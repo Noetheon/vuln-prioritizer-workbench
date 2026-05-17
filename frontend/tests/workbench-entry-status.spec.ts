@@ -617,8 +617,11 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     timeout: 15_000,
   })
   await expect(page).toHaveURL(/\/imports\/new(?:\?.*)?$/)
-  await expect(page.getByText("Import failed")).toBeVisible()
-  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible()
+  await expect(
+    page.getByRole("alert").getByText("Import failed"),
+  ).toBeVisible()
+  await expect(page.getByRole("button", { name: "Retry import" })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Start import" })).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Back to file" })).toBeVisible()
   await page.getByRole("button", { name: "Open diagnostics" }).click()
   const failedImportDiagnostics = page.getByRole("dialog", {

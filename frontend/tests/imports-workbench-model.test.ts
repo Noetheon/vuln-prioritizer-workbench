@@ -21,6 +21,7 @@ import {
 } from "../src/components/imports/imports-workbench-model.ts"
 import {
   optionalContextReadiness,
+  readinessCopyForStep,
   validateAssetContextCsvFile,
   validateVexJsonFile,
 } from "../src/components/imports/new-import-route-state.ts"
@@ -99,6 +100,12 @@ test("import formats preserve exact supported input keys", () => {
       (format) => format.inputType === "cyclonedx-json",
     )?.notes.join(" ") ?? "",
     /without vulnerabilities is not sufficient/,
+  )
+  assert.equal(
+    SUPPORTED_IMPORT_FORMATS.find(
+      (format) => format.inputType === "cyclonedx-json",
+    )?.contextSupport,
+    "component-vulnerability-context",
   )
   assert.match(
     SUPPORTED_IMPORT_FORMATS.find(
@@ -340,8 +347,6 @@ test("import model summarizes optional overlays", () => {
   assert.deepEqual(optionalContextLabels(wizard), [
     "Asset context CSV",
     "VEX sidecar",
-    "Provider snapshot",
-    "Locked provider data",
     "Reviewed ATT&CK mapping",
   ])
 })
@@ -570,6 +575,60 @@ test("optional context readiness validates selected asset and VEX files shallowl
   assert.equal(validChecks["asset-context"]?.status, "passed")
   assert.equal(validChecks.vex?.status, "passed")
   assert.equal(readinessBlocksImport(Object.values(validChecks)), false)
+
+  const missingAttackMappingChecks = optionalContextReadiness({
+    assetContextFile: null,
+    attackMappingFile: "",
+    attackSource: "local-curated",
+    vexFile: null,
+  })
+  assert.equal(missingAttackMappingChecks["attack-context"]?.status, "error")
+  assert.match(
+    missingAttackMappingChecks["attack-context"]?.message ?? "",
+    /Mapping file is required/,
+  )
+  assert.equal(
+    readinessBlocksImport(Object.values(missingAttackMappingChecks)),
+    true,
+  )
+
+  const validAttackMappingChecks = optionalContextReadiness({
+    assetContextFile: null,
+    attackMappingFile: "mapping.json",
+    attackSource: "ctid-json",
+    vexFile: null,
+  })
+  assert.equal(validAttackMappingChecks["attack-context"]?.status, "passed")
+  assert.equal(readinessBlocksImport(Object.values(validAttackMappingChecks)), false)
+})
+
+test("readiness copy uses only the approved wizard states", () => {
+  const missingChecks = buildImportReadinessChecks({
+    evidenceFile: null,
+    inputType: "",
+    parserPreview: initialParserPreview(),
+    projectId: "",
+    providerAvailable: true,
+  })
+  const readyChecks = buildImportReadinessChecks({
+    evidenceFile: new File(["cve_id\nCVE-2024-3094"], "findings.csv", {
+      type: "text/csv",
+    }),
+    inputType: "generic-occurrence-csv",
+    parserPreview: {
+      ...initialParserPreview(),
+      state: "passed",
+    },
+    projectId: "project-1",
+    providerAvailable: true,
+  })
+
+  assert.equal(readinessCopyForStep(1, missingChecks), "Needs input type")
+  assert.equal(readinessCopyForStep(2, missingChecks), "Needs evidence file")
+  assert.equal(readinessCopyForStep(2, readyChecks), "Can continue")
+  assert.equal(readinessCopyForStep(3, readyChecks), "Can continue")
+  assert.equal(readinessCopyForStep(4, readyChecks), "Ready to import")
+  assert.equal(readinessCopyForStep(4, readyChecks, true), "Failed")
 })
 
 test("readiness model blocks parser preview until the file check has passed", () => {

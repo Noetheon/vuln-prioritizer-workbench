@@ -322,8 +322,6 @@ export function optionalContextLabels(wizard: ImportWizardStateLike) {
   const labels: string[] = []
   if (wizard.assetContextFile) labels.push("Asset context CSV")
   if (wizard.vexFile) labels.push("VEX sidecar")
-  if (wizard.providerSnapshotFile) labels.push("Provider snapshot")
-  if (wizard.lockedProviderData) labels.push("Locked provider data")
   if (wizard.attackSource && wizard.attackSource !== "none") {
     labels.push("Reviewed ATT&CK mapping")
   }

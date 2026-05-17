@@ -40,7 +40,7 @@ export function ProviderAttackOptions({
   return (
     <div className="flex flex-col gap-4">
       <VpwSectionHeader
-        description="Optional deterministic enrichment from managed Workbench artifact directories."
+        description="Current provider data is used by default. Static snapshots are advanced deterministic replay inputs."
         title="Provider and ATT&CK options"
       />
       <div className="grid gap-4 lg:grid-cols-2">
@@ -87,7 +87,7 @@ export function ProviderAttackOptions({
           />
           <span className="grid gap-1">
             <span className="font-medium text-[var(--vpw-text-primary)]">
-              Locked provider data
+              Lock provider data for deterministic replay
             </span>
             <span className="text-xs leading-5 text-[var(--vpw-text-muted)]">
               Treat selected provider snapshot data as deterministic evidence
@@ -128,7 +128,7 @@ export function ProviderAttackOptions({
           description={
             attackSourceDisabled
               ? attackSourceDisabledReason
-              : "Managed filename required for CTID JSON or local curated ATT&CK imports."
+              : "Required when source is CTID JSON or Local curated."
           }
           htmlFor="attack-mapping-file"
           label="Mapping file"
@@ -146,7 +146,7 @@ export function ProviderAttackOptions({
           description={
             attackSourceDisabled
               ? attackSourceDisabledReason
-              : "Optional managed technique metadata filename."
+              : "Optional technique metadata filename."
           }
           htmlFor="attack-technique-metadata-file"
           label="Technique metadata"

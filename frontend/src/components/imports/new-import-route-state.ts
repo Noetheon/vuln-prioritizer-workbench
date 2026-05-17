@@ -65,6 +65,8 @@ export function disabledReasonForStep({
 }
 
 export function optionalContextReadiness({
+  attackMappingFile,
+  attackSource,
   assetContextFile,
   assetContextValidation,
   vexFile,
@@ -72,7 +74,10 @@ export function optionalContextReadiness({
 }: Pick<
   ImportsWorkbenchProps["importWizard"],
   "assetContextFile" | "vexFile"
-> & {
+> &
+  Partial<
+    Pick<ImportsWorkbenchProps["importWizard"], "attackMappingFile" | "attackSource">
+  > & {
   assetContextValidation?: OptionalContextValidationState | null
   vexValidation?: OptionalContextValidationState | null
 }): Partial<Record<ImportReadinessCheck["id"], ImportReadinessCheck>> {
@@ -91,47 +96,46 @@ export function optionalContextReadiness({
       validation: vexValidation,
       validExtensions: [".json"],
     }),
+    "attack-context": attackContextReadiness({
+      attackMappingFile,
+      attackSource,
+    }),
   }
 }
 
 export function readinessCopyForStep(
   step: StepId,
   readiness: readonly ImportReadinessCheck[],
-  importLoading = false,
+  importFailed = false,
 ) {
-  if (importLoading) return "Importing evidence"
-  const blocking = readiness.find(
-    (check) => check.status === "missing" || check.status === "error",
-  )
+  if (importFailed) return "Failed"
   const projectMissing = checkHasStatus(readiness, "project", "missing")
   const inputMissing = checkHasStatus(readiness, "input-type", "missing")
   const evidenceMissing = checkHasStatus(readiness, "evidence-file", "missing")
   const parserPending = checkHasStatus(readiness, "parser-preview", "pending")
+  const blocked = readinessBlocksImport(readiness)
 
   if (step === 1) {
-    if (projectMissing) return "Select a project"
-    if (inputMissing) return "Needs input type"
-    return "Continue to upload"
+    if (projectMissing || inputMissing) return "Needs input type"
+    return "Can continue"
   }
   if (step === 2) {
-    if (evidenceMissing) return "Needs evidence file"
-    if (parserPending) return "Checking file"
-    if (blocking) return "Needs attention"
+    if (evidenceMissing || parserPending || blocked) return "Needs evidence file"
     return "Can continue"
   }
   if (step === 3) {
-    if (blocking) return "Needs attention"
+    if (blocked) return "Needs evidence file"
     return "Can continue"
   }
-  return blocking || readinessBlocksImport(readiness)
-    ? "Needs attention"
-    : "Ready to import"
+  return blocked ? "Needs evidence file" : "Ready to import"
 }
 
 export function readinessToneForStep(
   step: StepId,
   readiness: readonly ImportReadinessCheck[],
+  importFailed = false,
 ) {
+  if (importFailed) return "critical" as const
   if (step === 4 && !readinessBlocksImport(readiness)) return "success" as const
   if (
     readiness.some(
@@ -144,6 +148,43 @@ export function readinessToneForStep(
     return "warning" as const
   }
   return "neutral" as const
+}
+
+function attackContextReadiness({
+  attackMappingFile,
+  attackSource,
+}: Pick<
+  ImportsWorkbenchProps["importWizard"],
+  "attackMappingFile" | "attackSource"
+> | {
+  attackMappingFile?: string
+  attackSource?: string
+}): ImportReadinessCheck {
+  if (!attackSource || attackSource === "none") {
+    return {
+      id: "attack-context",
+      label: "ATT&CK context",
+      status: "optional",
+      message: "Not selected optional.",
+      targetStep: 3,
+    }
+  }
+  if (!attackMappingFile?.trim()) {
+    return {
+      id: "attack-context",
+      label: "ATT&CK context",
+      status: "error",
+      message: "Mapping file is required for CTID JSON or local curated ATT&CK context.",
+      targetStep: 3,
+    }
+  }
+  return {
+    id: "attack-context",
+    label: "ATT&CK context",
+    status: "passed",
+    message: "Reviewed defensive context configured.",
+    targetStep: 3,
+  }
 }
 
 export function checkPassed(

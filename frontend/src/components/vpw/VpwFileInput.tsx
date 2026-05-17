@@ -35,6 +35,14 @@ export function VpwFileInput({
   onFileChange,
   showSelectedFileActions = false,
 }: VpwFileInputProps) {
+  const acceptedLabel = accept
+    ? accept
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .join(", ")
+    : ""
+
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     onFileChange(event.target.files?.[0] ?? null)
     event.target.value = ""
@@ -58,7 +66,7 @@ export function VpwFileInput({
       />
       <label
         className={cn(
-          "flex min-h-24 cursor-pointer items-center gap-3 rounded-[var(--vpw-radius-lg)] border border-dashed border-[var(--vpw-border-strong)] bg-[var(--vpw-bg-card)] px-4 py-3 text-sm transition-colors",
+          "flex min-h-28 cursor-pointer items-center gap-3 rounded-[var(--vpw-radius-lg)] border border-dashed border-[var(--vpw-border-strong)] bg-[var(--vpw-bg-card)] px-4 py-3 text-sm transition-colors",
           "hover:border-[var(--vpw-blue)] hover:bg-[var(--vpw-bg-info)]",
           "focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--vpw-focus-ring)]",
           disabled &&
@@ -78,7 +86,9 @@ export function VpwFileInput({
             {file ? file.name : "Choose or drop a file"}
           </span>
           <span className="mt-1 block text-xs leading-5 text-[var(--vpw-text-muted)]">
-            {accept ? `Accepted: ${accept}` : "Supported workbench input"}
+            {acceptedLabel
+              ? `Accepted: ${acceptedLabel}`
+              : "Supported workbench input"}
           </span>
         </span>
       </label>

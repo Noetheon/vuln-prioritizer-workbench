@@ -13,7 +13,6 @@ import {
 } from "@/lib/import-format-metadata"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
-  optionalContextLabels,
   selectedFormat,
   type ImportsWorkbenchProps,
 } from "./imports-workbench-model"
@@ -54,8 +53,8 @@ export function NewImportRoute(props: NewImportRouteProps) {
   const submitRequestedRef = useRef(false)
   const format = selectedFormat(props.supportedFormats, props.importWizard.inputType)
   const metadataFormat = getImportFormat(props.importWizard.inputType)
-  const optionalLabels = optionalContextLabels(props.importWizard)
   const projectSearch = selectedProjectRouteSearch(props.selectedProjectId)
+  const importFailed = Boolean(props.importError)
   const readiness = useMemo(() => {
     const baseChecks = buildImportReadinessChecks({
       evidenceFile: props.importWizard.file,
@@ -65,6 +64,8 @@ export function NewImportRoute(props: NewImportRouteProps) {
       providerAvailable: props.providerStatus?.status === "ok",
     })
     const optionalChecks = optionalContextReadiness({
+      attackMappingFile: props.importWizard.attackMappingFile,
+      attackSource: props.importWizard.attackSource,
       assetContextFile: props.importWizard.assetContextFile,
       assetContextValidation: optionalContextValidation.assetContext,
       vexFile: props.importWizard.vexFile,
@@ -76,6 +77,8 @@ export function NewImportRoute(props: NewImportRouteProps) {
     optionalContextValidation.vex,
     parserPreview,
     props.importWizard.assetContextFile,
+    props.importWizard.attackMappingFile,
+    props.importWizard.attackSource,
     props.importWizard.file,
     props.importWizard.inputType,
     props.importWizard.vexFile,
@@ -223,12 +226,6 @@ export function NewImportRoute(props: NewImportRouteProps) {
             <ImportFailurePanel
               failedImportRunId={props.failedImportRunId}
               importError={props.importError}
-              onBackToFile={() => setStep(2)}
-              onOpenDiagnostics={props.onOpenDiagnostics}
-              onRetry={() => {
-                submitRequestedRef.current = true
-              }}
-              selectedProjectId={props.selectedProjectId}
             />
           ) : null}
           {props.importLoading ? (
@@ -236,49 +233,33 @@ export function NewImportRoute(props: NewImportRouteProps) {
               Preparing upload, uploading evidence, and creating a run.
             </VpwStatusBanner>
           ) : null}
-          <div className="sticky bottom-0 -mx-[var(--vpw-panel-padding)] -mb-[var(--vpw-panel-padding)] flex flex-col gap-3 border-t border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] px-[var(--vpw-panel-padding)] py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-sm text-[var(--vpw-text-muted)]">
-              {continueDisabledReason ||
-                readinessCopyForStep(step, readiness, props.importLoading)}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                disabled={step === 1 || props.importLoading}
-                onClick={goBack}
-                type="button"
-                variant="outline"
-              >
-                <ArrowLeft aria-hidden="true" data-icon="inline-start" />
-                Back
-              </Button>
-              {step < 4 ? (
-                <Button
-                  disabled={Boolean(continueDisabledReason)}
-                  onClick={continueToNextStep}
-                  type="button"
-                >
-                  Continue
-                  <ArrowRight aria-hidden="true" data-icon="inline-end" />
-                </Button>
-              ) : (
-                <Button
-                  aria-busy={props.importLoading}
-                  disabled={Boolean(continueDisabledReason)}
-                  onClick={() => {
-                    submitRequestedRef.current = true
-                  }}
-                  type="submit"
-                >
-                  <Upload aria-hidden="true" data-icon="inline-start" />
-                  {props.importLoading ? "Importing" : "Start import"}
-                </Button>
-              )}
-            </div>
-          </div>
+          {importFailed ? (
+            <FailureFooter
+              failedImportRunId={props.failedImportRunId}
+              onBackToFile={() => setStep(2)}
+              onOpenDiagnostics={props.onOpenDiagnostics}
+              onRetry={() => {
+                submitRequestedRef.current = true
+              }}
+              selectedProjectId={props.selectedProjectId}
+            />
+          ) : (
+            <WizardFooter
+              continueDisabledReason={continueDisabledReason}
+              goBack={goBack}
+              importLoading={props.importLoading}
+              onContinue={continueToNextStep}
+              onSubmitClick={() => {
+                submitRequestedRef.current = true
+              }}
+              readiness={readiness}
+              step={step}
+            />
+          )}
         </VpwPanel>
         <SummaryRail
+          importFailed={importFailed}
           inputTypeLabel={metadataFormat?.label ?? "Not selected"}
-          optionalLabels={optionalLabels}
           parserPreview={parserPreview}
           props={props}
           readiness={readiness}
@@ -289,54 +270,137 @@ export function NewImportRoute(props: NewImportRouteProps) {
   )
 }
 
-function ImportFailurePanel({
+function WizardFooter({
+  continueDisabledReason,
+  goBack,
+  importLoading,
+  onContinue,
+  onSubmitClick,
+  readiness,
+  step,
+}: {
+  continueDisabledReason: string
+  goBack: () => void
+  importLoading: boolean
+  onContinue: () => void
+  onSubmitClick: () => void
+  readiness: ReturnType<typeof buildImportReadinessChecks>
+  step: StepId
+}) {
+  return (
+    <div className="sticky bottom-0 -mx-[var(--vpw-panel-padding)] -mb-[var(--vpw-panel-padding)] flex flex-col gap-3 border-t border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] px-[var(--vpw-panel-padding)] py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="text-sm text-[var(--vpw-text-muted)]">
+        {importLoading
+          ? "Creating import run..."
+          : continueDisabledReason || readinessCopyForStep(step, readiness)}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          disabled={step === 1 || importLoading}
+          onClick={goBack}
+          type="button"
+          variant="outline"
+        >
+          <ArrowLeft aria-hidden="true" data-icon="inline-start" />
+          Back
+        </Button>
+        {step < 4 ? (
+          <Button
+            disabled={Boolean(continueDisabledReason)}
+            onClick={onContinue}
+            type="button"
+          >
+            Continue
+            <ArrowRight aria-hidden="true" data-icon="inline-end" />
+          </Button>
+        ) : (
+          <Button
+            aria-busy={importLoading}
+            disabled={Boolean(continueDisabledReason)}
+            onClick={onSubmitClick}
+            type="submit"
+          >
+            <Upload aria-hidden="true" data-icon="inline-start" />
+            {importLoading ? "Importing" : "Start import"}
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function FailureFooter({
   failedImportRunId,
-  importError,
   onBackToFile,
   onOpenDiagnostics,
   onRetry,
   selectedProjectId,
 }: {
   failedImportRunId: string
-  importError: string
   onBackToFile: () => void
   onOpenDiagnostics: (runId: string) => void
   onRetry: () => void
   selectedProjectId: string
 }) {
   return (
+    <div className="sticky bottom-0 -mx-[var(--vpw-panel-padding)] -mb-[var(--vpw-panel-padding)] flex flex-col gap-3 border-t border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] px-[var(--vpw-panel-padding)] py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="text-sm font-medium text-[var(--vpw-red)]">
+        Import failed
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {!failedImportRunId ? (
+          <>
+            <Button onClick={onBackToFile} type="button" variant="outline">
+              Back to file
+            </Button>
+            <Button onClick={onRetry} type="submit">
+              Retry import
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button onClick={onBackToFile} type="button" variant="outline">
+              Back to file
+            </Button>
+            <Button
+              onClick={() => onOpenDiagnostics(failedImportRunId)}
+              type="button"
+              variant="outline"
+            >
+              Open diagnostics
+            </Button>
+            <Button asChild>
+              <Link
+                params={{ runId: failedImportRunId }}
+                search={{ projectId: selectedProjectId }}
+                to="/imports/runs/$runId"
+              >
+                Open run detail
+              </Link>
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ImportFailurePanel({
+  failedImportRunId,
+  importError,
+}: {
+  failedImportRunId: string
+  importError: string
+}) {
+  return (
     <VpwStatusBanner title="Import failed" tone="critical">
       <div className="grid gap-3">
+        <p>
+          {failedImportRunId
+            ? "The import run was recorded, but the parser rejected the supplied evidence."
+            : "Parser rejected the supplied evidence before a run could be recorded."}
+        </p>
         <p>{importError}</p>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={onRetry} size="sm" type="submit" variant="outline">
-            Retry
-          </Button>
-          <Button onClick={onBackToFile} size="sm" type="button" variant="outline">
-            Back to file
-          </Button>
-          {failedImportRunId ? (
-            <>
-              <Button
-                onClick={() => onOpenDiagnostics(failedImportRunId)}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                Open diagnostics
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link
-                  params={{ runId: failedImportRunId }}
-                  search={{ projectId: selectedProjectId }}
-                  to="/imports/runs/$runId"
-                >
-                  Open run detail
-                </Link>
-              </Button>
-            </>
-          ) : null}
-        </div>
       </div>
     </VpwStatusBanner>
   )

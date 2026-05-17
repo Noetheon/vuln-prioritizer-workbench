@@ -52,11 +52,11 @@ export function ImportsHomeRoute(props: ImportsHomeRouteProps) {
         </div>
         <VpwGrid columns={3}>
           <VpwMetricCard
-            description={props.selectedProject?.name ?? "No project selected"}
+            description={props.selectedProject ? "Active project" : "No project selected"}
             icon={<ListChecks aria-hidden="true" className="h-4 w-4" />}
             label="Current project"
             tone={props.selectedProject ? "neutral" : "warning"}
-            value={props.selectedProject ? "Active project" : "Required"}
+            value={props.selectedProject?.name ?? "Required"}
           />
           <VpwMetricCard
             description={providerSummary.detail}

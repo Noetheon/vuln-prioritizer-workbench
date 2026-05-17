@@ -154,13 +154,23 @@ function DiagnosticsTabs({
     <Tabs defaultValue="summary">
       <TabsList
         aria-label="Run diagnostics tabs"
-        className="flex w-full flex-nowrap justify-start overflow-x-auto whitespace-nowrap"
+        className="grid h-auto w-full grid-cols-5 overflow-visible whitespace-nowrap sm:inline-flex sm:w-auto sm:justify-start"
       >
-        <TabsTrigger value="summary">Summary</TabsTrigger>
-        <TabsTrigger value="parser">Parser</TabsTrigger>
-        <TabsTrigger value="upload">Upload</TabsTrigger>
-        <TabsTrigger value="provider">Provider</TabsTrigger>
-        <TabsTrigger value="raw">Raw</TabsTrigger>
+        <TabsTrigger className="min-w-0 px-1.5 text-xs sm:px-3 sm:text-sm" value="summary">
+          Summary
+        </TabsTrigger>
+        <TabsTrigger className="min-w-0 px-1.5 text-xs sm:px-3 sm:text-sm" value="parser">
+          Parser
+        </TabsTrigger>
+        <TabsTrigger className="min-w-0 px-1.5 text-xs sm:px-3 sm:text-sm" value="upload">
+          Upload
+        </TabsTrigger>
+        <TabsTrigger className="min-w-0 px-1.5 text-xs sm:px-3 sm:text-sm" value="provider">
+          Provider
+        </TabsTrigger>
+        <TabsTrigger className="min-w-0 px-1.5 text-xs sm:px-3 sm:text-sm" value="raw">
+          Raw
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="summary">
         <VpwPanel className="flex flex-col gap-4">

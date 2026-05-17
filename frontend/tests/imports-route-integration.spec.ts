@@ -119,6 +119,17 @@ test("run detail tabs show triage CTA, imported evidence, and compact diagnostic
   await expect(page.getByText("rich-import.txt", { exact: true })).toBeVisible()
   await expect(page.getByText("sha256-rich-import")).toBeVisible()
   await expect(page.getByText("No report artifacts generated yet")).toBeVisible()
+  for (const artifact of [
+    "Technical Markdown",
+    "Executive HTML",
+    "Analysis JSON",
+    "Findings CSV",
+    "SARIF",
+    "Evidence ZIP",
+    "ATT&CK Navigator layer, if mapped",
+  ]) {
+    await expect(page.getByText(artifact)).toBeVisible()
+  }
   await expect(
     page.getByRole("link", { name: "Open Evidence Center" }),
   ).toHaveAttribute("href", `/reports?projectId=${mockProject.id}&runId=${runWithMetadata.id}`)
@@ -182,8 +193,21 @@ test("new import wizard gates the four-step flow", async ({ page }) => {
 
   await page.getByRole("button", { name: /Generic occurrence CSV/ }).click()
   await expect(page.getByTestId("import-summary-rail")).toContainText(
-    "Continue to upload",
+    "Can continue",
   )
+  await expect(
+    page.getByTestId("import-summary-rail").locator("dt"),
+  ).toHaveText([
+    "Project",
+    "Input type",
+    "Evidence file",
+    "Asset context",
+    "VEX",
+    "ATT&CK context",
+    "Provider data",
+    "Deterministic replay",
+    "Readiness",
+  ])
   await page.getByRole("button", { name: "Continue" }).click()
   await expect(page.getByRole("heading", { name: "Upload file" })).toBeVisible()
   await expect(page.getByText("Evidence file is required")).toBeVisible()
@@ -219,6 +243,21 @@ test("new import wizard gates the four-step flow", async ({ page }) => {
   await expect(page.getByTestId("import-summary-rail")).toContainText(
     "Can continue",
   )
+  await expect(page.getByLabel("ATT&CK source")).toBeHidden()
+  await page
+    .getByText("Advanced provider data and reviewed ATT&CK context")
+    .click()
+  await expect(page.getByLabel("ATT&CK source")).toBeVisible()
+  await expect(
+    page.getByLabel("Lock provider data for deterministic replay"),
+  ).not.toBeChecked()
+  await page.getByLabel("ATT&CK source").click()
+  await page.getByRole("option", { name: "Local curated" }).click()
+  await expect(page.getByText("ATT&CK context needs attention")).toBeVisible()
+  await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled()
+  await page.getByLabel("Mapping file").fill("mapping.json")
+  await expect(page.getByText("ATT&CK context needs attention")).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled()
   await page.getByLabel("Asset context CSV").setInputFiles({
     buffer: Buffer.from("not csv"),
     mimeType: "text/plain",
@@ -269,9 +308,14 @@ test("new import failure without run id stays on review with retry and back acti
   await page.getByRole("button", { name: "Start import" }).click()
 
   await expect(page).toHaveURL(`/imports/new?projectId=${mockProject.id}`)
-  await expect(page.getByText("Import failed")).toBeVisible()
-  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible()
+  await expect(page.getByRole("alert").getByText("Import failed")).toBeVisible()
+  await expect(page.getByTestId("import-summary-rail")).toContainText("Failed")
+  await expect(page.getByTestId("import-summary-rail")).not.toContainText(
+    "Ready to import",
+  )
+  await expect(page.getByRole("button", { name: "Retry import" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Back to file" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Start import" })).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Open diagnostics" })).toHaveCount(
     0,
   )
@@ -328,8 +372,13 @@ test("new import failure with run id stays on review and exposes diagnostics", a
   await page.getByRole("button", { name: "Start import" }).click()
 
   await expect(page).toHaveURL(`/imports/new?projectId=${mockProject.id}`)
-  await expect(page.getByText("Import failed")).toBeVisible()
-  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible()
+  await expect(page.getByRole("alert").getByText("Import failed")).toBeVisible()
+  await expect(page.getByTestId("import-summary-rail")).toContainText("Failed")
+  await expect(page.getByTestId("import-summary-rail")).not.toContainText(
+    "Ready to import",
+  )
+  await expect(page.getByRole("button", { name: "Retry import" })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Start import" })).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Back to file" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Open diagnostics" })).toBeVisible()
   await expect(page.getByRole("link", { name: "Open run detail" })).toHaveAttribute(
@@ -465,6 +514,11 @@ test("supported formats search and category filters stay constrained", async ({
   ).toBeVisible()
 
   await page.getByRole("button", { name: "CycloneDX SBOM JSON" }).click()
+  await expect(page.getByRole("button", { name: "View details" }).first()).toBeVisible()
+  await expect(
+    page.getByRole("cell", { name: "component vulnerability context" }),
+  ).toBeVisible()
+  await expect(page.getByText("vex capable")).toHaveCount(0)
   await expect(
     page.getByText(
       "plain SBOM-only BOM without vulnerabilities is not sufficient",

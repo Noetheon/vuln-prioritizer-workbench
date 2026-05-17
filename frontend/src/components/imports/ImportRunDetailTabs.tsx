@@ -430,8 +430,19 @@ export function EvidenceTab({
           />
         ) : (
           <div className="rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] px-4 py-3 text-sm leading-6 text-[var(--vpw-text-secondary)]">
-            No report artifacts generated yet. Generate Technical Markdown, Executive HTML,
-            Findings CSV, SARIF, Evidence ZIP, or ATT&CK Navigator from the Evidence Center.
+            <p>No report artifacts generated yet.</p>
+            <p className="mt-2 font-medium text-[var(--vpw-text-primary)]">
+              Available from Evidence Center
+            </p>
+            <ul className="mt-2 grid gap-1">
+              <li>Technical Markdown</li>
+              <li>Executive HTML</li>
+              <li>Analysis JSON</li>
+              <li>Findings CSV</li>
+              <li>SARIF</li>
+              <li>Evidence ZIP</li>
+              <li>ATT&CK Navigator layer, if mapped</li>
+            </ul>
           </div>
         )}
         <Button asChild className="w-fit" variant="outline">

@@ -33,6 +33,7 @@ import {
   fileSizeLabel,
   formatExpectedFields,
   hasOptionalContext,
+  optionalContextLabels,
   type ImportsWorkbenchProps,
 } from "./imports-workbench-model"
 import {
@@ -241,6 +242,11 @@ export function UploadFileStep({
   format: ImportsWorkbenchProps["supportedFormats"][number] | undefined
   parserPreview: ParserPreview
 }) {
+  const uploadHelp =
+    format?.value === "generic-occurrence-csv"
+      ? "Your CSV must include a CVE identifier for each row. Optional columns can add component or asset context."
+      : "Attach the supplied evidence export for the selected input type."
+
   return (
     <section className="flex flex-col gap-5">
       <VpwSectionHeader
@@ -257,7 +263,7 @@ export function UploadFileStep({
       </div>
       <FileUploadField
         accept={format?.accept}
-        description={`Accepted: ${format?.accept?.replaceAll(",", " · ") ?? "select input type first"}`}
+        description={uploadHelp}
         file={importWizard.file}
         id="import-file"
         label="Evidence file"
@@ -279,6 +285,9 @@ export function AddContextStep(
     (check) => check.id === "asset-context",
   )
   const vexCheck = props.readiness.find((check) => check.id === "vex")
+  const attackContextCheck = props.readiness.find(
+    (check) => check.id === "attack-context",
+  )
   return (
     <section className="flex flex-col gap-5">
       <VpwSectionHeader
@@ -313,6 +322,11 @@ export function AddContextStep(
       {vexCheck?.status === "error" ? (
         <VpwStatusBanner title="VEX overlay needs attention" tone="critical">
           {vexCheck.message}
+        </VpwStatusBanner>
+      ) : null}
+      {attackContextCheck?.status === "error" ? (
+        <VpwStatusBanner title="ATT&CK context needs attention" tone="critical">
+          {attackContextCheck.message}
         </VpwStatusBanner>
       ) : null}
       <VpwStatusBanner title="ATT&CK/TTP context">
@@ -420,15 +434,15 @@ export function ReviewImportStep({
 }
 
 export function SummaryRail({
+  importFailed = false,
   inputTypeLabel,
-  optionalLabels,
   parserPreview,
   props,
   readiness,
   step,
 }: {
+  importFailed?: boolean
   inputTypeLabel: string
-  optionalLabels: string[]
   parserPreview: ParserPreview
   props: ImportsWorkbenchProps
   readiness: readonly ImportReadinessCheck[]
@@ -456,8 +470,20 @@ export function SummaryRail({
             value: props.importWizard.file?.name ?? "Next: upload evidence file",
           },
           {
-            label: "Optional context",
-            value: optionalLabels.length > 0 ? optionalLabels.join(", ") : "None",
+            label: "Asset context",
+            value: props.importWizard.assetContextFile?.name ?? "Not selected",
+          },
+          {
+            label: "VEX",
+            value: props.importWizard.vexFile?.name ?? "Not selected",
+          },
+          {
+            label: "ATT&CK context",
+            value:
+              props.importWizard.attackSource &&
+              props.importWizard.attackSource !== "none"
+                ? "Reviewed defensive context configured"
+                : "Not selected",
           },
           {
             label: "Provider data",
@@ -466,15 +492,21 @@ export function SummaryRail({
               : "Current provider data",
           },
           {
+            label: "Deterministic replay",
+            value: props.importWizard.lockedProviderData ? "Yes" : "No",
+          },
+          {
             label: "Readiness",
-            value: readinessCopyForStep(step, readiness, props.importLoading),
-            tone: readinessToneForStep(step, readiness),
+            value: readinessCopyForStep(step, readiness, importFailed),
+            tone: readinessToneForStep(step, readiness, importFailed),
           },
         ]}
       />
       <div className="flex flex-wrap gap-2">
         {hasOptionalContext(props.importWizard)
-          ? optionalLabels.map((label) => <MetaTag key={label} label={label} />)
+          ? optionalContextLabels(props.importWizard).map((label) => (
+              <MetaTag key={label} label={label} />
+            ))
           : null}
         {parserPreview.state === "passed" ? (
           <VpwBadge tone="success">File check passed</VpwBadge>

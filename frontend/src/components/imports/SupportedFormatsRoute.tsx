@@ -128,7 +128,7 @@ export function SupportedFormatsRoute({
             format.inputType === selectedInputType ? "secondary" : "outline"
           }
         >
-          View example
+          View details
         </Button>
       ),
       width: "128px",

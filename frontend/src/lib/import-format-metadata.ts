@@ -22,8 +22,8 @@ export type ContextSupport =
   | "cve-only"
   | "partial-occurrence-context"
   | "component-context"
+  | "component-vulnerability-context"
   | "asset-context-capable"
-  | "vex-capable"
 
 export type SupportedFormat = {
   inputType: ImportInputType
@@ -185,7 +185,7 @@ export const SUPPORTED_IMPORT_FORMATS: readonly SupportedFormat[] = [
     expectedShape: "CycloneDX components plus vulnerability references.",
     minimumFields: ["components", "vulnerabilities"],
     optionalFields: ["bom-ref", "purl", "affects"],
-    contextSupport: "vex-capable",
+    contextSupport: "component-vulnerability-context",
     exampleSnippet: '{"bomFormat":"CycloneDX","components":[],"vulnerabilities":[{"id":"CVE-2024-3094"}]}',
     notes: ["Plain SBOM-only BOM without vulnerabilities is not sufficient."],
     shortDescription: "CycloneDX SBOM plus vulnerabilities.",
