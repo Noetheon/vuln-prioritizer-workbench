@@ -59,6 +59,7 @@ NON_PUBLIC_CONTRACT_MARKDOWN = {
     Path("docs/_uiux_redesign_context/chatgpt-context-pack.md"),
     Path("docs/_uiux_redesign_context/uiux-codebase-brief.md"),
     Path("docs/_uiux_redesign_context/vpw-design-direction.md"),
+    Path("docs/_uiux_redesign_context/VPW_Imports_UIUX_Redesign_Codex_Handoff.md"),
 }
 
 

@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { VpwField, VpwPanel, VpwSectionHeader } from "@/components/vpw"
+import { VpwField, VpwSectionHeader } from "@/components/vpw"
 import {
   attackImportSourceOptions,
   demoProviderSnapshotFile,
@@ -34,8 +34,11 @@ export function ProviderAttackOptions({
   | "onProviderSnapshotFileChange"
   | "onUseDemoProviderSnapshot"
 >) {
+  const attackSourceDisabled = importWizard.attackSource === "none"
+  const attackSourceDisabledReason = "Select an ATT&CK source to enable this field."
+
   return (
-    <VpwPanel className="flex flex-col gap-4 border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-4">
+    <div className="flex flex-col gap-4">
       <VpwSectionHeader
         description="Optional deterministic enrichment from managed Workbench artifact directories."
         title="Provider and ATT&CK options"
@@ -122,12 +125,16 @@ export function ProviderAttackOptions({
           </Select>
         </VpwField>
         <VpwField
-          description="Managed filename required for CTID JSON or local curated ATT&CK imports."
+          description={
+            attackSourceDisabled
+              ? attackSourceDisabledReason
+              : "Managed filename required for CTID JSON or local curated ATT&CK imports."
+          }
           htmlFor="attack-mapping-file"
           label="Mapping file"
         >
           <Input
-            disabled={importWizard.attackSource === "none"}
+            disabled={attackSourceDisabled}
             id="attack-mapping-file"
             name="attackMappingFile"
             onChange={(event) => onAttackMappingFileChange(event.target.value)}
@@ -136,12 +143,16 @@ export function ProviderAttackOptions({
           />
         </VpwField>
         <VpwField
-          description="Optional managed technique metadata filename."
+          description={
+            attackSourceDisabled
+              ? attackSourceDisabledReason
+              : "Optional managed technique metadata filename."
+          }
           htmlFor="attack-technique-metadata-file"
           label="Technique metadata"
         >
           <Input
-            disabled={importWizard.attackSource === "none"}
+            disabled={attackSourceDisabled}
             id="attack-technique-metadata-file"
             name="attackTechniqueMetadataFile"
             onChange={(event) =>
@@ -152,6 +163,6 @@ export function ProviderAttackOptions({
           />
         </VpwField>
       </div>
-    </VpwPanel>
+    </div>
   )
 }

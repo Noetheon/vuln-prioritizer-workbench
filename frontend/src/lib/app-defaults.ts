@@ -14,6 +14,11 @@ import type {
   FindingsReadProjectFindingsData,
   ImportsService,
 } from "../api-client"
+import {
+  acceptedFileInputValue,
+  SUPPORTED_IMPORT_FORMATS,
+  type ImportInputType,
+} from "./import-format-metadata.ts"
 
 export type ProjectFormState = {
   name: string
@@ -25,72 +30,16 @@ export const emptyProjectForm: ProjectFormState = {
   description: "",
 }
 
-export const workbenchImportFormats = [
-  {
-    label: "CVE list",
-    value: "cve-list",
-    accept: ".txt,.csv,text/plain,text/csv",
-    detail: "Plain text or CSV with one CVE identifier per line.",
-  },
-  {
-    label: "Generic occurrence CSV",
-    value: "generic-occurrence-csv",
-    accept: ".csv,text/csv",
-    detail: "CSV with cve_id and optional asset/component context columns.",
-  },
-  {
-    label: "Trivy JSON",
-    value: "trivy-json",
-    accept: ".json,application/json",
-    detail: "Trivy vulnerability export in JSON format.",
-  },
-  {
-    label: "Grype JSON",
-    value: "grype-json",
-    accept: ".json,application/json",
-    detail: "Grype vulnerability export in JSON format.",
-  },
-  {
-    label: "CycloneDX SBOM JSON",
-    value: "cyclonedx-json",
-    accept: ".json,application/json",
-    detail: "CycloneDX JSON SBOM with vulnerability references.",
-  },
-  {
-    label: "SPDX SBOM JSON",
-    value: "spdx-json",
-    accept: ".json,application/json",
-    detail: "SPDX JSON SBOM with package vulnerability context.",
-  },
-  {
-    label: "Dependency-Check JSON",
-    value: "dependency-check-json",
-    accept: ".json,application/json",
-    detail: "OWASP Dependency-Check JSON report.",
-  },
-  {
-    label: "GitHub alerts JSON",
-    value: "github-alerts-json",
-    accept: ".json,application/json",
-    detail: "GitHub Dependabot/code scanning alert export in JSON format.",
-  },
-  {
-    label: "Nessus XML",
-    value: "nessus-xml",
-    accept: ".nessus,.xml,application/xml,text/xml",
-    detail: "Nessus XML export parsed locally without active scanning.",
-  },
-  {
-    label: "OpenVAS XML",
-    value: "openvas-xml",
-    accept: ".xml,application/xml,text/xml",
-    detail: "OpenVAS XML export parsed locally without active scanning.",
-  },
-] as const
+export const workbenchImportFormats = SUPPORTED_IMPORT_FORMATS.map((format) => ({
+  label: format.label,
+  value: format.inputType,
+  accept: acceptedFileInputValue(format.inputType),
+  detail: format.shortDescription,
+}))
 
 export const mvpImportFormats = workbenchImportFormats
 
-export type ImportFormat = (typeof workbenchImportFormats)[number]["value"]
+export type ImportFormat = ImportInputType
 export type AttackImportSource = "none" | "ctid-json" | "local-curated"
 
 export const attackImportSourceOptions: Array<{
@@ -203,7 +152,7 @@ export type ImportWizardState = {
   attackTechniqueMetadataFile: string
   assetContextFile: File | null
   file: File | null
-  inputType: ImportFormat
+  inputType: ImportFormat | ""
   lockedProviderData: boolean
   providerSnapshotFile: string
   vexFile: File | null
@@ -217,7 +166,7 @@ export const defaultImportWizardState: ImportWizardState = {
   attackTechniqueMetadataFile: "",
   assetContextFile: null,
   file: null,
-  inputType: "cve-list",
+  inputType: "",
   lockedProviderData: false,
   providerSnapshotFile: "",
   vexFile: null,

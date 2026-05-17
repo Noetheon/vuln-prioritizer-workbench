@@ -16,7 +16,7 @@ import {
   validOccurrenceCsv,
 } from "./workbench-e2e-helpers"
 test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
-  test.setTimeout(180_000)
+  test.setTimeout(240_000)
   const testRunSuffix = Date.now().toString(36)
   const dashboardProjectName = `VPW Dashboard Project ${testRunSuffix}`
   const uiProjectName = `VPW UI Project ${testRunSuffix}`
@@ -306,19 +306,16 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await page.reload()
   await expect(page).toHaveURL(/\/imports(?:\?.*)?$/)
   await expect(
-    page.getByRole("heading", { name: "Upload evidence" }),
+    page.getByRole("heading", { level: 1, name: "Imports" }),
   ).toBeVisible()
-  await expect(page.getByText("Provider and ATT&CK options")).toBeHidden()
-  await expect(page.getByText("Supported input formats")).toBeVisible()
-  await page.locator("summary").filter({ hasText: "Supported input formats" }).click()
-  await expect(page.getByRole("button", { name: /^Trivy JSON/ })).toBeVisible()
+  await expect(page.getByLabel("Evidence file")).toHaveCount(0)
+  await page.getByRole("link", { name: /New import/ }).click()
+  await expect(page).toHaveURL(/\/imports\/new(?:\?.*)?$/)
+  await expect(page.getByRole("heading", { name: "Choose source" })).toBeVisible()
   await selectRadixOptionByLabel(page, page, "Import project", project.name)
-  await selectRadixOptionByLabel(
-    page,
-    page,
-    "Input type",
-    "Generic occurrence CSV",
-  )
+  await page.getByRole("button", { name: /Generic occurrence CSV/ }).click()
+  await page.getByRole("button", { name: "Continue" }).click()
+  await expect(page.getByRole("heading", { name: "Upload file" })).toBeVisible()
   const importFileInput = page.locator('input[name="importFile"]')
   await importFileInput.setInputFiles({
     buffer: Buffer.from(
@@ -330,8 +327,10 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     mimeType: "text/csv",
     name: "import-wizard-occurrences.csv",
   })
+  await expect(page.getByText("File check passed").first()).toBeVisible()
+  await page.getByRole("button", { name: "Continue" }).click()
+  await expect(page.getByRole("heading", { name: "Add context" })).toBeVisible()
   const assetContextInput = page.locator('input[name="assetContextFile"]')
-  await page.locator("summary").filter({ hasText: "Optional context overlays" }).click()
   await assetContextInput.setInputFiles({
     buffer: validAssetContextCsv,
     mimeType: "text/csv",
@@ -343,7 +342,16 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     mimeType: "application/json",
     name: "import-wizard-openvex.json",
   })
-  await page.getByRole("button", { name: "Start import" }).click()
+  await page.getByRole("button", { name: "Continue" }).click()
+  await expect(page.getByRole("heading", { name: "Review import" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Start import" })).toBeVisible({
+    timeout: 15_000,
+  })
+  await page.getByRole("button", { name: "Start import" }).click({
+    noWaitAfter: true,
+    timeout: 15_000,
+  })
+  await expect(page).toHaveURL(/\/imports\/runs\/[0-9a-f-]{36}(?:\?.*)?$/)
   await expect(page.getByRole("link", { name: "Review findings" }).first()).toBeVisible()
   await page.waitForTimeout(1000)
   const importWizardFindingsResponse = await page.request.get(
@@ -585,37 +593,47 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
 
   await navigation.getByRole("link", { name: "Imports" }).click()
   await expect(page).toHaveURL(/\/imports(?:\?.*)?$/)
+  await page.getByRole("link", { name: /New import/ }).click()
+  await expect(page.getByRole("heading", { name: "Choose source" })).toBeVisible()
   await selectRadixOptionByLabel(page, page, "Import project", project.name)
-  await selectRadixOptionByLabel(
-    page,
-    page,
-    "Input type",
-    "Generic occurrence CSV",
-  )
-  await page.getByLabel("Import file").setInputFiles({
+  await page.getByRole("button", { name: /Generic occurrence CSV/ }).click()
+  await page.getByRole("button", { name: "Continue" }).click()
+  await expect(page.getByRole("heading", { name: "Upload file" })).toBeVisible()
+  await page.getByLabel("Evidence file").setInputFiles({
     buffer: invalidOccurrenceCsv,
     mimeType: "text/csv",
     name: "invalid-occurrences.csv",
   })
-  await page.getByRole("button", { name: "Start import" }).click()
+  await expect(page.getByText("File check passed").first()).toBeVisible()
+  await page.getByRole("button", { name: "Continue" }).click()
+  await expect(page.getByRole("heading", { name: "Add context" })).toBeVisible()
+  await page.getByRole("button", { name: "Continue" }).click()
+  await expect(page.getByRole("heading", { name: "Review import" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Start import" })).toBeVisible({
+    timeout: 15_000,
+  })
+  await page.getByRole("button", { name: "Start import" }).click({
+    noWaitAfter: true,
+    timeout: 15_000,
+  })
+  await expect(page).toHaveURL(/\/imports\/runs\/[0-9a-f-]{36}(?:\?.*)?$/)
   await expect(
-    page.getByRole("alert").filter({ hasText: "Import upload failed" }),
-  ).toContainText("Import upload failed")
+    page.getByRole("heading", { name: /Import run/ }),
+  ).toBeVisible()
   const importRuns = page
     .getByRole("table", { name: "Recent import runs" })
     .first()
-  await page.locator("summary").filter({ hasText: "Parser diagnostics" }).click()
-  await expect(
-    page.getByRole("table", { name: "Parser errors" }).first(),
-  ).toContainText("cve_id")
+  await page.getByRole("tab", { name: "Diagnostics" }).click()
+  await expect(page.getByText("not-a-cve").first()).toBeVisible()
+  await navigation.getByRole("link", { name: "Imports" }).click()
   await expect(importRuns).toContainText("invalid-occurrences.csv")
   await expect(importRuns).toContainText("failed")
   await importRuns
     .getByRole("row", { name: /invalid-occurrences\.csv/ })
-    .getByRole("button", { name: "View diagnostics" })
+    .getByRole("button", { name: /View diagnostics for run/ })
     .click()
   const diagnostics = page.getByRole("dialog", { name: "Run diagnostics" })
-  await expect(diagnostics.getByText("Failure Cause").first()).toBeVisible()
+  await expect(diagnostics.getByText("Failure cause").first()).toBeVisible()
   await expect(diagnostics.getByText("not-a-cve").first()).toBeVisible()
   await page.keyboard.press("Escape")
   await navigation.getByRole("link", { name: "Triage" }).click()

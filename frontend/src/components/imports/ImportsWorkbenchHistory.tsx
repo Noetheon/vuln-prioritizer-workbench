@@ -1,5 +1,5 @@
 import { Link } from "@/lib/router"
-import { FileSearch, History, ListChecks } from "lucide-react"
+import { Eye, FileSearch, History, ListChecks } from "lucide-react"
 import type { ReactNode } from "react"
 import type { AnalysisRunPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
@@ -21,7 +21,6 @@ import {
   VpwTableCard,
 } from "@/components/vpw"
 import { runStatusLabel } from "@/lib/risk-format"
-import { RunDiagnosticsSheet } from "./ImportsWorkbenchRunDetail"
 import {
   formatDateTime,
   formatDisplayType,
@@ -46,19 +45,13 @@ function ImportRunAction({
 }
 
 export function RecentImports({
-  diagnosticsOpen,
-  diagnosticsRunId,
-  onDiagnosticsOpenChange,
   onOpenDiagnostics,
   onRefreshRuns,
   onSelectRun,
   projectRuns,
-  runDetailError,
-  runDetailLoading,
   runsError,
   runsLoading,
   selectedProject,
-  selectedRun,
   selectedRunId,
   selectedRunSummary,
 }: Pick<
@@ -66,18 +59,12 @@ export function RecentImports({
   | "onRefreshRuns"
   | "onSelectRun"
   | "projectRuns"
-  | "runDetailError"
-  | "runDetailLoading"
   | "runsError"
   | "runsLoading"
   | "selectedProject"
-  | "selectedRun"
   | "selectedRunId"
   | "selectedRunSummary"
 > & {
-  diagnosticsOpen: boolean
-  diagnosticsRunId: string
-  onDiagnosticsOpenChange: (open: boolean) => void
   onOpenDiagnostics: (runId: string) => void
 }) {
   function findingsLabel(run: AnalysisRunPublic) {
@@ -91,6 +78,16 @@ export function RecentImports({
     const summary = objectRecord(run.summary_json)
     const count = summary.finding_count
     return typeof count === "number" ? `${count} finding(s)` : "Open for counts"
+  }
+
+  function runNumber(run: AnalysisRunPublic, key: string) {
+    if (selectedRunId === run.id && selectedRunSummary) {
+      const value = objectRecord(selectedRunSummary)[key]
+      return typeof value === "number" ? value : 0
+    }
+    const summary = objectRecord(run.summary_json)
+    const value = summary[key]
+    return typeof value === "number" ? value : 0
   }
 
   const columns: VpwDataTableColumn<AnalysisRunPublic>[] = [
@@ -142,6 +139,21 @@ export function RecentImports({
       cell: findingsLabel,
     },
     {
+      id: "created",
+      header: "Created",
+      cell: (run) => runNumber(run, "created_findings"),
+    },
+    {
+      id: "updated",
+      header: "Updated",
+      cell: (run) => runNumber(run, "updated_findings"),
+    },
+    {
+      id: "ignored",
+      header: "Ignored",
+      cell: (run) => runNumber(run, "ignored_lines"),
+    },
+    {
       id: "provider",
       header: "Provider snapshot",
       cell: (run) =>
@@ -152,12 +164,34 @@ export function RecentImports({
         ),
     },
     {
+      id: "started",
+      header: "Started",
+      cell: (run) => formatDateTime(run.started_at),
+    },
+    {
       id: "actions",
       header: "Actions",
       className: "text-right",
       headerClassName: "text-right",
       cell: (run) => (
         <div className="vpw-table-actions">
+          <ImportRunAction label="View details">
+            <Button
+              asChild
+              className="vpw-table-action-button"
+              size="icon-sm"
+              variant="outline"
+            >
+              <Link
+                aria-label={`View details for run ${run.id.slice(0, 8)}`}
+                params={{ runId: run.id }}
+                search={{ projectId: run.project_id }}
+                to="/imports/runs/$runId"
+              >
+                <Eye aria-hidden="true" />
+              </Link>
+            </Button>
+          </ImportRunAction>
           <ImportRunAction label="View diagnostics">
             <Button
               aria-label={`View diagnostics for run ${run.id.slice(0, 8)}`}
@@ -190,6 +224,11 @@ export function RecentImports({
       ),
     },
   ]
+  const refreshDescription = runsLoading
+    ? "Import runs are refreshing."
+    : selectedProject
+      ? selectedProject.name
+      : "Select a project before refreshing imports."
 
   return (
     <VpwSection>
@@ -205,7 +244,7 @@ export function RecentImports({
             Refresh
           </Button>
         }
-        description={selectedProject?.name ?? "No project selected"}
+        description={refreshDescription}
         title="Recent Imports"
       >
         {runsError ? (
@@ -229,20 +268,10 @@ export function RecentImports({
               />
             }
             getRowKey={(run) => run.id}
-            minWidth="960px"
+            minWidth="1180px"
           />
         )}
       </VpwTableCard>
-      <RunDiagnosticsSheet
-        diagnosticsOpen={diagnosticsOpen}
-        diagnosticsRunId={diagnosticsRunId}
-        onDiagnosticsOpenChange={onDiagnosticsOpenChange}
-        runDetailError={runDetailError}
-        runDetailLoading={runDetailLoading}
-        selectedRun={selectedRun}
-        selectedRunId={selectedRunId}
-        selectedRunSummary={selectedRunSummary}
-      />
     </VpwSection>
   )
 }

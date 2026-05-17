@@ -4,10 +4,14 @@ import { dirname, join } from "node:path"
 import test from "node:test"
 import { fileURLToPath } from "node:url"
 
-import { workbenchPathFromPathname } from "../src/lib/app-route-config.ts"
+import {
+  routeDetailFromPathname,
+  workbenchPathFromPathname,
+} from "../src/lib/app-route-config.ts"
 
 const frontendRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 const appRouterFile = new URL("../src/AppRouter.tsx", import.meta.url)
+const generatedRouteTreeFile = new URL("../src/routeTree.gen.ts", import.meta.url)
 const oldRoutesDir = new URL("../src/routes/", import.meta.url)
 const routeErrorBoundaryFile = new URL(
   "../src/workbench/RouteErrorBoundary.tsx",
@@ -62,6 +66,11 @@ test("AppRouter owns the active Workbench route table", () => {
 
   assert.deepEqual(navigationPaths, workbenchPaths)
   assert.deepEqual(routerPaths, workbenchPaths)
+  assert.match(appRouter, /const importRunMatch = normalizedPath\.match/)
+  assert.match(appRouter, /params: \{ importsView: "new" \}/)
+  assert.match(appRouter, /params: \{ importsView: "formats" \}/)
+  assert.match(appRouter, /params: \{ importsView: "run", runId \}/)
+  assert.match(appRouter, /routePath: "\/imports"/)
   assert.match(appRouter, /const findingDetailMatch = normalizedPath\.match/)
   assert.match(appRouter, /routePath: "\/findings"/)
 })
@@ -105,6 +114,7 @@ test("WorkbenchPath, navigation, and route details stay in sync", () => {
 
 test("obsolete file-route scaffolding is not part of the active frontend", () => {
   assert.equal(existsSync(oldRoutesDir), false)
+  assert.equal(existsSync(generatedRouteTreeFile), false)
 })
 
 test("Workbench shell is mounted once by AppRouter", () => {
@@ -153,10 +163,22 @@ test("AppShell handles blocked storage and restores route focus", () => {
 
 test("Workbench route matching does not highlight dashboard for unknown paths", () => {
   assert.equal(workbenchPathFromPathname("/"), "/")
+  assert.equal(workbenchPathFromPathname("/imports/new"), "/imports")
+  assert.equal(workbenchPathFromPathname("/imports/runs/run-2"), "/imports")
+  assert.equal(workbenchPathFromPathname("/imports/formats"), "/imports")
   assert.equal(workbenchPathFromPathname("/findings/demo-f1"), "/findings")
   assert.equal(workbenchPathFromPathname("/reports/exported/123"), "/reports")
   assert.equal(workbenchPathFromPathname("/findings-old"), null)
   assert.equal(workbenchPathFromPathname("/unknown"), null)
+})
+
+test("route details specialize finding detail and unknown paths", () => {
+  assert.equal(
+    routeDetailFromPathname("/findings/finding-1", "/findings").title,
+    "Finding detail",
+  )
+  assert.equal(routeDetailFromPathname("/imports/new", "/imports").title, "Imports")
+  assert.equal(routeDetailFromPathname("/unknown", null).title, "Workspace")
 })
 
 test("frontend unit test scripts automatically include every unit test file", () => {

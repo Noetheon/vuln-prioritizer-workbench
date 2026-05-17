@@ -1,0 +1,393 @@
+{
+  "generatedAt": "2026-05-17T15:58:01.313Z",
+  "updatedAt": "2026-05-17T18:20:00+02:00",
+  "note": "v5 unique checked package. Exact/perceptual duplicate viewport/fullPage captures from v4 were removed. One confusing tall formats capture was removed because it mixed a Nessus search state with the CycloneDX detail panel and added mostly whitespace.",
+  "screenshots": [
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/01_import-center_wqhd_2560x1440.png",
+      "label": "Import Center WQHD viewport",
+      "url": "http://127.0.0.1:15173/imports?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 1440,
+        "scrollHeight": 1440,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false
+      },
+      "dedupeSource": "01_import-center_wqhd-viewport_2560x1440.png"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/02_import-center_diagnostics-drawer_wqhd_2560x1440.png",
+      "label": "Import Center diagnostics drawer WQHD viewport",
+      "url": "http://127.0.0.1:15173/imports?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 1440,
+        "scrollHeight": 1440,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false,
+        "dialog": {
+          "left": 1888,
+          "top": 0,
+          "right": 2560,
+          "bottom": 1440,
+          "width": 672,
+          "height": 1440,
+          "viewportWidth": 2560,
+          "viewportHeight": 1440
+        }
+      },
+      "dedupeSource": "03_import-center_diagnostics-drawer_wqhd-viewport_2560x1440.png",
+      "updatedAfterManualReview": "2026-05-17: recaptured after waiting for desktop drawer animation to settle in viewport"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/03_new-import_step-1_choose-source_wqhd_2560x1440.png",
+      "label": "Wizard step 1 choose source WQHD viewport",
+      "url": "http://127.0.0.1:15173/imports/new?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 1440,
+        "scrollHeight": 1440,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false
+      },
+      "dedupeSource": "04_new-import_step-1_wqhd-viewport_2560x1440.png"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/04_new-import_step-2_missing-file_wqhd_2560x1440.png",
+      "label": "Wizard step 2 missing file WQHD viewport",
+      "url": "http://127.0.0.1:15173/imports/new?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 1440,
+        "scrollHeight": 1440,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false
+      },
+      "dedupeSource": "06_new-import_step-2_missing-file_wqhd-viewport_2560x1440.png"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/05_new-import_step-2_file-check-passed_wqhd_2560x1440.png",
+      "label": "Wizard step 2 file check passed WQHD viewport",
+      "url": "http://127.0.0.1:15173/imports/new?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 1440,
+        "scrollHeight": 1440,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false
+      },
+      "dedupeSource": "07_new-import_step-2_file-check-passed_wqhd-viewport_2560x1440.png"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/06_new-import_step-3_add-context_wqhd_2560x1440.png",
+      "label": "Wizard step 3 add context WQHD viewport",
+      "url": "http://127.0.0.1:15173/imports/new?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 1440,
+        "scrollHeight": 1440,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false
+      },
+      "dedupeSource": "08_new-import_step-3_wqhd-viewport_2560x1440.png"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/07_new-import_step-4_review-viewport_wqhd_2560x1440.png",
+      "label": "Wizard step 4 review WQHD viewport",
+      "url": "http://127.0.0.1:15173/imports/new?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 1440,
+        "scrollHeight": 1440,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false
+      },
+      "dedupeSource": "10_new-import_step-4_wqhd-viewport_2560x1440.png"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/08_new-import_step-4_review-fullcontent_2560x3200.png",
+      "label": "Wizard step 4 review full content 2560 width",
+      "url": "http://127.0.0.1:15173/imports/new?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 3200,
+        "scrollHeight": 3200,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false
+      },
+      "dedupeSource": "12_new-import_step-4_fullcontent_2560x3200.png"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/09_new-import_mobile-summary_390x844.png",
+      "label": "Wizard mobile summary 390x844",
+      "url": "http://127.0.0.1:15173/imports/new?projectId=project-1",
+      "fullPage": true,
+      "metrics": {
+        "bodyScrollWidth": 390,
+        "documentScrollWidth": 390,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "scrollHeight": 844,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false,
+        "rail": {
+          "left": 16,
+          "top": 190,
+          "right": 374,
+          "bottom": 820,
+          "width": 358,
+          "height": 630,
+          "viewportWidth": 390,
+          "viewportHeight": 844
+        }
+      },
+      "dedupeSource": "13_new-import_mobile-summary_390x844.png",
+      "updatedAfterCleanup": "2026-05-17: regenerated before commit after cleanup validation found missing file"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/10_run-detail_overview_wqhd_2560x1440.png",
+      "label": "Run detail overview WQHD viewport",
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 1440,
+        "scrollHeight": 1440,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false
+      },
+      "dedupeSource": "14_run-detail_overview_wqhd-viewport_2560x1440.png"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/11_run-detail_findings_wqhd_2560x1440.png",
+      "label": "Run detail findings tab WQHD viewport",
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 1440,
+        "scrollHeight": 1440,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false
+      },
+      "dedupeSource": "15_run-detail_findings_wqhd-viewport_2560x1440.png"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/12_run-detail_diagnostics_wqhd_2560x1440.png",
+      "label": "Run detail diagnostics tab WQHD viewport",
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 1440,
+        "scrollHeight": 1440,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false
+      },
+      "dedupeSource": "16_run-detail_diagnostics_wqhd-viewport_2560x1440.png"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/13_run-detail_evidence_wqhd_2560x1440.png",
+      "label": "Run detail evidence tab WQHD viewport",
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 1440,
+        "scrollHeight": 1440,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false
+      },
+      "dedupeSource": "17_run-detail_evidence_wqhd-viewport_2560x1440.png"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/14_run-detail_metadata_wqhd_2560x1440.png",
+      "label": "Run detail metadata tab WQHD viewport",
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 1440,
+        "scrollHeight": 1440,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false
+      },
+      "dedupeSource": "18_run-detail_metadata_wqhd-viewport_2560x1440.png"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/15_run-detail_diagnostics-drawer_mobile_390x844.png",
+      "label": "Run detail diagnostics drawer mobile viewport",
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "fullPage": true,
+      "metrics": {
+        "bodyScrollWidth": 390,
+        "documentScrollWidth": 390,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "scrollHeight": 844,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false,
+        "dialog": {
+          "left": 0,
+          "top": 0,
+          "right": 390,
+          "bottom": 844,
+          "width": 390,
+          "height": 844,
+          "viewportWidth": 390,
+          "viewportHeight": 844
+        }
+      },
+      "dedupeSource": "19_run-detail_diagnostics-drawer_mobile_390x844.png"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/16_supported-formats_table_wqhd_2560x1440.png",
+      "label": "Supported formats table WQHD viewport",
+      "url": "http://127.0.0.1:15173/imports/formats?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 1440,
+        "scrollHeight": 1440,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false
+      },
+      "dedupeSource": "20_supported-formats_table_wqhd-viewport_2560x1440.png"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/17_supported-formats_cyclonedx-detail_wqhd_2560x1440.png",
+      "label": "Supported formats CycloneDX detail WQHD viewport",
+      "url": "http://127.0.0.1:15173/imports/formats?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 1440,
+        "scrollHeight": 1440,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false
+      },
+      "dedupeSource": "22_supported-formats_cyclonedx_wqhd-viewport_2560x1440.png"
+    },
+    {
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_redesign_review_evidence_2026-05-17_v5_wqhd_2560x1440_unique_checked/screenshots/18_supported-formats_search-nessus_wqhd_2560x1440.png",
+      "label": "Supported formats Nessus search WQHD viewport",
+      "url": "http://127.0.0.1:15173/imports/formats?projectId=project-1",
+      "fullPage": false,
+      "metrics": {
+        "bodyScrollWidth": 2560,
+        "documentScrollWidth": 2560,
+        "viewportWidth": 2560,
+        "viewportHeight": 1440,
+        "scrollHeight": 1440,
+        "hasFrameworkOverlay": false,
+        "loadingSkeletonVisible": false,
+        "routeFailedVisible": false
+      },
+      "dedupeSource": "23_supported-formats_search-nessus_wqhd-viewport_2560x1440.png"
+    }
+  ],
+  "consoleMessages": [],
+  "acceptanceFacts": {
+    "screenshotsCaptured": 18,
+    "noConsoleErrorsOrWarnings": true,
+    "noFrameworkOverlay": true,
+    "noLoadingSkeleton": true,
+    "noRouteFailureOverlay": true,
+    "noHorizontalOverflow": true,
+    "supportedFormatsCount": 10,
+    "mobileDrawerMetrics": {
+      "left": 0,
+      "top": 0,
+      "right": 390,
+      "bottom": 844,
+      "width": 390,
+      "height": 844,
+      "viewportWidth": 390,
+      "viewportHeight": 844
+    },
+    "duplicateCleanup": {
+      "removedExactDuplicates": [
+        "02_import-center_wqhd-fullpage_2560x1440.png",
+        "05_new-import_step-1_wqhd-fullpage_2560x1440.png",
+        "21_supported-formats_table_wqhd-fullpage_2560x1440.png"
+      ],
+      "removedPerceptualDuplicates": [
+        "09_new-import_step-3_wqhd-fullpage_2560x1440.png",
+        "11_new-import_step-4_wqhd-fullpage_2560x1440.png"
+      ],
+      "keptSimilarButDifferentState": [
+        "04_new-import_step-2_missing-file_wqhd_2560x1440.png",
+        "05_new-import_step-2_file-check-passed_wqhd_2560x1440.png"
+      ],
+      "removedAsConfusingRedundantReviewAid": [
+        "19_supported-formats_cyclonedx-fullcontent_2560x2200.png"
+      ]
+    },
+    "desktopDrawerMetrics": {
+      "left": 1888,
+      "top": 0,
+      "right": 2560,
+      "bottom": 1440,
+      "width": 672,
+      "height": 1440,
+      "viewportWidth": 2560,
+      "viewportHeight": 1440
+    }
+  }
+}
