@@ -15,22 +15,31 @@ test("smoke: imports renders", async ({ page }) => {
   await openWorkbench(page)
   await page.goto("/imports")
   await expect(
-    page.getByRole("heading", { name: "Upload evidence" }),
+    page.getByRole("heading", { level: 1, name: "Imports" }),
   ).toBeVisible()
-  await expect(page.getByText("Provider and ATT&CK options")).toBeHidden()
-  await page.locator("summary").filter({ hasText: "Optional context overlays" }).click()
-  await expect(page.getByText("Provider and ATT&CK options")).toBeVisible()
-  await expect(page.getByLabel("Provider snapshot file")).toBeVisible()
-  await expect(page.getByLabel("ATT&CK source")).toBeVisible()
-  await page.getByRole("button", { name: "Use demo snapshot" }).click()
-  await expect(page.getByLabel("Provider snapshot file")).toHaveValue(
-    "demo_provider_snapshot.json",
-  )
-  await expect(page.getByLabel("Locked provider data")).toBeChecked()
-  await page.getByRole("combobox", { name: "Input type" }).click()
-  await expect(page.getByRole("option", { name: "CycloneDX SBOM JSON" })).toBeVisible()
-  await expect(page.getByRole("option", { name: "Nessus XML" })).toBeVisible()
-  await page.keyboard.press("Escape")
+  await expect(page.getByRole("link", { name: /New import/ })).toBeVisible()
+  await expect(page.getByRole("link", { name: /Supported formats/ })).toBeVisible()
+  await expect(page.getByLabel("Evidence file")).toHaveCount(0)
+
+  await page.goto("/imports/new")
+  await expect(
+    page.getByRole("heading", { name: "New import" }),
+  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Choose source" })).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: /CycloneDX SBOM JSON/ }),
+  ).toBeVisible()
+  await expect(page.getByRole("button", { name: /Nessus XML/ })).toBeVisible()
+  await expect(page.getByRole("button", { name: /OSV JSON/ })).toHaveCount(0)
+
+  await page.goto("/imports/formats")
+  await expect(
+    page.getByRole("heading", { name: "Supported formats" }),
+  ).toBeVisible()
+  await expect(page.getByLabel("Search formats")).toBeVisible()
+  await expect(page.getByRole("button", { name: /CycloneDX SBOM JSON/ })).toBeVisible()
+  await expect(page.getByRole("button", { name: /Nessus XML/ })).toBeVisible()
+  await expect(page.getByText("OSV JSON")).toHaveCount(0)
 })
 
 test("smoke: findings renders", async ({ page }) => {

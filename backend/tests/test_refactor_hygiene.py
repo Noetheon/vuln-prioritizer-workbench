@@ -474,6 +474,7 @@ def test_scoring_operational_rules_are_split_from_priority_facade() -> None:
 
 def test_frontend_routes_use_workbench_route_containers_instead_of_app_facade() -> None:
     app_facade = REPO_ROOT / "frontend/src/App.tsx"
+    generated_route_tree = REPO_ROOT / "frontend/src/routeTree.gen.ts"
     old_routes_dir = REPO_ROOT / "frontend/src/routes"
     app_router_source = (REPO_ROOT / "frontend/src/AppRouter.tsx").read_text(encoding="utf-8")
     expected_route_modules = (
@@ -490,6 +491,7 @@ def test_frontend_routes_use_workbench_route_containers_instead_of_app_facade() 
     )
 
     assert not app_facade.exists()
+    assert not generated_route_tree.exists()
     assert not old_routes_dir.exists()
     assert "components/app/AppShell" not in app_router_source
     for module_name in expected_route_modules:
@@ -920,15 +922,28 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     imports_sections_source = (
         REPO_ROOT / "frontend/src/components/imports/ImportsWorkbenchSections.tsx"
     ).read_text(encoding="utf-8")
-    imports_hero_source = (
-        REPO_ROOT / "frontend/src/components/imports/ImportsWorkbenchHero.tsx"
+    imports_home_source = (
+        REPO_ROOT / "frontend/src/components/imports/ImportsHomeRoute.tsx"
     ).read_text(encoding="utf-8")
-    imports_wizard_source = (
-        REPO_ROOT / "frontend/src/components/imports/ImportsWorkbenchWizard.tsx"
+    imports_new_source = (
+        REPO_ROOT / "frontend/src/components/imports/NewImportRoute.tsx"
     ).read_text(encoding="utf-8")
-    imports_results_source = (
-        REPO_ROOT / "frontend/src/components/imports/ImportsWorkbenchResults.tsx"
+    imports_run_detail_source = (
+        REPO_ROOT / "frontend/src/components/imports/ImportRunDetailRoute.tsx"
     ).read_text(encoding="utf-8")
+    imports_diagnostics_source = (
+        REPO_ROOT / "frontend/src/components/imports/ImportDiagnosticsDrawer.tsx"
+    ).read_text(encoding="utf-8")
+    imports_formats_source = (
+        REPO_ROOT / "frontend/src/components/imports/SupportedFormatsRoute.tsx"
+    ).read_text(encoding="utf-8")
+    legacy_imports_all_in_one_files = (
+        "ImportWizardSteps.tsx",
+        "ImportsWorkbenchHero.tsx",
+        "ImportsWorkbenchRunDetail.tsx",
+        "ImportsWorkbenchSupportedFormats.tsx",
+        "ImportsWorkbenchWizard.tsx",
+    )
     imports_history_source = (
         REPO_ROOT / "frontend/src/components/imports/ImportsWorkbenchHistory.tsx"
     ).read_text(encoding="utf-8")
@@ -1074,10 +1089,18 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert "EvidenceCenterHistory" in reports_sections_source
     assert "EvidenceCenterManifest" in reports_sections_source
     assert "EvidenceCenterDecision" in reports_sections_source
-    assert "ImportsWorkbenchHero" in imports_sections_source
-    assert "ImportsWorkbenchWizard" in imports_sections_source
-    assert "ImportsWorkbenchResults" in imports_sections_source
+    assert "ImportsHomeRoute" in imports_sections_source
+    assert "NewImportRoute" in imports_sections_source
+    assert "ImportRunDetailRoute" in imports_sections_source
+    assert "ImportDiagnosticsDrawer" in imports_sections_source
+    assert "SupportedFormatsRoute" in imports_sections_source
     assert "ImportsWorkbenchHistory" in imports_sections_source
+    assert "ImportsWorkbenchHero" not in imports_sections_source
+    assert "ImportsWorkbenchWizard" not in imports_sections_source
+    assert "ImportsWorkbenchRunDetail" not in imports_sections_source
+    assert "ImportsWorkbenchSupportedFormats" not in imports_sections_source
+    for file_name in legacy_imports_all_in_one_files:
+        assert not (REPO_ROOT / f"frontend/src/components/imports/{file_name}").exists()
     assert "ProjectsWorkbenchOverview" in projects_sections_source
     assert "ProjectsWorkbenchSetup" in projects_sections_source
     assert "ProjectsWorkbenchDirectory" in projects_sections_source
@@ -1106,9 +1129,11 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert len(reports_decision_source.splitlines()) <= 140
     assert len(imports_source.splitlines()) <= 120
     assert len(imports_sections_source.splitlines()) <= 40
-    assert len(imports_hero_source.splitlines()) <= 120
-    assert len(imports_wizard_source.splitlines()) <= 350
-    assert len(imports_results_source.splitlines()) <= 180
+    assert len(imports_home_source.splitlines()) <= 220
+    assert len(imports_new_source.splitlines()) <= 780
+    assert len(imports_run_detail_source.splitlines()) <= 520
+    assert len(imports_diagnostics_source.splitlines()) <= 280
+    assert len(imports_formats_source.splitlines()) <= 340
     assert len(imports_history_source.splitlines()) <= 350
     assert len(projects_source.splitlines()) <= 120
     assert len(projects_sections_source.splitlines()) <= 40

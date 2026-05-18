@@ -3,8 +3,44 @@ import {
   runUrlSearch,
   selectedRunIdFromSearch,
 } from "./run-route-search.ts"
+import type { ProjectUrlSearch } from "./selected-project-search.ts"
 
 export { normalizeSelectedRunId }
 
 export const selectedImportRunIdFromSearch = selectedRunIdFromSearch
 export const importRunUrlSearch = runUrlSearch
+
+export function importsRouteUrlSearch(searchStr: string): ProjectUrlSearch {
+  const rawSearch = searchStr.startsWith("?") ? searchStr.slice(1) : searchStr
+  const params = new URLSearchParams(rawSearch)
+  params.delete("runId")
+  return Object.fromEntries(params.entries())
+}
+
+export function importInputTypeFromSearch(searchStr: string): string {
+  const rawSearch = searchStr.startsWith("?") ? searchStr.slice(1) : searchStr
+  const params = new URLSearchParams(rawSearch)
+  return (
+    params.get("input_type") ??
+    params.get("inputType") ??
+    params.get("format") ??
+    ""
+  )
+}
+
+export function importFormatUrlSearch(
+  searchStr: string,
+  inputType: string,
+): ProjectUrlSearch {
+  const rawSearch = searchStr.startsWith("?") ? searchStr.slice(1) : searchStr
+  const params = new URLSearchParams(rawSearch)
+  params.delete("runId")
+  if (inputType) {
+    params.set("input_type", inputType)
+  } else {
+    params.delete("input_type")
+  }
+  params.delete("inputType")
+  params.delete("format")
+  return Object.fromEntries(params.entries())
+}

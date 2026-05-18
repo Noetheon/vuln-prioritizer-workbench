@@ -43,6 +43,7 @@ export type VpwDataTableProps<TData> = {
   className?: string
   density?: VpwDataTableDensity
   emptyState?: ReactNode
+  getRowClassName?: (row: TData, index: number) => string | undefined
   minWidth?: string
   rowClassName?: string
   tableClassName?: string
@@ -97,6 +98,7 @@ export function VpwDataTable<TData>({
   data,
   density = "standard",
   emptyState,
+  getRowClassName,
   getRowKey,
   minWidth,
   rowClassName,
@@ -158,7 +160,7 @@ export function VpwDataTable<TData>({
           {data.length > 0 ? (
             data.map((row, index) => (
               <TableRow
-                className={cn("vpw-table-row", rowClassName)}
+                className={cn("vpw-table-row", rowClassName, getRowClassName?.(row, index))}
                 key={getRowKey(row, index)}
               >
                 {columns.map((column) => (

@@ -2,12 +2,11 @@ import { useState } from "react"
 import { VpwStatusBanner } from "@/components/vpw"
 import type { ImportsWorkbenchProps } from "./imports-workbench-model"
 import {
-  ImportHero,
-  ImportResult,
-  ImportWizard,
-  ParserErrors,
-  RecentImports,
-  SupportedFormats,
+  ImportDiagnosticsDrawer,
+  ImportRunDetailRoute,
+  ImportsHomeRoute,
+  NewImportRoute,
+  SupportedFormatsRoute,
 } from "./ImportsWorkbenchSections"
 
 export function ImportsWorkbench(props: ImportsWorkbenchProps) {
@@ -21,15 +20,21 @@ export function ImportsWorkbench(props: ImportsWorkbenchProps) {
     setDiagnosticsOpen(true)
   }
 
+  const diagnosticsDrawer = (
+    <ImportDiagnosticsDrawer
+      diagnosticsOpen={diagnosticsOpen}
+      diagnosticsRunId={diagnosticsRunId}
+      onDiagnosticsOpenChange={setDiagnosticsOpen}
+      runDetailError={props.runDetailError}
+      runDetailLoading={props.runDetailLoading}
+      selectedRun={props.selectedRun}
+      selectedRunId={props.selectedRunId}
+      selectedRunSummary={props.selectedRunSummary}
+    />
+  )
+
   return (
     <div className="flex flex-col gap-6">
-      <ImportHero
-        importWizard={props.importWizard}
-        projectListError={props.projectListError}
-        projectRuns={props.projectRuns}
-        providerStatus={props.providerStatus}
-        selectedProject={props.selectedProject}
-      />
       {props.projectListError ? (
         <VpwStatusBanner title="Projects unavailable" tone="critical">
           {props.projectListError}
@@ -40,25 +45,23 @@ export function ImportsWorkbench(props: ImportsWorkbenchProps) {
           Create or select a project before uploading import files.
         </VpwStatusBanner>
       ) : null}
-      <ImportWizard {...props} />
-      <SupportedFormats
-        importWizard={props.importWizard}
-        onInputTypeChange={props.onInputTypeChange}
-        supportedFormats={props.supportedFormats}
-      />
-      <ImportResult
-        importRun={props.importRun}
-        importRunSummary={props.importRunSummary}
-        onOpenDiagnostics={openDiagnostics}
-      />
-      <ParserErrors errors={props.importParseErrors} />
-      <RecentImports
-        {...props}
-        diagnosticsOpen={diagnosticsOpen}
-        diagnosticsRunId={diagnosticsRunId}
-        onDiagnosticsOpenChange={setDiagnosticsOpen}
-        onOpenDiagnostics={openDiagnostics}
-      />
+      {props.view === "new" ? (
+        <NewImportRoute {...props} onOpenDiagnostics={openDiagnostics} />
+      ) : null}
+      {props.view === "run" ? (
+        <ImportRunDetailRoute {...props} onOpenDiagnostics={openDiagnostics} />
+      ) : null}
+      {props.view === "formats" ? <SupportedFormatsRoute {...props} /> : null}
+      {!props.view || props.view === "home" ? (
+        <ImportsHomeRoute
+          {...props}
+          diagnosticsOpen={diagnosticsOpen}
+          diagnosticsRunId={diagnosticsRunId}
+          onDiagnosticsOpenChange={setDiagnosticsOpen}
+          onOpenDiagnostics={openDiagnostics}
+        />
+      ) : null}
+      {diagnosticsDrawer}
     </div>
   )
 }

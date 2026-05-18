@@ -99,6 +99,32 @@ export function AppRouter() {
 
 export function routeMatch(pathname: string): RouteMatch {
   const normalizedPath = pathname.replace(/\/+$/, "") || "/"
+  const importRunMatch = normalizedPath.match(/^\/imports\/runs\/([^/]+)$/)
+  if (importRunMatch) {
+    const runId = safeDecodeURIComponent(importRunMatch[1] ?? "")
+    if (runId === null) {
+      return { Component: NotFoundRoute, params: {}, routePath: null }
+    }
+    return {
+      Component: ImportsRoute,
+      params: { importsView: "run", runId },
+      routePath: "/imports",
+    }
+  }
+  if (normalizedPath === "/imports/new") {
+    return {
+      Component: ImportsRoute,
+      params: { importsView: "new" },
+      routePath: "/imports",
+    }
+  }
+  if (normalizedPath === "/imports/formats") {
+    return {
+      Component: ImportsRoute,
+      params: { importsView: "formats" },
+      routePath: "/imports",
+    }
+  }
   const findingDetailMatch = normalizedPath.match(/^\/findings\/([^/]+)$/)
   if (findingDetailMatch) {
     const findingId = safeDecodeURIComponent(findingDetailMatch[1] ?? "")
