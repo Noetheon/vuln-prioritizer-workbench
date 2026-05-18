@@ -124,8 +124,18 @@ export function readinessCopyForStep(
     return "Can continue"
   }
   if (step === 3) {
-    if (blocked) return "Needs evidence file"
+    if (blocked) return "Needs context"
     return "Can continue"
+  }
+  if (
+    blocked &&
+    readiness.some(
+      (check) =>
+        check.targetStep === 3 &&
+        (check.status === "error" || check.status === "missing"),
+    )
+  ) {
+    return "Needs context"
   }
   return blocked ? "Needs evidence file" : "Ready to import"
 }

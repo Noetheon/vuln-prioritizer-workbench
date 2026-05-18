@@ -602,7 +602,7 @@ test("optional context readiness validates selected asset and VEX files shallowl
   assert.equal(readinessBlocksImport(Object.values(validAttackMappingChecks)), false)
 })
 
-test("readiness copy uses only the approved wizard states", () => {
+test("readiness copy uses specific wizard states for context blockers", () => {
   const missingChecks = buildImportReadinessChecks({
     evidenceFile: null,
     inputType: "",
@@ -622,11 +622,22 @@ test("readiness copy uses only the approved wizard states", () => {
     projectId: "project-1",
     providerAvailable: true,
   })
+  const contextBlockedChecks = readyChecks.map(
+    (check) =>
+      optionalContextReadiness({
+        attackMappingFile: "",
+        attackSource: "ctid-json",
+        assetContextFile: null,
+        vexFile: null,
+      })[check.id] ?? check,
+  )
 
   assert.equal(readinessCopyForStep(1, missingChecks), "Needs input type")
   assert.equal(readinessCopyForStep(2, missingChecks), "Needs evidence file")
   assert.equal(readinessCopyForStep(2, readyChecks), "Can continue")
   assert.equal(readinessCopyForStep(3, readyChecks), "Can continue")
+  assert.equal(readinessCopyForStep(3, contextBlockedChecks), "Needs context")
+  assert.equal(readinessCopyForStep(4, contextBlockedChecks), "Needs context")
   assert.equal(readinessCopyForStep(4, readyChecks), "Ready to import")
   assert.equal(readinessCopyForStep(4, readyChecks, true), "Failed")
 })
