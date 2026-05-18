@@ -37,8 +37,6 @@ export const workbenchImportFormats = SUPPORTED_IMPORT_FORMATS.map((format) => (
   detail: format.shortDescription,
 }))
 
-export const mvpImportFormats = workbenchImportFormats
-
 export type ImportFormat = ImportInputType
 export type AttackImportSource = "none" | "ctid-json" | "local-curated"
 

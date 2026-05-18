@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   CheckCircle2,
   ChevronRight,
-  Clipboard,
   Download,
   FolderOpen,
   ListChecks,
@@ -40,6 +39,12 @@ import {
   runFileLabel,
   type ImportsWorkbenchProps,
 } from "./imports-workbench-model"
+import {
+  CopyableValue,
+  CopyButton,
+  recordedValue,
+  warningCount,
+} from "./ImportDiagnosticsDrawerParts"
 
 type ImportRun = NonNullable<ImportsWorkbenchProps["selectedRun"]>
 type ImportRunSummary = NonNullable<ImportsWorkbenchProps["selectedRunSummary"]>
@@ -658,32 +663,6 @@ function RunDetailRows({
   )
 }
 
-function CopyableValue({ label, value }: { label: string; value: string }) {
-  return (
-    <span className="inline-flex max-w-full items-center gap-2">
-      <span className="min-w-0 truncate" title={value}>
-        {value}
-      </span>
-      <CopyButton label={label} value={value} />
-    </span>
-  )
-}
-
-function CopyButton({ label, value }: { label: string; value: string }) {
-  return (
-    <Button
-      aria-label={label}
-      className="shrink-0"
-      onClick={() => void navigator.clipboard?.writeText(value)}
-      size="icon-sm"
-      type="button"
-      variant="ghost"
-    >
-      <Clipboard aria-hidden="true" />
-    </Button>
-  )
-}
-
 function stringFromRecord(source: unknown, key: string) {
   const value = objectRecord(source)[key]
   return typeof value === "string" && value.trim() ? value : null
@@ -736,23 +715,11 @@ function numberFromSummary(summary: ImportRunSummary, key: string) {
   return typeof value === "number" ? value : "Not recorded"
 }
 
-function recordedValue(value: unknown) {
-  if (typeof value === "number") return value
-  if (typeof value === "string" && value.trim()) return value
-  return "Not recorded"
-}
-
 function candidateFindings(summary: ImportRunSummary) {
   const summaryJsonFindingCount = objectRecord(summary.summary_json).finding_count
   if (typeof summary.finding_count === "number") return summary.finding_count
   if (typeof summaryJsonFindingCount === "number") return summaryJsonFindingCount
   return (summary.created_findings ?? 0) + (summary.updated_findings ?? 0)
-}
-
-function warningCount(summaryJson: Record<string, unknown>) {
-  const warnings = summaryJson.warnings
-  if (Array.isArray(warnings)) return warnings.length
-  return typeof warnings === "number" ? warnings : "Not recorded"
 }
 
 function arrayFromRecord(source: Record<string, unknown>, key: string) {

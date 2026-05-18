@@ -6,7 +6,9 @@ import { objectRecord } from "./imports-workbench-model"
 export function CopyableValue({ label, value }: { label: string; value: string }) {
   return (
     <span className="inline-flex max-w-full items-center gap-2">
-      <span className="min-w-0 truncate">{value}</span>
+      <span className="min-w-0 truncate" title={value}>
+        {value}
+      </span>
       <CopyButton label={label} value={value} />
     </span>
   )
