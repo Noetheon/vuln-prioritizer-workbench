@@ -1,5 +1,5 @@
 import { FileCheck2, UploadCloud } from "lucide-react"
-import type { ChangeEvent } from "react"
+import type { ChangeEvent, ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "../ui/button"
@@ -15,10 +15,13 @@ export type VpwFileInputProps = {
   "aria-required"?: boolean | "true" | "false"
   className?: string
   disabled?: boolean
+  emptyIcon?: ReactNode
   file?: File | null
+  fileIcon?: ReactNode
   layout?: "default" | "centered"
   name?: string
   onFileChange: (file: File | null) => void
+  selectedDescription?: string
   selectedTone?: "default" | "accepted"
   showAcceptedText?: boolean
   showSelectedFileActions?: boolean
@@ -33,12 +36,15 @@ export function VpwFileInput({
   "aria-required": ariaRequired,
   className,
   disabled = false,
+  emptyIcon,
   file,
+  fileIcon,
   id,
   label,
   layout = "default",
   name,
   onFileChange,
+  selectedDescription,
   selectedTone = "default",
   showAcceptedText = true,
   showSelectedFileActions = false,
@@ -102,9 +108,9 @@ export function VpwFileInput({
           )}
         >
           {file ? (
-            <FileCheck2 aria-hidden="true" className="size-5" />
+            (fileIcon ?? <FileCheck2 aria-hidden="true" className="size-5" />)
           ) : (
-            <UploadCloud aria-hidden="true" className="size-5" />
+            (emptyIcon ?? <UploadCloud aria-hidden="true" className="size-5" />)
           )}
         </span>
         <span className="min-w-0">
@@ -112,12 +118,17 @@ export function VpwFileInput({
             {file ? file.name : "Choose or drop a file"}
           </span>
           <span className="mt-1 block text-xs leading-5 text-[var(--vpw-text-muted)]">
-            {showAcceptedText
-              ? acceptedText
-                ? `Accepted: ${acceptedText}`
-                : "Supported workbench input"
-              : file
-                ? "Accepted for upload."
+            {file
+              ? selectedDescription ??
+                (showAcceptedText
+                  ? acceptedText
+                    ? `Accepted: ${acceptedText}`
+                    : "Selected file"
+                  : "Accepted for upload.")
+              : showAcceptedText
+                ? acceptedText
+                  ? `Accepted: ${acceptedText}`
+                  : "Supported workbench input"
                 : "Select evidence from disk."}
           </span>
         </span>

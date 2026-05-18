@@ -1,9 +1,12 @@
 import { Link } from "@/lib/router"
 import {
-  AlertCircle,
   Check,
   CheckCircle2,
+  ChevronRight,
   Circle,
+  Info,
+  ShieldCheck,
+  Table2,
   X,
 } from "lucide-react"
 import type { CSSProperties } from "react"
@@ -671,6 +674,8 @@ export function AddContextStep(
   const attackContextCheck = props.readiness.find(
     (check) => check.id === "attack-context",
   )
+  const assetContextReady = assetContextCheck?.status === "passed"
+  const vexReady = vexCheck?.status === "passed"
   return (
     <section className="flex flex-col gap-5">
       <VpwSectionHeader
@@ -680,25 +685,39 @@ export function AddContextStep(
       <div className="grid gap-4 md:grid-cols-2">
         <FileUploadField
           accept=".csv,text/csv"
-          acceptedLabel=".csv, text/csv"
-          description="Optional CSV with owner, service, environment, exposure, and criticality context."
+          acceptedLabel=".csv"
+          description="Owner, service, environment, exposure, and criticality context."
+          emptyIcon={<Table2 aria-hidden="true" className="size-5" />}
           file={props.importWizard.assetContextFile}
           id="asset-context-file"
           label="Asset context CSV"
           layout="centered"
           name="assetContextFile"
           onFileChange={props.onAssetContextFileChange}
+          selectedDescription={optionalFileDescription(
+            assetContextCheck?.status,
+            "CSV header detected.",
+          )}
+          selectedTone={assetContextReady ? "accepted" : "default"}
+          showSelectedFileDescription={false}
         />
         <FileUploadField
           accept=".json,application/json"
-          acceptedLabel=".json, application/json"
-          description="Optional OpenVEX or CycloneDX VEX sidecar."
+          acceptedLabel=".json"
+          description="OpenVEX or CycloneDX VEX sidecar."
+          emptyIcon={<ShieldCheck aria-hidden="true" className="size-5" />}
           file={props.importWizard.vexFile}
           id="vex-file"
           label="VEX overlay"
           layout="centered"
           name="vexFile"
           onFileChange={props.onVexFileChange}
+          selectedDescription={optionalFileDescription(
+            vexCheck?.status,
+            "JSON parsed.",
+          )}
+          selectedTone={vexReady ? "accepted" : "default"}
+          showSelectedFileDescription={false}
         />
       </div>
       {assetContextCheck?.status === "error" ? (
@@ -717,7 +736,7 @@ export function AddContextStep(
         </VpwStatusBanner>
       ) : null}
       <div className="flex items-start gap-3 rounded-[var(--vpw-radius-lg)] border border-[color-mix(in_srgb,var(--vpw-blue)_32%,var(--vpw-border-default))] bg-[var(--vpw-bg-info)] p-4 text-sm text-[var(--vpw-text-secondary)]">
-        <AlertCircle
+        <Info
           aria-hidden="true"
           className="mt-0.5 size-5 shrink-0 text-[var(--vpw-blue)]"
         />
@@ -731,16 +750,20 @@ export function AddContextStep(
           </p>
         </div>
       </div>
-      <details className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)]">
-        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[var(--vpw-text-primary)]">
-          <span className="inline-flex w-full items-center justify-between gap-3">
+      <details className="group rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)]">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-[var(--vpw-text-primary)] [&::-webkit-details-marker]:hidden">
+          <span className="inline-flex min-w-0 items-center gap-2">
+            <ChevronRight
+              aria-hidden="true"
+              className="size-4 shrink-0 text-[var(--vpw-text-muted)] transition-transform group-open:rotate-90"
+            />
             <span>Advanced provider data and reviewed ATT&CK context</span>
+          </span>
             <span className="rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-info)] px-2 py-1 font-mono text-xs text-[var(--vpw-blue)]">
               Optional
             </span>
-          </span>
         </summary>
-        <div className="border-t border-[var(--vpw-border-default)] p-4">
+        <div className="border-t border-[var(--vpw-border-default)] p-3 sm:p-4">
           <ProviderAttackOptions
             importWizard={props.importWizard}
             onAttackMappingFileChange={props.onAttackMappingFileChange}
@@ -756,6 +779,16 @@ export function AddContextStep(
       </details>
     </section>
   )
+}
+
+function optionalFileDescription(
+  status: ImportReadinessCheck["status"] | undefined,
+  successMessage: string,
+) {
+  if (status === "passed") return successMessage
+  if (status === "pending") return "Checking file."
+  if (status === "error") return "Needs attention."
+  return undefined
 }
 
 export function ReviewImportStep({

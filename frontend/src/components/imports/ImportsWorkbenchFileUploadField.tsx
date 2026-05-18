@@ -6,7 +6,9 @@ type FileUploadFieldProps = {
   accept: string | undefined
   acceptedLabel?: string
   description?: ReactNode
+  emptyIcon?: ReactNode
   file: File | null
+  fileIcon?: ReactNode
   fieldClassName?: string
   id: string
   label: string
@@ -14,6 +16,7 @@ type FileUploadFieldProps = {
   name: string
   onFileChange: (file: File | null) => void
   required?: boolean
+  selectedDescription?: string
   selectedTone?: "default" | "accepted"
   showAcceptedText?: boolean
   showSelectedFileDescription?: boolean
@@ -23,7 +26,9 @@ export function FileUploadField({
   accept,
   acceptedLabel,
   description,
+  emptyIcon,
   file,
+  fileIcon,
   fieldClassName,
   id,
   label,
@@ -31,6 +36,7 @@ export function FileUploadField({
   name,
   onFileChange,
   required = false,
+  selectedDescription,
   selectedTone = "default",
   showAcceptedText = true,
   showSelectedFileDescription = true,
@@ -58,12 +64,15 @@ export function FileUploadField({
       <VpwFileInput
         accept={accept}
         acceptedLabel={acceptedLabel}
+        emptyIcon={emptyIcon}
         file={file}
+        fileIcon={fileIcon}
         id={id}
         label={label}
         layout={layout}
         name={name}
         onFileChange={onFileChange}
+        selectedDescription={selectedDescription}
         selectedTone={selectedTone}
         showAcceptedText={showAcceptedText}
         showSelectedFileActions
