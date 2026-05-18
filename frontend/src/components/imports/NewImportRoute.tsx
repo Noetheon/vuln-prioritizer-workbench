@@ -3,18 +3,12 @@ import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
-  CheckCircle2,
   ExternalLink,
   Upload,
 } from "lucide-react"
 import { type FormEventHandler, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
-import {
-  VpwBadge,
-  VpwPanel,
-  VpwStatusBanner,
-  type VpwBadgeTone,
-} from "@/components/vpw"
+import { VpwPanel, VpwStatusBanner } from "@/components/vpw"
 import {
   buildImportReadinessChecks,
   buildParserPreview,
@@ -23,7 +17,6 @@ import {
   readinessBlocksImport,
   type ParserPreview,
 } from "@/lib/import-format-metadata"
-import { cn } from "@/lib/utils"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   selectedFormat,
@@ -101,7 +94,6 @@ export function NewImportRoute(props: NewImportRouteProps) {
     props.selectedProjectId,
   ])
   const canStartImport = !readinessBlocksImport(readiness)
-  const selectedFormatLabel = metadataFormat?.label ?? ""
   const continueDisabledReason = disabledReasonForStep({
     canStartImport,
     importLoading: props.importLoading,
@@ -236,7 +228,7 @@ export function NewImportRoute(props: NewImportRouteProps) {
       <div className="imports-wizard-layout grid min-w-0 gap-6">
         <StepNav currentStep={step} onStepChange={setStep} readiness={readiness} />
         <div className="min-w-0 lg:h-full" ref={stepPanelRef}>
-          <VpwPanel className="flex min-w-0 flex-col overflow-hidden p-0 lg:max-h-[calc(100dvh-8rem)]">
+          <VpwPanel className="flex min-w-0 flex-col overflow-hidden p-0 lg:h-full lg:max-h-[calc(100dvh-8rem)]">
             <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-5 sm:p-6">
               {step === 1 ? <ChooseSourceStep {...props} /> : null}
               {step === 2 ? (
@@ -290,7 +282,6 @@ export function NewImportRoute(props: NewImportRouteProps) {
                   submitRequestedRef.current = true
                 }}
                 readiness={readiness}
-                selectedFormatLabel={selectedFormatLabel}
                 step={step}
               />
             )}
@@ -316,7 +307,6 @@ function WizardFooter({
   onContinue,
   onSubmitClick,
   readiness,
-  selectedFormatLabel,
   step,
 }: {
   continueDisabledReason: string
@@ -325,29 +315,12 @@ function WizardFooter({
   onContinue: () => void
   onSubmitClick: () => void
   readiness: ReturnType<typeof buildImportReadinessChecks>
-  selectedFormatLabel: string
   step: StepId
 }) {
   const readyCopy = readinessCopyForStep(step, readiness)
-  const footerCopy =
-    step === 1 && selectedFormatLabel && !continueDisabledReason
-      ? `Selected: ${selectedFormatLabel}`
-      : readyCopy
   const statusDescription = importLoading
     ? "Uploading evidence and creating the import run."
-    : continueDisabledReason || footerCopy
-  const statusLabel = importLoading
-    ? "Importing"
-    : continueDisabledReason
-      ? "Action needed"
-      : step === 1 && selectedFormatLabel
-        ? "Selected"
-        : readyCopy
-  const statusTone: VpwBadgeTone = importLoading
-    ? "info"
-    : continueDisabledReason
-      ? "neutral"
-      : "success"
+    : continueDisabledReason || actionHintForStep(step, readyCopy)
   return (
     <div
       className="imports-command-bar flex shrink-0 flex-col gap-3 border-t border-[var(--vpw-border-default)] bg-[color-mix(in_srgb,var(--vpw-bg-card)_94%,var(--vpw-bg-panel))] px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6"
@@ -355,35 +328,9 @@ function WizardFooter({
     >
       <div
         aria-live="polite"
-        className="flex min-w-0 items-center gap-3 text-sm"
+        className="min-w-0 text-sm leading-5 text-[var(--vpw-text-muted)]"
       >
-        <span
-          className={cn(
-            "grid size-8 shrink-0 place-items-center rounded-full border bg-[var(--vpw-bg-card)]",
-            continueDisabledReason
-              ? "border-[var(--vpw-border-default)] text-[var(--vpw-text-muted)]"
-              : "border-[color-mix(in_srgb,var(--vpw-green)_34%,var(--vpw-border-default))] text-[var(--vpw-green)]",
-            importLoading &&
-              "border-[color-mix(in_srgb,var(--vpw-blue)_34%,var(--vpw-border-default))] text-[var(--vpw-blue)]",
-          )}
-        >
-          {continueDisabledReason ? (
-            <AlertCircle aria-hidden="true" className="size-4" />
-          ) : (
-            <CheckCircle2 aria-hidden="true" className="size-4" />
-          )}
-        </span>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <VpwBadge density="compact" tone={statusTone}>
-              {statusLabel}
-            </VpwBadge>
-            <span className="vpw-label">Step {step} of 4</span>
-          </div>
-          <p className="mt-1 min-w-0 text-sm leading-5 text-[var(--vpw-text-muted)]">
-            {statusDescription}
-          </p>
-        </div>
+        {statusDescription}
       </div>
       <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:justify-end">
         <Button
@@ -423,6 +370,14 @@ function WizardFooter({
   )
 }
 
+function actionHintForStep(step: StepId, readyCopy: string) {
+  if (step === 1) return "Continue to upload the evidence file."
+  if (step === 2) return "Continue to optional context."
+  if (step === 3) return "Continue to review."
+  if (readyCopy === "Ready to import") return "Start the import when ready."
+  return readyCopy
+}
+
 function FailureFooter({
   failedImportRunId,
   onBackToFile,
@@ -443,24 +398,12 @@ function FailureFooter({
     >
       <div
         aria-live="polite"
-        className="flex min-w-0 items-center gap-3 text-sm"
+        className="min-w-0 text-sm leading-5 text-[var(--vpw-text-muted)]"
       >
-        <span className="grid size-8 shrink-0 place-items-center rounded-full border border-[color-mix(in_srgb,var(--vpw-red)_34%,var(--vpw-border-default))] bg-[var(--vpw-bg-card)] text-[var(--vpw-red)]">
-          <AlertCircle aria-hidden="true" className="size-4" />
-        </span>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <VpwBadge density="compact" tone="critical">
-              Failed
-            </VpwBadge>
-            <span className="vpw-label">Review import</span>
-          </div>
-          <p className="mt-1 min-w-0 text-sm leading-5 text-[var(--vpw-text-muted)]">
-            {failedImportRunId
-              ? "Open diagnostics for the recorded run or go back to fix the file."
-              : "Go back to the evidence file or retry the import."}
-          </p>
-        </div>
+        <span className="font-medium text-[var(--vpw-red)]">Import failed.</span>{" "}
+        {failedImportRunId
+          ? "Open diagnostics for the recorded run or go back to fix the file."
+          : "Go back to the evidence file or retry the import."}
       </div>
       <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:justify-end">
         {!failedImportRunId ? (

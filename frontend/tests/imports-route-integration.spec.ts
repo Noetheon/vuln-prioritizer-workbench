@@ -195,6 +195,12 @@ test("new import wizard gates the four-step flow", async ({ page }) => {
   await expect(page.getByTestId("import-summary-rail")).toContainText(
     "Can continue",
   )
+  await expect(page.getByTestId("import-wizard-command-bar")).not.toContainText(
+    "Selected",
+  )
+  await expect(page.getByTestId("import-wizard-command-bar")).not.toContainText(
+    "Generic occurrence CSV",
+  )
   await expect(
     page.getByTestId("import-summary-rail").locator("dt"),
   ).toHaveText([
