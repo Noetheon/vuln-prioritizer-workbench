@@ -449,9 +449,10 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
   {
     assertReady: async (page) => {
       await expect(
-        page.getByRole("heading", { name: "Upload evidence" }),
+        page.getByRole("heading", { level: 1, name: "Imports" }),
       ).toBeVisible({ timeout: 15_000 })
-      await expect(page.getByLabel("Input type")).toBeVisible()
+      await expect(page.getByRole("link", { name: /New import/ })).toBeVisible()
+      await expect(page.getByLabel("Evidence file")).toHaveCount(0)
     },
     id: "imports",
     path: "/imports",

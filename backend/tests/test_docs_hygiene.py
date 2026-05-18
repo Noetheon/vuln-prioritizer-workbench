@@ -59,7 +59,17 @@ NON_PUBLIC_CONTRACT_MARKDOWN = {
     Path("docs/_uiux_redesign_context/chatgpt-context-pack.md"),
     Path("docs/_uiux_redesign_context/uiux-codebase-brief.md"),
     Path("docs/_uiux_redesign_context/vpw-design-direction.md"),
+    Path("docs/_uiux_redesign_context/VPW_Imports_UIUX_Redesign_Codex_Handoff.md"),
 }
+NON_PUBLIC_DOC_ROOTS = {
+    Path("docs/_uiux_redesign_context"),
+}
+
+
+def _is_non_public_docs_path(path: Path) -> bool:
+    return path in NON_PUBLIC_CONTRACT_MARKDOWN or any(
+        path.is_relative_to(root) for root in NON_PUBLIC_DOC_ROOTS
+    )
 
 
 def _git_ls_files(*patterns: str) -> list[Path]:
@@ -124,7 +134,7 @@ def test_mkdocs_nav_includes_all_public_markdown_pages() -> None:
     docs_pages = {
         path
         for path in _git_ls_files("docs")
-        if path.suffix.lower() == ".md" and path not in NON_PUBLIC_CONTRACT_MARKDOWN
+        if path.suffix.lower() == ".md" and not _is_non_public_docs_path(path)
     }
 
     assert docs_pages - nav_pages == set()
@@ -135,6 +145,8 @@ def test_public_docs_media_are_referenced() -> None:
     unreferenced: list[str] = []
 
     for path in _git_ls_files("docs"):
+        if _is_non_public_docs_path(path):
+            continue
         if path.suffix.lower() not in MEDIA_SUFFIXES:
             continue
         docs_relative = path.relative_to("docs").as_posix()

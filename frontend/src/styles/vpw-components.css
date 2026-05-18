@@ -565,6 +565,14 @@
     background: color-mix(in srgb, var(--vpw-bg-info) 42%, var(--vpw-bg-card));
   }
 
+  .vpw-table-row--selected > .vpw-table-cell {
+    background: var(--vpw-bg-info);
+  }
+
+  .vpw-table-row--selected > .vpw-table-cell:first-child {
+    box-shadow: inset 2px 0 0 var(--vpw-blue);
+  }
+
   .vpw-table-actions {
     display: inline-flex;
     min-width: 0;
@@ -617,9 +625,69 @@
     line-height: 1.35;
   }
 
+  .imports-wizard-layout {
+    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr);
+    --imports-wizard-panel-height: none;
+  }
+
+  @media (min-width: 1024px) {
+    .imports-wizard-layout {
+      grid-template-columns: 240px minmax(0, 1fr);
+    }
+
+    .imports-wizard-layout > .import-summary-rail {
+      grid-column: 2;
+    }
+  }
+
+  @media (min-width: 1440px) {
+    .imports-wizard-layout.grid {
+      gap: 1rem;
+      grid-template-columns: 220px minmax(0, 1fr) 260px;
+      --imports-wizard-panel-height: calc(100dvh - 6.5rem);
+      min-height: var(--imports-wizard-panel-height);
+    }
+
+    .imports-wizard-layout > .import-summary-rail {
+      grid-column: auto;
+    }
+  }
+
   @media (min-width: 1600px) {
     .vpw-table-wrap {
       --vpw-table-subtext-max-width: 520px;
+    }
+
+    .imports-wizard-layout.grid {
+      gap: 1.25rem;
+      grid-template-columns: 240px minmax(0, 1fr) 320px;
+      --imports-wizard-panel-height: calc(100dvh - 6.5rem);
+      min-height: var(--imports-wizard-panel-height);
+    }
+
+    .imports-wizard-layout > .import-summary-rail {
+      grid-column: auto;
+    }
+  }
+
+  @media (min-width: 1800px) {
+    .imports-wizard-layout.grid {
+      gap: 1.5rem;
+      grid-template-columns: 270px minmax(720px, 1fr) 360px;
+      --imports-wizard-panel-height: calc(100dvh - 6.5rem);
+      min-height: var(--imports-wizard-panel-height);
+    }
+  }
+
+  .imports-command-bar {
+    box-shadow: 0 -12px 28px
+      color-mix(in srgb, var(--vpw-bg-panel) 86%, transparent);
+  }
+
+  @supports (backdrop-filter: blur(12px)) {
+    .imports-command-bar {
+      backdrop-filter: blur(12px);
     }
   }
 

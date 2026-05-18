@@ -6,11 +6,17 @@ import type {
   ProviderStatusPublic,
 } from "@/api-client"
 import type { VpwBadgeTone } from "@/components/vpw"
+import {
+  fileMatchesAcceptedExtension,
+  fileSizeLabel as importFileSizeLabel,
+  getImportFormat,
+  type ImportInputType,
+} from "../../lib/import-format-metadata.ts"
 import type { FormEventHandler } from "react"
 
 export type SupportedImportFormat = {
   label: string
-  value: string
+  value: ImportInputType
   accept: string
   detail: string
 }
@@ -21,14 +27,16 @@ export type ImportWizardStateLike = {
   attackTechniqueMetadataFile?: string
   assetContextFile: File | null
   file: File | null
-  inputType: string
+  inputType: ImportInputType | ""
   lockedProviderData?: boolean
   providerSnapshotFile?: string
   vexFile: File | null
 }
 
 export type ImportsWorkbenchProps = {
+  view?: "home" | "new" | "run" | "formats"
   importError: string
+  failedImportRunId: string
   importLoading: boolean
   importParseErrors: ImportParseErrorPublic[]
   importRun: AnalysisRunPublic | null
@@ -139,20 +147,160 @@ export function runTone(status: AnalysisRunPublic["status"]): VpwBadgeTone {
   return "neutral"
 }
 
-export function formatExpectedFields(value: string) {
-  if (value === "cve-list") return "One CVE per line"
-  if (value === "generic-occurrence-csv") {
-    return "cve_id plus optional asset/component columns"
+export function importRunTimelineItems(
+  run: AnalysisRunPublic | null,
+  summary: AnalysisRunSummaryPublic | null,
+) {
+  if (!summary) return []
+
+  const summaryJson = objectRecord(summary.summary_json ?? run?.summary_json)
+  const inputUpload = objectRecord(
+    summary.input_upload ??
+      summaryJson.input_upload ??
+      run?.summary_json?.input_upload,
+  )
+  const items: string[] = []
+
+  if (summary.started_at || run?.started_at) {
+    items.push("Import started")
   }
-  if (value === "trivy-json") return "Trivy Results[].Vulnerabilities"
-  if (value === "grype-json") return "Grype matches[] vulnerability data"
-  if (value === "cyclonedx-json") return "CycloneDX components/vulnerabilities"
-  if (value === "spdx-json") return "SPDX packages/vulnerability references"
-  if (value === "dependency-check-json") return "Dependency-Check dependencies[].vulnerabilities"
-  if (value === "github-alerts-json") return "GitHub alert vulnerability records"
-  if (value === "nessus-xml") return "Nessus ReportHost/ReportItem CVE data"
-  if (value === "openvas-xml") return "OpenVAS result CVE data"
+
+  if (
+    summary.filename ||
+    run?.filename ||
+    hasStringRecordValue(inputUpload, [
+      "original_filename",
+      "stored_filename",
+      "filename",
+      "storage_ref",
+    ])
+  ) {
+    items.push("File uploaded")
+  }
+
+  if (hasParserEvidence(summary, summaryJson)) {
+    items.push(
+      (summary.parse_errors ?? []).length > 0
+        ? "Parser diagnostics recorded"
+        : "Data parsed",
+    )
+  }
+
+  if (hasProviderEvidence(run, summary, summaryJson, inputUpload)) {
+    items.push("Provider data applied")
+  }
+
+  if (hasOptionalContextEvidence(summaryJson, inputUpload)) {
+    items.push("Optional context applied")
+  }
+
+  if (
+    numberValue(summary.created_findings, summaryJson.created_findings) +
+      numberValue(summary.updated_findings, summaryJson.updated_findings) >
+    0
+  ) {
+    items.push("Findings created or updated")
+  }
+
+  if (summary.finished_at || run?.finished_at) {
+    items.push("Import completed")
+  }
+
+  return items
+}
+
+export function formatExpectedFields(value: string) {
+  const metadata = getImportFormat(value)
+  if (metadata) return metadata.minimumFields.join(", ")
   return "Supported Workbench import fields"
+}
+
+function hasParserEvidence(
+  summary: AnalysisRunSummaryPublic,
+  summaryJson: Record<string, unknown>,
+) {
+  const terminal =
+    summary.status === "succeeded" ||
+    summary.status === "completed" ||
+    summary.status === "completed_with_errors" ||
+    summary.status === "failed" ||
+    summary.status === "cancelled"
+  if (!terminal) return false
+  return (
+    Array.isArray(summary.parse_errors) ||
+    hasNumberRecordValue(summaryJson, [
+      "created_findings",
+      "updated_findings",
+      "finding_count",
+      "findings_count",
+      "ignored_lines",
+      "occurrence_count",
+    ]) ||
+    summary.created_findings !== undefined ||
+    summary.updated_findings !== undefined ||
+    summary.finding_count !== undefined ||
+    summary.ignored_lines !== undefined ||
+    summary.occurrence_count !== undefined
+  )
+}
+
+function hasProviderEvidence(
+  run: AnalysisRunPublic | null,
+  summary: AnalysisRunSummaryPublic,
+  summaryJson: Record<string, unknown>,
+  inputUpload: Record<string, unknown>,
+) {
+  return Boolean(
+    summary.provider_snapshot_id ||
+      run?.provider_snapshot_id ||
+      stringValue(summaryJson.provider_snapshot_id) ||
+      stringValue(summaryJson.provider_snapshot_file) ||
+      stringValue(inputUpload.provider_snapshot_file) ||
+      typeof summaryJson.locked_provider_data === "boolean" ||
+      typeof inputUpload.locked_provider_data === "boolean",
+  )
+}
+
+function hasOptionalContextEvidence(
+  summaryJson: Record<string, unknown>,
+  inputUpload: Record<string, unknown>,
+) {
+  const assetContextUpload = objectRecord(summaryJson.asset_context_upload)
+  const vexUpload = objectRecord(summaryJson.vex_upload)
+  const attackSource =
+    stringValue(summaryJson.attack_source) ?? stringValue(inputUpload.attack_source)
+  return (
+    hasStringRecordValue(assetContextUpload, [
+      "original_filename",
+      "stored_filename",
+      "path",
+    ]) ||
+    hasStringRecordValue(vexUpload, ["original_filename", "stored_filename", "path"]) ||
+    hasStringRecordValue(inputUpload, [
+      "asset_context_filename",
+      "asset_context_file",
+      "vex_filename",
+      "vex_file",
+      "attack_mapping_file",
+      "attack_technique_metadata_file",
+    ]) ||
+    Boolean(attackSource && attackSource !== "none")
+  )
+}
+
+function hasStringRecordValue(record: Record<string, unknown>, keys: string[]) {
+  return keys.some((key) => Boolean(stringValue(record[key])))
+}
+
+function hasNumberRecordValue(record: Record<string, unknown>, keys: string[]) {
+  return keys.some((key) => typeof record[key] === "number")
+}
+
+function numberValue(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "number") return value
+  }
+  return 0
 }
 
 export function formatDisplayType(value: string) {
@@ -160,25 +308,20 @@ export function formatDisplayType(value: string) {
 }
 
 export function fileSizeLabel(file: File | null | undefined) {
-  if (!file) return "No file selected"
-  if (file.size < 1024) return `${file.size} B`
-  if (file.size < 1024 * 1024) return `${(file.size / 1024).toFixed(1)} KB`
-  return `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+  return importFileSizeLabel(file)
 }
 
 export function selectedFormat(
   formats: readonly SupportedImportFormat[],
   inputType: string,
 ) {
-  return formats.find((format) => format.value === inputType) ?? formats[0]
+  return formats.find((format) => format.value === inputType)
 }
 
 export function optionalContextLabels(wizard: ImportWizardStateLike) {
   const labels: string[] = []
   if (wizard.assetContextFile) labels.push("Asset context CSV")
   if (wizard.vexFile) labels.push("VEX sidecar")
-  if (wizard.providerSnapshotFile) labels.push("Provider snapshot")
-  if (wizard.lockedProviderData) labels.push("Locked provider data")
   if (wizard.attackSource && wizard.attackSource !== "none") {
     labels.push("Reviewed ATT&CK mapping")
   }
@@ -219,6 +362,8 @@ export function importSubmitDisabled({
     projectListLoading ||
     projectCount === 0 ||
     !selectedProjectId ||
-    !wizard.file
+    !wizard.inputType ||
+    !wizard.file ||
+    !fileMatchesAcceptedExtension(wizard.file, wizard.inputType)
   )
 }

@@ -8,8 +8,7 @@
   "files": {
     "includes": [
       "**",
-      "!src/client/**",
-      "!src/routeTree.gen.ts"
+      "!src/client/**"
     ]
   },
   "linter": {

@@ -13,14 +13,17 @@ export function buildImportUploadFormData({
   selectedFile,
   selectedVexFile,
 }: ImportUploadPayloadInput): ImportUploadFormData {
+  const attackSource = importWizard.attackSource?.trim() || "none"
+  const includeAttackFiles = attackSource !== "none"
+
   return {
-    ...(importWizard.attackMappingFile.trim()
+    ...(includeAttackFiles && importWizard.attackMappingFile.trim()
       ? {
           attack_mapping_file: importWizard.attackMappingFile.trim(),
         }
       : {}),
-    attack_source: importWizard.attackSource,
-    ...(importWizard.attackTechniqueMetadataFile.trim()
+    attack_source: attackSource,
+    ...(includeAttackFiles && importWizard.attackTechniqueMetadataFile.trim()
       ? {
           attack_technique_metadata_file:
             importWizard.attackTechniqueMetadataFile.trim(),

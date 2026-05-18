@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { useLocation, useNavigate } from "@/lib/router"
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react"
+import { useLocation, useNavigate, useParams } from "@/lib/router"
+import { type FormEvent, useCallback, useEffect, useState } from "react"
 import {
   type AnalysisRunPublic,
   type AnalysisRunSummaryPublic,
@@ -24,11 +24,11 @@ import {
 } from "../../lib/app-defaults"
 import { buildImportUploadFormData } from "../import-upload-payload"
 import {
-  importRunUrlSearch,
-  normalizeSelectedRunId,
+  importInputTypeFromSearch,
+  importsRouteUrlSearch,
   selectedImportRunIdFromSearch,
 } from "../import-route-search"
-import { searchStringFromUrlSearch } from "../selected-project-search"
+import { selectedProjectRouteSearch } from "../selected-project-search"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import {
   useProjectRunsQuery,
@@ -38,6 +38,7 @@ import {
   invalidateProjectScopedWorkbenchQueries,
   workbenchQueryKeys,
 } from "../workbench-query-keys"
+import { isImportInputType } from "@/lib/import-format-metadata"
 
 const TERMINAL_RUN_STATUSES = new Set([
   "cancelled",
@@ -47,13 +48,10 @@ const TERMINAL_RUN_STATUSES = new Set([
   "succeeded",
 ])
 
-function activeSearchString(fallbackSearch: string) {
-  return typeof window === "undefined" ? fallbackSearch : window.location.search
-}
-
 function ImportsRouteContainer() {
   const location = useLocation()
   const navigate = useNavigate()
+  const params = useParams<{ importsView?: string; runId?: string }>()
   const queryClient = useQueryClient()
   const {
     projectListLoading,
@@ -69,6 +67,7 @@ function ImportsRouteContainer() {
     defaultImportWizardState,
   )
   const [importError, setImportError] = useState("")
+  const [failedImportRunId, setFailedImportRunId] = useState("")
   const [importRun, setImportRun] = useState<AnalysisRunPublic | null>(null)
   const [importRunSummary, setImportRunSummary] =
     useState<AnalysisRunSummaryPublic | null>(null)
@@ -78,18 +77,20 @@ function ImportsRouteContainer() {
   const [selectedRunId, setSelectedRunId] = useState("")
   const [pendingSelectableRunId, setPendingSelectableRunId] = useState("")
   const [refreshedTerminalRun, setRefreshedTerminalRun] = useState("")
-  const routeRunId = selectedImportRunIdFromSearch(location.searchStr)
+  const routeRunId = params.importsView === "run" ? (params.runId ?? "") : ""
+  const legacyRouteRunId =
+    params.importsView || routeRunId
+      ? ""
+      : selectedImportRunIdFromSearch(location.searchStr)
+  const importsView =
+    params.importsView === "new" ||
+    params.importsView === "run" ||
+    params.importsView === "formats"
+      ? params.importsView
+      : "home"
   const projectRunsQuery = useProjectRunsQuery(selectedProjectId, true)
   const projectRuns = projectRunsQuery.data?.data ?? []
   const runDetailQuery = useRunDetailQuery(selectedRunId, true)
-  const runIds = useMemo(() => projectRuns.map((run) => run.id), [projectRuns])
-  const selectableRunIds = useMemo(
-    () =>
-      pendingSelectableRunId && !runIds.includes(pendingSelectableRunId)
-        ? [pendingSelectableRunId, ...runIds]
-        : runIds,
-    [pendingSelectableRunId, runIds],
-  )
   const importMutation = useMutation({
     mutationFn: ({
       body,
@@ -105,59 +106,58 @@ function ImportsRouteContainer() {
   })
 
   const selectRunId = useCallback(
-    (nextRunId: string, { replace }: { replace: boolean }) => {
+    (nextRunId: string) => {
       setSelectedRunId(nextRunId)
-      const currentLocationSearch = activeSearchString(location.searchStr)
-      const nextSearch = importRunUrlSearch(currentLocationSearch, nextRunId)
-      const currentSearch = currentLocationSearch.startsWith("?")
-        ? currentLocationSearch.slice(1)
-        : currentLocationSearch
-      if (searchStringFromUrlSearch(nextSearch) === currentSearch) {
-        return
-      }
-      void navigate({
-        replace,
-        search: () => nextSearch,
-      })
     },
-    [location.searchStr, navigate],
+    [],
   )
 
   useEffect(() => {
-    if (projectRunsQuery.isLoading && runIds.length === 0) {
+    if (!routeRunId) {
       return
     }
-    const nextRunId = normalizeSelectedRunId(
-      [routeRunId, selectedRunId],
-      selectableRunIds,
-    )
-    if (nextRunId === selectedRunId && nextRunId === routeRunId) {
+    if (selectedRunId === routeRunId) {
       return
     }
-    selectRunId(nextRunId, { replace: true })
-  }, [
-    projectRunsQuery.isLoading,
-    routeRunId,
-    runIds,
-    selectRunId,
-    selectableRunIds,
-    selectedRunId,
-  ])
+    selectRunId(routeRunId)
+  }, [routeRunId, selectRunId, selectedRunId])
 
   useEffect(() => {
-    if (pendingSelectableRunId && runIds.includes(pendingSelectableRunId)) {
+    if (!legacyRouteRunId) return
+    void navigate({
+      params: { runId: legacyRouteRunId },
+      replace: true,
+      search: () => importsRouteUrlSearch(location.searchStr),
+      to: "/imports/runs/$runId",
+    })
+  }, [legacyRouteRunId, location.searchStr, navigate])
+
+  useEffect(() => {
+    if (importsView !== "new") return
+    const inputType = importInputTypeFromSearch(location.searchStr)
+    if (!isImportInputType(inputType) || importWizard.inputType === inputType) {
+      return
+    }
+    setImportWizard((state) => ({ ...state, inputType }))
+  }, [importWizard.inputType, importsView, location.searchStr])
+
+  useEffect(() => {
+    if (
+      pendingSelectableRunId &&
+      projectRuns.some((run) => run.id === pendingSelectableRunId)
+    ) {
       setPendingSelectableRunId("")
     }
-  }, [pendingSelectableRunId, runIds])
+  }, [pendingSelectableRunId, projectRuns])
 
   async function refreshProjectRuns(preferredRunId?: string) {
     if (!selectedProjectId) {
-      selectRunId("", { replace: true })
+      selectRunId("")
       return
     }
     if (preferredRunId) {
       setPendingSelectableRunId(preferredRunId)
-      selectRunId(preferredRunId, { replace: false })
+      selectRunId(preferredRunId)
     }
     await queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.projectRuns(selectedProjectId),
@@ -228,6 +228,7 @@ function ImportsRouteContainer() {
       (formVexFile instanceof File && formVexFile.size > 0 ? formVexFile : null)
 
     setImportError("")
+    setFailedImportRunId("")
     setImportRun(null)
     setImportRunSummary(null)
     setImportParseErrors([])
@@ -237,6 +238,10 @@ function ImportsRouteContainer() {
     }
     if (!selectedFile) {
       setImportError("Choose an import file before uploading.")
+      return
+    }
+    if (!isImportInputType(importWizard.inputType)) {
+      setImportError("Select an input type before uploading.")
       return
     }
 
@@ -256,8 +261,14 @@ function ImportsRouteContainer() {
       const summary = await RunsService.readRunSummary({ run_id: run.id })
       setImportRunSummary(summary)
       setImportParseErrors(summary.parse_errors ?? [])
+      setFailedImportRunId("")
       setPendingSelectableRunId(run.id)
-      selectRunId(run.id, { replace: false })
+      selectRunId(run.id)
+      void navigate({
+        params: { runId: run.id },
+        search: selectedProjectRouteSearch(importProjectId),
+        to: "/imports/runs/$runId",
+      })
       await refreshProjects(importProjectId)
       await refreshProjectRuns(run.id)
       await invalidateProjectScopedWorkbenchQueries(queryClient, importProjectId)
@@ -265,10 +276,11 @@ function ImportsRouteContainer() {
       setImportError(apiErrorMessage("Import upload failed", caught))
       const runId = analysisRunIdFromError(caught)
       const parseErrors = parseErrorsFromError(caught)
+      setFailedImportRunId(runId ?? "")
       setImportParseErrors(parseErrors)
       if (runId) {
         setPendingSelectableRunId(runId)
-        selectRunId(runId, { replace: false })
+        selectRunId(runId)
         try {
           const summary = await RunsService.readRunSummary({ run_id: runId })
           setImportRunSummary(summary)
@@ -285,11 +297,12 @@ function ImportsRouteContainer() {
 
   function handleProjectChange(projectId: string) {
     setSelectedProjectId(projectId)
-    selectRunId("", { replace: true })
+    selectRunId("")
   }
 
   return (
     <ImportsWorkbench
+      failedImportRunId={failedImportRunId}
       importError={importError}
       importLoading={importMutation.isPending}
       importParseErrors={importParseErrors}
@@ -322,7 +335,7 @@ function ImportsRouteContainer() {
       }
       onProjectChange={handleProjectChange}
       onRefreshRuns={() => void refreshProjectRuns(selectedRunId)}
-      onSelectRun={(runId) => selectRunId(runId, { replace: false })}
+      onSelectRun={selectRunId}
       onSubmit={submitImport}
       onAttackMappingFileChange={(value) =>
         setImportWizard((state) => ({ ...state, attackMappingFile: value }))
@@ -365,6 +378,7 @@ function ImportsRouteContainer() {
       selectedRunId={selectedRunId}
       selectedRunSummary={runDetailQuery.data?.summary ?? null}
       supportedFormats={workbenchImportFormats}
+      view={importsView}
     />
   )
 }

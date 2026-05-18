@@ -11,7 +11,13 @@ COPY backend/pyproject.toml backend/requirements.runtime.lock.txt backend/MANIFE
 COPY backend/app ./backend/app
 COPY backend/src ./backend/src
 
-RUN python -m pip install --require-hashes -r backend/requirements.runtime.lock.txt \
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --only-upgrade \
+        libc-bin \
+        libc6 \
+        libcap2 \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip install --require-hashes -r backend/requirements.runtime.lock.txt \
     && python -m pip install --no-deps ./backend \
     && adduser --disabled-password --gecos "" --uid 10001 workbench \
     && mkdir -p \

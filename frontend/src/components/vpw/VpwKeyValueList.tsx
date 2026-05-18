@@ -15,11 +15,13 @@ export type VpwKeyValueListProps = {
   items: readonly VpwKeyValueItem[]
   className?: string
   columns?: 1 | 2
+  density?: "default" | "compact"
 }
 
 export function VpwKeyValueList({
   className,
   columns = 1,
+  density = "default",
   items,
 }: VpwKeyValueListProps) {
   return (
@@ -32,11 +34,19 @@ export function VpwKeyValueList({
     >
       {items.map((item) => (
         <div
-          className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] p-4"
+          className={cn(
+            "rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)]",
+            density === "compact" ? "px-3 py-2.5" : "p-4",
+          )}
           key={item.label}
         >
           <dt className="vpw-label">{item.label}</dt>
-          <dd className="mt-2 min-w-0 font-medium text-[var(--vpw-text-primary)] [overflow-wrap:anywhere]">
+          <dd
+            className={cn(
+              "min-w-0 font-medium text-[var(--vpw-text-primary)] [overflow-wrap:anywhere]",
+              density === "compact" ? "mt-1 text-sm" : "mt-2",
+            )}
+          >
             {item.tone ? (
               <VpwBadge tone={item.tone}>{item.value}</VpwBadge>
             ) : (

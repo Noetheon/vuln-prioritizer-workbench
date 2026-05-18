@@ -57,6 +57,7 @@ data/template-reports/
 data/template-provider-cache/
 data/template-provider-snapshots/
 workbench.db
+workbench-review.db
 backend/template.db
 
 # Build and packaging artifacts

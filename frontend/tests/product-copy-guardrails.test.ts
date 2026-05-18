@@ -69,6 +69,11 @@ const allowedCurrentCopy = [
     context: /\bscanner\b/i,
   },
   {
+    path: /^src\/(?:components\/imports|lib\/import-format-metadata\.ts)/,
+    context:
+      /\b(?:scanner exports|network scanner exports|parsed locally|does not scan networks|category: "scanner"|scanner)\b/i,
+  },
+  {
     path: /^tests\/(?:accessibility|finding-ttp-context|findings-route-integration|responsive-shell|settings-local-access|ui-evidence-screenshots|ui-smoke|workbench-entry-status)\.spec\.ts$/,
     context: /known exploited|does not prove exploitation|legacy sign out|api token management|tohavecount\(0\)|not\.tocontaintext|No exploit steps/i,
   },

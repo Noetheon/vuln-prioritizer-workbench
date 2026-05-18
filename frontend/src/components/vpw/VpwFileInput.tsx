@@ -1,39 +1,67 @@
 import { FileCheck2, UploadCloud } from "lucide-react"
-import type { ChangeEvent } from "react"
+import type { ChangeEvent, ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
+import { Button } from "../ui/button"
 
 export type VpwFileInputProps = {
   id: string
   label: string
   accept?: string
+  acceptedLabel?: string
   "aria-describedby"?: string
   "aria-errormessage"?: string
   "aria-invalid"?: boolean | "true" | "false"
   "aria-required"?: boolean | "true" | "false"
   className?: string
   disabled?: boolean
+  emptyIcon?: ReactNode
   file?: File | null
+  fileIcon?: ReactNode
+  layout?: "default" | "centered"
   name?: string
   onFileChange: (file: File | null) => void
+  selectedDescription?: string
+  selectedTone?: "default" | "accepted"
+  showAcceptedText?: boolean
+  showSelectedFileActions?: boolean
 }
 
 export function VpwFileInput({
   accept,
+  acceptedLabel,
   "aria-describedby": ariaDescribedBy,
   "aria-errormessage": ariaErrorMessage,
   "aria-invalid": ariaInvalid,
   "aria-required": ariaRequired,
   className,
   disabled = false,
+  emptyIcon,
   file,
+  fileIcon,
   id,
   label,
+  layout = "default",
   name,
   onFileChange,
+  selectedDescription,
+  selectedTone = "default",
+  showAcceptedText = true,
+  showSelectedFileActions = false,
 }: VpwFileInputProps) {
+  const acceptedText = acceptedLabel
+    ? acceptedLabel
+    : accept
+      ? accept
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+          .join(", ")
+      : ""
+
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     onFileChange(event.target.files?.[0] ?? null)
+    event.target.value = ""
   }
 
   return (
@@ -54,19 +82,35 @@ export function VpwFileInput({
       />
       <label
         className={cn(
-          "flex min-h-24 cursor-pointer items-center gap-3 rounded-[var(--vpw-radius-lg)] border border-dashed border-[var(--vpw-border-strong)] bg-[var(--vpw-bg-card)] px-4 py-3 text-sm transition-colors",
+          "flex cursor-pointer rounded-[var(--vpw-radius-lg)] border border-dashed border-[var(--vpw-border-strong)] bg-[var(--vpw-bg-card)] px-4 py-3 text-sm transition-colors",
+          file && selectedTone === "accepted" && layout === "default"
+            ? "min-h-20"
+            : "min-h-28",
+          layout === "centered"
+            ? "flex-col items-center justify-center gap-3 text-center"
+            : "items-center gap-3",
           "hover:border-[var(--vpw-blue)] hover:bg-[var(--vpw-bg-info)]",
           "focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--vpw-focus-ring)]",
+          file &&
+            selectedTone === "accepted" &&
+            "border-[color-mix(in_srgb,var(--vpw-green)_34%,var(--vpw-border-default))] bg-[var(--vpw-bg-success)]",
           disabled &&
             "cursor-not-allowed border-[var(--vpw-border-disabled)] bg-[var(--vpw-bg-disabled)] text-[var(--vpw-text-disabled)]",
         )}
         htmlFor={id}
       >
-        <span className="grid size-10 shrink-0 place-items-center rounded-[var(--vpw-radius-md)] bg-[var(--vpw-bg-panel)] text-[var(--vpw-blue)]">
+        <span
+          className={cn(
+            "grid size-10 shrink-0 place-items-center rounded-[var(--vpw-radius-md)] bg-[var(--vpw-bg-panel)] text-[var(--vpw-blue)]",
+            file &&
+              selectedTone === "accepted" &&
+              "bg-[var(--vpw-green)] text-[var(--vpw-bg-card)]",
+          )}
+        >
           {file ? (
-            <FileCheck2 aria-hidden="true" className="size-5" />
+            (fileIcon ?? <FileCheck2 aria-hidden="true" className="size-5" />)
           ) : (
-            <UploadCloud aria-hidden="true" className="size-5" />
+            (emptyIcon ?? <UploadCloud aria-hidden="true" className="size-5" />)
           )}
         </span>
         <span className="min-w-0">
@@ -74,10 +118,38 @@ export function VpwFileInput({
             {file ? file.name : "Choose or drop a file"}
           </span>
           <span className="mt-1 block text-xs leading-5 text-[var(--vpw-text-muted)]">
-            {accept ? `Accepted: ${accept}` : "Supported workbench input"}
+            {file
+              ? selectedDescription ??
+                (showAcceptedText
+                  ? acceptedText
+                    ? `Accepted: ${acceptedText}`
+                    : "Selected file"
+                  : "Accepted for upload.")
+              : showAcceptedText
+                ? acceptedText
+                  ? `Accepted: ${acceptedText}`
+                  : "Supported workbench input"
+                : "Select evidence from disk."}
           </span>
         </span>
       </label>
+      {file && showSelectedFileActions ? (
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline">
+            <label className="cursor-pointer" htmlFor={id}>
+              Change file
+            </label>
+          </Button>
+          <Button
+            onClick={() => onFileChange(null)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            Remove
+          </Button>
+        </div>
+      ) : null}
     </div>
   )
 }
