@@ -228,7 +228,7 @@ export function NewImportRoute(props: NewImportRouteProps) {
       <div className="imports-wizard-layout grid min-w-0 gap-6">
         <StepNav currentStep={step} onStepChange={setStep} readiness={readiness} />
         <div className="min-w-0 lg:h-full" ref={stepPanelRef}>
-          <VpwPanel className="flex min-w-0 flex-col overflow-hidden p-0 lg:h-full lg:max-h-[calc(100dvh-8rem)]">
+          <VpwPanel className="flex min-w-0 flex-col overflow-hidden p-0 lg:h-full lg:max-h-[var(--imports-wizard-panel-height)]">
             <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-5 sm:p-6">
               {step === 1 ? <ChooseSourceStep {...props} /> : null}
               {step === 2 ? (
