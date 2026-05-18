@@ -9,7 +9,12 @@ import {
 } from "lucide-react"
 import { type FormEventHandler, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { VpwPanel, VpwStatusBanner } from "@/components/vpw"
+import {
+  VpwBadge,
+  VpwPanel,
+  VpwStatusBanner,
+  type VpwBadgeTone,
+} from "@/components/vpw"
 import {
   buildImportReadinessChecks,
   buildParserPreview,
@@ -18,6 +23,7 @@ import {
   readinessBlocksImport,
   type ParserPreview,
 } from "@/lib/import-format-metadata"
+import { cn } from "@/lib/utils"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   selectedFormat,
@@ -230,8 +236,8 @@ export function NewImportRoute(props: NewImportRouteProps) {
       <div className="imports-wizard-layout grid min-w-0 gap-6">
         <StepNav currentStep={step} onStepChange={setStep} readiness={readiness} />
         <div className="min-w-0 lg:h-full" ref={stepPanelRef}>
-          <VpwPanel className="flex min-w-0 flex-col overflow-hidden p-0 lg:h-full">
-            <div className="flex min-w-0 flex-col gap-5 p-5 sm:p-6">
+          <VpwPanel className="flex min-w-0 flex-col overflow-hidden p-0 lg:max-h-[calc(100dvh-8rem)]">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-5 sm:p-6">
               {step === 1 ? <ChooseSourceStep {...props} /> : null}
               {step === 2 ? (
                 <UploadFileStep
@@ -327,23 +333,61 @@ function WizardFooter({
     step === 1 && selectedFormatLabel && !continueDisabledReason
       ? `Selected: ${selectedFormatLabel}`
       : readyCopy
+  const statusDescription = importLoading
+    ? "Uploading evidence and creating the import run."
+    : continueDisabledReason || footerCopy
+  const statusLabel = importLoading
+    ? "Importing"
+    : continueDisabledReason
+      ? "Action needed"
+      : step === 1 && selectedFormatLabel
+        ? "Selected"
+        : readyCopy
+  const statusTone: VpwBadgeTone = importLoading
+    ? "info"
+    : continueDisabledReason
+      ? "neutral"
+      : "success"
   return (
-    <div className="sticky bottom-0 flex flex-col gap-3 border-t border-[var(--vpw-border-default)] bg-[color-mix(in_srgb,var(--vpw-bg-card)_92%,var(--vpw-bg-panel))] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-      <div className="flex min-w-0 items-center gap-2 text-sm text-[var(--vpw-text-muted)]">
-        {!importLoading && step === 1 && selectedFormatLabel && !continueDisabledReason ? (
-          <CheckCircle2
-            aria-hidden="true"
-            className="size-4 shrink-0 text-[var(--vpw-green)]"
-          />
-        ) : null}
-        <span className="min-w-0 truncate">
-          {importLoading
-            ? "Creating import run..."
-            : continueDisabledReason || footerCopy}
+    <div
+      className="imports-command-bar flex shrink-0 flex-col gap-3 border-t border-[var(--vpw-border-default)] bg-[color-mix(in_srgb,var(--vpw-bg-card)_94%,var(--vpw-bg-panel))] px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+      data-testid="import-wizard-command-bar"
+    >
+      <div
+        aria-live="polite"
+        className="flex min-w-0 items-center gap-3 text-sm"
+      >
+        <span
+          className={cn(
+            "grid size-8 shrink-0 place-items-center rounded-full border bg-[var(--vpw-bg-card)]",
+            continueDisabledReason
+              ? "border-[var(--vpw-border-default)] text-[var(--vpw-text-muted)]"
+              : "border-[color-mix(in_srgb,var(--vpw-green)_34%,var(--vpw-border-default))] text-[var(--vpw-green)]",
+            importLoading &&
+              "border-[color-mix(in_srgb,var(--vpw-blue)_34%,var(--vpw-border-default))] text-[var(--vpw-blue)]",
+          )}
+        >
+          {continueDisabledReason ? (
+            <AlertCircle aria-hidden="true" className="size-4" />
+          ) : (
+            <CheckCircle2 aria-hidden="true" className="size-4" />
+          )}
         </span>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <VpwBadge density="compact" tone={statusTone}>
+              {statusLabel}
+            </VpwBadge>
+            <span className="vpw-label">Step {step} of 4</span>
+          </div>
+          <p className="mt-1 min-w-0 text-sm leading-5 text-[var(--vpw-text-muted)]">
+            {statusDescription}
+          </p>
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:justify-end">
         <Button
+          className="sm:min-w-24"
           disabled={step === 1 || importLoading}
           onClick={goBack}
           type="button"
@@ -354,6 +398,7 @@ function WizardFooter({
         </Button>
         {step < 4 ? (
           <Button
+            className="sm:min-w-32"
             disabled={Boolean(continueDisabledReason)}
             onClick={onContinue}
             type="button"
@@ -364,6 +409,7 @@ function WizardFooter({
         ) : (
           <Button
             aria-busy={importLoading}
+            className="sm:min-w-36"
             disabled={Boolean(continueDisabledReason)}
             onClick={onSubmitClick}
             type="submit"
@@ -391,33 +437,65 @@ function FailureFooter({
   selectedProjectId: string
 }) {
   return (
-    <div className="sticky bottom-0 flex flex-col gap-3 border-t border-[var(--vpw-border-default)] bg-[color-mix(in_srgb,var(--vpw-bg-card)_92%,var(--vpw-bg-panel))] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-      <div className="text-sm font-medium text-[var(--vpw-red)]">
-        Import failed
+    <div
+      className="imports-command-bar flex shrink-0 flex-col gap-3 border-t border-[var(--vpw-border-default)] bg-[color-mix(in_srgb,var(--vpw-bg-card)_94%,var(--vpw-bg-panel))] px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+      data-testid="import-wizard-command-bar"
+    >
+      <div
+        aria-live="polite"
+        className="flex min-w-0 items-center gap-3 text-sm"
+      >
+        <span className="grid size-8 shrink-0 place-items-center rounded-full border border-[color-mix(in_srgb,var(--vpw-red)_34%,var(--vpw-border-default))] bg-[var(--vpw-bg-card)] text-[var(--vpw-red)]">
+          <AlertCircle aria-hidden="true" className="size-4" />
+        </span>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <VpwBadge density="compact" tone="critical">
+              Failed
+            </VpwBadge>
+            <span className="vpw-label">Review import</span>
+          </div>
+          <p className="mt-1 min-w-0 text-sm leading-5 text-[var(--vpw-text-muted)]">
+            {failedImportRunId
+              ? "Open diagnostics for the recorded run or go back to fix the file."
+              : "Go back to the evidence file or retry the import."}
+          </p>
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:justify-end">
         {!failedImportRunId ? (
           <>
-            <Button onClick={onBackToFile} type="button" variant="outline">
+            <Button
+              className="sm:min-w-28"
+              onClick={onBackToFile}
+              type="button"
+              variant="outline"
+            >
               Back to file
             </Button>
-            <Button onClick={onRetry} type="submit">
+            <Button className="sm:min-w-32" onClick={onRetry} type="submit">
               Retry import
             </Button>
           </>
         ) : (
           <>
-            <Button onClick={onBackToFile} type="button" variant="outline">
+            <Button
+              className="sm:min-w-28"
+              onClick={onBackToFile}
+              type="button"
+              variant="outline"
+            >
               Back to file
             </Button>
             <Button
+              className="sm:min-w-36"
               onClick={() => onOpenDiagnostics(failedImportRunId)}
               type="button"
               variant="outline"
             >
               Open diagnostics
             </Button>
-            <Button asChild>
+            <Button asChild className="sm:min-w-36">
               <Link
                 params={{ runId: failedImportRunId }}
                 search={{ projectId: selectedProjectId }}

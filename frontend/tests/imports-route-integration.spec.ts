@@ -412,13 +412,21 @@ test("new import wizard keeps desktop and mobile layouts within the viewport", a
   const macbookSummaryBox = await page
     .getByTestId("import-summary-rail")
     .boundingBox()
+  const commandBarBox = await page
+    .getByTestId("import-wizard-command-bar")
+    .boundingBox()
   expect(macbookLayoutBox).not.toBeNull()
   expect(macbookSummaryBox).not.toBeNull()
+  expect(commandBarBox).not.toBeNull()
   expect(
     Math.abs((macbookSummaryBox?.y ?? 0) - (macbookLayoutBox?.y ?? 0)),
   ).toBeLessThanOrEqual(1)
   expect(macbookSummaryBox?.x ?? 0).toBeGreaterThan(
     (macbookLayoutBox?.x ?? 0) + 600,
+  )
+  expect(commandBarBox?.y ?? 0).toBeGreaterThanOrEqual(0)
+  expect((commandBarBox?.y ?? 0) + (commandBarBox?.height ?? 0)).toBeLessThanOrEqual(
+    956 + 1,
   )
 
   await page.setViewportSize({ width: 390, height: 844 })

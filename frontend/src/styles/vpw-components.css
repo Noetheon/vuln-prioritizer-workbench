@@ -665,6 +665,17 @@
     }
   }
 
+  .imports-command-bar {
+    box-shadow: 0 -12px 28px
+      color-mix(in srgb, var(--vpw-bg-panel) 86%, transparent);
+  }
+
+  @supports (backdrop-filter: blur(12px)) {
+    .imports-command-bar {
+      backdrop-filter: blur(12px);
+    }
+  }
+
   .vpw-empty-state {
     display: grid;
     place-items: center;
