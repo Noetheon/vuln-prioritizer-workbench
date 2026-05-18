@@ -1,4 +1,5 @@
 import { Database, FileJson, LockKeyhole, ShieldCheck } from "lucide-react"
+import type { ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,65 +44,44 @@ export function ProviderAttackOptions({
 
   return (
     <div className="grid gap-4">
-      <div className="grid gap-1">
-        <h3 className="text-lg font-semibold text-[var(--vpw-text-primary)]">
-          Advanced options
-        </h3>
-        <p className="text-sm leading-6 text-[var(--vpw-text-secondary)]">
-          Leave these defaults unchanged unless this import needs deterministic
-          replay data or reviewed ATT&CK mapping artifacts.
-        </p>
-      </div>
+      <p className="max-w-3xl text-sm leading-6 text-[var(--vpw-text-secondary)]">
+        Keep defaults unless this import needs a repeatable provider snapshot or
+        reviewed ATT&CK mapping artifacts.
+      </p>
 
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(220px,0.72fr)]">
-        <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-panel)] p-3">
-          <div className="flex items-start gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-[var(--vpw-radius-md)] bg-[var(--vpw-bg-card)] text-[var(--vpw-blue)]">
-              <Database aria-hidden="true" className="size-4" />
-            </span>
-            <div className="min-w-0">
-              <p className="font-semibold text-[var(--vpw-text-primary)]">
-                Provider data
-              </p>
-              <p className="mt-1 text-xs leading-5 text-[var(--vpw-text-secondary)]">
-                Current provider data is used unless a snapshot is selected.
-              </p>
-            </div>
-          </div>
+      <section className="grid gap-3 border-t border-[var(--vpw-border-subtle)] pt-3">
+        <AdvancedOptionHeading
+          description="Current provider data is used unless a snapshot is selected."
+          icon={<Database aria-hidden="true" className="size-4" />}
+          title="Provider data"
+        />
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
           <VpwField
-            className="mt-3"
-            description={`Optional filename under the provider snapshot directory, for example ${demoProviderSnapshotFile}.`}
+            description="Optional filename under the provider snapshot directory."
             htmlFor="provider-snapshot-file"
             label="Snapshot filename"
           >
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                id="provider-snapshot-file"
-                name="providerSnapshotFile"
-                onChange={(event) =>
-                  onProviderSnapshotFileChange(event.target.value)
-                }
-                placeholder={demoProviderSnapshotFile}
-                value={importWizard.providerSnapshotFile}
-              />
-              <Button
-                className="sm:w-auto"
-                onClick={onUseDemoProviderSnapshot}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                <FileJson aria-hidden="true" data-icon="inline-start" />
-                Use demo snapshot
-              </Button>
-            </div>
+            <Input
+              id="provider-snapshot-file"
+              name="providerSnapshotFile"
+              onChange={(event) =>
+                onProviderSnapshotFileChange(event.target.value)
+              }
+              placeholder={demoProviderSnapshotFile}
+              value={importWizard.providerSnapshotFile}
+            />
           </VpwField>
+          <Button
+            className="h-10 md:mt-[1.625rem] md:whitespace-nowrap"
+            onClick={onUseDemoProviderSnapshot}
+            type="button"
+            variant="outline"
+          >
+            <FileJson aria-hidden="true" data-icon="inline-start" />
+            Use demo snapshot
+          </Button>
         </div>
-
-        <label
-          className="flex min-h-10 items-start gap-3 rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-panel)] p-3 text-sm"
-          htmlFor="locked-provider-data"
-        >
+        <label className="flex items-start gap-3 text-sm" htmlFor="locked-provider-data">
           <Input
             aria-label="Lock provider data for deterministic replay"
             checked={importWizard.lockedProviderData}
@@ -113,7 +93,7 @@ export function ProviderAttackOptions({
             }
             type="checkbox"
           />
-          <span className="grid gap-1">
+          <span className="min-w-0 pt-px">
             <span className="inline-flex items-center gap-2 font-semibold text-[var(--vpw-text-primary)]">
               <LockKeyhole
                 aria-hidden="true"
@@ -121,30 +101,21 @@ export function ProviderAttackOptions({
               />
               Deterministic replay
             </span>
-            <span className="text-xs leading-5 text-[var(--vpw-text-muted)]">
+            <span className="mt-0.5 block text-xs leading-5 text-[var(--vpw-text-muted)]">
               Lock the selected provider snapshot only when the import must be
               reproducible.
             </span>
           </span>
         </label>
-      </div>
+      </section>
 
-      <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-panel)] p-3">
-        <div className="mb-3 flex items-start gap-3">
-          <span className="grid size-9 shrink-0 place-items-center rounded-[var(--vpw-radius-md)] bg-[var(--vpw-bg-card)] text-[var(--vpw-blue)]">
-            <ShieldCheck aria-hidden="true" className="size-4" />
-          </span>
-          <div className="min-w-0">
-            <p className="font-semibold text-[var(--vpw-text-primary)]">
-              Reviewed ATT&CK mapping
-            </p>
-            <p className="mt-1 text-xs leading-5 text-[var(--vpw-text-secondary)]">
-              Add reviewed defensive mappings only. This does not auto-map or
-              change base priority.
-            </p>
-          </div>
-        </div>
-        <div className="grid gap-3 lg:grid-cols-3">
+      <section className="grid gap-3 border-t border-[var(--vpw-border-subtle)] pt-3">
+        <AdvancedOptionHeading
+          description="Add reviewed defensive mappings only. This does not auto-map or change base priority."
+          icon={<ShieldCheck aria-hidden="true" className="size-4" />}
+          title="Reviewed ATT&CK mapping"
+        />
+        <div className="grid gap-3">
           <VpwField
             description={selectedAttackSourceDetail}
             label="ATT&CK source"
@@ -168,45 +139,73 @@ export function ProviderAttackOptions({
               </SelectContent>
             </Select>
           </VpwField>
-          <VpwField
-            description={
-              attackSourceDisabled
-                ? attackSourceDisabledReason
-                : "Required when source is CTID JSON or Local curated."
-            }
-            htmlFor="attack-mapping-file"
-            label="Mapping file"
-          >
-            <Input
-              disabled={attackSourceDisabled}
-              id="attack-mapping-file"
-              name="attackMappingFile"
-              onChange={(event) => onAttackMappingFileChange(event.target.value)}
-              placeholder="mapping.json"
-              value={importWizard.attackMappingFile}
-            />
-          </VpwField>
-          <VpwField
-            description={
-              attackSourceDisabled
-                ? attackSourceDisabledReason
-                : "Optional technique metadata filename."
-            }
-            htmlFor="attack-technique-metadata-file"
-            label="Technique metadata"
-          >
-            <Input
-              disabled={attackSourceDisabled}
-              id="attack-technique-metadata-file"
-              name="attackTechniqueMetadataFile"
-              onChange={(event) =>
-                onAttackTechniqueMetadataFileChange(event.target.value)
+          <div className="grid gap-3 sm:grid-cols-2">
+            <VpwField
+              description={
+                attackSourceDisabled
+                  ? attackSourceDisabledReason
+                  : "Required for CTID JSON or Local curated."
               }
-              placeholder="techniques.json"
-              value={importWizard.attackTechniqueMetadataFile}
-            />
-          </VpwField>
+              htmlFor="attack-mapping-file"
+              label="Mapping file"
+            >
+              <Input
+                disabled={attackSourceDisabled}
+                id="attack-mapping-file"
+                name="attackMappingFile"
+                onChange={(event) =>
+                  onAttackMappingFileChange(event.target.value)
+                }
+                placeholder="mapping.json"
+                value={importWizard.attackMappingFile}
+              />
+            </VpwField>
+            <VpwField
+              description={
+                attackSourceDisabled
+                  ? attackSourceDisabledReason
+                  : "Optional technique metadata filename."
+              }
+              htmlFor="attack-technique-metadata-file"
+              label="Technique metadata"
+            >
+              <Input
+                disabled={attackSourceDisabled}
+                id="attack-technique-metadata-file"
+                name="attackTechniqueMetadataFile"
+                onChange={(event) =>
+                  onAttackTechniqueMetadataFileChange(event.target.value)
+                }
+                placeholder="techniques.json"
+                value={importWizard.attackTechniqueMetadataFile}
+              />
+            </VpwField>
+          </div>
         </div>
+      </section>
+    </div>
+  )
+}
+
+function AdvancedOptionHeading({
+  description,
+  icon,
+  title,
+}: {
+  description: string
+  icon: ReactNode
+  title: string
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="grid size-8 shrink-0 place-items-center rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] text-[var(--vpw-blue)]">
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="font-semibold text-[var(--vpw-text-primary)]">{title}</p>
+        <p className="mt-1 text-xs leading-5 text-[var(--vpw-text-secondary)]">
+          {description}
+        </p>
       </div>
     </div>
   )
