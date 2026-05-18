@@ -404,6 +404,23 @@ test("new import wizard keeps desktop and mobile layouts within the viewport", a
   await expectNoHorizontalOverflow(page)
   await expectElementWithinViewport(page.getByTestId("import-summary-rail"))
 
+  await page.setViewportSize({ width: 1470, height: 956 })
+  await page.goto(`/imports/new?projectId=${mockProject.id}`)
+  await expect(page.getByRole("heading", { name: "New import" })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+  const macbookLayoutBox = await page.locator(".imports-wizard-layout").boundingBox()
+  const macbookSummaryBox = await page
+    .getByTestId("import-summary-rail")
+    .boundingBox()
+  expect(macbookLayoutBox).not.toBeNull()
+  expect(macbookSummaryBox).not.toBeNull()
+  expect(
+    Math.abs((macbookSummaryBox?.y ?? 0) - (macbookLayoutBox?.y ?? 0)),
+  ).toBeLessThanOrEqual(1)
+  expect(macbookSummaryBox?.x ?? 0).toBeGreaterThan(
+    (macbookLayoutBox?.x ?? 0) + 600,
+  )
+
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto(`/imports/new?projectId=${mockProject.id}`)
   await expect(page.getByRole("heading", { name: "New import" })).toBeVisible()
