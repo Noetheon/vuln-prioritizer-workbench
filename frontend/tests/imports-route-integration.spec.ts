@@ -239,9 +239,9 @@ test("new import wizard gates the four-step flow", async ({ page }) => {
     mimeType: "text/csv",
     name: "wizard-occurrences.csv",
   })
-  await expect(page.getByText("B. File check passed")).toBeVisible()
-  await expect(page.getByText("Shallow parser preview passed")).toBeVisible()
-  await expect(page.getByText("Accepted file types:")).toBeVisible()
+  await expect(page.getByText("B. File check")).toBeVisible()
+  await expect(page.getByText("Parser preview")).toBeVisible()
+  await expect(page.getByText("Accepted file types:")).toHaveCount(0)
   await expect(page.getByText("Accepted: .csv, text/csv")).toHaveCount(0)
   await expect(page.getByText("File type match")).toBeVisible()
   await expect(
@@ -583,7 +583,7 @@ async function completeWizardToReview(page: Page) {
     mimeType: "text/csv",
     name: "wizard-occurrences.csv",
   })
-  await expect(page.getByText("Shallow parser preview passed")).toBeVisible()
+  await expect(page.getByText("Parser preview")).toBeVisible()
   await page.getByRole("button", { name: "Continue" }).click()
   await page.getByRole("button", { name: "Continue" }).click()
   await expect(page.getByRole("heading", { name: "Review import" })).toBeVisible()

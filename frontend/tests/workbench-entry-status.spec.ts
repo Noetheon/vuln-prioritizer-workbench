@@ -327,7 +327,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     mimeType: "text/csv",
     name: "import-wizard-occurrences.csv",
   })
-  await expect(page.getByText("File check passed").first()).toBeVisible()
+  await expect(page.getByText("B. File check").first()).toBeVisible()
   await page.getByRole("button", { name: "Continue" }).click()
   await expect(page.getByRole("heading", { name: "Add context" })).toBeVisible()
   const assetContextInput = page.locator('input[name="assetContextFile"]')
@@ -604,7 +604,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     mimeType: "text/csv",
     name: "invalid-occurrences.csv",
   })
-  await expect(page.getByText("File check passed").first()).toBeVisible()
+  await expect(page.getByText("B. File check").first()).toBeVisible()
   await page.getByRole("button", { name: "Continue" }).click()
   await expect(page.getByRole("heading", { name: "Add context" })).toBeVisible()
   await page.getByRole("button", { name: "Continue" }).click()

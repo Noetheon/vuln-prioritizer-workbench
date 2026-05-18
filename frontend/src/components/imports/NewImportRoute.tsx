@@ -290,7 +290,6 @@ export function NewImportRoute(props: NewImportRouteProps) {
         <SummaryRail
           importFailed={importFailed}
           inputTypeLabel={metadataFormat?.label ?? "Not selected"}
-          parserPreview={parserPreview}
           props={props}
           readiness={readiness}
           step={step}

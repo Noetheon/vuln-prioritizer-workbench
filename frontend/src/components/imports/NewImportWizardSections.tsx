@@ -554,21 +554,14 @@ export function UploadFileStep({
   parserPreview: ParserPreview
 }) {
   const metadataFormat = getImportFormat(importWizard.inputType)
-  const fileCheckTitle =
-    parserPreview.state === "passed"
-      ? "B. File check passed"
-      : parserPreview.state === "warning"
-        ? "B. File check warning"
-        : "B. File check"
+  const uploadRequirement = metadataFormat
+    ? uploadRequirementCopy(metadataFormat.inputType)
+    : "Attach the main evidence file."
 
   return (
     <section className="flex flex-col gap-4">
       <VpwSectionHeader
-        description={
-          format
-            ? `Your ${format.label} evidence must match the selected format before continuing.`
-            : "Attach the main evidence file for the selected input type."
-        }
+        description="Attach evidence for the selected import format before continuing."
         title="Upload file"
       />
       <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-3">
@@ -580,7 +573,7 @@ export function UploadFileStep({
             <span className="font-medium text-[var(--vpw-text-primary)]">
               {format?.label ?? "Input type not selected"}
             </span>
-            {format?.detail ? ` - ${format.detail}` : ""}
+            {metadataFormat ? ` - ${uploadRequirement}` : ""}
           </p>
         </div>
         <FileUploadField
@@ -597,7 +590,7 @@ export function UploadFileStep({
           showAcceptedText={false}
           showSelectedFileDescription={false}
         />
-        {metadataFormat?.extensions.length ? (
+        {!importWizard.file && metadataFormat?.extensions.length ? (
           <AcceptedTypeChips extensions={metadataFormat.extensions} />
         ) : null}
       </div>
@@ -605,7 +598,7 @@ export function UploadFileStep({
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-base font-semibold text-[var(--vpw-text-primary)]">
-              {fileCheckTitle}
+              B. File check
             </p>
             <p className="mt-1 text-sm text-[var(--vpw-text-secondary)]">
               Shallow validation runs locally before the import starts.
@@ -639,6 +632,31 @@ function AcceptedTypeChips({ extensions }: { extensions: readonly string[] }) {
       ))}
     </div>
   )
+}
+
+function uploadRequirementCopy(inputType: ImportInputType) {
+  switch (inputType) {
+    case "cve-list":
+      return "One CVE identifier per line or a supported CVE column."
+    case "generic-occurrence-csv":
+      return "Rows must include a CVE identifier; asset and component columns are optional."
+    case "trivy-json":
+      return "Use a Trivy vulnerability report export."
+    case "grype-json":
+      return "Use a Grype vulnerability report export."
+    case "dependency-check-json":
+      return "Use an OWASP Dependency-Check report export."
+    case "github-alerts-json":
+      return "Use the pinned GitHub alert export shape."
+    case "cyclonedx-json":
+      return "Include components plus vulnerability references."
+    case "spdx-json":
+      return "Use package inventory data with vulnerability references where supported."
+    case "nessus-xml":
+      return "Use Nessus ReportHost and ReportItem evidence."
+    case "openvas-xml":
+      return "Use OpenVAS result evidence with CVE data."
+  }
 }
 
 export function AddContextStep(
@@ -821,14 +839,12 @@ export function ReviewImportStep({
 export function SummaryRail({
   importFailed = false,
   inputTypeLabel,
-  parserPreview,
   props,
   readiness,
   step,
 }: {
   importFailed?: boolean
   inputTypeLabel: string
-  parserPreview: ParserPreview
   props: ImportsWorkbenchProps
   readiness: readonly ImportReadinessCheck[]
   step: StepId
@@ -916,9 +932,6 @@ export function SummaryRail({
               <MetaTag key={label} label={label} />
             ))
           : null}
-        {parserPreview.state === "passed" ? (
-          <VpwBadge tone="success">File check passed</VpwBadge>
-        ) : null}
       </div>
     </VpwPanel>
   )
@@ -986,25 +999,17 @@ function ParserPreviewPanel({ parserPreview }: { parserPreview: ParserPreview })
   ]
   return (
     <div>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-[var(--vpw-text-primary)]">
-            {parserPreview.warnings.length > 0
-              ? "Parser preview warning"
-              : "Shallow parser preview passed"}
-          </p>
-          <p className="mt-1 text-sm text-[var(--vpw-text-secondary)]">
-            Full parser results will be available after import. If the file
-            structure does not match the selected format, import may create
-            fewer findings or skip rows.
-          </p>
-        </div>
-        <VpwBadge
-          className="shrink-0"
-          tone={parserPreview.warnings.length > 0 ? "warning" : "success"}
-        >
-          {parserPreview.warnings.length > 0 ? "Warning" : "Passed"}
-        </VpwBadge>
+      <div>
+        <p className="font-semibold text-[var(--vpw-text-primary)]">
+          {parserPreview.warnings.length > 0
+            ? "Parser preview warning"
+            : "Parser preview"}
+        </p>
+        <p className="mt-1 text-sm text-[var(--vpw-text-secondary)]">
+          Full parser results will be available after import. If the file
+          structure does not match the selected format, import may create fewer
+          findings or skip rows.
+        </p>
       </div>
       <dl className="mt-3 grid overflow-hidden rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] text-sm md:grid-cols-2">
         {previewItems.map((item) => (
