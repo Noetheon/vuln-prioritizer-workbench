@@ -58,6 +58,7 @@ export function NewImportRoute(props: NewImportRouteProps) {
     useState<OptionalContextValidationMap>({ assetContext: null, vex: null })
   const submitRequestedRef = useRef(false)
   const stepPanelRef = useRef<HTMLDivElement | null>(null)
+  const stepContentRef = useRef<HTMLDivElement | null>(null)
   const initialStepRenderRef = useRef(true)
   const format = selectedFormat(props.supportedFormats, props.importWizard.inputType)
   const metadataFormat = getImportFormat(props.importWizard.inputType)
@@ -124,15 +125,16 @@ export function NewImportRoute(props: NewImportRouteProps) {
 
   useEffect(() => {
     if (step < 1) return
-    if (initialStepRenderRef.current) {
-      initialStepRenderRef.current = false
-      return
-    }
+    const isInitialRender = initialStepRenderRef.current
+    initialStepRenderRef.current = false
     window.requestAnimationFrame(() => {
-      stepPanelRef.current?.scrollIntoView({
-        block: "start",
-        inline: "nearest",
-      })
+      stepContentRef.current?.scrollTo({ left: 0, top: 0 })
+      if (!isInitialRender) {
+        stepPanelRef.current?.scrollIntoView({
+          block: "start",
+          inline: "nearest",
+        })
+      }
     })
   }, [step])
 
@@ -229,7 +231,10 @@ export function NewImportRoute(props: NewImportRouteProps) {
         <StepNav currentStep={step} onStepChange={setStep} readiness={readiness} />
         <div className="min-w-0 lg:h-full" ref={stepPanelRef}>
           <VpwPanel className="flex min-w-0 flex-col overflow-hidden p-0 lg:h-full lg:max-h-[var(--imports-wizard-panel-height)]">
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-5 sm:p-6">
+            <div
+              className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-5 sm:p-6"
+              ref={stepContentRef}
+            >
               {step === 1 ? <ChooseSourceStep {...props} /> : null}
               {step === 2 ? (
                 <UploadFileStep

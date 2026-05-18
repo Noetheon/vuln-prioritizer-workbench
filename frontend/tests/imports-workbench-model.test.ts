@@ -425,6 +425,26 @@ test("import upload payload omits ATT&CK filenames when ATT&CK source is none", 
   assert.equal(payload.attack_source, "none")
 })
 
+test("import upload payload normalizes empty ATT&CK source to none", () => {
+  const importFile = {} as File
+  const payload = buildImportUploadFormData({
+    importWizard: {
+      ...defaultImportWizardState,
+      attackMappingFile: "stale-map.json",
+      attackSource: "" as typeof defaultImportWizardState.attackSource,
+      attackTechniqueMetadataFile: "stale-techniques.json",
+      inputType: "cve-list",
+    },
+    selectedAssetContextFile: null,
+    selectedFile: importFile,
+    selectedVexFile: null,
+  })
+
+  assert.equal(payload.attack_mapping_file, undefined)
+  assert.equal(payload.attack_technique_metadata_file, undefined)
+  assert.equal(payload.attack_source, "none")
+})
+
 test("demo provider snapshot preset enables deterministic replay", () => {
   const state = withDemoProviderSnapshot({
     ...defaultImportWizardState,

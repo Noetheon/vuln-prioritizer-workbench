@@ -9,7 +9,7 @@ import {
   Table2,
   X,
 } from "lucide-react"
-import type { CSSProperties } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -22,7 +22,6 @@ import {
 import {
   MetaTag,
   VpwBadge,
-  VpwKeyValueList,
   VpwPanel,
   VpwSectionHeader,
   VpwStatusBanner,
@@ -801,71 +800,393 @@ export function ReviewImportStep({
   readiness: readonly ImportReadinessCheck[]
 }) {
   const format = getImportFormat(importWizard.inputType)
+  const blockingChecks = readiness.filter(
+    (check) => check.status === "missing" || check.status === "error",
+  )
+  const requiredChecks = readiness.filter(
+    (check) =>
+      check.id !== "asset-context" &&
+      check.id !== "vex" &&
+      check.id !== "attack-context",
+  )
+  const requiredPassed = requiredChecks.filter(
+    (check) => check.status === "passed" || check.status === "warning",
+  ).length
+  const optionalChecks = readiness.filter(
+    (check) =>
+      check.id === "asset-context" ||
+      check.id === "vex" ||
+      check.id === "attack-context",
+  )
+  const optionalSelected = optionalChecks.filter((check) => check.status === "passed")
+  const providerCheck = readiness.find((check) => check.id === "provider-data")
+  const contextSummary =
+    optionalSelected.length > 0
+      ? optionalSelected.map((check) => check.label).join(", ")
+      : "No optional context selected"
+  const providerMessage =
+    providerCheck?.message ?? "Current provider data is available."
+  const evidenceFileLabel = importWizard.file
+    ? `${importWizard.file.name} - ${fileSizeLabel(importWizard.file)}`
+    : "Required"
+  const settingsItems = [
+    { label: "Project", value: selectedProject?.name ?? "Required" },
+    { label: "Input type", value: format?.label ?? "Required" },
+    {
+      label: "Evidence file",
+      value: evidenceFileLabel,
+    },
+    {
+      label: "Provider data",
+      value: importWizard.providerSnapshotFile
+        ? importWizard.providerSnapshotFile
+        : "Current provider data",
+    },
+    {
+      label: "Asset context",
+      value: importWizard.assetContextFile?.name ?? "Not selected",
+      muted: !importWizard.assetContextFile,
+    },
+    {
+      label: "VEX",
+      value: importWizard.vexFile?.name ?? "Not selected",
+      muted: !importWizard.vexFile,
+    },
+    {
+      label: "ATT&CK context",
+      value:
+        importWizard.attackSource && importWizard.attackSource !== "none"
+          ? "Reviewed defensive context configured"
+          : "Not selected",
+      muted: !importWizard.attackSource || importWizard.attackSource === "none",
+    },
+    {
+      label: "Deterministic replay",
+      value: importWizard.lockedProviderData ? "Yes" : "No",
+      muted: !importWizard.lockedProviderData,
+    },
+  ]
   return (
-    <section className="flex flex-col gap-4">
-      <VpwSectionHeader
-        description="Review settings and validate readiness before creating a run."
-        title="Review import"
-      />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(260px,0.9fr)]">
-        <div className="rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] p-4">
-          <h3 className="text-base font-semibold text-[var(--vpw-text-primary)]">
-            Readiness
-          </h3>
-          <ReadinessList readiness={readiness} />
-        </div>
-        <div className="rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] p-4">
-          <h3 className="text-base font-semibold text-[var(--vpw-text-primary)]">
-            Preview
-          </h3>
-          <PreviewSummary parserPreview={parserPreview} />
-        </div>
-      </div>
-      <div className="grid gap-3">
-        <h3 className="text-base font-semibold text-[var(--vpw-text-primary)]">
-          Import settings
-        </h3>
-        <VpwKeyValueList
-          columns={2}
-          density="compact"
-          items={[
-            { label: "Project", value: selectedProject?.name ?? "Required" },
-            { label: "Input type", value: format?.label ?? "Required" },
-            {
-              label: "Evidence file",
-              value: importWizard.file
-                ? `${importWizard.file.name} - ${fileSizeLabel(importWizard.file)}`
-                : "Required",
-            },
-            {
-              label: "Provider data",
-              value: importWizard.providerSnapshotFile
-                ? importWizard.providerSnapshotFile
-                : "Current provider data",
-            },
-            {
-              label: "Asset context",
-              value: importWizard.assetContextFile?.name ?? "Not selected",
-            },
-            {
-              label: "VEX",
-              value: importWizard.vexFile?.name ?? "Not selected",
-            },
-            {
-              label: "ATT&CK context",
-              value:
-                importWizard.attackSource && importWizard.attackSource !== "none"
-                  ? "Reviewed defensive context configured"
-                  : "Not selected",
-            },
-            {
-              label: "Deterministic replay",
-              value: importWizard.lockedProviderData ? "Yes" : "No",
-            },
-          ]}
+    <section className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <VpwSectionHeader
+          description="Confirm the import package and start the recorded run."
+          title="Review import"
         />
+        <VpwBadge tone={blockingChecks.length === 0 ? "success" : "critical"}>
+          {blockingChecks.length === 0 ? "Ready" : "Blocked"}
+        </VpwBadge>
       </div>
+      <ReviewPreflightSummary
+        blockingCount={blockingChecks.length}
+        optionalContext={contextSummary}
+        providerMessage={providerMessage}
+        requiredPassed={requiredPassed}
+        requiredTotal={requiredChecks.length}
+      />
+      <ReviewPackageSummary
+        evidenceFile={evidenceFileLabel}
+        inputType={format?.label ?? "Required"}
+        projectName={selectedProject?.name ?? "Required"}
+      />
+      <div className="grid gap-4 min-[1800px]:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)] min-[1800px]:items-start">
+        <section className="min-w-0">
+          <ReviewSectionHeading
+            description="Required checks are ready before the import starts."
+            title="Preflight checks"
+          />
+          <ReadinessOverview readiness={readiness} />
+        </section>
+        <section className="min-w-0">
+          <ReviewSectionHeading
+            description="Shallow local validation only. Final parser results are recorded after import."
+            title="Preview"
+          />
+          <PreviewSummary parserPreview={parserPreview} />
+        </section>
+      </div>
+      <details className="group min-w-0 border-t border-[var(--vpw-border-subtle)] pt-3">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-left [&::-webkit-details-marker]:hidden">
+          <span className="min-w-0">
+            <span className="block text-base font-semibold text-[var(--vpw-text-primary)]">
+              Import settings
+            </span>
+            <span className="mt-1 block text-sm leading-5 text-[var(--vpw-text-secondary)]">
+              Full run metadata attached to this import.
+            </span>
+          </span>
+          <ChevronRight
+            aria-hidden="true"
+            className="size-4 shrink-0 text-[var(--vpw-text-muted)] transition-transform group-open:rotate-90"
+          />
+        </summary>
+        <SettingsSummaryList items={settingsItems} />
+      </details>
     </section>
+  )
+}
+
+function ReviewPreflightSummary({
+  blockingCount,
+  optionalContext,
+  providerMessage,
+  requiredPassed,
+  requiredTotal,
+}: {
+  blockingCount: number
+  optionalContext: string
+  providerMessage: string
+  requiredPassed: number
+  requiredTotal: number
+}) {
+  const ready = blockingCount === 0
+  return (
+    <div
+      className={cn(
+        "rounded-[var(--vpw-radius-lg)] border p-3",
+        ready
+          ? "border-[color-mix(in_srgb,var(--vpw-green)_24%,var(--vpw-border-default))] bg-[color-mix(in_srgb,var(--vpw-bg-success)_54%,var(--vpw-bg-card))]"
+          : "border-[color-mix(in_srgb,var(--vpw-red)_34%,var(--vpw-border-default))] bg-[color-mix(in_srgb,var(--vpw-bg-critical)_50%,var(--vpw-bg-card))]",
+      )}
+    >
+      <div className="grid gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            className={cn(
+              "grid size-8 shrink-0 place-items-center rounded-full border",
+              ready
+                ? "border-[color-mix(in_srgb,var(--vpw-green)_28%,transparent)] bg-[var(--vpw-bg-card)] text-[var(--vpw-green)]"
+                : "border-[color-mix(in_srgb,var(--vpw-red)_28%,transparent)] bg-[var(--vpw-bg-card)] text-[var(--vpw-red)]",
+            )}
+          >
+            {ready ? (
+              <CheckCircle2 aria-hidden="true" className="size-5" />
+            ) : (
+              <X aria-hidden="true" className="size-5" />
+            )}
+          </span>
+          <div className="min-w-0">
+            <p className="font-semibold text-[var(--vpw-text-primary)]">
+              {ready ? "Ready to import" : "Review required"}
+            </p>
+            <p className="mt-1 max-w-[34rem] text-sm leading-5 text-[var(--vpw-text-secondary)]">
+              {ready
+                ? "Required checks passed. Starting the import creates a recorded run."
+                : `${blockingCount} check${blockingCount === 1 ? "" : "s"} need attention before import.`}
+            </p>
+          </div>
+        </div>
+        <dl className="grid min-w-0 gap-2 text-sm sm:grid-cols-3">
+          <ReviewMetric
+            label="Required"
+            tone={ready ? "success" : "critical"}
+            value={
+              ready
+                ? `${requiredPassed}/${requiredTotal} passed`
+                : `${blockingCount} blocked`
+            }
+          />
+          <ReviewMetric label="Context" value={optionalContext} />
+          <ReviewMetric label="Provider" value={providerMessage} />
+        </dl>
+      </div>
+    </div>
+  )
+}
+
+function ReviewPackageSummary({
+  evidenceFile,
+  inputType,
+  projectName,
+}: {
+  evidenceFile: string
+  inputType: string
+  projectName: string
+}) {
+  return (
+    <dl className="grid rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-panel)] text-sm md:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,1.35fr)] md:divide-x md:divide-[var(--vpw-border-subtle)]">
+      <ReviewMetric label="Project" value={projectName} />
+      <ReviewMetric label="Input type" value={inputType} />
+      <ReviewMetric label="Evidence file" value={evidenceFile} />
+    </dl>
+  )
+}
+
+function ReadinessOverview({
+  readiness,
+}: {
+  readiness: readonly ImportReadinessCheck[]
+}) {
+  const visibleChecks = readiness.filter(
+    (check) =>
+      check.id !== "asset-context" &&
+      check.id !== "vex" &&
+      check.id !== "attack-context",
+  )
+  const contextChecks = readiness.filter(
+    (check) =>
+      (check.id === "asset-context" ||
+        check.id === "vex" ||
+        check.id === "attack-context") &&
+      (check.status === "passed" ||
+        check.status === "warning" ||
+        check.status === "error"),
+  )
+  return (
+    <div className="mt-3">
+      <div className="grid gap-2 sm:grid-cols-3">
+        {visibleChecks.map((check) => (
+          <ReadinessCompactRow check={check} key={check.id} />
+        ))}
+      </div>
+      {contextChecks.length > 0 ? (
+        <details className="group mt-3">
+          <summary className="inline-flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-[var(--vpw-text-secondary)] transition-colors hover:text-[var(--vpw-text-primary)] [&::-webkit-details-marker]:hidden">
+            <ChevronRight
+              aria-hidden="true"
+              className="size-4 transition-transform group-open:rotate-90"
+            />
+            Context checks
+          </summary>
+          <div className="mt-2 grid gap-2 sm:grid-cols-3">
+            {contextChecks.map((check) => (
+              <ReadinessCompactRow check={check} key={check.id} />
+            ))}
+          </div>
+        </details>
+      ) : null}
+      <details className="group mt-3">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-[var(--vpw-text-muted)] transition-colors hover:text-[var(--vpw-text-primary)] [&::-webkit-details-marker]:hidden">
+          <ChevronRight
+            aria-hidden="true"
+            className="size-4 transition-transform group-open:rotate-90"
+          />
+          Full validation log
+        </summary>
+        <ReadinessList readiness={readiness} />
+      </details>
+    </div>
+  )
+}
+
+function ReadinessCompactRow({ check }: { check: ImportReadinessCheck }) {
+  return (
+    <div
+      className="flex min-w-0 items-center gap-2 rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] px-3 py-2"
+      title={check.message || readinessStatusLabel(check.status)}
+    >
+      <ReadinessIcon status={check.status} />
+      <span className="min-w-0 truncate text-sm font-medium leading-5 text-[var(--vpw-text-primary)]">
+        {readinessShortLabel(check)}
+      </span>
+      <span className="sr-only">
+        {check.message || readinessStatusLabel(check.status)}
+      </span>
+    </div>
+  )
+}
+
+function readinessShortLabel(check: ImportReadinessCheck) {
+  switch (check.id) {
+    case "project":
+      return "Project selected"
+    case "input-type":
+      return "Input type selected"
+    case "evidence-file":
+      return "Evidence uploaded"
+    case "file-type":
+      return "File type checked"
+    case "parser-preview":
+      return "Preview ready"
+    case "provider-data":
+      return "Provider data ready"
+    case "asset-context":
+      return "Asset context checked"
+    case "vex":
+      return "VEX checked"
+    case "attack-context":
+      return "ATT&CK context checked"
+    default:
+      return check.label
+  }
+}
+
+function readinessStatusLabel(status: ImportReadinessCheck["status"]) {
+  if (status === "passed") return "Ready."
+  if (status === "warning") return "Warning, import can continue."
+  if (status === "missing") return "Required before import."
+  if (status === "error") return "Needs attention."
+  return "Pending."
+}
+
+function ReviewSectionHeading({
+  description,
+  title,
+}: {
+  description: string
+  title: string
+}) {
+  return (
+    <div>
+      <h3 className="text-base font-semibold text-[var(--vpw-text-primary)]">
+        {title}
+      </h3>
+      <p className="mt-1 text-sm leading-5 text-[var(--vpw-text-secondary)]">
+        {description}
+      </p>
+    </div>
+  )
+}
+
+function ReviewMetric({
+  label,
+  tone,
+  value,
+}: {
+  label: string
+  tone?: "critical" | "success"
+  value: ReactNode
+}) {
+  return (
+    <div className="min-w-0 px-3 py-2 md:first:pl-3 md:last:pr-3">
+      <dt className="vpw-label">{label}</dt>
+      <dd
+        className={cn(
+          "mt-1 min-w-0 font-medium leading-5 text-[var(--vpw-text-primary)] [overflow-wrap:anywhere]",
+          tone === "success" && "text-[var(--vpw-green)]",
+          tone === "critical" && "text-[var(--vpw-red)]",
+        )}
+      >
+        {value}
+      </dd>
+    </div>
+  )
+}
+
+function SettingsSummaryList({
+  items,
+}: {
+  items: readonly { label: string; muted?: boolean; value: ReactNode }[]
+}) {
+  return (
+    <dl className="mt-3 border-t border-[var(--vpw-border-subtle)] text-sm">
+      {items.map((item) => (
+        <div
+          className="grid gap-2 border-b border-[var(--vpw-border-subtle)] py-3 sm:grid-cols-[minmax(9rem,0.42fr)_minmax(0,1fr)]"
+          key={item.label}
+        >
+          <dt className="vpw-label">{item.label}</dt>
+          <dd
+            className={cn(
+              "min-w-0 font-medium text-[var(--vpw-text-primary)] [overflow-wrap:anywhere]",
+              item.muted && "text-[var(--vpw-text-secondary)]",
+            )}
+          >
+            {item.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
   )
 }
 
@@ -1078,23 +1399,25 @@ function ReadinessList({
   readiness: readonly ImportReadinessCheck[]
 }) {
   return (
-    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+    <div className="mt-3 overflow-hidden rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] text-sm">
       {readiness.map((check) => (
         <div
-          className="flex items-start gap-2 rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-panel)] px-3 py-2"
+          className="grid gap-2 border-b border-[var(--vpw-border-subtle)] px-3 py-2.5 last:border-b-0 sm:grid-cols-[1.25rem_minmax(8rem,0.8fr)_minmax(0,1.2fr)] sm:items-start"
           key={check.id}
         >
           <ReadinessIcon status={check.status} />
-          <div className="min-w-0">
-            <p className="font-medium text-[var(--vpw-text-primary)]">
-              {check.label}
+          <p className="min-w-0 font-medium text-[var(--vpw-text-primary)]">
+            {check.label}
+          </p>
+          {check.message ? (
+            <p className="min-w-0 text-xs leading-5 text-[var(--vpw-text-secondary)] [overflow-wrap:anywhere] sm:text-right">
+              {check.message}
             </p>
-            {check.message ? (
-              <p className="mt-0.5 text-xs text-[var(--vpw-text-secondary)]">
-                {check.message}
-              </p>
-            ) : null}
-          </div>
+          ) : (
+            <p className="text-xs leading-5 text-[var(--vpw-text-muted)] sm:text-right">
+              No additional action.
+            </p>
+          )}
         </div>
       ))}
     </div>
@@ -1122,24 +1445,41 @@ function ReadinessIcon({ status }: { status: ImportReadinessCheck["status"] }) {
 }
 
 function PreviewSummary({ parserPreview }: { parserPreview: ParserPreview }) {
+  const items: Array<{ label: string; tone?: "warning"; value: ReactNode }> = [
+    {
+      label: "Candidate findings",
+      value: parserPreview.candidateRows ?? "Available after import",
+    },
+    { label: "Updated findings", value: "Available after import" },
+    {
+      label: "Ignored lines",
+      value: parserPreview.ignoredRows ?? "Available after import",
+    },
+    {
+      label: "Warnings",
+      tone: parserPreview.warnings.length > 0 ? "warning" : undefined,
+      value: parserPreview.warnings.length,
+    },
+  ]
   return (
-    <VpwKeyValueList
-      className="mt-3"
-      density="compact"
-      items={[
-        {
-          label: "Candidate findings",
-          value: parserPreview.candidateRows ?? "Available after import",
-        },
-        { label: "Updated findings", value: "Available after import" },
-        {
-          label: "Ignored lines",
-          value: parserPreview.ignoredRows ?? "Available after import",
-        },
-        { label: "Warnings", value: parserPreview.warnings.length },
-        { label: "Preview mode", value: "Shallow local check" },
-      ]}
-    />
+    <dl className="mt-3 grid overflow-hidden rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] text-sm sm:grid-cols-2">
+      {items.map((item) => (
+        <div
+          className="grid min-h-16 gap-1 border-b border-[var(--vpw-border-subtle)] px-3 py-2.5 sm:[&:nth-child(odd)]:border-r sm:[&:nth-last-child(-n+2)]:border-b-0"
+          key={item.label}
+        >
+          <dt className="vpw-label">{item.label}</dt>
+          <dd
+            className={cn(
+              "min-w-0 text-base font-semibold leading-5 text-[var(--vpw-text-primary)] [overflow-wrap:anywhere]",
+              item.tone === "warning" && "text-[var(--vpw-amber)]",
+            )}
+          >
+            {item.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
   )
 }
 

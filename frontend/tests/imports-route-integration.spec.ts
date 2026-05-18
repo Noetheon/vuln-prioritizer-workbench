@@ -296,7 +296,9 @@ test("new import wizard gates the four-step flow", async ({ page }) => {
   await expect(page.getByTestId("import-summary-rail")).toContainText(
     "Ready to import",
   )
-  await expect(page.getByRole("heading", { name: "Readiness" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Preflight checks" }),
+  ).toBeVisible()
   await expect(page.getByText("Updates expected")).toHaveCount(0)
   await expect(page.getByText("Updated findings")).toBeVisible()
   await expect(

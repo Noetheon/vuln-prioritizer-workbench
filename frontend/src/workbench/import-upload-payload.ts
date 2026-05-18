@@ -13,7 +13,7 @@ export function buildImportUploadFormData({
   selectedFile,
   selectedVexFile,
 }: ImportUploadPayloadInput): ImportUploadFormData {
-  const attackSource = importWizard.attackSource ?? "none"
+  const attackSource = importWizard.attackSource?.trim() || "none"
   const includeAttackFiles = attackSource !== "none"
 
   return {
