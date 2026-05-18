@@ -19,6 +19,8 @@ export type VpwFileInputProps = {
   layout?: "default" | "centered"
   name?: string
   onFileChange: (file: File | null) => void
+  selectedTone?: "default" | "accepted"
+  showAcceptedText?: boolean
   showSelectedFileActions?: boolean
 }
 
@@ -37,6 +39,8 @@ export function VpwFileInput({
   layout = "default",
   name,
   onFileChange,
+  selectedTone = "default",
+  showAcceptedText = true,
   showSelectedFileActions = false,
 }: VpwFileInputProps) {
   const acceptedText = acceptedLabel
@@ -72,18 +76,31 @@ export function VpwFileInput({
       />
       <label
         className={cn(
-          "flex min-h-28 cursor-pointer rounded-[var(--vpw-radius-lg)] border border-dashed border-[var(--vpw-border-strong)] bg-[var(--vpw-bg-card)] px-4 py-3 text-sm transition-colors",
+          "flex cursor-pointer rounded-[var(--vpw-radius-lg)] border border-dashed border-[var(--vpw-border-strong)] bg-[var(--vpw-bg-card)] px-4 py-3 text-sm transition-colors",
+          file && selectedTone === "accepted" && layout === "default"
+            ? "min-h-20"
+            : "min-h-28",
           layout === "centered"
             ? "flex-col items-center justify-center gap-3 text-center"
             : "items-center gap-3",
           "hover:border-[var(--vpw-blue)] hover:bg-[var(--vpw-bg-info)]",
           "focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--vpw-focus-ring)]",
+          file &&
+            selectedTone === "accepted" &&
+            "border-[color-mix(in_srgb,var(--vpw-green)_34%,var(--vpw-border-default))] bg-[var(--vpw-bg-success)]",
           disabled &&
             "cursor-not-allowed border-[var(--vpw-border-disabled)] bg-[var(--vpw-bg-disabled)] text-[var(--vpw-text-disabled)]",
         )}
         htmlFor={id}
       >
-        <span className="grid size-10 shrink-0 place-items-center rounded-[var(--vpw-radius-md)] bg-[var(--vpw-bg-panel)] text-[var(--vpw-blue)]">
+        <span
+          className={cn(
+            "grid size-10 shrink-0 place-items-center rounded-[var(--vpw-radius-md)] bg-[var(--vpw-bg-panel)] text-[var(--vpw-blue)]",
+            file &&
+              selectedTone === "accepted" &&
+              "bg-[var(--vpw-green)] text-[var(--vpw-bg-card)]",
+          )}
+        >
           {file ? (
             <FileCheck2 aria-hidden="true" className="size-5" />
           ) : (
@@ -95,9 +112,13 @@ export function VpwFileInput({
             {file ? file.name : "Choose or drop a file"}
           </span>
           <span className="mt-1 block text-xs leading-5 text-[var(--vpw-text-muted)]">
-            {acceptedText
-              ? `Accepted: ${acceptedText}`
-              : "Supported workbench input"}
+            {showAcceptedText
+              ? acceptedText
+                ? `Accepted: ${acceptedText}`
+                : "Supported workbench input"
+              : file
+                ? "Accepted for upload."
+                : "Select evidence from disk."}
           </span>
         </span>
       </label>

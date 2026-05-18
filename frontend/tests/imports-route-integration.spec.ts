@@ -239,7 +239,16 @@ test("new import wizard gates the four-step flow", async ({ page }) => {
     mimeType: "text/csv",
     name: "wizard-occurrences.csv",
   })
+  await expect(page.getByText("B. File check passed")).toBeVisible()
   await expect(page.getByText("Shallow parser preview passed")).toBeVisible()
+  await expect(page.getByText("Accepted file types:")).toBeVisible()
+  await expect(page.getByText("Accepted: .csv, text/csv")).toHaveCount(0)
+  await expect(page.getByText("File type match")).toBeVisible()
+  await expect(
+    page.getByText(
+      "If the file structure does not match the selected format, import may create fewer findings or skip rows.",
+    ),
+  ).toBeVisible()
   await expect(page.getByRole("button", { name: "Remove" })).toBeVisible()
   await expect(page.getByTestId("import-summary-rail")).toContainText(
     "Can continue",

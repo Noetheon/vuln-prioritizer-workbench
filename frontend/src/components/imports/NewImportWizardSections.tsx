@@ -4,7 +4,6 @@ import {
   Check,
   CheckCircle2,
   Circle,
-  FileCheck2,
   X,
 } from "lucide-react"
 import type { CSSProperties } from "react"
@@ -554,18 +553,16 @@ export function UploadFileStep({
   format: ImportsWorkbenchProps["supportedFormats"][number] | undefined
   parserPreview: ParserPreview
 }) {
-  const uploadHelp =
-    format?.value === "generic-occurrence-csv"
-      ? "Your CSV must include a CVE identifier for each row. Optional columns can add component or asset context."
-      : "Attach the supplied evidence export for the selected input type."
-  const acceptedCopy = format?.accept
-    ?.split(",")
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .join(", ")
+  const metadataFormat = getImportFormat(importWizard.inputType)
+  const fileCheckTitle =
+    parserPreview.state === "passed"
+      ? "B. File check passed"
+      : parserPreview.state === "warning"
+        ? "B. File check warning"
+        : "B. File check"
 
   return (
-    <section className="flex flex-col gap-5">
+    <section className="flex flex-col gap-4">
       <VpwSectionHeader
         description={
           format
@@ -574,8 +571,8 @@ export function UploadFileStep({
         }
         title="Upload file"
       />
-      <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-4">
-        <div className="mb-4">
+      <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-3">
+        <div className="mb-3">
           <p className="text-base font-semibold text-[var(--vpw-text-primary)]">
             A. Evidence file
           </p>
@@ -588,21 +585,27 @@ export function UploadFileStep({
         </div>
         <FileUploadField
           accept={format?.accept}
-          acceptedLabel={acceptedCopy}
-          description={uploadHelp}
+          description={undefined}
           file={importWizard.file}
+          fieldClassName="[&_[data-slot=field-label]]:sr-only"
           id="import-file"
           label="Evidence file"
           name="importFile"
           onFileChange={onFileChange}
           required
+          selectedTone={importWizard.file ? "accepted" : "default"}
+          showAcceptedText={false}
+          showSelectedFileDescription={false}
         />
+        {metadataFormat?.extensions.length ? (
+          <AcceptedTypeChips extensions={metadataFormat.extensions} />
+        ) : null}
       </div>
-      <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-4">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-base font-semibold text-[var(--vpw-text-primary)]">
-              B. File check
+              {fileCheckTitle}
             </p>
             <p className="mt-1 text-sm text-[var(--vpw-text-secondary)]">
               Shallow validation runs locally before the import starts.
@@ -617,6 +620,24 @@ export function UploadFileStep({
         <ParserPreviewPanel parserPreview={parserPreview} />
       </div>
     </section>
+  )
+}
+
+function AcceptedTypeChips({ extensions }: { extensions: readonly string[] }) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--vpw-text-muted)]">
+      <span className="font-medium text-[var(--vpw-text-secondary)]">
+        Accepted file types:
+      </span>
+      {extensions.map((extension) => (
+        <span
+          className="rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] px-2 py-1 font-mono text-[var(--vpw-text-primary)]"
+          key={extension}
+        >
+          {extension}
+        </span>
+      ))}
+    </div>
   )
 }
 
@@ -925,77 +946,85 @@ function ParserPreviewPanel({ parserPreview }: { parserPreview: ParserPreview })
       </VpwStatusBanner>
     )
   }
+  const previewItems: Array<{
+    label: string
+    tone?: "warning" | "critical"
+    value: number | string
+  }> = [
+    {
+      label: "File type match",
+      value: parserPreview.detectedInputType
+        ? `${getImportFormat(parserPreview.detectedInputType)?.label ?? "Selected format"}`
+        : "Matches selected format",
+    },
+    {
+      label: "Required fields",
+      value:
+        parserPreview.requiredFieldsFound &&
+        parserPreview.requiredFieldsFound.length > 0
+          ? requiredFieldsPreviewLabel(parserPreview)
+          : "Checked by full parser after import",
+    },
+    {
+      label: "Candidate findings",
+      value: parserPreview.candidateRows ?? "Available after import",
+    },
+    {
+      label: "Ignored lines",
+      value: parserPreview.ignoredRows ?? "Available after import",
+    },
+    {
+      label: "Parser warnings",
+      tone: parserPreview.warnings.length > 0 ? "warning" : undefined,
+      value: parserPreview.warnings.length,
+    },
+    {
+      label: "Parser errors",
+      tone: parserPreview.errors.length > 0 ? "critical" : undefined,
+      value: parserPreview.errors.length,
+    },
+  ]
   return (
     <div>
-      {parserPreview.fileName ? (
-        <div className="mb-3 flex items-center gap-3 rounded-[var(--vpw-radius-md)] border border-[color-mix(in_srgb,var(--vpw-green)_24%,var(--vpw-border-default))] bg-[var(--vpw-bg-success)] px-3 py-2.5">
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--vpw-green)] text-[var(--vpw-bg-card)]">
-            <FileCheck2 aria-hidden="true" className="size-4" />
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate font-semibold text-[var(--vpw-text-primary)]">
-              {parserPreview.fileName}
-            </span>
-            <span className="block text-xs text-[var(--vpw-text-secondary)]">
-              Accepted for shallow parser preview.
-            </span>
-          </span>
-        </div>
-      ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <p className="font-semibold text-[var(--vpw-text-primary)]">
             {parserPreview.warnings.length > 0
               ? "Parser preview warning"
               : "Shallow parser preview passed"}
           </p>
           <p className="mt-1 text-sm text-[var(--vpw-text-secondary)]">
-            Full parser results will be available after import.
+            Full parser results will be available after import. If the file
+            structure does not match the selected format, import may create
+            fewer findings or skip rows.
           </p>
         </div>
-        <VpwBadge tone={parserPreview.warnings.length > 0 ? "warning" : "success"}>
+        <VpwBadge
+          className="shrink-0"
+          tone={parserPreview.warnings.length > 0 ? "warning" : "success"}
+        >
           {parserPreview.warnings.length > 0 ? "Warning" : "Passed"}
         </VpwBadge>
       </div>
-      <VpwKeyValueList
-        className="mt-4"
-        columns={2}
-        density="compact"
-        items={[
-          {
-            label: "File type",
-            value: parserPreview.detectedInputType
-              ? `${getImportFormat(parserPreview.detectedInputType)?.label ?? "Selected format"}`
-              : "Matches selected format",
-          },
-          {
-            label: "Required fields",
-            value:
-              parserPreview.requiredFieldsFound &&
-              parserPreview.requiredFieldsFound.length > 0
-                ? requiredFieldsPreviewLabel(parserPreview)
-                : "Checked by full parser after import",
-          },
-          {
-            label: "Candidate findings",
-            value: parserPreview.candidateRows ?? "Available after import",
-          },
-          {
-            label: "Ignored lines",
-            value: parserPreview.ignoredRows ?? "Available after import",
-          },
-          {
-            label: "Parser warnings",
-            value: parserPreview.warnings.length,
-            tone: parserPreview.warnings.length > 0 ? "warning" : undefined,
-          },
-          {
-            label: "Parser errors",
-            value: parserPreview.errors.length,
-            tone: parserPreview.errors.length > 0 ? "critical" : undefined,
-          },
-        ]}
-      />
+      <dl className="mt-3 grid overflow-hidden rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] text-sm md:grid-cols-2">
+        {previewItems.map((item) => (
+          <div
+            className="grid min-h-10 grid-cols-[minmax(7.5rem,0.68fr)_minmax(0,1fr)] items-center gap-2.5 border-b border-[var(--vpw-border-subtle)] px-3 py-1.5 odd:md:border-r md:[&:nth-last-child(-n+2)]:border-b-0"
+            key={item.label}
+          >
+            <dt className="vpw-label">{item.label}</dt>
+            <dd
+              className={cn(
+                "min-w-0 font-medium text-[var(--vpw-text-primary)] [overflow-wrap:anywhere]",
+                item.tone === "warning" && "text-[var(--vpw-amber)]",
+                item.tone === "critical" && "text-[var(--vpw-red)]",
+              )}
+            >
+              {item.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
       {parserPreview.warnings.length > 0 ? (
         <p className="mt-3 text-sm text-[var(--vpw-text-secondary)]">
           {parserPreview.warnings.join(" ")}
