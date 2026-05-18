@@ -218,7 +218,7 @@ test("new import wizard gates the four-step flow", async ({ page }) => {
   ).toBeVisible()
   await expect(
     page.getByRole("button", {
-      name: /Add context Upload a valid evidence file first\./,
+      name: /Add context Upload evidence first\./,
     }),
   ).toBeDisabled()
   await expect(page.getByTestId("import-summary-rail")).toContainText(

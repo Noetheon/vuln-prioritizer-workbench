@@ -243,14 +243,14 @@ export function NewImportRoute(props: NewImportRouteProps) {
               {step === 3 ? (
                 <AddContextStep {...props} readiness={readiness} />
               ) : null}
-              {step === 4 ? (
+              {step === 4 && !importFailed ? (
                 <ReviewImportStep
                   {...props}
                   parserPreview={parserPreview}
                   readiness={readiness}
                 />
               ) : null}
-              {props.importError ? (
+              {step === 4 && importFailed ? (
                 <ImportFailurePanel
                   failedImportRunId={props.failedImportRunId}
                   importWizard={props.importWizard}

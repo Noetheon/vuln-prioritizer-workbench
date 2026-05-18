@@ -98,7 +98,7 @@ export function StepNav({
 
   return (
     <VpwPanel className="overflow-hidden p-0 lg:h-full">
-      <ol className="relative flex flex-col gap-1 p-4">
+      <ol className="relative flex flex-col gap-1.5 p-3">
         {stepLabels.map((item, index) => {
           const reachable =
             item.id === 1 ||
@@ -110,34 +110,47 @@ export function StepNav({
           const blockedReason = reachable
             ? ""
             : blockedStepReason(item.id, canReachStep2, canReachStep3)
+          const accessibleDescription = blockedReason || item.description
+          const visualDescription =
+            blockedReason === "Select project and input type first."
+              ? "Choose source first."
+              : blockedReason === "Upload a valid evidence file first."
+                ? "Upload evidence first."
+                : accessibleDescription
           return (
             <li className="relative" key={item.id}>
               {index < stepLabels.length - 1 ? (
                 <span
                   aria-hidden="true"
-                  className="absolute top-9 bottom-[-0.65rem] left-4 w-px bg-[var(--vpw-border-default)]"
+                  className={cn(
+                    "absolute top-8 bottom-[-0.85rem] left-[1.55rem] w-px",
+                    completed
+                      ? "bg-[var(--vpw-green)]"
+                      : "bg-[var(--vpw-border-default)]",
+                  )}
                 />
               ) : null}
               <button
                 aria-current={active ? "step" : undefined}
                 className={cn(
-                  "relative z-10 grid min-h-[4.75rem] w-full grid-cols-[2rem_minmax(0,1fr)] items-start gap-3 rounded-[var(--vpw-radius-lg)] border px-0 py-3 text-left transition-[background,border-color,box-shadow]",
+                  "relative z-10 grid min-h-[3.875rem] w-full grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-2.5 rounded-[var(--vpw-radius-md)] px-2.5 py-2.5 text-left transition-[background,box-shadow,color]",
                   active
-                    ? "border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] shadow-[var(--vpw-shadow-1)]"
-                    : "border-transparent bg-transparent",
+                    ? "bg-[var(--vpw-bg-card)] shadow-[var(--vpw-shadow-1)] ring-1 ring-[var(--vpw-border-default)]"
+                    : "bg-transparent",
                   reachable
-                    ? "hover:border-[var(--vpw-border-default)] hover:bg-[var(--vpw-bg-panel)]"
-                    : "cursor-not-allowed",
+                    ? "hover:bg-[var(--vpw-bg-panel)]"
+                    : "cursor-not-allowed opacity-80",
                 )}
                 disabled={!reachable}
                 onClick={() => reachable && onStepChange(item.id)}
+                title={blockedReason || undefined}
                 type="button"
               >
                 <span
                   className={cn(
-                    "relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border bg-[var(--vpw-bg-card)] font-mono text-xs font-semibold",
+                    "relative z-10 flex size-7 shrink-0 items-center justify-center rounded-full border bg-[var(--vpw-bg-card)] font-mono text-[0.72rem] font-semibold",
                     completed &&
-                      "border-[var(--vpw-green)] bg-[var(--vpw-bg-success)] text-[var(--vpw-green)]",
+                      "border-[var(--vpw-green)] bg-[var(--vpw-green)] text-[var(--vpw-bg-card)]",
                     active &&
                       !completed &&
                       "border-[var(--vpw-green)] bg-[var(--vpw-green)] text-[var(--vpw-bg-card)]",
@@ -147,15 +160,15 @@ export function StepNav({
                   )}
                 >
                   {completed ? (
-                    <Check aria-hidden="true" className="size-4" />
+                    <Check aria-hidden="true" className="size-3.5" />
                   ) : (
                     item.id
                   )}
                 </span>
-                <span className="min-w-0 pt-0.5">
+                <span className="min-w-0">
                   <span
                     className={cn(
-                      "block text-sm font-semibold leading-5",
+                      "block text-[0.8125rem] font-semibold leading-4",
                       active
                         ? "text-[var(--vpw-text-primary)]"
                         : "text-[var(--vpw-text-secondary)]",
@@ -163,8 +176,8 @@ export function StepNav({
                   >
                     {item.label}
                   </span>
-                  <span className="mt-0.5 block text-xs leading-5 text-[var(--vpw-text-muted)]">
-                    {blockedReason || item.description}
+                  <span className="mt-1 block text-[0.72rem] leading-4 text-[var(--vpw-text-muted)]">
+                    {visualDescription}
                   </span>
                 </span>
               </button>
