@@ -565,6 +565,14 @@
     background: color-mix(in srgb, var(--vpw-bg-info) 42%, var(--vpw-bg-card));
   }
 
+  .vpw-table-row--selected > .vpw-table-cell {
+    background: var(--vpw-bg-info);
+  }
+
+  .vpw-table-row--selected > .vpw-table-cell:first-child {
+    box-shadow: inset 2px 0 0 var(--vpw-blue);
+  }
+
   .vpw-table-actions {
     display: inline-flex;
     min-width: 0;

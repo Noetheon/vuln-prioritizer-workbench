@@ -131,10 +131,10 @@ export function StepNav({
                   )}
                 />
               ) : null}
-              <button
+              <Button
                 aria-current={active ? "step" : undefined}
                 className={cn(
-                  "relative z-10 grid min-h-[3.875rem] w-full grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-2.5 rounded-[var(--vpw-radius-md)] px-2.5 py-2.5 text-left transition-[background,box-shadow,color]",
+                  "relative z-10 grid h-auto min-h-[3.875rem] w-full grid-cols-[2.25rem_minmax(0,1fr)] items-center justify-start gap-2.5 rounded-[var(--vpw-radius-md)] px-2.5 py-2.5 text-left whitespace-normal transition-[background,box-shadow,color]",
                   active
                     ? "bg-[var(--vpw-bg-card)] shadow-[var(--vpw-shadow-1)] ring-1 ring-[var(--vpw-border-default)]"
                     : "bg-transparent",
@@ -144,8 +144,10 @@ export function StepNav({
                 )}
                 disabled={!reachable}
                 onClick={() => reachable && onStepChange(item.id)}
+                size="default"
                 title={blockedReason || undefined}
                 type="button"
+                variant="ghost"
               >
                 <span
                   className={cn(
@@ -181,7 +183,7 @@ export function StepNav({
                     {visualDescription}
                   </span>
                 </span>
-              </button>
+              </Button>
             </li>
           )
         })}
@@ -450,7 +452,7 @@ function ImportSourceGlyph({ inputType }: { inputType: ImportInputType }) {
       )
     case "dependency-check-json":
       return (
-        <span className="font-mono text-base font-black tracking-normal">
+        <span className="font-mono text-base font-black">
           DC
         </span>
       )
@@ -495,7 +497,7 @@ function ImportSourceGlyph({ inputType }: { inputType: ImportInputType }) {
       )
     case "spdx-json":
       return (
-        <span className="font-mono text-sm font-black tracking-normal">
+        <span className="font-mono text-sm font-black">
           SPDX
         </span>
       )
@@ -1365,10 +1367,10 @@ function ParserPreviewPanel({ parserPreview }: { parserPreview: ParserPreview })
           findings or skip rows.
         </p>
       </div>
-      <dl className="mt-3 grid overflow-hidden rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] text-sm md:grid-cols-2">
+      <dl className="mt-3 grid gap-px overflow-hidden rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-border-subtle)] text-sm md:grid-cols-2">
         {previewItems.map((item) => (
           <div
-            className="grid min-h-10 grid-cols-[minmax(7.5rem,0.68fr)_minmax(0,1fr)] items-center gap-2.5 border-b border-[var(--vpw-border-subtle)] px-3 py-1.5 odd:md:border-r md:[&:nth-last-child(-n+2)]:border-b-0"
+            className="grid min-h-10 grid-cols-[minmax(7.5rem,0.68fr)_minmax(0,1fr)] items-center gap-2.5 bg-[var(--vpw-bg-card)] px-3 py-1.5"
             key={item.label}
           >
             <dt className="vpw-label">{item.label}</dt>
@@ -1462,10 +1464,10 @@ function PreviewSummary({ parserPreview }: { parserPreview: ParserPreview }) {
     },
   ]
   return (
-    <dl className="mt-3 grid overflow-hidden rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] text-sm sm:grid-cols-2">
+    <dl className="mt-3 grid gap-px overflow-hidden rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-border-subtle)] text-sm sm:grid-cols-2">
       {items.map((item) => (
         <div
-          className="grid min-h-16 gap-1 border-b border-[var(--vpw-border-subtle)] px-3 py-2.5 sm:[&:nth-child(odd)]:border-r sm:[&:nth-last-child(-n+2)]:border-b-0"
+          className="grid min-h-16 gap-1 bg-[var(--vpw-bg-card)] px-3 py-2.5"
           key={item.label}
         >
           <dt className="vpw-label">{item.label}</dt>

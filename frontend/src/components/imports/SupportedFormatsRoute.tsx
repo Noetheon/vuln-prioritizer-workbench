@@ -206,7 +206,7 @@ export function SupportedFormatsRoute({
               density="compact"
               getRowClassName={(format) =>
                 format.inputType === selectedInputType
-                  ? "[&>td]:bg-[var(--vpw-bg-info)] [&>td:first-child]:shadow-[inset_2px_0_0_var(--vpw-blue)]"
+                  ? "vpw-table-row--selected"
                   : undefined
               }
               getRowKey={(format) => format.inputType}
