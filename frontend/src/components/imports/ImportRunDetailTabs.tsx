@@ -10,6 +10,7 @@ import {
   RotateCcw,
   UploadCloud,
 } from "lucide-react"
+import type { ReactNode } from "react"
 import type { ReportPublic } from "@/api-client"
 import { ReportsService } from "@/api-client"
 import { Button } from "@/components/ui/button"
@@ -25,6 +26,7 @@ import {
 } from "@/components/vpw"
 import { reportFormatLabel } from "@/lib/report-format"
 import { runStatusLabel } from "@/lib/risk-format"
+import { cn } from "@/lib/utils"
 import { fetchReportDownload, startReportDownload } from "@/workbench/report-download"
 import { workbenchQueryKeys } from "@/workbench/workbench-query-keys"
 import { ParserErrorsTable } from "./ImportsWorkbenchResults"
@@ -64,27 +66,31 @@ export function OverviewTab({
     <div className="grid gap-4 lg:grid-cols-2">
       <VpwPanel>
         <VpwSectionHeader title="Source details" />
-        <VpwKeyValueList
-          columns={2}
-          density="compact"
+        <RunDetailRows
           items={[
             { label: "Project", value: projectName ?? summary.project_id },
             { label: "Input type", value: formatDisplayType(summary.input_type) },
             { label: "Original file", value: runFileLabel(summary) },
             {
               label: "Provider snapshot",
-              value: summary.provider_snapshot_id ?? "Not recorded",
+              value: summary.provider_snapshot_id ? (
+                <CopyableValue
+                  label="Copy provider snapshot ID"
+                  value={summary.provider_snapshot_id}
+                />
+              ) : (
+                "Not recorded"
+              ),
             },
             { label: "Started", value: formatDateTime(summary.started_at) },
             { label: "Finished", value: formatDateTime(summary.finished_at) },
-            { label: "Run ID", value: summary.id },
+            { label: "Run ID", value: <CopyableValue label="Copy run ID" value={summary.id} /> },
           ]}
         />
       </VpwPanel>
       <VpwPanel>
         <VpwSectionHeader title="Context overlays" />
-        <VpwKeyValueList
-          density="compact"
+        <RunDetailRows
           items={[
             {
               label: "Asset context",
@@ -273,9 +279,7 @@ export function DiagnosticsTab({
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
       <VpwPanel className="flex flex-col gap-4">
         <VpwSectionHeader title="Parser diagnostics" />
-        <VpwKeyValueList
-          columns={2}
-          density="compact"
+        <RunDetailRows
           items={[
             { label: "Status", value: runStatusLabel(summary.status) },
             { label: "Rows read", value: recordedValue(numberFromSummary(summary, "rows_read")) },
@@ -315,18 +319,31 @@ export function DiagnosticsTab({
       <div className="grid gap-4">
         <VpwPanel className="flex flex-col gap-4">
           <VpwSectionHeader title="Upload and provider" />
-          <VpwKeyValueList
-            density="compact"
+          <RunDetailRows
             items={[
               { label: "Filename", value: runFileLabel(summary) },
               { label: "Input type", value: formatDisplayType(summary.input_type) },
               {
                 label: "File hash",
-                value: recordedValue(stringFromRecord(inputUpload, "sha256")),
+                value: stringFromRecord(inputUpload, "sha256") ? (
+                  <CopyableValue
+                    label="Copy file hash"
+                    value={stringFromRecord(inputUpload, "sha256") ?? ""}
+                  />
+                ) : (
+                  "Not recorded"
+                ),
               },
               {
                 label: "Storage reference",
-                value: recordedValue(stringFromRecord(inputUpload, "storage_ref")),
+                value: stringFromRecord(inputUpload, "storage_ref") ? (
+                  <CopyableValue
+                    label="Copy storage reference"
+                    value={stringFromRecord(inputUpload, "storage_ref") ?? ""}
+                  />
+                ) : (
+                  "Not recorded"
+                ),
               },
               {
                 label: "Provider data",
@@ -337,7 +354,14 @@ export function DiagnosticsTab({
               },
               {
                 label: "Provider snapshot",
-                value: summary.provider_snapshot_id ?? "Not recorded",
+                value: summary.provider_snapshot_id ? (
+                  <CopyableValue
+                    label="Copy provider snapshot ID"
+                    value={summary.provider_snapshot_id}
+                  />
+                ) : (
+                  "Not recorded"
+                ),
               },
             ]}
           />
@@ -395,15 +419,33 @@ export function EvidenceTab({
   })
   const reports = reportsQuery.data?.data ?? []
   const columns: VpwDataTableColumn<ReportPublic>[] = [
-    { id: "artifact", header: "Artifact", cell: (report) => reportFormatLabel(report.format) },
-    { id: "format", header: "Format", cell: (report) => report.format },
-    { id: "filename", header: "Filename", cell: (report) => report.filename },
+    {
+      id: "artifact",
+      header: "Artifact",
+      cell: (report) => (
+        <div className="min-w-0">
+          <span className="block font-medium text-[var(--vpw-text-primary)]">
+            {reportFormatLabel(report.format)}
+          </span>
+          <span className="vpw-table-subtext">{report.format}</span>
+        </div>
+      ),
+    },
+    {
+      id: "filename",
+      header: "Filename",
+      cell: (report) => (
+        <span className="block max-w-[16rem] [overflow-wrap:anywhere]">
+          {report.filename}
+        </span>
+      ),
+    },
     { id: "size", header: "Size", cell: (report) => `${report.size_bytes} B` },
-    { id: "created", header: "Created", cell: (report) => formatDateTime(report.created_at) },
-    { id: "checksum", header: "Checksum", cell: (report) => report.sha256.slice(0, 12) },
     {
       id: "actions",
       header: "Actions",
+      className: "text-right",
+      headerClassName: "text-right",
       cell: (report) => (
         <div className="vpw-table-actions">
           <Button
@@ -450,22 +492,35 @@ export function EvidenceTab({
     <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.75fr)_minmax(0,1.25fr)]">
       <VpwPanel className="flex flex-col gap-4">
         <VpwSectionHeader title="Imported evidence" />
-        <VpwKeyValueList
-          density="compact"
+        <RunDetailRows
           items={[
             { label: "Original file", value: runFileLabel(summary) },
             { label: "Input type", value: formatDisplayType(summary.input_type) },
             {
               label: "File hash",
-              value: recordedValue(stringFromRecord(inputUpload, "sha256")),
+              value: stringFromRecord(inputUpload, "sha256") ? (
+                <CopyableValue
+                  label="Copy file hash"
+                  value={stringFromRecord(inputUpload, "sha256") ?? ""}
+                />
+              ) : (
+                "Not recorded"
+              ),
             },
             {
               label: "Storage reference",
-              value: recordedValue(stringFromRecord(inputUpload, "storage_ref")),
+              value: stringFromRecord(inputUpload, "storage_ref") ? (
+                <CopyableValue
+                  label="Copy storage reference"
+                  value={stringFromRecord(inputUpload, "storage_ref") ?? ""}
+                />
+              ) : (
+                "Not recorded"
+              ),
             },
             { label: "Started", value: formatDateTime(summary.started_at) },
             { label: "Finished", value: formatDateTime(summary.finished_at) },
-            { label: "Run ID", value: run.id },
+            { label: "Run ID", value: <CopyableValue label="Copy run ID" value={run.id} /> },
           ]}
         />
         <p className="text-sm leading-6 text-[var(--vpw-text-secondary)]">
@@ -481,7 +536,7 @@ export function EvidenceTab({
             data={reports}
             density="compact"
             getRowKey={(report) => report.id}
-            minWidth="960px"
+            minWidth="640px"
           />
         ) : (
           <div className="rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] px-4 py-3 text-sm leading-6 text-[var(--vpw-text-secondary)]">
@@ -524,9 +579,7 @@ export function MetadataTab({
   return (
     <VpwPanel className="flex flex-col gap-4">
       <VpwSectionHeader title="Run metadata" />
-      <VpwKeyValueList
-        columns={2}
-        density="compact"
+      <RunDetailRows
         items={[
           { label: "Run ID", value: <CopyableValue label="Copy run ID" value={summary.id} /> },
           { label: "Input type", value: summary.input_type },
@@ -570,10 +623,41 @@ export function MetadataTab({
   )
 }
 
+function RunDetailRows({
+  className,
+  items,
+}: {
+  className?: string
+  items: readonly { label: string; value: ReactNode }[]
+}) {
+  return (
+    <dl
+      className={cn(
+        "divide-y divide-[var(--vpw-border-subtle)] overflow-hidden rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] text-sm",
+        className,
+      )}
+    >
+      {items.map((item) => (
+        <div
+          className="grid gap-1 px-3 py-2.5 sm:grid-cols-[9.5rem_minmax(0,1fr)] sm:gap-4"
+          key={item.label}
+        >
+          <dt className="vpw-label">{item.label}</dt>
+          <dd className="min-w-0 font-medium text-[var(--vpw-text-primary)] [overflow-wrap:anywhere]">
+            {item.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
 function CopyableValue({ label, value }: { label: string; value: string }) {
   return (
     <span className="inline-flex max-w-full items-center gap-2">
-      <span className="min-w-0 truncate">{value}</span>
+      <span className="min-w-0 truncate" title={value}>
+        {value}
+      </span>
       <CopyButton label={label} value={value} />
     </span>
   )

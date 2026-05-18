@@ -155,18 +155,18 @@ export function RecentImports({
     },
     {
       id: "provider",
-      header: "Provider snapshot",
+      header: "Provider",
       cell: (run) =>
         run.provider_snapshot_id ? (
-          <SourceMark label={run.provider_snapshot_id} source="provider" />
+          <span title={run.provider_snapshot_id}>
+            <SourceMark
+              label={shortSnapshotLabel(run.provider_snapshot_id)}
+              source="provider"
+            />
+          </span>
         ) : (
-          <span className="text-[var(--vpw-text-muted)]">Not recorded</span>
+          <span className="text-[var(--vpw-text-muted)]">Current</span>
         ),
-    },
-    {
-      id: "started",
-      header: "Started",
-      cell: (run) => formatDateTime(run.started_at),
     },
     {
       id: "actions",
@@ -268,10 +268,16 @@ export function RecentImports({
               />
             }
             getRowKey={(run) => run.id}
-            minWidth="1180px"
+            minWidth="980px"
           />
         )}
       </VpwTableCard>
     </VpwSection>
   )
+}
+
+function shortSnapshotLabel(value: string) {
+  const trimmed = value.trim()
+  if (trimmed.length <= 12) return trimmed
+  return `${trimmed.slice(0, 8)}...`
 }
