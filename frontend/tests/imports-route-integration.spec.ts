@@ -2,6 +2,7 @@ import { expect, type Locator, type Page, test } from "@playwright/test"
 import type {
   AnalysisRunPublic,
   AnalysisRunSummaryPublic,
+  ReportPublic,
 } from "../src/api-client"
 import { mockProject, routeWorkbenchShell } from "./workbench-route-mocks"
 
@@ -146,6 +147,53 @@ test("run detail tabs show triage CTA, imported evidence, and compact diagnostic
   await expect(page.getByRole("button", { name: "Copy run ID" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Copy SHA256" })).toBeVisible()
   await expect(page.getByText("Raw metadata")).toBeVisible()
+})
+
+test("run detail evidence only verifies evidence bundles", async ({ page }) => {
+  const runWithReports = importRun("run-with-reports", "reports-import.txt", 4)
+  await routeWorkbenchShell(page, {
+    projects: [mockProject],
+    runSummaries: {
+      [runWithReports.id]: importRunSummary(runWithReports, 4),
+    },
+    runs: [runWithReports],
+  })
+  await page.route(`**/api/v1/runs/${runWithReports.id}/reports`, (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        count: 2,
+        data: [
+          reportArtifact(runWithReports, "csv-report", "csv", "report", "findings.csv"),
+          reportArtifact(
+            runWithReports,
+            "zip-report",
+            "zip",
+            "evidence-bundle",
+            "evidence-bundle.zip",
+          ),
+        ],
+      }),
+    }),
+  )
+
+  await page.goto(`/imports/runs/${runWithReports.id}?projectId=${mockProject.id}`)
+  await page.getByRole("tab", { name: "Evidence" }).click()
+  await expect(
+    page.getByRole("heading", { name: "Generated report artifacts" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Download findings.csv" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Verify findings.csv" }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole("button", { name: "Download evidence-bundle.zip" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Verify evidence-bundle.zip" }),
+  ).toBeVisible()
 })
 
 test("legacy imports runId search redirects to canonical run route", async ({
@@ -687,5 +735,27 @@ function importRunSummary(
     started_at: run.started_at ?? "2026-05-10T10:00:00Z",
     status: run.status ?? "succeeded",
     updated_findings: 0,
+  }
+}
+
+function reportArtifact(
+  run: AnalysisRunPublic,
+  id: string,
+  format: string,
+  kind: string,
+  filename: string,
+): ReportPublic {
+  return {
+    analysis_run_id: run.id,
+    content_type: format === "zip" ? "application/zip" : "text/csv",
+    created_at: "2026-05-10T10:10:00Z",
+    download_url: `/api/v1/reports/${id}/download`,
+    filename,
+    format,
+    id,
+    kind,
+    project_id: run.project_id,
+    sha256: `sha256-${id}`,
+    size_bytes: 1234,
   }
 }

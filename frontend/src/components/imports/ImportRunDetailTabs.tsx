@@ -448,6 +448,19 @@ export function EvidenceTab({
       headerClassName: "text-right",
       cell: (report) => (
         <div className="vpw-table-actions">
+          {isVerifiableEvidenceBundle(report) ? (
+            <Button
+              aria-label={`Verify ${report.filename}`}
+              className="vpw-table-action-button"
+              disabled={verifyMutation.isPending}
+              onClick={() => verifyMutation.mutate(report)}
+              size="icon-sm"
+              type="button"
+              variant="outline"
+            >
+              <RotateCcw aria-hidden="true" />
+            </Button>
+          ) : null}
           <Button
             aria-label={`Download ${report.filename}`}
             className="vpw-table-action-button"
@@ -458,17 +471,6 @@ export function EvidenceTab({
             variant="outline"
           >
             <Download aria-hidden="true" />
-          </Button>
-          <Button
-            aria-label={`Verify ${report.filename}`}
-            className="vpw-table-action-button"
-            disabled={verifyMutation.isPending}
-            onClick={() => verifyMutation.mutate(report)}
-            size="icon-sm"
-            type="button"
-            variant="outline"
-          >
-            <RotateCcw aria-hidden="true" />
           </Button>
         </div>
       ),
@@ -621,6 +623,10 @@ export function MetadataTab({
       </details>
     </VpwPanel>
   )
+}
+
+function isVerifiableEvidenceBundle(report: ReportPublic) {
+  return report.format === "zip" && report.kind === "evidence-bundle"
 }
 
 function RunDetailRows({
