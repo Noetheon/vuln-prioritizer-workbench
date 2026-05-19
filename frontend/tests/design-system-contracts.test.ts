@@ -33,6 +33,12 @@ const colorTokenFiles = new Set([
 
 const showcaseFiles = new Set([
   "src/components/vpw/VpwDesignSystemShowcase.tsx",
+  "src/components/vpw/VpwDesignSystemShowcaseData.tsx",
+  "src/components/vpw/VpwDesignSystemShowcaseControls.tsx",
+  "src/components/vpw/VpwDesignSystemShowcaseEvidence.tsx",
+  "src/components/vpw/VpwDesignSystemShowcaseFrame.tsx",
+  "src/components/vpw/VpwDesignSystemShowcaseFoundations.tsx",
+  "src/components/vpw/VpwDesignSystemShowcaseStates.tsx",
 ])
 
 const rawControlAllowlist = new Set([
@@ -49,13 +55,14 @@ const rawTableAllowlist = new Set([
 ])
 
 const rowActionContractFiles = [
-  "src/components/assets/AssetTable.tsx",
-  "src/components/dashboard/DashboardRemediationSection.tsx",
+  "src/components/assets/AssetTableColumns.tsx",
+  "src/components/dashboard/DashboardRemediationColumns.tsx",
   "src/components/findings/FindingsDataTableColumns.tsx",
-  "src/components/imports/ImportsWorkbenchHistory.tsx",
+  "src/components/imports/ImportRunEvidenceColumns.tsx",
+  "src/components/imports/ImportsWorkbenchHistoryActions.tsx",
   "src/components/projects/ProjectsWorkbenchDirectoryColumns.tsx",
-  "src/components/providers/ProvidersWorkbenchSources.tsx",
-  "src/components/reports/EvidenceCenterHistory.tsx",
+  "src/components/providers/ProvidersWorkbenchSourcesColumns.tsx",
+  "src/components/reports/EvidenceCenterHistoryColumns.tsx",
   "src/components/waivers/WaiversWorkbenchRegisterColumns.tsx",
 ]
 
@@ -69,12 +76,18 @@ const inventoryTableCardContractFiles = [
 ]
 
 const inventoryActionColumnContractFiles = [
-  "src/components/assets/AssetTable.tsx",
-  "src/components/providers/ProvidersWorkbenchSources.tsx",
+  "src/components/assets/AssetTableColumns.tsx",
+  "src/components/providers/ProvidersWorkbenchSourcesColumns.tsx",
   "src/components/waivers/WaiversWorkbenchRegisterColumns.tsx",
-  "src/components/imports/ImportsWorkbenchHistory.tsx",
-  "src/components/reports/EvidenceCenterHistory.tsx",
+  "src/components/reports/EvidenceCenterHistoryColumns.tsx",
   "src/components/projects/ProjectsWorkbenchDirectoryColumns.tsx",
+]
+
+const splitInventoryActionContractFiles = [
+  {
+    actions: "src/components/imports/ImportsWorkbenchHistoryActions.tsx",
+    columns: "src/components/imports/ImportsWorkbenchHistoryColumns.tsx",
+  },
 ]
 
 const inventoryFilterContractFiles = [
@@ -128,6 +141,10 @@ const viewportFontSizePattern =
 
 function readProjectFile(path: string) {
   return readFileSync(join(frontendRoot, path), "utf8")
+}
+
+function readShowcaseSources() {
+  return [...showcaseFiles].map((path) => readProjectFile(path)).join("\n")
 }
 
 function walk(directory: string, files: string[] = []) {
@@ -206,6 +223,26 @@ function assertStandardResetControl(path: string, source: string) {
     `${path} should pair the reset icon with standard Reset text`,
   )
 }
+
+test("semantic badge model keeps focused pure model slices behind its facade", () => {
+  const facade = readProjectFile("src/components/vpw/semantic-badge-model.ts")
+  const slices = [
+    "src/components/vpw/semantic-badge-types.ts",
+    "src/components/vpw/semantic-risk-model.ts",
+    "src/components/vpw/semantic-status-model.ts",
+    "src/components/vpw/semantic-signal-model.ts",
+  ]
+
+  assert.deepEqual(
+    slices.filter((path) => !existsSync(join(frontendRoot, path))),
+    [],
+  )
+  assert.doesNotMatch(facade, /\b(?:function|const)\s+\w+/)
+  assert.match(facade, /from "\.\/semantic-badge-types(?:\.ts)?"/)
+  assert.match(facade, /from "\.\/semantic-risk-model(?:\.ts)?"/)
+  assert.match(facade, /from "\.\/semantic-status-model(?:\.ts)?"/)
+  assert.match(facade, /from "\.\/semantic-signal-model(?:\.ts)?"/)
+})
 
 test("semantic risk badges normalize levels, labels, and tones", () => {
   assert.deepEqual(
@@ -535,6 +572,12 @@ test("inventory action columns stay compact and right aligned", () => {
   for (const path of inventoryActionColumnContractFiles) {
     assertCompactRightAlignedActions(path, readProjectFile(path))
   }
+  for (const { actions, columns } of splitInventoryActionContractFiles) {
+    assertCompactRightAlignedActions(
+      `${columns} + ${actions}`,
+      `${readProjectFile(columns)}\n${readProjectFile(actions)}`,
+    )
+  }
 })
 
 test("shared filter bars expose search and select control primitives", () => {
@@ -550,6 +593,16 @@ test("shared filter bars expose search and select control primitives", () => {
   const filterBar = readProjectFile("src/components/vpw/VpwFilterBar.tsx")
   assert.match(filterBar, /VpwSearchControl/)
   assert.doesNotMatch(filterBar, /VpwSearchInput/)
+})
+
+test("design-system showcase stays out of the public product barrel", () => {
+  const vpwIndex = readProjectFile("src/components/vpw/index.ts")
+  const showcaseImportOffenders = walk(srcRoot)
+    .filter((path) => !showcaseFiles.has(path))
+    .filter((path) => readProjectFile(path).includes("VpwDesignSystemShowcase"))
+
+  assert.doesNotMatch(vpwIndex, /VpwDesignSystemShowcase/)
+  assert.deepEqual(showcaseImportOffenders, [])
 })
 
 test("filter bars keep the Workbench scope-search-filter-action order", () => {
@@ -682,9 +735,7 @@ test("runtime CSS, TypeScript tokens, JSON tokens, and showcase copy stay synchr
   }
   const tokenTs = readProjectFile("src/lib/vpw-tokens.ts")
   const tokenCss = readProjectFile("src/styles/tokens.css")
-  const showcase = readProjectFile(
-    "src/components/vpw/VpwDesignSystemShowcase.tsx",
-  )
+  const showcase = readShowcaseSources()
   const expectedRadius = {
     sm: "4px",
     md: "6px",
@@ -754,17 +805,20 @@ test("typography does not use viewport-scaled text or tracking drift", () => {
 
 test("VpwField associates descriptions and errors with field controls", () => {
   const field = readProjectFile("src/components/vpw/VpwField.tsx")
+  const fieldA11y = readProjectFile("src/components/vpw/VpwFieldA11y.ts")
   const fileInput = readProjectFile("src/components/vpw/VpwFileInput.tsx")
 
+  assert.match(field, /from "\.\/VpwFieldA11y"/)
   assert.match(field, /withFieldControlA11y\(children/)
-  assert.match(field, /"aria-describedby": mergeIdRefs/)
-  assert.match(field, /nextProps\["aria-required"\] = true/)
-  assert.match(field, /nextProps\["aria-invalid"\] = true/)
-  assert.match(field, /nextProps\["aria-errormessage"\] = errorId/)
   assert.match(field, /<FieldLabel htmlFor=\{controlId\}/)
   assert.match(field, /aria-hidden="true"/)
   assert.match(field, /<FieldDescription id=\{descriptionId\}/)
   assert.match(field, /<FieldError id=\{errorId\}/)
+
+  assert.match(fieldA11y, /"aria-describedby": mergeIdRefs/)
+  assert.match(fieldA11y, /nextProps\["aria-required"\] = true/)
+  assert.match(fieldA11y, /nextProps\["aria-invalid"\] = true/)
+  assert.match(fieldA11y, /nextProps\["aria-errormessage"\] = errorId/)
 
   assert.match(fileInput, /aria-describedby=\{ariaDescribedBy\}/)
   assert.match(fileInput, /aria-errormessage=\{ariaErrorMessage\}/)
