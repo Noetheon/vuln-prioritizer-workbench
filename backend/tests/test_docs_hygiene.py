@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -55,21 +56,12 @@ CANONICAL_EVIDENCE_CONTRACT_ARTIFACTS = {
 # archive/vpw-evidence so broad evidence sprawl cannot return unnoticed.
 NON_PUBLIC_CONTRACT_MARKDOWN = {
     path for path in CANONICAL_EVIDENCE_CONTRACT_ARTIFACTS if path.suffix.lower() == ".md"
-} | {
-    Path("docs/_uiux_redesign_context/chatgpt-context-pack.md"),
-    Path("docs/_uiux_redesign_context/uiux-codebase-brief.md"),
-    Path("docs/_uiux_redesign_context/vpw-design-direction.md"),
-    Path("docs/_uiux_redesign_context/VPW_Imports_UIUX_Redesign_Codex_Handoff.md"),
 }
-NON_PUBLIC_DOC_ROOTS = {
-    Path("docs/_uiux_redesign_context"),
-}
+PRIVATE_DOC_ROOT_PREFIXES = ("_", ".")
 
 
 def _is_non_public_docs_path(path: Path) -> bool:
-    return path in NON_PUBLIC_CONTRACT_MARKDOWN or any(
-        path.is_relative_to(root) for root in NON_PUBLIC_DOC_ROOTS
-    )
+    return path in NON_PUBLIC_CONTRACT_MARKDOWN
 
 
 def _git_ls_files(*patterns: str) -> list[Path]:
@@ -138,6 +130,18 @@ def test_mkdocs_nav_includes_all_public_markdown_pages() -> None:
     }
 
     assert docs_pages - nav_pages == set()
+
+
+def test_docs_tree_does_not_contain_private_context_roots() -> None:
+    private_roots = {
+        Path("docs") / path.relative_to("docs").parts[0]
+        for path in _git_ls_files("docs")
+        if path.parts
+        and len(path.parts) > 1
+        and path.relative_to("docs").parts[0].startswith(PRIVATE_DOC_ROOT_PREFIXES)
+    }
+
+    assert private_roots == set()
 
 
 def test_public_docs_media_are_referenced() -> None:
@@ -331,6 +335,22 @@ def test_archives_have_entrypoints_and_public_evidence_tree_is_limited() -> None
     assert "Ownership Rules" in archive_manifest
     assert "Update this manifest" in archive_manifest
     assert "Do not archive secrets" in archive_manifest
+
+
+def test_successful_committed_evidence_reports_point_to_existing_repo_artifacts() -> None:
+    positive_report = json.loads(
+        (REPO_ROOT / "docs/evidence/vpw-052-positive-verification.json").read_text(encoding="utf-8")
+    )
+    bundle_path = Path(positive_report["metadata"]["bundle_path"])
+
+    assert positive_report["summary"]["ok"] is True
+    assert not bundle_path.is_absolute()
+    assert (REPO_ROOT / bundle_path).is_file()
+    assert bundle_path.parts[:2] == ("archive", "vpw-evidence")
+
+
+def test_runtime_upload_roots_are_not_tracked_as_fixtures() -> None:
+    assert _git_ls_files("data/uploads") == []
 
 
 def test_documentation_map_defines_current_and_historical_boundaries() -> None:
