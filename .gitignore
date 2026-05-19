@@ -49,6 +49,7 @@ Library/
 /data/*.sqlite3
 data/workbench-import-uploads/
 data/workbench-reports/
+data/uploads/
 data/workbench-provider-cache/
 data/provider-snapshots/
 data/provider-snapshot-*.json

@@ -548,6 +548,97 @@ def test_workbench_shell_is_frame_only_and_routes_own_product_surfaces() -> None
     assert 'from "../components/projects"' not in source
 
 
+def test_app_shell_is_split_into_navigation_and_status_slices() -> None:
+    app_root = REPO_ROOT / "frontend/src/components/app"
+    shell_source = (app_root / "AppShell.tsx").read_text(encoding="utf-8")
+    expected_slices = {
+        "AppShellMobileNav.tsx": "export function AppShellMobileNav",
+        "AppShellSidebar.tsx": "export function AppShellSidebar",
+        "AppShellStatusStrip.tsx": "export function AppShellStatusStrip",
+    }
+
+    assert len(shell_source.splitlines()) <= 220
+    assert "function readSidebarCollapsed" in shell_source
+    assert "function writeSidebarCollapsed" in shell_source
+    assert "content.focus({ preventScroll: true })" in shell_source
+    assert 'aria-label="Workbench sidebar"' not in shell_source
+    assert 'aria-label="Workbench mobile navigation"' not in shell_source
+    assert 'aria-label="Workbench status summary"' not in shell_source
+    for filename, symbol in expected_slices.items():
+        source = (app_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert filename.removesuffix(".tsx") in shell_source
+        assert len(source.splitlines()) <= 260
+
+
+def test_design_system_showcase_is_split_and_kept_private() -> None:
+    vpw_root = REPO_ROOT / "frontend/src/components/vpw"
+    showcase_source = (vpw_root / "VpwDesignSystemShowcase.tsx").read_text(encoding="utf-8")
+    index_source = (vpw_root / "index.ts").read_text(encoding="utf-8")
+    expected_slices = {
+        "VpwDesignSystemShowcaseControls.tsx": "export function VpwDesignSystemShowcaseControls",
+        "VpwDesignSystemShowcaseData.tsx": "export const findingRows",
+        "VpwDesignSystemShowcaseEvidence.tsx": "export function VpwDesignSystemShowcaseEvidence",
+        "VpwDesignSystemShowcaseFrame.tsx": "export function VpwDesignSystemShowcaseFrame",
+        "VpwDesignSystemShowcaseFoundations.tsx": (
+            "export function VpwDesignSystemShowcaseFoundations"
+        ),
+        "VpwDesignSystemShowcaseStates.tsx": "export function VpwDesignSystemShowcaseStates",
+    }
+
+    assert len(showcase_source.splitlines()) <= 80
+    assert "VpwDesignSystemShowcase" not in index_source
+    assert "VpwDesignSystemShowcaseEvidence" in showcase_source
+    assert "VpwDesignSystemShowcaseFoundations" in showcase_source
+    assert "findingRows" not in showcase_source
+    foundations_source = (vpw_root / "VpwDesignSystemShowcaseFoundations.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "VpwDesignSystemShowcaseControls" in foundations_source
+    assert "VpwDesignSystemShowcaseFrame" in foundations_source
+    assert "VpwDesignSystemShowcaseStates" in foundations_source
+    assert len(foundations_source.splitlines()) <= 40
+    for filename, symbol in expected_slices.items():
+        source = (vpw_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert len(source.splitlines()) <= 200
+
+
+def test_semantic_badge_model_is_split_behind_facade() -> None:
+    vpw_root = REPO_ROOT / "frontend/src/components/vpw"
+    facade_source = (vpw_root / "semantic-badge-model.ts").read_text(encoding="utf-8")
+    expected_slices = {
+        "semantic-badge-types.ts": "export function normalizeSemanticToken",
+        "semantic-risk-model.ts": "export function normalizeRiskLevel",
+        "semantic-signal-model.ts": "export function normalizeSignalKind",
+        "semantic-status-model.ts": "export function normalizeStatus",
+    }
+
+    assert len(facade_source.splitlines()) <= 30
+    assert "normalizeSemanticToken" not in facade_source
+    assert "function normalizeRiskLevel" not in facade_source
+    for filename, symbol in expected_slices.items():
+        source = (vpw_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert filename.removesuffix(".ts") in facade_source
+        assert len(source.splitlines()) <= 120
+
+
+def test_vpw_field_keeps_a11y_helper_logic_split_from_primitives() -> None:
+    vpw_root = REPO_ROOT / "frontend/src/components/vpw"
+    field_source = (vpw_root / "VpwField.tsx").read_text(encoding="utf-8")
+    a11y_source = (vpw_root / "VpwFieldA11y.ts").read_text(encoding="utf-8")
+
+    assert "./VpwFieldA11y" in field_source
+    assert "export function VpwField" in field_source
+    assert "export function withFieldControlA11y" in a11y_source
+    assert "export function mergeIdRefs" in a11y_source
+    assert 'nextProps["aria-describedby"]' not in field_source
+    assert '"aria-describedby": mergeIdRefs' in a11y_source
+    assert len(field_source.splitlines()) <= 190
+    assert len(a11y_source.splitlines()) <= 130
+
+
 def test_workbench_route_shells_delegate_interaction_state() -> None:
     assets_route_source = (REPO_ROOT / "frontend/src/workbench/routes/AssetsRoute.tsx").read_text(
         encoding="utf-8"
@@ -604,6 +695,12 @@ def test_imports_workbench_model_helpers_are_split_from_component() -> None:
     model_source = (
         REPO_ROOT / "frontend/src/components/imports/imports-workbench-model.ts"
     ).read_text(encoding="utf-8")
+    timeline_source = (
+        REPO_ROOT / "frontend/src/components/imports/import-run-timeline-model.ts"
+    ).read_text(encoding="utf-8")
+    records_source = (
+        REPO_ROOT / "frontend/src/components/imports/imports-workbench-records.ts"
+    ).read_text(encoding="utf-8")
 
     assert "./imports-workbench-model" in component_source
     assert "export type ImportsWorkbenchProps" not in component_source
@@ -612,6 +709,172 @@ def test_imports_workbench_model_helpers_are_split_from_component() -> None:
     assert "export type ImportsWorkbenchProps" in model_source
     assert "export function failedRunCause" in model_source
     assert "export function uploadProgress" in model_source
+    assert "import-run-timeline-model" in model_source
+    assert "imports-workbench-records" in model_source
+    assert "imports-workbench-records" in timeline_source
+    assert "export function importRunTimelineItems" in timeline_source
+    assert "export function objectRecord" in records_source
+    assert "export function stringValue" in records_source
+    assert "function hasProviderEvidence" in timeline_source
+    assert "function hasProviderEvidence" not in model_source
+    assert len(model_source.splitlines()) <= 260
+    assert len(timeline_source.splitlines()) <= 180
+    assert len(records_source.splitlines()) <= 20
+
+
+def test_import_format_metadata_is_split_by_contract_surface() -> None:
+    lib_root = REPO_ROOT / "frontend/src/lib"
+    facade_source = (lib_root / "import-format-metadata.ts").read_text(encoding="utf-8")
+    expected_slices = {
+        "import-format-catalog.ts": "export const SUPPORTED_IMPORT_FORMATS",
+        "import-format-types.ts": "export type ImportInputType",
+        "import-parser-preview.ts": "export async function buildParserPreview",
+        "import-readiness.ts": "export function buildImportReadinessChecks",
+    }
+
+    assert len(facade_source.splitlines()) <= 40
+    assert "SUPPORTED_IMPORT_FORMATS: readonly SupportedFormat[]" not in facade_source
+    assert "export async function buildParserPreview" not in facade_source
+    assert "export function buildImportReadinessChecks" not in facade_source
+    for filename, symbol in expected_slices.items():
+        source = (lib_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert filename.removesuffix(".ts") in facade_source
+        assert len(source.splitlines()) <= 300
+
+
+def test_frontend_demo_data_is_split_by_product_surface() -> None:
+    lib_root = REPO_ROOT / "frontend/src/lib"
+    facade_source = (lib_root / "demo-data.ts").read_text(encoding="utf-8")
+    expected_slices = {
+        "demo-data-attack-contexts.ts": "export const DEMO_FINDING_ATTACK_CONTEXTS",
+        "demo-data-findings.ts": "export const DEMO_FINDINGS",
+        "demo-data-project.ts": "export const DEMO_PROJECT_ID",
+        "demo-data-reports.ts": "export const DEMO_REPORTS",
+    }
+
+    assert len(facade_source.splitlines()) <= 20
+    assert "export const DEMO_FINDINGS" not in facade_source
+    assert "export const DEMO_REPORTS" not in facade_source
+    for filename, symbol in expected_slices.items():
+        source = (lib_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert filename.removesuffix(".ts") in facade_source
+        assert len(source.splitlines()) <= 260
+
+
+def test_import_step_and_run_detail_tabs_are_split_by_surface() -> None:
+    imports_root = REPO_ROOT / "frontend/src/components/imports"
+    wizard_facade = (imports_root / "NewImportWizardSections.tsx").read_text(encoding="utf-8")
+    run_detail_facade = (imports_root / "ImportRunDetailTabs.tsx").read_text(encoding="utf-8")
+    expected_wizard_slices = {
+        "NewImportChooseSourceStep.tsx": "export function ChooseSourceStep",
+        "NewImportContextStep.tsx": "export function AddContextStep",
+        "NewImportReviewStep.tsx": "export function ReviewImportStep",
+        "NewImportStepNav.tsx": "export function StepNav",
+        "NewImportSummaryRail.tsx": "export function SummaryRail",
+        "NewImportUploadStep.tsx": "export function UploadFileStep",
+    }
+    expected_wizard_support_slices = {
+        "NewImportReviewPreview.tsx": "export function PreviewSummary",
+        "NewImportReviewReadiness.tsx": "export function ReadinessOverview",
+        "NewImportReviewShared.tsx": "export function ReviewSectionHeading",
+        "NewImportReviewSummary.tsx": "export function ReviewPreflightSummary",
+        "NewImportSourceGlyph.tsx": "export function ImportSourceMark",
+        "NewImportSourceGlyphIcons.tsx": "export function CveListGlyph",
+        "NewImportSourceOption.tsx": "export function FormatOptionCard",
+        "NewImportUploadPreview.tsx": "export function ParserPreviewPanel",
+    }
+    expected_run_detail_slices = {
+        "ImportRunDiagnosticsTab.tsx": "export function DiagnosticsTab",
+        "ImportRunEvidenceColumns.tsx": "export function buildImportRunEvidenceColumns",
+        "ImportRunEvidenceTab.tsx": "export function EvidenceTab",
+        "ImportRunFindingsTab.tsx": "export function FindingsTab",
+        "ImportRunMetadataTab.tsx": "export function MetadataTab",
+        "ImportRunOverviewTab.tsx": "export function OverviewTab",
+    }
+
+    assert len(wizard_facade.splitlines()) <= 10
+    assert len(run_detail_facade.splitlines()) <= 10
+    for filename, symbol in expected_wizard_slices.items():
+        source = (imports_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert filename.removesuffix(".tsx") in wizard_facade
+        assert len(source.splitlines()) <= 560
+
+    assert len((imports_root / "NewImportChooseSourceStep.tsx").read_text().splitlines()) <= 180
+    assert len((imports_root / "NewImportReviewStep.tsx").read_text().splitlines()) <= 180
+    assert len((imports_root / "NewImportRoute.tsx").read_text().splitlines()) <= 320
+    assert len((imports_root / "NewImportUploadStep.tsx").read_text().splitlines()) <= 120
+    assert len((imports_root / "NewImportWizardFooter.tsx").read_text().splitlines()) <= 180
+    assert len((imports_root / "NewImportFailurePanel.tsx").read_text().splitlines()) <= 120
+    route_source = (imports_root / "NewImportRoute.tsx").read_text(encoding="utf-8")
+    assert "./NewImportWizardFooter" in route_source
+    assert "./NewImportFailurePanel" in route_source
+    assert "function WizardFooter" not in route_source
+    assert "function ImportFailurePanel" not in route_source
+
+    for filename, symbol in expected_wizard_support_slices.items():
+        source = (imports_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert len(source.splitlines()) <= 320
+
+    source_option = (imports_root / "NewImportSourceOption.tsx").read_text(encoding="utf-8")
+    source_glyph = (imports_root / "NewImportSourceGlyph.tsx").read_text(encoding="utf-8")
+    assert "./NewImportSourceGlyph" in source_option
+    assert "./NewImportSourceGlyphIcons" in source_glyph
+    assert "function ImportSourceGlyph" not in source_option
+    assert "function ImportSourceGlyph" in source_glyph
+    assert len(source_option.splitlines()) <= 120
+    upload_source = (imports_root / "NewImportUploadStep.tsx").read_text(encoding="utf-8")
+    assert "./NewImportUploadPreview" in upload_source
+    assert "function ParserPreviewPanel" not in upload_source
+
+    for filename, symbol in expected_run_detail_slices.items():
+        source = (imports_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert len(source.splitlines()) <= 260
+
+    evidence_source = (imports_root / "ImportRunEvidenceTab.tsx").read_text(encoding="utf-8")
+    evidence_columns_source = (imports_root / "ImportRunEvidenceColumns.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "./ImportRunEvidenceColumns" in evidence_source
+    assert "vpw-table-actions" not in evidence_source
+    assert "vpw-table-action-button" in evidence_columns_source
+    for filename in expected_run_detail_slices:
+        if filename == "ImportRunEvidenceColumns.tsx":
+            continue
+        assert filename.removesuffix(".tsx") in run_detail_facade
+
+    shared_source = (imports_root / "ImportRunDetailTabShared.tsx").read_text(encoding="utf-8")
+    assert "export function RunDetailRows" in shared_source
+    assert "export type ImportRunSummary" in shared_source
+    assert len(shared_source.splitlines()) <= 160
+
+
+def test_supported_formats_route_is_split_from_detail_and_filter_surfaces() -> None:
+    imports_root = REPO_ROOT / "frontend/src/components/imports"
+    route_source = (imports_root / "SupportedFormatsRoute.tsx").read_text(encoding="utf-8")
+    expected_slices = {
+        "SupportedFormatsColumns.tsx": "export function buildSupportedFormatColumns",
+        "SupportedFormatDetailPanel.tsx": "export function SupportedFormatDetailPanel",
+        "SupportedFormatsFilters.tsx": "export function SupportedFormatsFilters",
+        "supported-formats-route-model.ts": "export function filterSupportedFormats",
+    }
+
+    assert len(route_source.splitlines()) <= 220
+    assert "./SupportedFormatsColumns" in route_source
+    assert "./SupportedFormatDetailPanel" in route_source
+    assert "./SupportedFormatsFilters" in route_source
+    assert "./supported-formats-route-model" in route_source
+    assert "VpwDataTableColumn" not in route_source
+    assert "function SupportedFormatDetailPanel" not in route_source
+    assert "function projectSearchString" not in route_source
+    for filename, symbol in expected_slices.items():
+        source = (imports_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert len(source.splitlines()) <= 160
 
 
 def test_findings_queue_uses_vpw_product_surfaces() -> None:
@@ -637,11 +900,61 @@ def test_findings_queue_uses_vpw_product_surfaces() -> None:
     assert "rounded-2xl" not in source
 
 
+def test_findings_quick_view_sheet_is_split_from_dialog_facade() -> None:
+    findings_root = REPO_ROOT / "frontend/src/components/findings"
+    dialog_facade = (findings_root / "RemediationQueueDialogs.tsx").read_text(encoding="utf-8")
+    quick_view_source = (findings_root / "RemediationQueueQuickViewSheet.tsx").read_text(
+        encoding="utf-8"
+    )
+    quick_view_model_source = (findings_root / "RemediationQueueQuickViewModel.tsx").read_text(
+        encoding="utf-8"
+    )
+    quick_view_sections_source = (
+        findings_root / "RemediationQueueQuickViewSections.tsx"
+    ).read_text(encoding="utf-8")
+    all_findings_sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted(findings_root.glob("*.tsx"))
+        if path.name != "RemediationQueueQuickViewSheet.tsx"
+    )
+
+    assert len(dialog_facade.splitlines()) <= 5
+    assert "./RemediationQueueQuickViewSheet" in dialog_facade
+    assert "./RemediationQueueQuickViewSections" in quick_view_source
+    assert "./RemediationQueueQuickViewModel" in quick_view_sections_source
+    assert "export function QuickViewSheet" in quick_view_source
+    assert "export function QuickViewDecisionSummary" in quick_view_sections_source
+    assert "export function QuickViewEvidenceSnapshot" in quick_view_sections_source
+    assert "export function QuickViewGovernanceSection" in quick_view_sections_source
+    assert "function governanceCopy" not in quick_view_source
+    assert "export function governanceCopy" in quick_view_model_source
+    assert "DrawerFact" not in quick_view_source
+    assert len(quick_view_source.splitlines()) <= 220
+    assert len(quick_view_model_source.splitlines()) <= 120
+    assert len(quick_view_sections_source.splitlines()) <= 260
+    assert "WhyDialog" not in all_findings_sources
+
+
 def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     dashboard_paths = [
         REPO_ROOT / "frontend/src/components/dashboard/RiskOperationsDashboard.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardHero.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardHeroActions.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardHeroProjectPicker.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardProviderWarning.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardRemediationSection.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardSignalOverviewFallback.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/dashboard-summary-model.ts",
         REPO_ROOT / "frontend/src/components/dashboard/ProviderFreshnessPanel.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardSidePanel.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardOperationsStatePanel.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardRecentRunsPanel.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardDataQualityPanel.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardRecommendedActionsPanel.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardSignalOverview.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardSignalTabs.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardKeyTakeaways.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardRemediationColumns.tsx",
         REPO_ROOT / "frontend/src/components/risk/MetricCard.tsx",
     ]
     finding_detail_paths = [
@@ -649,7 +962,12 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
         REPO_ROOT / "frontend/src/components/finding-detail/FindingDetailHero.tsx",
         REPO_ROOT / "frontend/src/components/finding-detail/WhyPriorityPanel.tsx",
         REPO_ROOT / "frontend/src/components/finding-detail/FindingEvidenceTab.tsx",
+        REPO_ROOT / "frontend/src/components/finding-detail/FindingEvidenceSummaryGrid.tsx",
+        REPO_ROOT / "frontend/src/components/finding-detail/FindingOccurrencesPanel.tsx",
+        REPO_ROOT / "frontend/src/components/finding-detail/FindingDataQualityPanel.tsx",
         REPO_ROOT / "frontend/src/components/finding-detail/FindingTtpContextTab.tsx",
+        REPO_ROOT / "frontend/src/components/finding-detail/FindingTtpContextSections.tsx",
+        REPO_ROOT / "frontend/src/components/finding-detail/FindingTtpTechnicalEvidence.tsx",
         REPO_ROOT / "frontend/src/components/finding-detail/FindingHistoryTab.tsx",
     ]
 
@@ -658,18 +976,120 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
 
         assert "components/ui/card" not in source, path
 
-    assert "VpwSurface" in dashboard_paths[0].read_text(encoding="utf-8")
-    assert "VpwSurface" in dashboard_paths[1].read_text(encoding="utf-8")
-    assert "VpwDataTable" in dashboard_paths[1].read_text(encoding="utf-8")
-    assert "VpwPanel" in dashboard_paths[2].read_text(encoding="utf-8")
-    assert "VpwSurface" in dashboard_paths[3].read_text(encoding="utf-8")
+    dashboard_source = dashboard_paths[0].read_text(encoding="utf-8")
+    dashboard_hero_source = dashboard_paths[1].read_text(encoding="utf-8")
+    dashboard_hero_actions_source = dashboard_paths[2].read_text(encoding="utf-8")
+    dashboard_hero_project_picker_source = dashboard_paths[3].read_text(encoding="utf-8")
+    dashboard_summary_source = dashboard_paths[7].read_text(encoding="utf-8")
+    dashboard_side_panel_source = dashboard_paths[9].read_text(encoding="utf-8")
+    dashboard_operations_source = dashboard_paths[10].read_text(encoding="utf-8")
+    dashboard_recent_runs_source = dashboard_paths[11].read_text(encoding="utf-8")
+    dashboard_data_quality_source = dashboard_paths[12].read_text(encoding="utf-8")
+    dashboard_recommended_actions_source = dashboard_paths[13].read_text(encoding="utf-8")
+    dashboard_signal_overview_source = dashboard_paths[14].read_text(encoding="utf-8")
+    dashboard_signal_tabs_source = dashboard_paths[15].read_text(encoding="utf-8")
+    dashboard_key_takeaways_source = dashboard_paths[16].read_text(encoding="utf-8")
+    dashboard_remediation_columns_source = dashboard_paths[17].read_text(encoding="utf-8")
+    metric_card_source = dashboard_paths[18].read_text(encoding="utf-8")
+    assert "DashboardProviderWarning" in dashboard_source
+    assert "DashboardSignalOverviewFallback" in dashboard_source
+    assert "dashboard-summary-model" in dashboard_source
+    assert "./DashboardHeroActions" in dashboard_hero_source
+    assert "./DashboardHeroProjectPicker" in dashboard_hero_source
+    assert "selectedProjectRouteSearch" not in dashboard_hero_source
+    assert "DashboardHeroActions" in dashboard_hero_actions_source
+    assert "ProviderStatusBadge" in dashboard_hero_actions_source
+    assert "DashboardHeroProjectPicker" in dashboard_hero_project_picker_source
+    assert "SelectTrigger" in dashboard_hero_project_picker_source
+    assert "buildDashboardMetricSummaries" in dashboard_summary_source
+    assert "rankedDashboardQueueFindings" in dashboard_summary_source
+    assert "./DashboardRemediationColumns" in dashboard_paths[5].read_text(encoding="utf-8")
+    assert "SheetContent" not in dashboard_paths[5].read_text(encoding="utf-8")
+    assert "vpw-table-actions" not in dashboard_paths[5].read_text(encoding="utf-8")
+    assert "buildDashboardRemediationColumns" in dashboard_remediation_columns_source
+    assert "vpw-table-actions" in dashboard_remediation_columns_source
+    assert "vpw-table-action-button" in dashboard_remediation_columns_source
+    assert "SheetContent" in dashboard_remediation_columns_source
+    assert "./DashboardOperationsStatePanel" in dashboard_side_panel_source
+    assert "./DashboardRecentRunsPanel" in dashboard_side_panel_source
+    assert "./DashboardDataQualityPanel" in dashboard_side_panel_source
+    assert "./DashboardRecommendedActionsPanel" in dashboard_side_panel_source
+    assert "VpwSurface" not in dashboard_side_panel_source
+    assert "DashboardOperationsStatePanel" in dashboard_operations_source
+    assert "ProviderStatusBadge" in dashboard_operations_source
+    assert "DashboardRecentRunsPanel" in dashboard_recent_runs_source
+    assert "runBadgeTone" in dashboard_recent_runs_source
+    assert "DashboardDataQualityPanel" in dashboard_data_quality_source
+    assert "DashboardRecommendedActionsPanel" in dashboard_recommended_actions_source
+    assert "RECOMMENDED_ACTIONS" in dashboard_recommended_actions_source
+    assert "./DashboardSignalTabs" in dashboard_signal_overview_source
+    assert "./DashboardKeyTakeaways" in dashboard_signal_overview_source
+    assert "ChartCard" not in dashboard_signal_overview_source
+    assert "TabsContent" not in dashboard_signal_overview_source
+    assert "DashboardSignalTabs" in dashboard_signal_tabs_source
+    assert "ChartCard" in dashboard_signal_tabs_source
+    assert "DashboardPriorityChart" in dashboard_signal_tabs_source
+    assert "DashboardKeyTakeaways" in dashboard_key_takeaways_source
+    assert "CheckCircle2" in dashboard_key_takeaways_source
+    assert len(dashboard_source.splitlines()) <= 340
+    assert len(dashboard_hero_source.splitlines()) <= 80
+    assert len(dashboard_hero_actions_source.splitlines()) <= 130
+    assert len(dashboard_hero_project_picker_source.splitlines()) <= 110
+    assert len(dashboard_summary_source.splitlines()) <= 180
+    assert len(dashboard_side_panel_source.splitlines()) <= 80
+    assert len(dashboard_operations_source.splitlines()) <= 120
+    assert len(dashboard_recent_runs_source.splitlines()) <= 90
+    assert len(dashboard_data_quality_source.splitlines()) <= 110
+    assert len(dashboard_recommended_actions_source.splitlines()) <= 130
+    assert len(dashboard_signal_overview_source.splitlines()) <= 110
+    assert len(dashboard_signal_tabs_source.splitlines()) <= 260
+    assert len(dashboard_key_takeaways_source.splitlines()) <= 70
+    assert len(dashboard_paths[5].read_text(encoding="utf-8").splitlines()) <= 140
+    assert len(dashboard_remediation_columns_source.splitlines()) <= 220
+    assert "VpwSurface" in dashboard_paths[4].read_text(encoding="utf-8")
+    assert "VpwSurface" in dashboard_paths[5].read_text(encoding="utf-8")
+    assert "VpwDataTable" in dashboard_paths[5].read_text(encoding="utf-8")
+    assert "VpwSurface" in dashboard_paths[6].read_text(encoding="utf-8")
+    assert "VpwPanel" in dashboard_paths[8].read_text(encoding="utf-8")
+    assert "VpwSurface" in dashboard_operations_source
+    assert "VpwSurface" in dashboard_recent_runs_source
+    assert "VpwSurface" in dashboard_data_quality_source
+    assert "VpwSurface" in dashboard_recommended_actions_source
+    assert "VpwSurface" in dashboard_signal_overview_source
+    assert "VpwSurface" in metric_card_source
     assert "VpwStatusBanner" in finding_detail_paths[0].read_text(encoding="utf-8")
     assert "VpwSurface" in finding_detail_paths[1].read_text(encoding="utf-8")
     assert "VpwKeyValueList" in finding_detail_paths[2].read_text(encoding="utf-8")
-    assert "VpwDataTable" in finding_detail_paths[3].read_text(encoding="utf-8")
-    assert "VpwDataTable" in finding_detail_paths[4].read_text(encoding="utf-8")
-    assert "VpwTimeline" in finding_detail_paths[5].read_text(encoding="utf-8")
-    dashboard_source = dashboard_paths[0].read_text(encoding="utf-8")
+    assert "FindingEvidenceSummaryGrid" in finding_detail_paths[3].read_text(encoding="utf-8")
+    assert "FindingOccurrencesPanel" in finding_detail_paths[3].read_text(encoding="utf-8")
+    assert "FindingDataQualityPanel" in finding_detail_paths[3].read_text(encoding="utf-8")
+    assert "VpwDataTable" not in finding_detail_paths[3].read_text(encoding="utf-8")
+    finding_occurrences_source = finding_detail_paths[5].read_text(encoding="utf-8")
+    finding_occurrences_columns_source = (
+        REPO_ROOT / "frontend/src/components/finding-detail/FindingOccurrencesColumns.tsx"
+    ).read_text(encoding="utf-8")
+    assert "VpwSurface" in finding_detail_paths[4].read_text(encoding="utf-8")
+    assert "VpwDataTable" in finding_occurrences_source
+    assert "./FindingOccurrencesColumns" in finding_occurrences_source
+    assert "VpwDataTableColumn" not in finding_occurrences_source
+    assert "buildFindingOccurrenceColumns" in finding_occurrences_columns_source
+    assert "Asset / Owner" in finding_occurrences_columns_source
+    assert "finding-data-quality-list" in finding_detail_paths[6].read_text(encoding="utf-8")
+    assert "VpwDataTable" not in finding_detail_paths[7].read_text(encoding="utf-8")
+    assert "FindingTtpContextSections" in finding_detail_paths[7].read_text(encoding="utf-8")
+    assert "./FindingTtpTechnicalEvidence" in finding_detail_paths[7].read_text(encoding="utf-8")
+    assert "FindingTtpContextHero" in finding_detail_paths[8].read_text(encoding="utf-8")
+    assert "VpwDataTable" in finding_detail_paths[9].read_text(encoding="utf-8")
+    assert "techniqueColumns" in finding_detail_paths[9].read_text(encoding="utf-8")
+    assert len(finding_detail_paths[3].read_text(encoding="utf-8").splitlines()) <= 60
+    assert len(finding_detail_paths[4].read_text(encoding="utf-8").splitlines()) <= 70
+    assert len(finding_occurrences_source.splitlines()) <= 90
+    assert len(finding_occurrences_columns_source.splitlines()) <= 130
+    assert len(finding_detail_paths[6].read_text(encoding="utf-8").splitlines()) <= 80
+    assert len(finding_detail_paths[7].read_text(encoding="utf-8").splitlines()) <= 180
+    assert len(finding_detail_paths[8].read_text(encoding="utf-8").splitlines()) <= 180
+    assert len(finding_detail_paths[9].read_text(encoding="utf-8").splitlines()) <= 130
+    assert "VpwTimeline" in finding_detail_paths[10].read_text(encoding="utf-8")
     assert "rounded-2xl" not in dashboard_source
     assert "bg-gradient-to-br" not in dashboard_source
     assert "bg-linear-to-br" not in dashboard_source
@@ -679,19 +1099,33 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
 def test_finding_detail_model_is_split_by_behavior() -> None:
     model_root = REPO_ROOT / "frontend/src/components/finding-detail"
     facade_source = (model_root / "finding-detail-model.ts").read_text(encoding="utf-8")
-    expected_slices = {
+    evidence_facade_source = (model_root / "finding-detail-evidence-model.ts").read_text(
+        encoding="utf-8"
+    )
+    expected_top_slices = {
         "finding-detail-attack-model.ts": "export function attackTechniqueRows",
         "finding-detail-demo-model.ts": "export function demoFindingDetailForId",
-        "finding-detail-evidence-model.ts": "export function findingEvidenceRows",
+        "finding-detail-evidence-model.ts": "finding-detail-evidence-rows-model",
         "finding-detail-shared.ts": "export function findingHeroSummary",
+    }
+    expected_evidence_slices = {
+        "finding-detail-decision-model.ts": "export function findingDecisionReasonRows",
+        "finding-detail-evidence-rows-model.ts": "export function findingEvidenceRows",
+        "finding-detail-occurrence-model.ts": "export function findingOccurrenceRows",
     }
 
     assert len(facade_source.splitlines()) <= 8
-    for filename, symbol in expected_slices.items():
+    assert len(evidence_facade_source.splitlines()) <= 8
+    for filename, symbol in expected_top_slices.items():
         source = (model_root / filename).read_text(encoding="utf-8")
         assert symbol in source
         assert filename.removesuffix(".ts") in facade_source
         assert len(source.splitlines()) <= 380
+    for filename, symbol in expected_evidence_slices.items():
+        source = (model_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert filename.removesuffix(".ts") in evidence_facade_source
+        assert len(source.splitlines()) <= 220
 
 
 def test_findings_search_and_asset_models_are_split_by_behavior() -> None:
@@ -726,6 +1160,94 @@ def test_findings_search_and_asset_models_are_split_by_behavior() -> None:
         assert symbol in source
         assert filename.removesuffix(".ts") in asset_facade
         assert len(source.splitlines()) <= 140
+
+
+def test_assets_workbench_delegates_drawer_view() -> None:
+    asset_root = REPO_ROOT / "frontend/src/components/assets"
+    route_source = (asset_root / "AssetsRoute.tsx").read_text(encoding="utf-8")
+    drawer_source = (asset_root / "AssetDrawer.tsx").read_text(encoding="utf-8")
+    table_source = (asset_root / "AssetTable.tsx").read_text(encoding="utf-8")
+    table_columns_source = (asset_root / "AssetTableColumns.tsx").read_text(encoding="utf-8")
+    linked_facade_source = (asset_root / "AssetLinkedFindingsPanel.tsx").read_text(encoding="utf-8")
+    expected_linked_slices = {
+        "AssetDetailContent.tsx": "export function AssetDetailContent",
+        "AssetEditContent.tsx": "export function AssetEditContent",
+        "AssetLinkedFindingsContent.tsx": "export function AssetLinkedFindingsContent",
+    }
+
+    assert "./AssetDrawer" in route_source
+    assert "<AssetDrawer state={state}" in route_source
+    assert "function AssetDrawerContent" not in route_source
+    assert "function assetDrawerTitle" not in route_source
+    assert "SheetContent" not in route_source
+    assert "export function AssetDrawer" in drawer_source
+    assert "function AssetDrawerContent" in drawer_source
+    assert "function assetDrawerTitle" in drawer_source
+    assert "AssetContextImportForm" in drawer_source
+    assert "AssetLinkedFindingsContent" in drawer_source
+    assert "./AssetTableColumns" in table_source
+    assert "buildAssetColumns" in table_columns_source
+    assert "vpw-table-actions" not in table_source
+    assert "vpw-table-action-button" in table_columns_source
+    assert len(route_source.splitlines()) <= 250
+    assert len(drawer_source.splitlines()) <= 180
+    assert len(table_source.splitlines()) <= 80
+    assert len(table_columns_source.splitlines()) <= 260
+    assert len(linked_facade_source.splitlines()) <= 6
+    assert "export function AssetLinkedFindingsContent" not in linked_facade_source
+    for filename, symbol in expected_linked_slices.items():
+        source = (asset_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert filename.removesuffix(".tsx") in linked_facade_source
+        assert len(source.splitlines()) <= 180
+
+
+def test_asset_context_forms_are_split_by_view_surface() -> None:
+    asset_root = REPO_ROOT / "frontend/src/components/assets"
+    facade_source = (asset_root / "AssetContextForm.tsx").read_text(encoding="utf-8")
+    expected_slices = {
+        "AssetContextForms.tsx": "export function AssetContextForms",
+        "AssetContextImportForm.tsx": "export function AssetContextImportForm",
+        "AssetForm.tsx": "export function AssetForm",
+    }
+
+    assert len(facade_source.splitlines()) <= 6
+    assert "export function AssetForm" not in facade_source
+    for filename, symbol in expected_slices.items():
+        source = (asset_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert filename.removesuffix(".tsx") in facade_source
+        assert len(source.splitlines()) <= 240
+
+
+def test_waivers_drawer_delegates_mode_content() -> None:
+    waivers_root = REPO_ROOT / "frontend/src/components/waivers"
+    drawer_source = (waivers_root / "WaiversWorkbenchDrawer.tsx").read_text(encoding="utf-8")
+    content_source = (waivers_root / "WaiversWorkbenchDrawerContent.tsx").read_text(
+        encoding="utf-8"
+    )
+    detail_source = (waivers_root / "WaiversWorkbenchDrawerDetail.tsx").read_text(encoding="utf-8")
+    expire_source = (waivers_root / "WaiversWorkbenchDrawerExpire.tsx").read_text(encoding="utf-8")
+    form_source = (waivers_root / "WaiversWorkbenchForm.tsx").read_text(encoding="utf-8")
+
+    assert "./WaiversWorkbenchDrawerContent" in drawer_source
+    assert "export function WaiverDrawer" in drawer_source
+    assert "function WaiverDrawerContent" not in drawer_source
+    assert "function WaiverDetailContent" not in drawer_source
+    assert "function WaiverExpireContent" not in drawer_source
+    assert "SheetContent" in drawer_source
+    assert "export function WaiverDrawerContent" in content_source
+    assert "./WaiversWorkbenchDrawerDetail" in content_source
+    assert "./WaiversWorkbenchDrawerExpire" in content_source
+    assert "./WaiversWorkbenchForm" in content_source
+    assert "export function WaiverDetailContent" in detail_source
+    assert "export function WaiverExpireContent" in expire_source
+    assert "export function WaiverForm" in form_source
+    assert len(drawer_source.splitlines()) <= 60
+    assert len(content_source.splitlines()) <= 130
+    assert len(detail_source.splitlines()) <= 160
+    assert len(expire_source.splitlines()) <= 90
+    assert len(form_source.splitlines()) <= 160
 
 
 def test_frontend_css_drops_unused_pre_vpw_shell_classes() -> None:
@@ -907,8 +1429,20 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     reports_lifecycle_source = (
         REPO_ROOT / "frontend/src/components/reports/EvidenceCenterLifecycle.tsx"
     ).read_text(encoding="utf-8")
+    reports_artifact_section_source = (
+        REPO_ROOT / "frontend/src/components/reports/EvidenceArtifactSection.tsx"
+    ).read_text(encoding="utf-8")
+    reports_lifecycle_flow_source = (
+        REPO_ROOT / "frontend/src/components/reports/EvidenceLifecycleFlow.tsx"
+    ).read_text(encoding="utf-8")
     reports_history_source = (
         REPO_ROOT / "frontend/src/components/reports/EvidenceCenterHistory.tsx"
+    ).read_text(encoding="utf-8")
+    reports_history_columns_source = (
+        REPO_ROOT / "frontend/src/components/reports/EvidenceCenterHistoryColumns.tsx"
+    ).read_text(encoding="utf-8")
+    reports_history_cells_source = (
+        REPO_ROOT / "frontend/src/components/reports/EvidenceCenterHistoryCells.tsx"
     ).read_text(encoding="utf-8")
     reports_manifest_source = (
         REPO_ROOT / "frontend/src/components/reports/EvidenceCenterManifest.tsx"
@@ -934,6 +1468,9 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     imports_diagnostics_source = (
         REPO_ROOT / "frontend/src/components/imports/ImportDiagnosticsDrawer.tsx"
     ).read_text(encoding="utf-8")
+    imports_diagnostics_tabs_source = (
+        REPO_ROOT / "frontend/src/components/imports/ImportDiagnosticsDrawerTabs.tsx"
+    ).read_text(encoding="utf-8")
     imports_formats_source = (
         REPO_ROOT / "frontend/src/components/imports/SupportedFormatsRoute.tsx"
     ).read_text(encoding="utf-8")
@@ -946,6 +1483,12 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     )
     imports_history_source = (
         REPO_ROOT / "frontend/src/components/imports/ImportsWorkbenchHistory.tsx"
+    ).read_text(encoding="utf-8")
+    imports_history_columns_source = (
+        REPO_ROOT / "frontend/src/components/imports/ImportsWorkbenchHistoryColumns.tsx"
+    ).read_text(encoding="utf-8")
+    imports_history_actions_source = (
+        REPO_ROOT / "frontend/src/components/imports/ImportsWorkbenchHistoryActions.tsx"
     ).read_text(encoding="utf-8")
     findings_source = (
         REPO_ROOT / "frontend/src/components/findings/RemediationQueue.tsx"
@@ -983,6 +1526,15 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     projects_overview_source = (
         REPO_ROOT / "frontend/src/components/projects/ProjectsWorkbenchOverview.tsx"
     ).read_text(encoding="utf-8")
+    projects_hero_source = (
+        REPO_ROOT / "frontend/src/components/projects/ProjectHero.tsx"
+    ).read_text(encoding="utf-8")
+    projects_metrics_source = (
+        REPO_ROOT / "frontend/src/components/projects/ProjectMetrics.tsx"
+    ).read_text(encoding="utf-8")
+    projects_selection_source = (
+        REPO_ROOT / "frontend/src/components/projects/ProjectSelectionStrip.tsx"
+    ).read_text(encoding="utf-8")
     projects_setup_source = (
         REPO_ROOT / "frontend/src/components/projects/ProjectsWorkbenchSetup.tsx"
     ).read_text(encoding="utf-8")
@@ -991,6 +1543,9 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     ).read_text(encoding="utf-8")
     projects_active_source = (
         REPO_ROOT / "frontend/src/components/projects/ProjectsWorkbenchActive.tsx"
+    ).read_text(encoding="utf-8")
+    projects_active_controls_source = (
+        REPO_ROOT / "frontend/src/components/projects/ProjectsWorkbenchActiveControls.tsx"
     ).read_text(encoding="utf-8")
     projects_model_source = (
         REPO_ROOT / "frontend/src/components/projects/projects-workbench-model.ts"
@@ -1007,8 +1562,17 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     waivers_create_source = (
         REPO_ROOT / "frontend/src/components/waivers/WaiversWorkbenchCreate.tsx"
     ).read_text(encoding="utf-8")
+    waivers_create_guidance_source = (
+        REPO_ROOT / "frontend/src/components/waivers/WaiversWorkbenchCreateGuidance.tsx"
+    ).read_text(encoding="utf-8")
+    waivers_form_source = (
+        REPO_ROOT / "frontend/src/components/waivers/WaiversWorkbenchForm.tsx"
+    ).read_text(encoding="utf-8")
     waivers_register_source = (
         REPO_ROOT / "frontend/src/components/waivers/WaiversWorkbenchRegister.tsx"
+    ).read_text(encoding="utf-8")
+    waivers_register_model_source = (
+        REPO_ROOT / "frontend/src/components/waivers/waivers-register-model.ts"
     ).read_text(encoding="utf-8")
     waivers_review_source = (
         REPO_ROOT / "frontend/src/components/waivers/WaiversWorkbenchReview.tsx"
@@ -1043,6 +1607,15 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     providers_sections_source = (
         REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbenchSections.tsx"
     ).read_text(encoding="utf-8")
+    providers_diagnostics_source = (
+        REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbenchDiagnostics.tsx"
+    ).read_text(encoding="utf-8")
+    providers_update_job_source = (
+        REPO_ROOT / "frontend/src/components/providers/ProviderUpdateJobPanel.tsx"
+    ).read_text(encoding="utf-8")
+    providers_runtime_facts_source = (
+        REPO_ROOT / "frontend/src/components/providers/ProviderRuntimeFactsPanel.tsx"
+    ).read_text(encoding="utf-8")
     providers_hero_source = (
         REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbenchHero.tsx"
     ).read_text(encoding="utf-8")
@@ -1052,6 +1625,9 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     providers_sources_source = (
         REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbenchSources.tsx"
     ).read_text(encoding="utf-8")
+    providers_sources_columns_source = (
+        REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbenchSourcesColumns.tsx"
+    ).read_text(encoding="utf-8")
     providers_snapshot_source = (
         REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbenchSnapshot.tsx"
     ).read_text(encoding="utf-8")
@@ -1060,6 +1636,15 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     ).read_text(encoding="utf-8")
     providers_model_source = (
         REPO_ROOT / "frontend/src/components/providers/providers-workbench-model.ts"
+    ).read_text(encoding="utf-8")
+    providers_source_model_source = (
+        REPO_ROOT / "frontend/src/components/providers/providers-workbench-source-model.ts"
+    ).read_text(encoding="utf-8")
+    providers_status_model_source = (
+        REPO_ROOT / "frontend/src/components/providers/providers-workbench-status-model.ts"
+    ).read_text(encoding="utf-8")
+    providers_types_source = (
+        REPO_ROOT / "frontend/src/components/providers/providers-workbench-types.ts"
     ).read_text(encoding="utf-8")
 
     assert "./EvidenceCenterSections" in reports_source
@@ -1087,14 +1672,42 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert "EvidenceCenterSummary" in reports_sections_source
     assert "EvidenceCenterLifecycle" in reports_sections_source
     assert "EvidenceCenterHistory" in reports_sections_source
+    assert "./EvidenceArtifactSection" in reports_lifecycle_source
+    assert "./EvidenceLifecycleFlow" in reports_lifecycle_source
+    assert "VpwEvidenceArtifactCard" not in reports_lifecycle_source
+    assert "VpwEvidenceFlowCard" not in reports_lifecycle_source
+    assert "ArtifactSection" in reports_artifact_section_source
+    assert "VpwEvidenceArtifactCard" in reports_artifact_section_source
+    assert "EvidenceLifecycle" in reports_lifecycle_flow_source
+    assert "VpwEvidenceFlowCard" in reports_lifecycle_flow_source
+    assert "./EvidenceCenterHistoryColumns" in reports_history_source
+    assert "./EvidenceCenterHistoryCells" in reports_history_columns_source
+    assert "buildReportHistoryColumns" in reports_history_columns_source
+    assert "ReportChecksumCell" in reports_history_cells_source
+    assert "ReportArtifactCell" in reports_history_cells_source
+    assert "ReportStatusCell" in reports_history_cells_source
+    assert "ReportHistoryActionsCell" in reports_history_columns_source
+    assert "VpwDataTableColumn" not in reports_history_source
     assert "EvidenceCenterManifest" in reports_sections_source
     assert "EvidenceCenterDecision" in reports_sections_source
     assert "ImportsHomeRoute" in imports_sections_source
     assert "NewImportRoute" in imports_sections_source
     assert "ImportRunDetailRoute" in imports_sections_source
     assert "ImportDiagnosticsDrawer" in imports_sections_source
+    assert "./ImportDiagnosticsDrawerTabs" in imports_diagnostics_source
+    assert "ImportDiagnosticsDrawerTabs" in imports_diagnostics_tabs_source
+    assert "TabsContent" not in imports_diagnostics_source
+    assert "ParserErrorsTable" in imports_diagnostics_tabs_source
+    assert "CopyButton" in imports_diagnostics_tabs_source
     assert "SupportedFormatsRoute" in imports_sections_source
     assert "ImportsWorkbenchHistory" in imports_sections_source
+    assert "./ImportsWorkbenchHistoryColumns" in imports_history_source
+    assert "./ImportsWorkbenchHistoryActions" in imports_history_columns_source
+    assert "buildImportHistoryColumns" in imports_history_columns_source
+    assert "vpw-table-actions" not in imports_history_source
+    assert "vpw-table-actions" not in imports_history_columns_source
+    assert "ImportRunActions" in imports_history_actions_source
+    assert "vpw-table-action-button" in imports_history_actions_source
     assert "ImportsWorkbenchHero" not in imports_sections_source
     assert "ImportsWorkbenchWizard" not in imports_sections_source
     assert "ImportsWorkbenchRunDetail" not in imports_sections_source
@@ -1102,13 +1715,38 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     for file_name in legacy_imports_all_in_one_files:
         assert not (REPO_ROOT / f"frontend/src/components/imports/{file_name}").exists()
     assert "ProjectsWorkbenchOverview" in projects_sections_source
+    assert "./ProjectHero" in projects_overview_source
+    assert "./ProjectMetrics" in projects_overview_source
+    assert "./ProjectSelectionStrip" in projects_overview_source
+    assert "ProjectHero" in projects_hero_source
+    assert "VpwToolbar" in projects_hero_source
+    assert "ProjectMetrics" in projects_metrics_source
+    assert "VpwMetricCard" in projects_metrics_source
+    assert "ProjectSelectionStrip" in projects_selection_source
+    assert "VpwSelectionCard" in projects_selection_source
+    assert "VpwMetricCard" not in projects_overview_source
+    assert "VpwSelectionCard" not in projects_overview_source
     assert "ProjectsWorkbenchSetup" in projects_sections_source
     assert "ProjectsWorkbenchDirectory" in projects_sections_source
     assert "ProjectsWorkbenchActive" in projects_sections_source
+    assert "./ProjectsWorkbenchActiveControls" in projects_active_source
+    assert "ActiveProjectActions" in projects_active_controls_source
+    assert "ActiveProjectEditForm" in projects_active_controls_source
+    assert "ActiveProjectDeletePanel" in projects_active_controls_source
+    assert "selectedProjectRouteSearch" not in projects_active_source
     assert "WaiversWorkbenchHero" in waivers_sections_source
     assert "WaiversWorkbenchCreate" in waivers_sections_source
     assert "WaiversWorkbenchRegister" in waivers_sections_source
     assert "WaiversWorkbenchReview" in waivers_sections_source
+    assert "./WaiversWorkbenchCreateGuidance" in waivers_create_source
+    assert "./WaiversWorkbenchForm" in waivers_create_source
+    assert "WaiversWorkbenchCreateGuidance" in waivers_create_guidance_source
+    assert "WaiverForm" in waivers_form_source
+    assert "function WaiverForm" not in waivers_create_source
+    assert "VpwKeyValueList" not in waivers_create_source
+    assert "./waivers-register-model" in waivers_register_source
+    assert "matchesWaiverSearch" in waivers_register_model_source
+    assert "function matchesWaiverSearch" not in waivers_register_source
     assert "SettingsWorkbenchHero" in settings_sections_source
     assert "SettingsWorkbenchOverview" in settings_sections_source
     assert "SettingsWorkbenchRuntime" in settings_sections_source
@@ -1116,15 +1754,38 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert not settings_tokens_path.exists()
     assert "ProvidersWorkbenchHero" in providers_sections_source
     assert "ProvidersWorkbenchMetrics" in providers_sections_source
+    assert "ProviderDiagnosticsSection" in providers_sections_source
+    assert "./ProviderUpdateJobPanel" in providers_diagnostics_source
+    assert "./ProviderRuntimeFactsPanel" in providers_diagnostics_source
+    assert "ProviderUpdateJobPanel" in providers_update_job_source
+    assert "ProviderRuntimeFactsPanel" in providers_runtime_facts_source
     assert "ProvidersWorkbenchSources" in providers_sections_source
+    assert "./ProvidersWorkbenchSourcesColumns" in providers_sources_source
+    assert "buildProviderSourceColumns" in providers_sources_columns_source
+    assert "vpw-table-actions" not in providers_sources_source
+    assert "vpw-table-action-button" in providers_sources_columns_source
     assert "ProvidersWorkbenchSnapshot" in providers_sections_source
     assert "ProvidersWorkbenchQuality" in providers_sections_source
+    assert "./providers-workbench-source-model" in providers_model_source
+    assert "./providers-workbench-status-model" in providers_model_source
+    assert "./providers-workbench-types" in providers_model_source
+    assert "sourceRows" in providers_source_model_source
+    assert "providerSourceCounts" in providers_source_model_source
+    assert "snapshotId" in providers_source_model_source
+    assert "providerHealthTone" in providers_status_model_source
+    assert "buildProviderEvidenceFlowItems" in providers_status_model_source
+    assert "ProvidersWorkbenchProps" in providers_types_source
+    assert "ProviderSourceRow" in providers_types_source
     assert len(reports_source.splitlines()) <= 240
     assert len(reports_sections_source.splitlines()) <= 40
     assert len(reports_run_context_source.splitlines()) <= 170
     assert len(reports_summary_source.splitlines()) <= 240
-    assert len(reports_lifecycle_source.splitlines()) <= 240
-    assert len(reports_history_source.splitlines()) <= 280
+    assert len(reports_lifecycle_source.splitlines()) <= 50
+    assert len(reports_artifact_section_source.splitlines()) <= 90
+    assert len(reports_lifecycle_flow_source.splitlines()) <= 150
+    assert len(reports_history_source.splitlines()) <= 120
+    assert len(reports_history_columns_source.splitlines()) <= 180
+    assert len(reports_history_cells_source.splitlines()) <= 120
     assert len(reports_manifest_source.splitlines()) <= 130
     assert len(reports_decision_source.splitlines()) <= 140
     assert len(imports_source.splitlines()) <= 120
@@ -1132,21 +1793,31 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert len(imports_home_source.splitlines()) <= 220
     assert len(imports_new_source.splitlines()) <= 780
     assert len(imports_run_detail_source.splitlines()) <= 520
-    assert len(imports_diagnostics_source.splitlines()) <= 280
+    assert len(imports_diagnostics_source.splitlines()) <= 120
+    assert len(imports_diagnostics_tabs_source.splitlines()) <= 220
     assert len(imports_formats_source.splitlines()) <= 340
-    assert len(imports_history_source.splitlines()) <= 350
+    assert len(imports_history_source.splitlines()) <= 120
+    assert len(imports_history_columns_source.splitlines()) <= 180
+    assert len(imports_history_actions_source.splitlines()) <= 100
     assert len(projects_source.splitlines()) <= 120
     assert len(projects_sections_source.splitlines()) <= 40
-    assert len(projects_overview_source.splitlines()) <= 220
+    assert len(projects_overview_source.splitlines()) <= 20
+    assert len(projects_hero_source.splitlines()) <= 90
+    assert len(projects_metrics_source.splitlines()) <= 100
+    assert len(projects_selection_source.splitlines()) <= 90
     assert len(projects_setup_source.splitlines()) <= 190
     assert len(projects_directory_source.splitlines()) <= 230
-    assert len(projects_active_source.splitlines()) <= 260
+    assert len(projects_active_source.splitlines()) <= 180
+    assert len(projects_active_controls_source.splitlines()) <= 180
     assert len(projects_model_source.splitlines()) <= 170
     assert len(waivers_source.splitlines()) <= 130
     assert len(waivers_sections_source.splitlines()) <= 40
     assert len(waivers_hero_source.splitlines()) <= 200
-    assert len(waivers_create_source.splitlines()) <= 280
+    assert len(waivers_create_source.splitlines()) <= 80
+    assert len(waivers_create_guidance_source.splitlines()) <= 90
+    assert len(waivers_form_source.splitlines()) <= 160
     assert len(waivers_register_source.splitlines()) <= 230
+    assert len(waivers_register_model_source.splitlines()) <= 90
     assert len(waivers_review_source.splitlines()) <= 110
     assert len(waivers_model_source.splitlines()) <= 260
     assert len(settings_source.splitlines()) <= 120
@@ -1157,12 +1828,19 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert len(settings_model_source.splitlines()) <= 220
     assert len(providers_source.splitlines()) <= 120
     assert len(providers_sections_source.splitlines()) <= 40
+    assert len(providers_diagnostics_source.splitlines()) <= 40
+    assert len(providers_update_job_source.splitlines()) <= 110
+    assert len(providers_runtime_facts_source.splitlines()) <= 110
     assert len(providers_hero_source.splitlines()) <= 130
     assert len(providers_metrics_source.splitlines()) <= 120
-    assert len(providers_sources_source.splitlines()) <= 140
+    assert len(providers_sources_source.splitlines()) <= 80
+    assert len(providers_sources_columns_source.splitlines()) <= 120
     assert len(providers_snapshot_source.splitlines()) <= 130
     assert len(providers_quality_source.splitlines()) <= 190
-    assert len(providers_model_source.splitlines()) <= 320
+    assert len(providers_model_source.splitlines()) <= 10
+    assert len(providers_source_model_source.splitlines()) <= 220
+    assert len(providers_status_model_source.splitlines()) <= 100
+    assert len(providers_types_source.splitlines()) <= 60
     assert len(findings_source.splitlines()) <= 320
     assert len(findings_view_source.splitlines()) <= 240
     assert len(findings_filters_source.splitlines()) <= 190

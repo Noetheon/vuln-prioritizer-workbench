@@ -53,7 +53,7 @@ const forbiddenProductDirectionCopy = [
 
 const allowedCurrentCopy = [
   {
-    path: /^src\/lib\/demo-data\.ts$/,
+    path: /^src\/lib\/demo-data(?:-[a-z-]+)?\.ts$/,
     context: /\b(?:exploited in the wild|known[- ]exploited|active exploitation|actively exploited|exploitation (?:observed|probability|signal|risk)|chained exploitation|defensive prioritization|detection planning|remediation context|exploit public-facing application)\b/i,
   },
   {
@@ -69,7 +69,7 @@ const allowedCurrentCopy = [
     context: /\bscanner\b/i,
   },
   {
-    path: /^src\/(?:components\/imports|lib\/import-format-metadata\.ts)/,
+    path: /^src\/(?:components\/imports|lib\/import-format-(?:metadata|catalog|types)\.ts)/,
     context:
       /\b(?:scanner exports|network scanner exports|parsed locally|does not scan networks|category: "scanner"|scanner)\b/i,
   },

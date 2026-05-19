@@ -250,10 +250,12 @@ dependency-audit: python-lock-check docker-base-image-check
 
 clean-local:
 	find . -name .DS_Store -not -path './.git/*' -delete
-	rm -rf .cache .mypy_cache .pytest_cache .ruff_cache .playwright-cli .playwright-mcp
+	rm -rf .cache .hypothesis .mypy_cache .pytest_cache .ruff_cache .playwright-cli .playwright-mcp
 	rm -rf backend/.mypy_cache backend/.pytest_cache backend/.ruff_cache
+	rm -rf backend/*.egg-info backend/src/*.egg-info
 	rm -rf build dist site htmlcov test-results frontend/test-results frontend/playwright-report frontend/dist
 	rm -rf .coverage .coverage.* backend/.coverage backend/.coverage.* coverage.xml backend-uvicorn.log frontend-vite.log
+	rm -rf frontend/openapi.json frontend/screenshot*.mjs
 	find . -name __pycache__ -type d -not -path './.git/*' -prune -exec rm -rf {} +
 	find . -name '*.py[co]' -not -path './.git/*' -delete
 

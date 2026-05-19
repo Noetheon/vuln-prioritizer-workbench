@@ -1,25 +1,8 @@
-import {
-  AlertCircle,
-  AlertTriangle,
-  Globe2,
-  ShieldAlert,
-  ShieldCheck,
-  TrendingUp,
-} from "lucide-react"
 import { lazy, Suspense, useMemo, useState } from "react"
-import { Skeleton } from "@/components/ui/skeleton"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import {
-  VpwSurface,
-  VpwSurfaceBody,
-  VpwSurfaceDescription,
-  VpwSurfaceHeader,
-  VpwSurfaceTitle,
-} from "@/components/vpw"
 import {
   epssBucketChartData,
   findingsByPriorityChartData,
-  priorityCount,
   runActivityTrendData,
   topServicesByRiskChartData,
 } from "@/lib/chart-data"
@@ -41,50 +24,28 @@ import {
 } from "./DashboardEmptyState"
 import { DashboardHero } from "./DashboardHero"
 import { DashboardMetricGrid } from "./DashboardMetricGrid"
+import { DashboardProviderWarning } from "./DashboardProviderWarning"
 import { DashboardRemediationSection } from "./DashboardRemediationSection"
 import { DashboardSidePanel } from "./DashboardSidePanel"
+import { DashboardSignalOverviewFallback } from "./DashboardSignalOverviewFallback"
 import {
   latestRunFacts,
-  type DashboardMetricSummary,
   type DashboardRunRange,
   type QueueFilterState,
   type RiskOperationsDashboardProps,
 } from "./dashboard-model"
+import {
+  buildDashboardMetricSummaries,
+  buildDashboardSignalTakeaways,
+  providerNeedsRefresh,
+  rankedDashboardQueueFindings,
+} from "./dashboard-summary-model"
 
 const DashboardSignalOverview = lazy(() =>
   import("./DashboardSignalOverview").then((module) => ({
     default: module.DashboardSignalOverview,
   })),
 )
-
-function DashboardSignalOverviewFallback() {
-  return (
-    <VpwSurface aria-label="Signal Overview loading" className="gap-4 py-4">
-      <VpwSurfaceHeader>
-        <VpwSurfaceTitle>Signal Overview</VpwSurfaceTitle>
-        <VpwSurfaceDescription>
-          Signal concentration, service risk, and trend direction for executive
-          review.
-        </VpwSurfaceDescription>
-      </VpwSurfaceHeader>
-      <VpwSurfaceBody>
-        <div
-          aria-label="Loading Signal Overview charts"
-          className="flex flex-col gap-4"
-          role="status"
-        >
-          <div className="flex flex-wrap gap-2">
-            <Skeleton className="h-8 w-36" />
-            <Skeleton className="h-8 w-32" />
-            <Skeleton className="h-8 w-28" />
-            <Skeleton className="h-8 w-24" />
-          </div>
-          <Skeleton className="h-64 w-full" />
-        </div>
-      </VpwSurfaceBody>
-    </VpwSurface>
-  )
-}
 
 export function RiskOperationsDashboard({
   dashboardError,
@@ -152,12 +113,10 @@ export function RiskOperationsDashboard({
 
   const hasProjects = effectiveProjects.length > 0
   const hasProviderStatus = effectiveSelectedProject !== null && hasProjects
-  const staleProvider =
-    hasProviderStatus &&
-    effectiveProviderStatus !== null &&
-    (effectiveProviderStatus.status !== "ok" ||
-      Boolean(effectiveProviderStatus.last_error) ||
-      (effectiveProviderStatus.warnings?.length ?? 0) > 0)
+  const staleProvider = providerNeedsRefresh(
+    hasProviderStatus,
+    effectiveProviderStatus,
+  )
 
   const freshness = formatProviderFreshness(effectiveProviderStatus)
 
@@ -179,86 +138,28 @@ export function RiskOperationsDashboard({
     return epssBucketChartData(effectiveSignalCounts.epssBuckets)
   }, [isDemoMode, epssBuckets, effectiveSignalCounts.epssBuckets])
 
-  const queueFindings = useMemo(() => {
-    const ranked = [...effectiveFindings].sort(
-      (a, b) => (b.risk_score ?? 0) - (a.risk_score ?? 0),
-    )
-    const query = filters.queueSearch.trim().toLowerCase()
-    if (!query) return ranked
-    return ranked.filter((finding) => {
-      const fields = [
-        finding.cve_id,
-        finding.owner,
-        finding.business_service,
-        finding.component_name,
-        finding.rationale,
-        finding.recommended_action,
-      ]
-      return fields.some((field) => field?.toLowerCase().includes(query))
-    })
-  }, [effectiveFindings, filters.queueSearch])
+  const queueFindings = useMemo(
+    () => rankedDashboardQueueFindings(effectiveFindings, filters.queueSearch),
+    [effectiveFindings, filters.queueSearch],
+  )
 
   const latestRun = effectiveRuns[0] ?? null
   const acceptedRiskCount = effectiveSummary?.counts_by_status?.accepted ?? 0
-  const summaryCards = useMemo<DashboardMetricSummary[]>(
-    () => [
-      {
-        detail: "Critical findings in scope",
-        icon: AlertTriangle,
-        label: "Critical Priority",
-        tone: "critical",
-        value:
-          (!isDemoMode && summaryLoading) || effectiveSummary === null
-            ? "—"
-            : String(priorityCount(effectiveSummary, "Critical")),
-      },
-      {
-        detail: "Known CISA KEV findings",
-        icon: ShieldAlert,
-        label: "KEV Exposed",
-        tone: "kev",
-        value:
-          (!isDemoMode && summaryLoading) || effectiveSummary === null
-            ? "—"
-            : String(effectiveSummary?.kev_hits ?? 0),
-      },
-      {
-        detail: "EPSS ≥70% signals",
-        icon: TrendingUp,
-        label: "High EPSS",
-        tone: "high",
-        value:
-          !isDemoMode && signalLoading
-            ? "—"
-            : String(effectiveSignalCounts.highEpss),
-      },
-      {
-        detail: "Internet-facing criticals",
-        icon: Globe2,
-        label: "Internet Facing",
-        tone: "exposure",
-        value:
-          !isDemoMode && signalLoading
-            ? "—"
-            : String(effectiveSignalCounts.internetFacingCriticals),
-      },
-      {
-        detail: "Accepted-risk findings",
-        icon: ShieldCheck,
-        label: "Accepted Risk Due",
-        tone: "accepted",
-        value:
-          (!isDemoMode && summaryLoading) || effectiveSummary === null
-            ? "—"
-            : String(acceptedRiskCount),
-      },
-    ],
+  const summaryCards = useMemo(
+    () =>
+      buildDashboardMetricSummaries({
+        acceptedRiskCount,
+        effectiveSignalCounts,
+        effectiveSummary,
+        isDemoMode,
+        signalLoading,
+        summaryLoading,
+      }),
     [
-      isDemoMode,
       acceptedRiskCount,
+      effectiveSignalCounts,
       effectiveSummary,
-      effectiveSignalCounts.highEpss,
-      effectiveSignalCounts.internetFacingCriticals,
+      isDemoMode,
       signalLoading,
       summaryLoading,
     ],
@@ -277,25 +178,13 @@ export function RiskOperationsDashboard({
   const latestRunFactsRows = latestRunFacts(effectiveRuns)
   const dataQualityWarnings = effectiveProviderStatus?.warnings ?? []
   const dataQualityError = effectiveProviderStatus?.last_error ?? null
-  const criticalCount =
-    effectiveSummary === null ? 0 : priorityCount(effectiveSummary, "Critical")
-  const kevCount = effectiveSummary?.kev_hits ?? 0
-  const internetFacingCount = effectiveSignalCounts.internetFacingCriticals
   const topServiceLabel = serviceItems[0]?.label ?? null
-  const signalTakeaways = [
-    `${criticalCount} critical findings demand immediate action.`,
-    kevCount > 0
-      ? `${kevCount} known-exploited KEV findings are active prioritization signals.`
-      : "No known-exploited KEV findings are currently in scope.",
-    internetFacingCount > 0
-      ? `${internetFacingCount} internet-facing critical findings drive near-term risk.`
-      : "No internet-facing critical findings are currently driving the queue.",
-    acceptedRiskCount > 0
-      ? `${acceptedRiskCount} accepted-risk records should stay on review cadence.`
-      : topServiceLabel
-        ? `${topServiceLabel} is the highest-risk service concentration.`
-        : "Service concentration will appear after ownership data is imported.",
-  ]
+  const signalTakeaways = buildDashboardSignalTakeaways({
+    acceptedRiskCount,
+    effectiveSignalCounts,
+    effectiveSummary,
+    topServiceLabel,
+  })
 
   const dashboardContent = (
     <div className="min-w-0 flex flex-col gap-4">
@@ -346,25 +235,7 @@ export function RiskOperationsDashboard({
         />
       ) : null}
 
-      {staleProvider ? (
-        <VpwSurface className="border-[var(--vpw-amber)] bg-[var(--vpw-bg-warning)]">
-          <VpwSurfaceHeader className="py-3">
-            <div className="flex items-center gap-2">
-              <AlertCircle
-                className="size-4 text-[var(--vpw-amber)]"
-                aria-hidden="true"
-              />
-              <VpwSurfaceTitle className="text-sm text-[var(--vpw-text-primary)]">
-                Provider data needs refresh
-              </VpwSurfaceTitle>
-            </div>
-            <VpwSurfaceDescription className="text-xs text-[var(--vpw-text-secondary)]">
-              Freshness is stale or partially degraded. Remediation priority
-              remains functional, but evidence may not be fully current.
-            </VpwSurfaceDescription>
-          </VpwSurfaceHeader>
-        </VpwSurface>
-      ) : null}
+      {staleProvider ? <DashboardProviderWarning /> : null}
 
       {showEmptyState ? (
         <DashboardSetupEmptyState
