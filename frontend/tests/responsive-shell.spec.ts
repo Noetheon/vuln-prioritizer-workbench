@@ -211,7 +211,7 @@ async function expectFindingsMobileCards(page: Page) {
   await expect(
     drawer.getByRole("link", { name: "Open full detail" }),
   ).toBeInViewport()
-  await expect(drawer).toContainText("Decision summary")
+  await expect(drawer).toContainText("Recommended action")
   await expect(drawer).toContainText("Open full detail")
   await expect(
     drawer.getByRole("link", { name: "Open full detail" }),

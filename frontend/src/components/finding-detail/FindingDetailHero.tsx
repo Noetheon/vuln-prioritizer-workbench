@@ -8,25 +8,14 @@ import {
   FindingStatusBadge,
   KevBadge,
   PriorityBadge,
-  RiskScore,
 } from "@/components/risk"
-import {
-  VpwBadge,
-  VpwSurface,
-  VpwSurfaceBody,
-  VpwSurfaceDescription,
-  VpwSurfaceHeader,
-  VpwSurfaceTitle,
-} from "@/components/vpw"
+import { VpwBadge } from "@/components/vpw"
 import { formatNullableNumber } from "@/lib/risk-format"
-import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 
 import {
   type FindingOccurrenceRow,
-  findingAssetServiceDetailLabel,
   findingComponentDetailLabel,
   findingHeroSummary,
-  findingOwnerDetailLabel,
   findingRecommendedAction,
   findingSlaLabel,
 } from "./finding-detail-model"
@@ -42,12 +31,7 @@ export function FindingDetailHero({
   explanation,
   finding,
   isDemo,
-  occurrences,
 }: FindingDetailHeroProps) {
-  const assetEnvironmentLabel = finding.asset_environment
-    ? labelize(finding.asset_environment)
-    : "Environment not recorded"
-
   return (
     <>
       {isDemo ? (
@@ -60,14 +44,17 @@ export function FindingDetailHero({
       ) : null}
 
       <section
-        className="finding-decision-hero"
-        aria-label="Finding decision hero"
+        aria-label="Finding decision summary"
+        className="finding-detail-header-band"
       >
-        <div className="finding-decision-hero-copy">
-          <VpwBadge className="finding-decision-kicker" tone="info">
-            Why this priority?
+        <div className="finding-detail-header-copy">
+          <VpwBadge className="finding-detail-kicker" tone="info">
+            Triage decision
           </VpwBadge>
           <h2>{finding.cve_id}</h2>
+          <p className="finding-detail-component-line">
+            {findingComponentDetailLabel(finding)}
+          </p>
           <p>{findingHeroSummary(finding, explanation)}</p>
           <div className="finding-decision-badges">
             <PriorityBadge priority={finding.priority} />
@@ -75,88 +62,40 @@ export function FindingDetailHero({
             <KevBadge matched={finding.in_kev} />
           </div>
         </div>
+
+        <div className="finding-detail-header-action">
+          <span>Owner action</span>
+          <strong>{findingRecommendedAction(finding, explanation)}</strong>
+          <small>
+            {findingSlaLabel(finding.priority)} SLA from current risk signals.
+          </small>
+        </div>
+
         <ul
-          className="finding-decision-hero-metrics"
           aria-label="Risk indicators"
+          className="finding-detail-header-metrics"
         >
-          <li className="finding-hero-metric-primary">
-            <span>Risk Score</span>
+          <li>
+            <span>Risk score</span>
             <strong>{formatNullableNumber(finding.risk_score)}</strong>
-            <small>Operational remediation priority</small>
+            <small>Operational priority</small>
           </li>
-          <li className="finding-hero-metric-support">
+          <li>
             <span>EPSS</span>
             <EpssBadge value={finding.epss} />
-            <small>Exploit probability signal</small>
+            <small>Probability signal</small>
           </li>
-          <li className="finding-hero-metric-support">
+          <li>
             <span>CVSS</span>
             <CvssBadge value={finding.cvss_base_score} />
-            <small>Impact severity signal</small>
+            <small>Impact signal</small>
           </li>
-          <li className="finding-hero-metric-decision">
-            <span>Decision</span>
-            <RiskScore value={finding.risk_score} />
-            <small>{findingSlaLabel(finding.priority)} SLA</small>
+          <li>
+            <span>SLA</span>
+            <strong>{findingSlaLabel(finding.priority)}</strong>
+            <small>Response target</small>
           </li>
         </ul>
-      </section>
-
-      <section
-        className="finding-decision-fact-grid"
-        aria-label="Finding scope"
-      >
-        <VpwSurface className="finding-fact-card">
-          <VpwSurfaceHeader>
-            <VpwSurfaceDescription>Component</VpwSurfaceDescription>
-            <VpwSurfaceTitle
-              className="finding-fact-card-title"
-              title={findingComponentDetailLabel(finding)}
-            >
-              {findingComponentDetailLabel(finding)}
-            </VpwSurfaceTitle>
-          </VpwSurfaceHeader>
-          <VpwSurfaceBody>
-            <p title={optionalText(finding.component_purl)}>
-              {optionalText(finding.component_purl)}
-            </p>
-          </VpwSurfaceBody>
-        </VpwSurface>
-        <VpwSurface className="finding-fact-card">
-          <VpwSurfaceHeader>
-            <VpwSurfaceDescription>Asset / Service</VpwSurfaceDescription>
-            <VpwSurfaceTitle
-              className="finding-fact-card-title"
-              title={findingAssetServiceDetailLabel(finding)}
-            >
-              {findingAssetServiceDetailLabel(finding)}
-            </VpwSurfaceTitle>
-          </VpwSurfaceHeader>
-          <VpwSurfaceBody>
-            <p>{labelize(finding.exposure)}</p>
-          </VpwSurfaceBody>
-        </VpwSurface>
-        <VpwSurface className="finding-fact-card">
-          <VpwSurfaceHeader>
-            <VpwSurfaceDescription>Owner</VpwSurfaceDescription>
-            <VpwSurfaceTitle className="finding-fact-card-title">
-              {findingOwnerDetailLabel(finding, occurrences)}
-            </VpwSurfaceTitle>
-          </VpwSurfaceHeader>
-          <VpwSurfaceBody>
-            <p>{assetEnvironmentLabel}</p>
-          </VpwSurfaceBody>
-        </VpwSurface>
-        <VpwSurface className="finding-fact-card finding-recommendation-card">
-          <VpwSurfaceHeader>
-            <VpwSurfaceDescription>
-              Primary recommendation
-            </VpwSurfaceDescription>
-            <VpwSurfaceTitle className="finding-fact-card-title">
-              {findingRecommendedAction(finding, explanation)}
-            </VpwSurfaceTitle>
-          </VpwSurfaceHeader>
-        </VpwSurface>
       </section>
     </>
   )

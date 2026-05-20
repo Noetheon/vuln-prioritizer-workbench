@@ -141,11 +141,6 @@ export function buildFindingsDataTableColumns({
       cell: (finding) => (
         <div className="finding-owner-cell">
           <strong>{ownerLabel(finding)}</strong>
-          {finding.business_service ? (
-            <span className="remediation-subtext">
-              {finding.business_service}
-            </span>
-          ) : null}
         </div>
       ),
       className: "w-[11%]",
@@ -191,10 +186,10 @@ export function buildFindingsDataTableColumns({
           </span>
           <div className="finding-meta-tags">
             <MetaTag label={findingSlaLabel(finding.priority)} />
-            {finding.waived ? <MetaTag label="Accepted risk" /> : null}
             {finding.under_investigation ? (
               <MetaTag label="Under review" />
             ) : null}
+            {finding.waived ? <MetaTag label="Accepted risk" /> : null}
           </div>
         </div>
       ),

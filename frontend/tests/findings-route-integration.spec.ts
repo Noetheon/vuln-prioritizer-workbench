@@ -375,7 +375,7 @@ test("findings controls update canonical URLs and preserve detail back context",
     .click()
   await expect(page).toHaveURL(/\/findings\/finding-10\?/)
   await expect(page).toHaveURL(/priority=critical/)
-  await page.getByRole("link", { name: "Back to Findings" }).click()
+  await page.getByRole("link", { name: "Back to Triage" }).click()
   await expect(page).toHaveURL(/\/findings\?/)
   await expect(page).toHaveURL(/priority=critical/)
   await expect(page).toHaveURL(/sort=score/)
@@ -423,7 +423,7 @@ test("findings detail, drawer preview, and scroll evidence are covered", async (
     .click()
   const quickViewSheet = page.getByRole("dialog", { name: cvePattern })
   await expect(quickViewSheet).toBeVisible()
-  await expect(quickViewSheet).toContainText("Decision summary")
+  await expect(quickViewSheet).toContainText("Recommended action")
   await expect(quickViewSheet).toContainText(
     "Known exploited dependency in a critical runtime.",
   )
@@ -432,7 +432,7 @@ test("findings detail, drawer preview, and scroll evidence are covered", async (
   await expect(quickViewSheet).toContainText("generic-occurrence-csv")
   await expect(quickViewSheet).toContainText("Defensive ATT&CK context")
   await expect(quickViewSheet).toContainText("does not prove compromise")
-  await expect(quickViewSheet).toContainText("Governance")
+  await expect(quickViewSheet).not.toContainText("No KEV")
   await expect(quickViewSheet).toContainText("Open full detail")
   const fullDetailLink = quickViewSheet.getByRole("link", {
     name: "Open full detail",
@@ -461,7 +461,7 @@ test("findings detail, drawer preview, and scroll evidence are covered", async (
   await expect(page.getByRole("heading", { name: cvePattern })).toBeVisible()
   await expect(page.getByRole("region", { name: "Risk to decision" })).toBeVisible()
 
-  await page.getByRole("tab", { name: "TTP Context" }).click()
+  await page.getByRole("tab", { name: "ATT&CK" }).click()
   await expect(
     page.getByRole("region", { name: "Threat informed context" }),
   ).toBeVisible()
@@ -471,7 +471,7 @@ test("findings detail, drawer preview, and scroll evidence are covered", async (
   await expect(page.getByRole("region", { name: "Finding history" })).toBeVisible()
   await captureAuditScreenshot(page, "vpw-aud-204-finding-detail-1440.png")
 
-  await page.getByRole("link", { name: "Back to Findings" }).click()
+  await page.getByRole("link", { name: "Back to Triage" }).click()
   await expect(page).toHaveURL(/\/findings\?/)
   await expect(page).toHaveURL(/sort=score/)
   await expect(page).toHaveURL(/priority=critical/)

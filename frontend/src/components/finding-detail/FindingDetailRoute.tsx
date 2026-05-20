@@ -1,16 +1,23 @@
 import { Link } from "@/lib/router"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, RefreshCcw } from "lucide-react"
 
 import type {
   FindingDetailPublic,
   FindingExplanationPublic,
 } from "@/api-client"
 import type { FindingsUrlSearch } from "@/components/findings/findings-search-state"
+import {
+  FindingStatusBadge,
+  KevBadge,
+  PriorityBadge,
+} from "@/components/risk"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VpwSkeletonStack, VpwStatusBanner } from "@/components/vpw"
 import type { FindingDetailTab } from "@/lib/app-defaults"
+import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 import { findingWaiverEvidence } from "@/lib/waiver-view"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 
 import { FindingDetailHero } from "./FindingDetailHero"
 import { FindingEvidenceTab } from "./FindingEvidenceTab"
@@ -23,6 +30,12 @@ import {
   findingHistoryRows,
   findingOccurrenceRows,
   findingProviderGaps,
+  findingAssetServiceDetailLabel,
+  findingComponentDetailLabel,
+  findingNextStepLabel,
+  findingOwnerDetailLabel,
+  findingRecommendedAction,
+  findingSlaLabel,
   findingReasonRows,
   isDemoFindingDetail,
 } from "./finding-detail-model"
@@ -80,7 +93,7 @@ export function FindingDetailRoute({
         <Button variant="outline" size="sm" asChild>
           <Link search={findingsBackSearch} to="/findings">
             <ArrowLeft aria-hidden="true" size={16} />
-            <span>Back to Findings</span>
+            <span>Back to Triage</span>
           </Link>
         </Button>
       </div>
@@ -108,70 +121,189 @@ export function FindingDetailRoute({
             occurrences={occurrences}
           />
 
-          <WhyPriorityPanel
-            decisionReasons={decisionReasons}
-            explanation={explanation}
-            finding={finding}
-            occurrences={occurrences}
-            onRefresh={onRefresh}
-            reasonRows={reasonRows}
-            waiverEvidence={waiverEvidence}
-          />
-
-          <Tabs
-            className="finding-detail-tabs-shell"
-            value={tab}
-            onValueChange={(value) => onTabChange(value as FindingDetailTab)}
-          >
-            <div className="finding-tabs-toolbar">
-              <div className="finding-tabs-heading">
-                <span>Decision evidence</span>
-                <strong>Evidence, TTP context, and lifecycle</strong>
-                <p>
-                  Provider-backed facts used to explain and defend the priority
-                  decision.
-                </p>
-              </div>
-              <TabsList className="finding-detail-tabs-list">
-                <TabsTrigger
-                  className="finding-detail-tab-trigger"
-                  value="evidence"
-                >
-                  Evidence
-                </TabsTrigger>
-                <TabsTrigger className="finding-detail-tab-trigger" value="ttp">
-                  TTP Context
-                </TabsTrigger>
-                <TabsTrigger
-                  className="finding-detail-tab-trigger"
-                  value="history"
-                >
-                  History
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent className="finding-detail-tab-panel" value="evidence">
-              <FindingEvidenceTab
-                dataQualityRows={dataQualityRows}
-                evidenceRows={evidenceRows}
+          <div className="finding-detail-workspace-grid">
+            <main className="finding-detail-workspace-main">
+              <WhyPriorityPanel
+                decisionReasons={decisionReasons}
+                explanation={explanation}
+                finding={finding}
                 occurrences={occurrences}
-              />
-            </TabsContent>
-
-            <TabsContent className="finding-detail-tab-panel" value="ttp">
-              <FindingTtpContextTab attackContext={attackContext} />
-            </TabsContent>
-
-            <TabsContent className="finding-detail-tab-panel" value="history">
-              <FindingHistoryTab
-                historyRows={historyRows}
+                onRefresh={onRefresh}
+                reasonRows={reasonRows}
                 waiverEvidence={waiverEvidence}
               />
-            </TabsContent>
-          </Tabs>
+
+              <Tabs
+                className="finding-detail-tabs-shell"
+                value={tab}
+                onValueChange={(value) => onTabChange(value as FindingDetailTab)}
+              >
+                <div className="finding-tabs-toolbar">
+                  <div className="finding-tabs-heading">
+                    <span>Investigation record</span>
+                    <strong>Evidence, ATT&amp;CK context, and lifecycle</strong>
+                    <p>
+                      Provider-backed facts used to explain and defend the
+                      priority decision.
+                    </p>
+                  </div>
+                  <TabsList className="finding-detail-tabs-list">
+                    <TabsTrigger
+                      className="finding-detail-tab-trigger"
+                      value="evidence"
+                    >
+                      Evidence
+                    </TabsTrigger>
+                    <TabsTrigger
+                      className="finding-detail-tab-trigger"
+                      value="ttp"
+                    >
+                      ATT&amp;CK
+                    </TabsTrigger>
+                    <TabsTrigger
+                      className="finding-detail-tab-trigger"
+                      value="history"
+                    >
+                      History
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <TabsContent
+                  className="finding-detail-tab-panel"
+                  value="evidence"
+                >
+                  <FindingEvidenceTab
+                    dataQualityRows={dataQualityRows}
+                    evidenceRows={evidenceRows}
+                    occurrences={occurrences}
+                  />
+                </TabsContent>
+
+                <TabsContent className="finding-detail-tab-panel" value="ttp">
+                  <FindingTtpContextTab attackContext={attackContext} />
+                </TabsContent>
+
+                <TabsContent
+                  className="finding-detail-tab-panel"
+                  value="history"
+                >
+                  <FindingHistoryTab
+                    historyRows={historyRows}
+                    waiverEvidence={waiverEvidence}
+                  />
+                </TabsContent>
+              </Tabs>
+            </main>
+
+            <FindingDetailActionRail
+              explanation={explanation}
+              finding={finding}
+              occurrences={occurrences}
+              onRefresh={onRefresh}
+              waiverEvidence={waiverEvidence}
+            />
+          </div>
         </>
       ) : null}
     </section>
+  )
+}
+
+function FindingDetailActionRail({
+  explanation,
+  finding,
+  occurrences,
+  onRefresh,
+  waiverEvidence,
+}: {
+  explanation: FindingExplanationPublic | null
+  finding: FindingDetailPublic
+  occurrences: ReturnType<typeof findingOccurrenceRows>
+  onRefresh: () => void
+  waiverEvidence: ReturnType<typeof findingWaiverEvidence>
+}) {
+  const projectSearch = selectedProjectRouteSearch(finding.project_id)
+  const scopeRows = [
+    {
+      label: "Asset / service",
+      value: findingAssetServiceDetailLabel(finding),
+    },
+    {
+      label: "Owner",
+      value: findingOwnerDetailLabel(finding, occurrences),
+    },
+    {
+      label: "Exposure",
+      value: labelize(finding.exposure),
+    },
+  ]
+  const decisionRows = [
+    {
+      label: "SLA",
+      value: findingSlaLabel(finding.priority),
+    },
+    {
+      label: "Next step",
+      value: findingNextStepLabel(finding),
+    },
+    {
+      label: "Risk acceptance",
+      value: waiverEvidence
+        ? `${optionalText(waiverEvidence.status)} - ${optionalText(
+            waiverEvidence.reason,
+          )}`
+        : "Not recorded",
+    },
+  ]
+
+  return (
+    <aside className="finding-detail-action-rail" aria-label="Triage summary">
+      <div className="finding-detail-action-rail__header">
+        <span>Decision scope</span>
+        <strong>{findingComponentDetailLabel(finding)}</strong>
+      </div>
+
+      <div className="finding-detail-action-rail__badges">
+        <PriorityBadge priority={finding.priority} />
+        <FindingStatusBadge status={finding.status} />
+        <KevBadge matched={finding.in_kev} />
+      </div>
+
+      <div className="finding-detail-action-block">
+        <span>Recommended action</span>
+        <p>{findingRecommendedAction(finding, explanation)}</p>
+      </div>
+
+      <dl className="finding-detail-action-list">
+        {scopeRows.map((row) => (
+          <div key={row.label}>
+            <dt>{row.label}</dt>
+            <dd>{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <dl className="finding-detail-action-list">
+        {decisionRows.map((row) => (
+          <div key={row.label}>
+            <dt>{row.label}</dt>
+            <dd>{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="finding-detail-action-buttons">
+        <Button onClick={onRefresh} size="sm" type="button" variant="outline">
+          <RefreshCcw aria-hidden="true" size={14} />
+          Refresh evidence
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <Link search={projectSearch} to="/waivers">
+            Risk acceptance
+          </Link>
+        </Button>
+      </div>
+    </aside>
   )
 }

@@ -1,16 +1,13 @@
 import { Link } from "@/lib/router"
 import { AlertTriangle, ArrowUp, Eye, FileDown, Upload } from "lucide-react"
+import type { ReactNode } from "react"
 import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
-  CountBadge,
-  VpwDemoBanner,
-  VpwGrid,
-  VpwMetricCard,
   VpwPanel,
   VpwSection,
-  VpwSectionHeader,
+  VpwDemoBanner,
 } from "@/components/vpw"
 
 export function DemoBanner() {
@@ -22,31 +19,12 @@ export function DemoBanner() {
   )
 }
 
-type SummaryChipProps = {
-  compact?: boolean
+type SummaryMetric = {
+  description: string
+  icon: ReactNode
   label: string
-  value: number | string
-  tone?: "critical" | "warning" | "info" | "support"
-}
-
-function SummaryChip({
-  compact = false,
-  label,
-  value,
-  tone = "info",
-}: SummaryChipProps) {
-  return (
-    <CountBadge
-      className={
-        compact
-          ? "min-h-9 w-full justify-between gap-2 px-3 text-[0.72rem]"
-          : undefined
-      }
-      label={`${label}: ${value}`}
-      tone={tone}
-      value={value}
-    />
-  )
+  tone: "critical" | "warning" | "support" | "info"
+  value: number
 }
 
 type RemediationQueueSummaryProps = {
@@ -65,83 +43,81 @@ export function RemediationQueueSummary({
   openCount,
 }: RemediationQueueSummaryProps) {
   const projectSearch = selectedProjectRouteSearch(displayProject?.id ?? "")
+  const projectName = displayProject?.name ?? "the selected project"
+  const metrics: SummaryMetric[] = [
+    {
+      description: "Immediate owner attention",
+      icon: <AlertTriangle aria-hidden="true" className="h-4 w-4" />,
+      label: "Critical",
+      tone: "critical",
+      value: criticalCount,
+    },
+    {
+      description: "Near-term remediation",
+      icon: <ArrowUp aria-hidden="true" className="h-4 w-4" />,
+      label: "High",
+      tone: "warning",
+      value: highCount,
+    },
+    {
+      description: "Known exploited",
+      icon: <AlertTriangle aria-hidden="true" className="h-4 w-4" />,
+      label: "KEV",
+      tone: "support",
+      value: kevCount,
+    },
+    {
+      description: "Open lifecycle",
+      icon: <Eye aria-hidden="true" className="h-4 w-4" />,
+      label: "Open",
+      tone: "info",
+      value: openCount,
+    },
+  ]
 
   return (
     <VpwSection>
-      <VpwPanel className="findings-analyst-summary flex flex-col gap-5 bg-[var(--vpw-bg-card)]">
-        <VpwSectionHeader
-          actions={
-            <>
-              <Button asChild size="sm" variant="outline">
-                <Link search={projectSearch} to="/reports">
-                  <FileDown aria-hidden="true" className="mr-1.5" size={14} />
-                  Generate evidence
-                </Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link search={projectSearch} to="/imports">
-                  <Upload aria-hidden="true" className="mr-1.5" size={14} />
-                  Import findings
-                </Link>
-              </Button>
-            </>
-          }
-          description={
-            displayProject?.name
-              ? `Prioritized remediation queue for ${displayProject.name}`
-              : "Prioritized remediation queue for the selected project"
-          }
-          eyebrow="Remediation Queue"
-          title="Findings"
-        />
-        <fieldset className="m-0 grid grid-cols-2 gap-2 border-0 p-0 sm:hidden">
-          <legend className="sr-only">Queue signal summary</legend>
-          <SummaryChip
-            compact
-            label="Critical"
-            tone="critical"
-            value={criticalCount}
-          />
-          <SummaryChip compact label="High" tone="warning" value={highCount} />
-          <SummaryChip compact label="KEV" tone="support" value={kevCount} />
-          <SummaryChip compact label="Open" tone="info" value={openCount} />
-        </fieldset>
-        <VpwGrid className="hidden sm:grid" columns={4}>
-          <VpwMetricCard
-            description="highest urgency"
-            icon={<AlertTriangle aria-hidden="true" className="h-4 w-4" />}
-            label="Critical"
-            tone="critical"
-            value={criticalCount}
-          />
-          <VpwMetricCard
-            description="near-term action"
-            icon={<ArrowUp aria-hidden="true" className="h-4 w-4" />}
-            label="High"
-            tone="warning"
-            value={highCount}
-          />
-          <VpwMetricCard
-            description="known exploited"
-            icon={<AlertTriangle aria-hidden="true" className="h-4 w-4" />}
-            label="KEV"
-            tone="support"
-            value={kevCount}
-          />
-          <VpwMetricCard
-            description="open lifecycle"
-            icon={<Eye aria-hidden="true" className="h-4 w-4" />}
-            label="Open"
-            tone="info"
-            value={openCount}
-          />
-        </VpwGrid>
-        <div className="hidden flex-wrap gap-2 sm:flex">
-          <SummaryChip label="Critical" tone="critical" value={criticalCount} />
-          <SummaryChip label="High" tone="warning" value={highCount} />
-          <SummaryChip label="KEV" tone="support" value={kevCount} />
-          <SummaryChip label="Open" tone="info" value={openCount} />
+      <VpwPanel className="findings-triage-overview" padded={false}>
+        <div className="findings-triage-overview__header">
+          <div>
+            <p className="vpw-label text-[var(--vpw-teal)]">
+              Remediation workspace
+            </p>
+            <h2>Findings queue</h2>
+            <p>
+              Prioritized vulnerability findings for {projectName}. Review
+              owner-ready evidence, context, and remediation state.
+            </p>
+          </div>
+          <div className="findings-triage-overview__actions">
+            <Button asChild size="sm" variant="outline">
+              <Link search={projectSearch} to="/reports">
+                <FileDown aria-hidden="true" className="mr-1.5" size={14} />
+                Generate evidence
+              </Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link search={projectSearch} to="/imports">
+                <Upload aria-hidden="true" className="mr-1.5" size={14} />
+                Import findings
+              </Link>
+            </Button>
+          </div>
         </div>
+        <dl className="findings-triage-strip" aria-label="Queue signal summary">
+          {metrics.map((metric) => (
+            <div data-tone={metric.tone} key={metric.label}>
+              <dt>
+                <span className="findings-triage-strip__icon">
+                  {metric.icon}
+                </span>
+                {metric.label}
+              </dt>
+              <dd>{metric.value}</dd>
+              <p>{metric.description}</p>
+            </div>
+          ))}
+        </dl>
       </VpwPanel>
     </VpwSection>
   )

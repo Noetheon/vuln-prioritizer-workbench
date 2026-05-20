@@ -573,7 +573,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     fullPage: true,
     path: evidenceScreenshotPath("vpw-044-finding-context.png"),
   })
-  await page.getByRole("link", { name: "Back to Findings" }).click()
+  await page.getByRole("link", { name: "Back to Triage" }).click()
   await expect(page).toHaveURL(/\/findings(?:\?.*)?$/)
 
   await navigation.getByRole("link", { name: "Assets" }).click()
@@ -680,7 +680,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   })
   await expect(findingDetail).toBeVisible()
   const detailHeader = page.getByRole("region", {
-    name: "Finding decision hero",
+    name: "Finding decision summary",
   })
   await expect(detailHeader).toContainText("CVE-2024-3094")
   await expect(detailHeader).toContainText("Critical")
@@ -690,7 +690,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(findingOverview).toContainText("CVSS")
   await expect(findingOverview).toContainText("10.0")
   const whyPriority = page.getByRole("region", { name: "Risk to decision" })
-  await expect(whyPriority).toContainText("Recommended action")
+  await expect(findingDetail).toContainText("Recommended action")
   await expect(whyPriority).toContainText(/priority|Critical|CVSS|EPSS|KEV/i)
   const occurrencesTable = page.getByRole("table", {
     name: "Occurrences table",
@@ -730,7 +730,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     fullPage: true,
     path: evidenceScreenshotPath("vpw-043-finding-detail.png"),
   })
-  await page.getByRole("link", { name: "Back to Findings" }).click()
+  await page.getByRole("link", { name: "Back to Triage" }).click()
   await expect(page).toHaveURL(/\/findings(?:\?.*)?$/)
   await expect(findingsTable).toBeVisible()
   const findingsFilters = page.getByRole("region", { name: "Findings filters" })

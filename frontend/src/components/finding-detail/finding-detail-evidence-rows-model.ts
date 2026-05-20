@@ -34,6 +34,9 @@ export function findingEvidenceRows(
     stringValue(evidence.report_reference) ??
     stringValue(evidence.artifact_reference) ??
     stringValue(firstOccurrence?.vex_source_path)
+  const dataQualityLabels = Array.from(
+    new Set(dataQualityRows.map((row) => labelize(row.code))),
+  )
 
   return [
     {
@@ -74,7 +77,7 @@ export function findingEvidenceRows(
     {
       detail:
         dataQualityRows.length > 0
-          ? dataQualityRows.map((row) => labelize(row.code)).join(", ")
+          ? dataQualityLabels.join(", ")
           : "No data quality flags recorded.",
       label: "Data quality notes",
       value:

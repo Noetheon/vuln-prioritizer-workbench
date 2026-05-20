@@ -2,23 +2,22 @@
   display: grid;
   width: 100%;
   min-width: 0;
-  gap: 18px;
-  border: 1px solid var(--vpw-border-strong);
-  border-radius: var(--vpw-radius-lg);
-  padding: clamp(16px, 1.2vw, 22px);
+  gap: 1rem;
+  border: 1px solid var(--vpw-border-default);
+  border-radius: var(--vpw-radius-xl);
+  padding: clamp(1rem, 1.2vw, 1.25rem);
   background: var(--vpw-bg-card);
-  box-shadow: var(--vpw-shadow-1);
+  box-shadow: none;
 }
 
 .finding-tabs-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  border: 1px solid var(--vpw-border-default);
-  border-radius: var(--vpw-radius-md);
-  padding: 14px;
-  background: var(--vpw-bg-panel);
+  gap: 1rem;
+  border-bottom: 1px solid var(--vpw-border-subtle);
+  padding-bottom: 1rem;
+  background: transparent;
 }
 
 .finding-tabs-heading {
@@ -52,9 +51,9 @@
 .finding-detail-tabs-list {
   flex: none;
   width: fit-content;
-  height: 44px;
-  border: 1px solid var(--vpw-border-strong);
-  border-radius: var(--vpw-radius-lg);
+  height: 40px;
+  border: 1px solid var(--vpw-border-default);
+  border-radius: var(--vpw-radius-md);
   padding: 4px;
   background: var(--vpw-bg-panel);
 }
@@ -69,8 +68,8 @@
 
 .finding-detail-tabs-list [data-state="active"] {
   background: var(--vpw-bg-card);
-  color: var(--vpw-teal);
-  box-shadow: var(--vpw-shadow-1);
+  color: var(--vpw-text-primary);
+  box-shadow: none;
 }
 
 .finding-detail-tabs-list [data-state="active"]::after {
@@ -103,17 +102,21 @@
 }
 
 .finding-evidence-grid {
-  display: grid;
-  gap: 12px;
-}
-
-.finding-evidence-grid {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--vpw-border-subtle);
+  border-radius: var(--vpw-radius-lg);
+  background: var(--vpw-border-subtle);
 }
 
 .finding-evidence-summary-card {
+  flex: 1 1 220px;
   gap: 10px;
-  border-radius: var(--vpw-radius-lg);
+  min-width: min(100%, 220px);
+  border: 0;
+  border-radius: 0;
   box-shadow: none;
 }
 
@@ -123,8 +126,7 @@
 }
 
 .finding-evidence-summary-card-primary {
-  grid-column: span 2;
-  border-color: color-mix(in srgb, var(--vpw-teal) 18%, var(--vpw-bg-card));
+  grid-column: span 1;
   background: color-mix(in srgb, var(--vpw-bg-success) 58%, var(--vpw-bg-card));
 }
 
@@ -170,6 +172,93 @@
   background: var(--vpw-bg-card);
   scrollbar-gutter: stable;
   -webkit-overflow-scrolling: touch;
+}
+
+.finding-occurrences-mobile-list {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.finding-occurrence-mobile-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--vpw-border-default);
+  border-radius: var(--vpw-radius-lg);
+  padding: 12px;
+  background: var(--vpw-bg-card);
+}
+
+.finding-occurrence-mobile-card div {
+  display: grid;
+  gap: 3px;
+  border-bottom: 1px solid var(--vpw-border-subtle);
+  padding-bottom: 10px;
+}
+
+.finding-occurrence-mobile-card div:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.finding-occurrence-mobile-card span {
+  color: var(--vpw-text-muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.finding-occurrence-mobile-card strong {
+  color: var(--vpw-text-primary);
+  font-size: 0.95rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.finding-occurrence-mobile-card small {
+  color: var(--vpw-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1600px) {
+  .finding-evidence-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1180px) {
+  .finding-evidence-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .finding-tabs-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .finding-detail-tabs-list {
+    width: 100%;
+  }
+
+  .finding-detail-tab-trigger {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .finding-occurrences-table {
+    display: none;
+  }
+
+  .finding-occurrences-mobile-list {
+    display: grid;
+    gap: 10px;
+  }
 }
 
 
