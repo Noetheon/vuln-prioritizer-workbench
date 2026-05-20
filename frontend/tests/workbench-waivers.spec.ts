@@ -92,7 +92,7 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
 }) => {
   test.setTimeout(60_000)
   const testRunSuffix = Date.now().toString(36)
-  const projectName = `VPW Waiver Project ${testRunSuffix}`
+  const projectName = `VPW Acceptance Project ${testRunSuffix}`
 
   await openWorkbench(page)
   const headers = localApiHeaders()
@@ -101,7 +101,7 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
     `${backendBaseUrl}/api/v1/projects/`,
     {
       data: {
-        description: "Playwright waiver project",
+        description: "Playwright accepted-risk project",
         name: projectName,
       },
       headers,
@@ -137,20 +137,25 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
     projectName,
   )
 
-  await page.getByRole("button", { name: "Create acceptance" }).first().click()
+  await page
+    .getByRole("button", { name: "Record accepted risk" })
+    .first()
+    .click()
   const createWaiver = page.getByRole("dialog", {
-    name: "Create acceptance",
+    name: "Record accepted risk",
   })
   await expect(createWaiver).toBeVisible()
-  await createWaiver.getByLabel("Waiver CVE ID").fill("CVE-2024-3094")
-  await createWaiver.getByLabel("Waiver owner").fill("risk-owner")
+  await createWaiver.getByLabel("Acceptance CVE ID").fill("CVE-2024-3094")
+  await createWaiver.getByLabel("Acceptance owner").fill("risk-owner")
   await createWaiver
-    .getByLabel("Waiver reason")
+    .getByLabel("Acceptance reason")
     .fill("Temporary accepted risk for VPW-064 browser evidence.")
-  await createWaiver.getByLabel("Waiver expires at").fill("2099-12-31")
-  await createWaiver.getByLabel("Waiver review at").fill("2099-12-01")
-  await createWaiver.getByLabel("Waiver approval reference").fill("CAB-064")
-  await createWaiver.getByRole("button", { name: "Create waiver" }).click()
+  await createWaiver.getByLabel("Acceptance expires at").fill("2099-12-31")
+  await createWaiver.getByLabel("Acceptance review at").fill("2099-12-01")
+  await createWaiver
+    .getByLabel("Acceptance approval reference")
+    .fill("CAB-064")
+  await createWaiver.getByRole("button", { name: "Create acceptance" }).click()
 
   const waiversTable = page.getByRole("table", {
     name: "Risk acceptance register table",
@@ -178,7 +183,8 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
     name: "Finding priority decision",
   })
   await expect(findingDetail).toContainText("Accepted")
-  await expect(findingDetail).toContainText("Risk acceptance option")
+  await expect(findingDetail).toContainText("Risk acceptance")
+  await expect(findingDetail).toContainText("Acceptance")
   await expect(findingDetail).toContainText("Temporary accepted risk")
   await page.screenshot({
     fullPage: true,
@@ -192,12 +198,16 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
     "Risk Acceptance project",
     projectName,
   )
-  await waiversTable.getByRole("button", { name: "Expire" }).click()
+  await waiversTable
+    .getByRole("button", {
+      name: /Expire accepted-risk decision for .*CVE-2024-3094/,
+    })
+    .click()
   const expireDrawer = page.getByRole("dialog", {
-    name: /Expire CVE CVE-2024-3094/,
+    name: "Expire accepted-risk decision?",
   })
   await expect(expireDrawer).toBeVisible()
-  await expireDrawer.getByRole("button", { name: "Confirm expiry" }).click()
+  await expireDrawer.getByRole("button", { name: "Expire acceptance" }).click()
   await page.getByRole("button", { name: "Close" }).click()
   await expect(waiversTable).toContainText("Expired")
 
@@ -205,12 +215,12 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
   await expect(page.getByText("Temporary accepted risk")).toHaveCount(0)
 })
 
-test("workbench governance rollups show service risk and waiver debt", async ({
+test("workbench governance rollups show service risk and accepted-risk debt", async ({
   page,
 }) => {
   test.setTimeout(60_000)
   const testRunSuffix = Date.now().toString(36)
-  const projectName = `VPW Governance Project ${testRunSuffix}`
+  const projectName = `VPW Governance Acceptance Project ${testRunSuffix}`
 
   await openWorkbench(page)
   const headers = localApiHeaders()
@@ -251,7 +261,7 @@ test("workbench governance rollups show service risk and waiver debt", async ({
         approval_ref: "CAB-067-A",
         expires_at: dateValueFromOffset(7),
         owner: "risk-team",
-        reason: "Review due checkout waiver for VPW-067 evidence.",
+        reason: "Review due checkout acceptance for VPW-067 evidence.",
         review_at: dateValueFromOffset(0),
         service: "checkout",
       },
@@ -268,7 +278,7 @@ test("workbench governance rollups show service risk and waiver debt", async ({
         asset_key: "identity-api",
         expires_at: dateValueFromOffset(-1),
         owner: "legacy-risk",
-        reason: "Expired identity waiver for VPW-067 debt evidence.",
+        reason: "Expired identity acceptance for VPW-067 debt evidence.",
         review_at: dateValueFromOffset(-2),
       },
       headers,
@@ -311,8 +321,9 @@ test("workbench governance rollups show service risk and waiver debt", async ({
     "Risk Acceptance project",
     projectName,
   )
-  await page.getByText("Review queue and lifecycle context").click()
-  await expect(page.getByText("Owner follow-up")).toBeVisible()
+  await expect(page.getByText("Governance overview")).toBeVisible()
+  await expect(page.getByText("Review queue").first()).toBeVisible()
+  await expect(page.getByText("Owner rollup").first()).toBeVisible()
   await expect(page.getByText("Expired").first()).toBeVisible()
   await expect(page.getByText("Review due").first()).toBeVisible()
   await expect(page.getByText("service:checkout").first()).toBeVisible()

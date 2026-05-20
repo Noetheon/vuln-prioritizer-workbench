@@ -1,4 +1,3 @@
-import { ChevronDown } from "lucide-react"
 import { VpwPageContainer, VpwStatusBanner } from "@/components/vpw"
 import {
   WaiverMetrics,
@@ -8,7 +7,6 @@ import {
 } from "./WaiversWorkbenchSections"
 import { WaiverDrawer } from "./WaiversWorkbenchDrawer"
 import {
-  evidenceCompleteness,
   isMissingApproval,
   reviewQueue,
   summaryValue,
@@ -34,15 +32,11 @@ export function WaiversWorkbench(props: WaiversWorkbenchProps) {
     "Accepted findings",
   )
   const missingApprovals = props.waivers.filter(isMissingApproval).length
-  const completeness = evidenceCompleteness(props.waivers)
   const queue = reviewQueue(props.waiverDebtItems, props.waivers)
 
   return (
     <VpwPageContainer className="flex flex-col gap-8 px-0 py-0">
       <WaiversHero
-        activeWaivers={activeWaivers}
-        expired={expired}
-        expiringSoon={expiringSoon}
         openWaiverDrawer={props.openWaiverDrawer}
         onProjectChange={props.onProjectChange}
         projectListLoading={props.projectListLoading}
@@ -53,17 +47,22 @@ export function WaiversWorkbench(props: WaiversWorkbenchProps) {
       />
 
       {props.waiversError ? (
-        <VpwStatusBanner title="Waivers unavailable" tone="critical">
+        <VpwStatusBanner title="Risk Acceptance unavailable" tone="critical">
           {props.waiversError}
         </VpwStatusBanner>
       ) : null}
+      {props.findingsError ? (
+        <VpwStatusBanner title="Matched findings unavailable" tone="warning">
+          {props.findingsError}
+        </VpwStatusBanner>
+      ) : null}
       {props.waiverActionError ? (
-        <VpwStatusBanner title="Waiver action failed" tone="critical">
+        <VpwStatusBanner title="Risk Acceptance action failed" tone="critical">
           {props.waiverActionError}
         </VpwStatusBanner>
       ) : null}
       {props.waiverActionMessage ? (
-        <VpwStatusBanner title="Waiver action complete" tone="success">
+        <VpwStatusBanner title="Risk Acceptance action complete" tone="success">
           {props.waiverActionMessage}
         </VpwStatusBanner>
       ) : null}
@@ -71,9 +70,9 @@ export function WaiversWorkbench(props: WaiversWorkbenchProps) {
       <WaiverMetrics
         acceptedFindings={acceptedFindings}
         activeWaivers={activeWaivers}
-        expired={expired}
         expiringSoon={expiringSoon}
         missingApprovals={missingApprovals}
+        reviewDue={reviewDue}
         waiversLoading={props.waiversLoading}
       />
       <WaiverRegister
@@ -85,34 +84,15 @@ export function WaiversWorkbench(props: WaiversWorkbenchProps) {
         waivers={props.waivers}
         waiversLoading={props.waiversLoading}
       />
-      <details className="group rounded-[var(--vpw-radius-xl)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] shadow-[var(--vpw-shadow-0)]">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 [&::-webkit-details-marker]:hidden">
-          <span>
-            <span className="vpw-label text-[var(--vpw-teal)]">
-              Governance rollups
-            </span>
-            <span className="mt-1 block text-base font-semibold text-[var(--vpw-text-primary)]">
-              Review queue and lifecycle context
-            </span>
-            <span className="mt-1 block text-sm text-[var(--vpw-text-secondary)]">
-              {completeness}% evidence completeness across accepted-risk records.
-            </span>
-          </span>
-          <ChevronDown
-            aria-hidden="true"
-            className="size-4 shrink-0 text-[var(--vpw-text-muted)] transition-transform group-open:rotate-180"
-          />
-        </summary>
-        <div className="border-t border-[var(--vpw-border-subtle)] p-5">
-          <WaiverReviewSection
-            acceptedFindings={acceptedFindings}
-            expired={expired}
-            expiringSoon={expiringSoon}
-            queue={queue}
-            reviewDue={reviewDue}
-          />
-        </div>
-      </details>
+      <WaiverReviewSection
+        acceptedFindings={acceptedFindings}
+        expired={expired}
+        expiringSoon={expiringSoon}
+        missingApprovals={missingApprovals}
+        queue={queue}
+        reviewDue={reviewDue}
+        waivers={props.waivers}
+      />
       <WaiverDrawer state={props} />
     </VpwPageContainer>
   )

@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   CalendarClock,
   ClipboardCheck,
+  ExternalLink,
   FileCheck2,
   ShieldCheck,
 } from "lucide-react"
@@ -16,9 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  VpwBadge,
   VpwField,
   VpwGrid,
+  MetaTag,
   VpwMetricCard,
   VpwPanel,
   VpwSection,
@@ -29,9 +30,6 @@ import {
 import type { WaiversWorkbenchProps } from "./waivers-workbench-model"
 
 export function WaiversHero({
-  activeWaivers,
-  expired,
-  expiringSoon,
   openWaiverDrawer,
   onProjectChange,
   projectListLoading,
@@ -49,9 +47,6 @@ export function WaiversHero({
   | "selectedProject"
   | "selectedProjectId"
 > & {
-  activeWaivers: number
-  expired: string
-  expiringSoon: string
 }) {
   const projectSearch = selectedProjectRouteSearch(selectedProjectId)
 
@@ -66,20 +61,24 @@ export function WaiversHero({
                 onClick={() => openWaiverDrawer("create")}
                 type="button"
               >
-                Create acceptance
+                Record accepted risk
               </Button>
               <Button asChild variant="outline">
-                <Link search={projectSearch} to="/findings">
-                  View findings
+                <Link
+                  search={{ ...projectSearch, status: "accepted" }}
+                  to="/findings"
+                >
+                  <ExternalLink aria-hidden="true" data-icon="inline-start" />
+                  Open accepted findings
                 </Link>
               </Button>
             </>
           }
-          description="Govern accepted risk decisions with owner, scope, expiry and evidence."
+          description="Govern time-boxed accepted-risk decisions with owner, scope, expiry, and evidence. Accepted risk remains visible in Triage and Finding Detail."
           eyebrow="Risk acceptance"
-          title="Risk Acceptance"
+          title="Accepted risk register"
         />
-        <VpwToolbar label="Waiver context" variant="plain">
+        <VpwToolbar label="Risk Acceptance context" variant="plain">
           <VpwToolbarGroup className="min-w-0">
             <VpwField className="w-full min-w-0 sm:w-64" label="Project">
               <Select
@@ -106,21 +105,8 @@ export function WaiversHero({
             </VpwField>
           </VpwToolbarGroup>
           <VpwToolbarGroup>
-            <VpwBadge tone={selectedProject ? "success" : "warning"}>
-              Active project: {selectedProject?.name ?? "None"}
-            </VpwBadge>
-            <VpwBadge tone="info">Active: {activeWaivers}</VpwBadge>
-            <VpwBadge tone={Number(expiringSoon) > 0 ? "warning" : "neutral"}>
-              Expiring soon: {expiringSoon}
-            </VpwBadge>
-            <VpwBadge tone={Number(expired) > 0 ? "critical" : "neutral"}>
-              Expired: {expired}
-            </VpwBadge>
-            <VpwBadge
-              tone={projectSummary?.latest_run_id ? "success" : "neutral"}
-            >
-              Evidence {projectSummary?.latest_run_id ? "ready" : "pending"}
-            </VpwBadge>
+            <MetaTag label={`Project: ${selectedProject?.name ?? "None"}`} />
+            <MetaTag label={`Evidence ${projectSummary?.latest_run_id ? "available" : "pending"}`} />
           </VpwToolbarGroup>
         </VpwToolbar>
       </VpwPanel>
@@ -131,25 +117,32 @@ export function WaiversHero({
 export function WaiverMetrics({
   acceptedFindings,
   activeWaivers,
-  expired,
   expiringSoon,
   missingApprovals,
+  reviewDue,
   waiversLoading,
 }: Pick<WaiversWorkbenchProps, "waiversLoading"> & {
   acceptedFindings: string
   activeWaivers: number
-  expired: string
   expiringSoon: string
   missingApprovals: number
+  reviewDue: string
 }) {
   return (
     <VpwGrid columns={1} className="md:grid-cols-2 xl:grid-cols-5">
       <VpwMetricCard
-        description="currently accepted risk"
+        description="accepted risk currently active"
         icon={<ShieldCheck aria-hidden="true" className="h-4 w-4" />}
-        label="Active acceptances"
+        label="Active decisions"
         tone="success"
         value={waiversLoading ? "Loading" : activeWaivers}
+      />
+      <VpwMetricCard
+        description="requires owner review"
+        icon={<ClipboardCheck aria-hidden="true" className="h-4 w-4" />}
+        label="Review due"
+        tone={Number(reviewDue) > 0 ? "warning" : "neutral"}
+        value={reviewDue}
       />
       <VpwMetricCard
         description="within the review window"
@@ -157,13 +150,6 @@ export function WaiverMetrics({
         label="Expiring soon"
         tone={Number(expiringSoon) > 0 ? "warning" : "neutral"}
         value={expiringSoon}
-      />
-      <VpwMetricCard
-        description="past expiry date"
-        icon={<AlertTriangle aria-hidden="true" className="h-4 w-4" />}
-        label="Expired acceptances"
-        tone={Number(expired) > 0 ? "critical" : "neutral"}
-        value={expired}
       />
       <VpwMetricCard
         description="findings currently accepted"
@@ -174,8 +160,8 @@ export function WaiverMetrics({
       />
       <VpwMetricCard
         description="missing approval reference or ticket"
-        icon={<ClipboardCheck aria-hidden="true" className="h-4 w-4" />}
-        label="Incomplete evidence"
+        icon={<AlertTriangle aria-hidden="true" className="h-4 w-4" />}
+        label="Evidence incomplete"
         tone={missingApprovals > 0 ? "warning" : "success"}
         value={waiversLoading ? "Loading" : missingApprovals}
       />

@@ -27,7 +27,7 @@ export function WaiversWorkbenchCreateGuidance({
         title="Owner, reason and expiry are required"
         tone="warning"
       >
-        Waivers should document why risk is accepted and when it must be
+        Decisions should document why risk is accepted and when it must be
         revisited.
       </VpwStatusBanner>
       <VpwStatusBanner title="Accepted risk stays visible" tone="info">
@@ -38,7 +38,8 @@ export function WaiversWorkbenchCreateGuidance({
         title="Critical findings still need review"
         tone="critical"
       >
-        A waiver is an explicit decision record, not a remediation replacement.
+        Accepted risk is an explicit decision record, not a remediation
+        replacement.
       </VpwStatusBanner>
       <VpwKeyValueList
         columns={2}

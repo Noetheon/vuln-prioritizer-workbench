@@ -17,7 +17,7 @@ test("assets route uses inventory table with drawer modes", async ({ page }) => 
 
   await page.goto("/assets")
   await expect(
-    page.getByRole("heading", { level: 2, name: "Assets" }),
+    page.getByRole("heading", { level: 2, name: "Asset context workspace" }),
   ).toBeVisible()
   const assetsTable = page.getByRole("table", { name: "Assets table" })
   await expect(assetsTable).toContainText("build-host-1")
@@ -51,9 +51,9 @@ test("assets route uses inventory table with drawer modes", async ({ page }) => 
   })
   await buildHostRow.getByRole("button", { name: "View" }).click()
   const detailDrawer = page.getByRole("dialog", { name: "build-host-1" })
-  await expect(detailDrawer).toContainText("Asset context")
+  await expect(detailDrawer).toContainText("Asset detail")
   await expect(detailDrawer).toContainText("Internet Facing")
-  await detailDrawer.getByRole("button", { name: "Linked findings" }).click()
+  await detailDrawer.getByRole("button", { name: "Findings" }).click()
   const findingsDrawer = page.getByRole("dialog", {
     name: /Linked findings for build-host-1/,
   })

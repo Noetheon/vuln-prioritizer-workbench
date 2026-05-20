@@ -14,8 +14,8 @@ export const waiverViews = [
 
 export const waiverEvidenceViews = [
   { label: "All", value: "all" },
-  { label: "Missing", value: "missing" },
-  { label: "Recorded", value: "recorded" },
+  { label: "Incomplete", value: "missing" },
+  { label: "Complete", value: "recorded" },
 ] as const
 
 export function matchesWaiverEvidenceView(

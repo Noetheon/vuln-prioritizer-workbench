@@ -391,6 +391,45 @@ test("findings detail, drawer preview, and scroll evidence are covered", async (
     findings: [mockFinding],
     projects: [mockProject],
   })
+  await page.route("**/api/v1/findings/finding-1/explain", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        cve_id: mockFinding.cve_id,
+        decision_explanation: {
+          human_readable:
+            "Critical because KEV is listed, EPSS is high, CVSS is critical, and production context increases operational urgency.",
+          reasons: [
+            {
+              code: "priority.kev.known_exploited",
+              message: "CISA KEV listed for this CVE.",
+            },
+            {
+              code: "priority.critical.epss_cvss",
+              message: "EPSS and CVSS exceed critical thresholds.",
+            },
+            {
+              code: "asset.context",
+              message:
+                "Asset context marks this as internet-facing production scope.",
+            },
+          ],
+        },
+        finding_id: mockFinding.id,
+        priority: mockFinding.priority,
+        priority_rank: 0,
+        project_id: mockFinding.project_id,
+        provider_evidence: {
+          cvss: mockFinding.cvss_base_score,
+          epss: mockFinding.epss,
+          kev: mockFinding.in_kev,
+        },
+        rationale: mockFinding.rationale,
+        recommended_action: mockFinding.recommended_action,
+        risk_score: mockFinding.risk_score,
+      }),
+    }),
+  )
 
   await page.goto("/findings?priority=critical&sort=score&direction=desc")
 
@@ -425,7 +464,7 @@ test("findings detail, drawer preview, and scroll evidence are covered", async (
   await expect(quickViewSheet).toBeVisible()
   await expect(quickViewSheet).toContainText("Recommended action")
   await expect(quickViewSheet).toContainText(
-    "Known exploited dependency in a critical runtime.",
+    "Critical because KEV is listed, EPSS is high, CVSS is critical, and production context increases operational urgency.",
   )
   await expect(quickViewSheet).toContainText("Patch xz.")
   await expect(quickViewSheet).toContainText("Evidence snapshot")
@@ -460,15 +499,57 @@ test("findings detail, drawer preview, and scroll evidence are covered", async (
   ).toBeVisible()
   await expect(page.getByRole("heading", { name: cvePattern })).toBeVisible()
   await expect(page.getByRole("region", { name: "Risk to decision" })).toBeVisible()
+  await expect(page.getByRole("complementary", { name: "Triage summary" })).toContainText(
+    "Open in Triage",
+  )
+  await expect(
+    page.getByRole("button", { name: "Refresh evidence" }),
+  ).toHaveCount(1)
+  await expect(page.getByRole("tab", { name: "Decision" })).toBeVisible()
+  await expect(page.getByRole("tab", { name: "Evidence" })).toBeVisible()
+  await expect(page.getByRole("tab", { name: "Occurrences" })).toBeVisible()
+  await expect(page.getByRole("tab", { name: "Governance" })).toBeVisible()
+  await expect(
+    page.getByText("Provider decision audit trail"),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("table", { name: "Provider rationale statements" }),
+  ).toHaveCount(0)
+  await page.getByText("Provider decision audit trail").click()
+  await expect(
+    page.getByRole("table", { name: "Provider rationale statements" }),
+  ).toBeVisible()
+  await page.getByText("Provider decision audit trail").click()
+  await expect(
+    page.getByRole("table", { name: "Provider rationale statements" }),
+  ).toHaveCount(0)
+
+  await page.getByRole("tab", { name: "Evidence" }).click()
+  await expect(page.getByRole("tabpanel", { name: "Evidence" })).toContainText(
+    "Evidence used for this decision",
+  )
+
+  await page.getByRole("tab", { name: "Occurrences" }).click()
+  const occurrencesPanel = page.getByRole("tabpanel", { name: "Occurrences" })
+  await expect(occurrencesPanel).toContainText("Package / PURL")
+  await expect(occurrencesPanel).toContainText("Environment")
 
   await page.getByRole("tab", { name: "ATT&CK" }).click()
   await expect(
     page.getByRole("region", { name: "Threat informed context" }),
   ).toBeVisible()
+  await expect(page.getByText("Does not override base priority")).toBeVisible()
   await expect(page.getByText("does not prove exploitation")).toBeVisible()
 
   await page.getByRole("tab", { name: "History" }).click()
   await expect(page.getByRole("region", { name: "Finding history" })).toBeVisible()
+
+  await page.getByRole("tab", { name: "Governance" }).click()
+  const governancePanel = page.getByRole("tabpanel", { name: "Governance" })
+  await expect(governancePanel).toContainText("No accepted risk record exists")
+  await expect(
+    governancePanel.getByRole("link", { name: "Risk acceptance" }),
+  ).toBeVisible()
   await captureAuditScreenshot(page, "vpw-aud-204-finding-detail-1440.png")
 
   await page.getByRole("link", { name: "Back to Triage" }).click()

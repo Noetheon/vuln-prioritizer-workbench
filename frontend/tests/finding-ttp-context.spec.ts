@@ -79,7 +79,7 @@ test("workbench finding detail renders ATT&CK tab", async ({ page }) => {
     "Workbench does not infer tactics or techniques for unmapped CVEs.",
   )
   await expect(ttpPanel).toContainText(
-    "No exploit steps, payloads, PoC guidance, active probing, or offensive procedure instructions.",
+    "No exploit steps, payloads, PoC guidance, active probing, offensive procedure instructions, or automatic ATT&CK inference.",
   )
   await expect(ttpPanel).not.toContainText(
     /generate PoC|run PoC|autopatch|start active probing|exploit payload/i,

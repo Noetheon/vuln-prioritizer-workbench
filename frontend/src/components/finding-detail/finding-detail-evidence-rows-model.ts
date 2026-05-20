@@ -163,5 +163,23 @@ export function findingHistoryRows(
             ? labelize(vexStatus)
             : "Not accepted",
     },
+    {
+      detail: finding?.updated_at
+        ? "Finding evidence was refreshed from the stored Workbench record."
+        : "No evidence refresh timestamp recorded.",
+      label: "Evidence refreshed",
+      value: finding?.updated_at
+        ? formatFindingDateTime(finding.updated_at)
+        : "Not recorded",
+    },
+    {
+      detail:
+        "Provider snapshot changes are recorded through the imported evidence and explanation payload when supplied.",
+      label: "Provider snapshot changed",
+      value:
+        finding?.explanation_json || finding?.evidence_json
+          ? "Stored with finding"
+          : "Not recorded",
+    },
   ]
 }

@@ -215,9 +215,9 @@ export function findingHeroSummary(
   if (signals.length > 0) {
     const priority =
       finding.priority && labelize(finding.priority) !== "Not recorded"
-        ? `${labelize(finding.priority)} priority`
+        ? labelize(finding.priority)
         : "Priority"
-    return `${priority} combines ${summaryList(signals)}.`
+    return `${priority} because ${summaryList(signals)} are active decision signals.`
   }
 
   return firstCompactSentence(findingWhyText(finding, explanation))

@@ -219,7 +219,13 @@ export const defaultFindingFilters: FindingFilters = {
 
 export const findingPageSizes = [1, 10, 25, 50] as const
 
-export type FindingDetailTab = "evidence" | "ttp" | "history"
+export type FindingDetailTab =
+  | "decision"
+  | "evidence"
+  | "occurrences"
+  | "ttp"
+  | "history"
+  | "governance"
 
 export const findingPriorityOptions: FindingPriority[] = [
   "critical",

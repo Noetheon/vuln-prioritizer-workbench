@@ -1,8 +1,7 @@
 import {
-  AlertTriangle,
-  Archive,
-  Clock3,
   Database,
+  FileCheck2,
+  LockKeyhole,
   FileArchive,
   Signal,
 } from "lucide-react"
@@ -10,84 +9,60 @@ import {
 import type { ProviderStatusPublic } from "@/api-client"
 import { VpwGrid, VpwMetricCard } from "@/components/vpw"
 import {
-  formatCacheAge,
-  providerSnapshotHealth,
-  providerSnapshotSummary,
-} from "@/lib/provider-format"
-import {
-  dataQualityLabel,
+  evidenceReadinessCardTone,
   evidenceReadinessLabel,
-  evidenceReadinessTone,
-  formatDateTime,
-  type ProviderSourceCounts,
+  providerFreshnessDetail,
+  providerFreshnessLabel,
+  providerFreshnessTone,
+  providerHealthDescription,
+  providerHealthLabel,
   providerHealthTone,
+  snapshotModeDescription,
+  snapshotModeLabel,
 } from "./providers-workbench-model"
 
 type ProviderMetricsGridProps = {
-  counts: ProviderSourceCounts
   providerStatus: ProviderStatusPublic | null
 }
 
-export function ProviderMetricsGrid({
-  counts,
-  providerStatus,
-}: ProviderMetricsGridProps) {
-  const dataQuality = dataQualityLabel(providerStatus)
-  const evidenceReadiness = evidenceReadinessLabel(providerStatus)
-  const warningCount =
-    (providerStatus?.warnings ?? []).length + (providerStatus?.last_error ? 1 : 0)
-
+export function ProviderMetricsGrid({ providerStatus }: ProviderMetricsGridProps) {
   return (
-    <VpwGrid
-      className="md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6"
-      columns={1}
-    >
+    <VpwGrid columns={4}>
       <VpwMetricCard
-        description={providerSnapshotSummary(providerStatus)}
+        description={providerHealthDescription(providerStatus)}
         icon={<Signal aria-hidden="true" />}
         label="Provider health"
         tone={providerHealthTone(providerStatus)}
-        value={providerSnapshotHealth(providerStatus)}
+        value={providerHealthLabel(providerStatus)}
       />
       <VpwMetricCard
-        description="Age and completeness of stored provider source data"
+        description={providerFreshnessDetail(providerStatus)}
         icon={<Database aria-hidden="true" />}
-        label="Provider freshness"
-        tone={counts.staleSources > 0 ? "warning" : "info"}
-        value={formatCacheAge(providerStatus?.cache_age_seconds)}
+        label="Freshness"
+        tone={providerFreshnessTone(providerStatus)}
+        value={providerFreshnessLabel(providerStatus)}
       />
       <VpwMetricCard
-        description={
-          providerStatus?.snapshot.locked_provider_data
-            ? "Locked replay evidence"
-            : "Stored provider evidence"
-        }
-        icon={<Archive aria-hidden="true" />}
+        description={snapshotModeDescription(providerStatus)}
+        icon={<LockKeyhole aria-hidden="true" />}
         label="Snapshot mode"
         tone={
           providerStatus?.snapshot.locked_provider_data ? "support" : "info"
         }
-        value={providerStatus?.snapshot_mode ?? "missing"}
+        value={snapshotModeLabel(providerStatus)}
       />
       <VpwMetricCard
-        description="Latest provider snapshot update"
-        icon={<Clock3 aria-hidden="true" />}
-        label="Last sync"
-        value={formatDateTime(providerStatus?.last_sync)}
-      />
-      <VpwMetricCard
-        description={`${counts.missingSources} missing, ${counts.staleSources} stale`}
-        icon={<AlertTriangle aria-hidden="true" />}
-        label="Data quality"
-        tone={counts.missingSources > 0 ? "warning" : "success"}
-        value={dataQuality}
-      />
-      <VpwMetricCard
-        description="Provider warnings and last-error state"
-        icon={<FileArchive aria-hidden="true" />}
-        label="Warnings"
-        tone={warningCount > 0 ? "warning" : evidenceReadinessTone(providerStatus)}
-        value={warningCount > 0 ? warningCount : evidenceReadiness}
+        description="Provider metadata can be attached to evidence bundles where available."
+        icon={
+          providerStatus?.last_error ? (
+            <FileArchive aria-hidden="true" />
+          ) : (
+            <FileCheck2 aria-hidden="true" />
+          )
+        }
+        label="Evidence readiness"
+        tone={evidenceReadinessCardTone(providerStatus)}
+        value={evidenceReadinessLabel(providerStatus)}
       />
     </VpwGrid>
   )

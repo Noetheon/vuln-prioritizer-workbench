@@ -546,7 +546,7 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
         page.getByRole("heading", { level: 1, name: "Data Sources" }),
       ).toBeVisible({ timeout: 15_000 })
       await expect(
-        page.getByRole("heading", { level: 2, name: "Data source inventory" }),
+        page.getByRole("heading", { level: 2, name: "Source inventory" }),
       ).toBeVisible()
     },
     id: "providers",

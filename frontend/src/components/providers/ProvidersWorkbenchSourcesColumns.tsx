@@ -1,4 +1,4 @@
-import { RefreshCw } from "lucide-react"
+import { Eye } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -14,28 +14,36 @@ import {
 import type { ProviderSourceRow } from "./providers-workbench-model"
 
 type BuildProviderSourceColumnsArgs = {
-  onRefreshProviderStatus: () => void
-  providerStatusLoading: boolean
+  onViewDetails: (row: ProviderSourceRow) => void
 }
 
 export function buildProviderSourceColumns({
-  onRefreshProviderStatus,
-  providerStatusLoading,
+  onViewDetails,
 }: BuildProviderSourceColumnsArgs): readonly VpwDataTableColumn<ProviderSourceRow>[] {
   return [
     {
       cell: (row) => (
         <div className="min-w-40">
-          <SourceMark source={row.name} />
-          <p className="text-xs text-[var(--vpw-text-muted)]">{row.detail}</p>
+          <SourceMark label={row.name} source={row.name} />
+          <p className="mt-1 text-xs text-[var(--vpw-text-muted)]">
+            {row.technicalName}
+          </p>
         </div>
       ),
       header: "Source",
       id: "source",
-      width: "24%",
+      width: "18%",
     },
     {
-      cell: (row) => <StatusLozenge label={row.status} status={row.status} />,
+      cell: (row) => row.purpose,
+      header: "Purpose",
+      id: "purpose",
+      width: "18%",
+    },
+    {
+      cell: (row) => (
+        <StatusLozenge label={row.statusLabel} status={row.statusToken} />
+      ),
       header: "Status",
       id: "status",
       width: "10%",
@@ -44,49 +52,48 @@ export function buildProviderSourceColumns({
       cell: (row) => row.lastUpdated,
       header: "Last updated",
       id: "last-updated",
-      width: "16%",
+      width: "14%",
     },
     {
-      cell: (row) => row.cacheAge,
-      header: "Cache age",
-      id: "cache-age",
-      width: "10%",
-    },
-    {
-      cell: (row) => row.sourceType,
-      header: "Source type",
-      id: "source-type",
-      width: "16%",
+      cell: (row) => row.age,
+      header: "Age",
+      id: "age",
+      width: "9%",
     },
     {
       cell: (row) => (
         <StatusLozenge
-          label={row.usedInEvidence}
-          status={row.usedInEvidence === "No" ? "unknown" : "ready"}
+          label={row.evidenceUse}
+          status={row.evidenceUse === "Included" ? "ready" : "unknown"}
         />
       ),
-      header: "Used in evidence",
-      id: "used-in-evidence",
-      width: "14%",
+      header: "Evidence use",
+      id: "evidence-use",
+      width: "12%",
     },
     {
-      cell: () => (
+      cell: (row) => row.notes,
+      header: "Notes",
+      id: "notes",
+      width: "20%",
+    },
+    {
+      cell: (row) => (
         <div className="vpw-table-actions">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                aria-label="Refresh provider status"
+                aria-label={`View details for ${row.name}`}
                 className="vpw-table-action-button"
-                disabled={providerStatusLoading}
-                onClick={onRefreshProviderStatus}
+                onClick={() => onViewDetails(row)}
                 size="icon-sm"
                 type="button"
                 variant="outline"
               >
-                <RefreshCw aria-hidden="true" />
+                <Eye aria-hidden="true" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="left">Refresh status</TooltipContent>
+            <TooltipContent side="left">View details</TooltipContent>
           </Tooltip>
         </div>
       ),

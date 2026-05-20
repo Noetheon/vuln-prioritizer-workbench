@@ -95,8 +95,18 @@ test("providers route presents health-first data source diagnostics", async ({
   ).toBeVisible()
   await expect(page.getByText("EPSS source is stale").first()).toBeVisible()
   await expect(page.getByText("KEV catalog cache is missing").first()).toBeVisible()
-  await expect(page.getByText("Provider freshness").first()).toBeVisible()
-  await expect(page.getByText("Needs sync").first()).toBeVisible()
+  await expect(page.getByText("Provider trust status").first()).toBeVisible()
+  await expect(page.getByText("Provider health").first()).toBeVisible()
+  await expect(page.getByText("Freshness").first()).toBeVisible()
+  await expect(page.getByText("Degraded").first()).toBeVisible()
+  await expect(page.getByText("Evidence readiness").first()).toBeVisible()
+  await expect(page.getByText("Evidence ready")).toHaveCount(0)
+  await expect(
+    page.getByRole("button", { name: "Refresh status" }).first(),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: "Open Evidence Center" }),
+  ).toBeVisible()
 
   await expect(page.getByRole("tab", { name: "Sources" })).toHaveAttribute(
     "aria-selected",
@@ -105,14 +115,23 @@ test("providers route presents health-first data source diagnostics", async ({
   const sourcesTable = page.getByRole("table", {
     name: "Data source inventory",
   })
-  await expect(sourcesTable).toContainText("NVD")
-  await expect(sourcesTable).toContainText("EPSS")
-  await expect(sourcesTable).toContainText("KEV")
-  await expect(sourcesTable).toContainText("stale")
-  await expect(sourcesTable).toContainText("missing")
+  await expect(sourcesTable).toContainText("NVD / CVSS")
+  await expect(sourcesTable).toContainText("FIRST EPSS")
+  await expect(sourcesTable).toContainText("CISA KEV")
+  await expect(sourcesTable).toContainText("Provider snapshot")
+  await expect(sourcesTable).toContainText("Probability signal")
+  await expect(sourcesTable).toContainText("Included")
+  await expect(sourcesTable).toContainText("Stale")
+  await expect(sourcesTable).toContainText("Missing")
+  await page.getByRole("button", { name: "View details for FIRST EPSS" }).click()
+  await expect(page.getByRole("dialog")).toContainText(
+    "EPSS refresh failed",
+  )
+  await page.keyboard.press("Escape")
 
-  await page.getByRole("tab", { name: "Snapshot & Cache" }).click()
-  await expect(page.getByText("Recorded snapshot").first()).toBeVisible()
+  await page.getByRole("tab", { name: "Snapshot" }).click()
+  await expect(page.getByText("Snapshot audit summary").first()).toBeVisible()
+  await expect(page.getByText("Reproducibility record").first()).toBeVisible()
   await expect(page.getByText("snapshot-2025-04-30").first()).toBeVisible()
   await expect(
     page.getByText("sha256:vpw-provider-snapshot").first(),
@@ -120,20 +139,29 @@ test("providers route presents health-first data source diagnostics", async ({
   await expect(page.getByText("nvd-cache-hash").first()).toBeVisible()
 
   await page.getByRole("tab", { name: "Diagnostics" }).click()
-  await expect(page.getByText("Latest provider update").first()).toBeVisible()
+  await expect(page.getByText("Runtime facts").first()).toBeVisible()
+  await expect(page.getByText("Status check").first()).toBeVisible()
   await expect(page.getByText("provider-job-1").first()).toBeVisible()
-  await expect(page.getByText("Provider runtime facts").first()).toBeVisible()
+  await expect(page.getByText("Evidence readiness: 35%").first()).toBeVisible()
   await expect(page.getByText("/var/tmp/vpw/cache").first()).toBeVisible()
   await expect(page.getByText("/var/tmp/vpw/snapshots").first()).toBeVisible()
-  await expect(page.getByText("EPSS source error").first()).toBeVisible()
+  await expect(page.getByText("FIRST EPSS source error").first()).toBeVisible()
   await expect(page.getByText("EPSS refresh failed").first()).toBeVisible()
+  await expect(page.getByText("Raw diagnostics").first()).toBeVisible()
 
-  await page.getByRole("tab", { name: "Quality Notes" }).click()
+  await page.getByRole("tab", { name: "Quality" }).click()
   await expect(
     page.getByText("Provider data quality notes").first(),
   ).toBeVisible()
+  await expect(page.getByText("Source interpretation rules").first()).toBeVisible()
   await expect(page.getByText("EPSS source is stale").first()).toBeVisible()
   await expect(
     page.getByText("KEV catalog cache is missing").first(),
   ).toBeVisible()
+  await expect(
+    page.getByText("Provider data supports prioritization and reporting."),
+  ).toBeVisible()
+
+  await page.getByRole("link", { name: "Open Evidence Center" }).click()
+  await expect(page).toHaveURL(/\/reports/)
 })

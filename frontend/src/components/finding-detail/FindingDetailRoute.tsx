@@ -6,22 +6,26 @@ import type {
   FindingExplanationPublic,
 } from "@/api-client"
 import type { FindingsUrlSearch } from "@/components/findings/findings-search-state"
-import {
-  FindingStatusBadge,
-  KevBadge,
-  PriorityBadge,
-} from "@/components/risk"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { VpwSkeletonStack, VpwStatusBanner } from "@/components/vpw"
+import {
+  RiskBadge,
+  SignalChip,
+  StatusLozenge,
+  VpwSkeletonStack,
+  VpwStatusBanner,
+} from "@/components/vpw"
 import type { FindingDetailTab } from "@/lib/app-defaults"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 import { findingWaiverEvidence } from "@/lib/waiver-view"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 
 import { FindingDetailHero } from "./FindingDetailHero"
+import { FindingDecisionTab } from "./FindingDecisionTab"
 import { FindingEvidenceTab } from "./FindingEvidenceTab"
+import { FindingGovernanceTab } from "./FindingGovernanceTab"
 import { FindingHistoryTab } from "./FindingHistoryTab"
+import { FindingOccurrencesTab } from "./FindingOccurrencesTab"
 import { FindingTtpContextTab } from "./FindingTtpContextTab"
 import {
   findingDataQualityRows,
@@ -37,7 +41,6 @@ import {
   findingReasonRows,
   isDemoFindingDetail,
 } from "./finding-detail-model"
-import { WhyPriorityPanel } from "./WhyPriorityPanel"
 
 export type FindingDetailRouteProps = {
   error: string
@@ -121,16 +124,6 @@ export function FindingDetailRoute({
 
           <div className="finding-detail-workspace-grid">
             <main className="finding-detail-workspace-main">
-              <WhyPriorityPanel
-                decisionReasons={decisionReasons}
-                explanation={explanation}
-                finding={finding}
-                occurrences={occurrences}
-                onRefresh={onRefresh}
-                reasonRows={reasonRows}
-                waiverEvidence={waiverEvidence}
-              />
-
               <Tabs
                 className="finding-detail-tabs-shell"
                 value={tab}
@@ -138,14 +131,20 @@ export function FindingDetailRoute({
               >
                 <div className="finding-tabs-toolbar">
                   <div className="finding-tabs-heading">
-                    <span>Investigation record</span>
-                    <strong>Evidence, ATT&amp;CK context, and lifecycle</strong>
+                    <span>Finding workspace</span>
+                    <strong>Decision, evidence, ATT&amp;CK / TTP, and governance</strong>
                     <p>
-                      Provider-backed facts used to explain and defend the
-                      priority decision.
+                      Use these top-level sections to explain, validate, and
+                      defend the recorded remediation decision.
                     </p>
                   </div>
                   <TabsList className="finding-detail-tabs-list">
+                    <TabsTrigger
+                      className="finding-detail-tab-trigger"
+                      value="decision"
+                    >
+                      Decision
+                    </TabsTrigger>
                     <TabsTrigger
                       className="finding-detail-tab-trigger"
                       value="evidence"
@@ -154,9 +153,15 @@ export function FindingDetailRoute({
                     </TabsTrigger>
                     <TabsTrigger
                       className="finding-detail-tab-trigger"
+                      value="occurrences"
+                    >
+                      Occurrences
+                    </TabsTrigger>
+                    <TabsTrigger
+                      className="finding-detail-tab-trigger"
                       value="ttp"
                     >
-                      ATT&amp;CK
+                      ATT&amp;CK / TTP
                     </TabsTrigger>
                     <TabsTrigger
                       className="finding-detail-tab-trigger"
@@ -164,8 +169,26 @@ export function FindingDetailRoute({
                     >
                       History
                     </TabsTrigger>
+                    <TabsTrigger
+                      className="finding-detail-tab-trigger"
+                      value="governance"
+                    >
+                      Governance
+                    </TabsTrigger>
                   </TabsList>
                 </div>
+
+                <TabsContent
+                  className="finding-detail-tab-panel"
+                  value="decision"
+                >
+                  <FindingDecisionTab
+                    decisionReasons={decisionReasons}
+                    explanation={explanation}
+                    finding={finding}
+                    reasonRows={reasonRows}
+                  />
+                </TabsContent>
 
                 <TabsContent
                   className="finding-detail-tab-panel"
@@ -178,6 +201,13 @@ export function FindingDetailRoute({
                   />
                 </TabsContent>
 
+                <TabsContent
+                  className="finding-detail-tab-panel"
+                  value="occurrences"
+                >
+                  <FindingOccurrencesTab occurrences={occurrences} />
+                </TabsContent>
+
                 <TabsContent className="finding-detail-tab-panel" value="ttp">
                   <FindingTtpContextTab attackContext={attackContext} />
                 </TabsContent>
@@ -186,8 +216,16 @@ export function FindingDetailRoute({
                   className="finding-detail-tab-panel"
                   value="history"
                 >
-                  <FindingHistoryTab
-                    historyRows={historyRows}
+                  <FindingHistoryTab historyRows={historyRows} />
+                </TabsContent>
+
+                <TabsContent
+                  className="finding-detail-tab-panel"
+                  value="governance"
+                >
+                  <FindingGovernanceTab
+                    finding={finding}
+                    occurrences={occurrences}
                     waiverEvidence={waiverEvidence}
                   />
                 </TabsContent>
@@ -196,6 +234,7 @@ export function FindingDetailRoute({
 
             <FindingDetailActionRail
               finding={finding}
+              findingsBackSearch={findingsBackSearch}
               occurrences={occurrences}
               onRefresh={onRefresh}
               waiverEvidence={waiverEvidence}
@@ -209,11 +248,13 @@ export function FindingDetailRoute({
 
 function FindingDetailActionRail({
   finding,
+  findingsBackSearch,
   occurrences,
   onRefresh,
   waiverEvidence,
 }: {
   finding: FindingDetailPublic
+  findingsBackSearch: FindingsUrlSearch
   occurrences: ReturnType<typeof findingOccurrenceRows>
   onRefresh: () => void
   waiverEvidence: ReturnType<typeof findingWaiverEvidence>
@@ -264,9 +305,9 @@ function FindingDetailActionRail({
       </div>
 
       <div className="finding-detail-action-rail__badges">
-        <PriorityBadge priority={finding.priority} />
-        <FindingStatusBadge status={finding.status} />
-        <KevBadge matched={finding.in_kev} />
+        <RiskBadge level={finding.priority} />
+        <StatusLozenge status={finding.status} />
+        {finding.in_kev ? <SignalChip kind="kev" /> : null}
       </div>
 
       <div className="finding-detail-action-block">
@@ -284,6 +325,16 @@ function FindingDetailActionRail({
       </dl>
 
       <dl className="finding-detail-action-list">
+        <div>
+          <dt>VEX</dt>
+          <dd>
+            {finding.suppressed_by_vex
+              ? "Suppressed by VEX"
+              : occurrences
+                    .map((occurrence) => optionalText(String(occurrence.vex_status ?? "")))
+                    .find((value) => value !== "Not supplied") ?? "No VEX overlay"}
+          </dd>
+        </div>
         {decisionRows.map((row) => (
           <div key={row.label}>
             <dt>{row.label}</dt>
@@ -293,14 +344,19 @@ function FindingDetailActionRail({
       </dl>
 
       <div className="finding-detail-action-buttons">
-        <Button onClick={onRefresh} size="sm" type="button" variant="outline">
-          <RefreshCcw aria-hidden="true" size={14} />
-          Refresh evidence
+        <Button asChild size="sm">
+          <Link search={findingsBackSearch} to="/findings">
+            Open in Triage
+          </Link>
         </Button>
         <Button asChild size="sm" variant="outline">
           <Link search={projectSearch} to="/waivers">
             Risk acceptance
           </Link>
+        </Button>
+        <Button onClick={onRefresh} size="sm" type="button" variant="outline">
+          <RefreshCcw aria-hidden="true" size={14} />
+          Refresh evidence
         </Button>
       </div>
     </aside>

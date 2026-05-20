@@ -2,17 +2,14 @@ import type {
   FindingDetailPublic,
   FindingExplanationPublic,
 } from "@/api-client"
-import { Button } from "@/components/ui/button"
 import { formatNullableNumber } from "@/lib/risk-format"
-import { formatLabel as labelize } from "@/lib/ui-copy"
-import type { FindingWaiverEvidence } from "@/lib/waiver-view"
 
-import type {
-  FindingDecisionReason,
-  FindingOccurrenceRow,
-} from "./finding-detail-model"
+import type { FindingDecisionReason } from "./finding-detail-model"
+import { FindingRationaleLedger } from "./FindingRationaleLedger"
 import {
   compactFindingText,
+  findingRecommendedAction,
+  findingRecommendedActionParts,
   findingWhyText,
 } from "./finding-detail-model"
 
@@ -20,10 +17,7 @@ export type WhyPriorityPanelProps = {
   decisionReasons: readonly FindingDecisionReason[]
   explanation: FindingExplanationPublic | null
   finding: FindingDetailPublic
-  occurrences: readonly FindingOccurrenceRow[]
-  onRefresh: () => void
   reasonRows: readonly { detail: string; label: string }[]
-  waiverEvidence: FindingWaiverEvidence | null
 }
 
 function countProviderReasons(
@@ -45,23 +39,44 @@ function providerReasonText(
   return matched
 }
 
+function primaryDriverLabel(
+  finding: FindingDetailPublic,
+  decisionReasons: readonly FindingDecisionReason[],
+) {
+  if (finding.in_kev) {
+    return "CISA KEV"
+  }
+  if (finding.epss !== null && finding.epss !== undefined && finding.epss >= 0.7) {
+    return "High EPSS"
+  }
+  if (
+    finding.cvss_base_score !== null &&
+    finding.cvss_base_score !== undefined &&
+    finding.cvss_base_score >= 9
+  ) {
+    return "Critical CVSS"
+  }
+  return decisionReasons[0]?.label ?? "Stored rationale"
+}
+
 export function WhyPriorityPanel({
   decisionReasons,
   explanation,
   finding,
-  onRefresh,
   reasonRows,
 }: WhyPriorityPanelProps) {
   const whyText = findingWhyText(finding, explanation)
+  const recommendedAction = findingRecommendedAction(finding, explanation)
+  const action = findingRecommendedActionParts(recommendedAction)
   const scoreInputs = countProviderReasons(
     reasonRows,
     /score|priority|threshold|escalation|operational/i,
   )
   const signalSummary = [
-    providerReasonText(reasonRows, /kev|exploited/i) ? "KEV" : null,
+    providerReasonText(reasonRows, /kev|cisa/i) ? "KEV" : null,
     providerReasonText(reasonRows, /epss/i) ? "EPSS" : null,
     providerReasonText(reasonRows, /cvss|severity/i) ? "CVSS" : null,
-  ].filter(Boolean)
+  ].filter((value): value is string => Boolean(value))
   const contextSummary = [
     providerReasonText(
       reasonRows,
@@ -71,7 +86,7 @@ export function WhyPriorityPanel({
       : null,
     providerReasonText(reasonRows, /vex|governance/i) ? "VEX status" : null,
     scoreInputs > 0 ? "Score rules" : null,
-  ].filter(Boolean)
+  ].filter((value): value is string => Boolean(value))
 
   return (
     <section
@@ -80,27 +95,28 @@ export function WhyPriorityPanel({
     >
       <div className="finding-decision-section__header">
         <div>
-          <span>Decision record</span>
+          <span>Decision</span>
           <h3>Why this priority?</h3>
           <p>
-            The priority is explained from stored scanner, provider, asset, and
-            governance evidence.
+            The ranking is explained from stored scanner, provider, asset, and
+            governance evidence before any raw audit details.
           </p>
         </div>
-        <Button onClick={onRefresh} size="sm" type="button" variant="outline">
-          Refresh evidence
-        </Button>
       </div>
 
       <div className="finding-decision-brief">
         <div className="finding-decision-brief__primary">
-          <span>Why now</span>
+          <span>Decision summary</span>
           <p title={whyText}>{compactFindingText(whyText, 360)}</p>
         </div>
         <dl className="finding-decision-brief__facts">
           <div>
             <dt>Risk score</dt>
             <dd>{formatNullableNumber(finding.risk_score)}</dd>
+          </div>
+          <div>
+            <dt>Primary driver</dt>
+            <dd>{primaryDriverLabel(finding, decisionReasons)}</dd>
           </div>
           <div>
             <dt>Signals</dt>
@@ -113,6 +129,19 @@ export function WhyPriorityPanel({
         </dl>
       </div>
 
+      <section
+        aria-label="Owner action summary"
+        className="finding-decision-owner-summary"
+      >
+        <span>Owner action</span>
+        <strong>{action.title}</strong>
+        <p title={recommendedAction}>{action.detail}</p>
+      </section>
+
+      <div className="finding-decision-reasons-heading">
+        <span>Decision drivers</span>
+        <strong>Ordered active signals</strong>
+      </div>
       <ol className="finding-decision-reasons">
         {decisionReasons.map((reason, index) => (
           <li data-tone={reason.tone} key={`${reason.label}:${reason.detail}`}>
@@ -125,78 +154,11 @@ export function WhyPriorityPanel({
         ))}
       </ol>
 
-      {reasonRows.length > 0 ? (
-        <details className="finding-provider-reasons">
-          <summary>
-            <div>
-              <span>Provider explanation</span>
-              <strong>Stored rationale ledger</strong>
-              <p>
-                Audit trail from the provider decision payload. Use it to
-                explain why this finding was ranked, not as extra remediation
-                work.
-              </p>
-            </div>
-            <div className="finding-provider-reasons__summary-action">
-              <span className="finding-provider-reasons__count">
-                {reasonRows.length} reason{reasonRows.length === 1 ? "" : "s"}
-              </span>
-            </div>
-          </summary>
-          <div className="finding-provider-reasons__body">
-            <dl className="finding-provider-reasons__stats">
-              <div>
-                <dt>Signal evidence</dt>
-                <dd>
-                  {signalSummary.length > 0
-                    ? signalSummary.join(", ")
-                    : "No provider signal"}
-                </dd>
-              </div>
-              <div>
-                <dt>Context applied</dt>
-                <dd>
-                  {contextSummary.length > 0
-                    ? contextSummary.join(", ")
-                    : "No context applied"}
-                </dd>
-              </div>
-              <div>
-                <dt>Raw audit trail</dt>
-                <dd>
-                  {reasonRows.length} rationale rule
-                  {reasonRows.length === 1 ? "" : "s"}
-                </dd>
-              </div>
-            </dl>
-
-            <div className="finding-provider-reasons__ledger-shell">
-              <table className="finding-provider-reasons__ledger">
-                <caption>Provider rationale statements</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Reason</th>
-                    <th scope="col">Provider statement</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reasonRows.map((reason) => (
-                    <tr key={`${reason.label}:${reason.detail}`}>
-                      <th scope="row">{labelize(reason.label)}</th>
-                      <td title={reason.detail}>
-                        {compactFindingText(
-                          reason.detail,
-                          reason.detail.length > 160 ? 300 : 220,
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </details>
-      ) : null}
+      <FindingRationaleLedger
+        contextSummary={contextSummary}
+        reasonRows={reasonRows}
+        signalSummary={signalSummary}
+      />
     </section>
   )
 }

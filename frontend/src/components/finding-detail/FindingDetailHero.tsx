@@ -2,15 +2,14 @@ import type {
   FindingDetailPublic,
   FindingExplanationPublic,
 } from "@/api-client"
+import { CvssBadge, EpssBadge } from "@/components/risk"
 import {
-  CvssBadge,
-  EpssBadge,
-  FindingStatusBadge,
-  KevBadge,
-  PriorityBadge,
-} from "@/components/risk"
-import { VpwBadge } from "@/components/vpw"
-import { formatNullableNumber } from "@/lib/risk-format"
+  RiskBadge,
+  RiskScoreBadge,
+  SignalChip,
+  StatusLozenge,
+  VpwBadge,
+} from "@/components/vpw"
 
 import {
   type FindingOccurrenceRow,
@@ -36,6 +35,10 @@ export function FindingDetailHero({
 }: FindingDetailHeroProps) {
   const recommendedAction = findingRecommendedAction(finding, explanation)
   const action = findingRecommendedActionParts(recommendedAction)
+  const recommendationSummary = compactFindingText(
+    `${action.title}. Validate affected assets, then record the fix path in Triage.`,
+    150,
+  )
 
   return (
     <>
@@ -64,19 +67,24 @@ export function FindingDetailHero({
             {compactFindingText(findingHeroSummary(finding, explanation), 220)}
           </p>
           <div className="finding-decision-badges">
-            <PriorityBadge priority={finding.priority} />
-            <FindingStatusBadge status={finding.status} />
-            <KevBadge matched={finding.in_kev} />
+            <RiskBadge level={finding.priority} />
+            <StatusLozenge status={finding.status} />
+            {finding.in_kev ? <SignalChip kind="kev" /> : null}
+            {finding.epss !== null && finding.epss !== undefined ? (
+              <SignalChip kind="epss" value={finding.epss} />
+            ) : null}
+            {finding.cvss_base_score !== null &&
+            finding.cvss_base_score !== undefined ? (
+              <SignalChip kind="cvss" value={finding.cvss_base_score} />
+            ) : null}
           </div>
-        </div>
-
-        <div className="finding-detail-header-action">
-          <span>Owner action</span>
-          <strong>{action.title}</strong>
-          <p title={recommendedAction}>{action.detail}</p>
-          <small>
-            {findingSlaLabel(finding.priority)} SLA from current risk signals.
-          </small>
+          <p
+            className="finding-detail-recommendation-line"
+            title={recommendedAction}
+          >
+            <span>Recommended action</span>
+            {recommendationSummary}
+          </p>
         </div>
 
         <ul
@@ -85,7 +93,9 @@ export function FindingDetailHero({
         >
           <li>
             <span>Risk score</span>
-            <strong>{formatNullableNumber(finding.risk_score)}</strong>
+            <strong>
+              <RiskScoreBadge value={finding.risk_score} />
+            </strong>
             <small>Operational priority</small>
           </li>
           <li>

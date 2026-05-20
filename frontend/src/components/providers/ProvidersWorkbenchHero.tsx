@@ -1,10 +1,10 @@
 import { Link } from "@/lib/router"
-import { Activity } from "lucide-react"
+import { Activity, FileText } from "lucide-react"
 import type { ProviderStatusPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
+  MetaTag,
   StatusLozenge,
-  VpwBadge,
   VpwPanel,
   VpwSection,
   VpwSectionHeader,
@@ -13,14 +13,14 @@ import {
   VpwToolbar,
   VpwToolbarGroup,
 } from "@/components/vpw"
-import { providerSnapshotHealth } from "@/lib/provider-format"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   evidenceReadinessLabel,
-  evidenceReadinessTone,
-  formatDateTime,
+  providerFreshnessLabel,
+  providerHealthLabel,
   type ProvidersWorkbenchProps,
-  providerHealthTone,
+  snapshotModeLabel,
+  warningSummary,
 } from "./providers-workbench-model"
 
 type ProviderStatusAlertsProps = Pick<
@@ -43,9 +43,9 @@ export function ProvidersHero({
     <VpwSection>
       <VpwPanel className="flex flex-col gap-5 p-5">
         <VpwSectionHeader
-          description="Monitor vulnerability intelligence sources, snapshot freshness and evidence data quality."
+          description="Monitor vulnerability intelligence sources, provider snapshot freshness, and evidence data quality."
           eyebrow="Data source trust"
-          title="Data Sources"
+          title="Provider trust status"
         />
         <VpwToolbar label="Provider actions" variant="plain">
           <VpwToolbarGroup>
@@ -59,23 +59,51 @@ export function ProvidersHero({
               Refresh status
             </Button>
             <Button asChild variant="outline">
-              <Link search={projectSearch} to="/reports">View Evidence Center</Link>
+              <Link search={projectSearch} to="/reports">
+                <FileText aria-hidden="true" data-icon="inline-start" />
+                Open Evidence Center
+              </Link>
             </Button>
           </VpwToolbarGroup>
+        </VpwToolbar>
+        <p className="max-w-3xl text-sm leading-6 text-[var(--vpw-text-secondary)]">
+          Evidence Center uses recorded provider snapshots and report artifacts
+          for reproducible review. Refresh status reloads stored provider state
+          from the backend; it does not scan systems.
+        </p>
+        <VpwToolbar label="Provider trust summary" variant="plain">
           <VpwToolbarGroup>
-            <VpwBadge tone={providerHealthTone(providerStatus)}>
-              Snapshot mode: {providerStatus?.snapshot_mode ?? "missing"}
-            </VpwBadge>
-            <VpwBadge tone="neutral">
-              Last sync: {formatDateTime(providerStatus?.last_sync)}
-            </VpwBadge>
+            <MetaTag label="Provider data" />
             <StatusLozenge
-              label={`Provider health: ${providerSnapshotHealth(providerStatus)}`}
-              status={providerStatus?.status ?? "unknown"}
+              label={`Health: ${providerHealthLabel(providerStatus)}`}
+              status={providerHealthLabel(providerStatus)}
             />
-            <VpwBadge tone={evidenceReadinessTone(providerStatus)}>
-              Evidence: {evidenceReadiness}
-            </VpwBadge>
+            <StatusLozenge
+              label={`Freshness: ${providerFreshnessLabel(providerStatus)}`}
+              status={providerFreshnessLabel(providerStatus)}
+            />
+            <StatusLozenge
+              label={`Snapshot: ${snapshotModeLabel(providerStatus)}`}
+              status={
+                providerStatus?.snapshot.locked_provider_data
+                  ? "ready"
+                  : "open"
+              }
+            />
+            <StatusLozenge
+              label={`Evidence: ${evidenceReadiness}`}
+              status={evidenceReadiness === "Ready" ? "ready" : "review_due"}
+            />
+            <StatusLozenge
+              label={`Warnings: ${warningSummary(providerStatus)}`}
+              status={
+                providerStatus?.last_error
+                  ? "failed"
+                  : (providerStatus?.warnings?.length ?? 0) > 0
+                    ? "review_due"
+                    : "ready"
+              }
+            />
           </VpwToolbarGroup>
         </VpwToolbar>
       </VpwPanel>

@@ -1,5 +1,7 @@
+import "@/styles/assets.css"
+
 import { Link } from "@/lib/router"
-import { Activity, FileInput, Plus } from "lucide-react"
+import { Activity, Database, FileInput, FolderKanban, Plus } from "lucide-react"
 import type { Dispatch, FormEvent, SetStateAction } from "react"
 
 import type {
@@ -15,7 +17,6 @@ import {
   VpwPageContainer,
   VpwPanel,
   VpwSection,
-  VpwSectionHeader,
   VpwStatusBanner,
   VpwToolbar,
   VpwToolbarGroup,
@@ -92,16 +93,21 @@ export type AssetsWorkbenchProps = {
 
 export function AssetsWorkbench(state: AssetsWorkbenchProps) {
   const projectSearch = selectedProjectRouteSearch(state.selectedProjectId)
+  const providerHealthy = state.providerStatus?.status === "ok"
 
   return (
-    <VpwPageContainer className="flex flex-col gap-6 px-0 py-0">
-        <VpwSection>
-          <VpwPanel className="flex flex-col gap-5 p-5">
-            <VpwSectionHeader
-              description="Manage asset, service, exposure and owner context for risk-based prioritization."
-              eyebrow="Asset exposure"
-              title="Assets"
-            />
+    <VpwPageContainer className="assets-workbench flex flex-col gap-6 px-0 py-0">
+      <VpwSection>
+        <VpwPanel className="assets-command-panel">
+          <div className="assets-command-header">
+            <div className="assets-command-copy">
+              <p className="vpw-label text-[var(--vpw-teal)]">Asset exposure</p>
+              <h2>Asset context workspace</h2>
+              <p>
+                Maintain ownership, service, exposure, and criticality context
+                used by Triage prioritization.
+              </p>
+            </div>
             <VpwToolbar label="Asset actions" variant="plain">
               <VpwToolbarGroup>
                 <Button
@@ -129,7 +135,9 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
                 <Button
                   aria-label="Refresh assets"
                   disabled={state.assetsLoading}
-                  onClick={() => void state.refreshAssets(state.selectedAssetId)}
+                  onClick={() =>
+                    void state.refreshAssets(state.selectedAssetId)
+                  }
                   type="button"
                   variant="outline"
                 >
@@ -138,98 +146,93 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
                 </Button>
               </VpwToolbarGroup>
             </VpwToolbar>
-            <VpwToolbar
-              className="overflow-hidden"
-              label="Asset page context"
-              variant="plain"
-            >
-              <VpwToolbarGroup className="min-w-0">
-                <VpwBadge
-                  className="max-w-full"
-                  overflow="wrap"
-                  tone="info"
-                >
-                  Active project: {state.activeProjectLabel}
-                </VpwBadge>
-                <VpwBadge tone="neutral">
-                  Assets: {state.assetSummary.total}
-                </VpwBadge>
-                <VpwBadge tone="warning">
-                  Internet-facing: {state.assetSummary.internetFacing}
-                </VpwBadge>
-                <VpwBadge tone="critical">
-                  Critical services: {state.assetSummary.criticalServices}
-                </VpwBadge>
-                <VpwBadge tone="support">
-                  Owner coverage: {state.assetSummary.ownerCoverage}%
-                </VpwBadge>
-              </VpwToolbarGroup>
-            </VpwToolbar>
-            <VpwStatusBanner
-              title="Provider snapshot"
-              tone={state.providerStatus?.status === "ok" ? "success" : "warning"}
-            >
-              {providerSnapshotSummary(state.providerStatus)} -{" "}
-              {providerSnapshotHealth(state.providerStatus)} - snapshot mode{" "}
-              {state.providerStatus?.snapshot_mode ?? "missing"}.
-            </VpwStatusBanner>
-          </VpwPanel>
-        </VpwSection>
+          </div>
+          <AssetSummaryCards assetSummary={state.assetSummary} />
+          <div className="assets-context-strip">
+            <div className="assets-context-strip__item">
+              <span className="assets-context-strip__icon">
+                <FolderKanban aria-hidden="true" />
+              </span>
+              <div>
+                <span className="vpw-label">Active project</span>
+                <strong>{state.activeProjectLabel}</strong>
+              </div>
+            </div>
+            <div className="assets-context-strip__item">
+              <span
+                className="assets-context-strip__icon"
+                data-tone={providerHealthy ? "success" : "warning"}
+              >
+                <Database aria-hidden="true" />
+              </span>
+              <div>
+                <span className="vpw-label">Provider snapshot</span>
+                <strong>{providerSnapshotSummary(state.providerStatus)}</strong>
+                <small>
+                  {providerSnapshotHealth(state.providerStatus)} · snapshot{" "}
+                  {state.providerStatus?.snapshot_mode ?? "missing"}
+                </small>
+              </div>
+            </div>
+            <VpwBadge tone={providerHealthy ? "success" : "warning"}>
+              {providerHealthy ? "Ready for scoring" : "Review provider data"}
+            </VpwBadge>
+          </div>
+        </VpwPanel>
+      </VpwSection>
 
-        {state.assetsError ? (
-          <VpwStatusBanner title="Asset action failed" tone="critical">
-            {state.assetsError}
-          </VpwStatusBanner>
+      {state.assetsError ? (
+        <VpwStatusBanner title="Asset action failed" tone="critical">
+          {state.assetsError}
+        </VpwStatusBanner>
+      ) : null}
+      {state.assetMessage ? (
+        <VpwStatusBanner title="Asset context updated" tone="success">
+          {state.assetMessage}
+        </VpwStatusBanner>
+      ) : null}
+      {state.projectLoading || state.assetsLoading ? (
+        <VpwStatusBanner title="Loading asset context" tone="info">
+          Refreshing project assets and linked finding counts.
+        </VpwStatusBanner>
+      ) : null}
+
+      <AssetInventoryShell
+        assetOwnerFilter={state.assetOwnerFilter}
+        assetServiceFilter={state.assetServiceFilter}
+        assetsLoading={state.assetsLoading}
+        clearAssetFilters={state.clearAssetFilters}
+        hasAssets={state.assets.length > 0}
+        openImportAssets={() => state.openAssetDrawer("import")}
+        projectLoading={state.projectLoading}
+        projects={state.projects}
+        projectSelectDisabled={state.projectSelectDisabled}
+        selectProject={state.selectProject}
+        selectedProject={state.selectedProject}
+        selectedProjectId={state.selectedProjectId}
+        setAssetOwnerFilter={state.setAssetOwnerFilter}
+        setAssetServiceFilter={state.setAssetServiceFilter}
+      >
+        {state.assets.length > 0 ? (
+          <AssetTable
+            assetActionLoading={state.assetActionLoading}
+            assets={state.assets}
+            openAssetDrawer={state.openAssetDrawer}
+            recalculateAsset={state.recalculateAsset}
+            selectedAssetId={state.selectedAssetId}
+            selectedHighestPriority={state.selectedHighestPriority}
+            setSelectedAssetId={state.setSelectedAssetId}
+            startEditAsset={state.startEditAsset}
+          />
         ) : null}
-        {state.assetMessage ? (
-          <VpwStatusBanner title="Asset context updated" tone="success">
-            {state.assetMessage}
-          </VpwStatusBanner>
-        ) : null}
-        {state.projectLoading || state.assetsLoading ? (
-          <VpwStatusBanner title="Loading asset context" tone="info">
-            Refreshing project assets and linked finding counts.
-          </VpwStatusBanner>
-        ) : null}
+      </AssetInventoryShell>
 
-        <AssetSummaryCards assetSummary={state.assetSummary} />
+      <AssetServiceRollup
+        serviceRollups={state.serviceRollups}
+        setAssetServiceFilter={state.setAssetServiceFilter}
+      />
 
-        <AssetInventoryShell
-          assetOwnerFilter={state.assetOwnerFilter}
-          assetServiceFilter={state.assetServiceFilter}
-          assetsLoading={state.assetsLoading}
-          clearAssetFilters={state.clearAssetFilters}
-          hasAssets={state.assets.length > 0}
-          openImportAssets={() => state.openAssetDrawer("import")}
-          projectLoading={state.projectLoading}
-          projects={state.projects}
-          projectSelectDisabled={state.projectSelectDisabled}
-          selectProject={state.selectProject}
-          selectedProject={state.selectedProject}
-          selectedProjectId={state.selectedProjectId}
-          setAssetOwnerFilter={state.setAssetOwnerFilter}
-          setAssetServiceFilter={state.setAssetServiceFilter}
-        >
-          {state.assets.length > 0 ? (
-            <AssetTable
-              assetActionLoading={state.assetActionLoading}
-              assets={state.assets}
-              openAssetDrawer={state.openAssetDrawer}
-              recalculateAsset={state.recalculateAsset}
-              selectedAssetId={state.selectedAssetId}
-              selectedHighestPriority={state.selectedHighestPriority}
-              setSelectedAssetId={state.setSelectedAssetId}
-              startEditAsset={state.startEditAsset}
-            />
-          ) : null}
-        </AssetInventoryShell>
-
-        <AssetServiceRollup
-          serviceRollups={state.serviceRollups}
-          setAssetServiceFilter={state.setAssetServiceFilter}
-        />
-
-        <AssetDrawer state={state} />
+      <AssetDrawer state={state} />
     </VpwPageContainer>
   )
 }

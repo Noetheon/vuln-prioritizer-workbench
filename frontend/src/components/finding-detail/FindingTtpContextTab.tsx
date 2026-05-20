@@ -82,6 +82,14 @@ export function FindingTtpContextTab({
         </div>
       </VpwSurfaceHeader>
       <VpwSurfaceBody className="finding-ttp-card-content">
+        <VpwStatusBanner
+          className="finding-defensive-note"
+          title="Reviewed defensive context only"
+          tone="info"
+        >
+          Not proof of compromise. Does not override base priority. Use this
+          mapping for remediation planning and coverage review only.
+        </VpwStatusBanner>
         {attackEmpty ? (
           <section
             aria-label="TTP context empty state"
@@ -139,8 +147,8 @@ export function FindingTtpContextTab({
           title="Defensive context only"
           tone="info"
         >
-          No exploit steps, payloads, PoC guidance, active probing, or offensive
-          procedure instructions.
+          No exploit steps, payloads, PoC guidance, active probing, offensive
+          procedure instructions, or automatic ATT&amp;CK inference.
         </VpwStatusBanner>
       </VpwSurfaceBody>
     </VpwSurface>

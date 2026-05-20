@@ -58,11 +58,11 @@ export const routeDetails: Record<WorkbenchPath, RouteDetail> = {
   },
   "/providers": {
     description:
-      "Check provider freshness, local snapshots, warnings, and diagnostics.",
+      "Check provider freshness, local snapshots, warnings, and evidence readiness.",
     eyebrow: "Prepare",
     title: "Data Sources",
     panelTitle: "Data Sources",
-    panelDetail: "Check provider freshness and trust state.",
+    panelDetail: "Check provider freshness, snapshots, and evidence readiness.",
   },
   "/reports": {
     description:

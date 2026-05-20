@@ -1,5 +1,5 @@
 import type { VpwDataTableColumn } from "@/components/vpw"
-import { joinedValues, stringValue } from "@/lib/app-errors"
+import { stringValue } from "@/lib/app-errors"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 
 import type { FindingOccurrenceRow } from "./finding-detail-model"
@@ -8,75 +8,78 @@ export function buildFindingOccurrenceColumns(): readonly VpwDataTableColumn<Fin
   return [
     {
       cell: (occurrence) => (
-        <>
-          <span className="font-medium">
-            {optionalText(
-              stringValue(occurrence.source_format) ??
-                stringValue(occurrence.source),
-            )}
-          </span>
-          <small className="vpw-table-subtext">
-            {optionalText(
-              stringValue(occurrence.source_record_id) ??
-                stringValue(occurrence.raw_reference),
-            )}
-          </small>
-        </>
-      ),
-      header: "Source",
-      id: "source",
-    },
-    {
-      cell: (occurrence) => (
-        <>
-          <span className="font-medium">
-            {joinedValues([
-              stringValue(occurrence.component_name),
-              stringValue(occurrence.component_version),
-            ])}
-          </span>
-          <small className="vpw-table-subtext">
-            {optionalText(stringValue(occurrence.purl))}
-          </small>
-        </>
+        <span className="font-medium">
+          {optionalText(stringValue(occurrence.component_name))}
+        </span>
       ),
       header: "Component",
       id: "component",
     },
     {
       cell: (occurrence) => (
-        <>
-          <span className="font-medium">
-            {optionalText(
-              stringValue(occurrence.asset_ref) ??
-                stringValue(occurrence.target_ref),
-            )}
-          </span>
-          <small className="vpw-table-subtext">
-            {joinedValues([
-              stringValue(occurrence.asset_owner),
-              stringValue(occurrence.asset_business_service),
-              labelize(stringValue(occurrence.asset_exposure)),
-            ])}
-          </small>
-        </>
+        <span className="font-medium">
+          {optionalText(stringValue(occurrence.component_version))}
+        </span>
       ),
-      header: "Asset / Owner",
+      header: "Version",
+      id: "version",
+    },
+    {
+      cell: (occurrence) => (
+        <span className="font-medium">
+          {optionalText(stringValue(occurrence.purl))}
+        </span>
+      ),
+      header: "Package / PURL",
+      id: "purl",
+    },
+    {
+      cell: (occurrence) => (
+        <span className="font-medium">
+          {optionalText(
+            stringValue(occurrence.asset_ref) ??
+              stringValue(occurrence.target_ref),
+          )}
+        </span>
+      ),
+      header: "Asset",
       id: "asset",
     },
     {
       cell: (occurrence) => (
-        <>
-          <span className="font-medium">
-            {optionalText(stringValue(occurrence.scanner))}
-          </span>
-          <small className="vpw-table-subtext">
-            {optionalText(stringValue(occurrence.raw_severity))}
-          </small>
-        </>
+        <span className="font-medium">
+          {optionalText(stringValue(occurrence.asset_business_service))}
+        </span>
       ),
-      header: "Evidence",
-      id: "evidence",
+      header: "Service",
+      id: "service",
+    },
+    {
+      cell: (occurrence) => (
+        <span className="font-medium">
+          {optionalText(stringValue(occurrence.asset_owner))}
+        </span>
+      ),
+      header: "Owner",
+      id: "owner",
+    },
+    {
+      cell: (occurrence) => (
+        <span className="font-medium">
+          {optionalText(labelize(stringValue(occurrence.asset_environment)))}
+        </span>
+      ),
+      header: "Environment",
+      id: "environment",
+    },
+    {
+      cell: (occurrence) => (
+        <span className="font-medium">
+          {optionalText(labelize(stringValue(occurrence.asset_exposure)))}
+        </span>
+      ),
+      header: "Exposure",
+      id: "exposure",
     },
     {
       cell: (occurrence) => {
@@ -101,6 +104,27 @@ export function buildFindingOccurrenceColumns(): readonly VpwDataTableColumn<Fin
       },
       header: "Fix / VEX",
       id: "fix",
+    },
+    {
+      cell: (occurrence) => (
+        <>
+          <span className="font-medium">
+            {optionalText(
+              stringValue(occurrence.source_format) ??
+                stringValue(occurrence.source) ??
+                stringValue(occurrence.scanner),
+            )}
+          </span>
+          <small className="vpw-table-subtext">
+            {optionalText(
+              stringValue(occurrence.source_record_id) ??
+                stringValue(occurrence.raw_reference),
+            )}
+          </small>
+        </>
+      ),
+      header: "Source",
+      id: "source",
     },
   ]
 }

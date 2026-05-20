@@ -258,16 +258,18 @@ export function RemediationQueueFilters({
           <div className="findings-active-filters">
             <span className="sr-only">Active filters</span>
             {activeFilterChips.map((chip, index) => (
-              <button
+              <Button
                 aria-label={`Remove active filter ${index + 1}`}
                 className="findings-active-filter-chip"
                 key={chip.label}
                 onClick={chip.onRemove}
+                size="xs"
                 type="button"
+                variant="ghost"
               >
                 <span>{chip.label}</span>
                 <X aria-hidden="true" size={12} />
-              </button>
+              </Button>
             ))}
           </div>
         ) : null}

@@ -49,7 +49,7 @@ export function ProvidersWorkbench({
       />
       {showProviderDetails ? (
         <>
-          <ProviderMetricsGrid counts={counts} providerStatus={providerStatus} />
+          <ProviderMetricsGrid providerStatus={providerStatus} />
           <Tabs
             className="flex flex-col gap-4"
             defaultValue="sources"
@@ -60,9 +60,9 @@ export function ProvidersWorkbench({
               className="h-auto w-fit max-w-full flex-wrap justify-start"
             >
               <TabsTrigger value="sources">Sources</TabsTrigger>
-              <TabsTrigger value="snapshot">Snapshot & Cache</TabsTrigger>
+              <TabsTrigger value="snapshot">Snapshot</TabsTrigger>
               <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
-              <TabsTrigger value="quality">Quality Notes</TabsTrigger>
+              <TabsTrigger value="quality">Quality</TabsTrigger>
             </TabsList>
             <TabsContent value="sources">
               <ProviderSourcesTable

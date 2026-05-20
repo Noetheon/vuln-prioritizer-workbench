@@ -27,7 +27,7 @@ export function FindingOccurrencesPanel({
       <VpwSurfaceHeader>
         <div className="finding-card-heading">
           <div>
-            <VpwSurfaceDescription>Scanner evidence</VpwSurfaceDescription>
+            <VpwSurfaceDescription>Occurrence evidence</VpwSurfaceDescription>
             <VpwSurfaceTitle>Occurrences</VpwSurfaceTitle>
           </div>
           <VpwBadge tone="info">{occurrences.length} source row(s)</VpwBadge>
@@ -45,7 +45,7 @@ export function FindingOccurrencesPanel({
               getRowKey={(occurrence, index) =>
                 stringValue(occurrence.id) ?? `occurrence-${index + 1}`
               }
-              minWidth="680px"
+              minWidth="1120px"
               variant="detail"
             />
           </>

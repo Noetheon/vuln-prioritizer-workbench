@@ -16,7 +16,10 @@ export function WaiverDrawerContent({
   if (state.waiverDrawerMode === "create") {
     return (
       <WaiverForm
-        buttonLabel="Create waiver"
+        buttonLabel="Create acceptance"
+        findings={state.findings}
+        findingsLoading={state.findingsLoading}
+        onCancel={state.closeWaiverDrawer}
         onFieldChange={state.onFieldChange}
         onSubmit={state.onCreateWaiver}
         waiverActionLoading={
@@ -42,6 +45,9 @@ export function WaiverDrawerContent({
     return (
       <WaiverForm
         buttonLabel="Save acceptance"
+        findings={state.findings}
+        findingsLoading={state.findingsLoading}
+        onCancel={() => state.openWaiverDrawer("detail", selectedWaiver)}
         onFieldChange={state.onReviewFieldChange}
         onSubmit={state.onUpdateWaiver}
         waiverActionLoading={state.waiverActionLoading}
@@ -63,6 +69,7 @@ export function WaiverDrawerContent({
 
   return (
     <WaiverDetailContent
+      findings={state.findings}
       openWaiverDrawer={state.openWaiverDrawer}
       waiver={selectedWaiver}
       waiverActionLoading={state.waiverActionLoading}
@@ -76,13 +83,15 @@ export function waiverDrawerTitle(
 ) {
   switch (mode) {
     case "create":
-      return "Create acceptance"
+      return "Record accepted risk"
     case "review":
-      return waiver ? `Review ${waiverScopeLabel(waiver)}` : "Review acceptance"
+      return waiver
+        ? `Review accepted risk for ${waiverScopeLabel(waiver)}`
+        : "Review accepted risk"
     case "expire":
-      return waiver ? `Expire ${waiverScopeLabel(waiver)}` : "Expire acceptance"
+      return "Expire accepted-risk decision?"
     case "detail":
-      return waiver ? waiverScopeLabel(waiver) : "Risk acceptance detail"
+      return "Accepted risk decision"
     default:
       return "Risk acceptance"
   }
@@ -97,7 +106,7 @@ export function waiverDrawerDescription(
     case "review":
       return "Update owner, reason, approval evidence, review, expiry, or scope."
     case "expire":
-      return "Confirm that this accepted-risk decision should no longer apply."
+      return "Confirm that this decision should no longer apply."
     case "detail":
       return "Inspect the decision, lifecycle state, evidence, and matched findings."
     default:
