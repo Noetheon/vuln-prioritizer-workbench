@@ -4,10 +4,8 @@ import type { FindingDetailPublic, FindingPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
   RiskBadge,
-  SignalChip,
   StatusLozenge,
   VpwBadge,
-  VpwSignalCluster,
 } from "@/components/vpw"
 import {
   attackConfidenceLabel,
@@ -254,21 +252,15 @@ export function QuickViewSignalBrief({
   if (items.length === 0) return null
 
   return (
-    <section aria-label="Risk signals" className="finding-drawer-section">
+    <section
+      aria-label="Risk signals"
+      className="finding-drawer-section finding-drawer-section--signals"
+    >
       <div className="finding-drawer-section-heading">
         <h3>Signals</h3>
-        <VpwSignalCluster maxVisible={5}>
-          {finding.in_kev ? <SignalChip kind="kev" /> : null}
-          {finding.epss !== null && finding.epss !== undefined ? (
-            <SignalChip kind="epss" value={finding.epss} />
-          ) : null}
-          {finding.cvss_base_score !== null &&
-          finding.cvss_base_score !== undefined ? (
-            <SignalChip kind="cvss" value={finding.cvss_base_score} />
-          ) : null}
-          {finding.attack_mapped ? <SignalChip kind="attack" /> : null}
-          {finding.suppressed_by_vex ? <SignalChip kind="vex" /> : null}
-        </VpwSignalCluster>
+        <span className="finding-drawer-section-meta">
+          {items.length} active
+        </span>
       </div>
       <ul className="finding-drawer-signal-grid">
         {items.map((item) => (
@@ -292,7 +284,10 @@ export function QuickViewEvidenceSnapshot({
   const dataQuality = uniqueDataQualityRows(dataQualityRows)
 
   return (
-    <section aria-label="Evidence snapshot" className="finding-drawer-section">
+    <section
+      aria-label="Evidence snapshot"
+      className="finding-drawer-section finding-drawer-section--evidence"
+    >
       <div className="finding-drawer-section-heading">
         <h3>Evidence snapshot</h3>
       </div>
