@@ -19,9 +19,23 @@ type FindingDataQualityPanelProps = {
   dataQualityRows: readonly FindingDataQualityRow[]
 }
 
+function uniqueDataQualityRows(rows: readonly FindingDataQualityRow[]) {
+  const seen = new Set<string>()
+  return rows.filter((row) => {
+    const key = `${row.severity}:${row.source}:${row.message}`
+    if (seen.has(key)) {
+      return false
+    }
+    seen.add(key)
+    return true
+  })
+}
+
 export function FindingDataQualityPanel({
   dataQualityRows,
 }: FindingDataQualityPanelProps) {
+  const uniqueRows = uniqueDataQualityRows(dataQualityRows)
+
   return (
     <VpwSurface
       aria-label="Data quality notes"
@@ -32,9 +46,9 @@ export function FindingDataQualityPanel({
         <VpwSurfaceTitle>Data quality notes</VpwSurfaceTitle>
       </VpwSurfaceHeader>
       <VpwSurfaceBody>
-        {dataQualityRows.length > 0 ? (
+        {uniqueRows.length > 0 ? (
           <ul className="finding-data-quality-list">
-            {dataQualityRows.map((flag) => (
+            {uniqueRows.map((flag) => (
               <li key={flag.key}>
                 <strong>{labelize(flag.code)}</strong>
                 <span>

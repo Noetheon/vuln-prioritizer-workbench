@@ -1,10 +1,3 @@
-import {
-  VpwSurface,
-  VpwSurfaceBody,
-  VpwSurfaceDescription,
-  VpwSurfaceHeader,
-  VpwSurfaceTitle,
-} from "@/components/vpw"
 import { cn } from "@/lib/utils"
 import type { FindingDetailRow } from "./finding-detail-model"
 
@@ -18,7 +11,7 @@ export function FindingEvidenceSummaryGrid({
   return (
     <section className="finding-evidence-grid" aria-label="Evidence summary">
       {evidenceRows.map((row, index) => (
-        <VpwSurface
+        <dl
           className={cn(
             "finding-evidence-summary-card",
             index === 0 ? "finding-evidence-summary-card-primary" : undefined,
@@ -26,18 +19,10 @@ export function FindingEvidenceSummaryGrid({
           )}
           key={row.label}
         >
-          <VpwSurfaceHeader>
-            <VpwSurfaceDescription className="finding-evidence-summary-description">
-              {row.label}
-            </VpwSurfaceDescription>
-            <VpwSurfaceTitle className="finding-evidence-summary-title">
-              {row.value}
-            </VpwSurfaceTitle>
-          </VpwSurfaceHeader>
-          <VpwSurfaceBody>
-            <p>{row.detail}</p>
-          </VpwSurfaceBody>
-        </VpwSurface>
+          <dt className="finding-evidence-summary-description">{row.label}</dt>
+          <dd className="finding-evidence-summary-title">{row.value}</dd>
+          {row.detail ? <dd>{row.detail}</dd> : null}
+        </dl>
       ))}
     </section>
   )

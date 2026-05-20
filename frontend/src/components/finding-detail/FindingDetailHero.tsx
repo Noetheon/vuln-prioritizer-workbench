@@ -14,9 +14,11 @@ import { formatNullableNumber } from "@/lib/risk-format"
 
 import {
   type FindingOccurrenceRow,
+  compactFindingText,
   findingComponentDetailLabel,
   findingHeroSummary,
   findingRecommendedAction,
+  findingRecommendedActionParts,
   findingSlaLabel,
 } from "./finding-detail-model"
 
@@ -32,6 +34,9 @@ export function FindingDetailHero({
   finding,
   isDemo,
 }: FindingDetailHeroProps) {
+  const recommendedAction = findingRecommendedAction(finding, explanation)
+  const action = findingRecommendedActionParts(recommendedAction)
+
   return (
     <>
       {isDemo ? (
@@ -55,7 +60,9 @@ export function FindingDetailHero({
           <p className="finding-detail-component-line">
             {findingComponentDetailLabel(finding)}
           </p>
-          <p>{findingHeroSummary(finding, explanation)}</p>
+          <p title={findingHeroSummary(finding, explanation)}>
+            {compactFindingText(findingHeroSummary(finding, explanation), 220)}
+          </p>
           <div className="finding-decision-badges">
             <PriorityBadge priority={finding.priority} />
             <FindingStatusBadge status={finding.status} />
@@ -65,7 +72,8 @@ export function FindingDetailHero({
 
         <div className="finding-detail-header-action">
           <span>Owner action</span>
-          <strong>{findingRecommendedAction(finding, explanation)}</strong>
+          <strong>{action.title}</strong>
+          <p title={recommendedAction}>{action.detail}</p>
           <small>
             {findingSlaLabel(finding.priority)} SLA from current risk signals.
           </small>

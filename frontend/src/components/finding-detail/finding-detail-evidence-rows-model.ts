@@ -43,11 +43,13 @@ export function findingEvidenceRows(
       detail:
         providerGaps.length > 0
           ? `Gaps: ${providerGaps.join(", ")}`
-          : "No provider gaps recorded for the stored finding signals.",
+          : providerSignalLabels.length > 0
+            ? `${providerSignalLabels.join(", ")} signals recorded. No provider gaps recorded.`
+            : "No provider gaps recorded for the stored finding signals.",
       label: "Provider snapshot",
       value:
         providerKeys.length > 0
-          ? `${providerKeys.length} provider evidence field(s) recorded`
+          ? `${providerKeys.length} fields recorded`
           : providerSignalLabels.length > 0
             ? providerSignalLabels.join(", ")
             : "No provider snapshot recorded",

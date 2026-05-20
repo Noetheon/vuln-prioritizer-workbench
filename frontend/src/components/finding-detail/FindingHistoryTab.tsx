@@ -30,6 +30,7 @@ export function FindingHistoryTab({
         <VpwTimeline
           items={historyRows.map((row) => ({
             description: row.detail,
+            id: `${row.label}:${row.value}`,
             meta: row.label,
             title: row.value,
           }))}

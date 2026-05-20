@@ -69,8 +69,8 @@ export function FindingTtpContextTab({
       <VpwSurfaceHeader className="finding-ttp-card-header">
         <div className="finding-card-heading">
           <div>
-            <VpwSurfaceDescription>ATT&amp;CK</VpwSurfaceDescription>
-            <VpwSurfaceTitle>TTP Context</VpwSurfaceTitle>
+            <VpwSurfaceDescription>Reviewed mapping</VpwSurfaceDescription>
+            <VpwSurfaceTitle>Defensive ATT&amp;CK context</VpwSurfaceTitle>
           </div>
           <VpwBadge tone={mappingTone(attackContext, attackSource)}>
             {attackSource?.toLowerCase().includes("demo")

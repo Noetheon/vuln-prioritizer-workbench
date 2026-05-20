@@ -11,10 +11,12 @@ import {
   attackTechniqueRows,
 } from "./finding-detail-attack-model"
 import {
+  compactFindingText,
   decisionReasonDetail,
   decisionReasonLabel,
   findingAssetLabel,
   findingRecommendedAction,
+  findingRecommendedActionParts,
   findingWhyText,
   isInternetFacingExposure,
   isProductionEnvironment,
@@ -98,9 +100,10 @@ export function findingDecisionReasonRows(
 
   const recommendedAction = findingRecommendedAction(finding, explanation)
   if (recommendedAction !== "No recommended action has been recorded.") {
+    const action = findingRecommendedActionParts(recommendedAction)
     rows.push({
-      detail: recommendedAction,
-      label: "Fix or mitigation",
+      detail: compactFindingText(`${action.title}. ${action.detail}`, 180),
+      label: "Owner action",
       tone: "positive",
     })
   }

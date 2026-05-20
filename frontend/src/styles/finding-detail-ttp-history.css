@@ -393,3 +393,187 @@
   font-size: 0.86rem;
   font-weight: 700;
 }
+
+.finding-ttp-card {
+  border-radius: var(--vpw-radius-lg);
+}
+
+.finding-ttp-card .finding-ttp-card-header {
+  border-bottom: 0;
+  background: var(--vpw-bg-card);
+}
+
+.finding-ttp-card-content {
+  display: grid;
+  gap: 1rem;
+  padding-top: 0.25rem;
+}
+
+.finding-ttp-context-hero {
+  border-color: var(--vpw-border-default);
+  border-radius: var(--vpw-radius-md);
+  background: var(--vpw-bg-card);
+  box-shadow: none;
+}
+
+.finding-ttp-context-hero-simple {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.85rem;
+  padding: 0.92rem;
+}
+
+.finding-ttp-context-hero span,
+.finding-ttp-chain small,
+.finding-ttp-narrative-card span,
+.finding-ttp-technical-heading span {
+  color: var(--vpw-text-muted);
+}
+
+.finding-ttp-main-copy h3 {
+  font-size: 1.12rem;
+  line-height: 1.25;
+}
+
+.finding-ttp-main-copy p {
+  max-width: 58rem;
+  color: var(--vpw-text-secondary);
+  font-size: 0.9rem;
+}
+
+.finding-ttp-main-facts {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.finding-ttp-main-facts div {
+  border-color: var(--vpw-border-subtle);
+  border-radius: var(--vpw-radius-md);
+  padding: 0.62rem 0.68rem;
+  background: var(--vpw-bg-card);
+}
+
+.finding-ttp-chain {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  overflow: visible;
+  gap: 0.62rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.finding-ttp-chain li,
+.finding-ttp-chain-compact li {
+  min-height: auto;
+  border: 1px solid var(--vpw-border-subtle);
+  border-radius: var(--vpw-radius-md);
+  padding: 0.78rem 0.84rem;
+  background: var(--vpw-bg-card);
+  box-shadow: none;
+}
+
+.finding-ttp-chain li::after {
+  content: none;
+}
+
+.finding-ttp-chain li[data-tone="signal"],
+.finding-ttp-chain li[data-tone="exposure"],
+.finding-ttp-chain li[data-tone="technique"],
+.finding-ttp-chain li[data-tone="coverage"],
+.finding-ttp-chain li[data-tone="decision"] {
+  background: var(--vpw-bg-card);
+}
+
+.finding-ttp-chain li[data-tone="signal"],
+.finding-ttp-chain li[data-tone="coverage"] {
+  box-shadow: inset 2px 0 0 var(--vpw-red);
+}
+
+.finding-ttp-chain li[data-tone="exposure"] {
+  box-shadow: inset 2px 0 0 var(--vpw-amber);
+}
+
+.finding-ttp-chain li[data-tone="technique"],
+.finding-ttp-chain li[data-tone="decision"] {
+  box-shadow: inset 2px 0 0 var(--vpw-teal);
+}
+
+.finding-ttp-chain-index {
+  width: 1.4rem;
+  height: 1.4rem;
+  border: 1px solid var(--vpw-border-default);
+  background: var(--vpw-bg-card);
+  color: var(--vpw-text-secondary);
+}
+
+.finding-ttp-chain-compact strong {
+  font-size: 0.86rem;
+  line-height: 1.28;
+}
+
+.finding-ttp-chain-compact p {
+  font-size: 0.8rem;
+}
+
+.finding-ttp-decision-grid-simple {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.finding-ttp-narrative-card {
+  border-color: var(--vpw-border-subtle);
+  border-radius: var(--vpw-radius-md);
+  padding: 0.9rem;
+  background: var(--vpw-bg-card);
+}
+
+.finding-ttp-actions-card {
+  border-color: var(--vpw-border-subtle);
+  background: var(--vpw-bg-card);
+  box-shadow: inset 2px 0 0 var(--vpw-teal);
+}
+
+.finding-ttp-technical-evidence {
+  border-color: var(--vpw-border-subtle);
+  border-radius: var(--vpw-radius-md);
+  padding: 0;
+  background: var(--vpw-bg-card);
+}
+
+.finding-defensive-note,
+.finding-detection-note {
+  margin-top: 0;
+  border-radius: var(--vpw-radius-md);
+  background: var(--vpw-bg-card);
+}
+
+.finding-accepted-risk-card {
+  border-color: var(--vpw-border-subtle);
+  background: var(--vpw-bg-card);
+}
+
+.finding-history-timeline {
+  overflow: hidden;
+  border: 1px solid var(--vpw-border-subtle);
+  border-radius: var(--vpw-radius-md);
+  background: var(--vpw-bg-card);
+}
+
+.finding-history-timeline :is(ol, ul) {
+  margin: 0;
+}
+
+.finding-history-timeline > * {
+  padding: 0.85rem 0.95rem;
+}
+
+@media (max-width: 1180px) {
+  .finding-ttp-context-hero-simple,
+  .finding-ttp-decision-grid-simple {
+    grid-template-columns: 1fr;
+  }
+
+  .finding-ttp-chain {
+    flex-direction: column;
+  }
+}

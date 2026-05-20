@@ -139,6 +139,51 @@ function firstCompactSentence(value: string, maxLength = 190) {
   return `${compact || firstSentence.slice(0, maxLength - 3).trimEnd()}...`
 }
 
+export function compactFindingText(value: string, maxLength = 260) {
+  const compact = value.replace(/\s+/g, " ").trim()
+  if (compact.length <= maxLength) {
+    return compact
+  }
+
+  const firstSentence = compact.match(/^(.+?[.!?])(?:\s|$)/)?.[1]
+  const candidate =
+    firstSentence && firstSentence.length <= maxLength ? firstSentence : compact
+  const words = candidate.split(/\s+/)
+  let output = ""
+  for (const word of words) {
+    const next = output ? `${output} ${word}` : word
+    if (next.length > maxLength - 3) {
+      break
+    }
+    output = next
+  }
+  return `${output || candidate.slice(0, maxLength - 3).trimEnd()}...`
+}
+
+export function findingRecommendedActionParts(value: string) {
+  if (/CISA KEV required action/i.test(value)) {
+    return {
+      detail:
+        "CISA KEV requires remediation or removal where updates exist. Validate affected assets, then record the fix path in Triage.",
+      title: "Apply fixed version or remove affected asset",
+    }
+  }
+
+  const [label, ...rest] = value.split(":")
+  const title = label.trim()
+  if (title && rest.length > 0 && title.length <= 72) {
+    return {
+      detail: compactFindingText(rest.join(":").trim(), 280),
+      title,
+    }
+  }
+
+  return {
+    detail: compactFindingText(value, 280),
+    title: "Recommended remediation",
+  }
+}
+
 export function findingHeroSummary(
   finding: FindingDetailPublic | null,
   explanation: FindingExplanationPublic | null,

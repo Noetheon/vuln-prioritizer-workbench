@@ -30,11 +30,9 @@ import {
   findingHistoryRows,
   findingOccurrenceRows,
   findingProviderGaps,
-  findingAssetServiceDetailLabel,
   findingComponentDetailLabel,
   findingNextStepLabel,
   findingOwnerDetailLabel,
-  findingRecommendedAction,
   findingSlaLabel,
   findingReasonRows,
   isDemoFindingDetail,
@@ -197,7 +195,6 @@ export function FindingDetailRoute({
             </main>
 
             <FindingDetailActionRail
-              explanation={explanation}
               finding={finding}
               occurrences={occurrences}
               onRefresh={onRefresh}
@@ -211,13 +208,11 @@ export function FindingDetailRoute({
 }
 
 function FindingDetailActionRail({
-  explanation,
   finding,
   occurrences,
   onRefresh,
   waiverEvidence,
 }: {
-  explanation: FindingExplanationPublic | null
   finding: FindingDetailPublic
   occurrences: ReturnType<typeof findingOccurrenceRows>
   onRefresh: () => void
@@ -226,12 +221,16 @@ function FindingDetailActionRail({
   const projectSearch = selectedProjectRouteSearch(finding.project_id)
   const scopeRows = [
     {
-      label: "Asset / service",
-      value: findingAssetServiceDetailLabel(finding),
-    },
-    {
       label: "Owner",
       value: findingOwnerDetailLabel(finding, occurrences),
+    },
+    {
+      label: "Service",
+      value: optionalText(finding.business_service),
+    },
+    {
+      label: "Asset",
+      value: optionalText(finding.asset_name ?? finding.asset_key),
     },
     {
       label: "Exposure",
@@ -244,13 +243,13 @@ function FindingDetailActionRail({
       value: findingSlaLabel(finding.priority),
     },
     {
-      label: "Next step",
-      value: findingNextStepLabel(finding),
+      label: "Status",
+      value: labelize(finding.status),
     },
     {
-      label: "Risk acceptance",
+      label: "Acceptance",
       value: waiverEvidence
-        ? `${optionalText(waiverEvidence.status)} - ${optionalText(
+        ? `${optionalText(waiverEvidence.status)} · ${optionalText(
             waiverEvidence.reason,
           )}`
         : "Not recorded",
@@ -260,7 +259,7 @@ function FindingDetailActionRail({
   return (
     <aside className="finding-detail-action-rail" aria-label="Triage summary">
       <div className="finding-detail-action-rail__header">
-        <span>Decision scope</span>
+        <span>Triage state</span>
         <strong>{findingComponentDetailLabel(finding)}</strong>
       </div>
 
@@ -271,8 +270,8 @@ function FindingDetailActionRail({
       </div>
 
       <div className="finding-detail-action-block">
-        <span>Recommended action</span>
-        <p>{findingRecommendedAction(finding, explanation)}</p>
+        <span>Next step</span>
+        <p>{findingNextStepLabel(finding)}</p>
       </div>
 
       <dl className="finding-detail-action-list">

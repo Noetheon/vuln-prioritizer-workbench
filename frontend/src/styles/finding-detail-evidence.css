@@ -2,10 +2,11 @@
   display: grid;
   width: 100%;
   min-width: 0;
-  gap: 1rem;
+  gap: 0;
   border: 1px solid var(--vpw-border-default);
   border-radius: var(--vpw-radius-xl);
-  padding: clamp(1rem, 1.2vw, 1.25rem);
+  overflow: hidden;
+  padding: 0;
   background: var(--vpw-bg-card);
   box-shadow: none;
 }
@@ -16,7 +17,7 @@
   justify-content: space-between;
   gap: 1rem;
   border-bottom: 1px solid var(--vpw-border-subtle);
-  padding-bottom: 1rem;
+  padding: 1rem 1.1rem;
   background: transparent;
 }
 
@@ -87,6 +88,7 @@
   display: grid;
   min-width: 0;
   gap: 18px;
+  padding: 1rem 1.1rem 1.1rem;
 }
 
 .finding-evidence-tab-layout {
@@ -104,19 +106,22 @@
 .finding-evidence-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 1px;
   overflow: hidden;
   border: 1px solid var(--vpw-border-subtle);
   border-radius: var(--vpw-radius-lg);
-  background: var(--vpw-border-subtle);
+  background: var(--vpw-bg-card);
 }
 
 .finding-evidence-summary-card {
-  flex: 1 1 220px;
-  gap: 10px;
-  min-width: min(100%, 220px);
-  border: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.28rem;
+  min-width: 0;
+  border: 0 solid var(--vpw-border-subtle);
+  border-width: 0 1px 1px 0;
   border-radius: 0;
+  flex: 1 1 15rem;
+  padding: 0.82rem 0.9rem;
   box-shadow: none;
 }
 
@@ -127,12 +132,11 @@
 
 .finding-evidence-summary-card-primary {
   grid-column: span 1;
-  background: color-mix(in srgb, var(--vpw-bg-success) 58%, var(--vpw-bg-card));
+  background: var(--vpw-bg-card);
 }
 
 .finding-evidence-summary-card-primary {
-  box-shadow: inset 0 0 0 1px
-    color-mix(in srgb, var(--vpw-teal) 12%, transparent);
+  box-shadow: inset 2px 0 0 var(--vpw-teal);
 }
 
 .finding-evidence-summary-card-primary .finding-evidence-summary-description,
@@ -142,6 +146,16 @@
 
 .finding-evidence-summary-card-secondary {
   grid-column: span 1;
+}
+
+.finding-evidence-summary-card dd {
+  margin: 0;
+}
+
+.finding-evidence-summary-card > dd:last-child {
+  color: var(--vpw-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.38;
 }
 
 .finding-tab-card,
@@ -158,8 +172,8 @@
 }
 
 .finding-data-quality-card {
-  border-color: color-mix(in srgb, var(--vpw-amber) 38%, var(--vpw-bg-card));
-  background: color-mix(in srgb, var(--vpw-bg-warning) 72%, var(--vpw-bg-card));
+  border-color: var(--vpw-border-default);
+  background: var(--vpw-bg-card);
 }
 
 .finding-detail-table-wrap {
@@ -228,9 +242,17 @@
   .finding-evidence-detail-grid {
     grid-template-columns: 1fr;
   }
+
+  .finding-evidence-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1180px) {
+  .finding-evidence-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .finding-evidence-detail-grid {
     grid-template-columns: 1fr;
   }
@@ -251,6 +273,10 @@
 }
 
 @media (max-width: 640px) {
+  .finding-evidence-grid {
+    grid-template-columns: 1fr;
+  }
+
   .finding-occurrences-table {
     display: none;
   }
@@ -278,10 +304,11 @@
     );
   align-items: start;
   gap: 12px;
-  border: 1px solid color-mix(in srgb, var(--vpw-amber) 38%, var(--vpw-bg-card));
+  border: 1px solid var(--vpw-border-subtle);
   border-radius: var(--vpw-radius-lg);
   padding: 12px;
-  background: var(--vpw-bg-warning);
+  background: var(--vpw-bg-card);
+  box-shadow: inset 2px 0 0 var(--vpw-amber);
 }
 
 .finding-data-quality-card .finding-data-quality-list li {
