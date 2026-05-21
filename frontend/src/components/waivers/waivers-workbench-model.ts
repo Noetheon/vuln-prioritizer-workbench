@@ -7,7 +7,7 @@ import type {
   WaiverPublic,
 } from "@/api-client"
 import type { VpwBadgeTone, VpwTimelineItem } from "@/components/vpw"
-import { formatLabel as labelize } from "@/lib/ui-copy"
+import { formatLabel as labelize, shortId } from "@/lib/ui-copy"
 import { formatDate as formatWorkbenchDate } from "../../lib/date-format.ts"
 
 export type WaiverFormStateLike = {
@@ -84,9 +84,7 @@ export function joinedValues(values: Array<string | null | undefined>) {
   return visible.length > 0 ? visible.join(" / ") : "Project scope"
 }
 
-export function shortId(value: string | null | undefined) {
-  return value ? value.slice(0, 8) : "Not recorded"
-}
+export { shortId }
 
 export function formatDate(value: string | null | undefined) {
   return formatWorkbenchDate(value, {
