@@ -26,8 +26,7 @@ import {
 import type { ReportFormat } from "@/lib/report-format"
 import { runStatusLabel } from "@/lib/risk-format"
 import {
-  ADDITIONAL_ARTIFACT_FORMATS,
-  RECOMMENDED_ARTIFACT_FORMATS,
+  ALL_ARTIFACT_FORMATS,
   artifactCardForFormat,
   attackNavigatorAvailable,
   generatedActionLabel,
@@ -50,11 +49,6 @@ type EvidenceGenerateDrawerProps = {
   selectedRunSummary: AnalysisRunSummaryPublic | null
 }
 
-const allFormats = [
-  ...RECOMMENDED_ARTIFACT_FORMATS,
-  ...ADDITIONAL_ARTIFACT_FORMATS,
-]
-
 export function EvidenceGenerateDrawer({
   activeReportFormat,
   onCreateReport,
@@ -73,7 +67,7 @@ export function EvidenceGenerateDrawer({
   )
   const firstAvailableFormat = useMemo(
     () =>
-      allFormats.find(
+      ALL_ARTIFACT_FORMATS.find(
         (format) => format !== "attack-navigator" || attackAvailable,
       ) ?? "zip",
     [attackAvailable],
@@ -147,7 +141,7 @@ export function EvidenceGenerateDrawer({
                 title="Choose artifact type"
               />
               <VpwGrid columns={1}>
-                {allFormats.map((format) => {
+                {ALL_ARTIFACT_FORMATS.map((format) => {
                   const card = artifactCardForFormat(format)
                   const existing = reportForFormat(reports, format)
                   const unavailable =

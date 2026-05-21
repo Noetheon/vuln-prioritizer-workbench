@@ -143,38 +143,76 @@ function RecommendedArtifactCard({
           status={report ? "succeeded" : "unknown"}
         />
       </div>
-      <div className="mt-auto flex flex-wrap gap-2">
+      <ArtifactActions
+        className="mt-auto"
+        format={format}
+        generating={generating}
+        onCreateReport={onCreateReport}
+        onDownloadReport={onDownloadReport}
+        onVerifyReport={onVerifyReport}
+        report={report}
+        reportActionsEnabled={reportActionsEnabled}
+      />
+    </VpwPanel>
+  )
+}
+
+function ArtifactActions({
+  className,
+  disabledByContext = false,
+  format,
+  generateVariant = "default",
+  generating,
+  onCreateReport,
+  onDownloadReport,
+  onVerifyReport,
+  report,
+  reportActionsEnabled,
+}: {
+  className?: string
+  disabledByContext?: boolean
+  format: ReportFormat
+  generateVariant?: "default" | "outline"
+  generating: boolean
+  onCreateReport: (format: ReportFormat) => Promise<void>
+  onDownloadReport: (report: ReportPublic) => Promise<void>
+  onVerifyReport?: (report: ReportPublic) => Promise<void>
+  report: ReportPublic | null
+  reportActionsEnabled: boolean
+}) {
+  return (
+    <div className={`flex flex-wrap gap-2 ${className ?? ""}`}>
+      <Button
+        aria-busy={generating}
+        disabled={!reportActionsEnabled || generating || disabledByContext}
+        onClick={() => void onCreateReport(format)}
+        size="sm"
+        type="button"
+        variant={generateVariant}
+      >
+        {generating ? "Generating" : generatedActionLabel(format, report)}
+      </Button>
+      {report ? (
         <Button
-          aria-busy={generating}
-          disabled={!reportActionsEnabled || generating}
-          onClick={() => void onCreateReport(format)}
+          onClick={() => void onDownloadReport(report)}
           size="sm"
           type="button"
+          variant="outline"
         >
-          {generating ? "Generating" : generatedActionLabel(format, report)}
+          Download
         </Button>
-        {report ? (
-          <Button
-            onClick={() => void onDownloadReport(report)}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            Download
-          </Button>
-        ) : null}
-        {report?.format === "zip" ? (
-          <Button
-            onClick={() => void onVerifyReport(report)}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            Verify bundle
-          </Button>
-        ) : null}
-      </div>
-    </VpwPanel>
+      ) : null}
+      {onVerifyReport && report?.format === "zip" ? (
+        <Button
+          onClick={() => void onVerifyReport(report)}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          Verify bundle
+        </Button>
+      ) : null}
+    </div>
   )
 }
 
@@ -229,32 +267,17 @@ function AdditionalExports({
                 label={artifactStatusLabel(report)}
                 status={report ? "succeeded" : "unknown"}
               />
-              <div className="flex flex-wrap justify-start gap-2 md:justify-end">
-                <Button
-                  aria-busy={generating}
-                  disabled={
-                    !reportActionsEnabled || generating || disabledByContext
-                  }
-                  onClick={() => void onCreateReport(format)}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {generating
-                    ? "Generating"
-                    : generatedActionLabel(format, report)}
-                </Button>
-                {report ? (
-                  <Button
-                    onClick={() => void onDownloadReport(report)}
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    Download
-                  </Button>
-                ) : null}
-              </div>
+              <ArtifactActions
+                className="justify-start md:justify-end"
+                disabledByContext={disabledByContext}
+                format={format}
+                generateVariant="outline"
+                generating={generating}
+                onCreateReport={onCreateReport}
+                onDownloadReport={onDownloadReport}
+                report={report}
+                reportActionsEnabled={reportActionsEnabled}
+              />
             </div>
           )
         })}

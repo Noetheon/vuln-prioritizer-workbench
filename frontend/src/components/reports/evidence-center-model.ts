@@ -120,6 +120,11 @@ export const ADDITIONAL_ARTIFACT_FORMATS: readonly ReportFormat[] = [
   "attack-navigator",
 ]
 
+export const ALL_ARTIFACT_FORMATS: readonly ReportFormat[] = [
+  ...RECOMMENDED_ARTIFACT_FORMATS,
+  ...ADDITIONAL_ARTIFACT_FORMATS,
+]
+
 export function artifactCardForFormat(format: ReportFormat) {
   const card = ARTIFACT_CARDS.find((item) => item.reportFormat === format)
   if (!card) {

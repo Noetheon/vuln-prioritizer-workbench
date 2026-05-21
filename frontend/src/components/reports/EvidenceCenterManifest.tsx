@@ -13,7 +13,10 @@ import {
 } from "@/components/vpw"
 import { DEMO_PROJECT, DEMO_REPORTS, DEMO_RUNS } from "@/lib/demo-data"
 import { formatReportDateTime, reportFormatLabel } from "@/lib/report-format"
-import { verificationSummary } from "./evidence-center-model"
+import {
+  evidenceBundleReport,
+  verificationSummary,
+} from "./evidence-center-model"
 
 type ManifestProps = {
   selectedProject: ProjectPublic | null
@@ -43,7 +46,7 @@ export function ManifestPreview({
   const project = isDemo ? DEMO_PROJECT : selectedProject
   const run = isDemo ? DEMO_RUNS[0] : selectedReportRun
   const effectiveReports = isDemo ? DEMO_REPORTS : reports
-  const zipReport = effectiveReports.find((report) => report.format === "zip")
+  const zipReport = evidenceBundleReport(effectiveReports)
   const providerSources =
     providerStatus?.snapshot.selected_sources?.join(", ") ??
     (isDemo ? "nvd, epss, kev" : "Unavailable")
