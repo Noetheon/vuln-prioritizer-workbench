@@ -32,6 +32,12 @@ type ReportHistoryColumnOptions = {
   verificationReportTarget: ReportPublic | null
 }
 
+type ReportVerificationFlags = {
+  verificationFailed: boolean
+  verificationInProgress: boolean
+  verificationOk: boolean
+}
+
 export function buildReportHistoryColumns({
   isDemo,
   mode,
@@ -41,8 +47,15 @@ export function buildReportHistoryColumns({
   verificationReport,
   verificationReportTarget,
 }: ReportHistoryColumnOptions): VpwDataTableColumn<ReportPublic>[] {
-  const verifiedTargetId = verificationReportTarget?.id ?? ""
   const verifiedSummary = verificationSummary(verificationReport)
+  const verificationFlags = (report: ReportPublic) =>
+    reportVerificationFlags({
+      report,
+      verificationLoading,
+      verificationReport: Boolean(verificationReport),
+      verificationReportTarget,
+      verificationSummaryOk: verifiedSummary.ok === true,
+    })
 
   if (mode === "history") {
     return [
@@ -82,17 +95,7 @@ export function buildReportHistoryColumns({
           <ReportStatusCell
             isDemo={isDemo}
             report={report}
-            verificationFailed={Boolean(
-              verifiedTargetId === report.id &&
-                verificationReport &&
-                verifiedSummary.ok !== true,
-            )}
-            verificationInProgress={
-              verifiedTargetId === report.id && verificationLoading
-            }
-            verificationOk={
-              verifiedTargetId === report.id && verifiedSummary.ok === true
-            }
+            {...verificationFlags(report)}
           />
         ),
         header: "Status",
@@ -144,17 +147,7 @@ export function buildReportHistoryColumns({
         <ReportStatusCell
           isDemo={isDemo}
           report={report}
-          verificationFailed={Boolean(
-            verifiedTargetId === report.id &&
-              verificationReport &&
-              verifiedSummary.ok !== true,
-          )}
-          verificationInProgress={
-            verifiedTargetId === report.id && verificationLoading
-          }
-          verificationOk={
-            verifiedTargetId === report.id && verifiedSummary.ok === true
-          }
+          {...verificationFlags(report)}
         />
       ),
       header: "Status",
@@ -206,6 +199,29 @@ export function buildReportHistoryColumns({
       verificationReportTarget,
     }),
   ]
+}
+
+function reportVerificationFlags({
+  report,
+  verificationLoading,
+  verificationReport,
+  verificationReportTarget,
+  verificationSummaryOk,
+}: {
+  report: ReportPublic
+  verificationLoading: boolean
+  verificationReport: boolean
+  verificationReportTarget: ReportPublic | null
+  verificationSummaryOk: boolean
+}): ReportVerificationFlags {
+  const isVerificationTarget = verificationReportTarget?.id === report.id
+
+  return {
+    verificationFailed:
+      isVerificationTarget && verificationReport && !verificationSummaryOk,
+    verificationInProgress: isVerificationTarget && verificationLoading,
+    verificationOk: isVerificationTarget && verificationSummaryOk,
+  }
 }
 
 function actionColumn({
