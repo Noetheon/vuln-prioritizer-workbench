@@ -20,8 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  VpwCommandPanel,
+  VpwCompactMetric,
   VpwField,
-  VpwPanel,
+  VpwMetricStrip,
   VpwSection,
   VpwToolbar,
   VpwToolbarGroup,
@@ -52,17 +54,8 @@ export function WaiversHero({
 
   return (
     <VpwSection className="waivers-command-section">
-      <VpwPanel className="waivers-command-panel">
-        <div className="waivers-command-header">
-          <div className="waivers-command-copy">
-            <p className="vpw-label">Risk acceptance</p>
-            <h2>Accepted risk control center</h2>
-            <p>
-              Govern time-boxed exceptions with owner, scope, expiry, and
-              supporting evidence. Accepted risk remains visible in Triage and
-              Finding Detail.
-            </p>
-          </div>
+      <VpwCommandPanel
+        actions={
           <VpwToolbar
             className="waivers-command-actions"
             label="Risk Acceptance actions"
@@ -88,8 +81,11 @@ export function WaiversHero({
               </Button>
             </VpwToolbarGroup>
           </VpwToolbar>
-        </div>
-
+        }
+        description="Govern time-boxed exceptions with owner, scope, expiry, and supporting evidence. Accepted risk remains visible in Triage and Finding Detail."
+        eyebrow="Risk acceptance"
+        title="Accepted risk control center"
+      >
         <div className="waivers-context-strip">
           <div className="waivers-project-control">
             <VpwField className="w-full min-w-0" label="Project">
@@ -121,32 +117,34 @@ export function WaiversHero({
               </small>
             </VpwField>
           </div>
-          <WaiverContextItem
-            description="Accepted findings stay auditable"
-            icon={<ShieldCheck aria-hidden="true" />}
-            label="Triage visibility"
-            tone="success"
-            value="Always visible"
-          />
-          <WaiverContextItem
-            description={
-              evidenceAvailable
-                ? "Latest import evidence can support decisions"
-                : "Record approval references before relying on exceptions"
-            }
-            icon={<FileCheck2 aria-hidden="true" />}
-            label="Evidence"
-            tone={evidenceAvailable ? "success" : "warning"}
-            value={evidenceAvailable ? "Available" : "Pending"}
-          />
-          <WaiverContextItem
-            description="Owner, scope, review, and expiry are required"
-            icon={<History aria-hidden="true" />}
-            label="Lifecycle"
-            value="Time-boxed"
-          />
+          <VpwMetricStrip minCardWidth="14rem">
+            <WaiverContextItem
+              description="Accepted findings stay auditable"
+              icon={<ShieldCheck aria-hidden="true" />}
+              label="Triage visibility"
+              tone="success"
+              value="Always visible"
+            />
+            <WaiverContextItem
+              description={
+                evidenceAvailable
+                  ? "Latest import evidence can support decisions"
+                  : "Record approval references before relying on exceptions"
+              }
+              icon={<FileCheck2 aria-hidden="true" />}
+              label="Evidence"
+              tone={evidenceAvailable ? "success" : "warning"}
+              value={evidenceAvailable ? "Available" : "Pending"}
+            />
+            <WaiverContextItem
+              description="Owner, scope, review, and expiry are required"
+              icon={<History aria-hidden="true" />}
+              label="Lifecycle"
+              value="Time-boxed"
+            />
+          </VpwMetricStrip>
         </div>
-      </VpwPanel>
+      </VpwCommandPanel>
     </VpwSection>
   )
 }
@@ -165,16 +163,13 @@ function WaiverContextItem({
   value: string
 }) {
   return (
-    <div className="waivers-context-item">
-      <span className="waivers-context-item__icon" data-tone={tone}>
-        {icon}
-      </span>
-      <div>
-        <span className="vpw-label">{label}</span>
-        <strong>{value}</strong>
-        <small>{description}</small>
-      </div>
-    </div>
+    <VpwCompactMetric
+      description={description}
+      icon={icon}
+      label={label}
+      tone={tone}
+      value={value}
+    />
   )
 }
 
@@ -193,7 +188,11 @@ export function WaiverMetrics({
   reviewDue: string
 }) {
   return (
-    <section aria-label="Risk acceptance summary" className="waivers-kpi-strip">
+    <VpwMetricStrip
+      aria-label="Risk acceptance summary"
+      className="waivers-kpi-strip"
+      minCardWidth="11.5rem"
+    >
       <WaiverKpiCard
         description="accepted risk currently active"
         icon={<ShieldCheck aria-hidden="true" className="h-4 w-4" />}
@@ -229,7 +228,7 @@ export function WaiverMetrics({
         tone={missingApprovals > 0 ? "warning" : "success"}
         value={waiversLoading ? "Loading" : missingApprovals}
       />
-    </section>
+    </VpwMetricStrip>
   )
 }
 
@@ -247,13 +246,12 @@ function WaiverKpiCard({
   value: ReactNode
 }) {
   return (
-    <div className="waivers-kpi-card" data-tone={tone}>
-      <span className="waivers-kpi-card__icon">{icon}</span>
-      <div className="waivers-kpi-card__body">
-        <span className="vpw-label">{label}</span>
-        <strong>{value}</strong>
-        <small>{description}</small>
-      </div>
-    </div>
+    <VpwCompactMetric
+      description={description}
+      icon={icon}
+      label={label}
+      tone={tone}
+      value={value}
+    />
   )
 }

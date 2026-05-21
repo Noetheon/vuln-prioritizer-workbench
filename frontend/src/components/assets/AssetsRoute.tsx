@@ -14,8 +14,10 @@ import { Button } from "../ui/button"
 import { selectedProjectRouteSearch } from "../../workbench/selected-project-search"
 import {
   VpwBadge,
+  VpwCommandPanel,
+  VpwCompactMetric,
+  VpwMetricStrip,
   VpwPageContainer,
-  VpwPanel,
   VpwSection,
   VpwStatusBanner,
   VpwToolbar,
@@ -98,16 +100,8 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
   return (
     <VpwPageContainer className="assets-workbench flex flex-col gap-6 px-0 py-0">
       <VpwSection>
-        <VpwPanel className="assets-command-panel">
-          <div className="assets-command-header">
-            <div className="assets-command-copy">
-              <p className="vpw-label text-[var(--vpw-teal)]">Asset exposure</p>
-              <h2>Asset context workspace</h2>
-              <p>
-                Maintain ownership, service, exposure, and criticality context
-                used by Triage prioritization.
-              </p>
-            </div>
+        <VpwCommandPanel
+          actions={
             <VpwToolbar label="Asset actions" variant="plain">
               <VpwToolbarGroup>
                 <Button
@@ -146,39 +140,38 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
                 </Button>
               </VpwToolbarGroup>
             </VpwToolbar>
-          </div>
+          }
+          description="Maintain ownership, service, exposure, and criticality context used by Triage prioritization."
+          eyebrow="Asset exposure"
+          title="Asset context workspace"
+        >
           <AssetSummaryCards assetSummary={state.assetSummary} />
           <div className="assets-context-strip">
-            <div className="assets-context-strip__item">
-              <span className="assets-context-strip__icon">
-                <FolderKanban aria-hidden="true" />
-              </span>
-              <div>
-                <span className="vpw-label">Active project</span>
-                <strong>{state.activeProjectLabel}</strong>
+            <VpwMetricStrip minCardWidth="14rem">
+              <VpwCompactMetric
+                icon={<FolderKanban aria-hidden="true" />}
+                label="Active project"
+                value={state.activeProjectLabel}
+              />
+              <VpwCompactMetric
+                description={`${providerSnapshotHealth(
+                  state.providerStatus,
+                )} · snapshot ${state.providerStatus?.snapshot_mode ?? "missing"}`}
+                icon={<Database aria-hidden="true" />}
+                label="Provider snapshot"
+                tone={providerHealthy ? "success" : "warning"}
+                value={providerSnapshotSummary(state.providerStatus)}
+              />
+              <div className="assets-context-strip__status">
+                <VpwBadge tone={providerHealthy ? "success" : "warning"}>
+                  {providerHealthy
+                    ? "Ready for scoring"
+                    : "Review provider data"}
+                </VpwBadge>
               </div>
-            </div>
-            <div className="assets-context-strip__item">
-              <span
-                className="assets-context-strip__icon"
-                data-tone={providerHealthy ? "success" : "warning"}
-              >
-                <Database aria-hidden="true" />
-              </span>
-              <div>
-                <span className="vpw-label">Provider snapshot</span>
-                <strong>{providerSnapshotSummary(state.providerStatus)}</strong>
-                <small>
-                  {providerSnapshotHealth(state.providerStatus)} · snapshot{" "}
-                  {state.providerStatus?.snapshot_mode ?? "missing"}
-                </small>
-              </div>
-            </div>
-            <VpwBadge tone={providerHealthy ? "success" : "warning"}>
-              {providerHealthy ? "Ready for scoring" : "Review provider data"}
-            </VpwBadge>
+            </VpwMetricStrip>
           </div>
-        </VpwPanel>
+        </VpwCommandPanel>
       </VpwSection>
 
       {state.assetsError ? (

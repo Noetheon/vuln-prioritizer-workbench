@@ -96,6 +96,20 @@ const inventoryFilterContractFiles = [
   "src/components/projects/ProjectsWorkbenchDirectory.tsx",
 ]
 
+const commandPanelContractFiles = [
+  "src/components/assets/AssetsRoute.tsx",
+  "src/components/waivers/WaiversWorkbenchHero.tsx",
+  "src/components/providers/ProvidersWorkbenchHero.tsx",
+]
+
+const compactMetricContractFiles = [
+  "src/components/assets/AssetSummaryCards.tsx",
+  "src/components/assets/AssetsRoute.tsx",
+  "src/components/waivers/WaiversWorkbenchHero.tsx",
+  "src/components/providers/ProvidersWorkbenchHero.tsx",
+  "src/components/providers/ProvidersWorkbenchMetrics.tsx",
+]
+
 const filterControlFiles = [
   "src/components/vpw/VpwSearchControl.tsx",
   "src/components/vpw/VpwSelectControl.tsx",
@@ -685,6 +699,50 @@ test("filter reset controls use the standard reset icon and text", () => {
   for (const path of resetControlContractFiles) {
     assertStandardResetControl(path, readProjectFile(path))
   }
+})
+
+test("workspace hero and summary surfaces use shared VPW shell primitives", () => {
+  const layout = readProjectFile("src/components/vpw/VpwLayout.tsx")
+  const vpwStyles = readProjectFile("src/styles/vpw-components.css")
+
+  assert.match(layout, /export function VpwCommandPanel/)
+  assert.match(layout, /export function VpwMetricStrip/)
+  assert.match(layout, /export function VpwCompactMetric/)
+  assert.match(vpwStyles, /\.vpw-command-panel/)
+  assert.match(vpwStyles, /\.vpw-metric-strip/)
+  assert.match(vpwStyles, /\.vpw-compact-metric/)
+
+  for (const path of commandPanelContractFiles) {
+    assert.match(readProjectFile(path), /VpwCommandPanel/, `${path}: command shell`)
+  }
+
+  for (const path of compactMetricContractFiles) {
+    const source = readProjectFile(path)
+    assert.match(source, /VpwMetricStrip/, `${path}: metric strip`)
+    assert.match(source, /VpwCompactMetric/, `${path}: compact metric`)
+  }
+
+  const localPatternOffenders: string[] = []
+  for (const path of [
+    "src/components/assets/AssetsRoute.tsx",
+    "src/components/assets/AssetSummaryCards.tsx",
+    "src/components/waivers/WaiversWorkbenchHero.tsx",
+    "src/components/providers/ProvidersWorkbenchHero.tsx",
+    "src/components/providers/ProvidersWorkbenchMetrics.tsx",
+    "src/styles/assets.css",
+    "src/styles/waivers.css",
+    "src/styles/providers.css",
+  ]) {
+    const source = readProjectFile(path)
+    const matches = violationsFor(
+      /(?:assets|waivers|providers)-(?:command-(?:panel|header|copy)|(?:context-item|kpi-card)(?:__\w+)?|context-strip__item|context-strip__icon)/g,
+      source,
+    )
+    if (matches.length > 0) {
+      localPatternOffenders.push(`${path}: ${matches.join(", ")}`)
+    }
+  }
+  assert.deepEqual(localPatternOffenders, [])
 })
 
 test("app shell owns page scrolling in the content region", () => {

@@ -1,6 +1,7 @@
 import { Globe2, Link2, RefreshCw, Server, ShieldCheck } from "lucide-react"
 import type { ReactNode } from "react"
 
+import { VpwCompactMetric, VpwMetricStrip } from "../vpw"
 import type { AssetSummary } from "./asset-model"
 
 export function AssetSummaryCards({
@@ -9,7 +10,11 @@ export function AssetSummaryCards({
   assetSummary: AssetSummary
 }) {
   return (
-    <section aria-label="Asset summary" className="assets-kpi-strip">
+    <VpwMetricStrip
+      aria-label="Asset summary"
+      className="assets-kpi-strip"
+      minCardWidth="11.5rem"
+    >
       <AssetKpi
         description="Assets and target references in scope"
         icon={<Server aria-hidden="true" />}
@@ -44,7 +49,7 @@ export function AssetSummaryCards({
         tone={assetSummary.rescoreNeeded > 0 ? "warning" : "success"}
         value={assetSummary.rescoreNeeded}
       />
-    </section>
+    </VpwMetricStrip>
   )
 }
 
@@ -62,13 +67,12 @@ function AssetKpi({
   value: ReactNode
 }) {
   return (
-    <div className="assets-kpi-card" data-tone={tone}>
-      <span className="assets-kpi-card__icon">{icon}</span>
-      <div className="assets-kpi-card__body">
-        <span className="vpw-label">{label}</span>
-        <strong>{value}</strong>
-        <small>{description}</small>
-      </div>
-    </div>
+    <VpwCompactMetric
+      description={description}
+      icon={icon}
+      label={label}
+      tone={tone}
+      value={value}
+    />
   )
 }

@@ -558,6 +558,69 @@ test("findings detail, drawer preview, and scroll evidence are covered", async (
   await expect(page).toHaveURL(/priority=critical/)
 })
 
+test("finding detail remains scrollable from shell surfaces at MacBook viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1470, height: 956 })
+  await routeWorkbenchShell(page, {
+    findings: [mockFinding],
+    projects: [mockProject],
+  })
+
+  await page.goto(`/findings/${mockFinding.id}?projectId=${mockProject.id}`)
+
+  const content = page.getByRole("region", {
+    name: "Workbench page content",
+  })
+  await expect(content).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: mockFinding.cve_id }),
+  ).toBeVisible()
+
+  const initialMetrics = await content.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+    scrollTop: element.scrollTop,
+  }))
+  expect(initialMetrics.scrollHeight).toBeGreaterThan(
+    initialMetrics.clientHeight,
+  )
+  expect(initialMetrics.scrollTop).toBe(0)
+
+  async function expectWheelScrollsToBottomFrom(point: { x: number; y: number }) {
+    await content.evaluate((element) => {
+      element.scrollTop = 0
+    })
+    await page.mouse.move(point.x, point.y)
+    for (let step = 0; step < 14; step += 1) {
+      await page.mouse.wheel(0, 900)
+    }
+    await expect
+      .poll(() =>
+        content.evaluate(
+          (element) =>
+            element.scrollTop + element.clientHeight >= element.scrollHeight - 4,
+        ),
+      )
+      .toBe(true)
+
+    const metrics = await content.evaluate((element) => ({
+      bottomGap: element.scrollHeight - element.scrollTop - element.clientHeight,
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      scrollTop: element.scrollTop,
+    }))
+    expect(metrics.scrollTop).toBeGreaterThan(0)
+    expect(metrics.bottomGap).toBeLessThanOrEqual(4)
+  }
+
+  await expectWheelScrollsToBottomFrom({ x: 260, y: 112 })
+  await expectWheelScrollsToBottomFrom({ x: 760, y: 520 })
+  await expect(
+    page.getByRole("complementary", { name: "Triage summary" }),
+  ).toContainText("Risk acceptance")
+})
+
 test("findings loading and disabled control semantics are observable", async ({
   page,
 }) => {

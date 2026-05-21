@@ -21,6 +21,192 @@
     box-shadow: none;
   }
 
+  .vpw-command-panel {
+    display: grid;
+    min-width: 0;
+    gap: 1rem;
+    padding: var(--vpw-panel-padding);
+  }
+
+  .vpw-command-panel__header {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .vpw-command-panel__copy {
+    flex: 1 1 34rem;
+    max-width: 58rem;
+    min-width: 0;
+  }
+
+  .vpw-command-panel__copy h2 {
+    font-size: 1.25rem;
+    line-height: 1.15;
+  }
+
+  .vpw-command-panel__copy p:not(.vpw-label) {
+    max-width: 54rem;
+    font-size: 0.925rem;
+    line-height: 1.5;
+  }
+
+  .vpw-command-panel__actions {
+    display: flex;
+    min-width: 0;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+  }
+
+  .vpw-command-panel__actions .vpw-toolbar,
+  .vpw-command-panel__actions .vpw-toolbar-group {
+    min-width: 0;
+  }
+
+  .vpw-command-panel__body {
+    min-width: 0;
+  }
+
+  .vpw-command-panel__note {
+    max-width: 58rem;
+    margin: 0;
+    border-top: 1px solid var(--vpw-border-subtle);
+    padding-top: 0.9rem;
+    color: var(--vpw-text-secondary);
+    font-size: 0.925rem;
+    line-height: 1.5;
+  }
+
+  .vpw-metric-strip {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(min(100%, var(--vpw-metric-strip-min)), 1fr)
+    );
+    gap: 0.75rem;
+  }
+
+  .vpw-compact-metric {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 0.75rem;
+    border: 1px solid var(--vpw-border-default);
+    border-radius: var(--vpw-radius-xl);
+    background: var(--vpw-bg-card);
+    padding: 0.85rem;
+  }
+
+  .vpw-compact-metric__icon {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--vpw-border-default);
+    border-radius: var(--vpw-radius-md);
+    background: var(--vpw-bg-card);
+    color: var(--vpw-text-secondary);
+  }
+
+  .vpw-compact-metric__icon svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .vpw-compact-metric[data-tone="success"] .vpw-compact-metric__icon {
+    border-color: color-mix(in srgb, var(--vpw-green) 24%, var(--vpw-bg-card));
+    background: var(--vpw-bg-success);
+    color: var(--vpw-green);
+  }
+
+  .vpw-compact-metric[data-tone="warning"] .vpw-compact-metric__icon {
+    border-color: color-mix(in srgb, var(--vpw-amber) 34%, var(--vpw-bg-card));
+    background: var(--vpw-bg-warning);
+    color: var(--vpw-amber);
+  }
+
+  .vpw-compact-metric[data-tone="critical"] .vpw-compact-metric__icon {
+    border-color: color-mix(in srgb, var(--vpw-red) 28%, var(--vpw-bg-card));
+    background: var(--vpw-bg-critical);
+    color: var(--vpw-red);
+  }
+
+  .vpw-compact-metric[data-tone="info"] .vpw-compact-metric__icon {
+    border-color: color-mix(in srgb, var(--vpw-blue) 22%, var(--vpw-bg-card));
+    background: var(--vpw-bg-info);
+    color: var(--vpw-text-info);
+  }
+
+  .vpw-compact-metric[data-tone="support"] .vpw-compact-metric__icon {
+    border-color: color-mix(in srgb, var(--vpw-violet) 22%, var(--vpw-bg-card));
+    background: var(--vpw-bg-panel);
+    color: var(--vpw-violet);
+  }
+
+  .vpw-compact-metric__body {
+    display: grid;
+    min-width: 0;
+    gap: 0.14rem;
+  }
+
+  .vpw-compact-metric__body strong {
+    overflow: hidden;
+    color: var(--vpw-text-primary);
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .vpw-compact-metric__body small {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--vpw-text-secondary);
+    font-size: 0.78rem;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  @media (max-width: 900px) {
+    .vpw-command-panel__header {
+      align-items: stretch;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+
+    .vpw-command-panel__copy {
+      flex-basis: auto;
+      max-width: none;
+    }
+
+    .vpw-command-panel__actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .vpw-command-panel__actions .vpw-toolbar-group {
+      justify-content: flex-start;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .vpw-compact-metric {
+      align-items: center;
+      padding-block: 0.75rem;
+    }
+
+    .vpw-compact-metric__body strong {
+      white-space: normal;
+    }
+  }
+
   .vpw-dialog-content,
   .vpw-sheet-content {
     isolation: isolate;

@@ -270,7 +270,7 @@ test("asset drawer modes have no serious accessibility violations", async ({
     .getByRole("table", { name: "Assets table" })
     .locator("tbody tr")
     .filter({ hasText: mockAsset.name })
-    .getByRole("button", { exact: true, name: "View" })
+    .getByRole("button", { name: `View details for ${mockAsset.name}` })
     .click()
   await expect(
     page.getByRole("dialog", { name: mockAsset.name }),
@@ -346,13 +346,17 @@ test("data source tabs have no serious accessibility violations", async ({
 
   const sourcesTab = page.getByRole("tab", { name: "Sources" })
   const snapshotTab = page.getByRole("tab", { name: "Snapshot" })
+  const diagnosticsTab = page.getByRole("tab", { name: "Diagnostics" })
   const qualityTab = page.getByRole("tab", { name: "Quality" })
   await sourcesTab.focus()
   await expect(sourcesTab).toBeFocused()
   await page.keyboard.press("ArrowRight")
   await expect(snapshotTab).toBeFocused()
   await expect(snapshotTab).toHaveAttribute("aria-selected", "true")
-  await page.keyboard.press("End")
+  await page.keyboard.press("ArrowRight")
+  await expect(diagnosticsTab).toBeFocused()
+  await expect(diagnosticsTab).toHaveAttribute("aria-selected", "true")
+  await page.keyboard.press("ArrowRight")
   await expect(qualityTab).toBeFocused()
   await expect(qualityTab).toHaveAttribute("aria-selected", "true")
   await page.keyboard.press("Home")

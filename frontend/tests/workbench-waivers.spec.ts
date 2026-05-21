@@ -3,7 +3,6 @@ import { evidenceScreenshotPath } from "./evidence-paths"
 import {
   backendBaseUrl,
   localApiHeaders,
-  openWorkbench,
 } from "./workbench-runtime-helpers"
 
 const validOccurrenceCsv = Buffer.from(
@@ -94,7 +93,6 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
   const testRunSuffix = Date.now().toString(36)
   const projectName = `VPW Acceptance Project ${testRunSuffix}`
 
-  await openWorkbench(page)
   const headers = localApiHeaders()
 
   const projectResponse = await page.request.post(
@@ -222,7 +220,6 @@ test("workbench governance rollups show service risk and accepted-risk debt", as
   const testRunSuffix = Date.now().toString(36)
   const projectName = `VPW Governance Acceptance Project ${testRunSuffix}`
 
-  await openWorkbench(page)
   const headers = localApiHeaders()
 
   const projectResponse = await page.request.post(

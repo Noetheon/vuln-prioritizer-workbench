@@ -12,10 +12,12 @@ import type { ReactNode } from "react"
 import type { ProviderStatusPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
+  VpwCommandPanel,
+  VpwCompactMetric,
+  VpwMetricStrip,
   type VpwMetricTone,
   VpwPanel,
   VpwSection,
-  VpwSectionHeader,
   VpwSkeletonStack,
   VpwStatusBanner,
   VpwToolbar,
@@ -55,16 +57,13 @@ function ProviderContextItem({
   value: string
 }) {
   return (
-    <div className="providers-context-strip__item">
-      <span className="providers-context-strip__icon" data-tone={tone}>
-        {icon}
-      </span>
-      <div>
-        <span className="vpw-label">{label}</span>
-        <strong>{value}</strong>
-        <small>{detail}</small>
-      </div>
-    </div>
+    <VpwCompactMetric
+      description={detail}
+      icon={icon}
+      label={label}
+      tone={tone}
+      value={value}
+    />
   )
 }
 
@@ -84,15 +83,8 @@ export function ProvidersHero({
 
   return (
     <VpwSection>
-      <VpwPanel className="providers-command-panel">
-        <div className="providers-command-header">
-          <div className="providers-command-copy">
-            <VpwSectionHeader
-              description="Monitor vulnerability intelligence sources, provider snapshot freshness, and evidence data quality."
-              eyebrow="Data source trust"
-              title="Provider evidence workspace"
-            />
-          </div>
+      <VpwCommandPanel
+        actions={
           <VpwToolbar label="Provider actions" variant="plain">
             <VpwToolbarGroup>
               <Button
@@ -112,9 +104,13 @@ export function ProvidersHero({
               </Button>
             </VpwToolbarGroup>
           </VpwToolbar>
-        </div>
-
-        <div className="providers-context-strip">
+        }
+        description="Monitor vulnerability intelligence sources, provider snapshot freshness, and evidence data quality."
+        eyebrow="Data source trust"
+        note="Evidence Center uses recorded provider snapshots and report artifacts for reproducible review. Refresh status reloads stored provider state from the backend; it does not scan systems."
+        title="Provider evidence workspace"
+      >
+        <VpwMetricStrip className="providers-context-strip" minCardWidth="13rem">
           <ProviderContextItem
             detail="Provider signals for prioritization"
             icon={<Signal aria-hidden="true" />}
@@ -156,14 +152,8 @@ export function ProvidersHero({
             }
             value={warningSummary(providerStatus)}
           />
-        </div>
-
-        <p className="providers-command-note">
-          Evidence Center uses recorded provider snapshots and report artifacts
-          for reproducible review. Refresh status reloads stored provider state
-          from the backend; it does not scan systems.
-        </p>
-      </VpwPanel>
+        </VpwMetricStrip>
+      </VpwCommandPanel>
     </VpwSection>
   )
 }

@@ -1,14 +1,18 @@
 import {
   Database,
+  FileArchive,
   FileCheck2,
   LockKeyhole,
-  FileArchive,
   Signal,
 } from "lucide-react"
 import type { ReactNode } from "react"
 
 import type { ProviderStatusPublic } from "@/api-client"
-import type { VpwMetricTone } from "@/components/vpw"
+import {
+  VpwCompactMetric,
+  VpwMetricStrip,
+  type VpwMetricTone,
+} from "@/components/vpw"
 import {
   evidenceReadinessCardTone,
   evidenceReadinessLabel,
@@ -40,14 +44,13 @@ function ProviderKpiCard({
   value: string
 }) {
   return (
-    <div className="providers-kpi-card" data-tone={tone}>
-      <span className="providers-kpi-card__icon">{icon}</span>
-      <div className="providers-kpi-card__body">
-        <span className="vpw-label">{label}</span>
-        <strong>{value}</strong>
-        <small title={description}>{description}</small>
-      </div>
-    </div>
+    <VpwCompactMetric
+      description={<span title={description}>{description}</span>}
+      icon={icon}
+      label={label}
+      tone={tone}
+      value={value}
+    />
   )
 }
 
@@ -55,7 +58,11 @@ export function ProviderMetricsGrid({
   providerStatus,
 }: ProviderMetricsGridProps) {
   return (
-    <section aria-label="Provider summary" className="providers-kpi-strip">
+    <VpwMetricStrip
+      aria-label="Provider summary"
+      className="providers-kpi-strip"
+      minCardWidth="13rem"
+    >
       <ProviderKpiCard
         description={providerHealthDescription(providerStatus)}
         icon={<Signal aria-hidden="true" />}
@@ -92,6 +99,6 @@ export function ProviderMetricsGrid({
         tone={evidenceReadinessCardTone(providerStatus)}
         value={evidenceReadinessLabel(providerStatus)}
       />
-    </section>
+    </VpwMetricStrip>
   )
 }
