@@ -66,7 +66,7 @@ export const routeDetails: Record<WorkbenchPath, RouteDetail> = {
   },
   "/reports": {
     description:
-      "Generate, verify, and download reports and deterministic evidence bundles.",
+      "Generate, verify, and download audit-ready evidence for an import run.",
     eyebrow: "Govern",
     title: "Evidence Center",
     panelTitle: "Evidence Center",

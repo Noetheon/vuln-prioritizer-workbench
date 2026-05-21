@@ -278,7 +278,10 @@ test("asset drawer modes have no serious accessibility violations", async ({
   await expectNoSeriousA11yViolations(page, "asset detail drawer")
   await expectDialogVisibleTextContrast(page, "asset detail drawer")
 
-  await page.getByRole("button", { name: "Linked findings" }).click()
+  await page
+    .getByRole("dialog", { name: mockAsset.name })
+    .getByRole("button", { name: "Findings" })
+    .click()
   await expect(
     page.getByRole("dialog", { name: /Linked findings for build-host-1/ }),
   ).toBeVisible()
@@ -299,11 +302,12 @@ test("risk acceptance drawers have no serious accessibility violations", async (
     .getByRole("table", { name: "Risk acceptance register table" })
     .locator("tbody tr")
     .filter({ hasText: "CVE-2024-3094" })
-    .getByRole("button", { exact: true, name: "View" })
+    .getByRole("button", { name: /View accepted-risk decision/ })
     .click()
   await expect(
-    page.getByRole("dialog", { name: /CVE-2024-3094/ }),
+    page.getByRole("dialog", { name: "Accepted risk decision" }),
   ).toBeVisible()
+  await expect(page.getByText("CVE-2024-3094").first()).toBeVisible()
   await expectNoSeriousA11yViolations(page, "risk acceptance detail drawer")
   await expectDialogVisibleTextContrast(page, "risk acceptance detail drawer")
 
@@ -318,11 +322,12 @@ test("risk acceptance drawers have no serious accessibility violations", async (
     .getByRole("table", { name: "Risk acceptance register table" })
     .locator("tbody tr")
     .filter({ hasText: "CVE-2024-3094" })
-    .getByRole("button", { name: "Expire" })
+    .getByRole("button", { name: /Expire accepted-risk decision/ })
     .click()
   await expect(
-    page.getByRole("dialog", { name: /Expire.*CVE-2024-3094/ }),
+    page.getByRole("dialog", { name: "Expire accepted-risk decision?" }),
   ).toBeVisible()
+  await expect(page.getByText("CVE-2024-3094").first()).toBeVisible()
   await expectNoSeriousA11yViolations(page, "risk acceptance expire drawer")
 })
 
@@ -340,8 +345,8 @@ test("data source tabs have no serious accessibility violations", async ({
   ).toBeVisible()
 
   const sourcesTab = page.getByRole("tab", { name: "Sources" })
-  const snapshotTab = page.getByRole("tab", { name: "Snapshot & Cache" })
-  const qualityTab = page.getByRole("tab", { name: "Quality Notes" })
+  const snapshotTab = page.getByRole("tab", { name: "Snapshot" })
+  const qualityTab = page.getByRole("tab", { name: "Quality" })
   await sourcesTab.focus()
   await expect(sourcesTab).toBeFocused()
   await page.keyboard.press("ArrowRight")
@@ -356,9 +361,9 @@ test("data source tabs have no serious accessibility violations", async ({
 
   for (const tabName of [
     "Sources",
-    "Snapshot & Cache",
+    "Snapshot",
     "Diagnostics",
-    "Quality Notes",
+    "Quality",
   ]) {
     await page.getByRole("tab", { name: tabName }).click()
     await expect(

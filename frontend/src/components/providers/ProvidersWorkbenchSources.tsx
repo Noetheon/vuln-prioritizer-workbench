@@ -39,6 +39,7 @@ export function ProviderSourcesTable({
   return (
     <VpwSection>
       <VpwTableCard
+        className="providers-table-card"
         description="Configured vulnerability intelligence sources and whether they are available for prioritization evidence."
         actions={
           <Button
@@ -72,7 +73,7 @@ export function ProviderSourcesTable({
             data={rows}
             density="compact"
             getRowKey={(row) => row.id}
-            minWidth="1120px"
+            minWidth="1040px"
           />
         )}
       </VpwTableCard>
@@ -91,7 +92,7 @@ export function ProviderSourcesTable({
             </DialogDescription>
           </DialogHeader>
           {selectedRow ? (
-            <div className="flex flex-col gap-4">
+            <div className="providers-source-dialog">
               <StatusLozenge
                 label={selectedRow.statusLabel}
                 status={selectedRow.statusToken}

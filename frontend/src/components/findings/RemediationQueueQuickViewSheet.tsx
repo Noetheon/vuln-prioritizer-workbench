@@ -107,7 +107,12 @@ export function QuickViewSheet({
           <QuickViewStatusRow finding={effectiveFinding} />
         </SheetHeader>
 
-        <div className="finding-drawer-body">
+        <section
+          aria-label="Finding quick view content"
+          className="finding-drawer-body"
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: Drawer body is the scroll owner and must be keyboard reachable.
+          tabIndex={0}
+        >
           {error ? (
             <VpwStatusBanner title={error} tone="critical">
               <Button
@@ -151,7 +156,7 @@ export function QuickViewSheet({
             finding={effectiveFinding}
             projectSearch={projectSearch}
           />
-        </div>
+        </section>
 
         <SheetFooter className="border-t border-[var(--vpw-border-default)] px-5 py-4">
           <Button

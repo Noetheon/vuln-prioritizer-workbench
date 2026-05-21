@@ -452,6 +452,14 @@
   text-transform: uppercase;
 }
 
+.finding-detail-header-metrics .vpw-badge__label,
+.finding-detail-action-score .vpw-badge__label {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  text-transform: none;
+}
+
 .finding-detail-header-metrics strong {
   color: var(--vpw-text-primary);
   font-size: 1.45rem;

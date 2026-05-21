@@ -141,7 +141,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     page.getByRole("heading", { level: 1, name: "Data Sources" }),
   ).toBeVisible()
   await expect(page.getByText("Provider freshness").first()).toBeVisible()
-  await expect(page.getByText("Snapshot mode").first()).toBeVisible()
+  await expect(page.getByText("Replay behavior for reports").first()).toBeVisible()
   await expect(page.getByText("Data source inventory").first()).toBeVisible()
   await expect(
     page.getByRole("table", { name: "Data source inventory" }),
@@ -153,9 +153,9 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     page.getByRole("table", { name: "Data source inventory" }),
   ).toContainText("KEV")
 
-  await page.getByRole("tab", { name: "Snapshot & Cache" }).click()
-  await expect(page.getByText("Provider Snapshot").first()).toBeVisible()
-  await expect(page.getByText("Recorded snapshot").first()).toBeVisible()
+  await page.getByRole("tab", { name: "Snapshot" }).click()
+  await expect(page.getByText("Snapshot audit summary").first()).toBeVisible()
+  await expect(page.getByText("Recorded snapshot details").first()).toBeVisible()
   await expect(page.getByText("Snapshot ID").first()).toBeVisible()
   await expect(
     page
@@ -164,10 +164,10 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   ).toBeVisible()
 
   await page.getByRole("tab", { name: "Diagnostics" }).click()
-  await expect(page.getByText("Provider runtime facts").first()).toBeVisible()
-  await expect(page.getByText("Latest provider update").first()).toBeVisible()
+  await expect(page.getByText("Runtime facts").first()).toBeVisible()
+  await expect(page.getByText("Status check").first()).toBeVisible()
 
-  await page.getByRole("tab", { name: "Quality Notes" }).click()
+  await page.getByRole("tab", { name: "Quality" }).click()
   await expect(
     page.getByText("Provider data quality notes").first(),
   ).toBeVisible()
@@ -184,33 +184,37 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   ).toBeVisible()
   await expect(
     page.getByText(
-      "Generate audit-ready vulnerability evidence, executive summaries, and technical exports.",
+      "Generate, verify, and download audit-ready evidence for an import run.",
     ),
   ).toBeVisible()
   await expect(
     page.getByRole("combobox", { name: "Select analysis run" }),
   ).toBeVisible()
-  await expect(page.getByText("Ready for generation")).toBeVisible()
+  await expect(page.getByText("Ready for generation").first()).toBeVisible()
   await expect(page.getByRole("tab", { name: "Artifacts" })).toHaveAttribute(
     "aria-selected",
     "true",
   )
-  await expect(page.getByText("Generate Evidence Artifacts")).toBeVisible()
-  await expect(page.getByText("Markdown Technical Report")).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Recommended artifacts" }),
+  ).toBeVisible()
+  await expect(page.getByText("Technical Markdown Report")).toBeVisible()
   await expect(page.getByText("Executive HTML Report")).toBeVisible()
   await expect(page.getByText("JSON Findings Export")).toBeVisible()
   await expect(page.getByText("CSV Findings Export")).toBeVisible()
   await expect(page.getByText("ATT&CK Navigator Layer")).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Export Navigator" }),
+  ).toBeDisabled()
   await expect(page.getByText("SARIF Export")).toBeVisible()
   await expect(page.getByText("Evidence ZIP Bundle")).toBeVisible()
   const expectedReports = [
     { action: "Generate Markdown", filename: "technical-report.md" },
-    { action: "Generate HTML", filename: "executive-report.html" },
-    { action: "Export JSON", filename: "analysis-result.v1.json" },
-    { action: "Export CSV", filename: "findings.csv" },
-    { action: "Export Navigator", filename: "attack-navigator-layer.json" },
+    { action: "Generate executive HTML", filename: "executive-report.html" },
+    { action: "Export analysis JSON", filename: "analysis-result.v1.json" },
+    { action: "Export CSV findings", filename: "findings.csv" },
     { action: "Export SARIF", filename: "results.sarif" },
-    { action: "Build Bundle", filename: "evidence-bundle.zip" },
+    { action: "Build evidence ZIP", filename: "evidence-bundle.zip" },
   ]
   for (const report of expectedReports) {
     const actionButton = page.getByRole("button", {
@@ -225,7 +229,6 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(reportHistory).toContainText("executive-report.html")
   await expect(reportHistory).toContainText("analysis-result.v1.json")
   await expect(reportHistory).toContainText("findings.csv")
-  await expect(reportHistory).toContainText("attack-navigator-layer.json")
   await expect(reportHistory).toContainText("results.sarif")
   await expect(reportHistory).toContainText("evidence-bundle.zip")
   await page.screenshot({
@@ -234,13 +237,13 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   })
   await page.getByRole("tab", { name: "Decision Summary" }).click()
   await expect(
-    page.getByRole("heading", { name: "Executive Decision" }),
+    page.getByRole("heading", { exact: true, name: "Executive Decision" }),
   ).toBeVisible()
   await page.getByRole("tab", { name: "Manifest & Verification" }).click()
-  await expect(page.getByText("Evidence Lifecycle")).toBeVisible()
-  await expect(page.getByText("Download evidence bundle")).toBeVisible()
+  await expect(page.getByText("Evidence lifecycle")).toBeVisible()
+  await expect(page.getByText("Download Evidence ZIP")).toBeVisible()
   await page.getByRole("tab", { name: "Data Quality" }).click()
-  await expect(page.getByText("Parser warnings", { exact: true })).toBeVisible()
+  await expect(page.getByText("Parser errors", { exact: true })).toBeVisible()
   await page.getByRole("tab", { name: "Artifacts" }).click()
   await reportHistory
     .getByRole("button", { name: "Verify evidence-bundle.zip" })
@@ -379,6 +382,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   expect(vexSuppressedFinding?.suppressed_by_vex).toBe(true)
   expect(vexSuppressedFinding?.status).toBe("suppressed")
   await page.goto(`/findings/${vexSuppressedFinding.id}`)
+  await page.getByRole("tab", { name: "Occurrences" }).click()
   await expect(
     page.getByRole("table", { name: "Occurrences table" }),
   ).toContainText("Not Affected")
@@ -534,7 +538,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     path: evidenceScreenshotPath("vpw-044-assets-page.png"),
   })
   await importedAssetRow
-    .getByRole("button", { name: "Linked findings" })
+    .getByRole("button", { name: /Open linked findings for build-host-1/ })
     .click()
   const linkedFindingsDrawer = page.getByRole("dialog", {
     name: /Linked findings for build-host-1/,
@@ -568,7 +572,8 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(assetFindingDetail).toContainText("payments-runtime")
   await expect(assetFindingDetail).toContainText("Production")
   await expect(assetFindingDetail).toContainText("Critical")
-  await expect(assetFindingDetail).toContainText("Asset Context Rescore Needed")
+  await expect(assetFindingDetail).toContainText("Internet Facing")
+  await expect(assetFindingDetail).toContainText("Assign remediation work")
   await page.screenshot({
     fullPage: true,
     path: evidenceScreenshotPath("vpw-044-finding-context.png"),
@@ -695,6 +700,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   const occurrencesTable = page.getByRole("table", {
     name: "Occurrences table",
   })
+  await page.getByRole("tab", { name: "Occurrences" }).click()
   await expect(occurrencesTable).toContainText("generic-occurrence-csv")
   await expect(occurrencesTable).toContainText(
     "xz <img src=x onerror=window.__vpwXss=1>",
@@ -717,6 +723,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     () => (window as Window & { __vpwXss?: number }).__vpwXss ?? null,
   )
   expect(xssMarker).toBeNull()
+  await page.getByRole("tab", { name: "Evidence" }).click()
   const dataQuality = page.getByLabel("Data quality notes")
   await expect(dataQuality).toContainText("Provider data")
   await expect(dataQuality).toContainText(

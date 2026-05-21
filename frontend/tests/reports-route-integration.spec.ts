@@ -49,7 +49,12 @@ test("Evidence Center separates artifacts, decision, manifest, history, and data
     "aria-selected",
     "true",
   )
-  await expect(page.getByRole("heading", { name: "Generate Evidence Artifacts" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Generated artifacts" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Recommended artifacts" }),
+  ).toBeVisible()
   await expect(page.getByRole("table", { name: "Report history list" })).toContainText(
     "evidence-bundle.zip",
   )
@@ -57,13 +62,13 @@ test("Evidence Center separates artifacts, decision, manifest, history, and data
 
   await page.getByRole("tab", { name: "Decision Summary" }).click()
   await expect(
-    page.getByRole("heading", { name: "Executive Decision" }),
+    page.getByRole("heading", { exact: true, name: "Executive Decision" }),
   ).toBeVisible()
   await expect(page.getByText("Manifest metadata")).toHaveCount(0)
 
   await page.getByRole("tab", { name: "Manifest & Verification" }).click()
-  await expect(page.getByText("Evidence Lifecycle")).toBeVisible()
-  await expect(page.getByText("Download evidence bundle")).toBeVisible()
+  await expect(page.getByText("Evidence lifecycle")).toBeVisible()
+  await expect(page.getByText("Download Evidence ZIP")).toBeVisible()
 
   await page.getByRole("tab", { name: "History" }).click()
   await expect(page.getByRole("table", { name: "Report history list" })).toContainText(
@@ -71,7 +76,7 @@ test("Evidence Center separates artifacts, decision, manifest, history, and data
   )
 
   await page.getByRole("tab", { name: "Data Quality" }).click()
-  await expect(page.getByText("Parser warnings")).toBeVisible()
+  await expect(page.getByText("Parser errors")).toBeVisible()
   await expect(page.getByText("Ignored rows")).toBeVisible()
 })
 

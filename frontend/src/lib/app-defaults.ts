@@ -86,19 +86,19 @@ export const reportActionCards: Array<{
     format: "Markdown",
     icon: FileText,
     reportFormat: "markdown",
-    title: "Markdown Technical Report",
+    title: "Technical Markdown Report",
   },
   {
-    actionLabel: "Generate HTML",
+    actionLabel: "Generate executive HTML",
     detail:
       "Executive browser report with priority summary, evidence links, and safe rendering.",
     format: "HTML",
     icon: FileArchive,
     reportFormat: "html",
-    title: "HTML Executive Report",
+    title: "Executive HTML Report",
   },
   {
-    actionLabel: "Export JSON",
+    actionLabel: "Export analysis JSON",
     detail:
       "Machine-readable findings and analysis data for automation and downstream systems.",
     format: "JSON",
@@ -107,7 +107,7 @@ export const reportActionCards: Array<{
     title: "JSON Findings Export",
   },
   {
-    actionLabel: "Export CSV",
+    actionLabel: "Export CSV findings",
     detail:
       "Spreadsheet-friendly findings table for triage, filtering, and stakeholder review.",
     format: "CSV",
@@ -116,9 +116,9 @@ export const reportActionCards: Array<{
     title: "CSV Findings Export",
   },
   {
-    actionLabel: "Export Navigator Layer",
+    actionLabel: "Export Navigator",
     detail:
-      "MITRE ATT&CK Navigator JSON with mapped techniques, risk scores, KEV notes, and explicit coverage scope.",
+      "Defensive ATT&CK Navigator JSON when mapped techniques are available.",
     format: "Navigator JSON",
     icon: GitBranch,
     reportFormat: "attack-navigator",
@@ -131,16 +131,16 @@ export const reportActionCards: Array<{
     format: "SARIF",
     icon: FileJson,
     reportFormat: "sarif",
-    title: "SARIF Results",
+    title: "SARIF Export",
   },
   {
-    actionLabel: "Build Evidence Bundle",
+    actionLabel: "Build evidence ZIP",
     detail:
       "ZIP package with reports, manifest, source artifacts, and SHA256 checksums.",
     format: "Evidence ZIP",
     icon: FileArchive,
     reportFormat: "zip",
-    title: "Evidence Bundle",
+    title: "Evidence ZIP Bundle",
   },
 ]
 

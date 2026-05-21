@@ -31,15 +31,9 @@ type ProviderSnapshotDetailsProps = {
   rows: readonly ProviderSourceRow[]
 }
 
-function SummaryItem({
-  label,
-  value,
-}: {
-  label: string
-  value: ReactNode
-}) {
+function SummaryItem({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] px-3 py-2.5">
+    <div className="providers-summary-item">
       <p className="vpw-label">{label}</p>
       <div className="mt-1 min-w-0 text-sm font-medium text-[var(--vpw-text-primary)] [overflow-wrap:anywhere]">
         {value}
@@ -69,7 +63,7 @@ export function ProviderSnapshotDetails({
 
   return (
     <VpwSection>
-      <VpwPanel className="flex flex-col gap-4 p-5">
+      <VpwPanel className="providers-section-panel">
         <VpwSectionHeader
           actions={
             <div className="flex flex-wrap gap-2">
@@ -94,7 +88,7 @@ export function ProviderSnapshotDetails({
           eyebrow="Snapshot"
           title="Snapshot audit summary"
         />
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <div className="providers-summary-grid">
           <SummaryItem label="Snapshot ID" value={currentSnapshotId} />
           <SummaryItem
             label="Mode"
@@ -110,7 +104,10 @@ export function ProviderSnapshotDetails({
             }
           />
           <SummaryItem label="Generated" value={formatDateTime(generatedAt)} />
-          <SummaryItem label="Selected sources" value={selectedSources(providerStatus)} />
+          <SummaryItem
+            label="Selected sources"
+            value={selectedSources(providerStatus)}
+          />
           <SummaryItem
             label="Verification"
             value={
@@ -123,8 +120,8 @@ export function ProviderSnapshotDetails({
         </div>
       </VpwPanel>
 
-      <VpwGrid columns={2}>
-        <VpwPanel className="flex flex-col gap-4 p-5">
+      <VpwGrid columns={2} className="providers-detail-grid">
+        <VpwPanel className="providers-section-panel">
           <VpwSectionHeader
             description="Audit fields recorded with the provider snapshot."
             eyebrow="Recorded snapshot details"
@@ -163,7 +160,7 @@ export function ProviderSnapshotDetails({
           />
         </VpwPanel>
 
-        <VpwPanel className="flex flex-col gap-4 p-5">
+        <VpwPanel className="providers-section-panel">
           <VpwSectionHeader
             description="Local cache and source locations from the stored provider status."
             eyebrow="Cache and source paths"

@@ -12,6 +12,7 @@ import {
   VpwEmptyState,
   VpwSection,
   VpwSectionHeader,
+  VpwStatusBanner,
 } from "@/components/vpw"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ReportFormat } from "@/lib/report-format"
@@ -30,6 +31,7 @@ type EvidenceCenterTabsProps = {
   isDemo: boolean
   onCreateReport: (format: ReportFormat) => Promise<void>
   onDownloadReport: (report: ReportPublic) => Promise<void>
+  onOpenGenerateDrawer: () => void
   onVerifyReport: (report: ReportPublic) => Promise<void>
   projectSummary: ProjectDecisionSummaryPublic | null
   providerStatus: ProviderStatusPublic | null
@@ -50,6 +52,7 @@ export function EvidenceCenterTabs({
   isDemo,
   onCreateReport,
   onDownloadReport,
+  onOpenGenerateDrawer,
   onVerifyReport,
   projectSummary,
   providerStatus,
@@ -63,6 +66,10 @@ export function EvidenceCenterTabs({
   verificationReport,
   verificationReportTarget,
 }: EvidenceCenterTabsProps) {
+  const hasArtifacts = reports.length > 0 || isDemo
+  const runFailed =
+    !isDemo && selectedReportRun?.status === "failed"
+
   return (
     <Tabs className="flex flex-col gap-4" defaultValue="artifacts">
       <TabsList
@@ -77,26 +84,68 @@ export function EvidenceCenterTabs({
       </TabsList>
 
       <TabsContent className="mt-0 flex flex-col gap-4" value="artifacts">
+        {!isDemo && !selectedReportRun ? (
+          <VpwEmptyState
+            action={
+              <VpwBadge tone="neutral">Select run</VpwBadge>
+            }
+            description="Select a completed import run to generate evidence artifacts."
+            title="No import run selected"
+          />
+        ) : null}
+        {runFailed ? (
+          <VpwStatusBanner title="Run failed" tone="critical">
+            The selected run did not complete. Parser output and run diagnostics
+            are available from the Imports route before evidence can be
+            generated.
+          </VpwStatusBanner>
+        ) : null}
+        {hasArtifacts ? (
+          <ReportHistory
+            emptyDescription="No artifacts generated yet. Generate an executive report, technical report, or evidence bundle for this run."
+            isDemo={isDemo}
+            mode="inventory"
+            onDownload={onDownloadReport}
+            onVerify={onVerifyReport}
+            panelDescription="What exists now and what can be downloaded or verified."
+            panelEyebrow="Artifact inventory"
+            panelTitle="Generated artifacts"
+            reports={reports}
+            reportsLoading={reportsLoading}
+            verificationLoading={verificationLoading}
+            verificationReport={verificationReport}
+            verificationReportTarget={verificationReportTarget}
+          />
+        ) : null}
         <ArtifactSection
           activeReportFormat={activeReportFormat}
           isDemo={isDemo}
           onCreateReport={onCreateReport}
+          onDownloadReport={onDownloadReport}
+          onOpenGenerateDrawer={onOpenGenerateDrawer}
+          onVerifyReport={onVerifyReport}
           reportActionsEnabled={reportActionsEnabled}
-        />
-        <ReportHistory
-          emptyDescription="Generate an artifact above to populate this run's artifact table."
-          isDemo={isDemo}
-          onDownload={onDownloadReport}
-          onVerify={onVerifyReport}
-          panelDescription="Generated report artifacts for the selected run."
-          panelEyebrow="Artifact inventory"
-          panelTitle="Generated Artifacts"
           reports={reports}
-          reportsLoading={reportsLoading}
-          verificationLoading={verificationLoading}
-          verificationReport={verificationReport}
-          verificationReportTarget={verificationReportTarget}
+          selectedReportRun={selectedReportRun}
+          selectedRunSummary={selectedRunSummary}
         />
+        {!hasArtifacts ? (
+          <ReportHistory
+            emptyDescription="Generate an executive report, technical report, or evidence bundle for this run."
+            isDemo={isDemo}
+            mode="inventory"
+            onDownload={onDownloadReport}
+            onVerify={onVerifyReport}
+            panelDescription="What exists now and what can be downloaded or verified."
+            panelEyebrow="Artifact inventory"
+            panelTitle="Generated artifacts"
+            reports={reports}
+            reportsLoading={reportsLoading}
+            verificationLoading={verificationLoading}
+            verificationReport={verificationReport}
+            verificationReportTarget={verificationReportTarget}
+          />
+        ) : null}
       </TabsContent>
 
       <TabsContent className="mt-0" value="decision">
@@ -111,7 +160,11 @@ export function EvidenceCenterTabs({
           {hasDecisionContext ? (
             <ExecutiveDecision
               isDemo={isDemo}
+              onCreateReport={onCreateReport}
+              onDownloadReport={onDownloadReport}
               projectSummary={projectSummary}
+              reports={reports}
+              selectedProject={selectedProject}
               selectedReportRun={selectedReportRun}
               selectedRunSummary={selectedRunSummary}
             />
@@ -139,6 +192,7 @@ export function EvidenceCenterTabs({
         <ManifestPreview
           isDemo={isDemo}
           onDownload={onDownloadReport}
+          onVerify={onVerifyReport}
           providerStatus={providerStatus}
           reports={reports}
           selectedProject={selectedProject}
@@ -152,9 +206,12 @@ export function EvidenceCenterTabs({
       <TabsContent className="mt-0" value="history">
         <ReportHistory
           isDemo={isDemo}
+          mode="history"
           onDownload={onDownloadReport}
           onVerify={onVerifyReport}
           panelDescription="Previously generated reports for the selected run."
+          panelEyebrow="Generated artifact history"
+          panelTitle="Generated artifact history"
           reports={reports}
           reportsLoading={reportsLoading}
           verificationLoading={verificationLoading}
@@ -173,7 +230,11 @@ export function EvidenceCenterTabs({
             isDemo={isDemo}
             providerStatus={providerStatus}
             reports={reports}
+            selectedReportRun={selectedReportRun}
             selectedRunSummary={selectedRunSummary}
+            verificationLoading={verificationLoading}
+            verificationReport={verificationReport}
+            verificationReportTarget={verificationReportTarget}
           />
         </VpwSection>
       </TabsContent>

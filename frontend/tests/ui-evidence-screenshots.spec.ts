@@ -482,9 +482,7 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
         page.getByRole("heading", { name: new RegExp(mockFinding.cve_id) }),
       ).toBeVisible({ timeout: 15_000 })
       await expect(
-        page.getByText(
-          "Critical priority combines CISA KEV, 92% EPSS, CVSS 10.0, and Internet Facing exposure.",
-        ),
+        page.getByText("Triage decision"),
       ).toBeVisible()
       await expect(
         page.getByText(mockFinding.rationale, { exact: true }).first(),
@@ -499,13 +497,13 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
   {
     assertReady: async (page) => {
       await expect(
-        page.getByRole("heading", { level: 2, name: "Evidence Center" }),
+        page.getByRole("heading", { level: 2, name: "Evidence summary" }),
       ).toBeVisible({ timeout: 15_000 })
       await expect(
         page.getByRole("tab", { name: "Artifacts" }),
       ).toHaveAttribute("aria-selected", "true")
       await expect(
-        page.getByRole("heading", { name: "Generate Evidence Artifacts" }),
+        page.getByRole("heading", { name: "Recommended artifacts" }),
       ).toBeVisible()
     },
     id: "reports-evidence-center",
@@ -514,7 +512,10 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
   {
     assertReady: async (page) => {
       await expect(
-        page.getByRole("heading", { level: 2, name: "Assets" }).first(),
+        page.getByRole("heading", {
+          level: 2,
+          name: "Asset context workspace",
+        }),
       ).toBeVisible({ timeout: 15_000 })
       await expect(
         page.getByRole("table", { name: "Assets table" }),
@@ -532,7 +533,7 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
         page.getByRole("heading", {
           exact: true,
           level: 2,
-          name: "Risk Acceptance",
+          name: "Accepted risk control center",
         }),
       ).toBeVisible({ timeout: 15_000 })
       await expect(page.getByText("CAB-2026-014").first()).toBeVisible()

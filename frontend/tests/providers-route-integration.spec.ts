@@ -94,8 +94,12 @@ test("providers route presents health-first data source diagnostics", async ({
     page.getByRole("heading", { level: 1, name: "Data Sources" }),
   ).toBeVisible()
   await expect(page.getByText("EPSS source is stale").first()).toBeVisible()
-  await expect(page.getByText("KEV catalog cache is missing").first()).toBeVisible()
-  await expect(page.getByText("Provider trust status").first()).toBeVisible()
+  await expect(
+    page.getByText("KEV catalog cache is missing").first(),
+  ).toBeVisible()
+  await expect(
+    page.getByText("Provider evidence workspace").first(),
+  ).toBeVisible()
   await expect(page.getByText("Provider health").first()).toBeVisible()
   await expect(page.getByText("Freshness").first()).toBeVisible()
   await expect(page.getByText("Degraded").first()).toBeVisible()
@@ -123,10 +127,10 @@ test("providers route presents health-first data source diagnostics", async ({
   await expect(sourcesTable).toContainText("Included")
   await expect(sourcesTable).toContainText("Stale")
   await expect(sourcesTable).toContainText("Missing")
-  await page.getByRole("button", { name: "View details for FIRST EPSS" }).click()
-  await expect(page.getByRole("dialog")).toContainText(
-    "EPSS refresh failed",
-  )
+  await page
+    .getByRole("button", { name: "View details for FIRST EPSS" })
+    .click()
+  await expect(page.getByRole("dialog")).toContainText("EPSS refresh failed")
   await page.keyboard.press("Escape")
 
   await page.getByRole("tab", { name: "Snapshot" }).click()
@@ -153,7 +157,9 @@ test("providers route presents health-first data source diagnostics", async ({
   await expect(
     page.getByText("Provider data quality notes").first(),
   ).toBeVisible()
-  await expect(page.getByText("Source interpretation rules").first()).toBeVisible()
+  await expect(
+    page.getByText("Source interpretation rules").first(),
+  ).toBeVisible()
   await expect(page.getByText("EPSS source is stale").first()).toBeVisible()
   await expect(
     page.getByText("KEV catalog cache is missing").first(),

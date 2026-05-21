@@ -32,13 +32,13 @@ export function buildProviderSourceColumns({
       ),
       header: "Source",
       id: "source",
-      width: "18%",
+      width: "16%",
     },
     {
       cell: (row) => row.purpose,
       header: "Purpose",
       id: "purpose",
-      width: "18%",
+      width: "17%",
     },
     {
       cell: (row) => (
@@ -46,19 +46,19 @@ export function buildProviderSourceColumns({
       ),
       header: "Status",
       id: "status",
-      width: "10%",
+      width: "9%",
     },
     {
       cell: (row) => row.lastUpdated,
       header: "Last updated",
       id: "last-updated",
-      width: "14%",
+      width: "13%",
     },
     {
       cell: (row) => row.age,
       header: "Age",
       id: "age",
-      width: "9%",
+      width: "8%",
     },
     {
       cell: (row) => (
@@ -69,13 +69,13 @@ export function buildProviderSourceColumns({
       ),
       header: "Evidence use",
       id: "evidence-use",
-      width: "12%",
+      width: "11%",
     },
     {
       cell: (row) => row.notes,
       header: "Notes",
       id: "notes",
-      width: "20%",
+      width: "18%",
     },
     {
       cell: (row) => (

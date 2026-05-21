@@ -5,9 +5,10 @@ import {
   FileArchive,
   Signal,
 } from "lucide-react"
+import type { ReactNode } from "react"
 
 import type { ProviderStatusPublic } from "@/api-client"
-import { VpwGrid, VpwMetricCard } from "@/components/vpw"
+import type { VpwMetricTone } from "@/components/vpw"
 import {
   evidenceReadinessCardTone,
   evidenceReadinessLabel,
@@ -25,24 +26,51 @@ type ProviderMetricsGridProps = {
   providerStatus: ProviderStatusPublic | null
 }
 
-export function ProviderMetricsGrid({ providerStatus }: ProviderMetricsGridProps) {
+function ProviderKpiCard({
+  description,
+  icon,
+  label,
+  tone,
+  value,
+}: {
+  description: string
+  icon: ReactNode
+  label: string
+  tone: VpwMetricTone
+  value: string
+}) {
   return (
-    <VpwGrid columns={4}>
-      <VpwMetricCard
+    <div className="providers-kpi-card" data-tone={tone}>
+      <span className="providers-kpi-card__icon">{icon}</span>
+      <div className="providers-kpi-card__body">
+        <span className="vpw-label">{label}</span>
+        <strong>{value}</strong>
+        <small title={description}>{description}</small>
+      </div>
+    </div>
+  )
+}
+
+export function ProviderMetricsGrid({
+  providerStatus,
+}: ProviderMetricsGridProps) {
+  return (
+    <section aria-label="Provider summary" className="providers-kpi-strip">
+      <ProviderKpiCard
         description={providerHealthDescription(providerStatus)}
         icon={<Signal aria-hidden="true" />}
         label="Provider health"
         tone={providerHealthTone(providerStatus)}
         value={providerHealthLabel(providerStatus)}
       />
-      <VpwMetricCard
+      <ProviderKpiCard
         description={providerFreshnessDetail(providerStatus)}
         icon={<Database aria-hidden="true" />}
         label="Freshness"
         tone={providerFreshnessTone(providerStatus)}
         value={providerFreshnessLabel(providerStatus)}
       />
-      <VpwMetricCard
+      <ProviderKpiCard
         description={snapshotModeDescription(providerStatus)}
         icon={<LockKeyhole aria-hidden="true" />}
         label="Snapshot mode"
@@ -51,7 +79,7 @@ export function ProviderMetricsGrid({ providerStatus }: ProviderMetricsGridProps
         }
         value={snapshotModeLabel(providerStatus)}
       />
-      <VpwMetricCard
+      <ProviderKpiCard
         description="Provider metadata can be attached to evidence bundles where available."
         icon={
           providerStatus?.last_error ? (
@@ -64,6 +92,6 @@ export function ProviderMetricsGrid({ providerStatus }: ProviderMetricsGridProps
         tone={evidenceReadinessCardTone(providerStatus)}
         value={evidenceReadinessLabel(providerStatus)}
       />
-    </VpwGrid>
+    </section>
   )
 }

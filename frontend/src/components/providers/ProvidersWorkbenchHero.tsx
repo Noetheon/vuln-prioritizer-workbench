@@ -1,10 +1,18 @@
 import { Link } from "@/lib/router"
-import { Activity, FileText } from "lucide-react"
+import {
+  Activity,
+  AlertTriangle,
+  Database,
+  FileCheck2,
+  FileText,
+  LockKeyhole,
+  Signal,
+} from "lucide-react"
+import type { ReactNode } from "react"
 import type { ProviderStatusPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
-  MetaTag,
-  StatusLozenge,
+  type VpwMetricTone,
   VpwPanel,
   VpwSection,
   VpwSectionHeader,
@@ -16,8 +24,11 @@ import {
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   evidenceReadinessLabel,
+  evidenceReadinessCardTone,
   providerFreshnessLabel,
+  providerFreshnessTone,
   providerHealthLabel,
+  providerHealthTone,
   type ProvidersWorkbenchProps,
   snapshotModeLabel,
   warningSummary,
@@ -30,6 +41,33 @@ type ProviderStatusAlertsProps = Pick<
   providerStatus: ProviderStatusPublic | null
 }
 
+function ProviderContextItem({
+  detail,
+  icon,
+  label,
+  tone,
+  value,
+}: {
+  detail: string
+  icon: ReactNode
+  label: string
+  tone: VpwMetricTone
+  value: string
+}) {
+  return (
+    <div className="providers-context-strip__item">
+      <span className="providers-context-strip__icon" data-tone={tone}>
+        {icon}
+      </span>
+      <div>
+        <span className="vpw-label">{label}</span>
+        <strong>{value}</strong>
+        <small>{detail}</small>
+      </div>
+    </div>
+  )
+}
+
 export function ProvidersHero({
   onRefreshProviderStatus,
   providerStatus,
@@ -38,74 +76,93 @@ export function ProvidersHero({
 }: ProvidersWorkbenchProps) {
   const evidenceReadiness = evidenceReadinessLabel(providerStatus)
   const projectSearch = selectedProjectRouteSearch(selectedProjectId)
+  const warningCount = providerStatus?.warnings?.length ?? 0
+  const snapshotTone: VpwMetricTone = providerStatus?.snapshot
+    .locked_provider_data
+    ? "support"
+    : "info"
 
   return (
     <VpwSection>
-      <VpwPanel className="flex flex-col gap-5 p-5">
-        <VpwSectionHeader
-          description="Monitor vulnerability intelligence sources, provider snapshot freshness, and evidence data quality."
-          eyebrow="Data source trust"
-          title="Provider trust status"
-        />
-        <VpwToolbar label="Provider actions" variant="plain">
-          <VpwToolbarGroup>
-            <Button
-              aria-busy={providerStatusLoading}
-              disabled={providerStatusLoading}
-              onClick={onRefreshProviderStatus}
-              type="button"
-            >
-              <Activity aria-hidden="true" data-icon="inline-start" />
-              Refresh status
-            </Button>
-            <Button asChild variant="outline">
-              <Link search={projectSearch} to="/reports">
-                <FileText aria-hidden="true" data-icon="inline-start" />
-                Open Evidence Center
-              </Link>
-            </Button>
-          </VpwToolbarGroup>
-        </VpwToolbar>
-        <p className="max-w-3xl text-sm leading-6 text-[var(--vpw-text-secondary)]">
+      <VpwPanel className="providers-command-panel">
+        <div className="providers-command-header">
+          <div className="providers-command-copy">
+            <VpwSectionHeader
+              description="Monitor vulnerability intelligence sources, provider snapshot freshness, and evidence data quality."
+              eyebrow="Data source trust"
+              title="Provider evidence workspace"
+            />
+          </div>
+          <VpwToolbar label="Provider actions" variant="plain">
+            <VpwToolbarGroup>
+              <Button
+                aria-busy={providerStatusLoading}
+                disabled={providerStatusLoading}
+                onClick={onRefreshProviderStatus}
+                type="button"
+              >
+                <Activity aria-hidden="true" data-icon="inline-start" />
+                Refresh status
+              </Button>
+              <Button asChild variant="outline">
+                <Link search={projectSearch} to="/reports">
+                  <FileText aria-hidden="true" data-icon="inline-start" />
+                  Open Evidence Center
+                </Link>
+              </Button>
+            </VpwToolbarGroup>
+          </VpwToolbar>
+        </div>
+
+        <div className="providers-context-strip">
+          <ProviderContextItem
+            detail="Provider signals for prioritization"
+            icon={<Signal aria-hidden="true" />}
+            label="Provider health"
+            tone={providerHealthTone(providerStatus)}
+            value={providerHealthLabel(providerStatus)}
+          />
+          <ProviderContextItem
+            detail="Stored cache age and sync state"
+            icon={<Database aria-hidden="true" />}
+            label="Freshness"
+            tone={providerFreshnessTone(providerStatus)}
+            value={providerFreshnessLabel(providerStatus)}
+          />
+          <ProviderContextItem
+            detail="Replay behavior for reports"
+            icon={<LockKeyhole aria-hidden="true" />}
+            label="Snapshot"
+            tone={snapshotTone}
+            value={snapshotModeLabel(providerStatus)}
+          />
+          <ProviderContextItem
+            detail="Report artifact metadata"
+            icon={<FileCheck2 aria-hidden="true" />}
+            label="Evidence readiness"
+            tone={evidenceReadinessCardTone(providerStatus)}
+            value={evidenceReadiness}
+          />
+          <ProviderContextItem
+            detail="Source warnings and update errors"
+            icon={<AlertTriangle aria-hidden="true" />}
+            label="Warnings"
+            tone={
+              providerStatus?.last_error
+                ? "critical"
+                : warningCount > 0
+                  ? "warning"
+                  : "success"
+            }
+            value={warningSummary(providerStatus)}
+          />
+        </div>
+
+        <p className="providers-command-note">
           Evidence Center uses recorded provider snapshots and report artifacts
           for reproducible review. Refresh status reloads stored provider state
           from the backend; it does not scan systems.
         </p>
-        <VpwToolbar label="Provider trust summary" variant="plain">
-          <VpwToolbarGroup>
-            <MetaTag label="Provider data" />
-            <StatusLozenge
-              label={`Health: ${providerHealthLabel(providerStatus)}`}
-              status={providerHealthLabel(providerStatus)}
-            />
-            <StatusLozenge
-              label={`Freshness: ${providerFreshnessLabel(providerStatus)}`}
-              status={providerFreshnessLabel(providerStatus)}
-            />
-            <StatusLozenge
-              label={`Snapshot: ${snapshotModeLabel(providerStatus)}`}
-              status={
-                providerStatus?.snapshot.locked_provider_data
-                  ? "ready"
-                  : "open"
-              }
-            />
-            <StatusLozenge
-              label={`Evidence: ${evidenceReadiness}`}
-              status={evidenceReadiness === "Ready" ? "ready" : "review_due"}
-            />
-            <StatusLozenge
-              label={`Warnings: ${warningSummary(providerStatus)}`}
-              status={
-                providerStatus?.last_error
-                  ? "failed"
-                  : (providerStatus?.warnings?.length ?? 0) > 0
-                    ? "review_due"
-                    : "ready"
-              }
-            />
-          </VpwToolbarGroup>
-        </VpwToolbar>
       </VpwPanel>
     </VpwSection>
   )

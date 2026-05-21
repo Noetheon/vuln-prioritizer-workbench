@@ -89,14 +89,16 @@ export function WaiverReviewSection({
 
   return (
     <VpwSection>
-      <VpwPanel className="flex flex-col gap-5 p-5">
-        <VpwSectionHeader
-          description="Review queue and owner accountability for current accepted-risk decisions."
-          eyebrow="Governance"
-          title="Governance overview"
-        />
-        <VpwGrid columns={2}>
-          <div className="flex flex-col gap-4">
+      <VpwPanel className="waivers-governance-panel">
+        <div className="waivers-governance-header">
+          <VpwSectionHeader
+            description="Review queue and owner accountability for current accepted-risk decisions."
+            eyebrow="Governance"
+            title="Governance overview"
+          />
+        </div>
+        <VpwGrid columns={2} className="waivers-governance-grid">
+          <div className="waivers-governance-column">
             <VpwSectionHeader
               description="Decision lifecycle debt that needs owner follow-up."
               eyebrow="Review queue"
@@ -138,7 +140,7 @@ export function WaiverReviewSection({
                 title="No review queue"
               />
             ) : (
-              <div className="grid gap-3">
+              <div className="waivers-review-queue-list">
                 {queue.map((item) => (
                   <VpwWaiverDecisionCard
                     key={item.id}
@@ -153,7 +155,7 @@ export function WaiverReviewSection({
             )}
           </div>
 
-          <div className="flex flex-col gap-4">
+          <div className="waivers-governance-column">
             <VpwSectionHeader
               description="Owners ranked by review pressure and accepted finding exposure."
               eyebrow="Owner rollup"
@@ -171,6 +173,7 @@ export function WaiverReviewSection({
                 />
               }
               getRowKey={(row) => row.owner}
+              className="waivers-owner-rollup-table"
               minWidth="560px"
             />
           </div>

@@ -86,9 +86,11 @@ export function WaiverRegister({
         }
         description="Accepted risk remains visible after creation and expiry."
         eyebrow="Register"
-        title="Accepted risk register"
+        className="waivers-register-card"
+        title="Decision register"
       >
         <VpwFilterBar
+          className="waivers-filter-bar"
           actions={
             <Button
               aria-label="Reset risk acceptance filters"

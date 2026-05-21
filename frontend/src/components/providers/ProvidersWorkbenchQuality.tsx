@@ -38,9 +38,7 @@ function QualityNote({
   }[tone]
 
   return (
-    <div
-      className={`rounded-[var(--vpw-radius-lg)] border border-l-2 border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] px-4 py-3 ${toneClass}`}
-    >
+    <div className={`providers-quality-note ${toneClass}`}>
       <h3 className="text-sm font-semibold text-[var(--vpw-text-primary)]">
         {title}
       </h3>
@@ -60,13 +58,16 @@ function ProviderDataQualityNotes({
   const derivedNotes = providerDataQualityNotes(providerStatus)
 
   return (
-    <VpwPanel className="flex flex-col gap-5 p-5">
+    <VpwPanel className="providers-section-panel">
       <VpwSectionHeader
         description="Operational warnings and interpretation rules for provider signals."
         eyebrow="Provider data quality"
         title="Provider data quality notes"
       />
-      <section className="flex flex-col gap-3" aria-labelledby="provider-active-warnings">
+      <section
+        className="providers-quality-group"
+        aria-labelledby="provider-active-warnings"
+      >
         <h3
           className="text-sm font-semibold text-[var(--vpw-text-primary)]"
           id="provider-active-warnings"
@@ -92,7 +93,7 @@ function ProviderDataQualityNotes({
       </section>
 
       <section
-        className="flex flex-col gap-3"
+        className="providers-quality-group"
         aria-labelledby="provider-interpretation-rules"
       >
         <h3
@@ -118,7 +119,7 @@ function ProviderDataQualityNotes({
       </section>
 
       <section
-        className="flex flex-col gap-3"
+        className="providers-quality-group"
         aria-labelledby="provider-snapshot-notes"
       >
         <h3
@@ -154,9 +155,9 @@ export function ProviderDataQualitySection({
 
   return (
     <VpwSection>
-      <VpwGrid columns={2}>
+      <VpwGrid columns={2} className="providers-detail-grid">
         <ProviderDataQualityNotes providerStatus={providerStatus} />
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="providers-quality-side">
           <VpwEvidenceFlowCard items={evidenceFlowItems} />
           <VpwStatusBanner title="Provider data boundary" tone="info">
             Provider data supports prioritization and reporting. It does not

@@ -304,12 +304,13 @@
   }
 
   .finding-detail-tabs-list {
+    overflow-x: auto;
     width: 100%;
   }
 
   .finding-detail-tab-trigger {
-    flex: 1 1 0;
-    min-width: 0;
+    flex: 0 0 auto;
+    min-width: max-content;
   }
 }
 

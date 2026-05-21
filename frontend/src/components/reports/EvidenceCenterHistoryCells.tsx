@@ -61,10 +61,28 @@ export function ReportStatusCell({
         : verificationFailed
           ? "Verify failed"
           : report.format === "zip"
-            ? "Bundle"
+            ? "Bundle available"
             : "Generated"
 
   return <StatusLozenge density="compact" label={label} status={status} />
+}
+
+export function ReportVerificationCell({ label }: { label: string }) {
+  const status =
+    label === "Verified" || label === "Checksum recorded"
+      ? "succeeded"
+      : label === "Verification failed"
+        ? "failed"
+        : label === "Verification running" || label === "Verification pending"
+          ? "review_due"
+          : "unknown"
+  return (
+    <StatusLozenge
+      density="compact"
+      label={label}
+      status={status}
+    />
+  )
 }
 
 export function ReportChecksumCell({ report }: { report: ReportPublic }) {

@@ -31,14 +31,13 @@ export function ProviderDiagnosticsSection({
   const sourceErrors = (providerStatus?.sources ?? []).filter(
     (source) => source.last_error,
   )
-  const errorsCount =
-    (providerStatus?.last_error ? 1 : 0) + sourceErrors.length
+  const errorsCount = (providerStatus?.last_error ? 1 : 0) + sourceErrors.length
   const readinessScore = evidenceReadinessScore(providerStatus)
 
   return (
     <VpwSection>
-      <VpwGrid columns={2}>
-        <VpwPanel className="flex flex-col gap-4 p-5">
+      <VpwGrid columns={2} className="providers-detail-grid">
+        <VpwPanel className="providers-section-panel">
           <VpwSectionHeader
             description="Operational provider state from the stored local status response."
             eyebrow="Runtime status"
@@ -50,8 +49,7 @@ export function ProviderDiagnosticsSection({
               {
                 label: "Overall status",
                 value: providerHealthLabel(providerStatus),
-                tone:
-                  providerStatus?.status === "ok" ? "success" : "warning",
+                tone: providerStatus?.status === "ok" ? "success" : "warning",
               },
               {
                 label: "Snapshot mode",
@@ -98,7 +96,7 @@ export function ProviderDiagnosticsSection({
           />
         </VpwPanel>
 
-        <VpwPanel className="flex flex-col gap-4 p-5">
+        <VpwPanel className="providers-section-panel">
           <VpwSectionHeader
             description="Latest status check and warning/error counts from stored provider state."
             eyebrow="Last provider status check"
@@ -176,7 +174,7 @@ export function ProviderDiagnosticsSection({
         </VpwPanel>
       </VpwGrid>
 
-      <VpwPanel className="flex flex-col gap-4 p-5">
+      <VpwPanel className="providers-section-panel">
         <VpwSectionHeader
           description="Whether provider metadata can be attached to reproducible evidence bundles."
           eyebrow="Evidence readiness"
@@ -194,7 +192,11 @@ export function ProviderDiagnosticsSection({
         {warnings.length > 0 ? (
           <div className="flex flex-col gap-3">
             {warnings.map((warning) => (
-              <VpwStatusBanner key={warning} title="Provider warning" tone="warning">
+              <VpwStatusBanner
+                key={warning}
+                title="Provider warning"
+                tone="warning"
+              >
                 {warning}
               </VpwStatusBanner>
             ))}
@@ -215,12 +217,10 @@ export function ProviderDiagnosticsSection({
         ) : null}
       </VpwPanel>
 
-      <VpwPanel className="p-5">
+      <VpwPanel className="providers-raw-panel">
         <details className="group">
-          <summary className="cursor-pointer text-sm font-semibold text-[var(--vpw-text-primary)]">
-            Raw diagnostics
-          </summary>
-          <pre className="mt-4 max-h-96 overflow-auto rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-panel)] p-4 text-xs leading-5 text-[var(--vpw-text-secondary)]">
+          <summary className="providers-raw-summary">Raw diagnostics</summary>
+          <pre className="providers-raw-pre">
             {JSON.stringify(providerStatus, null, 2)}
           </pre>
         </details>

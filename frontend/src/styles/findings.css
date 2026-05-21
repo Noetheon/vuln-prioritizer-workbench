@@ -125,10 +125,11 @@
   line-height: 1;
 }
 
-.findings-triage-strip p {
+.findings-triage-strip dd.findings-triage-strip__description {
   margin: 0;
   color: var(--vpw-text-muted);
   font-size: 0.8rem;
+  font-weight: 450;
   line-height: 1.25;
 }
 

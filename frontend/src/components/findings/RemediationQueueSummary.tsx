@@ -114,7 +114,9 @@ export function RemediationQueueSummary({
                 {metric.label}
               </dt>
               <dd>{metric.value}</dd>
-              <p>{metric.description}</p>
+              <dd className="findings-triage-strip__description">
+                {metric.description}
+              </dd>
             </div>
           ))}
         </dl>

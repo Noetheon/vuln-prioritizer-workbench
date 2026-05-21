@@ -155,11 +155,12 @@
   }
 
   .finding-detail-tabs-list {
+    overflow-x: auto;
     width: 100%;
   }
 
   .finding-detail-tabs-list [role="tab"] {
-    min-width: 0;
-    flex: 1;
+    min-width: max-content;
+    flex: 0 0 auto;
   }
 }

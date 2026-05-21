@@ -1,3 +1,5 @@
+import "@/styles/waivers.css"
+
 import { VpwPageContainer, VpwStatusBanner } from "@/components/vpw"
 import {
   WaiverMetrics,
@@ -35,7 +37,7 @@ export function WaiversWorkbench(props: WaiversWorkbenchProps) {
   const queue = reviewQueue(props.waiverDebtItems, props.waivers)
 
   return (
-    <VpwPageContainer className="flex flex-col gap-8 px-0 py-0">
+    <VpwPageContainer className="waivers-workbench flex flex-col gap-6 px-0 py-0">
       <WaiversHero
         openWaiverDrawer={props.openWaiverDrawer}
         onProjectChange={props.onProjectChange}
