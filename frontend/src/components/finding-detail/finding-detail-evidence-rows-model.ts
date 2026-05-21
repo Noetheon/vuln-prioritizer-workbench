@@ -2,6 +2,7 @@ import type { FindingDetailPublic, FindingExplanationPublic } from "@/api-client
 import { joinedValues, objectRecord, stringValue } from "@/lib/app-errors"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 import type { FindingWaiverEvidence } from "@/lib/waiver-view"
+import { formatDateTime } from "../../lib/date-format.ts"
 import type {
   FindingDetailRow,
   FindingOccurrenceRow,
@@ -97,14 +98,9 @@ export function findingEvidenceRows(
 }
 
 function formatFindingDateTime(value: string) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date)
+  return formatDateTime(value, {
+    invalidFallback: (invalidValue) => invalidValue,
+  })
 }
 
 export function findingHistoryRows(

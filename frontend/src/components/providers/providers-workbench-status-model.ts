@@ -1,6 +1,7 @@
 import type { ProviderStatusPublic } from "@/api-client"
 import type { VpwMetricTone } from "@/components/vpw"
 import type { VpwTimelineItem } from "@/components/vpw/VpwTimeline"
+import { formatDateTime as formatWorkbenchDateTime } from "../../lib/date-format.ts"
 
 const freshnessThresholdDays = 7
 const reviewDueThresholdDays = 14
@@ -330,15 +331,7 @@ export function buildProviderEvidenceFlowItems({
 }
 
 export function formatDateTime(value: string | null | undefined) {
-  if (!value) {
-    return "Not recorded"
-  }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date)
+  return formatWorkbenchDateTime(value, {
+    invalidFallback: (invalidValue) => invalidValue,
+  })
 }

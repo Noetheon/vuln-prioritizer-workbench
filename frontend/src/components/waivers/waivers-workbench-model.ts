@@ -8,6 +8,7 @@ import type {
 } from "@/api-client"
 import type { VpwBadgeTone, VpwTimelineItem } from "@/components/vpw"
 import { formatLabel as labelize } from "@/lib/ui-copy"
+import { formatDate as formatWorkbenchDate } from "../../lib/date-format.ts"
 
 export type WaiverFormStateLike = {
   approvalRef: string
@@ -88,12 +89,9 @@ export function shortId(value: string | null | undefined) {
 }
 
 export function formatDate(value: string | null | undefined) {
-  if (!value) return "Not recorded"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-  }).format(date)
+  return formatWorkbenchDate(value, {
+    invalidFallback: (invalidValue) => invalidValue,
+  })
 }
 
 export function waiverScopeLabel(waiver: WaiverPublic) {

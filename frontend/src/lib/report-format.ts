@@ -1,3 +1,5 @@
+import { formatDateTime } from "./date-format.ts"
+
 export type ReportFormat =
   | "markdown"
   | "html"
@@ -21,13 +23,7 @@ export function reportSizeLabel(sizeBytes: number): string {
 }
 
 export function formatReportDateTime(value: string | null | undefined): string {
-  if (!value) return "Not recorded"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "Not recorded"
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date)
+  return formatDateTime(value)
 }
 
 export function isReportableRunStatus(

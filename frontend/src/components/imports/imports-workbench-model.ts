@@ -15,6 +15,7 @@ import {
 import type { FormEventHandler } from "react"
 import { objectRecord, stringValue } from "./imports-workbench-records.ts"
 
+export { formatDateTime } from "../../lib/date-format.ts"
 export { importRunTimelineItems } from "./import-run-timeline-model.ts"
 export { objectRecord, stringValue } from "./imports-workbench-records.ts"
 
@@ -75,16 +76,6 @@ export type ImportsWorkbenchProps = {
   selectedRunId: string
   selectedRunSummary: AnalysisRunSummaryPublic | null
   supportedFormats: readonly SupportedImportFormat[]
-}
-
-export function formatDateTime(value: string | null | undefined) {
-  if (!value) return "Not recorded"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "Not recorded"
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date)
 }
 
 export function runFileLabel(run: {
