@@ -6,6 +6,7 @@ import {
   VpwSurfaceTitle,
 } from "@/components/vpw"
 import { formatLabel as labelize } from "@/lib/ui-copy"
+import { uniqueFindingDataQualityRows } from "./finding-detail-model"
 
 export type FindingDataQualityRow = {
   code: string
@@ -19,22 +20,10 @@ type FindingDataQualityPanelProps = {
   dataQualityRows: readonly FindingDataQualityRow[]
 }
 
-function uniqueDataQualityRows(rows: readonly FindingDataQualityRow[]) {
-  const seen = new Set<string>()
-  return rows.filter((row) => {
-    const key = `${row.severity}:${row.source}:${row.message}`
-    if (seen.has(key)) {
-      return false
-    }
-    seen.add(key)
-    return true
-  })
-}
-
 export function FindingDataQualityPanel({
   dataQualityRows,
 }: FindingDataQualityPanelProps) {
-  const uniqueRows = uniqueDataQualityRows(dataQualityRows)
+  const uniqueRows = uniqueFindingDataQualityRows(dataQualityRows)
 
   return (
     <VpwSurface

@@ -11,9 +11,12 @@ import {
   attackConfidenceLabel,
   attackTacticsLabel,
   findingSlaLabel,
+  compactFindingText,
+  findingRecommendedActionParts,
   type FindingAttackContext,
   type FindingDetailRow,
   type FindingOccurrenceRow,
+  uniqueFindingDataQualityRows,
 } from "@/components/finding-detail/finding-detail-model"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 import type { ProjectUrlSearch } from "@/workbench/selected-project-search"
@@ -41,53 +44,6 @@ type QuickViewAttackTechnique = {
   name?: string | null
   tactics?: string[] | null
   technique_id?: string | null
-}
-
-function compactDrawerText(value: string, maxLength = 260) {
-  const compact = value.replace(/\s+/g, " ").trim()
-  if (compact.length <= maxLength) return compact
-  const sentence = compact.match(/^(.+?[.!?])(?:\s|$)/)?.[1]
-  const candidate = sentence && sentence.length <= maxLength ? sentence : compact
-  const words = candidate.split(/\s+/)
-  let output = ""
-  for (const word of words) {
-    const next = output ? `${output} ${word}` : word
-    if (next.length > maxLength - 3) break
-    output = next
-  }
-  return `${output || candidate.slice(0, maxLength - 3).trimEnd()}...`
-}
-
-function uniqueDataQualityRows(rows: readonly QuickViewDataQualityRow[]) {
-  const seen = new Set<string>()
-  return rows.filter((row) => {
-    const key = `${row.severity}:${row.message}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
-}
-
-function actionParts(value: string) {
-  if (/CISA KEV required action/i.test(value)) {
-    return {
-      detail:
-        "CISA KEV requires remediation or removal where updates exist. Validate affected assets, then record the fix path in Triage.",
-      title: "Apply fixed version or remove affected asset",
-    }
-  }
-  const [label, ...rest] = value.split(":")
-  const title = label.trim()
-  if (title && rest.length > 0 && title.length <= 72) {
-    return {
-      detail: rest.join(":").trim(),
-      title,
-    }
-  }
-  return {
-    detail: value,
-    title: "Recommended remediation",
-  }
 }
 
 function riskScoreLabel(value: QuickViewFinding["risk_score"]) {
@@ -210,7 +166,7 @@ export function QuickViewDecisionSummary({
   rationale: string
   recommendedAction: string
 }) {
-  const action = actionParts(recommendedAction)
+  const action = findingRecommendedActionParts(recommendedAction)
   const assignment = [
     { label: "Owner", value: optionalText(finding.owner) },
     { label: "Service", value: optionalText(finding.business_service) },
@@ -227,7 +183,7 @@ export function QuickViewDecisionSummary({
         <div className="finding-drawer-primary-action">
           <span>Recommended action</span>
           <strong>{action.title}</strong>
-          <p title={recommendedAction}>{compactDrawerText(action.detail)}</p>
+          <p title={recommendedAction}>{compactFindingText(action.detail)}</p>
         </div>
       </div>
       <dl className="finding-drawer-assignment-strip">
@@ -237,7 +193,7 @@ export function QuickViewDecisionSummary({
       </dl>
       <div className="finding-drawer-why-now">
         <span>Why now</span>
-        <p title={rationale}>{compactDrawerText(rationale, 320)}</p>
+        <p title={rationale}>{compactFindingText(rationale, 320)}</p>
       </div>
     </section>
   )
@@ -281,7 +237,7 @@ export function QuickViewEvidenceSnapshot({
   dataQualityRows: readonly QuickViewDataQualityRow[]
   evidenceRows: readonly FindingDetailRow[]
 }) {
-  const dataQuality = uniqueDataQualityRows(dataQualityRows)
+  const dataQuality = uniqueFindingDataQualityRows(dataQualityRows)
 
   return (
     <section

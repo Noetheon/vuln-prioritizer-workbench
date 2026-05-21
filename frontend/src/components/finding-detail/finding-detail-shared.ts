@@ -27,6 +27,26 @@ export type FindingDetailRow = {
 export type FindingOccurrenceRow = Partial<FindingOccurrencePublic> &
   Record<string, unknown>
 
+type DataQualityDedupRow = {
+  message: string
+  severity: string
+  source?: string | null
+}
+
+export function uniqueFindingDataQualityRows<
+  TRow extends DataQualityDedupRow,
+>(rows: readonly TRow[]) {
+  const seen = new Set<string>()
+  return rows.filter((row) => {
+    const key = `${row.severity}:${row.source ?? ""}:${row.message}`
+    if (seen.has(key)) {
+      return false
+    }
+    seen.add(key)
+    return true
+  })
+}
+
 const decisionReasonCopy: Record<string, { label: string; detail: string }> = {
   "asset.context": {
     detail: "Asset context influences operational priority.",
