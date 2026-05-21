@@ -12,7 +12,8 @@
 
 .finding-tabs-toolbar {
   display: flex;
-  align-items: center;
+  align-items: stretch;
+  flex-direction: column;
   justify-content: space-between;
   gap: 1rem;
   border-bottom: 1px solid var(--vpw-border-subtle);
@@ -53,6 +54,8 @@
   flex-wrap: wrap;
   flex: none;
   width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
   height: auto;
   border: 1px solid var(--vpw-border-default);
   border-radius: var(--vpw-radius-md);

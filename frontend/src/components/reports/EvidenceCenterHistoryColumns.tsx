@@ -1,11 +1,7 @@
 import { Clipboard, Download, ShieldCheck } from "lucide-react"
 import type { ReportPublic, ReportVerificationPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { VpwDataTableColumn } from "@/components/vpw"
 import { formatReportDateTime, reportSizeLabel } from "@/lib/report-format"
 import {

@@ -24,7 +24,7 @@
   color: color-mix(in srgb, var(--vpw-amber) 55%, var(--vpw-text-primary));
   font-size: 0.9rem;
   font-weight: 700;
-  box-shadow: var(--vpw-shadow-1);
+  box-shadow: none;
 }
 
 .finding-decision-loading {
@@ -47,14 +47,7 @@
 }
 
 .finding-decision-hero::before {
-  position: absolute;
-  top: 0;
-  right: 24px;
-  left: 24px;
-  height: 2px;
-  border-radius: 0 0 var(--vpw-radius-pill) var(--vpw-radius-pill);
-  background: var(--vpw-teal);
-  content: "";
+  content: none;
 }
 
 .finding-decision-hero-copy {
@@ -108,7 +101,7 @@
 .finding-evidence-summary-card {
   border: 1px solid var(--vpw-border-default);
   border-radius: var(--vpw-radius-lg);
-  background: color-mix(in srgb, var(--vpw-bg-card) 78%, transparent);
+  background: var(--vpw-bg-card);
 }
 
 .finding-decision-hero-metrics li {
@@ -121,18 +114,18 @@
 }
 
 .finding-hero-metric-support {
-  background: color-mix(in srgb, var(--vpw-bg-card) 66%, transparent);
+  background: var(--vpw-bg-card);
 }
 
 .finding-hero-metric-primary {
-  border-color: color-mix(in srgb, var(--vpw-teal) 30%, var(--vpw-bg-card));
+  border-color: var(--vpw-border-default);
   background: var(--vpw-bg-card);
-  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--vpw-teal) 82%, var(--vpw-bg-card));
+  box-shadow: none;
 }
 
 .finding-hero-metric-decision {
-  border-color: color-mix(in srgb, var(--vpw-blue) 24%, var(--vpw-bg-card));
-  background: var(--vpw-bg-info);
+  border-color: var(--vpw-border-default);
+  background: var(--vpw-bg-card);
 }
 
 .finding-decision-hero-metrics span,
@@ -187,12 +180,12 @@
   overflow: hidden;
   border-color: var(--vpw-border-default);
   border-radius: var(--vpw-radius-lg);
-  box-shadow: var(--vpw-shadow-1);
+  box-shadow: none;
 }
 
 .finding-recommendation-card {
-  border-color: color-mix(in srgb, var(--vpw-blue) 22%, var(--vpw-bg-card));
-  background: color-mix(in srgb, var(--vpw-bg-info) 44%, var(--vpw-bg-card));
+  border-color: var(--vpw-border-default);
+  background: var(--vpw-bg-card);
 }
 
 .finding-evidence-summary-title {
@@ -226,20 +219,20 @@
 }
 
 .finding-decision-card {
-  border-color: var(--vpw-border-strong);
+  border-color: var(--vpw-border-default);
   border-radius: var(--vpw-radius-lg);
-  box-shadow: var(--vpw-shadow-1);
+  box-shadow: none;
 }
 
 .finding-analysis-card {
-  border-color: color-mix(in srgb, var(--vpw-teal) 24%, var(--vpw-bg-card));
-  box-shadow: var(--vpw-shadow-2);
+  border-color: var(--vpw-border-default);
+  box-shadow: none;
 }
 
 .finding-action-card {
-  border-color: color-mix(in srgb, var(--vpw-blue) 22%, var(--vpw-bg-card));
+  border-color: var(--vpw-border-default);
   background: var(--vpw-bg-card);
-  box-shadow: inset 0 3px 0 color-mix(in srgb, var(--vpw-blue) 68%, var(--vpw-teal));
+  box-shadow: none;
 }
 
 .finding-analysis-card .finding-card-title,
@@ -820,7 +813,7 @@
   }
 
   .finding-detail-header-action {
-    box-shadow: inset 0 3px 0 color-mix(in srgb, var(--vpw-teal) 72%, var(--vpw-bg-card));
+    box-shadow: none;
   }
 }
 
@@ -873,7 +866,7 @@
 .finding-detail-header-action {
   border-left: 1px solid var(--vpw-border-subtle);
   background: var(--vpw-bg-card);
-  box-shadow: inset 3px 0 0 var(--vpw-red);
+  box-shadow: none;
 }
 
 .finding-detail-header-action strong {

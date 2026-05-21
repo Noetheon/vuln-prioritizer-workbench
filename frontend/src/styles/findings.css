@@ -23,8 +23,8 @@
 
 .findings-remediation-layout .vpw-panel,
 .findings-remediation-layout .vpw-card {
-  border-color: var(--findings-analyst-border);
-  background: var(--findings-analyst-fill);
+  border-color: var(--vpw-border-default);
+  background: var(--vpw-bg-card);
   box-shadow: none;
 }
 
@@ -54,7 +54,7 @@
 .findings-triage-overview__header h2 {
   margin: 0.2rem 0 0;
   color: var(--vpw-text-primary);
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 760;
   line-height: 1.25;
 }
@@ -88,7 +88,7 @@
 
 .findings-triage-strip div {
   display: grid;
-  min-height: 5.5rem;
+  min-height: 5rem;
   align-content: center;
   gap: 0.35rem;
   padding: 0.9rem 1rem;
@@ -120,7 +120,7 @@
 .findings-triage-strip dd {
   margin: 0;
   color: var(--vpw-text-primary);
-  font-size: 1.65rem;
+  font-size: 1.45rem;
   font-weight: 780;
   line-height: 1;
 }

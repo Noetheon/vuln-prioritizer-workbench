@@ -17,7 +17,7 @@ export type VpwToolbarGroupProps = {
 const toolbarVariantClass: Record<NonNullable<VpwToolbarProps["variant"]>, string> =
   {
     framed:
-      "rounded-[var(--vpw-radius-xl)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-3 shadow-[var(--vpw-shadow-1)]",
+      "rounded-[var(--vpw-radius-xl)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-3 shadow-none",
     plain: "p-0",
   }
 

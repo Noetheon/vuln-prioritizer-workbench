@@ -188,7 +188,7 @@ function AssetTableActions({
       <AssetTableAction label="View asset">
         <Button
           aria-current={selectedAssetId === asset.id ? "true" : undefined}
-          aria-label="View"
+          aria-label={`View details for ${asset.name}`}
           className="vpw-table-action-button"
           onClick={() => openAssetDrawer("detail", asset)}
           size="icon-sm"

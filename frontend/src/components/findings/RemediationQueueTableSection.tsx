@@ -93,7 +93,7 @@ export function RemediationQueueTableSection({
           totalCount === 1 ? "" : "s"
         } for ${displayProject?.name ?? "the selected project"}.`}
         eyebrow="Triage focus"
-        title="Findings queue"
+        title="Prioritized findings"
       >
         <FindingsDataTable
           findingDirection={findingDirection}

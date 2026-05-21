@@ -30,7 +30,7 @@
   .waivers-command-copy h2 {
     margin-top: 0.25rem;
     color: var(--vpw-text-primary);
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 720;
     line-height: 1.15;
     letter-spacing: 0;
@@ -68,7 +68,7 @@
     min-width: 0;
     border: 1px solid var(--vpw-border-default);
     border-radius: var(--vpw-radius-xl);
-    background: color-mix(in srgb, var(--vpw-bg-panel) 46%, var(--vpw-bg-card));
+    background: var(--vpw-bg-card);
   }
 
   .waivers-project-control {
