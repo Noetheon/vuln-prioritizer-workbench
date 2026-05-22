@@ -10,12 +10,22 @@ import type {
   AnalysisRunPublic,
   AnalysisRunSummaryPublic,
   ProjectDecisionSummaryPublic,
+  ProviderStatusPublic,
+  ReportPublic,
   ReportVerificationPublic,
 } from "@/api-client"
+import type {
+  VpwBadgeTone,
+  VpwMetricTone,
+  VpwStatusBannerTone,
+} from "@/components/vpw"
 import { objectRecord } from "@/lib/app-errors"
-import type { ReportFormat } from "@/lib/report-format"
+import {
+  formatReportDateTime,
+  reportFormatLabel,
+  type ReportFormat,
+} from "@/lib/report-format"
 import { runStatusTone } from "@/lib/risk-format"
-import type { VpwBadgeTone, VpwMetricTone, VpwStatusBannerTone } from "@/components/vpw"
 
 export type ArtifactCard = {
   actionLabel: string
@@ -29,10 +39,9 @@ export type ArtifactCard = {
 
 export const ARTIFACT_CARDS: ArtifactCard[] = [
   {
-    actionLabel: "Generate HTML",
+    actionLabel: "Generate executive HTML",
     audience: "CISO",
-    description:
-      "Executive browser report with priority summary and evidence links.",
+    description: "Best for CISO and stakeholder review.",
     format: "HTML",
     icon: FileText,
     reportFormat: "html",
@@ -41,14 +50,14 @@ export const ARTIFACT_CARDS: ArtifactCard[] = [
   {
     actionLabel: "Generate Markdown",
     audience: "Engineering",
-    description: "Technical report for analyst handoff, PRs, and audit notes.",
+    description: "Best for analyst handoff and PR or ticket notes.",
     format: "Markdown",
     icon: FileText,
     reportFormat: "markdown",
-    title: "Markdown Technical Report",
+    title: "Technical Markdown Report",
   },
   {
-    actionLabel: "Export JSON",
+    actionLabel: "Export analysis JSON",
     audience: "Automation",
     description:
       "Machine-readable findings and analysis data for downstream systems.",
@@ -58,7 +67,7 @@ export const ARTIFACT_CARDS: ArtifactCard[] = [
     title: "JSON Findings Export",
   },
   {
-    actionLabel: "Export CSV",
+    actionLabel: "Export CSV findings",
     audience: "Audit",
     description:
       "Spreadsheet-friendly findings table for triage and stakeholder review.",
@@ -70,8 +79,7 @@ export const ARTIFACT_CARDS: ArtifactCard[] = [
   {
     actionLabel: "Export Navigator",
     audience: "Security engineering",
-    description:
-      "ATT&CK Navigator JSON with mapped techniques and risk scores.",
+    description: "Defensive ATT&CK Navigator layer when mapped context exists.",
     format: "Navigator JSON",
     icon: GitBranch,
     reportFormat: "attack-navigator",
@@ -88,16 +96,129 @@ export const ARTIFACT_CARDS: ArtifactCard[] = [
     title: "SARIF Export",
   },
   {
-    actionLabel: "Build Bundle",
-    audience: "Evidence",
+    actionLabel: "Build evidence ZIP",
+    audience: "Audit",
     description:
-      "ZIP with all reports, manifest, source artifacts, and SHA256 checksums.",
+      "Best for audit package, manifest, hashes, and provider snapshot.",
     format: "Evidence ZIP",
     icon: FileArchive,
     reportFormat: "zip",
     title: "Evidence ZIP Bundle",
   },
 ]
+
+export const RECOMMENDED_ARTIFACT_FORMATS: readonly ReportFormat[] = [
+  "zip",
+  "html",
+  "markdown",
+]
+
+export const ADDITIONAL_ARTIFACT_FORMATS: readonly ReportFormat[] = [
+  "csv",
+  "json",
+  "sarif",
+  "attack-navigator",
+]
+
+export const ALL_ARTIFACT_FORMATS: readonly ReportFormat[] = [
+  ...RECOMMENDED_ARTIFACT_FORMATS,
+  ...ADDITIONAL_ARTIFACT_FORMATS,
+]
+
+export function artifactCardForFormat(format: ReportFormat) {
+  const card = ARTIFACT_CARDS.find((item) => item.reportFormat === format)
+  if (!card) {
+    throw new Error(`Unknown report format ${format}`)
+  }
+  return card
+}
+
+export function reportForFormat(
+  reports: readonly ReportPublic[],
+  format: ReportFormat,
+) {
+  return reports.find((report) => report.format === format) ?? null
+}
+
+export function evidenceBundleReport(reports: readonly ReportPublic[]) {
+  return reportForFormat(reports, "zip")
+}
+
+export function newestReport(reports: readonly ReportPublic[]) {
+  return (
+    reports
+      .slice()
+      .sort(
+        (left, right) =>
+          new Date(right.created_at).getTime() -
+          new Date(left.created_at).getTime(),
+      )[0] ?? null
+  )
+}
+
+export function generatedArtifactsDetail(reports: readonly ReportPublic[]) {
+  const latest = newestReport(reports)
+  if (!latest) return "Generate the first artifact for this run"
+  return `Latest generated ${formatReportDateTime(latest.created_at)}`
+}
+
+export function generatedActionLabel(
+  format: ReportFormat,
+  existingReport: ReportPublic | null,
+) {
+  if (existingReport) {
+    return format === "zip" ? "Rebuild evidence ZIP" : "Regenerate"
+  }
+  if (format === "zip") return "Build evidence ZIP"
+  if (format === "html") return "Generate executive HTML"
+  if (format === "json") return "Export analysis JSON"
+  if (format === "csv") return "Export CSV findings"
+  return artifactCardForFormat(format).actionLabel
+}
+
+export function artifactStatusLabel(report: ReportPublic | null) {
+  return report ? "Generated" : "Missing"
+}
+
+export function verificationSummary(report: ReportVerificationPublic | null) {
+  return objectRecord(report?.summary)
+}
+
+export function artifactVerificationLabel({
+  report,
+  verificationLoading,
+  verificationReport,
+  verificationReportTarget,
+}: {
+  report: ReportPublic | null
+  verificationLoading: boolean
+  verificationReport: ReportVerificationPublic | null
+  verificationReportTarget: ReportPublic | null
+}) {
+  if (!report) return "Not available"
+  if (report.format !== "zip") return "Checksum recorded"
+  if (verificationReportTarget?.id === report.id && verificationLoading) {
+    return "Verification running"
+  }
+  const summary =
+    verificationReportTarget?.id === report.id
+      ? verificationSummary(verificationReport)
+      : {}
+  if (summary.ok === true) return "Verified"
+  if (verificationReportTarget?.id === report.id && verificationReport) {
+    return "Verification failed"
+  }
+  return "Verification pending"
+}
+
+export function verificationTone(label: string): VpwBadgeTone {
+  if (label === "Verified" || label === "Checksum recorded") return "success"
+  if (label === "Verification failed") return "critical"
+  if (label === "Verification running" || label === "Verification pending") {
+    return "warning"
+  }
+  return "neutral"
+}
 
 export function runFileLabel(run: AnalysisRunPublic): string {
   const summaryJson = run.summary_json as Record<string, unknown> | undefined
@@ -128,8 +249,115 @@ export function summaryOpenFindings(
   return summary.finding_count ?? 0
 }
 
-export function verificationSummary(report: ReportVerificationPublic | null) {
-  return objectRecord(report?.summary)
+export function runShortId(run: AnalysisRunPublic | null) {
+  return run ? run.id.slice(0, 8) : "Not selected"
+}
+
+export function providerSnapshotShortId(
+  run: AnalysisRunPublic | null,
+  providerStatus: ProviderStatusPublic | null,
+) {
+  return (
+    run?.provider_snapshot_id?.slice(0, 8) ??
+    providerStatus?.snapshot.id?.slice(0, 8) ??
+    "Not recorded"
+  )
+}
+
+export function providerSnapshotLabel(
+  run: AnalysisRunPublic | null,
+  providerStatus: ProviderStatusPublic | null,
+) {
+  const snapshot = providerSnapshotShortId(run, providerStatus)
+  const locked = providerStatus?.snapshot.locked_provider_data
+    ? "locked"
+    : providerStatus?.snapshot.missing
+      ? "missing"
+      : "fresh"
+  return `${snapshot} · ${locked}`
+}
+
+export function evidenceReadinessLabel({
+  isDemo,
+  reportActionsEnabled,
+  selectedReportRun,
+}: {
+  isDemo: boolean
+  reportActionsEnabled: boolean
+  selectedReportRun: AnalysisRunPublic | null
+}) {
+  if (isDemo) return "Demo mode"
+  if (!selectedReportRun) return "No import run selected"
+  if (selectedReportRun.status === "failed") return "Run failed"
+  if (reportActionsEnabled) return "Ready for generation"
+  return "Select a completed run"
+}
+
+export function evidenceReadinessTone(label: string): VpwBadgeTone {
+  if (label === "Ready for generation" || label === "Demo mode") {
+    return "success"
+  }
+  if (label === "Run failed") return "critical"
+  return "neutral"
+}
+
+export function runSummaryRecord(
+  summary: AnalysisRunSummaryPublic | null,
+  run: AnalysisRunPublic | null,
+) {
+  return {
+    ...objectRecord(run?.summary_json),
+    ...objectRecord(summary?.summary_json),
+  }
+}
+
+export function attackNavigatorAvailable(
+  summary: AnalysisRunSummaryPublic | null,
+  run: AnalysisRunPublic | null,
+) {
+  const record = runSummaryRecord(summary, run)
+  return (
+    Number(record.attack_mapped_cves ?? record.attack_mapped_count ?? 0) > 0 ||
+    Boolean(record.attack_mapping_file)
+  )
+}
+
+export function contextCoverageFacts(
+  summary: AnalysisRunSummaryPublic | null,
+  run: AnalysisRunPublic | null,
+) {
+  const record = runSummaryRecord(summary, run)
+  const assetContext = objectRecord(record.asset_context)
+  const vex = objectRecord(record.vex)
+  return {
+    acceptedRisk: "Recorded when accepted-risk decisions affect findings",
+    assetContext:
+      Object.keys(assetContext).length > 0 || record.asset_context_upload
+        ? "Present"
+        : "Optional missing",
+    attack:
+      attackNavigatorAvailable(summary, run) || record.attack_source !== "none"
+        ? "Present"
+        : "Optional missing",
+    vex:
+      Object.keys(vex).length > 0 || Number(record.suppressed_by_vex ?? 0) > 0
+        ? "Present"
+        : "Optional missing",
+  }
+}
+
+export function reportHistoryAction(report: ReportPublic) {
+  if (report.format === "zip") return "Built bundle"
+  if (report.format === "csv" || report.format === "json") return "Exported"
+  return "Generated"
+}
+
+export function reportRunLabel(report: ReportPublic) {
+  return report.analysis_run_id.slice(0, 8)
+}
+
+export function artifactFormatLabel(report: ReportPublic) {
+  return reportFormatLabel(report.format)
 }
 
 export function runBadgeTone(
@@ -159,5 +387,17 @@ export function reportFormatTone(format: string): VpwBadgeTone {
 }
 
 export function statusBannerTone(message: string): VpwStatusBannerTone {
+  if (/failed/i.test(message)) return "critical"
   return message ? "success" : "info"
+}
+
+export function actionStatusTitle(message: string, error: string) {
+  if (error) {
+    if (/verification/i.test(error)) return "Bundle verification failed"
+    return "Report generation failed"
+  }
+  if (/verification failed/i.test(message)) return "Bundle verification failed"
+  if (/verified/i.test(message)) return "Bundle verification complete"
+  if (/download/i.test(message)) return "Download started"
+  return "Last action"
 }

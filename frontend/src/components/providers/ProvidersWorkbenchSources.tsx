@@ -1,9 +1,19 @@
 import { Database } from "lucide-react"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  StatusLozenge,
   VpwDataTable,
   VpwEmptyState,
+  VpwKeyValueList,
   VpwSection,
   VpwTableCard,
 } from "@/components/vpw"
@@ -21,17 +31,29 @@ export function ProviderSourcesTable({
   providerStatusLoading,
   rows,
 }: ProviderSourcesTableProps) {
+  const [selectedRow, setSelectedRow] = useState<ProviderSourceRow | null>(null)
   const columns = buildProviderSourceColumns({
-    onRefreshProviderStatus,
-    providerStatusLoading,
+    onViewDetails: setSelectedRow,
   })
 
   return (
     <VpwSection>
       <VpwTableCard
+        className="providers-table-card"
         description="Configured vulnerability intelligence sources and whether they are available for prioritization evidence."
-        eyebrow="Source inventory"
-        title="Data source inventory"
+        actions={
+          <Button
+            aria-busy={providerStatusLoading}
+            disabled={providerStatusLoading}
+            onClick={onRefreshProviderStatus}
+            type="button"
+            variant="outline"
+          >
+            Refresh status
+          </Button>
+        }
+        eyebrow="Data sources"
+        title="Source inventory"
       >
         {rows.length === 0 && !providerStatusLoading ? (
           <VpwEmptyState
@@ -51,10 +73,46 @@ export function ProviderSourcesTable({
             data={rows}
             density="compact"
             getRowKey={(row) => row.id}
-            minWidth="880px"
+            minWidth="1040px"
           />
         )}
       </VpwTableCard>
+      <Dialog
+        onOpenChange={(open) => {
+          if (!open) setSelectedRow(null)
+        }}
+        open={selectedRow !== null}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedRow?.name ?? "Source details"}</DialogTitle>
+            <DialogDescription>
+              Source-level provider status and evidence use from the stored
+              provider response.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedRow ? (
+            <div className="providers-source-dialog">
+              <StatusLozenge
+                label={selectedRow.statusLabel}
+                status={selectedRow.statusToken}
+              />
+              <VpwKeyValueList
+                columns={2}
+                items={[
+                  { label: "Purpose", value: selectedRow.purpose },
+                  { label: "Technical name", value: selectedRow.technicalName },
+                  { label: "Last updated", value: selectedRow.lastUpdated },
+                  { label: "Age", value: selectedRow.age },
+                  { label: "Evidence use", value: selectedRow.evidenceUse },
+                  { label: "Value", value: selectedRow.value },
+                  { label: "Notes", value: selectedRow.notes },
+                ]}
+              />
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </VpwSection>
   )
 }

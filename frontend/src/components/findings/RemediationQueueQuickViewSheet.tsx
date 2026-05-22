@@ -36,6 +36,7 @@ import {
   QuickViewEvidenceSnapshot,
   QuickViewGovernanceSection,
   QuickViewOccurrencesPreview,
+  QuickViewSignalBrief,
   QuickViewStatusRow,
 } from "./RemediationQueueQuickViewSections"
 import { componentLabel } from "./remediation-queue-model"
@@ -91,7 +92,7 @@ export function QuickViewSheet({
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="vpw-sheet-content finding-detail-drawer w-[min(100vw,44rem)] gap-0 overflow-hidden p-0 sm:max-w-none">
+      <SheetContent className="vpw-sheet-content finding-detail-drawer max-sm:left-0 max-sm:right-0 max-sm:w-auto max-sm:max-w-none w-[min(100vw,39rem)] gap-0 overflow-hidden p-0 sm:max-w-none">
         <SheetHeader className="border-b border-[var(--vpw-border-default)] px-5 py-4 pr-12 text-left">
           <SheetTitle className="text-base leading-tight text-[var(--vpw-text-primary)]">
             <span className="font-mono">{finding.cve_id}</span>
@@ -101,14 +102,17 @@ export function QuickViewSheet({
             </span>
           </SheetTitle>
           <SheetDescription>
-            Decision preview with evidence, affected context, governance state,
-            and full detail access.
+            {component}
           </SheetDescription>
+          <QuickViewStatusRow finding={effectiveFinding} />
         </SheetHeader>
 
-        <div className="finding-drawer-body">
-          <QuickViewStatusRow finding={effectiveFinding} />
-
+        <section
+          aria-label="Finding quick view content"
+          className="finding-drawer-body"
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: Drawer body is the scroll owner and must be keyboard reachable.
+          tabIndex={0}
+        >
           {error ? (
             <VpwStatusBanner title={error} tone="critical">
               <Button
@@ -137,10 +141,10 @@ export function QuickViewSheet({
             rationale={rationale}
             recommendedAction={recommendedAction}
           />
+          <QuickViewSignalBrief finding={effectiveFinding} />
           <QuickViewEvidenceSnapshot
             dataQualityRows={dataQualityRows}
             evidenceRows={evidenceRows}
-            finding={effectiveFinding}
           />
           <QuickViewOccurrencesPreview occurrences={occurrences} />
           <QuickViewAttackContextSection
@@ -152,7 +156,7 @@ export function QuickViewSheet({
             finding={effectiveFinding}
             projectSearch={projectSearch}
           />
-        </div>
+        </section>
 
         <SheetFooter className="border-t border-[var(--vpw-border-default)] px-5 py-4">
           <Button

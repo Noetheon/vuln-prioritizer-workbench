@@ -1,7 +1,14 @@
 import type { FindingPriority, FindingPublic } from "@/api-client"
 import { optionalText } from "@/lib/ui-copy"
-import { componentLabel, ownerLabel, serviceLabel, type FindingsDirection, type QueueSort } from "./remediation-queue-model"
+import {
+  componentLabel,
+  ownerLabel,
+  serviceLabel,
+  type FindingsDirection,
+  type QueueSort,
+} from "./remediation-queue-model"
 
+export { formatDateTime, formatShortDate } from "../../lib/date-format.ts"
 export { componentLabel, ownerLabel, serviceLabel }
 
 export function assetLabel(finding: FindingPublic) {
@@ -28,6 +35,13 @@ export function findingWhyNowCompact(finding: FindingPublic) {
   return `${firstSentence.slice(0, 107).trimEnd()}...`
 }
 
+export function findingActionLabel(finding: FindingPublic) {
+  const scope = [componentLabel(finding), assetLabel(finding)]
+    .filter((value) => value && value !== "Unknown component")
+    .join(" on ")
+  return scope ? `${finding.cve_id} for ${scope}` : finding.cve_id
+}
+
 export function findingSlaLabel(priority: FindingPriority | undefined) {
   switch (priority) {
     case "critical":
@@ -41,31 +55,6 @@ export function findingSlaLabel(priority: FindingPriority | undefined) {
     default:
       return "Triage SLA"
   }
-}
-
-export function formatDateTime(value: string | null | undefined) {
-  if (!value) return "Not recorded"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return "Not recorded"
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date)
-}
-
-export function formatShortDate(value: string | null | undefined) {
-  if (!value) return "Not recorded"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return "Not recorded"
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "2-digit",
-  }).format(date)
 }
 
 export function sortAriaState(

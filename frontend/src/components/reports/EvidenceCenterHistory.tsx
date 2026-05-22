@@ -18,6 +18,7 @@ type HistoryProps = {
   verificationLoading: boolean
   onDownload: (report: ReportPublic) => void
   onVerify: (report: ReportPublic) => void
+  mode?: "inventory" | "history"
   emptyDescription?: string
   panelDescription?: string
   panelEyebrow?: string
@@ -28,6 +29,7 @@ export function ReportHistory({
   isDemo,
   onDownload,
   onVerify,
+  mode = "history",
   reports,
   reportsLoading,
   verificationLoading,
@@ -41,6 +43,7 @@ export function ReportHistory({
   const rows = isDemo ? DEMO_REPORTS : reports
   const columns = buildReportHistoryColumns({
     isDemo,
+    mode,
     onDownload,
     onVerify,
     verificationLoading,
@@ -85,7 +88,7 @@ export function ReportHistory({
           />
         }
         getRowKey={(report) => report.id}
-        minWidth="860px"
+        minWidth={mode === "inventory" ? "1040px" : "960px"}
       />
     </VpwTableCard>
   )

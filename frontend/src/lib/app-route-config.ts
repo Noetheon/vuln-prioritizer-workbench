@@ -58,15 +58,15 @@ export const routeDetails: Record<WorkbenchPath, RouteDetail> = {
   },
   "/providers": {
     description:
-      "Check provider freshness, local snapshots, warnings, and diagnostics.",
+      "Check provider freshness, local snapshots, warnings, and evidence readiness.",
     eyebrow: "Prepare",
     title: "Data Sources",
     panelTitle: "Data Sources",
-    panelDetail: "Check provider freshness and trust state.",
+    panelDetail: "Check provider freshness, snapshots, and evidence readiness.",
   },
   "/reports": {
     description:
-      "Generate, verify, and download reports and deterministic evidence bundles.",
+      "Generate, verify, and download audit-ready evidence for an import run.",
     eyebrow: "Govern",
     title: "Evidence Center",
     panelTitle: "Evidence Center",

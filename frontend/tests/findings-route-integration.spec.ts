@@ -1,6 +1,10 @@
 import { expect, type Page, test } from "@playwright/test"
 import { evidenceScreenshotPath } from "./evidence-paths"
-import { mockFinding, mockProject, routeWorkbenchShell } from "./workbench-route-mocks"
+import {
+  mockFinding,
+  mockProject,
+  routeWorkbenchShell,
+} from "./workbench-route-mocks"
 
 async function captureAuditScreenshot(page: Page, fileName: string) {
   await page.screenshot({
@@ -70,10 +74,10 @@ test("projects route surfaces partial summary failures", async ({ page }) => {
 
   await page.goto("/projects")
 
+  await expect(page.getByText("Project summary data incomplete")).toBeVisible()
   await expect(
-    page.getByText("Project summary data incomplete"),
+    page.getByText(/1 project summary could not be loaded/),
   ).toBeVisible()
-  await expect(page.getByText(/1 project summary could not be loaded/)).toBeVisible()
   await expect(
     page.getByRole("heading", { level: 1, name: "Projects" }),
   ).toBeVisible()
@@ -169,7 +173,9 @@ test("finding detail still renders when optional explanation fails", async ({
   await page.goto("/findings/finding-1")
 
   await expect(page.getByText("Priority explanation unavailable")).toBeVisible()
-  await expect(page.getByRole("heading", { name: /CVE-2024-3094/ })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: /CVE-2024-3094/ }),
+  ).toBeVisible()
   await expect(
     page.getByRole("region", { name: "Finding priority decision" }),
   ).toBeVisible()
@@ -205,9 +211,7 @@ test("findings table owns horizontal scroll without page overflow", async ({
     }
   })
 
-  expect(metrics.bodyScrollWidth).toBeLessThanOrEqual(
-    metrics.viewportWidth + 1,
-  )
+  expect(metrics.bodyScrollWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1)
   expect(metrics.documentScrollWidth).toBeLessThanOrEqual(
     metrics.viewportWidth + 1,
   )
@@ -257,9 +261,9 @@ test("findings URL search state survives reload and drives API params", async ({
     page.getByRole("table", { name: "Findings remediation queue" }),
   ).toBeVisible()
 
-  await expect.poll(() => requests.at(-1)?.searchParams.get("asset_id")).toBe(
-    "asset-1",
-  )
+  await expect
+    .poll(() => requests.at(-1)?.searchParams.get("asset_id"))
+    .toBe("asset-1")
   const lastRequest = requests.at(-1)
   expect(lastRequest?.searchParams.get("owner_service")).toBe("payments")
   expect(lastRequest?.searchParams.get("priority")).toBe("critical")
@@ -289,9 +293,9 @@ test("findings URL search state survives reload and drives API params", async ({
     await expect(page).toHaveURL(pattern)
   }
   await expect(page).toHaveURL(/ownerService=payments/)
-  await expect.poll(() => requests.at(-1)?.searchParams.get("offset")).toBe(
-    "10",
-  )
+  await expect
+    .poll(() => requests.at(-1)?.searchParams.get("offset"))
+    .toBe("10")
 })
 
 test("findings controls update canonical URLs and preserve detail back context", async ({
@@ -325,22 +329,16 @@ test("findings controls update canonical URLs and preserve detail back context",
   await page.getByRole("combobox", { name: "Priority" }).click()
   await page.getByRole("option", { name: "Critical" }).click()
   await expect(page).toHaveURL(/priority=critical/)
-  await expect.poll(() => requests.at(-1)?.searchParams.get("priority")).toBe(
-    "critical",
-  )
+  await expect
+    .poll(() => requests.at(-1)?.searchParams.get("priority"))
+    .toBe("critical")
   const signalsButton = page.getByRole("button", {
     name: /^Signals(?:\s+\d+)?$/,
   })
-  await expect(signalsButton).toHaveAttribute(
-    "aria-expanded",
-    "false",
-  )
+  await expect(signalsButton).toHaveAttribute("aria-expanded", "false")
   await expect(page.getByRole("combobox", { name: "KEV" })).toHaveCount(0)
   await signalsButton.click()
-  await expect(signalsButton).toHaveAttribute(
-    "aria-expanded",
-    "true",
-  )
+  await expect(signalsButton).toHaveAttribute("aria-expanded", "true")
   await expect(page.getByRole("combobox", { name: "KEV" })).toBeVisible()
   await expect(page.getByRole("combobox", { name: "Exposure" })).toBeVisible()
   await expect(page.getByLabel("EPSS min")).toBeVisible()
@@ -350,9 +348,7 @@ test("findings controls update canonical URLs and preserve detail back context",
   await page.getByRole("combobox", { name: "KEV" }).click()
   await page.getByRole("option", { exact: true, name: "KEV" }).click()
   await expect(page).toHaveURL(/kev=true/)
-  await expect.poll(() => requests.at(-1)?.searchParams.get("kev")).toBe(
-    "true",
-  )
+  await expect.poll(() => requests.at(-1)?.searchParams.get("kev")).toBe("true")
   await page.reload()
   await expect(signalsButton).toHaveAttribute("aria-expanded", "true")
   await expect(page.getByRole("combobox", { name: "KEV" })).toBeVisible()
@@ -360,22 +356,20 @@ test("findings controls update canonical URLs and preserve detail back context",
   await page.getByRole("button", { name: /Sort by Score/ }).click()
   await expect(page).toHaveURL(/sort=score/)
   await expect(page).toHaveURL(/direction=desc/)
-  await expect.poll(() => requests.at(-1)?.searchParams.get("sort")).toBe(
-    "score",
-  )
+  await expect
+    .poll(() => requests.at(-1)?.searchParams.get("sort"))
+    .toBe("score")
 
   await page.getByRole("button", { name: "Next" }).click()
   await expect(page).toHaveURL(/offset=10/)
-  await expect.poll(() => requests.at(-1)?.searchParams.get("offset")).toBe(
-    "10",
-  )
+  await expect
+    .poll(() => requests.at(-1)?.searchParams.get("offset"))
+    .toBe("10")
 
-  await page
-    .getByRole("link", { exact: true, name: "CVE-2024-3210" })
-    .click()
+  await page.getByRole("link", { exact: true, name: "CVE-2024-3210" }).click()
   await expect(page).toHaveURL(/\/findings\/finding-10\?/)
   await expect(page).toHaveURL(/priority=critical/)
-  await page.getByRole("link", { name: "Back to Findings" }).click()
+  await page.getByRole("link", { name: "Back to Triage" }).click()
   await expect(page).toHaveURL(/\/findings\?/)
   await expect(page).toHaveURL(/priority=critical/)
   await expect(page).toHaveURL(/sort=score/)
@@ -391,6 +385,45 @@ test("findings detail, drawer preview, and scroll evidence are covered", async (
     findings: [mockFinding],
     projects: [mockProject],
   })
+  await page.route("**/api/v1/findings/finding-1/explain", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        cve_id: mockFinding.cve_id,
+        decision_explanation: {
+          human_readable:
+            "Critical because KEV is listed, EPSS is high, CVSS is critical, and production context increases operational urgency.",
+          reasons: [
+            {
+              code: "priority.kev.known_exploited",
+              message: "CISA KEV listed for this CVE.",
+            },
+            {
+              code: "priority.critical.epss_cvss",
+              message: "EPSS and CVSS exceed critical thresholds.",
+            },
+            {
+              code: "asset.context",
+              message:
+                "Asset context marks this as internet-facing production scope.",
+            },
+          ],
+        },
+        finding_id: mockFinding.id,
+        priority: mockFinding.priority,
+        priority_rank: 0,
+        project_id: mockFinding.project_id,
+        provider_evidence: {
+          cvss: mockFinding.cvss_base_score,
+          epss: mockFinding.epss,
+          kev: mockFinding.in_kev,
+        },
+        rationale: mockFinding.rationale,
+        recommended_action: mockFinding.recommended_action,
+        risk_score: mockFinding.risk_score,
+      }),
+    }),
+  )
 
   await page.goto("/findings?priority=critical&sort=score&direction=desc")
 
@@ -416,23 +449,25 @@ test("findings detail, drawer preview, and scroll evidence are covered", async (
   )
 
   const quickViewButton = page.getByRole("button", {
-    name: `Quick view ${mockFinding.cve_id}`,
+    name: new RegExp(`Quick view ${mockFinding.cve_id}`),
   })
   await page
-    .getByRole("button", { name: `Quick view ${mockFinding.cve_id}` })
+    .getByRole("button", {
+      name: new RegExp(`Quick view ${mockFinding.cve_id}`),
+    })
     .click()
   const quickViewSheet = page.getByRole("dialog", { name: cvePattern })
   await expect(quickViewSheet).toBeVisible()
-  await expect(quickViewSheet).toContainText("Decision summary")
+  await expect(quickViewSheet).toContainText("Recommended action")
   await expect(quickViewSheet).toContainText(
-    "Known exploited dependency in a critical runtime.",
+    "Critical because KEV is listed, EPSS is high, CVSS is critical, and production context increases operational urgency.",
   )
   await expect(quickViewSheet).toContainText("Patch xz.")
   await expect(quickViewSheet).toContainText("Evidence snapshot")
   await expect(quickViewSheet).toContainText("generic-occurrence-csv")
   await expect(quickViewSheet).toContainText("Defensive ATT&CK context")
   await expect(quickViewSheet).toContainText("does not prove compromise")
-  await expect(quickViewSheet).toContainText("Governance")
+  await expect(quickViewSheet).not.toContainText("No KEV")
   await expect(quickViewSheet).toContainText("Open full detail")
   const fullDetailLink = quickViewSheet.getByRole("link", {
     name: "Open full detail",
@@ -459,22 +494,134 @@ test("findings detail, drawer preview, and scroll evidence are covered", async (
     page.getByRole("region", { name: "Finding priority decision" }),
   ).toBeVisible()
   await expect(page.getByRole("heading", { name: cvePattern })).toBeVisible()
-  await expect(page.getByRole("region", { name: "Risk to decision" })).toBeVisible()
+  await expect(
+    page.getByRole("region", { name: "Risk to decision" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("complementary", { name: "Triage summary" }),
+  ).toContainText("Open in Triage")
+  await expect(
+    page.getByRole("button", { name: "Refresh evidence" }),
+  ).toHaveCount(1)
+  await expect(page.getByRole("tab", { name: "Decision" })).toBeVisible()
+  await expect(page.getByRole("tab", { name: "Evidence" })).toBeVisible()
+  await expect(page.getByRole("tab", { name: "Occurrences" })).toBeVisible()
+  await expect(page.getByRole("tab", { name: "Governance" })).toBeVisible()
+  await expect(page.getByText("Provider decision audit trail")).toBeVisible()
+  await expect(
+    page.getByRole("table", { name: "Provider rationale statements" }),
+  ).toHaveCount(0)
+  await page.getByText("Provider decision audit trail").click()
+  await expect(
+    page.getByRole("table", { name: "Provider rationale statements" }),
+  ).toBeVisible()
+  await page.getByText("Provider decision audit trail").click()
+  await expect(
+    page.getByRole("table", { name: "Provider rationale statements" }),
+  ).toHaveCount(0)
 
-  await page.getByRole("tab", { name: "TTP Context" }).click()
+  await page.getByRole("tab", { name: "Evidence" }).click()
+  await expect(page.getByRole("tabpanel", { name: "Evidence" })).toContainText(
+    "Evidence used for this decision",
+  )
+
+  await page.getByRole("tab", { name: "Occurrences" }).click()
+  const occurrencesPanel = page.getByRole("tabpanel", { name: "Occurrences" })
+  await expect(occurrencesPanel).toContainText("Package / PURL")
+  await expect(occurrencesPanel).toContainText("Environment")
+
+  await page.getByRole("tab", { name: "ATT&CK" }).click()
   await expect(
     page.getByRole("region", { name: "Threat informed context" }),
   ).toBeVisible()
+  await expect(page.getByText("Does not override base priority")).toBeVisible()
   await expect(page.getByText("does not prove exploitation")).toBeVisible()
 
   await page.getByRole("tab", { name: "History" }).click()
-  await expect(page.getByRole("region", { name: "Finding history" })).toBeVisible()
+  await expect(
+    page.getByRole("region", { name: "Finding history" }),
+  ).toBeVisible()
+
+  await page.getByRole("tab", { name: "Governance" }).click()
+  const governancePanel = page.getByRole("tabpanel", { name: "Governance" })
+  await expect(governancePanel).toContainText("No accepted risk record exists")
+  await expect(
+    governancePanel.getByRole("link", { name: "Risk acceptance" }),
+  ).toBeVisible()
   await captureAuditScreenshot(page, "vpw-aud-204-finding-detail-1440.png")
 
-  await page.getByRole("link", { name: "Back to Findings" }).click()
+  await page.getByRole("link", { name: "Back to Triage" }).click()
   await expect(page).toHaveURL(/\/findings\?/)
   await expect(page).toHaveURL(/sort=score/)
   await expect(page).toHaveURL(/priority=critical/)
+})
+
+test("finding detail remains scrollable from shell surfaces at MacBook viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1470, height: 956 })
+  await routeWorkbenchShell(page, {
+    findings: [mockFinding],
+    projects: [mockProject],
+  })
+
+  await page.goto(`/findings/${mockFinding.id}?projectId=${mockProject.id}`)
+
+  const content = page.getByRole("region", {
+    name: "Workbench page content",
+  })
+  await expect(content).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: mockFinding.cve_id }),
+  ).toBeVisible()
+
+  const initialMetrics = await content.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+    scrollTop: element.scrollTop,
+  }))
+  expect(initialMetrics.scrollHeight).toBeGreaterThan(
+    initialMetrics.clientHeight,
+  )
+  expect(initialMetrics.scrollTop).toBe(0)
+
+  async function expectWheelScrollsToBottomFrom(point: {
+    x: number
+    y: number
+  }) {
+    await content.evaluate((element) => {
+      element.scrollTop = 0
+    })
+    await page.mouse.move(point.x, point.y)
+    for (let step = 0; step < 14; step += 1) {
+      await page.mouse.wheel(0, 900)
+    }
+    await expect
+      .poll(() =>
+        content.evaluate(
+          (element) =>
+            element.scrollTop + element.clientHeight >=
+            element.scrollHeight - 4,
+        ),
+      )
+      .toBe(true)
+
+    const metrics = await content.evaluate((element) => ({
+      bottomGap:
+        element.scrollHeight - element.scrollTop - element.clientHeight,
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      scrollTop: element.scrollTop,
+    }))
+    expect(metrics.scrollTop).toBeGreaterThan(0)
+    expect(metrics.bottomGap).toBeLessThanOrEqual(4)
+  }
+
+  await expectWheelScrollsToBottomFrom({ x: 260, y: 112 })
+  await expectWheelScrollsToBottomFrom({ x: 760, y: 520 })
+  await expect(
+    page.getByRole("complementary", { name: "Triage summary" }),
+  ).toContainText("Risk acceptance")
 })
 
 test("findings loading and disabled control semantics are observable", async ({
@@ -523,9 +670,9 @@ test("invalid findings URL params are normalized before API requests", async ({
   )
 
   await expect(page).toHaveURL(/\/findings(?:\?.*)?$/)
-  await expect.poll(() => requests.at(-1)?.searchParams.get("sort")).toBe(
-    "operational",
-  )
+  await expect
+    .poll(() => requests.at(-1)?.searchParams.get("sort"))
+    .toBe("operational")
   const lastRequest = requests.at(-1)
   expect(lastRequest?.searchParams.get("direction")).toBe("asc")
   expect(lastRequest?.searchParams.get("limit")).toBe("10")

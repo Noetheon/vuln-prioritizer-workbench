@@ -2,7 +2,8 @@ import { ListFilter, RotateCcw, X } from "lucide-react"
 import type { Dispatch, SetStateAction } from "react"
 import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
-import { VpwBadge, VpwPanel, VpwSearchInput } from "@/components/vpw"
+import { VpwBadge, VpwSearchInput } from "@/components/vpw"
+import { formatLabel as labelize } from "@/lib/ui-copy"
 import {
   AdvancedFilterSelects,
   PrimaryFilterSelects,
@@ -70,13 +71,81 @@ export function RemediationQueueFilters({
   const queueSearchId = `${controlIdPrefix}-search`
   const ownerServiceSearchId = `${controlIdPrefix}-owner-service`
   const activeSavedView = savedViewFromFilters(findingFilters)
+  const activeFilterChips = [
+    findingAssetId
+      ? {
+          label: `Asset: ${findingAssetKey ?? findingAssetId}`,
+          onRemove: onClearAssetFilter,
+        }
+      : null,
+    queryDraft.trim()
+      ? {
+          label: `Search: ${queryDraft.trim()}`,
+          onRemove: () => setQueryDraft(""),
+        }
+      : null,
+    ownerServiceDraft.trim()
+      ? {
+          label: `Owner / service: ${ownerServiceDraft.trim()}`,
+          onRemove: () => setOwnerServiceDraft(""),
+        }
+      : null,
+    findingFilters.priority
+      ? {
+          label: `Priority: ${labelize(findingFilters.priority)}`,
+          onRemove: () => onFilterChange("priority", ""),
+        }
+      : null,
+    findingFilters.status
+      ? {
+          label: `Status: ${labelize(findingFilters.status)}`,
+          onRemove: () => onFilterChange("status", ""),
+        }
+      : null,
+    findingFilters.kev
+      ? {
+          label: findingFilters.kev === "true" ? "KEV listed" : "Not KEV",
+          onRemove: () => onFilterChange("kev", ""),
+        }
+      : null,
+    findingFilters.exposure
+      ? {
+          label: `Exposure: ${labelize(findingFilters.exposure)}`,
+          onRemove: () => onFilterChange("exposure", ""),
+        }
+      : null,
+    findingFilters.epssMin
+      ? {
+          label: `EPSS min: ${findingFilters.epssMin}`,
+          onRemove: () => onFilterChange("epssMin", ""),
+        }
+      : null,
+    findingFilters.epssMax
+      ? {
+          label: `EPSS max: ${findingFilters.epssMax}`,
+          onRemove: () => onFilterChange("epssMax", ""),
+        }
+      : null,
+    findingFilters.cvssMin
+      ? {
+          label: `CVSS min: ${findingFilters.cvssMin}`,
+          onRemove: () => onFilterChange("cvssMin", ""),
+        }
+      : null,
+    findingFilters.cvssMax
+      ? {
+          label: `CVSS max: ${findingFilters.cvssMax}`,
+          onRemove: () => onFilterChange("cvssMax", ""),
+        }
+      : null,
+  ].filter((chip): chip is { label: string; onRemove: () => void } =>
+    Boolean(chip),
+  )
 
   return (
-    <VpwPanel
+    <section
       aria-label="Findings filters"
       className="findings-filter-card"
-      padded={false}
-      role="region"
     >
       <div className="findings-filter-card__inner">
         <div className="findings-filter-grid">
@@ -116,7 +185,7 @@ export function RemediationQueueFilters({
             <VpwSearchInput
               id={queueSearchId}
               onChange={(e) => setQueryDraft(e.target.value)}
-              placeholder="CVE, component, asset"
+              placeholder="CVE, asset"
               value={queryDraft}
             />
           </label>
@@ -131,7 +200,7 @@ export function RemediationQueueFilters({
             <VpwSearchInput
               id={ownerServiceSearchId}
               onChange={(e) => setOwnerServiceDraft(e.target.value)}
-              placeholder="payments, infra-team"
+              placeholder="Owner or service"
               value={ownerServiceDraft}
             />
           </label>
@@ -184,7 +253,27 @@ export function RemediationQueueFilters({
             onFilterChange={onFilterChange}
           />
         ) : null}
+
+        {activeFilterChips.length > 0 ? (
+          <div className="findings-active-filters">
+            <span className="sr-only">Active filters</span>
+            {activeFilterChips.map((chip, index) => (
+              <Button
+                aria-label={`Remove active filter ${index + 1}`}
+                className="findings-active-filter-chip"
+                key={chip.label}
+                onClick={chip.onRemove}
+                size="xs"
+                type="button"
+                variant="ghost"
+              >
+                <span>{chip.label}</span>
+                <X aria-hidden="true" size={12} />
+              </Button>
+            ))}
+          </div>
+        ) : null}
       </div>
-    </VpwPanel>
+    </section>
   )
 }

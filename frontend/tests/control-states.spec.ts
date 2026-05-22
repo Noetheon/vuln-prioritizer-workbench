@@ -1,6 +1,10 @@
 import { expect, type Locator, test } from "@playwright/test"
 import { evidenceScreenshotPath } from "./evidence-paths"
-import { mockFinding, mockProject, routeWorkbenchShell } from "./workbench-route-mocks"
+import {
+  mockFinding,
+  mockProject,
+  routeWorkbenchShell,
+} from "./workbench-route-mocks"
 
 async function expectButtonStateTokens(
   button: Locator,
@@ -63,7 +67,9 @@ test("shared controls show distinct default, outline, ghost, icon, and disabled 
     page.getByRole("link", { name: /Import findings/ }),
   ).toBeVisible()
   await expect(
-    page.getByRole("button", { name: `Quick view ${mockFinding.cve_id}` }),
+    page.getByRole("button", {
+      name: new RegExp(`Quick view ${mockFinding.cve_id}`),
+    }),
   ).toBeVisible()
 
   const resetButton = page.getByRole("button", { name: "Reset" })

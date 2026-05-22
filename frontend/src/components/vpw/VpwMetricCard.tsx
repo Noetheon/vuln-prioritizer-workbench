@@ -40,15 +40,6 @@ const iconToneClass: Record<VpwMetricTone, string> = {
     "border-[color-mix(in_srgb,var(--vpw-violet)_22%,var(--vpw-bg-card))] bg-[var(--vpw-bg-panel)] text-[var(--vpw-violet)]",
 }
 
-const cardToneClass: Record<VpwMetricTone, string> = {
-  neutral: "border-t-[var(--vpw-border-default)]",
-  success: "border-t-[var(--vpw-green)]",
-  warning: "border-t-[var(--vpw-amber)]",
-  critical: "border-t-[var(--vpw-red)]",
-  info: "border-t-[var(--vpw-blue)]",
-  support: "border-t-[var(--vpw-violet)]",
-}
-
 export function VpwMetricCard({
   className,
   description,
@@ -60,8 +51,7 @@ export function VpwMetricCard({
   return (
     <Card
       className={cn(
-        "vpw-card min-h-[8rem] gap-0 overflow-hidden border-t-2 py-0",
-        cardToneClass[tone],
+        "vpw-card min-h-[7rem] gap-0 overflow-hidden py-0",
         className,
       )}
     >
@@ -83,7 +73,7 @@ export function VpwMetricCard({
         ) : null}
       </CardHeader>
       <CardContent className="px-4 pb-4 pt-0">
-        <CardTitle className="text-2xl font-semibold leading-tight text-[var(--vpw-text-primary)]">
+        <CardTitle className="text-xl font-semibold leading-tight text-[var(--vpw-text-primary)]">
           {value}
         </CardTitle>
         {description ? (

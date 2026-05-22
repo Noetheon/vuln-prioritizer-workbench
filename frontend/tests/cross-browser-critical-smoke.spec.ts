@@ -57,12 +57,12 @@ test("critical Workbench evidence flow works across browser engines", async ({
     page.getByRole("heading", { level: 1, name: "Evidence Center" }),
   ).toBeVisible()
   await expect(
-    page.getByRole("heading", { name: "Generate Evidence Artifacts" }),
+    page.getByRole("heading", { name: "Recommended artifacts" }),
   ).toBeVisible()
 
   const reports = [
-    { action: "Export JSON", filename: "analysis-result.v1.json" },
-    { action: "Build Bundle", filename: "evidence-bundle.zip" },
+    { action: "Export analysis JSON", filename: "analysis-result.v1.json" },
+    { action: "Build evidence ZIP", filename: "evidence-bundle.zip" },
   ]
   for (const report of reports) {
     await page.getByRole("button", { name: report.action }).click()

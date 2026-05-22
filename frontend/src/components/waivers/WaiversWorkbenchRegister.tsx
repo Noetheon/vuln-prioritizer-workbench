@@ -86,9 +86,11 @@ export function WaiverRegister({
         }
         description="Accepted risk remains visible after creation and expiry."
         eyebrow="Register"
-        title="Risk acceptance register"
+        className="waivers-register-card"
+        title="Decision register"
       >
         <VpwFilterBar
+          className="waivers-filter-bar"
           actions={
             <Button
               aria-label="Reset risk acceptance filters"
@@ -142,25 +144,38 @@ export function WaiverRegister({
               <VpwEmptyState
                 action={
                   <div className="flex flex-wrap justify-center gap-2">
-                    <Button
-                      onClick={() => openWaiverDrawer("create")}
-                      type="button"
-                    >
-                      Create acceptance
-                    </Button>
+                    {waivers.length === 0 ? (
+                      <Button
+                        onClick={() => openWaiverDrawer("create")}
+                        type="button"
+                      >
+                        Record accepted risk
+                      </Button>
+                    ) : (
+                      <Button onClick={resetRegisterFilters} type="button">
+                        Clear filters
+                      </Button>
+                    )}
                     <Button asChild variant="outline">
-                      <Link search={projectSearch} to="/findings">
-                        View findings
+                      <Link
+                        search={{ ...projectSearch, status: "accepted" }}
+                        to="/findings"
+                      >
+                        Open accepted findings
                       </Link>
                     </Button>
                   </div>
                 }
                 className="!min-h-72 !rounded-none !border-0 !bg-transparent"
-                description="Create a risk acceptance only when remediation cannot happen immediately and compensating controls are documented."
+                description={
+                  waivers.length === 0
+                    ? "Record accepted risk only when a finding has an accountable owner, scope, expiry, and supporting evidence."
+                    : "Clear filters or adjust the search."
+                }
                 title={
                   waivers.length === 0
                     ? "No accepted risk decisions yet"
-                    : "No decisions match these filters"
+                    : "No accepted-risk records match these filters"
                 }
               />
             }

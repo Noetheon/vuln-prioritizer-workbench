@@ -11,3 +11,7 @@ export function formatLabel(value: string | null | undefined) {
 export function optionalText(value: string | null | undefined) {
   return value?.trim() ? value : "Not supplied"
 }
+
+export function shortId(value: string | null | undefined) {
+  return value ? value.slice(0, 8) : "Not recorded"
+}

@@ -7,15 +7,19 @@ import type {
   ReportPublic,
 } from "@/api-client"
 import {
-  VpwGrid,
-  VpwMetricCard,
+  VpwCompactMetric,
+  VpwMetricStrip,
   VpwSection,
   VpwSectionHeader,
 } from "@/components/vpw"
 import { DEMO_REPORTS, DEMO_RUNS, DEMO_SUMMARY } from "@/lib/demo-data"
-import { formatProviderFreshness } from "@/lib/provider-format"
 import { runStatusLabel } from "@/lib/risk-format"
-import { priorityCount, runMetricTone } from "./evidence-center-model"
+import {
+  evidenceBundleReport,
+  generatedArtifactsDetail,
+  priorityCount,
+  runMetricTone,
+} from "./evidence-center-model"
 
 type SummaryProps = {
   projectSummary: ProjectDecisionSummaryPublic | null
@@ -30,7 +34,6 @@ type SummaryProps = {
 export function EvidenceSummary({
   isDemo,
   projectSummary,
-  providerStatus,
   reports,
   reportsLoading,
   selectedReportRun,
@@ -44,21 +47,18 @@ export function EvidenceSummary({
   const critical = priorityCount(effectiveSummary, "critical")
   const high = priorityCount(effectiveSummary, "high")
   const criticalHigh = critical + high
-  const zipReport = effectiveReports.find((report) => report.format === "zip")
-  const providerSummary = providerStatus
-    ? formatProviderFreshness(providerStatus)
-    : null
+  const zipReport = evidenceBundleReport(effectiveReports)
   const reportCount =
     reportsLoading && !isDemo ? "..." : String(effectiveReports.length)
 
   return (
     <VpwSection>
       <VpwSectionHeader
-        description="Evidence readiness for the selected run."
-        title="Evidence Summary"
+        description="Run status, finding scope, bundle availability, and generated artifacts."
+        title="Evidence summary"
       />
-      <VpwGrid columns={4} className="xl:grid-cols-5">
-        <VpwMetricCard
+      <VpwMetricStrip minCardWidth="11.5rem">
+        <VpwCompactMetric
           description={
             isDemo
               ? "demo run 2025-04-30"
@@ -67,7 +67,7 @@ export function EvidenceSummary({
                 : "No run selected"
           }
           icon={<Clock aria-hidden="true" className="h-4 w-4" />}
-          label="Selected run"
+          label="Run status"
           tone={runMetricTone(effectiveRun, isDemo)}
           value={
             isDemo
@@ -77,14 +77,14 @@ export function EvidenceSummary({
                 : "No run"
           }
         />
-        <VpwMetricCard
+        <VpwCompactMetric
           description="Across all priorities"
           icon={<Layers aria-hidden="true" className="h-4 w-4" />}
           label="Findings in scope"
           tone="info"
           value={String(effectiveSummary?.finding_count ?? 0)}
         />
-        <VpwMetricCard
+        <VpwCompactMetric
           description={`${critical} critical - ${high} high`}
           icon={<AlertTriangle aria-hidden="true" className="h-4 w-4" />}
           label="Critical + High"
@@ -97,27 +97,21 @@ export function EvidenceSummary({
           }
           value={String(criticalHigh)}
         />
-        <VpwMetricCard
-          description={
-            zipReport ? "Evidence bundle available" : "Generate ZIP to finalize"
-          }
+        <VpwCompactMetric
+          description={zipReport ? "Evidence ZIP exists" : "Not built"}
           icon={<ShieldCheck aria-hidden="true" className="h-4 w-4" />}
           label="Evidence bundle"
           tone={zipReport ? "success" : "neutral"}
-          value={zipReport ? "Ready" : "Open"}
+          value={zipReport ? "Available" : "Not built"}
         />
-        <VpwMetricCard
-          description={
-            isDemo
-              ? "NVD, EPSS, KEV"
-              : (providerSummary?.detail ?? "Provider snapshot unavailable")
-          }
+        <VpwCompactMetric
+          description={generatedArtifactsDetail(effectiveReports)}
           icon={<Globe aria-hidden="true" className="h-4 w-4" />}
-          label="Artifacts"
-          tone={isDemo || providerStatus?.status === "ok" ? "success" : "info"}
+          label="Generated artifacts"
+          tone={effectiveReports.length > 0 ? "success" : "neutral"}
           value={reportCount}
         />
-      </VpwGrid>
+      </VpwMetricStrip>
     </VpwSection>
   )
 }

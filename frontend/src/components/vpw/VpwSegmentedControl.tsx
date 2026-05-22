@@ -24,7 +24,7 @@ export function VpwSegmentedControl({
   return (
     <fieldset
       className={cn(
-        "inline-flex rounded-[var(--vpw-radius-md)] bg-[var(--vpw-bg-panel)] p-1",
+        "vpw-segmented-control inline-flex rounded-[var(--vpw-radius-md)] bg-[var(--vpw-bg-panel)] p-1",
         className,
       )}
     >

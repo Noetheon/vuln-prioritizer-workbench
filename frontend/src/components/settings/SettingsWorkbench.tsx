@@ -4,6 +4,7 @@ import {
   SettingsAlerts,
   SettingsHero,
   SettingsDiagnostics,
+  SettingsMetrics,
   SettingsRuntimeProviders,
   SettingsWorkspaceHealth,
 } from "./SettingsWorkbenchSections"
@@ -19,10 +20,7 @@ export function SettingsWorkbench(props: SettingsWorkbenchProps) {
   return (
     <VpwPageContainer className="flex flex-col gap-5 px-0 py-0">
       <SettingsHero
-        providerStatus={props.providerStatus}
-        providerStatusError={props.providerStatusError}
         selectedProjectId={props.selectedProjectId}
-        statusError={props.statusError}
       />
       <SettingsAlerts
         providerStatusError={props.providerStatusError}
@@ -53,13 +51,20 @@ export function SettingsWorkbench(props: SettingsWorkbenchProps) {
         </div>
 
         <TabsContent className="mt-5" value="overview">
-          <SettingsWorkspaceHealth
-            providerStatus={props.providerStatus}
-            providerStatusError={props.providerStatusError}
-            providerStatusLoading={props.providerStatusLoading}
-            status={props.status}
-            statusError={props.statusError}
-          />
+          <div className="flex flex-col gap-4">
+            <SettingsMetrics
+              providerStatus={props.providerStatus}
+              providerStatusError={props.providerStatusError}
+              statusError={props.statusError}
+            />
+            <SettingsWorkspaceHealth
+              providerStatus={props.providerStatus}
+              providerStatusError={props.providerStatusError}
+              providerStatusLoading={props.providerStatusLoading}
+              status={props.status}
+              statusError={props.statusError}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent className="mt-5" value="runtime">

@@ -20,6 +20,7 @@ import { formatLabel as labelize } from "@/lib/ui-copy"
 import {
   assetLabel,
   componentLabel,
+  findingActionLabel,
   formatDateTime,
   formatShortDate,
   findingSlaLabel,
@@ -81,27 +82,36 @@ export function buildFindingsDataTableColumns({
       id: "finding",
       header: "Finding",
       ariaSort: sortAriaState(findingDirection, queueSort, "cve"),
-      cell: (finding) => (
-        <div className="finding-primary-cell">
-          <Link
-            className="finding-cve-link"
-            params={{ findingId: finding.id }}
-            search={findingSearch}
-            title={`Open finding ${finding.cve_id}`}
-            to="/findings/$findingId"
-          >
-            {finding.cve_id}
-          </Link>
-          <strong className="finding-component-name" title={componentLabel(finding)}>
-            {componentLabel(finding)}
-          </strong>
-          {finding.component_purl ? (
-            <span className="remediation-subtext truncate" title={finding.component_purl}>
-              {finding.component_purl}
-            </span>
-          ) : null}
-        </div>
-      ),
+      cell: (finding) => {
+        const actionLabel = findingActionLabel(finding)
+        return (
+          <div className="finding-primary-cell">
+            <Link
+              className="finding-cve-link"
+              params={{ findingId: finding.id }}
+              search={findingSearch}
+              title={`Open finding ${actionLabel}`}
+              to="/findings/$findingId"
+            >
+              {finding.cve_id}
+            </Link>
+            <strong
+              className="finding-component-name"
+              title={componentLabel(finding)}
+            >
+              {componentLabel(finding)}
+            </strong>
+            {finding.component_purl ? (
+              <span
+                className="remediation-subtext truncate"
+                title={finding.component_purl}
+              >
+                {finding.component_purl}
+              </span>
+            ) : null}
+          </div>
+        )
+      },
       className: "w-[20%] min-w-0",
       headerClassName: "w-[20%]",
       sort: sortable("cve", "Finding"),
@@ -116,7 +126,10 @@ export function buildFindingsDataTableColumns({
           <strong className="block truncate" title={assetLabel(finding)}>
             {assetLabel(finding)}
           </strong>
-          <span className="remediation-subtext truncate" title={serviceLabel(finding)}>
+          <span
+            className="remediation-subtext truncate"
+            title={serviceLabel(finding)}
+          >
             {serviceLabel(finding)}
           </span>
           <div className="finding-meta-tags">
@@ -141,11 +154,6 @@ export function buildFindingsDataTableColumns({
       cell: (finding) => (
         <div className="finding-owner-cell">
           <strong>{ownerLabel(finding)}</strong>
-          {finding.business_service ? (
-            <span className="remediation-subtext">
-              {finding.business_service}
-            </span>
-          ) : null}
         </div>
       ),
       className: "w-[11%]",
@@ -191,10 +199,10 @@ export function buildFindingsDataTableColumns({
           </span>
           <div className="finding-meta-tags">
             <MetaTag label={findingSlaLabel(finding.priority)} />
-            {finding.waived ? <MetaTag label="Accepted risk" /> : null}
             {finding.under_investigation ? (
               <MetaTag label="Under review" />
             ) : null}
+            {finding.waived ? <MetaTag label="Accepted risk" /> : null}
           </div>
         </div>
       ),
@@ -206,46 +214,49 @@ export function buildFindingsDataTableColumns({
     {
       id: "view",
       header: "Actions",
-      cell: (finding) => (
-        <div className="vpw-table-actions">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                aria-label={`Quick view ${finding.cve_id}`}
-                className="vpw-table-action-button finding-view-action"
-                onClick={() => onOpenSheet(finding)}
-                size="icon-sm"
-                type="button"
-                variant="outline"
-              >
-                <Eye aria-hidden="true" size={16} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">Open drawer</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                asChild
-                className="vpw-table-action-button finding-view-action"
-                size="icon-sm"
-                type="button"
-                variant="outline"
-              >
-                <Link
-                  aria-label={`Open full detail ${finding.cve_id}`}
-                  params={{ findingId: finding.id }}
-                  search={findingSearch}
-                  to="/findings/$findingId"
+      cell: (finding) => {
+        const actionLabel = findingActionLabel(finding)
+        return (
+          <div className="vpw-table-actions">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label={`Quick view ${actionLabel}`}
+                  className="vpw-table-action-button finding-view-action"
+                  onClick={() => onOpenSheet(finding)}
+                  size="icon-sm"
+                  type="button"
+                  variant="outline"
                 >
-                  <ExternalLink aria-hidden="true" size={16} />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">Full detail</TooltipContent>
-          </Tooltip>
-        </div>
-      ),
+                  <Eye aria-hidden="true" size={16} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">Open drawer</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  asChild
+                  className="vpw-table-action-button finding-view-action"
+                  size="icon-sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <Link
+                    aria-label={`Open full detail ${actionLabel}`}
+                    params={{ findingId: finding.id }}
+                    search={findingSearch}
+                    to="/findings/$findingId"
+                  >
+                    <ExternalLink aria-hidden="true" size={16} />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">Full detail</TooltipContent>
+            </Tooltip>
+          </div>
+        )
+      },
       className: "min-w-[5rem] px-2 text-right",
       headerClassName: "px-2 text-right",
       width: "5rem",

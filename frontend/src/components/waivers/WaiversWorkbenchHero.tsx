@@ -3,9 +3,13 @@ import {
   AlertTriangle,
   CalendarClock,
   ClipboardCheck,
+  ExternalLink,
   FileCheck2,
+  History,
+  Plus,
   ShieldCheck,
 } from "lucide-react"
+import type { ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
@@ -16,22 +20,18 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  VpwBadge,
+  VpwCommandPanel,
+  VpwCompactMetric,
   VpwField,
-  VpwGrid,
-  VpwMetricCard,
-  VpwPanel,
+  VpwMetricStrip,
   VpwSection,
-  VpwSectionHeader,
   VpwToolbar,
   VpwToolbarGroup,
+  type VpwMetricTone,
 } from "@/components/vpw"
 import type { WaiversWorkbenchProps } from "./waivers-workbench-model"
 
 export function WaiversHero({
-  activeWaivers,
-  expired,
-  expiringSoon,
   openWaiverDrawer,
   onProjectChange,
   projectListLoading,
@@ -48,40 +48,47 @@ export function WaiversHero({
   | "projects"
   | "selectedProject"
   | "selectedProjectId"
-> & {
-  activeWaivers: number
-  expired: string
-  expiringSoon: string
-}) {
+> & {}) {
   const projectSearch = selectedProjectRouteSearch(selectedProjectId)
+  const evidenceAvailable = Boolean(projectSummary?.latest_run_id)
 
   return (
-    <VpwSection>
-      <VpwPanel className="flex flex-col gap-5 p-5">
-        <VpwSectionHeader
-          actions={
-            <>
+    <VpwSection className="waivers-command-section">
+      <VpwCommandPanel
+        actions={
+          <VpwToolbar
+            className="waivers-command-actions"
+            label="Risk Acceptance actions"
+            variant="plain"
+          >
+            <VpwToolbarGroup className="waivers-command-actions__group">
               <Button
                 disabled={projectListLoading || projects.length === 0}
                 onClick={() => openWaiverDrawer("create")}
                 type="button"
               >
-                Create acceptance
+                <Plus aria-hidden="true" data-icon="inline-start" />
+                Record accepted risk
               </Button>
               <Button asChild variant="outline">
-                <Link search={projectSearch} to="/findings">
-                  View findings
+                <Link
+                  search={{ ...projectSearch, status: "accepted" }}
+                  to="/findings"
+                >
+                  <ExternalLink aria-hidden="true" data-icon="inline-start" />
+                  Open accepted findings
                 </Link>
               </Button>
-            </>
-          }
-          description="Govern accepted risk decisions with owner, scope, expiry and evidence."
-          eyebrow="Risk acceptance"
-          title="Risk Acceptance"
-        />
-        <VpwToolbar label="Waiver context" variant="plain">
-          <VpwToolbarGroup className="min-w-0">
-            <VpwField className="w-full min-w-0 sm:w-64" label="Project">
+            </VpwToolbarGroup>
+          </VpwToolbar>
+        }
+        description="Govern time-boxed exceptions with owner, scope, expiry, and supporting evidence. Accepted risk remains visible in Triage and Finding Detail."
+        eyebrow="Risk acceptance"
+        title="Accepted risk control center"
+      >
+        <div className="waivers-context-strip">
+          <div className="waivers-project-control">
+            <VpwField className="w-full min-w-0" label="Project">
               <Select
                 disabled={projectListLoading || projects.length === 0}
                 onValueChange={onProjectChange}
@@ -103,82 +110,148 @@ export function WaiversHero({
                   ))}
                 </SelectContent>
               </Select>
+              <small className="waivers-project-control__hint">
+                {selectedProject
+                  ? `${selectedProject.name} acceptance scope`
+                  : "Select a project to review accepted risk"}
+              </small>
             </VpwField>
-          </VpwToolbarGroup>
-          <VpwToolbarGroup>
-            <VpwBadge tone={selectedProject ? "success" : "warning"}>
-              Active project: {selectedProject?.name ?? "None"}
-            </VpwBadge>
-            <VpwBadge tone="info">Active: {activeWaivers}</VpwBadge>
-            <VpwBadge tone={Number(expiringSoon) > 0 ? "warning" : "neutral"}>
-              Expiring soon: {expiringSoon}
-            </VpwBadge>
-            <VpwBadge tone={Number(expired) > 0 ? "critical" : "neutral"}>
-              Expired: {expired}
-            </VpwBadge>
-            <VpwBadge
-              tone={projectSummary?.latest_run_id ? "success" : "neutral"}
-            >
-              Evidence {projectSummary?.latest_run_id ? "ready" : "pending"}
-            </VpwBadge>
-          </VpwToolbarGroup>
-        </VpwToolbar>
-      </VpwPanel>
+          </div>
+          <VpwMetricStrip minCardWidth="14rem">
+            <WaiverContextItem
+              description="Accepted findings stay auditable"
+              icon={<ShieldCheck aria-hidden="true" />}
+              label="Triage visibility"
+              tone="success"
+              value="Always visible"
+            />
+            <WaiverContextItem
+              description={
+                evidenceAvailable
+                  ? "Latest import evidence can support decisions"
+                  : "Record approval references before relying on exceptions"
+              }
+              icon={<FileCheck2 aria-hidden="true" />}
+              label="Evidence"
+              tone={evidenceAvailable ? "success" : "warning"}
+              value={evidenceAvailable ? "Available" : "Pending"}
+            />
+            <WaiverContextItem
+              description="Owner, scope, review, and expiry are required"
+              icon={<History aria-hidden="true" />}
+              label="Lifecycle"
+              value="Time-boxed"
+            />
+          </VpwMetricStrip>
+        </div>
+      </VpwCommandPanel>
     </VpwSection>
+  )
+}
+
+function WaiverContextItem({
+  description,
+  icon,
+  label,
+  tone = "neutral",
+  value,
+}: {
+  description: string
+  icon: ReactNode
+  label: string
+  tone?: VpwMetricTone
+  value: string
+}) {
+  return (
+    <VpwCompactMetric
+      description={description}
+      icon={icon}
+      label={label}
+      tone={tone}
+      value={value}
+    />
   )
 }
 
 export function WaiverMetrics({
   acceptedFindings,
   activeWaivers,
-  expired,
   expiringSoon,
   missingApprovals,
+  reviewDue,
   waiversLoading,
 }: Pick<WaiversWorkbenchProps, "waiversLoading"> & {
   acceptedFindings: string
   activeWaivers: number
-  expired: string
   expiringSoon: string
   missingApprovals: number
+  reviewDue: string
 }) {
   return (
-    <VpwGrid columns={1} className="md:grid-cols-2 xl:grid-cols-5">
-      <VpwMetricCard
-        description="currently accepted risk"
+    <VpwMetricStrip
+      aria-label="Risk acceptance summary"
+      className="waivers-kpi-strip"
+      minCardWidth="11.5rem"
+    >
+      <WaiverKpiCard
+        description="accepted risk currently active"
         icon={<ShieldCheck aria-hidden="true" className="h-4 w-4" />}
-        label="Active acceptances"
+        label="Active decisions"
         tone="success"
         value={waiversLoading ? "Loading" : activeWaivers}
       />
-      <VpwMetricCard
+      <WaiverKpiCard
+        description="requires owner review"
+        icon={<ClipboardCheck aria-hidden="true" className="h-4 w-4" />}
+        label="Review due"
+        tone={Number(reviewDue) > 0 ? "warning" : "neutral"}
+        value={reviewDue}
+      />
+      <WaiverKpiCard
         description="within the review window"
         icon={<CalendarClock aria-hidden="true" className="h-4 w-4" />}
         label="Expiring soon"
         tone={Number(expiringSoon) > 0 ? "warning" : "neutral"}
         value={expiringSoon}
       />
-      <VpwMetricCard
-        description="past expiry date"
-        icon={<AlertTriangle aria-hidden="true" className="h-4 w-4" />}
-        label="Expired acceptances"
-        tone={Number(expired) > 0 ? "critical" : "neutral"}
-        value={expired}
-      />
-      <VpwMetricCard
+      <WaiverKpiCard
         description="findings currently accepted"
         icon={<FileCheck2 aria-hidden="true" className="h-4 w-4" />}
         label="Accepted findings"
         tone="info"
         value={acceptedFindings}
       />
-      <VpwMetricCard
+      <WaiverKpiCard
         description="missing approval reference or ticket"
-        icon={<ClipboardCheck aria-hidden="true" className="h-4 w-4" />}
-        label="Incomplete evidence"
+        icon={<AlertTriangle aria-hidden="true" className="h-4 w-4" />}
+        label="Evidence incomplete"
         tone={missingApprovals > 0 ? "warning" : "success"}
         value={waiversLoading ? "Loading" : missingApprovals}
       />
-    </VpwGrid>
+    </VpwMetricStrip>
+  )
+}
+
+function WaiverKpiCard({
+  description,
+  icon,
+  label,
+  tone = "neutral",
+  value,
+}: {
+  description: string
+  icon: ReactNode
+  label: string
+  tone?: VpwMetricTone
+  value: ReactNode
+}) {
+  return (
+    <VpwCompactMetric
+      description={description}
+      icon={icon}
+      label={label}
+      tone={tone}
+      value={value}
+    />
   )
 }

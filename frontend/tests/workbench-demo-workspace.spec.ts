@@ -74,10 +74,11 @@ test("workbench demo workspace seeds persisted dashboard and reports", async ({
   await expect(
     page.getByRole("heading", { name: "Risk Acceptance" }),
   ).toBeVisible()
-  await expect(page.getByText("Active: 3", { exact: true })).toBeVisible()
-  await expect(
-    page.getByText("Expiring soon: 1", { exact: true }),
-  ).toBeVisible()
+  const riskSummary = page.getByLabel("Risk acceptance summary")
+  await expect(riskSummary).toContainText("Active decisions")
+  await expect(riskSummary).toContainText("3")
+  await expect(riskSummary).toContainText("Expiring soon")
+  await expect(riskSummary).toContainText("1")
   await expect(page.getByText("DEMO-RISK-1001").first()).toBeVisible()
   await expect(page.getByText("DEMO-RISK-1004").first()).toBeVisible()
 

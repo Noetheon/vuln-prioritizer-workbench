@@ -1,14 +1,10 @@
+import "@/styles/providers.css"
+
 import { VpwPageContainer } from "@/components/vpw"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   ProviderDiagnosticsSection,
   ProviderDataQualitySection,
-  ProviderMetricsGrid,
   ProviderSnapshotDetails,
   ProviderSourcesTable,
   ProviderStatusAlerts,
@@ -34,7 +30,7 @@ export function ProvidersWorkbench({
   const counts = providerSourceCounts(rows)
 
   return (
-    <VpwPageContainer className="flex flex-col gap-6 px-0 py-0">
+    <VpwPageContainer className="providers-workbench flex flex-col gap-6 px-0 py-0">
       <ProvidersHero
         onRefreshProviderStatus={onRefreshProviderStatus}
         providerStatus={providerStatus}
@@ -48,47 +44,44 @@ export function ProvidersWorkbench({
         providerStatusLoading={providerStatusLoading}
       />
       {showProviderDetails ? (
-        <>
-          <ProviderMetricsGrid counts={counts} providerStatus={providerStatus} />
-          <Tabs
-            className="flex flex-col gap-4"
-            defaultValue="sources"
-            orientation="horizontal"
+        <Tabs
+          className="providers-tabs"
+          defaultValue="sources"
+          orientation="horizontal"
+        >
+          <TabsList
+            aria-label="Data source detail tabs"
+            className="providers-tabs-list h-auto max-w-full flex-wrap justify-start"
           >
-            <TabsList
-              aria-label="Data source detail tabs"
-              className="h-auto w-fit max-w-full flex-wrap justify-start"
-            >
-              <TabsTrigger value="sources">Sources</TabsTrigger>
-              <TabsTrigger value="snapshot">Snapshot & Cache</TabsTrigger>
-              <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
-              <TabsTrigger value="quality">Quality Notes</TabsTrigger>
-            </TabsList>
-            <TabsContent value="sources">
-              <ProviderSourcesTable
-                onRefreshProviderStatus={onRefreshProviderStatus}
-                providerStatusLoading={providerStatusLoading}
-                rows={rows}
-              />
-            </TabsContent>
-            <TabsContent value="snapshot">
-              <ProviderSnapshotDetails
-                onRefreshProviderStatus={onRefreshProviderStatus}
-                providerStatus={providerStatus}
-                rows={rows}
-              />
-            </TabsContent>
-            <TabsContent value="diagnostics">
-              <ProviderDiagnosticsSection providerStatus={providerStatus} />
-            </TabsContent>
-            <TabsContent value="quality">
-              <ProviderDataQualitySection
-                counts={counts}
-                providerStatus={providerStatus}
-              />
-            </TabsContent>
-          </Tabs>
-        </>
+            <TabsTrigger value="sources">Sources</TabsTrigger>
+            <TabsTrigger value="snapshot">Snapshot</TabsTrigger>
+            <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
+            <TabsTrigger value="quality">Quality</TabsTrigger>
+          </TabsList>
+          <TabsContent value="sources">
+            <ProviderSourcesTable
+              onRefreshProviderStatus={onRefreshProviderStatus}
+              providerStatusLoading={providerStatusLoading}
+              rows={rows}
+            />
+          </TabsContent>
+          <TabsContent value="snapshot">
+            <ProviderSnapshotDetails
+              onRefreshProviderStatus={onRefreshProviderStatus}
+              providerStatus={providerStatus}
+              rows={rows}
+            />
+          </TabsContent>
+          <TabsContent value="diagnostics">
+            <ProviderDiagnosticsSection providerStatus={providerStatus} />
+          </TabsContent>
+          <TabsContent value="quality">
+            <ProviderDataQualitySection
+              counts={counts}
+              providerStatus={providerStatus}
+            />
+          </TabsContent>
+        </Tabs>
       ) : null}
     </VpwPageContainer>
   )

@@ -1,6 +1,7 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react"
+import type { CSSProperties, ComponentPropsWithoutRef, ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
+import { VpwSectionHeader } from "./VpwSectionHeader"
 
 export type VpwSectionProps = ComponentPropsWithoutRef<"section"> & {
   children: ReactNode
@@ -19,6 +20,36 @@ export type VpwPanelProps = ComponentPropsWithoutRef<"div"> & {
 
 export type VpwSurfaceProps = ComponentPropsWithoutRef<"div"> & {
   children: ReactNode
+}
+
+export type VpwCompactTone =
+  | "neutral"
+  | "success"
+  | "warning"
+  | "critical"
+  | "info"
+  | "support"
+
+export type VpwCommandPanelProps = Omit<VpwPanelProps, "children"> & {
+  actions?: ReactNode
+  children?: ReactNode
+  description?: ReactNode
+  eyebrow?: string
+  note?: ReactNode
+  title: ReactNode
+}
+
+export type VpwMetricStripProps = ComponentPropsWithoutRef<"section"> & {
+  children: ReactNode
+  minCardWidth?: string
+}
+
+export type VpwCompactMetricProps = ComponentPropsWithoutRef<"div"> & {
+  description?: ReactNode
+  icon?: ReactNode
+  label: string
+  tone?: VpwCompactTone
+  value: ReactNode
 }
 
 const gridClass: Record<NonNullable<VpwGridProps["columns"]>, string> = {
@@ -143,6 +174,86 @@ export function VpwSurfaceBody({
       {...props}
     >
       {children}
+    </div>
+  )
+}
+
+export function VpwCommandPanel({
+  actions,
+  children,
+  className,
+  description,
+  eyebrow,
+  note,
+  title,
+  ...props
+}: VpwCommandPanelProps) {
+  return (
+    <VpwPanel className={cn("vpw-command-panel", className)} {...props}>
+      <div className="vpw-command-panel__header">
+        <VpwSectionHeader
+          className="vpw-command-panel__copy"
+          description={description}
+          eyebrow={eyebrow}
+          title={title}
+          titleLevel={2}
+        />
+        {actions ? (
+          <div className="vpw-command-panel__actions">{actions}</div>
+        ) : null}
+      </div>
+      {children ? (
+        <div className="vpw-command-panel__body">{children}</div>
+      ) : null}
+      {note ? <p className="vpw-command-panel__note">{note}</p> : null}
+    </VpwPanel>
+  )
+}
+
+export function VpwMetricStrip({
+  children,
+  className,
+  minCardWidth = "12rem",
+  style,
+  ...props
+}: VpwMetricStripProps) {
+  return (
+    <section
+      className={cn("vpw-metric-strip", className)}
+      style={
+        {
+          "--vpw-metric-strip-min": minCardWidth,
+          ...style,
+        } as CSSProperties
+      }
+      {...props}
+    >
+      {children}
+    </section>
+  )
+}
+
+export function VpwCompactMetric({
+  className,
+  description,
+  icon,
+  label,
+  tone = "neutral",
+  value,
+  ...props
+}: VpwCompactMetricProps) {
+  return (
+    <div
+      className={cn("vpw-compact-metric", className)}
+      data-tone={tone}
+      {...props}
+    >
+      {icon ? <span className="vpw-compact-metric__icon">{icon}</span> : null}
+      <div className="vpw-compact-metric__body">
+        <span className="vpw-label">{label}</span>
+        <strong>{value}</strong>
+        {description ? <small>{description}</small> : null}
+      </div>
     </div>
   )
 }

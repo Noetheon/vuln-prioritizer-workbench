@@ -20,6 +20,7 @@ import {
 import {
   useProjectGovernanceRollupsQuery,
   useProjectSummaryQuery,
+  useFindingsQuery,
   useWaiversQuery,
 } from "../useWorkbenchQueries"
 import { invalidateProjectScopedWorkbenchQueries } from "../workbench-query-keys"
@@ -36,6 +37,15 @@ function WaiversRouteContent() {
   const projectSummaryQuery = useProjectSummaryQuery(selectedProjectId)
   const projectGovernanceRollupsQuery =
     useProjectGovernanceRollupsQuery(selectedProjectId)
+  const findingsQuery = useFindingsQuery(
+    {
+      limit: 500,
+      offset: 0,
+      project_id: selectedProjectId,
+      sort: "operational",
+    },
+    Boolean(selectedProjectId),
+  )
   const waiversQuery = useWaiversQuery(selectedProjectId, true)
   const [waiverActionError, setWaiverActionError] = useState("")
   const [waiverActionMessage, setWaiverActionMessage] = useState("")
@@ -142,7 +152,7 @@ function WaiversRouteContent() {
       return
     }
     if (!selectedProjectId) {
-      setWaiverActionError("Select a project before creating a waiver.")
+      setWaiverActionError("Select a project before recording accepted risk.")
       return
     }
 
@@ -155,11 +165,11 @@ function WaiversRouteContent() {
       setSelectedWaiverId(waiver.id)
       setWaiverDrawerMode(null)
       setWaiverActionMessage(
-        `Accepted risk waiver created for ${waiverScopeLabel(waiver)}.`,
+        `Accepted-risk decision created for ${waiverScopeLabel(waiver)}.`,
       )
       refreshWaivers()
     } catch (caught) {
-      setWaiverActionError(apiErrorMessage("Waiver create failed", caught))
+      setWaiverActionError(apiErrorMessage("Acceptance create failed", caught))
     }
   }
 
@@ -185,11 +195,11 @@ function WaiversRouteContent() {
       setSelectedWaiverId(waiver.id)
       setWaiverDrawerMode("detail")
       setWaiverActionMessage(
-        `Accepted risk waiver updated for ${waiverScopeLabel(waiver)}.`,
+        `Accepted-risk decision updated for ${waiverScopeLabel(waiver)}.`,
       )
       refreshWaivers()
     } catch (caught) {
-      setWaiverActionError(apiErrorMessage("Waiver update failed", caught))
+      setWaiverActionError(apiErrorMessage("Acceptance update failed", caught))
     }
   }
 
@@ -203,11 +213,11 @@ function WaiversRouteContent() {
         setWaiverDrawerMode("detail")
       }
       setWaiverActionMessage(
-        `Waiver for ${waiverScopeLabel(expired)} is now expired.`,
+        `Accepted-risk decision for ${waiverScopeLabel(expired)} is now expired.`,
       )
       refreshWaivers()
     } catch (caught) {
-      setWaiverActionError(apiErrorMessage("Waiver expire failed", caught))
+      setWaiverActionError(apiErrorMessage("Acceptance expire failed", caught))
     }
   }
 
@@ -216,6 +226,13 @@ function WaiversRouteContent() {
   return (
     <section className="w-full">
       <WaiversWorkbench
+        findings={findingsQuery.data?.data ?? []}
+        findingsError={
+          findingsQuery.isError
+            ? apiErrorMessage("Findings unavailable", findingsQuery.error)
+            : ""
+        }
+        findingsLoading={findingsQuery.isLoading || findingsQuery.isFetching}
         onCreateWaiver={createWaiver}
         onExpireWaiver={(waiver) => void expireWaiver(waiver)}
         onFieldChange={updateWaiverFormField}
@@ -253,7 +270,10 @@ function WaiversRouteContent() {
         waivers={waivers}
         waiversError={
           (waiversQuery.isError
-            ? apiErrorMessage("Waivers unavailable", waiversQuery.error)
+            ? apiErrorMessage(
+                "Accepted-risk decisions unavailable",
+                waiversQuery.error,
+              )
             : "") ||
           (projectGovernanceRollupsQuery.isError
             ? apiErrorMessage(

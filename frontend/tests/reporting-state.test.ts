@@ -43,7 +43,10 @@ test("Evidence Center consumes selected run summaries and verification state", (
 
   assert.doesNotMatch(source, /void selectedRunSummary/)
   assert.match(text(evidenceCenterFile), /isDemo \|\| selectedReportRun/)
-  assert.match(text(evidenceCenterDecisionFile), /isDemo \? DEMO_SUMMARY : selectedRunSummary/)
+  assert.match(
+    text(evidenceCenterDecisionFile),
+    /selectedRunSummary \?\? projectSummary/,
+  )
   assert.match(source, /verificationReportTarget/)
   assert.match(source, /verificationStatus/)
 })

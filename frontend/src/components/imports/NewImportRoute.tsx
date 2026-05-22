@@ -211,7 +211,7 @@ export function NewImportRoute(props: NewImportRouteProps) {
 
   return (
     <form
-      className="imports-page-shell flex w-full min-w-0 flex-col gap-6"
+      className="imports-page-shell flex w-full min-w-0 flex-col gap-4"
       onSubmit={handleSubmit}
     >
       <div className="flex justify-end">

@@ -106,7 +106,9 @@ test("run detail tabs show triage CTA, imported evidence, and compact diagnostic
     }),
   )
 
-  await page.goto(`/imports/runs/${runWithMetadata.id}?projectId=${mockProject.id}`)
+  await page.goto(
+    `/imports/runs/${runWithMetadata.id}?projectId=${mockProject.id}`,
+  )
   await page.getByRole("tab", { name: "Review findings" }).click()
   await expect(page.getByText("Findings are ready for triage")).toBeVisible()
   await expect(page.getByRole("link", { name: "Open Triage" })).toHaveAttribute(
@@ -119,7 +121,9 @@ test("run detail tabs show triage CTA, imported evidence, and compact diagnostic
   await expect(page.getByText("Imported evidence")).toBeVisible()
   await expect(page.getByText("rich-import.txt", { exact: true })).toBeVisible()
   await expect(page.getByText("sha256-rich-import")).toBeVisible()
-  await expect(page.getByText("No report artifacts generated yet")).toBeVisible()
+  await expect(
+    page.getByText("No report artifacts generated yet"),
+  ).toBeVisible()
   for (const artifact of [
     "Technical Markdown",
     "Executive HTML",
@@ -133,7 +137,10 @@ test("run detail tabs show triage CTA, imported evidence, and compact diagnostic
   }
   await expect(
     page.getByRole("link", { name: "Open Evidence Center" }),
-  ).toHaveAttribute("href", `/reports?projectId=${mockProject.id}&runId=${runWithMetadata.id}`)
+  ).toHaveAttribute(
+    "href",
+    `/reports?projectId=${mockProject.id}&runId=${runWithMetadata.id}`,
+  )
 
   await page.getByRole("tab", { name: "Diagnostics" }).click()
   await expect(page.getByText("Parser diagnostics")).toBeVisible()
@@ -164,7 +171,13 @@ test("run detail evidence only verifies evidence bundles", async ({ page }) => {
       body: JSON.stringify({
         count: 2,
         data: [
-          reportArtifact(runWithReports, "csv-report", "csv", "report", "findings.csv"),
+          reportArtifact(
+            runWithReports,
+            "csv-report",
+            "csv",
+            "report",
+            "findings.csv",
+          ),
           reportArtifact(
             runWithReports,
             "zip-report",
@@ -177,7 +190,9 @@ test("run detail evidence only verifies evidence bundles", async ({ page }) => {
     }),
   )
 
-  await page.goto(`/imports/runs/${runWithReports.id}?projectId=${mockProject.id}`)
+  await page.goto(
+    `/imports/runs/${runWithReports.id}?projectId=${mockProject.id}`,
+  )
   await page.getByRole("tab", { name: "Evidence" }).click()
   await expect(
     page.getByRole("heading", { name: "Generated report artifacts" }),
@@ -219,6 +234,49 @@ test("legacy imports runId search redirects to canonical run route", async ({
   )
   await expect(
     page.getByRole("heading", { name: "Import run run-2" }).first(),
+  ).toBeVisible()
+})
+
+test("legacy import run route aliases resolve before run detail fetches", async ({
+  page,
+}) => {
+  const uuidRunOne = importRun(
+    "095da1b0-9888-46e6-8584-a93092cc31cc",
+    "historical-import-one.txt",
+    2,
+  )
+  const uuidRunTwo = importRun(
+    "64a0cb9b-d4b4-47a5-a377-0b6e57c4d23b",
+    "historical-import-two.txt",
+    4,
+  )
+  await routeWorkbenchShell(page, {
+    projects: [mockProject],
+    runSummaries: {
+      [uuidRunOne.id]: importRunSummary(uuidRunOne, 2),
+      [uuidRunTwo.id]: importRunSummary(uuidRunTwo, 4),
+    },
+    runs: [uuidRunOne, uuidRunTwo],
+  })
+  await page.route(`**/api/v1/runs/${uuidRunTwo.id}/reports`, (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ data: [], count: 0 }),
+    }),
+  )
+
+  await page.goto(`/imports/runs/run-2?projectId=${mockProject.id}`)
+  await expect(page).toHaveURL(
+    `/imports/runs/${uuidRunTwo.id}?projectId=${mockProject.id}`,
+  )
+  await expect(page.getByText("Run detail unavailable")).toHaveCount(0)
+  await expect(
+    page.getByRole("heading", { name: "Import run 64a0cb9b" }).first(),
+  ).toBeVisible()
+  await expect(
+    page
+      .getByRole("definition")
+      .filter({ hasText: "historical-import-two.txt" }),
   ).toBeVisible()
 })
 
@@ -326,7 +384,9 @@ test("new import wizard gates the four-step flow", async ({ page }) => {
     mimeType: "text/plain",
     name: "asset-context.txt",
   })
-  await expect(page.getByText("Asset context file needs attention")).toBeVisible()
+  await expect(
+    page.getByText("Asset context file needs attention"),
+  ).toBeVisible()
   await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled()
   await page.getByRole("button", { name: "Remove" }).click()
   await page.getByLabel("VEX overlay").setInputFiles({
@@ -365,7 +425,9 @@ test("new import failure without run id stays on review with retry and back acti
     route.fulfill({
       contentType: "application/json",
       status: 400,
-      body: JSON.stringify({ detail: "Parser rejected the supplied evidence." }),
+      body: JSON.stringify({
+        detail: "Parser rejected the supplied evidence.",
+      }),
     }),
   )
 
@@ -380,11 +442,15 @@ test("new import failure without run id stays on review with retry and back acti
   )
   await expect(page.getByRole("button", { name: "Retry import" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Back to file" })).toBeVisible()
-  await expect(page.getByRole("button", { name: "Start import" })).toHaveCount(0)
-  await expect(page.getByRole("button", { name: "Open diagnostics" })).toHaveCount(
+  await expect(page.getByRole("button", { name: "Start import" })).toHaveCount(
     0,
   )
-  await expect(page.getByRole("link", { name: "Open run detail" })).toHaveCount(0)
+  await expect(
+    page.getByRole("button", { name: "Open diagnostics" }),
+  ).toHaveCount(0)
+  await expect(page.getByRole("link", { name: "Open run detail" })).toHaveCount(
+    0,
+  )
 })
 
 test("new import failure with run id stays on review and exposes diagnostics", async ({
@@ -442,18 +508,26 @@ test("new import failure with run id stays on review and exposes diagnostics", a
   await expect(page.getByTestId("import-summary-rail")).not.toContainText(
     "Ready to import",
   )
-  await expect(page.getByRole("button", { name: "Retry import" })).toHaveCount(0)
-  await expect(page.getByRole("button", { name: "Start import" })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Retry import" })).toHaveCount(
+    0,
+  )
+  await expect(page.getByRole("button", { name: "Start import" })).toHaveCount(
+    0,
+  )
   await expect(page.getByRole("button", { name: "Back to file" })).toBeVisible()
-  await expect(page.getByRole("button", { name: "Open diagnostics" })).toBeVisible()
-  await expect(page.getByRole("link", { name: "Open run detail" })).toHaveAttribute(
+  await expect(
+    page.getByRole("button", { name: "Open diagnostics" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: "Open run detail" }),
+  ).toHaveAttribute(
     "href",
     `/imports/runs/${failedRun.id}?projectId=${mockProject.id}`,
   )
   await page.getByRole("button", { name: "Open diagnostics" }).click()
-  await expect(page.getByRole("dialog", { name: "Run diagnostics" })).toContainText(
-    failedRun.id,
-  )
+  await expect(
+    page.getByRole("dialog", { name: "Run diagnostics" }),
+  ).toContainText(failedRun.id)
 })
 
 test("new import wizard keeps desktop and mobile layouts within the viewport", async ({
@@ -473,7 +547,9 @@ test("new import wizard keeps desktop and mobile layouts within the viewport", a
   await page.goto(`/imports/new?projectId=${mockProject.id}`)
   await expect(page.getByRole("heading", { name: "New import" })).toBeVisible()
   await expectNoHorizontalOverflow(page)
-  const macbookLayoutBox = await page.locator(".imports-wizard-layout").boundingBox()
+  const macbookLayoutBox = await page
+    .locator(".imports-wizard-layout")
+    .boundingBox()
   const macbookSummaryBox = await page
     .getByTestId("import-summary-rail")
     .boundingBox()
@@ -490,14 +566,20 @@ test("new import wizard keeps desktop and mobile layouts within the viewport", a
     (macbookLayoutBox?.x ?? 0) + 600,
   )
   expect(commandBarBox?.y ?? 0).toBeGreaterThanOrEqual(0)
-  expect((commandBarBox?.y ?? 0) + (commandBarBox?.height ?? 0)).toBeLessThanOrEqual(
-    956 + 1,
-  )
+  expect(
+    (commandBarBox?.y ?? 0) + (commandBarBox?.height ?? 0),
+  ).toBeLessThanOrEqual(956 + 1)
 
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto(`/imports/new?projectId=${mockProject.id}`)
   await expect(page.getByRole("heading", { name: "New import" })).toBeVisible()
   await expectNoHorizontalOverflow(page)
+  const mobileStepMetrics = await page
+    .locator(".imports-step-nav__button")
+    .evaluateAll((buttons) =>
+      buttons.map((button) => button.getBoundingClientRect().height),
+    )
+  expect(Math.max(...mobileStepMetrics)).toBeLessThanOrEqual(72)
   await page.getByTestId("import-summary-rail").scrollIntoViewIfNeeded()
   await expect(page.getByTestId("import-summary-rail")).toContainText(
     "Import summary",
@@ -548,8 +630,12 @@ test("run detail diagnostics drawer fills the mobile viewport without clipping",
     })
   expect(tabMetrics.height).toBeLessThanOrEqual(48)
   expect(tabMetrics.scrollWidth).toBeGreaterThanOrEqual(tabMetrics.width)
-  await expect(dialog.getByRole("link", { name: "Review findings" })).toBeVisible()
-  await expect(dialog.getByRole("link", { name: "Open run detail" })).toBeVisible()
+  await expect(
+    dialog.getByRole("link", { name: "Review findings" }),
+  ).toBeVisible()
+  await expect(
+    dialog.getByRole("link", { name: "Open run detail" }),
+  ).toBeVisible()
   await expectNoHorizontalOverflow(page)
 })
 
@@ -604,7 +690,9 @@ test("supported formats search and category filters stay constrained", async ({
   ).toBeVisible()
 
   await page.getByRole("button", { name: "CycloneDX SBOM JSON" }).click()
-  await expect(page.getByRole("button", { name: "View details" }).first()).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "View details" }).first(),
+  ).toBeVisible()
   await expect(
     page.getByRole("cell", { name: "component vulnerability context" }),
   ).toBeVisible()
@@ -624,6 +712,38 @@ test("supported formats search and category filters stay constrained", async ({
   )
 })
 
+test("supported formats use mobile selection cards instead of a wide table", async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 844, width: 390 })
+  await routeWorkbenchShell(page, {
+    projects: [mockProject],
+  })
+
+  await page.goto(`/imports/formats?projectId=${mockProject.id}`)
+  await expect(
+    page.getByRole("heading", { name: "Supported formats" }),
+  ).toBeVisible()
+
+  const mobileList = page.getByLabel("Supported import formats mobile list")
+  await expect(mobileList).toBeVisible()
+  await expect(
+    mobileList.getByRole("button", { name: /CVE list/ }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("table", { name: "Supported import formats" }),
+  ).toHaveCount(0)
+
+  await page.getByLabel("Search formats").fill("nessus")
+  await expect(
+    mobileList.getByRole("button", { name: /Nessus XML/ }),
+  ).toBeVisible()
+  await expect(
+    mobileList.getByRole("button", { name: /Trivy JSON/ }),
+  ).toHaveCount(0)
+  await expectNoHorizontalOverflow(page)
+})
+
 async function completeWizardToReview(page: Page) {
   await page.goto(`/imports/new?projectId=${mockProject.id}`)
   await page.getByRole("button", { name: /Generic occurrence CSV/ }).click()
@@ -636,7 +756,9 @@ async function completeWizardToReview(page: Page) {
   await expect(page.getByText("Parser preview")).toBeVisible()
   await page.getByRole("button", { name: "Continue" }).click()
   await page.getByRole("button", { name: "Continue" }).click()
-  await expect(page.getByRole("heading", { name: "Review import" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Review import" }),
+  ).toBeVisible()
 }
 
 async function expectNoHorizontalOverflow(page: Page) {

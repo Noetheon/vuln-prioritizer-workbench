@@ -92,8 +92,8 @@ export function RemediationQueueTableSection({
         description={`${totalCount} prioritized finding${
           totalCount === 1 ? "" : "s"
         } for ${displayProject?.name ?? "the selected project"}.`}
-        eyebrow="Remediation Focus"
-        title="Remediation Queue"
+        eyebrow="Triage focus"
+        title="Prioritized findings"
       >
         <FindingsDataTable
           findingDirection={findingDirection}
