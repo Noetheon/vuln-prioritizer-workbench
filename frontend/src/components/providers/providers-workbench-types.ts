@@ -10,15 +10,17 @@ export type ProvidersWorkbenchProps = {
 }
 
 export type ProviderSourceRow = {
-  cacheAge: string
-  detail: string
+  age: string
+  evidenceUse: string
   id: string
   lastUpdated: string
   name: string
-  sourceType: string
-  status: string
+  notes: string
+  purpose: string
+  statusLabel: string
+  statusToken: string
+  technicalName: string
   tone: VpwBadgeTone
-  usedInEvidence: string
   value: string
 }
 

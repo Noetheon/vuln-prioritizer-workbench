@@ -7,6 +7,7 @@ import type {
   ReportPublic,
   ReportVerificationPublic,
 } from "@/api-client"
+import { useState } from "react"
 import type { ReportFormat } from "@/lib/report-format"
 import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import {
@@ -15,6 +16,7 @@ import {
   RunContext,
 } from "./EvidenceCenterSections"
 import { EvidenceCenterTabs } from "./EvidenceCenterTabs"
+import { EvidenceGenerateDrawer } from "./EvidenceGenerateDrawer"
 
 export type EvidenceCenterProps = {
   selectedProject: ProjectPublic | null
@@ -79,6 +81,7 @@ export function EvidenceCenter({
   verificationReport,
   verificationReportTarget,
 }: EvidenceCenterProps) {
+  const [generateDrawerOpen, setGenerateDrawerOpen] = useState(false)
   const combinedError = [
     projectListError,
     runsError,
@@ -95,8 +98,10 @@ export function EvidenceCenter({
     <div className="flex flex-col gap-6">
       <RunContext
         isDemo={isDemo}
+        onOpenGenerateDrawer={() => setGenerateDrawerOpen(true)}
         onProjectChange={onProjectChange}
         onRunIdChange={onRunIdChange}
+        providerStatus={providerStatus}
         projectRuns={projectRuns}
         projects={projects}
         projectListLoading={projectListLoading}
@@ -106,6 +111,7 @@ export function EvidenceCenter({
         selectedProjectId={selectedProjectId}
         selectedReportRun={selectedReportRun}
         selectedRunId={selectedRunId}
+        selectedRunSummary={selectedRunSummary}
       />
 
       <EvidenceSummary
@@ -126,6 +132,7 @@ export function EvidenceCenter({
         isDemo={isDemo}
         onCreateReport={onCreateReport}
         onDownloadReport={onDownloadReport}
+        onOpenGenerateDrawer={() => setGenerateDrawerOpen(true)}
         onVerifyReport={onVerifyReport}
         projectSummary={projectSummary}
         providerStatus={providerStatus}
@@ -138,6 +145,18 @@ export function EvidenceCenter({
         verificationLoading={verificationLoading}
         verificationReport={verificationReport}
         verificationReportTarget={verificationReportTarget}
+      />
+      <EvidenceGenerateDrawer
+        activeReportFormat={activeReportFormat}
+        onCreateReport={onCreateReport}
+        onOpenChange={setGenerateDrawerOpen}
+        open={generateDrawerOpen}
+        project={selectedProject}
+        providerStatus={providerStatus}
+        reportActionsEnabled={reportActionsEnabled}
+        reports={reports}
+        selectedReportRun={selectedReportRun}
+        selectedRunSummary={selectedRunSummary}
       />
     </div>
   )

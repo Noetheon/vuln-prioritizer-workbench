@@ -6,6 +6,7 @@ import {
   VpwSurfaceTitle,
 } from "@/components/vpw"
 import { formatLabel as labelize } from "@/lib/ui-copy"
+import { uniqueFindingDataQualityRows } from "./finding-detail-model"
 
 export type FindingDataQualityRow = {
   code: string
@@ -22,6 +23,8 @@ type FindingDataQualityPanelProps = {
 export function FindingDataQualityPanel({
   dataQualityRows,
 }: FindingDataQualityPanelProps) {
+  const uniqueRows = uniqueFindingDataQualityRows(dataQualityRows)
+
   return (
     <VpwSurface
       aria-label="Data quality notes"
@@ -32,9 +35,9 @@ export function FindingDataQualityPanel({
         <VpwSurfaceTitle>Data quality notes</VpwSurfaceTitle>
       </VpwSurfaceHeader>
       <VpwSurfaceBody>
-        {dataQualityRows.length > 0 ? (
+        {uniqueRows.length > 0 ? (
           <ul className="finding-data-quality-list">
-            {dataQualityRows.map((flag) => (
+            {uniqueRows.map((flag) => (
               <li key={flag.key}>
                 <strong>{labelize(flag.code)}</strong>
                 <span>

@@ -74,7 +74,7 @@ export function validateWaiverForm(form: WaiverFormState) {
     !form.assetKey.trim() &&
     !form.service.trim()
   ) {
-    return "At least one waiver scope is required."
+    return "At least one acceptance scope is required."
   }
   if (!form.owner.trim()) {
     return "Owner is required."
@@ -83,7 +83,18 @@ export function validateWaiverForm(form: WaiverFormState) {
     return "Reason is required."
   }
   if (!form.expiresAt.trim()) {
-    return "Expires date is required."
+    return "Expiry date is required."
+  }
+  if (form.reviewAt.trim()) {
+    const review = new Date(form.reviewAt)
+    const expiry = new Date(form.expiresAt)
+    if (
+      !Number.isNaN(review.getTime()) &&
+      !Number.isNaN(expiry.getTime()) &&
+      review > expiry
+    ) {
+      return "Review date must be before or on the expiry date."
+    }
   }
   return ""
 }
@@ -123,10 +134,10 @@ export function waiverFormFromWaiver(waiver: WaiverPublic): WaiverFormState {
 export function waiverScopeLabel(waiver: WaiverPublic) {
   return joinedValues([
     waiver.finding_id ? `Finding ${waiver.finding_id.slice(0, 8)}` : null,
-    waiver.cve_id ? `CVE ${waiver.cve_id}` : null,
+    waiver.cve_id ?? null,
     waiver.asset_id ? `Asset ID ${waiver.asset_id}` : null,
-    waiver.asset_key ? `Asset ${waiver.asset_key}` : null,
-    waiver.service ? `Service ${waiver.service}` : null,
+    waiver.asset_key ?? null,
+    waiver.service ?? null,
   ])
 }
 

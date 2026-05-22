@@ -26,27 +26,37 @@ export function buildSupportedFormatColumns({
           {format.label}
         </Button>
       ),
+      width: "18%",
     },
     {
       id: "category",
       header: "Category",
       cell: (format) => format.categoryLabel,
+      width: "13%",
     },
     {
       id: "extensions",
       header: "Extensions",
       cell: (format) => format.extensions.join(", "),
+      width: "11%",
     },
-    { id: "best", header: "Best for", cell: (format) => format.bestFor },
+    {
+      id: "best",
+      header: "Best for",
+      cell: (format) => <SupportedFormatText value={format.bestFor} />,
+      width: "20%",
+    },
     {
       id: "shape",
       header: "Expected shape",
-      cell: (format) => format.expectedShape,
+      cell: (format) => <SupportedFormatText value={format.expectedShape} />,
+      width: "22%",
     },
     {
       id: "context",
       header: "Context support",
       cell: (format) => format.contextSupport.replaceAll("-", " "),
+      width: "16%",
     },
     {
       id: "details",
@@ -67,4 +77,15 @@ export function buildSupportedFormatColumns({
       width: "128px",
     },
   ]
+}
+
+function SupportedFormatText({ value }: { value: string }) {
+  return (
+    <span
+      className="line-clamp-2 max-w-[34rem] text-sm leading-5 text-[var(--vpw-text-secondary)]"
+      title={value}
+    >
+      {value}
+    </span>
+  )
 }

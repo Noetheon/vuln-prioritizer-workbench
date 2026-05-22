@@ -1,15 +1,18 @@
+import type { ReactNode } from "react"
+
 import type { ProviderStatusPublic } from "@/api-client"
 import {
   VpwEvidenceFlowCard,
   VpwGrid,
   VpwPanel,
+  VpwSection,
   VpwSectionHeader,
   VpwStatusBanner,
 } from "@/components/vpw"
 import { providerDataQualityNotes } from "@/lib/provider-format"
 import {
   buildProviderEvidenceFlowItems,
-  evidenceReadinessLabel,
+  evidenceReadinessFullLabel,
   type ProviderSourceCounts,
 } from "./providers-workbench-model"
 
@@ -18,53 +21,122 @@ type ProviderDataQualitySectionProps = {
   providerStatus: ProviderStatusPublic | null
 }
 
+function QualityNote({
+  children,
+  title,
+  tone = "info",
+}: {
+  children: ReactNode
+  title: string
+  tone?: "info" | "success" | "warning" | "critical"
+}) {
+  const toneClass = {
+    critical: "border-l-[var(--vpw-red)]",
+    info: "border-l-[var(--vpw-blue)]",
+    success: "border-l-[var(--vpw-green)]",
+    warning: "border-l-[var(--vpw-amber)]",
+  }[tone]
+
+  return (
+    <div className={`providers-quality-note ${toneClass}`}>
+      <h3 className="text-sm font-semibold text-[var(--vpw-text-primary)]">
+        {title}
+      </h3>
+      <p className="mt-1 text-sm leading-6 text-[var(--vpw-text-secondary)]">
+        {children}
+      </p>
+    </div>
+  )
+}
+
 function ProviderDataQualityNotes({
   providerStatus,
 }: {
   providerStatus: ProviderStatusPublic | null
 }) {
+  const warnings = providerStatus?.warnings ?? []
+  const derivedNotes = providerDataQualityNotes(providerStatus)
+
   return (
-    <VpwPanel className="flex flex-col gap-4 p-5">
+    <VpwPanel className="providers-section-panel">
       <VpwSectionHeader
-        description="Structured trust notes for prioritization and reporting."
-        eyebrow="Data quality"
+        description="Operational warnings and interpretation rules for provider signals."
+        eyebrow="Provider data quality"
         title="Provider data quality notes"
       />
-      <div className="flex flex-col gap-3">
-        <VpwStatusBanner title="CVSS coverage" tone="info">
-          Missing CVSS does not mean low risk; it is a provider data gap.
-        </VpwStatusBanner>
-        <VpwStatusBanner title="EPSS coverage" tone="warning">
-          Missing EPSS should be treated as incomplete exploit-probability
-          evidence, not as zero likelihood.
-        </VpwStatusBanner>
-        <VpwStatusBanner title="KEV signal" tone="critical">
-          KEV is a strong prioritization signal when present.
-        </VpwStatusBanner>
-        <VpwStatusBanner title="Locked snapshots" tone="success">
-          Locked snapshots are used for reproducible evidence bundles and
-          executive reports.
-        </VpwStatusBanner>
-        {providerDataQualityNotes(providerStatus).map((note) => (
-          <VpwStatusBanner key={note} title="Snapshot note" tone="info">
-            {note}
-          </VpwStatusBanner>
-        ))}
-        {(providerStatus?.warnings ?? []).map((warning) => (
-          <VpwStatusBanner
-            key={warning}
-            title="Provider warning"
-            tone="warning"
-          >
-            {warning}
-          </VpwStatusBanner>
-        ))}
+      <section
+        className="providers-quality-group"
+        aria-labelledby="provider-active-warnings"
+      >
+        <h3
+          className="text-sm font-semibold text-[var(--vpw-text-primary)]"
+          id="provider-active-warnings"
+        >
+          Active warnings
+        </h3>
+        {warnings.length > 0 ? (
+          warnings.map((warning) => (
+            <QualityNote key={warning} title="Provider warning" tone="warning">
+              {warning}
+            </QualityNote>
+          ))
+        ) : (
+          <QualityNote title="No warnings" tone="success">
+            No provider warnings or last-error state recorded.
+          </QualityNote>
+        )}
         {providerStatus?.last_error ? (
-          <VpwStatusBanner title="Last provider error" tone="critical">
+          <QualityNote title="Last provider error" tone="critical">
             {providerStatus.last_error}
-          </VpwStatusBanner>
+          </QualityNote>
         ) : null}
-      </div>
+      </section>
+
+      <section
+        className="providers-quality-group"
+        aria-labelledby="provider-interpretation-rules"
+      >
+        <h3
+          className="text-sm font-semibold text-[var(--vpw-text-primary)]"
+          id="provider-interpretation-rules"
+        >
+          Source interpretation rules
+        </h3>
+        <QualityNote title="CVSS coverage" tone="info">
+          CVSS is impact and severity evidence, not exploit probability.
+        </QualityNote>
+        <QualityNote title="EPSS coverage" tone="warning">
+          EPSS is exploit probability evidence, not impact severity. Missing
+          EPSS means incomplete probability evidence, not zero likelihood.
+        </QualityNote>
+        <QualityNote title="KEV signal" tone="critical">
+          KEV is a strong known-exploited prioritization signal when present.
+        </QualityNote>
+        <QualityNote title="Missing provider evidence" tone="warning">
+          Missing provider evidence should be shown as incomplete, not as zero
+          risk.
+        </QualityNote>
+      </section>
+
+      <section
+        className="providers-quality-group"
+        aria-labelledby="provider-snapshot-notes"
+      >
+        <h3
+          className="text-sm font-semibold text-[var(--vpw-text-primary)]"
+          id="provider-snapshot-notes"
+        >
+          Snapshot and evidence notes
+        </h3>
+        <QualityNote title="Locked snapshots" tone="success">
+          Locked snapshots support reproducible reports and evidence bundles.
+        </QualityNote>
+        {derivedNotes.map((note) => (
+          <QualityNote key={note} title="Snapshot note" tone="info">
+            {note}
+          </QualityNote>
+        ))}
+      </section>
     </VpwPanel>
   )
 }
@@ -73,7 +145,7 @@ export function ProviderDataQualitySection({
   counts,
   providerStatus,
 }: ProviderDataQualitySectionProps) {
-  const evidenceReadiness = evidenceReadinessLabel(providerStatus)
+  const evidenceReadiness = evidenceReadinessFullLabel(providerStatus)
   const evidenceFlowItems = buildProviderEvidenceFlowItems({
     availableSources: counts.availableSources,
     evidenceReadiness,
@@ -82,9 +154,18 @@ export function ProviderDataQualitySection({
   })
 
   return (
-    <VpwGrid columns={2}>
-      <ProviderDataQualityNotes providerStatus={providerStatus} />
-      <VpwEvidenceFlowCard items={evidenceFlowItems} />
-    </VpwGrid>
+    <VpwSection>
+      <VpwGrid columns={2} className="providers-detail-grid">
+        <ProviderDataQualityNotes providerStatus={providerStatus} />
+        <div className="providers-quality-side">
+          <VpwEvidenceFlowCard items={evidenceFlowItems} />
+          <VpwStatusBanner title="Provider data boundary" tone="info">
+            Provider data supports prioritization and reporting. It does not
+            scan systems, provide attack instructions, or prove local
+            compromise.
+          </VpwStatusBanner>
+        </div>
+      </VpwGrid>
+    </VpwSection>
   )
 }

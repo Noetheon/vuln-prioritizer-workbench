@@ -63,7 +63,7 @@ test("smoke: evidence center renders", async ({ page }) => {
     "true",
   )
   await expect(
-    page.getByRole("heading", { name: "Generate Evidence Artifacts" }),
+    page.getByRole("heading", { name: "Recommended artifacts" }),
   ).toBeVisible()
 })
 
@@ -75,7 +75,7 @@ test("smoke: providers renders", async ({ page }) => {
     page.getByRole("heading", { level: 1, name: "Data Sources" }),
   ).toBeVisible()
   await expect(
-    page.getByRole("heading", { name: "Data source inventory" }),
+    page.getByRole("heading", { name: "Source inventory" }),
   ).toBeVisible()
 })
 

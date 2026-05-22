@@ -27,6 +27,26 @@ export type FindingDetailRow = {
 export type FindingOccurrenceRow = Partial<FindingOccurrencePublic> &
   Record<string, unknown>
 
+type DataQualityDedupRow = {
+  message: string
+  severity: string
+  source?: string | null
+}
+
+export function uniqueFindingDataQualityRows<
+  TRow extends DataQualityDedupRow,
+>(rows: readonly TRow[]) {
+  const seen = new Set<string>()
+  return rows.filter((row) => {
+    const key = `${row.severity}:${row.source ?? ""}:${row.message}`
+    if (seen.has(key)) {
+      return false
+    }
+    seen.add(key)
+    return true
+  })
+}
+
 const decisionReasonCopy: Record<string, { label: string; detail: string }> = {
   "asset.context": {
     detail: "Asset context influences operational priority.",
@@ -139,6 +159,51 @@ function firstCompactSentence(value: string, maxLength = 190) {
   return `${compact || firstSentence.slice(0, maxLength - 3).trimEnd()}...`
 }
 
+export function compactFindingText(value: string, maxLength = 260) {
+  const compact = value.replace(/\s+/g, " ").trim()
+  if (compact.length <= maxLength) {
+    return compact
+  }
+
+  const firstSentence = compact.match(/^(.+?[.!?])(?:\s|$)/)?.[1]
+  const candidate =
+    firstSentence && firstSentence.length <= maxLength ? firstSentence : compact
+  const words = candidate.split(/\s+/)
+  let output = ""
+  for (const word of words) {
+    const next = output ? `${output} ${word}` : word
+    if (next.length > maxLength - 3) {
+      break
+    }
+    output = next
+  }
+  return `${output || candidate.slice(0, maxLength - 3).trimEnd()}...`
+}
+
+export function findingRecommendedActionParts(value: string) {
+  if (/CISA KEV required action/i.test(value)) {
+    return {
+      detail:
+        "CISA KEV requires remediation or removal where updates exist. Validate affected assets, then record the fix path in Triage.",
+      title: "Apply fixed version or remove affected asset",
+    }
+  }
+
+  const [label, ...rest] = value.split(":")
+  const title = label.trim()
+  if (title && rest.length > 0 && title.length <= 72) {
+    return {
+      detail: compactFindingText(rest.join(":").trim(), 280),
+      title,
+    }
+  }
+
+  return {
+    detail: compactFindingText(value, 280),
+    title: "Recommended remediation",
+  }
+}
+
 export function findingHeroSummary(
   finding: FindingDetailPublic | null,
   explanation: FindingExplanationPublic | null,
@@ -170,9 +235,9 @@ export function findingHeroSummary(
   if (signals.length > 0) {
     const priority =
       finding.priority && labelize(finding.priority) !== "Not recorded"
-        ? `${labelize(finding.priority)} priority`
+        ? labelize(finding.priority)
         : "Priority"
-    return `${priority} combines ${summaryList(signals)}.`
+    return `${priority} because ${summaryList(signals)} are active decision signals.`
   }
 
   return firstCompactSentence(findingWhyText(finding, explanation))

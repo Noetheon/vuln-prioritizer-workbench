@@ -1,0 +1,128 @@
+@layer components {
+  .waivers-workbench {
+    --waivers-panel-gap: 1rem;
+  }
+
+  .waivers-command-section {
+    gap: 0;
+  }
+
+  .waivers-context-strip {
+    display: grid;
+    grid-template-columns: minmax(16rem, 1.15fr) minmax(0, 3fr);
+    gap: 0.75rem;
+    align-items: stretch;
+    border-top: 1px solid var(--vpw-border-subtle);
+    padding-top: 0.95rem;
+  }
+
+  .waivers-project-control {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    border: 1px solid var(--vpw-border-default);
+    border-radius: var(--vpw-radius-xl);
+    background: var(--vpw-bg-card);
+    padding: 0.8rem;
+  }
+
+  .waivers-project-control__hint {
+    display: block;
+    overflow: hidden;
+    margin-top: 0.35rem;
+    color: var(--vpw-text-secondary);
+    font-size: 0.78rem;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .waivers-register-card,
+  .waivers-governance-panel {
+    box-shadow: var(--vpw-shadow-0);
+  }
+
+  .waivers-filter-bar {
+    align-items: flex-end;
+    background: color-mix(in srgb, var(--vpw-bg-panel) 52%, var(--vpw-bg-card));
+    box-shadow: var(--vpw-shadow-0);
+  }
+
+  .waivers-register-card .vpw-table-wrap {
+    --vpw-table-frame-padding: 0;
+  }
+
+  .waivers-register-card .vpw-table-container {
+    border-radius: var(--vpw-radius-lg);
+  }
+
+  .waivers-governance-panel {
+    display: grid;
+    gap: 1rem;
+    padding: var(--vpw-panel-padding);
+  }
+
+  .waivers-governance-header {
+    padding-bottom: 0.25rem;
+  }
+
+  .waivers-governance-panel h2,
+  .waivers-governance-header .vpw-section-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .waivers-governance-grid {
+    align-items: start;
+    gap: 1rem;
+  }
+
+  .waivers-governance-column {
+    display: grid;
+    gap: 0.875rem;
+    min-width: 0;
+  }
+
+  .waivers-governance-column > .flex {
+    gap: 0.25rem;
+  }
+
+  .waivers-governance-column .vpw-section-header h2 {
+    font-size: 1.05rem;
+  }
+
+  .waivers-review-queue-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .waivers-owner-rollup-table {
+    --vpw-table-frame-padding: 0;
+  }
+
+  @media (max-width: 1280px) {
+    .waivers-context-strip {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .waivers-command-actions,
+    .waivers-command-actions__group {
+      width: 100%;
+    }
+
+    .waivers-command-actions__group {
+      justify-content: flex-start;
+    }
+
+    .waivers-context-strip {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .waivers-project-control__hint {
+      display: none;
+    }
+  }
+}

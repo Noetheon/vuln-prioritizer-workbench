@@ -6,8 +6,12 @@ import {
   VpwDataTable,
   VpwEmptyState,
   VpwPanel,
+  VpwSelectionCard,
 } from "@/components/vpw"
-import { SUPPORTED_IMPORT_FORMATS } from "@/lib/import-format-metadata"
+import {
+  SUPPORTED_IMPORT_FORMATS,
+  type SupportedFormat,
+} from "@/lib/import-format-metadata"
 import { importFormatUrlSearch } from "@/workbench/import-route-search"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import { buildSupportedFormatColumns } from "./SupportedFormatsColumns"
@@ -83,19 +87,27 @@ export function SupportedFormatsRoute({
             query={query}
           />
           {filteredFormats.length > 0 ? (
-            <VpwDataTable
-              caption="Supported import formats"
-              columns={columns}
-              data={filteredFormats}
-              density="compact"
-              getRowClassName={(format) =>
-                format.inputType === selectedInputType
-                  ? "vpw-table-row--selected"
-                  : undefined
-              }
-              getRowKey={(format) => format.inputType}
-              minWidth="960px"
-            />
+            <>
+              <SupportedFormatsMobileList
+                formats={filteredFormats}
+                onSelectInputType={setSelectedInputType}
+                selectedInputType={selectedInputType}
+              />
+              <VpwDataTable
+                caption="Supported import formats"
+                className="hidden md:block"
+                columns={columns}
+                data={filteredFormats}
+                density="compact"
+                getRowClassName={(format) =>
+                  format.inputType === selectedInputType
+                    ? "vpw-table-row--selected"
+                    : undefined
+                }
+                getRowKey={(format) => format.inputType}
+                minWidth="900px"
+              />
+            </>
           ) : (
             <VpwEmptyState
               action={
@@ -123,5 +135,45 @@ export function SupportedFormatsRoute({
         ) : null}
       </div>
     </div>
+  )
+}
+
+function SupportedFormatsMobileList({
+  formats,
+  onSelectInputType,
+  selectedInputType,
+}: {
+  formats: readonly SupportedFormat[]
+  onSelectInputType: (inputType: SupportedFormat["inputType"]) => void
+  selectedInputType: SupportedFormat["inputType"]
+}) {
+  return (
+    <section
+      aria-label="Supported import formats mobile list"
+      className="grid gap-2 md:hidden"
+    >
+      {formats.map((format) => (
+        <VpwSelectionCard
+          checked={format.inputType === selectedInputType}
+          key={format.inputType}
+          meta={
+            <span className="flex flex-wrap gap-x-2 gap-y-1">
+              <span>{format.categoryLabel}</span>
+              <span aria-hidden="true">/</span>
+              <span>{format.extensions.join(", ")}</span>
+            </span>
+          }
+          onClick={() => onSelectInputType(format.inputType)}
+          title={format.label}
+        >
+          <span className="grid gap-1">
+            <span>{format.bestFor}</span>
+            <span className="text-xs text-[var(--vpw-text-muted)]">
+              {format.contextSupport.replaceAll("-", " ")}
+            </span>
+          </span>
+        </VpwSelectionCard>
+      ))}
+    </section>
   )
 }

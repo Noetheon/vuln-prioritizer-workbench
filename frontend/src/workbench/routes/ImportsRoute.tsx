@@ -25,15 +25,14 @@ import {
 import { buildImportUploadFormData } from "../import-upload-payload"
 import {
   importInputTypeFromSearch,
+  importRunRouteIdNeedsCanonicalRedirect,
   importsRouteUrlSearch,
+  resolveImportRunRouteId,
   selectedImportRunIdFromSearch,
 } from "../import-route-search"
 import { selectedProjectRouteSearch } from "../selected-project-search"
 import { useWorkbenchContext } from "../WorkbenchContext"
-import {
-  useProjectRunsQuery,
-  useRunDetailQuery,
-} from "../useWorkbenchQueries"
+import { useProjectRunsQuery, useRunDetailQuery } from "../useWorkbenchQueries"
 import {
   invalidateProjectScopedWorkbenchQueries,
   workbenchQueryKeys,
@@ -90,7 +89,26 @@ function ImportsRouteContainer() {
       : "home"
   const projectRunsQuery = useProjectRunsQuery(selectedProjectId, true)
   const projectRuns = projectRunsQuery.data?.data ?? []
-  const runDetailQuery = useRunDetailQuery(selectedRunId, true)
+  const projectRunIds = projectRuns.map((run) => run.id)
+  const routeSelectableRunId = resolveImportRunRouteId(
+    routeRunId,
+    projectRunIds,
+  )
+  const routeRunResolutionPending = Boolean(
+    routeRunId &&
+      !routeSelectableRunId &&
+      (projectListLoading ||
+        !selectedProjectId ||
+        projectRunsQuery.isLoading ||
+        projectRunsQuery.isFetching),
+  )
+  const routeRunResolutionUnavailable = Boolean(
+    routeRunId && !routeSelectableRunId && !routeRunResolutionPending,
+  )
+  const runDetailQuery = useRunDetailQuery(
+    selectedRunId,
+    Boolean(selectedRunId),
+  )
   const importMutation = useMutation({
     mutationFn: ({
       body,
@@ -105,22 +123,45 @@ function ImportsRouteContainer() {
       }),
   })
 
-  const selectRunId = useCallback(
-    (nextRunId: string) => {
-      setSelectedRunId(nextRunId)
-    },
-    [],
-  )
+  const selectRunId = useCallback((nextRunId: string) => {
+    setSelectedRunId(nextRunId)
+  }, [])
 
   useEffect(() => {
     if (!routeRunId) {
       return
     }
-    if (selectedRunId === routeRunId) {
+    if (!routeSelectableRunId) {
+      if (!routeRunResolutionPending && selectedRunId) {
+        selectRunId("")
+      }
       return
     }
-    selectRunId(routeRunId)
-  }, [routeRunId, selectRunId, selectedRunId])
+    if (selectedRunId === routeSelectableRunId) {
+      return
+    }
+    selectRunId(routeSelectableRunId)
+  }, [
+    routeRunId,
+    routeRunResolutionPending,
+    routeSelectableRunId,
+    selectRunId,
+    selectedRunId,
+  ])
+
+  useEffect(() => {
+    if (
+      !importRunRouteIdNeedsCanonicalRedirect(routeRunId, routeSelectableRunId)
+    ) {
+      return
+    }
+    void navigate({
+      params: { runId: routeSelectableRunId },
+      replace: true,
+      search: () => importsRouteUrlSearch(location.searchStr),
+      to: "/imports/runs/$runId",
+    })
+  }, [location.searchStr, navigate, routeRunId, routeSelectableRunId])
 
   useEffect(() => {
     if (!legacyRouteRunId) return
@@ -271,7 +312,10 @@ function ImportsRouteContainer() {
       })
       await refreshProjects(importProjectId)
       await refreshProjectRuns(run.id)
-      await invalidateProjectScopedWorkbenchQueries(queryClient, importProjectId)
+      await invalidateProjectScopedWorkbenchQueries(
+        queryClient,
+        importProjectId,
+      )
     } catch (caught) {
       setImportError(apiErrorMessage("Import upload failed", caught))
       const runId = analysisRunIdFromError(caught)
@@ -291,7 +335,10 @@ function ImportsRouteContainer() {
       }
       await refreshProjects(importProjectId)
       await refreshProjectRuns(runId ?? undefined)
-      await invalidateProjectScopedWorkbenchQueries(queryClient, importProjectId)
+      await invalidateProjectScopedWorkbenchQueries(
+        queryClient,
+        importProjectId,
+      )
     }
   }
 
@@ -315,9 +362,7 @@ function ImportsRouteContainer() {
           assetContextFile: file,
         }))
       }
-      onFileChange={(file) =>
-        setImportWizard((state) => ({ ...state, file }))
-      }
+      onFileChange={(file) => setImportWizard((state) => ({ ...state, file }))}
       onInputTypeChange={(value) =>
         setImportWizard((state) => ({
           ...state,
@@ -361,11 +406,17 @@ function ImportsRouteContainer() {
       projects={projects}
       providerStatus={providerStatus}
       runDetailError={
-        runDetailQuery.isError
-          ? apiErrorMessage("Run detail unavailable", runDetailQuery.error)
-          : ""
+        routeRunResolutionUnavailable
+          ? "Run detail unavailable: unknown import run."
+          : runDetailQuery.isError
+            ? apiErrorMessage("Run detail unavailable", runDetailQuery.error)
+            : ""
       }
-      runDetailLoading={runDetailQuery.isLoading || runDetailQuery.isFetching}
+      runDetailLoading={
+        routeRunResolutionPending ||
+        runDetailQuery.isLoading ||
+        runDetailQuery.isFetching
+      }
       runsError={
         projectRunsQuery.isError
           ? apiErrorMessage("Import runs unavailable", projectRunsQuery.error)

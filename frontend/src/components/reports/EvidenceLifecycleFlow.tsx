@@ -4,12 +4,17 @@ import type {
   ReportVerificationPublic,
 } from "@/api-client"
 import {
-  VpwEvidenceFlowCard,
+  VpwPanel,
   VpwSection,
   VpwSectionHeader,
+  VpwTimeline,
+  type VpwTimelineItem,
 } from "@/components/vpw"
 import { DEMO_REPORTS } from "@/lib/demo-data"
-import { verificationSummary } from "./evidence-center-model"
+import {
+  evidenceBundleReport,
+  verificationSummary,
+} from "./evidence-center-model"
 
 type EvidenceLifecycleProps = {
   activeReportFormat: string
@@ -35,97 +40,100 @@ export function EvidenceLifecycle({
   verificationReportTarget,
 }: EvidenceLifecycleProps) {
   const effectiveReports = isDemo ? DEMO_REPORTS : reports
-  const zipReport = effectiveReports.find((report) => report.format === "zip")
-  const verifiedTargetId = verificationReportTarget?.id ?? ""
-  const zipVerificationSelected = Boolean(
-    zipReport && verifiedTargetId === zipReport.id,
+  const zipReport = evidenceBundleReport(effectiveReports)
+  const verificationTargetsZip = Boolean(
+    zipReport && verificationReportTarget?.id === zipReport.id,
   )
-  const verifiedSummary = zipVerificationSelected
+  const verifiedSummary = verificationTargetsZip
     ? verificationSummary(verificationReport)
     : {}
-  const verificationOk = zipVerificationSelected && verifiedSummary.ok === true
+  const verificationOk = verificationTargetsZip && verifiedSummary.ok === true
   const verificationFailed = Boolean(
-    zipVerificationSelected &&
-      verificationReport &&
-      verifiedSummary.ok !== true,
+    verificationTargetsZip && verificationReport && verifiedSummary.ok !== true,
   )
-  const selectedRunMeta = isDemo
-    ? "Demo run"
-    : selectedReportRun
-      ? `Run ${selectedReportRun.id.slice(0, 8)}`
-      : "Waiting"
-  const artifactMeta = activeReportFormat
-    ? "Generating"
-    : reportsLoading && !isDemo
-      ? "Loading"
-      : effectiveReports.length > 0
-        ? `${effectiveReports.length} generated`
-        : reportActionsEnabled
-          ? "Ready"
-          : "Waiting"
-  const verificationMeta = verificationLoading
-    ? "Verifying"
-    : verificationOk
-      ? "Verified"
-      : verificationFailed
-        ? "Failed"
-        : zipReport
-          ? "Ready"
-          : "Waiting"
+  const artifactsGenerated = effectiveReports.length > 0
+  const lifecycle: VpwTimelineItem[] = [
+    {
+      description: selectedReportRun
+        ? "A run is selected and anchors generated artifacts."
+        : "Select a completed import run before generating evidence.",
+      meta: selectedReportRun ? "Done" : "Pending",
+      title: "1. Run selected",
+      tone: selectedReportRun || isDemo ? "success" : "neutral",
+    },
+    {
+      description: activeReportFormat
+        ? "Artifact generation is currently running."
+        : artifactsGenerated
+          ? `${effectiveReports.length} artifacts are available.`
+          : "Generate at least one artifact for this run.",
+      meta: activeReportFormat
+        ? "Current"
+        : artifactsGenerated
+          ? `Done · ${effectiveReports.length} artifacts`
+          : reportsLoading
+            ? "Loading"
+            : "Pending",
+      title: "2. Artifacts generated",
+      tone: activeReportFormat
+        ? "warning"
+        : artifactsGenerated
+          ? "success"
+          : reportActionsEnabled
+            ? "warning"
+            : "neutral",
+    },
+    {
+      description: zipReport
+        ? "Evidence ZIP is available for audit packaging."
+        : "Build the Evidence ZIP to include manifest and checksums.",
+      meta: zipReport ? `Done · ${zipReport.filename}` : "Pending",
+      title: "3. Bundle built",
+      tone: zipReport ? "success" : "neutral",
+    },
+    {
+      description: verificationOk
+        ? "SHA256 values match the manifest."
+        : verificationFailed
+          ? "Checksum drift was detected. Rebuild the bundle or inspect manifest details."
+          : zipReport
+            ? "Verify the bundle before audit use."
+            : "Build the Evidence ZIP first.",
+      meta: verificationLoading
+        ? "Current"
+        : verificationOk
+          ? "Verified"
+          : verificationFailed
+            ? "Failed"
+            : "Pending",
+      title: "4. Bundle verified",
+      tone: verificationFailed
+        ? "critical"
+        : verificationOk
+          ? "success"
+          : zipReport || verificationLoading
+            ? "warning"
+            : "neutral",
+    },
+    {
+      description: verificationOk
+        ? "Evidence package is ready for audit use."
+        : "Finish bundle generation and verification before audit use.",
+      meta: verificationOk ? "Ready" : "Pending",
+      title: "5. Ready for audit use",
+      tone: verificationOk ? "success" : "neutral",
+    },
+  ]
 
   return (
     <VpwSection>
       <VpwSectionHeader
-        description="Track the report path from run context through artifact generation and bundle verification."
-        title="Evidence Lifecycle"
+        description="Run selection, artifact generation, bundle build, verification, and audit readiness."
+        title="Evidence lifecycle"
       />
-      <VpwEvidenceFlowCard
-        items={[
-          {
-            description: isDemo
-              ? "Demo context is loaded for preview only."
-              : selectedReportRun
-                ? "A run is selected and can anchor generated artifacts."
-                : "Select a completed run before generating evidence.",
-            meta: selectedRunMeta,
-            title: "Select run context",
-            tone: isDemo || selectedReportRun ? "success" : "neutral",
-          },
-          {
-            description: activeReportFormat
-              ? "A report artifact is being generated."
-              : effectiveReports.length > 0
-                ? "Generated artifacts are available in report history."
-                : "Choose a format once a completed run is selected.",
-            meta: artifactMeta,
-            title: "Generate artifacts",
-            tone:
-              activeReportFormat || reportActionsEnabled
-                ? effectiveReports.length > 0
-                  ? "success"
-                  : "warning"
-                : "neutral",
-          },
-          {
-            description: verificationOk
-              ? "The evidence bundle manifest matched the generated files."
-              : verificationFailed
-                ? "The latest verification found bundle drift."
-                : zipReport
-                  ? "Verify the ZIP bundle before using it as audit evidence."
-                  : "Generate an evidence ZIP to enable bundle verification.",
-            meta: verificationMeta,
-            title: "Verify and archive bundle",
-            tone: verificationFailed
-              ? "critical"
-              : verificationOk
-                ? "success"
-                : zipReport || verificationLoading
-                  ? "warning"
-                  : "neutral",
-          },
-        ]}
-      />
+      <VpwPanel className="p-5">
+        <VpwTimeline items={lifecycle} />
+      </VpwPanel>
     </VpwSection>
   )
 }

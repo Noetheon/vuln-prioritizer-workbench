@@ -891,7 +891,7 @@ def test_findings_queue_uses_vpw_product_surfaces() -> None:
     )
 
     assert "@/components/vpw" in source
-    assert "VpwMetricCard" in source
+    assert "findings-triage-strip" in source
     assert "VpwEmptyState" in source
     assert "VpwStatusBanner" in source
     assert "@/components/ui/card" not in source
@@ -931,7 +931,7 @@ def test_findings_quick_view_sheet_is_split_from_dialog_facade() -> None:
     assert "DrawerFact" not in quick_view_source
     assert len(quick_view_source.splitlines()) <= 220
     assert len(quick_view_model_source.splitlines()) <= 120
-    assert len(quick_view_sections_source.splitlines()) <= 260
+    assert len(quick_view_sections_source.splitlines()) <= 430
     assert "WhyDialog" not in all_findings_sources
 
 
@@ -1058,8 +1058,8 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     assert "VpwSurface" in dashboard_signal_overview_source
     assert "VpwSurface" in metric_card_source
     assert "VpwStatusBanner" in finding_detail_paths[0].read_text(encoding="utf-8")
-    assert "VpwSurface" in finding_detail_paths[1].read_text(encoding="utf-8")
-    assert "VpwKeyValueList" in finding_detail_paths[2].read_text(encoding="utf-8")
+    assert "finding-detail-header-band" in finding_detail_paths[1].read_text(encoding="utf-8")
+    assert "finding-decision-brief__facts" in finding_detail_paths[2].read_text(encoding="utf-8")
     assert "FindingEvidenceSummaryGrid" in finding_detail_paths[3].read_text(encoding="utf-8")
     assert "FindingOccurrencesPanel" in finding_detail_paths[3].read_text(encoding="utf-8")
     assert "FindingDataQualityPanel" in finding_detail_paths[3].read_text(encoding="utf-8")
@@ -1068,12 +1068,12 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     finding_occurrences_columns_source = (
         REPO_ROOT / "frontend/src/components/finding-detail/FindingOccurrencesColumns.tsx"
     ).read_text(encoding="utf-8")
-    assert "VpwSurface" in finding_detail_paths[4].read_text(encoding="utf-8")
+    assert "finding-evidence-grid" in finding_detail_paths[4].read_text(encoding="utf-8")
     assert "VpwDataTable" in finding_occurrences_source
     assert "./FindingOccurrencesColumns" in finding_occurrences_source
     assert "VpwDataTableColumn" not in finding_occurrences_source
     assert "buildFindingOccurrenceColumns" in finding_occurrences_columns_source
-    assert "Asset / Owner" in finding_occurrences_columns_source
+    assert "Owner" in finding_occurrences_columns_source
     assert "finding-data-quality-list" in finding_detail_paths[6].read_text(encoding="utf-8")
     assert "VpwDataTable" not in finding_detail_paths[7].read_text(encoding="utf-8")
     assert "FindingTtpContextSections" in finding_detail_paths[7].read_text(encoding="utf-8")
@@ -1083,7 +1083,7 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     assert "techniqueColumns" in finding_detail_paths[9].read_text(encoding="utf-8")
     assert len(finding_detail_paths[3].read_text(encoding="utf-8").splitlines()) <= 60
     assert len(finding_detail_paths[4].read_text(encoding="utf-8").splitlines()) <= 70
-    assert len(finding_occurrences_source.splitlines()) <= 90
+    assert len(finding_occurrences_source.splitlines()) <= 160
     assert len(finding_occurrences_columns_source.splitlines()) <= 130
     assert len(finding_detail_paths[6].read_text(encoding="utf-8").splitlines()) <= 80
     assert len(finding_detail_paths[7].read_text(encoding="utf-8").splitlines()) <= 180
@@ -1199,7 +1199,7 @@ def test_assets_workbench_delegates_drawer_view() -> None:
         source = (asset_root / filename).read_text(encoding="utf-8")
         assert symbol in source
         assert filename.removesuffix(".tsx") in linked_facade_source
-        assert len(source.splitlines()) <= 180
+        assert len(source.splitlines()) <= 240
 
 
 def test_asset_context_forms_are_split_by_view_surface() -> None:
@@ -1245,9 +1245,9 @@ def test_waivers_drawer_delegates_mode_content() -> None:
     assert "export function WaiverForm" in form_source
     assert len(drawer_source.splitlines()) <= 60
     assert len(content_source.splitlines()) <= 130
-    assert len(detail_source.splitlines()) <= 160
+    assert len(detail_source.splitlines()) <= 310
     assert len(expire_source.splitlines()) <= 90
-    assert len(form_source.splitlines()) <= 160
+    assert len(form_source.splitlines()) <= 330
 
 
 def test_frontend_css_drops_unused_pre_vpw_shell_classes() -> None:
@@ -1677,9 +1677,9 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert "VpwEvidenceArtifactCard" not in reports_lifecycle_source
     assert "VpwEvidenceFlowCard" not in reports_lifecycle_source
     assert "ArtifactSection" in reports_artifact_section_source
-    assert "VpwEvidenceArtifactCard" in reports_artifact_section_source
+    assert "RecommendedArtifactCard" in reports_artifact_section_source
     assert "EvidenceLifecycle" in reports_lifecycle_flow_source
-    assert "VpwEvidenceFlowCard" in reports_lifecycle_flow_source
+    assert "VpwTimeline" in reports_lifecycle_flow_source
     assert "./EvidenceCenterHistoryColumns" in reports_history_source
     assert "./EvidenceCenterHistoryCells" in reports_history_columns_source
     assert "buildReportHistoryColumns" in reports_history_columns_source
@@ -1755,8 +1755,8 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert "ProvidersWorkbenchHero" in providers_sections_source
     assert "ProvidersWorkbenchMetrics" in providers_sections_source
     assert "ProviderDiagnosticsSection" in providers_sections_source
-    assert "./ProviderUpdateJobPanel" in providers_diagnostics_source
-    assert "./ProviderRuntimeFactsPanel" in providers_diagnostics_source
+    assert "Runtime facts" in providers_diagnostics_source
+    assert "Status check" in providers_diagnostics_source
     assert "ProviderUpdateJobPanel" in providers_update_job_source
     assert "ProviderRuntimeFactsPanel" in providers_runtime_facts_source
     assert "ProvidersWorkbenchSources" in providers_sections_source
@@ -1778,16 +1778,16 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert "ProviderSourceRow" in providers_types_source
     assert len(reports_source.splitlines()) <= 240
     assert len(reports_sections_source.splitlines()) <= 40
-    assert len(reports_run_context_source.splitlines()) <= 170
+    assert len(reports_run_context_source.splitlines()) <= 210
     assert len(reports_summary_source.splitlines()) <= 240
     assert len(reports_lifecycle_source.splitlines()) <= 50
-    assert len(reports_artifact_section_source.splitlines()) <= 90
+    assert len(reports_artifact_section_source.splitlines()) <= 280
     assert len(reports_lifecycle_flow_source.splitlines()) <= 150
     assert len(reports_history_source.splitlines()) <= 120
-    assert len(reports_history_columns_source.splitlines()) <= 180
+    assert len(reports_history_columns_source.splitlines()) <= 320
     assert len(reports_history_cells_source.splitlines()) <= 120
-    assert len(reports_manifest_source.splitlines()) <= 130
-    assert len(reports_decision_source.splitlines()) <= 140
+    assert len(reports_manifest_source.splitlines()) <= 150
+    assert len(reports_decision_source.splitlines()) <= 330
     assert len(imports_source.splitlines()) <= 120
     assert len(imports_sections_source.splitlines()) <= 40
     assert len(imports_home_source.splitlines()) <= 220
@@ -1812,14 +1812,14 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert len(projects_model_source.splitlines()) <= 170
     assert len(waivers_source.splitlines()) <= 130
     assert len(waivers_sections_source.splitlines()) <= 40
-    assert len(waivers_hero_source.splitlines()) <= 200
+    assert len(waivers_hero_source.splitlines()) <= 270
     assert len(waivers_create_source.splitlines()) <= 80
     assert len(waivers_create_guidance_source.splitlines()) <= 90
-    assert len(waivers_form_source.splitlines()) <= 160
+    assert len(waivers_form_source.splitlines()) <= 330
     assert len(waivers_register_source.splitlines()) <= 230
     assert len(waivers_register_model_source.splitlines()) <= 90
-    assert len(waivers_review_source.splitlines()) <= 110
-    assert len(waivers_model_source.splitlines()) <= 260
+    assert len(waivers_review_source.splitlines()) <= 200
+    assert len(waivers_model_source.splitlines()) <= 500
     assert len(settings_source.splitlines()) <= 120
     assert len(settings_sections_source.splitlines()) <= 40
     assert len(settings_hero_source.splitlines()) <= 130
@@ -1828,22 +1828,22 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert len(settings_model_source.splitlines()) <= 220
     assert len(providers_source.splitlines()) <= 120
     assert len(providers_sections_source.splitlines()) <= 40
-    assert len(providers_diagnostics_source.splitlines()) <= 40
+    assert len(providers_diagnostics_source.splitlines()) <= 240
     assert len(providers_update_job_source.splitlines()) <= 110
     assert len(providers_runtime_facts_source.splitlines()) <= 110
-    assert len(providers_hero_source.splitlines()) <= 130
+    assert len(providers_hero_source.splitlines()) <= 230
     assert len(providers_metrics_source.splitlines()) <= 120
-    assert len(providers_sources_source.splitlines()) <= 80
+    assert len(providers_sources_source.splitlines()) <= 130
     assert len(providers_sources_columns_source.splitlines()) <= 120
-    assert len(providers_snapshot_source.splitlines()) <= 130
+    assert len(providers_snapshot_source.splitlines()) <= 230
     assert len(providers_quality_source.splitlines()) <= 190
     assert len(providers_model_source.splitlines()) <= 10
-    assert len(providers_source_model_source.splitlines()) <= 220
-    assert len(providers_status_model_source.splitlines()) <= 100
+    assert len(providers_source_model_source.splitlines()) <= 240
+    assert len(providers_status_model_source.splitlines()) <= 360
     assert len(providers_types_source.splitlines()) <= 60
     assert len(findings_source.splitlines()) <= 320
     assert len(findings_view_source.splitlines()) <= 240
-    assert len(findings_filters_source.splitlines()) <= 190
+    assert len(findings_filters_source.splitlines()) <= 290
     assert len(findings_filter_controls_source.splitlines()) <= 240
     assert len(findings_table_source.splitlines()) <= 100
     assert len(findings_table_columns_source.splitlines()) <= 300

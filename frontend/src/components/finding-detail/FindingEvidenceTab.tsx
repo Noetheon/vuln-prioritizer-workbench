@@ -25,6 +25,15 @@ export function FindingEvidenceTab({
       aria-label="Evidence workspace"
       className="finding-evidence-tab-layout"
     >
+      <div className="finding-tab-intro">
+        <span>Evidence</span>
+        <h3>Evidence used for this decision</h3>
+        <p>
+          Provider facts, imported source evidence, occurrence rows, data
+          quality notes, and artifact references that support the recorded
+          priority.
+        </p>
+      </div>
       <FindingEvidenceSummaryGrid evidenceRows={evidenceRows} />
 
       <section

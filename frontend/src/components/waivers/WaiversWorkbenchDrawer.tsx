@@ -25,12 +25,14 @@ export function WaiverDrawer({ state }: { state: WaiversWorkbenchProps }) {
       }}
       open={state.waiverDrawerMode !== null}
     >
-      <SheetContent className="w-[min(100vw,48rem)] overflow-y-auto sm:max-w-none">
-        <SheetHeader>
+      <SheetContent className="flex w-[min(100vw,52rem)] flex-col overflow-hidden p-0 sm:max-w-none">
+        <SheetHeader className="shrink-0 border-b border-[var(--vpw-border-subtle)] p-6 pr-12">
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription>{description}</SheetDescription>
         </SheetHeader>
-        <WaiverDrawerContent state={state} />
+        <div className="min-h-0 flex-1 overflow-y-auto p-6">
+          <WaiverDrawerContent state={state} />
+        </div>
       </SheetContent>
     </Sheet>
   )

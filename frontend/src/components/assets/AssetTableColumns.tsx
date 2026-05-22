@@ -41,6 +41,7 @@ export function buildAssetColumns({
     {
       cell: (asset) => (
         <Button
+          aria-label={assetSelectionLabel(asset)}
           aria-current={selectedAssetId === asset.id ? "true" : undefined}
           className="h-auto justify-start px-2 py-1 text-left"
           onClick={() => setSelectedAssetId(asset.id)}
@@ -157,6 +158,14 @@ export function buildAssetColumns({
   ]
 }
 
+function assetSelectionLabel(asset: AssetPublic): string {
+  const target = asset.target_ref ?? asset.asset_key
+  if (!target || target === asset.name) {
+    return `Select asset ${asset.name}`
+  }
+  return `Select asset ${asset.name}, target ${target}`
+}
+
 function AssetTableAction({
   children,
   label,
@@ -188,7 +197,7 @@ function AssetTableActions({
       <AssetTableAction label="View asset">
         <Button
           aria-current={selectedAssetId === asset.id ? "true" : undefined}
-          aria-label="View"
+          aria-label={`View details for ${asset.name}`}
           className="vpw-table-action-button"
           onClick={() => openAssetDrawer("detail", asset)}
           size="icon-sm"

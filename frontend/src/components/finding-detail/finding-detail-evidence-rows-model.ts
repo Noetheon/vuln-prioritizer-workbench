@@ -2,6 +2,7 @@ import type { FindingDetailPublic, FindingExplanationPublic } from "@/api-client
 import { joinedValues, objectRecord, stringValue } from "@/lib/app-errors"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 import type { FindingWaiverEvidence } from "@/lib/waiver-view"
+import { formatDateTime } from "../../lib/date-format.ts"
 import type {
   FindingDetailRow,
   FindingOccurrenceRow,
@@ -34,17 +35,22 @@ export function findingEvidenceRows(
     stringValue(evidence.report_reference) ??
     stringValue(evidence.artifact_reference) ??
     stringValue(firstOccurrence?.vex_source_path)
+  const dataQualityLabels = Array.from(
+    new Set(dataQualityRows.map((row) => labelize(row.code))),
+  )
 
   return [
     {
       detail:
         providerGaps.length > 0
           ? `Gaps: ${providerGaps.join(", ")}`
-          : "No provider gaps recorded for the stored finding signals.",
+          : providerSignalLabels.length > 0
+            ? `${providerSignalLabels.join(", ")} signals recorded. No provider gaps recorded.`
+            : "No provider gaps recorded for the stored finding signals.",
       label: "Provider snapshot",
       value:
         providerKeys.length > 0
-          ? `${providerKeys.length} provider evidence field(s) recorded`
+          ? `${providerKeys.length} fields recorded`
           : providerSignalLabels.length > 0
             ? providerSignalLabels.join(", ")
             : "No provider snapshot recorded",
@@ -74,7 +80,7 @@ export function findingEvidenceRows(
     {
       detail:
         dataQualityRows.length > 0
-          ? dataQualityRows.map((row) => labelize(row.code)).join(", ")
+          ? dataQualityLabels.join(", ")
           : "No data quality flags recorded.",
       label: "Data quality notes",
       value:
@@ -92,14 +98,9 @@ export function findingEvidenceRows(
 }
 
 function formatFindingDateTime(value: string) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date)
+  return formatDateTime(value, {
+    invalidFallback: (invalidValue) => invalidValue,
+  })
 }
 
 export function findingHistoryRows(
@@ -157,6 +158,24 @@ export function findingHistoryRows(
           : vexStatus
             ? labelize(vexStatus)
             : "Not accepted",
+    },
+    {
+      detail: finding?.updated_at
+        ? "Finding evidence was refreshed from the stored Workbench record."
+        : "No evidence refresh timestamp recorded.",
+      label: "Evidence refreshed",
+      value: finding?.updated_at
+        ? formatFindingDateTime(finding.updated_at)
+        : "Not recorded",
+    },
+    {
+      detail:
+        "Provider snapshot changes are recorded through the imported evidence and explanation payload when supplied.",
+      label: "Provider snapshot changed",
+      value:
+        finding?.explanation_json || finding?.evidence_json
+          ? "Stored with finding"
+          : "Not recorded",
     },
   ]
 }

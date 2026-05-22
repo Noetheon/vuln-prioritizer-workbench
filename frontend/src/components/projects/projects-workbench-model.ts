@@ -2,6 +2,10 @@ import type { FormEventHandler } from "react"
 import type { ProjectDecisionSummaryPublic, ProjectPublic } from "@/api-client"
 import type { VpwBadgeTone } from "@/components/vpw"
 import { runStatusLabel, runStatusTone } from "@/lib/risk-format"
+import { shortId } from "@/lib/ui-copy"
+
+export { formatDateTime } from "../../lib/date-format.ts"
+export { shortId }
 
 export type ProjectFormStateLike = {
   description: string
@@ -36,20 +40,6 @@ export type ProjectsWorkbenchProps = {
   projects: ProjectPublic[]
   selectedProject: ProjectPublic | null
   selectedProjectId: string
-}
-
-export function formatDateTime(value: string | null | undefined) {
-  if (!value) return "Not recorded"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "Not recorded"
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date)
-}
-
-export function shortId(value: string | null | undefined) {
-  return value ? value.slice(0, 8) : "Not recorded"
 }
 
 export function runTone(

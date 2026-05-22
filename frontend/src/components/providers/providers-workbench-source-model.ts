@@ -7,9 +7,9 @@ import {
   formatCacheAge,
   providerSnapshotSummary,
   providerSourceDetail,
-  providerSourceLabel,
   providerSourceState,
 } from "@/lib/provider-format"
+import { formatDateTime } from "./providers-workbench-status-model"
 import type {
   ProviderSourceCounts,
   ProviderSourceRow,
@@ -25,57 +25,80 @@ function stringValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value : null
 }
 
-export function formatDateTime(value: string | null | undefined) {
-  if (!value) {
-    return "Not recorded"
-  }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date)
+function normalizedSourceName(value: string) {
+  return value.trim().toLowerCase().replaceAll("_", "-")
 }
 
-function sourceStatusLabel(source: ProviderSourceStatusPublic) {
+export function sourceDisplayName(sourceName: string) {
+  const normalized = normalizedSourceName(sourceName)
+  if (normalized.includes("nvd")) {
+    return "NVD / CVSS"
+  }
+  if (normalized.includes("epss") || normalized.includes("first")) {
+    return "FIRST EPSS"
+  }
+  if (normalized.includes("kev") || normalized.includes("cisa")) {
+    return "CISA KEV"
+  }
+  if (normalized.includes("provider-snapshot")) {
+    return "Snapshot metadata"
+  }
+  if (normalized.includes("snapshot")) {
+    return "Snapshot metadata"
+  }
+  return sourceName
+}
+
+function sourcePurpose(sourceName: string) {
+  const normalized = normalizedSourceName(sourceName)
+  if (normalized.includes("nvd")) {
+    return "CVSS severity and CVE metadata"
+  }
+  if (normalized.includes("epss") || normalized.includes("first")) {
+    return "Probability signal"
+  }
+  if (normalized.includes("kev") || normalized.includes("cisa")) {
+    return "Known exploited vulnerability signal"
+  }
+  if (normalized.includes("snapshot")) {
+    return "Recorded provider replay evidence"
+  }
+  return "Supplemental provider signal"
+}
+
+function sourceStatus(source: ProviderSourceStatusPublic) {
   const state = providerSourceState(source)
-  if (state === "available") {
-    return source.last_sync || source.value ? "fresh" : "available"
+  if (source.last_error && !source.available) {
+    return { label: "Unavailable", token: "unavailable" }
   }
-  return state
+  if (state === "available") {
+    return source.last_sync || source.value
+      ? { label: "Fresh", token: "fresh" }
+      : { label: "Available", token: "available" }
+  }
+  if (state === "stale") {
+    return { label: "Stale", token: "stale" }
+  }
+  return { label: "Missing", token: "missing" }
 }
 
-function sourceStatusTone(status: string): VpwBadgeTone {
-  switch (status) {
+function sourceStatusTone(statusToken: string): VpwBadgeTone {
+  switch (statusToken) {
     case "fresh":
     case "available":
       return "success"
     case "stale":
       return "warning"
     case "missing":
+    case "unavailable":
       return "critical"
     default:
       return "neutral"
   }
 }
 
-function sourceType(sourceName: string) {
-  switch (sourceName.toLowerCase()) {
-    case "nvd":
-      return "Vulnerability database"
-    case "epss":
-      return "Exploit probability"
-    case "kev":
-      return "Known exploited"
-    case "provider snapshot":
-      return "Snapshot metadata"
-    case "osv":
-      return "Advisory database"
-    default:
-      return "Provider"
-  }
+function evidenceUse(source: ProviderSourceStatusPublic) {
+  return source.selected ? "Included" : "Not included"
 }
 
 export function snapshotId(providerStatus: ProviderStatusPublic | null) {
@@ -89,15 +112,28 @@ export function snapshotId(providerStatus: ProviderStatusPublic | null) {
 
 export function selectedSources(providerStatus: ProviderStatusPublic | null) {
   const selected = providerStatus?.snapshot.selected_sources ?? []
-  return selected.length > 0 ? selected.join(", ") : "No sources selected"
+  return selected.length > 0
+    ? selected.map(sourceDisplayName).join(", ")
+    : "No sources selected"
+}
+
+export function redactedSourcePath(value: string | null | undefined) {
+  if (!value) {
+    return "Not recorded"
+  }
+  const parts = value.split("/").filter(Boolean)
+  if (parts.length <= 2) {
+    return value
+  }
+  return `.../${parts.slice(-2).join("/")}`
 }
 
 export function sourceHashes(providerStatus: ProviderStatusPublic | null) {
   const hashes = providerStatus?.snapshot.source_hashes ?? {}
   const values = Object.entries(hashes).map(([source, hash]) =>
     typeof hash === "string" && hash.trim()
-      ? `${source}: ${hash}`
-      : `${source}: not recorded`,
+      ? `${sourceDisplayName(source)}: ${hash}`
+      : `${sourceDisplayName(source)}: not recorded`,
   )
   return values.length > 0 ? values.join(" | ") : "No source hashes recorded"
 }
@@ -110,48 +146,58 @@ export function sourceRows(
   }
 
   const rows = (providerStatus.sources ?? []).map((source) => {
-    const status = sourceStatusLabel(source)
+    const status = sourceStatus(source)
     return {
-      cacheAge: formatCacheAge(source.cache_age_seconds),
-      detail: providerSourceDetail(source),
+      age: formatCacheAge(source.cache_age_seconds),
+      evidenceUse: evidenceUse(source),
       id: source.name,
       lastUpdated: formatDateTime(source.last_sync),
-      name: providerSourceLabel(source),
-      sourceType: sourceType(source.name),
-      status,
-      tone: sourceStatusTone(status),
-      usedInEvidence: source.selected ? "Yes" : "No",
+      name: sourceDisplayName(source.name),
+      notes: providerSourceDetail(source),
+      purpose: sourcePurpose(source.name),
+      statusLabel: status.label,
+      statusToken: status.token,
+      technicalName: source.name,
+      tone: sourceStatusTone(status.token),
       value: source.value ?? "Not recorded",
     }
   })
 
   rows.push({
-    cacheAge: formatCacheAge(providerStatus?.cache_age_seconds),
-    detail: providerSnapshotSummary(providerStatus),
+    age: formatCacheAge(providerStatus.cache_age_seconds),
+    evidenceUse: providerStatus.snapshot.selected_sources?.length
+      ? "Included"
+      : "Recorded",
     id: "provider-snapshot",
     lastUpdated: formatDateTime(
-      providerStatus?.snapshot.generated_at ??
-        providerStatus?.snapshot.created_at ??
-        providerStatus?.last_sync,
+      providerStatus.snapshot.generated_at ??
+        providerStatus.snapshot.created_at ??
+        providerStatus.last_sync,
     ),
-    name: "PROVIDER SNAPSHOT",
-    sourceType: "Snapshot metadata",
-    status: providerStatus?.snapshot.missing
+    name: "Provider snapshot",
+    notes: providerStatus.snapshot.content_hash
+      ? "Snapshot metadata and content hash are recorded."
+      : providerSnapshotSummary(providerStatus),
+    purpose: "Recorded provider replay evidence",
+    statusLabel: providerStatus.snapshot.missing
+      ? "Missing"
+      : providerStatus.status === "ok"
+        ? "Fresh"
+        : "Stale",
+    statusToken: providerStatus.snapshot.missing
       ? "missing"
-      : providerStatus?.status === "ok"
+      : providerStatus.status === "ok"
         ? "fresh"
         : "stale",
-    tone: providerStatus?.snapshot.missing
+    technicalName: "provider_snapshot",
+    tone: providerStatus.snapshot.missing
       ? "critical"
-      : providerStatus?.status === "ok"
+      : providerStatus.status === "ok"
         ? "success"
         : "warning",
-    usedInEvidence: providerStatus?.snapshot.selected_sources?.length
-      ? "Yes"
-      : "Recorded",
     value:
-      providerStatus?.snapshot.mode ??
-      providerStatus?.snapshot_mode ??
+      providerStatus.snapshot.mode ??
+      providerStatus.snapshot_mode ??
       "Not recorded",
   })
 
@@ -163,17 +209,19 @@ export function providerSourceCounts(
 ): ProviderSourceCounts {
   return {
     availableSources: rows.filter((row) =>
-      ["available", "fresh"].includes(row.status),
+      ["available", "fresh"].includes(row.statusToken),
     ).length,
-    staleSources: rows.filter((row) => row.status === "stale").length,
-    missingSources: rows.filter((row) => row.status === "missing").length,
+    staleSources: rows.filter((row) => row.statusToken === "stale").length,
+    missingSources: rows.filter((row) =>
+      ["missing", "unavailable"].includes(row.statusToken),
+    ).length,
   }
 }
 
 export function snapshotSources(rows: readonly ProviderSourceRow[]) {
   return rows.map((row) => ({
     name: row.name,
-    status: row.status,
+    status: row.statusLabel,
     tone: row.tone,
   }))
 }

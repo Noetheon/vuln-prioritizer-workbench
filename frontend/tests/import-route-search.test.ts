@@ -4,9 +4,11 @@ import test from "node:test"
 import {
   importFormatUrlSearch,
   importInputTypeFromSearch,
+  importRunRouteIdNeedsCanonicalRedirect,
   importRunUrlSearch,
   importsRouteUrlSearch,
   normalizeSelectedRunId,
+  resolveImportRunRouteId,
   selectedImportRunIdFromSearch,
 } from "../src/workbench/import-route-search.ts"
 
@@ -77,4 +79,32 @@ test("normalizes stale import run ids to an available run", () => {
   )
   assert.equal(normalizeSelectedRunId(["missing"], ["run-1"]), "run-1")
   assert.equal(normalizeSelectedRunId(["missing"], []), "")
+})
+
+test("resolves import run route aliases without backend lookups", () => {
+  const runIds = [
+    "095da1b0-9888-46e6-8584-a93092cc31cc",
+    "64a0cb9b-d4b4-47a5-a377-0b6e57c4d23b",
+  ]
+
+  assert.equal(resolveImportRunRouteId(runIds[0], runIds), runIds[0])
+  assert.equal(resolveImportRunRouteId("095da1b0", runIds), runIds[0])
+  assert.equal(resolveImportRunRouteId("run-2", runIds), runIds[1])
+  assert.equal(resolveImportRunRouteId("not-a-run", runIds), "")
+  assert.equal(
+    resolveImportRunRouteId("584f5eee-0ff7-4105-bc9b-cddd722bcf25", []),
+    "584f5eee-0ff7-4105-bc9b-cddd722bcf25",
+  )
+})
+
+test("detects import run aliases that should be canonicalized", () => {
+  assert.equal(
+    importRunRouteIdNeedsCanonicalRedirect("run-2", "uuid-run-2"),
+    true,
+  )
+  assert.equal(
+    importRunRouteIdNeedsCanonicalRedirect("uuid-run-2", "uuid-run-2"),
+    false,
+  )
+  assert.equal(importRunRouteIdNeedsCanonicalRedirect("run-2", ""), false)
 })

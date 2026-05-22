@@ -31,7 +31,7 @@ export function AssetDrawer({ state }: AssetDrawerProps) {
       }}
       open={state.assetDrawerMode !== null}
     >
-      <SheetContent className="w-[min(100vw,48rem)] overflow-y-auto sm:max-w-none">
+      <SheetContent className="asset-drawer w-[min(100vw,48rem)] overflow-y-auto sm:max-w-none">
         <SheetHeader>
           <SheetTitle>{drawerTitle}</SheetTitle>
           <SheetDescription>{drawerDescription}</SheetDescription>

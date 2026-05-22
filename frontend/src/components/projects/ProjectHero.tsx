@@ -31,8 +31,8 @@ export function ProjectHero({
     <VpwSection>
       <VpwSectionHeader
         description="Manage workbench projects, imported findings, runs, and evidence readiness."
-        eyebrow="Projects"
-        title="Projects"
+        eyebrow="Project control"
+        title="Workspace projects"
       />
       <VpwToolbar label="Project actions">
         <VpwToolbarGroup>

@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 export type VpwTimelineTone = "neutral" | "success" | "warning" | "critical"
 
 export type VpwTimelineItem = {
+  id?: string
   title: string
   description?: ReactNode
   meta?: ReactNode
@@ -47,7 +48,7 @@ export function VpwTimeline({ className, items }: VpwTimelineProps) {
         return (
           <li
             className="relative grid grid-cols-[1.25rem_1fr] gap-3"
-            key={item.title}
+            key={item.id ?? item.title}
           >
             {index < items.length - 1 ? (
               <span

@@ -8,6 +8,7 @@ import { TooltipProvider } from "../ui/tooltip"
 import { AppShellMobileNav } from "./AppShellMobileNav"
 import { AppShellSidebar } from "./AppShellSidebar"
 import { AppShellStatusStrip } from "./AppShellStatusStrip"
+import { useWorkbenchScrollOwner } from "./useWorkbenchScrollOwner"
 
 export type StatusSummaryItem = {
   label: string
@@ -77,6 +78,7 @@ export function AppShell({
   const contentRef = useRef<HTMLElement | null>(null)
   const lastNavigationKeyRef = useRef<string | null>(null)
   const mobileNavButtonRef = useRef<HTMLButtonElement | null>(null)
+  const scrollOwnerHandlers = useWorkbenchScrollOwner(contentRef)
 
   useEffect(() => {
     writeSidebarCollapsed(sidebarCollapsed)
@@ -110,7 +112,10 @@ export function AppShell({
 
   return (
     <TooltipProvider>
-      <div className="vpw-app-shell flex h-dvh min-h-dvh overflow-hidden bg-[var(--vpw-bg-app)]">
+      <div
+        className="vpw-app-shell flex h-dvh min-h-dvh overflow-hidden bg-[var(--vpw-bg-app)]"
+        {...scrollOwnerHandlers}
+      >
         <AppShellSidebar
           activePath={activePath}
           navigationGroups={navigationGroups}

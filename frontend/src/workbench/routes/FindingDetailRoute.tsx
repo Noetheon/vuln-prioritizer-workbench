@@ -23,11 +23,11 @@ function FindingDetailRouteContainer({ findingId }: { findingId: string }) {
   const findingsSearch = parseFindingsSearch(activeSearchString(location.searchStr))
   const findingDetailQuery = useFindingDetailQuery(findingId)
   const [findingDetailTab, setFindingDetailTab] =
-    useState<FindingDetailTab>("evidence")
+    useState<FindingDetailTab>("decision")
   const findingDetail = findingDetailQuery.data?.detail ?? null
 
   useEffect(() => {
-    setFindingDetailTab("evidence")
+    setFindingDetailTab("decision")
   }, [])
 
   useEffect(() => {

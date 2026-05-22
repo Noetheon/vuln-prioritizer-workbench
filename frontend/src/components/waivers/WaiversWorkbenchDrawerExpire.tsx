@@ -26,15 +26,16 @@ export function WaiverExpireContent({
   return (
     <VpwPanel className="flex flex-col gap-4 p-5">
       <VpwSectionHeader
-        description="Expire this accepted-risk decision and return matching findings to normal remediation visibility."
+        description="This ends the active accepted-risk state while keeping the historical decision visible."
         eyebrow="Expire acceptance"
         title={waiverScopeLabel(waiver)}
       />
-      <VpwStatusBanner title="Confirm expiry" tone="critical">
+      <VpwStatusBanner title="Expire accepted-risk decision?" tone="critical">
         <span className="flex items-start gap-2">
           <AlertTriangle aria-hidden="true" className="mt-0.5 size-4" />
-          Expiring this decision clears the active accepted-risk state for
-          matching findings.
+          Expire accepted-risk decision? This will end the accepted-risk state
+          for matching findings, but the historical decision record remains
+          visible.
         </span>
       </VpwStatusBanner>
       <div className="flex flex-wrap gap-2">
@@ -46,7 +47,7 @@ export function WaiverExpireContent({
           variant="destructive"
         >
           <ShieldAlert aria-hidden="true" />
-          Confirm expiry
+          Expire acceptance
         </Button>
         <Button
           disabled={waiverActionLoading}

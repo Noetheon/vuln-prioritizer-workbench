@@ -14,15 +14,19 @@ import {
   StatusLozenge,
   type VpwDataTableColumn,
 } from "@/components/vpw"
-import { optionalText } from "@/lib/ui-copy"
 import { cn } from "@/lib/utils"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   daysLabel,
+  evidenceDetail,
+  evidenceStateLabel,
+  evidenceStateToken,
   formatDate,
+  lifecycleLabel,
+  lifecycleStatusToken,
   shortId,
-  statusLabel,
   type WaiversWorkbenchProps,
+  waiverScopeLines,
   waiverScopeLabel,
 } from "./waivers-workbench-model"
 
@@ -38,77 +42,124 @@ export function buildWaiverRegisterColumns({
 }: BuildWaiverRegisterColumnsArgs): VpwDataTableColumn<WaiverPublic>[] {
   const columns: VpwDataTableColumn<WaiverPublic>[] = [
     {
-      cell: (waiver) => (
-        <div className="grid min-w-44 gap-0.5">
-          <strong className="text-sm text-[var(--vpw-text-primary)]">
-            {waiverScopeLabel(waiver)}
-          </strong>
-          <span className="font-mono text-xs text-[var(--vpw-text-muted)]">
-            {waiver.finding_id
-              ? `Finding ${shortId(waiver.finding_id)}`
-              : `Acceptance ${shortId(waiver.id)}`}
-          </span>
-        </div>
-      ),
+      cell: (waiver) => {
+        const scope = waiverScopeLines(waiver)
+        return (
+          <div className="grid min-w-44 gap-0.5">
+            <strong className="text-sm text-[var(--vpw-text-primary)]">
+              {scope.primary}
+            </strong>
+            {scope.secondary ? (
+              <span className="text-sm text-[var(--vpw-text-secondary)]">
+                {scope.secondary}
+              </span>
+            ) : null}
+            <span className="font-mono text-xs text-[var(--vpw-text-muted)]">
+              Acceptance {shortId(waiver.id)}
+            </span>
+          </div>
+        )
+      },
       header: "Scope",
       id: "scope",
-      width: "18%",
+      width: "17%",
     },
     {
       cell: (waiver) => (
-        <span className="line-clamp-2 text-sm leading-5">
+        <span className="line-clamp-2 text-sm leading-5" title={waiver.reason}>
           {waiver.reason}
         </span>
       ),
-      header: "Reason",
-      id: "reason",
-      width: "18%",
+      header: "Decision",
+      id: "decision",
+      width: "15%",
     },
     {
-      cell: (waiver) => waiver.owner,
+      cell: (waiver) => (
+        <div className="vpw-table-cell-stack">
+          <strong
+            className="vpw-table-cell-primary vpw-table-cell-nowrap"
+            title={waiver.owner}
+          >
+            {waiver.owner}
+          </strong>
+          <span className="vpw-table-cell-secondary">
+            accountable owner
+          </span>
+        </div>
+      ),
       header: "Owner",
       id: "owner",
-      width: "10%",
+      width: "13%",
     },
     {
       cell: (waiver) => (
         <StatusLozenge
-          label={statusLabel(waiver.status)}
-          status={waiver.status}
+          label={lifecycleLabel(waiver)}
+          status={lifecycleStatusToken(waiver)}
         />
       ),
-      header: "Status",
-      id: "status",
-      width: "11%",
+      header: "State",
+      id: "state",
+      width: "12%",
     },
     {
       cell: (waiver) => (
-        <div className="grid min-w-32 gap-1">
-          <span>{formatDate(waiver.expires_at)}</span>
-          <small className="text-xs text-[var(--vpw-text-muted)]">
+        <div className="vpw-table-cell-stack">
+          <span className="vpw-table-cell-primary">
+            Expires {formatDate(waiver.expires_at)}
+          </span>
+          <span className="vpw-table-cell-secondary">
             {daysLabel(waiver.days_remaining)}
-          </small>
-          <small className="text-xs text-[var(--vpw-text-muted)]">
-            Review {formatDate(waiver.review_at)}
-          </small>
+          </span>
+          <span className="vpw-table-cell-secondary">
+            Review due {formatDate(waiver.review_at)}
+          </span>
         </div>
       ),
-      header: "Expiry / Review",
+      className: "min-w-0",
+      header: "Review / Expiry",
       id: "lifecycle",
       width: "13%",
     },
     {
-      cell: (waiver) => <CountBadge value={waiver.matched_findings ?? 0} />,
+      cell: (waiver) => (
+        <Button asChild size="xs" variant="ghost">
+          <Link
+            search={{
+              ...selectedProjectRouteSearch(waiver.project_id),
+              q: waiver.cve_id ?? waiver.asset_key ?? waiver.service ?? "",
+              status: "accepted",
+            }}
+            to="/findings"
+          >
+            <CountBadge
+              label={`${waiver.matched_findings ?? 0} finding${(waiver.matched_findings ?? 0) === 1 ? "" : "s"}`}
+              value={waiver.matched_findings ?? 0}
+            />
+          </Link>
+        </Button>
+      ),
       header: "Matched findings",
       id: "matched-findings",
-      width: "8%",
+      width: "11%",
     },
     {
-      cell: (waiver) =>
-        optionalText(waiver.approval_ref ?? waiver.ticket_url),
+      cell: (waiver) => (
+        <div className="vpw-table-cell-stack">
+          <StatusLozenge
+            label={evidenceStateLabel(waiver)}
+            status={evidenceStateToken(waiver)}
+          />
+          <span className="vpw-table-cell-secondary">
+            {evidenceDetail(waiver)}
+          </span>
+        </div>
+      ),
+      className: "min-w-0",
       header: "Evidence",
       id: "evidence",
-      width: "10%",
+      width: "11%",
     },
     {
       cell: (waiver) => (
@@ -160,7 +211,7 @@ function WaiverRegisterActions({
       <WaiverAction label="View acceptance">
         <Button
           aria-current={selectedWaiverId === waiver.id ? "true" : undefined}
-          aria-label="View"
+          aria-label={`View accepted-risk decision for ${waiverScopeLabel(waiver)}`}
           className="vpw-table-action-button"
           onClick={() => openWaiverDrawer("detail", waiver)}
           size="icon-xs"
@@ -174,7 +225,7 @@ function WaiverRegisterActions({
         <>
           <WaiverAction label="Review or edit">
             <Button
-              aria-label={`Review ${waiverScopeLabel(waiver)}`}
+              aria-label={`Review or edit accepted-risk decision for ${waiverScopeLabel(waiver)}`}
               className="vpw-table-action-button"
               onClick={() => openWaiverDrawer("review", waiver)}
               size="icon-xs"
@@ -187,7 +238,7 @@ function WaiverRegisterActions({
           <WaiverAction label="Expire acceptance">
             <Button
               aria-busy={waiverActionLoading}
-              aria-label={`Expire ${waiverScopeLabel(waiver)}`}
+              aria-label={`Expire accepted-risk decision for ${waiverScopeLabel(waiver)}`}
               className="vpw-table-action-button"
               disabled={waiverActionLoading}
               onClick={() => openWaiverDrawer("expire", waiver)}
@@ -209,7 +260,7 @@ function WaiverRegisterActions({
             variant="outline"
           >
             <Link
-              aria-label={`Open finding for ${waiverScopeLabel(waiver)}`}
+              aria-label={`Open matched finding for ${waiverScopeLabel(waiver)}`}
               params={{ findingId: waiver.finding_id }}
               search={selectedProjectRouteSearch(waiver.project_id)}
               to="/findings/$findingId"

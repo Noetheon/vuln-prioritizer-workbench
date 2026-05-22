@@ -1,5 +1,4 @@
 import type { CSSProperties, ReactNode } from "react"
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
 
 import {
   Table,
@@ -10,8 +9,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { VpwDataTableHeaderContent } from "./VpwDataTableHeaderContent"
+import { VpwDataTableMobileCards } from "./VpwDataTableMobileCards"
 
 export type VpwDataTableColumn<TData> = {
   id: string
@@ -45,6 +45,7 @@ export type VpwDataTableProps<TData> = {
   emptyState?: ReactNode
   getRowClassName?: (row: TData, index: number) => string | undefined
   minWidth?: string
+  mobileCards?: boolean
   rowClassName?: string
   tableClassName?: string
   variant?: VpwDataTableVariant
@@ -61,35 +62,6 @@ const variantClass: Record<VpwDataTableVariant, string> = {
   detail: "vpw-table-detail",
 }
 
-function VpwDataTableHeaderContent<TData>({
-  column,
-}: {
-  column: VpwDataTableColumn<TData>
-}) {
-  if (!column.sort) return <>{column.header}</>
-
-  const Icon = column.sort.active
-    ? column.sort.direction === "asc"
-      ? ArrowUp
-      : ArrowDown
-    : ArrowUpDown
-
-  return (
-    <Button
-      aria-label={`Sort by ${column.sort.label}`}
-      aria-pressed={column.sort.active}
-      className="vpw-table-sort-button"
-      onClick={column.sort.onSort}
-      size="xs"
-      type="button"
-      variant="ghost"
-    >
-      <Icon aria-hidden="true" className="vpw-table-sort-button__icon" />
-      <span>{column.header}</span>
-    </Button>
-  )
-}
-
 export function VpwDataTable<TData>({
   caption,
   ariaLabel,
@@ -101,6 +73,7 @@ export function VpwDataTable<TData>({
   getRowClassName,
   getRowKey,
   minWidth,
+  mobileCards = true,
   rowClassName,
   tableClassName,
   variant = "default",
@@ -115,78 +88,94 @@ export function VpwDataTable<TData>({
   } as CSSProperties
 
   return (
-    <section
-      aria-label={ariaLabel ?? caption ?? "Data table"}
-      className={cn("vpw-table-wrap", className)}
-      style={tableStyle}
-      // biome-ignore lint/a11y/noNoninteractiveTabindex: Data table wrappers can scroll horizontally and need keyboard access.
-      tabIndex={0}
-    >
-      <Table
-        className={cn(
-          "vpw-table",
-          variantClass[variant],
-          densityClass[density],
-          tableClassName,
-        )}
-        containerClassName="vpw-table-container"
+    <>
+      <section
+        aria-label={ariaLabel ?? caption ?? "Data table"}
+        className={cn("vpw-table-wrap", className)}
+        data-mobile-cards={mobileCards ? "true" : "false"}
+        style={tableStyle}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: Data table wrappers can scroll horizontally and need keyboard access.
+        tabIndex={0}
       >
-        {caption ? (
-          <TableCaption className="sr-only">{caption}</TableCaption>
-        ) : null}
-        <colgroup>
-          {columns.map((column) => (
-            <col
-              key={column.id}
-              style={column.width ? { width: column.width } : undefined}
-            />
-          ))}
-        </colgroup>
-        <TableHeader>
-          <TableRow>
-            {columns.map((column) => (
-              <TableHead
-                aria-sort={column.ariaSort}
-                className={cn("vpw-table-header-cell", column.headerClassName)}
-                key={column.id}
-                scope="col"
-              >
-                <VpwDataTableHeaderContent column={column} />
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.length > 0 ? (
-            data.map((row, index) => (
-              <TableRow
-                className={cn("vpw-table-row", rowClassName, getRowClassName?.(row, index))}
-                key={getRowKey(row, index)}
-              >
-                {columns.map((column) => (
-                  <TableCell
-                    className={cn(
-                      "vpw-table-cell !whitespace-normal",
-                      column.className,
-                    )}
-                    key={column.id}
-                  >
-                    {column.cell(row)}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : (
-            <TableRow className="vpw-table-row">
-              <TableCell className="vpw-table-cell" colSpan={columns.length}>
-                <div className="py-8 text-center text-sm text-[var(--vpw-text-muted)]">
-                  No records available.
-                </div>
-              </TableCell>
-            </TableRow>
+        <Table
+          className={cn(
+            "vpw-table",
+            variantClass[variant],
+            densityClass[density],
+            tableClassName,
           )}
-        </TableBody>
-      </Table>
-    </section>
+          containerClassName="vpw-table-container"
+        >
+          {caption ? (
+            <TableCaption className="sr-only">{caption}</TableCaption>
+          ) : null}
+          <colgroup>
+            {columns.map((column) => (
+              <col
+                key={column.id}
+                style={column.width ? { width: column.width } : undefined}
+              />
+            ))}
+          </colgroup>
+          <TableHeader>
+            <TableRow>
+              {columns.map((column) => (
+                <TableHead
+                  aria-sort={column.ariaSort}
+                  className={cn("vpw-table-header-cell", column.headerClassName)}
+                  key={column.id}
+                  scope="col"
+                >
+                  <VpwDataTableHeaderContent column={column} />
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.length > 0 ? (
+              data.map((row, index) => (
+                <TableRow
+                  className={cn(
+                    "vpw-table-row",
+                    rowClassName,
+                    getRowClassName?.(row, index),
+                  )}
+                  key={getRowKey(row, index)}
+                >
+                  {columns.map((column) => (
+                    <TableCell
+                      className={cn(
+                        "vpw-table-cell !whitespace-normal",
+                        column.className,
+                      )}
+                      key={column.id}
+                    >
+                      {column.cell(row)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow className="vpw-table-row">
+                <TableCell className="vpw-table-cell" colSpan={columns.length}>
+                  <div className="py-8 text-center text-sm text-[var(--vpw-text-muted)]">
+                    No records available.
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </section>
+      {mobileCards ? (
+        <VpwDataTableMobileCards
+          ariaLabel={ariaLabel}
+          caption={caption}
+          columns={columns}
+          data={data}
+          getRowKey={getRowKey}
+        />
+      ) : null}
+    </>
   )
 }

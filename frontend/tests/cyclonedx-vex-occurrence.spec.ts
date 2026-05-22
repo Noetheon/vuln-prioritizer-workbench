@@ -76,6 +76,7 @@ test("workbench frontend renders CycloneDX VEX occurrence evidence", async ({
   expect(suppressed.suppressed_by_vex).toBe(true)
   expect(suppressed.status).toBe("suppressed")
   await page.goto(`/findings/${suppressed.id}`)
+  await page.getByRole("tab", { name: "Occurrences" }).click()
   const occurrencesTable = page.getByRole("table", {
     name: "Occurrences table",
   })

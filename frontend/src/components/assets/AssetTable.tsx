@@ -37,9 +37,11 @@ export function AssetTable({
 
   return (
     <VpwTableCard
+      className="assets-table-card"
       description={`${assets.length} asset${
         assets.length === 1 ? "" : "s"
       } match the current project and filters.`}
+      eyebrow="Register"
       title="Asset register"
     >
       <VpwDataTable

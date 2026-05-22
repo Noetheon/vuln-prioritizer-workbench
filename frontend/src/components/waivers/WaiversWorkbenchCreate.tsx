@@ -33,12 +33,14 @@ export function CreateWaiverSection({
       <div id="create-waiver">
         <VpwPanel className="flex flex-col gap-5 p-5">
           <VpwSectionHeader
-            description="Create an accepted-risk decision only when remediation cannot happen immediately."
+            description="Record an accepted-risk decision only when remediation cannot happen immediately."
             eyebrow="Governance form"
-            title="Create waiver"
+            title="Record accepted risk"
           />
           <WaiverForm
-            buttonLabel="Create waiver"
+            buttonLabel="Create acceptance"
+            findings={[]}
+            findingsLoading={false}
             onFieldChange={onFieldChange}
             onSubmit={onCreateWaiver}
             waiverActionLoading={

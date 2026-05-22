@@ -4,6 +4,7 @@ import type {
 } from "@/api-client"
 import type { VpwBadgeTone } from "@/components/vpw"
 import { formatCacheAge, providerSnapshotSummary } from "@/lib/provider-format"
+import { formatDateTime as formatWorkbenchDateTime } from "../../lib/date-format.ts"
 
 export type SettingsWorkbenchProps = {
   activeSettingsTab: SettingsTab
@@ -45,17 +46,9 @@ export type ProviderConfigRow = {
 }
 
 export function formatDateTime(value: string | null | undefined) {
-  if (!value) {
-    return "Not recorded"
-  }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date)
+  return formatWorkbenchDateTime(value, {
+    invalidFallback: (invalidValue) => invalidValue,
+  })
 }
 
 function sourceByName(

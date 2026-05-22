@@ -50,13 +50,14 @@ export function AssetInventoryShell({
   setAssetServiceFilter: (value: string) => void
 }) {
   return (
-    <VpwSection>
+    <VpwSection className="assets-inventory-shell">
       <VpwSectionHeader
-        description="Filter project assets by service and owner, then inspect the context that changes prioritization."
+        description="Filter by project context, then inspect the asset records that change prioritization."
         eyebrow="In-scope assets"
         title="Asset inventory"
       />
       <VpwFilterBar
+        className="assets-filter-bar"
         leading={
           <VpwField className="vpw-filter-field--lg" label="Project">
             <VpwSelectControl
@@ -127,6 +128,7 @@ export function AssetInventoryShell({
 
       {assetsLoading ? (
         <VpwTableCard
+          className="assets-table-card"
           description="Loading the asset rows for the selected project and filters."
           title="Asset register"
         >

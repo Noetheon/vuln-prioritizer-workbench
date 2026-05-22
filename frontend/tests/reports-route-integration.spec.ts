@@ -49,7 +49,12 @@ test("Evidence Center separates artifacts, decision, manifest, history, and data
     "aria-selected",
     "true",
   )
-  await expect(page.getByRole("heading", { name: "Generate Evidence Artifacts" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Generated artifacts" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Recommended artifacts" }),
+  ).toBeVisible()
   await expect(page.getByRole("table", { name: "Report history list" })).toContainText(
     "evidence-bundle.zip",
   )
@@ -57,13 +62,13 @@ test("Evidence Center separates artifacts, decision, manifest, history, and data
 
   await page.getByRole("tab", { name: "Decision Summary" }).click()
   await expect(
-    page.getByRole("heading", { name: "Executive Decision" }),
+    page.getByRole("heading", { exact: true, name: "Executive Decision" }),
   ).toBeVisible()
   await expect(page.getByText("Manifest metadata")).toHaveCount(0)
 
   await page.getByRole("tab", { name: "Manifest & Verification" }).click()
-  await expect(page.getByText("Evidence Lifecycle")).toBeVisible()
-  await expect(page.getByText("Download evidence bundle")).toBeVisible()
+  await expect(page.getByText("Evidence lifecycle")).toBeVisible()
+  await expect(page.getByText("Download Evidence ZIP")).toBeVisible()
 
   await page.getByRole("tab", { name: "History" }).click()
   await expect(page.getByRole("table", { name: "Report history list" })).toContainText(
@@ -71,8 +76,47 @@ test("Evidence Center separates artifacts, decision, manifest, history, and data
   )
 
   await page.getByRole("tab", { name: "Data Quality" }).click()
-  await expect(page.getByText("Parser warnings")).toBeVisible()
+  await expect(page.getByText("Parser errors")).toBeVisible()
   await expect(page.getByText("Ignored rows")).toBeVisible()
+})
+
+test("Evidence Center run context stays compact on mobile", async ({ page }) => {
+  await page.setViewportSize({ height: 844, width: 390 })
+  await routeWorkbenchShell(page, {
+    projects: [mockProject],
+    runSummaries: { [runId]: runSummary() },
+    runs: [analysisRun()],
+  })
+  await page.route(`**/api/v1/runs/${runId}/reports`, (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ count: 2, data: [reportHtml, reportZip] }),
+    }),
+  )
+  await page.route(`**/api/v1/runs/${runId}/reports?*`, (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ count: 2, data: [reportHtml, reportZip] }),
+    }),
+  )
+
+  await page.goto(`/reports?projectId=${mockProject.id}&runId=${runId}`)
+  await expect(page.getByRole("heading", { name: "Evidence Center" })).toBeVisible()
+
+  const metrics = await page.locator(".evidence-run-context-panel").evaluate((panel) => {
+    const rect = panel.getBoundingClientRect()
+    return {
+      bodyOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      height: rect.height,
+      position: window.getComputedStyle(panel).position,
+      right: rect.right,
+      viewportWidth: document.documentElement.clientWidth,
+    }
+  })
+  expect(metrics.bodyOverflow).toBeLessThanOrEqual(1)
+  expect(metrics.position).toBe("static")
+  expect(metrics.right).toBeLessThanOrEqual(metrics.viewportWidth + 1)
+  expect(metrics.height).toBeLessThanOrEqual(360)
 })
 
 function analysisRun(): AnalysisRunPublic {

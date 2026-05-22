@@ -1,7 +1,10 @@
 import {
   VpwStatusBanner,
 } from "@/components/vpw"
-import { statusBannerTone } from "./evidence-center-model"
+import {
+  actionStatusTitle,
+  statusBannerTone,
+} from "./evidence-center-model"
 export { ArtifactSection } from "./EvidenceArtifactSection"
 export { EvidenceLifecycle } from "./EvidenceLifecycleFlow"
 
@@ -17,13 +20,16 @@ export function ActionStatus({
   return (
     <div className="flex flex-col gap-3">
       {error ? (
-        <VpwStatusBanner title="Report action failed" tone="critical">
+        <VpwStatusBanner
+          title={actionStatusTitle(message, error)}
+          tone="critical"
+        >
           {error}
         </VpwStatusBanner>
       ) : null}
       {message ? (
         <VpwStatusBanner
-          title="Report action complete"
+          title={actionStatusTitle(message, error)}
           tone={statusBannerTone(message)}
         >
           {message}
