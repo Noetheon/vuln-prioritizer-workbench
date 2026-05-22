@@ -751,6 +751,9 @@ test("workspace hero and summary surfaces use shared VPW shell primitives", () =
 test("app shell owns page scrolling in the content region", () => {
   const appShell = readProjectFile("src/components/app/AppShell.tsx")
   const baseCss = readProjectFile("src/styles/base.css")
+  const scrollOwner = readProjectFile(
+    "src/components/app/useWorkbenchScrollOwner.ts",
+  )
 
   assert.match(appShell, /vpw-app-shell/)
   assert.match(appShell, /<main className="[^"]*overflow-hidden/)
@@ -765,6 +768,9 @@ test("app shell owns page scrolling in the content region", () => {
   assert.doesNotMatch(appShell, /sticky top-0/)
   assert.match(baseCss, /html:has\(\.vpw-app-shell\)/)
   assert.match(baseCss, /body:has\(\.vpw-app-shell\)/)
+  assert.doesNotMatch(scrollOwner, /onWheelCapture/)
+  assert.doesNotMatch(scrollOwner, /preventDefault/)
+  assert.doesNotMatch(scrollOwner, /requestAnimationFrame/)
 })
 
 test("stylesheets do not couple to shadcn data-slot internals", () => {
