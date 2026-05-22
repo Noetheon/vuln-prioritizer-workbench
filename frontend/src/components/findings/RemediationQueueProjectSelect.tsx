@@ -1,11 +1,5 @@
 import type { ProjectPublic } from "@/api-client"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { VpwField, VpwSelectControl } from "@/components/vpw"
 
 type RemediationQueueProjectSelectProps = {
   onProjectChange: (id: string) => void
@@ -21,29 +15,18 @@ export function RemediationQueueProjectSelect({
   selectedProjectId,
 }: RemediationQueueProjectSelectProps) {
   return (
-    <div className="findings-filter-field findings-filter-field--project">
-      <span className="vpw-label findings-filter-label">
-        Project
-      </span>
-      <Select
+    <VpwField className="vpw-filter-field vpw-filter-field--md" label="Project">
+      <VpwSelectControl
+        ariaLabel="Project"
         disabled={projectListLoading || projects.length === 0}
         onValueChange={onProjectChange}
+        options={projects.map((project) => ({
+          label: project.name,
+          value: project.id,
+        }))}
+        placeholder="No projects"
         value={selectedProjectId}
-      >
-        <SelectTrigger
-          aria-label="Project"
-          className="findings-filter-control h-9 w-full text-sm"
-        >
-          <SelectValue placeholder="No projects" />
-        </SelectTrigger>
-        <SelectContent>
-          {projects.map((project) => (
-            <SelectItem key={project.id} value={project.id}>
-              {project.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+      />
+    </VpwField>
   )
 }

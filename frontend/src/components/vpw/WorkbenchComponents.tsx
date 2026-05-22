@@ -1,5 +1,6 @@
 import { isValidElement, type ComponentPropsWithoutRef, type ReactNode } from "react"
 
+import { Button } from "@/components/ui/button"
 import {
   Sheet,
   SheetContent,
@@ -10,6 +11,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
+import { X } from "lucide-react"
 
 import { VpwBadge, type BadgeDensity, type VpwBadgeTone } from "./VpwBadge"
 import {
@@ -38,6 +40,11 @@ import { VpwTableCard } from "./VpwTableCard"
 import {
   type SignalKind,
   type StatusKind,
+  formatRiskScore,
+  normalizeRiskLevel,
+  riskLabel,
+  riskScoreTone,
+  riskTone,
   signalLabel,
   signalTone,
   statusLabel,
@@ -276,16 +283,27 @@ export function PageSection({
 }
 
 export type FilterBarProps = VpwFilterBarProps & {
+  activeFilters?: readonly FilterBarActiveFilter[]
   resetAction?: ReactNode
   resultCount?: number | string
   resultLabel?: ReactNode
+  secondaryControls?: ReactNode
+}
+
+export type FilterBarActiveFilter = {
+  label: ReactNode
+  onRemove: () => void
+  ariaLabel?: string
+  id?: string
 }
 
 export function FilterBar({
+  activeFilters,
   actions,
   resetAction,
   resultCount,
   resultLabel,
+  secondaryControls,
   ...props
 }: FilterBarProps) {
   const resolvedActions =
@@ -301,7 +319,40 @@ export function FilterBar({
       </>
     ) : undefined
 
-  return <VpwFilterBar actions={resolvedActions} {...props} />
+  return (
+    <div className="grid min-w-0 gap-2">
+      <VpwFilterBar actions={resolvedActions} {...props} />
+      {activeFilters && activeFilters.length > 0 ? (
+        <fieldset
+          aria-label="Active filters"
+          className="m-0 flex min-w-0 flex-wrap gap-2 border-0 p-0"
+        >
+          {activeFilters.map((filter) => (
+            <Button
+              aria-label={filter.ariaLabel}
+              className="min-w-0 gap-1.5 border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] text-xs text-[var(--vpw-text-secondary)]"
+              key={filter.id ?? String(filter.label)}
+              onClick={filter.onRemove}
+              size="xs"
+              type="button"
+              variant="outline"
+            >
+              <span className="min-w-0 truncate">{filter.label}</span>
+              <X aria-hidden="true" className="size-3 shrink-0" />
+            </Button>
+          ))}
+        </fieldset>
+      ) : null}
+      {secondaryControls ? (
+        <fieldset
+          aria-label="Additional filters"
+          className="vpw-filter-bar m-0 border-0 p-0"
+        >
+          {secondaryControls}
+        </fieldset>
+      ) : null}
+    </div>
+  )
 }
 
 export type DataTableFrameEmptyStateConfig = Pick<
@@ -474,6 +525,9 @@ export type SignalBadgeKind =
   | "accepted_risk"
   | "provider-freshness"
   | "provider_freshness"
+  | "priority"
+  | "risk-score"
+  | "risk_score"
   | string
 
 export type SignalBadgeProps = {
@@ -515,6 +569,10 @@ function canonicalSignalLabel(
   if (normalized === "provider_freshness") {
     return value ? `Freshness ${value}` : "Provider freshness"
   }
+  if (normalized === "priority") {
+    return value ? `Priority ${riskLabel(normalizeRiskLevel(String(value)))}` : "Priority"
+  }
+  if (normalized === "risk_score") return `Risk ${formatRiskScore(value)}`
   return signalLabel({ kind, value })
 }
 
@@ -532,6 +590,8 @@ function canonicalSignalTone(
     if (freshness === "failed") return "critical"
     return "info"
   }
+  if (normalized === "priority") return riskTone(normalizeRiskLevel(String(value)))
+  if (normalized === "risk_score") return riskScoreTone(value)
   return signalTone(kind)
 }
 

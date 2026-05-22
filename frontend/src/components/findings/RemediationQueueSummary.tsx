@@ -1,12 +1,11 @@
 import { Link } from "@/lib/router"
-import { AlertTriangle, ArrowUp, Eye, FileDown, Upload } from "lucide-react"
-import type { ReactNode } from "react"
+import { FileDown, Upload } from "lucide-react"
 import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
-  VpwPanel,
-  VpwSection,
+  ContextBar,
+  MetricStrip,
   VpwDemoBanner,
 } from "@/components/vpw"
 
@@ -21,7 +20,6 @@ export function DemoBanner() {
 
 type SummaryMetric = {
   description: string
-  icon: ReactNode
   label: string
   tone: "critical" | "warning" | "support" | "info"
   value: number
@@ -47,28 +45,24 @@ export function RemediationQueueSummary({
   const metrics: SummaryMetric[] = [
     {
       description: "Immediate owner attention",
-      icon: <AlertTriangle aria-hidden="true" className="h-4 w-4" />,
       label: "Critical",
       tone: "critical",
       value: criticalCount,
     },
     {
       description: "Near-term remediation",
-      icon: <ArrowUp aria-hidden="true" className="h-4 w-4" />,
       label: "High",
       tone: "warning",
       value: highCount,
     },
     {
       description: "Known exploited",
-      icon: <AlertTriangle aria-hidden="true" className="h-4 w-4" />,
       label: "KEV",
-      tone: "support",
+      tone: "critical",
       value: kevCount,
     },
     {
       description: "Open lifecycle",
-      icon: <Eye aria-hidden="true" className="h-4 w-4" />,
       label: "Open",
       tone: "info",
       value: openCount,
@@ -76,20 +70,10 @@ export function RemediationQueueSummary({
   ]
 
   return (
-    <VpwSection>
-      <VpwPanel className="findings-triage-overview" padded={false}>
-        <div className="findings-triage-overview__header">
-          <div>
-            <p className="vpw-label text-[var(--vpw-teal)]">
-              Remediation workspace
-            </p>
-            <h2>Findings queue</h2>
-            <p>
-              Prioritized vulnerability findings for {projectName}. Review
-              owner-ready evidence, context, and remediation state.
-            </p>
-          </div>
-          <div className="findings-triage-overview__actions">
+    <>
+      <ContextBar
+        actions={
+          <>
             <Button asChild size="sm" variant="outline">
               <Link search={projectSearch} to="/reports">
                 <FileDown aria-hidden="true" className="mr-1.5" size={14} />
@@ -102,25 +86,18 @@ export function RemediationQueueSummary({
                 Import findings
               </Link>
             </Button>
-          </div>
-        </div>
-        <dl className="findings-triage-strip" aria-label="Queue signal summary">
-          {metrics.map((metric) => (
-            <div data-tone={metric.tone} key={metric.label}>
-              <dt>
-                <span className="findings-triage-strip__icon">
-                  {metric.icon}
-                </span>
-                {metric.label}
-              </dt>
-              <dd>{metric.value}</dd>
-              <dd className="findings-triage-strip__description">
-                {metric.description}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </VpwPanel>
-    </VpwSection>
+          </>
+        }
+        description={`Prioritized findings for ${projectName}. Work from owner attention, evidence strength, affected asset context, and lifecycle state.`}
+        items={[
+          { label: "Project", value: projectName },
+          { label: "Primary object", value: "Prioritized findings" },
+          { label: "Decision basis", value: "Supplied evidence and provider signals" },
+          { label: "Next action", value: "Open queue row or quick view" },
+        ]}
+        title="Triage context"
+      />
+      <MetricStrip metrics={metrics} />
+    </>
   )
 }

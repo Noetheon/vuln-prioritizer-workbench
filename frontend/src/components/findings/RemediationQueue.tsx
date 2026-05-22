@@ -9,7 +9,6 @@ import { DEMO_FINDINGS, DEMO_PROJECT, DEMO_SUMMARY } from "@/lib/demo-data"
 import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import { apiErrorMessage } from "@/lib/app-errors"
 import { useFindingDetailQuery } from "@/workbench/useWorkbenchQueries"
-import type { QueueSort } from "./FindingsDataTable"
 import { RemediationQueueView } from "./RemediationQueueView"
 import {
   activeFilterCount,
@@ -19,6 +18,7 @@ import {
   type FindingsSavedView,
   type FindingsDirection,
   type FindingsSort,
+  type QueueSort,
   isApiSort,
   sortDisplayFindings,
 } from "./remediation-queue-model"

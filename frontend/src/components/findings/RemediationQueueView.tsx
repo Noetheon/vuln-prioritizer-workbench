@@ -1,9 +1,4 @@
-import {
-  type Dispatch,
-  type SetStateAction,
-  useEffect,
-  useState,
-} from "react"
+import type { Dispatch, SetStateAction } from "react"
 import type {
   FindingDetailPublic,
   FindingExplanationPublic,
@@ -12,7 +7,7 @@ import type {
 } from "@/api-client"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import type { FindingsUrlSearch } from "./findings-search-state"
-import type { QueueSort } from "./FindingsDataTable"
+import type { QueueSort } from "./remediation-queue-model"
 import type { RemediationQueueProps } from "./RemediationQueue"
 import { QuickViewSheet } from "./RemediationQueueDialogs"
 import { RemediationQueueFilters } from "./RemediationQueueFilters"
@@ -114,33 +109,6 @@ export function RemediationQueueView({
   totalCount,
 }: RemediationQueueViewProps) {
   const stableFindingSearch: FindingsUrlSearch = findingSearch
-  const mobileFilterLayout = useMobileFilterLayout()
-  const renderFilters = (controlIdPrefix: string) => (
-    <RemediationQueueFilters
-      activeFindingFilters={activeFindingFilters}
-      controlIdPrefix={controlIdPrefix}
-      filterCount={filterCount}
-      findingAssetId={findingAssetId}
-      findingAssetKey={findingAssetKey}
-      findingFilters={findingFilters}
-      isDemo={isDemo}
-      onClearAssetFilter={onClearAssetFilter}
-      onClearFilters={onClearFilters}
-      onFilterChange={onFilterChange}
-      onProjectChange={onProjectChange}
-      onSavedViewChange={onSavedViewChange}
-      ownerServiceDraft={ownerServiceDraft}
-      projectListLoading={projectListLoading}
-      projects={projects}
-      queryDraft={queryDraft}
-      selectedProjectId={selectedProjectId}
-      setAdvancedFiltersOpen={setAdvancedFiltersOpen}
-      setOwnerServiceDraft={setOwnerServiceDraft}
-      setQueryDraft={setQueryDraft}
-      showAdvancedFilters={showAdvancedFilters}
-      signalFilterCount={signalFilterCount}
-    />
-  )
 
   return (
     <TooltipProvider>
@@ -165,8 +133,29 @@ export function RemediationQueueView({
             totalCount,
           })}
         </p>
-        {!mobileFilterLayout ? renderFilters("queue-desktop") : null}
-        {mobileFilterLayout ? renderFilters("queue-mobile") : null}
+        <RemediationQueueFilters
+          activeFindingFilters={activeFindingFilters}
+          filterCount={filterCount}
+          findingAssetId={findingAssetId}
+          findingAssetKey={findingAssetKey}
+          findingFilters={findingFilters}
+          isDemo={isDemo}
+          onClearAssetFilter={onClearAssetFilter}
+          onClearFilters={onClearFilters}
+          onFilterChange={onFilterChange}
+          onProjectChange={onProjectChange}
+          onSavedViewChange={onSavedViewChange}
+          ownerServiceDraft={ownerServiceDraft}
+          projectListLoading={projectListLoading}
+          projects={projects}
+          queryDraft={queryDraft}
+          selectedProjectId={selectedProjectId}
+          setAdvancedFiltersOpen={setAdvancedFiltersOpen}
+          setOwnerServiceDraft={setOwnerServiceDraft}
+          setQueryDraft={setQueryDraft}
+          showAdvancedFilters={showAdvancedFilters}
+          signalFilterCount={signalFilterCount}
+        />
         <RemediationQueueStates
           activeFindingFilters={activeFindingFilters}
           displayFindings={displayFindings}
@@ -213,22 +202,4 @@ export function RemediationQueueView({
       </div>
     </TooltipProvider>
   )
-}
-
-function useMobileFilterLayout() {
-  const [mobileFilterLayout, setMobileFilterLayout] = useState(() => {
-    if (typeof window === "undefined") return false
-    return window.matchMedia("(max-width: 639px)").matches
-  })
-
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 639px)")
-    const update = () => setMobileFilterLayout(media.matches)
-
-    update()
-    media.addEventListener("change", update)
-    return () => media.removeEventListener("change", update)
-  }, [])
-
-  return mobileFilterLayout
 }

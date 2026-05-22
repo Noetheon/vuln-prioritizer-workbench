@@ -1,4 +1,5 @@
 import { Input } from "@/components/ui/input"
+import { VpwField } from "@/components/vpw"
 
 type RangeFilterProps = {
   max: string
@@ -24,14 +25,11 @@ export function RangeFilter({
   step,
 }: RangeFilterProps) {
   return (
-    <div className="findings-filter-field findings-filter-field--range">
-      <span className="vpw-label findings-filter-label">
-        {name}
-      </span>
-      <div className="findings-filter-range-control">
+    <VpwField className="vpw-filter-field vpw-filter-field--md" label={name}>
+      <div className="flex min-w-0 items-center gap-2">
         <Input
           aria-label={minLabel}
-          className="findings-filter-control h-9 w-20 text-sm"
+          className="vpw-filter-control h-9 w-20 text-sm"
           inputMode="decimal"
           max={max}
           min="0"
@@ -44,7 +42,7 @@ export function RangeFilter({
         <span className="text-xs text-muted-foreground">to</span>
         <Input
           aria-label={maxLabel}
-          className="findings-filter-control h-9 w-20 text-sm"
+          className="vpw-filter-control h-9 w-20 text-sm"
           inputMode="decimal"
           max={max}
           min="0"
@@ -55,6 +53,6 @@ export function RangeFilter({
           value={maxValue}
         />
       </div>
-    </div>
+    </VpwField>
   )
 }

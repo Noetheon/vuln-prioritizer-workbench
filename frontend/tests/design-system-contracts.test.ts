@@ -124,7 +124,7 @@ const resetControlContractFiles = [
   "src/components/waivers/WaiversWorkbenchRegister.tsx",
 ]
 
-const findingsFilterControlContractFiles = [
+const canonicalFindingsFilterFiles = [
   "src/components/findings/RemediationQueueProjectSelect.tsx",
   "src/components/findings/RemediationQueueFilterControls.tsx",
   "src/components/findings/RemediationQueueRangeFilter.tsx",
@@ -686,13 +686,52 @@ test("inventory filter sections use shared filter controls", () => {
   assert.deepEqual(offenders, [])
 })
 
-test("findings filter controls share the Workbench control height contract", () => {
+test("findings triage uses canonical Workbench filter, table, badge, and drawer primitives", () => {
   const offenders: string[] = []
-  for (const path of findingsFilterControlContractFiles) {
+  const filters = readProjectFile(
+    "src/components/findings/RemediationQueueFilters.tsx",
+  )
+  const table = readProjectFile(
+    "src/components/findings/RemediationQueueTableSection.tsx",
+  )
+  const columns = readProjectFile(
+    "src/components/findings/FindingsDataTableColumns.tsx",
+  )
+  const drawer = readProjectFile(
+    "src/components/findings/RemediationQueueQuickViewSheet.tsx",
+  )
+  const drawerSections = readProjectFile(
+    "src/components/findings/RemediationQueueQuickViewSections.tsx",
+  )
+  const findingsStyles = readProjectFile("src/styles/findings.css")
+
+  assert.match(filters, /<FilterBar/)
+  assert.match(table, /<DataTableFrame/)
+  assert.match(table, /mobileCards=\{false\}/)
+  assert.match(columns, /SignalBadge/)
+  assert.match(columns, /StatusBadge/)
+  assert.match(drawer, /<DetailDrawer/)
+  assert.match(drawerSections, /DecisionSummary/)
+  assert.match(drawerSections, /DefinitionList/)
+  assert.match(drawerSections, /EvidenceRow/)
+
+  for (const path of canonicalFindingsFilterFiles) {
     const source = readProjectFile(path)
-    if (!/findings-filter-control/.test(source)) {
-      offenders.push(`${path}: missing findings-filter-control`)
+    if (/findings-filter-(?:card|grid|control|field|label)/.test(source)) {
+      offenders.push(`${path}: uses route-local filter classes`)
     }
+  }
+  if (/findings-triage|findings-mobile|finding-drawer/.test(findingsStyles)) {
+    offenders.push("src/styles/findings.css: contains retired Findings UI chrome")
+  }
+  if (
+    /FindingsMobileCards|<FindingsDataTable|from "\.\/FindingsDataTable"/.test(
+      table,
+    )
+  ) {
+    offenders.push(
+      "src/components/findings/RemediationQueueTableSection.tsx: uses retired wrappers",
+    )
   }
 
   assert.deepEqual(offenders, [])

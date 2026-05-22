@@ -8,11 +8,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
-  MetaTag,
-  RiskBadge,
-  RiskScoreBadge,
-  SignalChip,
-  StatusLozenge,
+  SignalBadge,
+  StatusBadge,
   VpwSignalCluster,
   type VpwDataTableColumn,
 } from "@/components/vpw"
@@ -59,7 +56,7 @@ export function buildFindingsDataTableColumns({
       header: "Priority",
       ariaSort: sortAriaState(findingDirection, queueSort, "priority"),
       cell: (finding) => (
-        <RiskBadge density="compact" level={finding.priority} />
+        <SignalBadge kind="priority" value={finding.priority} />
       ),
       className: "w-[9%]",
       headerClassName: "w-[9%]",
@@ -71,7 +68,7 @@ export function buildFindingsDataTableColumns({
       header: "Score",
       ariaSort: sortAriaState(findingDirection, queueSort, "score"),
       cell: (finding) => (
-        <RiskScoreBadge density="compact" value={finding.risk_score} />
+        <SignalBadge kind="risk-score" value={finding.risk_score} />
       ),
       className: "w-[7%]",
       headerClassName: "w-[7%]",
@@ -134,10 +131,10 @@ export function buildFindingsDataTableColumns({
           </span>
           <div className="finding-meta-tags">
             {finding.asset_environment ? (
-              <MetaTag label={labelize(finding.asset_environment)} />
+              <SignalBadge kind="unknown" label={labelize(finding.asset_environment)} />
             ) : null}
             {finding.exposure ? (
-              <MetaTag label={labelize(finding.exposure)} />
+              <SignalBadge kind="exposure" value={labelize(finding.exposure)} />
             ) : null}
           </div>
         </div>
@@ -167,16 +164,16 @@ export function buildFindingsDataTableColumns({
       ariaSort: sortAriaState(findingDirection, queueSort, "epss"),
       cell: (finding) => (
         <VpwSignalCluster maxVisible={3}>
-          {finding.in_kev ? <SignalChip kind="kev" /> : null}
+          {finding.in_kev ? <SignalBadge kind="kev" /> : null}
           {finding.epss !== null && finding.epss !== undefined ? (
-            <SignalChip kind="epss" value={finding.epss} />
+            <SignalBadge kind="epss" value={finding.epss} />
           ) : null}
           {finding.cvss_base_score !== null &&
           finding.cvss_base_score !== undefined ? (
-            <SignalChip kind="cvss" value={finding.cvss_base_score} />
+            <SignalBadge kind="cvss" value={finding.cvss_base_score} />
           ) : null}
-          {finding.attack_mapped ? <SignalChip kind="attack" /> : null}
-          {finding.suppressed_by_vex ? <SignalChip kind="vex" /> : null}
+          {finding.attack_mapped ? <SignalBadge kind="attack" /> : null}
+          {finding.suppressed_by_vex ? <SignalBadge kind="vex" /> : null}
         </VpwSignalCluster>
       ),
       className: "w-[14%]",
@@ -190,7 +187,7 @@ export function buildFindingsDataTableColumns({
       ariaSort: sortAriaState(findingDirection, queueSort, "status"),
       cell: (finding) => (
         <div className="finding-status-cell">
-          <StatusLozenge density="compact" status={finding.status} />
+          <StatusBadge status={finding.status} />
           <span
             className="remediation-subtext"
             title={`Last seen ${formatDateTime(finding.last_seen_at)}`}
@@ -198,11 +195,15 @@ export function buildFindingsDataTableColumns({
             {formatShortDate(finding.last_seen_at)}
           </span>
           <div className="finding-meta-tags">
-            <MetaTag label={findingSlaLabel(finding.priority)} />
+            <SignalBadge
+              kind="priority"
+              label={findingSlaLabel(finding.priority)}
+              value={finding.priority}
+            />
             {finding.under_investigation ? (
-              <MetaTag label="Under review" />
+              <StatusBadge label="Under review" status="in_review" />
             ) : null}
-            {finding.waived ? <MetaTag label="Accepted risk" /> : null}
+            {finding.waived ? <SignalBadge kind="accepted-risk" /> : null}
           </div>
         </div>
       ),

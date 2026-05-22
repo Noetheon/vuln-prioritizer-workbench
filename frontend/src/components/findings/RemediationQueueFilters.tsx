@@ -1,8 +1,8 @@
-import { ListFilter, RotateCcw, X } from "lucide-react"
+import { ListFilter, RotateCcw } from "lucide-react"
 import type { Dispatch, SetStateAction } from "react"
 import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
-import { VpwBadge, VpwSearchInput } from "@/components/vpw"
+import { FilterBar, VpwField, VpwSearchControl } from "@/components/vpw"
 import { formatLabel as labelize } from "@/lib/ui-copy"
 import {
   AdvancedFilterSelects,
@@ -18,7 +18,6 @@ import {
 
 type RemediationQueueFiltersProps = {
   activeFindingFilters: boolean
-  controlIdPrefix?: string
   filterCount: number
   findingAssetId: string | null
   findingAssetKey: string | null
@@ -46,7 +45,6 @@ type RemediationQueueFiltersProps = {
 
 export function RemediationQueueFilters({
   activeFindingFilters,
-  controlIdPrefix = "queue",
   filterCount,
   findingAssetId,
   findingAssetKey,
@@ -68,8 +66,6 @@ export function RemediationQueueFilters({
   showAdvancedFilters,
   signalFilterCount,
 }: RemediationQueueFiltersProps) {
-  const queueSearchId = `${controlIdPrefix}-search`
-  const ownerServiceSearchId = `${controlIdPrefix}-owner-service`
   const activeSavedView = savedViewFromFilters(findingFilters)
   const activeFilterChips = [
     findingAssetId
@@ -143,137 +139,81 @@ export function RemediationQueueFilters({
   )
 
   return (
-    <section
-      aria-label="Findings filters"
-      className="findings-filter-card"
-    >
-      <div className="findings-filter-card__inner">
-        <div className="findings-filter-grid">
-          {!isDemo ? (
+    <FilterBar
+      activeFilters={activeFilterChips.map((chip) => ({
+        ariaLabel: `Remove active filter ${chip.label}`,
+        id: chip.label,
+        label: chip.label,
+        onRemove: chip.onRemove,
+      }))}
+      actions={
+        <>
+          <Button
+            aria-expanded={showAdvancedFilters}
+            onClick={() => setAdvancedFiltersOpen((open) => !open)}
+            size="sm"
+            type="button"
+            variant={showAdvancedFilters ? "secondary" : "outline"}
+          >
+            <ListFilter aria-hidden="true" size={14} />
+            {signalFilterCount > 0
+              ? `Signals (${signalFilterCount})`
+              : "Signals"}
+          </Button>
+          <Button
+            disabled={!activeFindingFilters && filterCount === 0}
+            onClick={onClearFilters}
+            size="sm"
+            type="button"
+            variant="ghost"
+          >
+            <RotateCcw aria-hidden="true" size={14} />
+            Reset
+          </Button>
+        </>
+      }
+      leading={
+        !isDemo ? (
             <RemediationQueueProjectSelect
               onProjectChange={onProjectChange}
               projectListLoading={projectListLoading}
               projects={projects}
               selectedProjectId={selectedProjectId}
             />
-          ) : null}
-
-          {findingAssetId ? (
-            <div className="findings-filter-asset">
-              <span>Asset</span>
-              <strong>{findingAssetKey ?? findingAssetId}</strong>
-              <Button
-                aria-label="Clear asset filter"
-                className="ml-1 size-6"
-                onClick={onClearAssetFilter}
-                size="icon"
-                type="button"
-                variant="ghost"
-              >
-                <X aria-hidden="true" size={12} />
-              </Button>
-            </div>
-          ) : null}
-
-          <label
-            className="findings-filter-field findings-filter-field--search"
-            htmlFor={queueSearchId}
-          >
-            <span className="vpw-label findings-filter-label">
-              Search
-            </span>
-            <VpwSearchInput
-              id={queueSearchId}
-              onChange={(e) => setQueryDraft(e.target.value)}
-              placeholder="CVE, asset"
-              value={queryDraft}
-            />
-          </label>
-
-          <label
-            className="findings-filter-field findings-filter-field--owner"
-            htmlFor={ownerServiceSearchId}
-          >
-            <span className="vpw-label findings-filter-label">
-              Owner / Service
-            </span>
-            <VpwSearchInput
-              id={ownerServiceSearchId}
-              onChange={(e) => setOwnerServiceDraft(e.target.value)}
-              placeholder="Owner or service"
-              value={ownerServiceDraft}
-            />
-          </label>
-
-          <PrimaryFilterSelects
-            findingFilters={findingFilters}
-            onFilterChange={onFilterChange}
-          />
-
-          <RemediationQueueSavedViews
-            activeSavedView={activeSavedView}
-            onSavedViewChange={onSavedViewChange}
-          />
-
-          <div className="findings-filter-actions">
-            <Button
-              aria-expanded={showAdvancedFilters}
-              className="h-9"
-              onClick={() => setAdvancedFiltersOpen((open) => !open)}
-              size="sm"
-              type="button"
-              variant={showAdvancedFilters ? "secondary" : "outline"}
-            >
-              <ListFilter aria-hidden="true" size={14} />
-              Signals
-              {signalFilterCount > 0 ? (
-                <VpwBadge className="ml-1" density="compact">
-                  {signalFilterCount}
-                </VpwBadge>
-              ) : null}
-            </Button>
-
-            <Button
-              className="h-9"
-              disabled={!activeFindingFilters && filterCount === 0}
-              onClick={onClearFilters}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              <RotateCcw aria-hidden="true" size={14} />
-              Reset
-            </Button>
-          </div>
-        </div>
-
-        {showAdvancedFilters ? (
+          ) : undefined
+      }
+      onSearchChange={setQueryDraft}
+      searchLabel="Finding search"
+      searchPlaceholder="CVE, asset"
+      searchTitle="Search"
+      searchValue={queryDraft}
+      secondaryControls={
+        showAdvancedFilters ? (
           <AdvancedFilterSelects
             findingFilters={findingFilters}
             onFilterChange={onFilterChange}
           />
-        ) : null}
-
-        {activeFilterChips.length > 0 ? (
-          <div className="findings-active-filters">
-            <span className="sr-only">Active filters</span>
-            {activeFilterChips.map((chip, index) => (
-              <Button
-                aria-label={`Remove active filter ${index + 1}`}
-                className="findings-active-filter-chip"
-                key={chip.label}
-                onClick={chip.onRemove}
-                size="xs"
-                type="button"
-                variant="ghost"
-              >
-                <span>{chip.label}</span>
-                <X aria-hidden="true" size={12} />
-              </Button>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </section>
+        ) : undefined
+      }
+    >
+      <VpwField
+        className="vpw-filter-field vpw-filter-field--md"
+        label="Owner / Service"
+      >
+        <VpwSearchControl
+          onChange={(event) => setOwnerServiceDraft(event.target.value)}
+          placeholder="Owner or service"
+          value={ownerServiceDraft}
+        />
+      </VpwField>
+      <PrimaryFilterSelects
+        findingFilters={findingFilters}
+        onFilterChange={onFilterChange}
+      />
+      <RemediationQueueSavedViews
+        activeSavedView={activeSavedView}
+        onSavedViewChange={onSavedViewChange}
+      />
+    </FilterBar>
   )
 }
