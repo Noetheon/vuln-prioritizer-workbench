@@ -3,10 +3,10 @@ import type { FindingPublic, ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
-  Callout,
-  EmptyState,
+  VpwEmptyState,
   VpwPanel,
   VpwSkeletonStack,
+  VpwStatusBanner,
 } from "@/components/vpw"
 
 type RemediationQueueStatesProps = {
@@ -37,9 +37,9 @@ export function RemediationQueueStates({
   return (
     <>
       {hasError ? (
-        <Callout severity="critical" title="Findings unavailable">
+        <VpwStatusBanner title="Findings unavailable" tone="critical">
           {findingsError}
-        </Callout>
+        </VpwStatusBanner>
       ) : null}
       {isLoading ? (
         <VpwPanel aria-busy="true" aria-label="Loading findings" role="status">
@@ -48,7 +48,7 @@ export function RemediationQueueStates({
       ) : null}
 
       {!isLoading && !hasError && !isDemo && projects.length === 0 ? (
-        <EmptyState
+        <VpwEmptyState
           action={
             <Button asChild>
               <Link to="/projects">Create a project</Link>
@@ -66,7 +66,7 @@ export function RemediationQueueStates({
       selectedProject &&
       displayFindings.length === 0 &&
       !activeFindingFilters ? (
-        <EmptyState
+        <VpwEmptyState
           action={
             <Button asChild>
               <Link search={projectSearch} to="/imports">
@@ -84,7 +84,7 @@ export function RemediationQueueStates({
       !hasError &&
       displayFindings.length === 0 &&
       activeFindingFilters ? (
-        <EmptyState
+        <VpwEmptyState
           action={
             <Button onClick={onClearFilters} type="button" variant="outline">
               Clear filters

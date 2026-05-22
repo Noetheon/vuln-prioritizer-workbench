@@ -3,12 +3,9 @@ import { ShieldCheck } from "lucide-react"
 import type { FindingDetailPublic, FindingPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
-  Callout,
-  DecisionSummary,
-  DefinitionList,
-  EvidenceRow,
-  SignalBadge,
-  StatusBadge,
+  RiskBadge,
+  StatusLozenge,
+  VpwBadge,
 } from "@/components/vpw"
 import {
   attackConfidenceLabel,
@@ -25,6 +22,7 @@ import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 import type { ProjectUrlSearch } from "@/workbench/selected-project-search"
 import {
   cvssText,
+  DrawerFact,
   drawerAssetLabel,
   epssText,
   governanceCopy,
@@ -48,25 +46,18 @@ type QuickViewAttackTechnique = {
   technique_id?: string | null
 }
 
-type QuickViewSignalItem = {
-  detail: string
-  kind: "kev" | "epss" | "cvss" | "attack" | "vex"
-  label: string
-  value?: number
-}
-
 function riskScoreLabel(value: QuickViewFinding["risk_score"]) {
   if (typeof value === "number") return `Risk ${value.toFixed(1)}`
   return value ? `Risk ${value}` : "Risk not scored"
 }
 
 function signalItems(finding: QuickViewFinding) {
-  const items: Array<QuickViewSignalItem | null> = [
+  return [
     finding.in_kev
       ? {
           detail: "Known exploited vulnerability signal is present.",
-          kind: "kev" as const,
           label: "CISA KEV",
+          tone: "critical" as const,
         }
       : null,
     finding.epss !== null && finding.epss !== undefined
@@ -75,52 +66,41 @@ function signalItems(finding: QuickViewFinding) {
             finding.epss >= 0.7
               ? "Elevated exploitation probability."
               : "Provider probability signal recorded.",
-          kind: "epss" as const,
           label: `EPSS ${epssText(finding)}`,
-          value: finding.epss,
+          tone: "warning" as const,
         }
       : null,
     finding.cvss_base_score !== null &&
     finding.cvss_base_score !== undefined
       ? {
           detail: "Impact severity score from vulnerability provider data.",
-          kind: "cvss" as const,
           label: `CVSS ${cvssText(finding)}`,
-          value: finding.cvss_base_score,
+          tone: "critical" as const,
         }
       : null,
     finding.attack_mapped
       ? {
           detail: "Reviewed defensive mapping is available.",
-          kind: "attack" as const,
           label: "ATT&CK mapped",
+          tone: "support" as const,
         }
       : null,
     finding.suppressed_by_vex
       ? {
           detail: "Suppression state is recorded and should be validated.",
-          kind: "vex" as const,
           label: "VEX state",
+          tone: "info" as const,
         }
       : null,
-  ]
-  return items.filter((item): item is QuickViewSignalItem => item !== null)
-}
-
-function primaryDriver(finding: QuickViewFinding) {
-  if (finding.in_kev) return <SignalBadge kind="kev" />
-  if (finding.epss !== null && finding.epss !== undefined) {
-    return <SignalBadge kind="epss" value={finding.epss} />
-  }
-  if (
-    finding.cvss_base_score !== null &&
-    finding.cvss_base_score !== undefined
-  ) {
-    return <SignalBadge kind="cvss" value={finding.cvss_base_score} />
-  }
-  if (finding.attack_mapped) return <SignalBadge kind="attack" />
-  if (finding.waived) return <SignalBadge kind="accepted-risk" />
-  return <StatusBadge status={finding.status} />
+  ].filter(
+    (
+      item,
+    ): item is {
+      detail: string
+      label: string
+      tone: "critical" | "warning" | "info" | "support"
+    } => Boolean(item),
+  )
 }
 
 function evidenceLabel(row: FindingDetailRow) {
@@ -167,14 +147,12 @@ function evidenceDetail(row: FindingDetailRow) {
 
 export function QuickViewStatusRow({ finding }: { finding: QuickViewFinding }) {
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2">
-      <SignalBadge kind="priority" value={finding.priority} />
-      <StatusBadge status={finding.status} />
-      <SignalBadge
-        kind="risk-score"
-        label={riskScoreLabel(finding.risk_score)}
-        value={finding.risk_score}
-      />
+    <div className="finding-drawer-status-row">
+      <RiskBadge density="compact" level={finding.priority} />
+      <StatusLozenge density="compact" status={finding.status} />
+      <VpwBadge density="compact" tone="critical">
+        {riskScoreLabel(finding.risk_score)}
+      </VpwBadge>
     </div>
   )
 }
@@ -194,25 +172,29 @@ export function QuickViewDecisionSummary({
     { label: "Service", value: optionalText(finding.business_service) },
     { label: "Asset", value: drawerAssetLabel(finding) },
     { label: "SLA", value: findingSlaLabel(finding.priority) },
-    { label: "Status", value: labelize(finding.status) },
   ]
 
   return (
     <section
       aria-label="Decision summary"
-      className="flex min-w-0 flex-col gap-3"
+      className="finding-drawer-section finding-drawer-section--decision"
     >
-      <DecisionSummary
-        decisionBasis="Prioritization combines supplied evidence, provider signals, affected context, and lifecycle state."
-        primaryDriver={primaryDriver(finding)}
-        recommendedAction={`${action.title}. ${compactFindingText(action.detail)}`}
-        riskScore={
-          <SignalBadge kind="risk-score" value={finding.risk_score} />
-        }
-        title="Priority decision"
-        whyThisPriority={compactFindingText(rationale, 320)}
-      />
-      <DefinitionList columns={2} items={assignment} />
+      <div className="finding-drawer-decision-hero">
+        <div className="finding-drawer-primary-action">
+          <span>Recommended action</span>
+          <strong>{action.title}</strong>
+          <p title={recommendedAction}>{compactFindingText(action.detail)}</p>
+        </div>
+      </div>
+      <dl className="finding-drawer-assignment-strip">
+        {assignment.map((item) => (
+          <DrawerFact key={item.label} label={item.label} value={item.value} />
+        ))}
+      </dl>
+      <div className="finding-drawer-why-now">
+        <span>Why now</span>
+        <p title={rationale}>{compactFindingText(rationale, 320)}</p>
+      </div>
     </section>
   )
 }
@@ -228,24 +210,22 @@ export function QuickViewSignalBrief({
   return (
     <section
       aria-label="Risk signals"
-      className="flex min-w-0 flex-col"
+      className="finding-drawer-section finding-drawer-section--signals"
     >
-      <p className="vpw-label mb-1">Signals</p>
-      <div className="min-w-0">
-        {items.map((item) => (
-          <EvidenceRow
-            description={item.detail}
-            key={item.label}
-            signal={{
-              kind: item.kind,
-              label: item.label,
-              value: item.value,
-            }}
-            source="Provider signal"
-            title={item.label}
-          />
-        ))}
+      <div className="finding-drawer-section-heading">
+        <h3>Signals</h3>
+        <span className="finding-drawer-section-meta">
+          {items.length} active
+        </span>
       </div>
+      <ul className="finding-drawer-signal-grid">
+        {items.map((item) => (
+          <li data-tone={item.tone} key={item.label}>
+            <strong>{item.label}</strong>
+            <span>{item.detail}</span>
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }
@@ -262,31 +242,32 @@ export function QuickViewEvidenceSnapshot({
   return (
     <section
       aria-label="Evidence snapshot"
-      className="flex min-w-0 flex-col"
+      className="finding-drawer-section finding-drawer-section--evidence"
     >
-      <p className="vpw-label mb-1">Evidence snapshot</p>
-      <div className="min-w-0">
-        {evidenceRows.slice(0, 5).map((row) => (
-          <EvidenceRow
-            description={evidenceDetail(row)}
-            key={row.label}
-            source={evidenceLabel(row)}
-            title={evidenceValue(row)}
-          />
-        ))}
+      <div className="finding-drawer-section-heading">
+        <h3>Evidence snapshot</h3>
       </div>
+      <dl className="finding-drawer-rows">
+        {evidenceRows.slice(0, 5).map((row) => (
+          <div key={row.label}>
+            <dt>{evidenceLabel(row)}</dt>
+            <dd>{evidenceValue(row)}</dd>
+            {evidenceDetail(row) ? (
+              <dd className="finding-drawer-evidence-detail">
+                {evidenceDetail(row)}
+              </dd>
+            ) : null}
+          </div>
+        ))}
+      </dl>
       {dataQuality.length > 0 ? (
-        <div className="mt-3 grid min-w-0 gap-2">
+        <ul className="finding-drawer-inline-list">
           {dataQuality.slice(0, 3).map((row) => (
-            <Callout
-              key={row.key}
-              severity={row.severity === "error" ? "critical" : "warning"}
-              title={labelize(row.severity)}
-            >
+            <li key={row.key}>
               {labelize(row.severity)}: {row.message}
-            </Callout>
+            </li>
           ))}
-        </div>
+        </ul>
       ) : null}
     </section>
   )
@@ -298,26 +279,25 @@ export function QuickViewOccurrencesPreview({
   occurrences: readonly FindingOccurrenceRow[]
 }) {
   return (
-    <section aria-label="Occurrences preview" className="flex min-w-0 flex-col">
-      <p className="vpw-label mb-1">Affected scope</p>
+    <section aria-label="Occurrences preview" className="finding-drawer-section">
+      <h3>Affected scope</h3>
       {occurrences.length > 0 ? (
-        <div className="min-w-0">
+        <ul className="finding-drawer-occurrences">
           {occurrences.slice(0, 3).map((occurrence, index) => (
-            <EvidenceRow
-              description={occurrenceComponentLabel(occurrence)}
-              key={occurrenceRowKey(occurrence, index)}
-              source={occurrenceSourceLabel(occurrence)}
-              title={occurrenceAssetLabel(occurrence)}
-            />
+            <li key={occurrenceRowKey(occurrence, index)}>
+              <div>
+                <strong>{occurrenceAssetLabel(occurrence)}</strong>
+                <span>{occurrenceComponentLabel(occurrence)}</span>
+              </div>
+              <small>{occurrenceSourceLabel(occurrence)}</small>
+            </li>
           ))}
-        </div>
+        </ul>
       ) : (
-        <p className="text-sm text-[var(--vpw-text-secondary)]">
-          No source occurrences are recorded for this finding.
-        </p>
+        <p>No source occurrences are recorded for this finding.</p>
       )}
       {occurrences.length > 3 ? (
-        <p className="mt-2 text-xs leading-5 text-[var(--vpw-text-muted)]">
+        <p className="finding-drawer-muted">
           {occurrences.length - 3} additional occurrence(s) are available in
           full detail.
         </p>
@@ -340,28 +320,28 @@ export function QuickViewAttackContextSection({
   return (
     <section
       aria-label="Defensive ATT&CK context"
-      className="flex min-w-0 flex-col gap-3"
+      className="finding-drawer-section"
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="finding-drawer-section-title">
         <ShieldCheck aria-hidden="true" size={16} />
-        <p className="vpw-label">Defensive ATT&CK context</p>
+        <h3>Defensive ATT&CK context</h3>
       </div>
-      <EvidenceRow
-        description={`${attackTacticsLabel(
-          attackTechniques[0]?.tactics,
-        )} - confidence ${attackConfidenceLabel(
-          attackContext?.confidence,
-        ).toLowerCase()} - ${labelize(attackContext?.review_status).toLowerCase()}`}
-        signal={{ kind: "attack" }}
-        source="Defensive ATT&CK context"
-        title={`${attackTechniques[0]?.technique_id ?? "Mapped"} ${
-          attackTechniques[0]?.name ?? ""
-        }`.trim()}
-      />
-      <Callout severity="info" title="Defensive context only">
+      <div className="finding-drawer-attack-compact">
+        <strong>
+          {`${attackTechniques[0]?.technique_id ?? "Mapped"} ${
+            attackTechniques[0]?.name ?? ""
+          }`.trim()}
+        </strong>
+        <span>
+          {attackTacticsLabel(attackTechniques[0]?.tactics)} · confidence{" "}
+          {attackConfidenceLabel(attackContext?.confidence).toLowerCase()} ·{" "}
+          {labelize(attackContext?.review_status).toLowerCase()}
+        </span>
+      </div>
+      <p className="finding-drawer-muted finding-drawer-muted--compact">
         Defensive planning context only; it does not prove compromise or active
         exploitation.
-      </Callout>
+      </p>
     </section>
   )
 }
@@ -376,17 +356,10 @@ export function QuickViewGovernanceSection({
   if (!finding.waived && !finding.suppressed_by_vex) return null
 
   return (
-    <section aria-label="Governance" className="flex min-w-0 flex-col gap-3">
-      <EvidenceRow
-        description={governanceCopy(finding)}
-        signal={{
-          kind: finding.waived ? "accepted-risk" : "vex",
-          label: finding.waived ? "Accepted risk" : "VEX state",
-        }}
-        source="Governance"
-        title={finding.waived ? "Risk acceptance recorded" : "Suppression state recorded"}
-      />
-      <div className="flex min-w-0 flex-wrap gap-2">
+    <section aria-label="Governance" className="finding-drawer-section">
+      <h3>Risk acceptance</h3>
+      <p>{governanceCopy(finding)}</p>
+      <div className="finding-drawer-actions-inline">
         <Button asChild size="sm" variant="outline">
           <Link search={projectSearch} to="/waivers">
             Open Risk Acceptance

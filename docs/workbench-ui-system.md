@@ -258,9 +258,6 @@ Use `PageSection`, `FilterBar`, and `DataTableFrame` for queues and registries:
         onSearchChange={setQuery}
       />
     }
-    activeFilters={[
-      { label: "Priority: Critical", onRemove: clearPriorityFilter },
-    ]}
     columns={columns}
     data={rows}
     getRowKey={(row) => row.id}
@@ -278,9 +275,6 @@ Use `DefinitionList` for metadata, `DecisionSummary` for rationale, and `Evidenc
   primaryDriver={<SignalBadge kind="kev" />}
   decisionBasis="Supplied asset evidence, provider snapshot, and waiver state."
 />
-
-<SignalBadge kind="priority" value="critical" />
-<SignalBadge kind="risk-score" value={9.4} />
 
 <DefinitionList
   items={[

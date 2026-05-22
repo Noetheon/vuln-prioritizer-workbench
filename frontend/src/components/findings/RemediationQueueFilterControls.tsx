@@ -3,7 +3,13 @@ import type {
   FindingPriority,
   FindingStatus,
 } from "@/api-client"
-import { VpwField, VpwSelectControl } from "@/components/vpw"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { formatLabel as labelize } from "@/lib/ui-copy"
 import { RangeFilter } from "./RemediationQueueRangeFilter"
 import {
@@ -28,42 +34,62 @@ export function PrimaryFilterSelects({
 }: FilterSelectsProps) {
   return (
     <>
-      <VpwField className="vpw-filter-field vpw-filter-field--sm" label="Priority">
-        <VpwSelectControl
-          ariaLabel="Priority"
+      <div className="findings-filter-field findings-filter-field--select">
+        <span className="vpw-label findings-filter-label">
+          Priority
+        </span>
+        <Select
           onValueChange={(v) =>
             onFilterChange(
               "priority",
               v === "__all" ? "" : (v as FindingPriority),
             )
           }
-          options={[
-            { label: "All", value: "__all" },
-            ...priorityOptions.map((p) => ({
-              label: labelize(p),
-              value: p,
-            })),
-          ]}
           value={findingFilters.priority || "__all"}
-        />
-      </VpwField>
+        >
+          <SelectTrigger
+            aria-label="Priority"
+            className="findings-filter-control h-9 w-full text-sm"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all">All</SelectItem>
+            {priorityOptions.map((p) => (
+              <SelectItem key={p} value={p}>
+                {labelize(p)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      <VpwField className="vpw-filter-field vpw-filter-field--sm" label="Status">
-        <VpwSelectControl
-          ariaLabel="Status"
+      <div className="findings-filter-field findings-filter-field--select">
+        <span className="vpw-label findings-filter-label">
+          Status
+        </span>
+        <Select
           onValueChange={(v) =>
             onFilterChange("status", v === "__all" ? "" : (v as FindingStatus))
           }
-          options={[
-            { label: "All", value: "__all" },
-            ...statusOptions.map((s) => ({
-              label: labelize(s),
-              value: s,
-            })),
-          ]}
           value={findingFilters.status || "__all"}
-        />
-      </VpwField>
+        >
+          <SelectTrigger
+            aria-label="Status"
+            className="findings-filter-control h-9 w-full text-sm"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all">All</SelectItem>
+            {statusOptions.map((s) => (
+              <SelectItem key={s} value={s}>
+                {labelize(s)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </>
   )
 }
@@ -73,41 +99,60 @@ export function AdvancedFilterSelects({
   onFilterChange,
 }: FilterSelectsProps) {
   return (
-    <>
-      <VpwField className="vpw-filter-field vpw-filter-field--sm" label="KEV">
-        <VpwSelectControl
-          ariaLabel="KEV"
+    <div className="findings-filter-advanced">
+      <div className="findings-filter-field findings-filter-field--select">
+        <span className="vpw-label findings-filter-label">
+          KEV
+        </span>
+        <Select
           onValueChange={(v) =>
             onFilterChange("kev", v === "__all" ? "" : (v as KevFilter))
           }
-          options={[
-            { label: "Any", value: "__all" },
-            { label: "KEV", value: "true" },
-            { label: "Not KEV", value: "false" },
-          ]}
           value={findingFilters.kev || "__all"}
-        />
-      </VpwField>
+        >
+          <SelectTrigger
+            aria-label="KEV"
+            className="findings-filter-control h-9 w-full text-sm"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all">Any</SelectItem>
+            <SelectItem value="true">KEV</SelectItem>
+            <SelectItem value="false">Not KEV</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-      <VpwField className="vpw-filter-field vpw-filter-field--md" label="Exposure">
-        <VpwSelectControl
-          ariaLabel="Exposure"
+      <div className="findings-filter-field findings-filter-field--wide-select">
+        <span className="vpw-label findings-filter-label">
+          Exposure
+        </span>
+        <Select
           onValueChange={(v) =>
             onFilterChange(
               "exposure",
               v === "__all" ? "" : (v as AssetExposure),
             )
           }
-          options={[
-            { label: "Any", value: "__all" },
-            ...exposureOptions.map((e) => ({
-              label: labelize(e),
-              value: e,
-            })),
-          ]}
           value={findingFilters.exposure || "__all"}
-        />
-      </VpwField>
+        >
+          <SelectTrigger
+            aria-label="Exposure"
+            className="findings-filter-control h-9 w-full text-sm"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all">Any</SelectItem>
+            {exposureOptions.map((e) => (
+              <SelectItem key={e} value={e}>
+                {labelize(e)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       <RangeFilter
         max="1"
@@ -131,6 +176,6 @@ export function AdvancedFilterSelects({
         onMinChange={(value) => onFilterChange("cvssMin", value)}
         step="0.1"
       />
-    </>
+    </div>
   )
 }

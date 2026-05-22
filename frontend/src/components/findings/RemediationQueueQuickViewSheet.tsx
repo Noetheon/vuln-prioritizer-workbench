@@ -5,7 +5,18 @@ import type {
   FindingPublic,
 } from "@/api-client"
 import { Button } from "@/components/ui/button"
-import { Callout, DetailDrawer, VpwSkeletonStack } from "@/components/vpw"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import {
+  VpwSkeletonStack,
+  VpwStatusBanner,
+} from "@/components/vpw"
 import {
   attackContextEmptyState,
   attackTechniqueRows,
@@ -57,9 +68,7 @@ export function QuickViewSheet({
 }: QuickViewSheetProps) {
   if (!finding) return null
   const effectiveFinding = detail ?? finding
-  const component = detail
-    ? findingComponentDetailLabel(detail)
-    : componentLabel(finding)
+  const component = detail ? findingComponentDetailLabel(detail) : componentLabel(finding)
   const occurrences = findingOccurrenceRows(detail, explanation)
   const dataQualityRows = findingDataQualityRows(detail, explanation)
   const providerGaps = findingProviderGaps(detail, explanation)
@@ -78,16 +87,78 @@ export function QuickViewSheet({
     : finding.recommended_action ?? "No recommended action has been recorded."
   const rationale = detail
     ? findingWhyText(detail, explanation)
-    : finding.rationale ??
-      "No priority explanation has been recorded for this finding."
+    : finding.rationale ?? "No priority explanation has been recorded for this finding."
   const projectSearch = selectedProjectRouteSearch(effectiveFinding.project_id)
 
   return (
-    <DetailDrawer
-      className="max-sm:left-0 max-sm:right-0 max-sm:w-auto max-sm:max-w-none w-[min(100vw,39rem)] sm:max-w-none"
-      description={component}
-      footer={
-        <>
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent className="vpw-sheet-content finding-detail-drawer max-sm:left-0 max-sm:right-0 max-sm:w-auto max-sm:max-w-none w-[min(100vw,39rem)] gap-0 overflow-hidden p-0 sm:max-w-none">
+        <SheetHeader className="border-b border-[var(--vpw-border-default)] px-5 py-4 pr-12 text-left">
+          <SheetTitle className="text-base leading-tight text-[var(--vpw-text-primary)]">
+            <span className="font-mono">{finding.cve_id}</span>
+            <span className="font-normal text-[var(--vpw-text-muted)]">
+              {" "}
+              · {component}
+            </span>
+          </SheetTitle>
+          <SheetDescription>
+            {component}
+          </SheetDescription>
+          <QuickViewStatusRow finding={effectiveFinding} />
+        </SheetHeader>
+
+        <section
+          aria-label="Finding quick view content"
+          className="finding-drawer-body"
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: Drawer body is the scroll owner and must be keyboard reachable.
+          tabIndex={0}
+        >
+          {error ? (
+            <VpwStatusBanner title={error} tone="critical">
+              <Button
+                className="mt-2 h-8 px-2"
+                onClick={onRefresh}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                Retry detail
+              </Button>
+            </VpwStatusBanner>
+          ) : null}
+          {explanationWarning ? (
+            <VpwStatusBanner title={explanationWarning} tone="critical" />
+          ) : null}
+
+          {loading ? (
+            <section aria-label="Loading finding drawer detail" role="status">
+              <VpwSkeletonStack rows={4} />
+            </section>
+          ) : null}
+
+          <QuickViewDecisionSummary
+            finding={effectiveFinding}
+            rationale={rationale}
+            recommendedAction={recommendedAction}
+          />
+          <QuickViewSignalBrief finding={effectiveFinding} />
+          <QuickViewEvidenceSnapshot
+            dataQualityRows={dataQualityRows}
+            evidenceRows={evidenceRows}
+          />
+          <QuickViewOccurrencesPreview occurrences={occurrences} />
+          <QuickViewAttackContextSection
+            attackContext={attackContext}
+            attackEmpty={attackEmpty}
+            attackTechniques={attackTechniques}
+          />
+          <QuickViewGovernanceSection
+            finding={effectiveFinding}
+            projectSearch={projectSearch}
+          />
+        </section>
+
+        <SheetFooter className="border-t border-[var(--vpw-border-default)] px-5 py-4">
           <Button
             className="sm:order-1"
             onClick={onClose}
@@ -105,74 +176,8 @@ export function QuickViewSheet({
               Open full detail
             </Link>
           </Button>
-        </>
-      }
-      onOpenChange={(value) => {
-        if (!value) onClose()
-      }}
-      open={open}
-      status={<QuickViewStatusRow finding={effectiveFinding} />}
-      title={
-        <>
-          <span className="font-mono">{finding.cve_id}</span>
-          <span className="font-normal text-[var(--vpw-text-muted)]">
-            {" "}
-            - {component}
-          </span>
-        </>
-      }
-    >
-      <section
-        aria-label="Finding quick view content"
-        className="flex min-w-0 flex-col gap-4"
-      >
-        {error ? (
-          <Callout
-            action={
-              <Button
-                onClick={onRefresh}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                Retry detail
-              </Button>
-            }
-            severity="critical"
-            title={error}
-          />
-        ) : null}
-        {explanationWarning ? (
-          <Callout severity="critical" title={explanationWarning} />
-        ) : null}
-
-        {loading ? (
-          <section aria-label="Loading finding drawer detail" role="status">
-            <VpwSkeletonStack rows={4} />
-          </section>
-        ) : null}
-
-        <QuickViewDecisionSummary
-          finding={effectiveFinding}
-          rationale={rationale}
-          recommendedAction={recommendedAction}
-        />
-        <QuickViewSignalBrief finding={effectiveFinding} />
-        <QuickViewEvidenceSnapshot
-          dataQualityRows={dataQualityRows}
-          evidenceRows={evidenceRows}
-        />
-        <QuickViewOccurrencesPreview occurrences={occurrences} />
-        <QuickViewAttackContextSection
-          attackContext={attackContext}
-          attackEmpty={attackEmpty}
-          attackTechniques={attackTechniques}
-        />
-        <QuickViewGovernanceSection
-          finding={effectiveFinding}
-          projectSearch={projectSearch}
-        />
-      </section>
-    </DetailDrawer>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   )
 }
