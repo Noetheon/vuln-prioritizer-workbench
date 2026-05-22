@@ -1,36 +1,16 @@
 import { Link } from "@/lib/router"
 
 import { Button } from "@/components/ui/button"
-import {
-  VpwBadge,
-  type VpwBadgeTone,
-  VpwSection,
-} from "@/components/vpw"
+import { VpwSection } from "@/components/vpw"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
-import {
-  evidenceReadiness,
-  providerHealth,
-  type SettingsWorkbenchProps,
-} from "./settings-workbench-model"
+import type { SettingsWorkbenchProps } from "./settings-workbench-model"
 
 type SettingsHeroProps = Pick<
   SettingsWorkbenchProps,
-  "providerStatus" | "providerStatusError" | "selectedProjectId" | "statusError"
+  "selectedProjectId"
 >
 
-export function SettingsHero({
-  providerStatus,
-  providerStatusError,
-  selectedProjectId,
-  statusError,
-}: SettingsHeroProps) {
-  const provider = providerHealth(providerStatus)
-  const evidence = evidenceReadiness(
-    providerStatus,
-    providerStatusError,
-    statusError,
-  )
-
+export function SettingsHero({ selectedProjectId }: SettingsHeroProps) {
   return (
     <VpwSection aria-label="Workspace settings">
       <div className="flex flex-col gap-4 border-b border-[var(--vpw-border-default)] pb-4 lg:flex-row lg:items-end lg:justify-between">
@@ -54,47 +34,6 @@ export function SettingsHero({
           </Button>
         </div>
       </div>
-      <div className="mt-3 flex min-w-0 flex-wrap gap-2">
-        <SettingsHeroFact
-          label="Workspace"
-          tone="success"
-          value="Local workspace"
-        />
-        <SettingsHeroFact
-          label="Access"
-          tone="info"
-          value="Local single-user"
-        />
-        <SettingsHeroFact
-          label="Snapshot"
-          tone={provider.tone}
-          value={providerStatus?.snapshot_mode ?? "loading"}
-        />
-        <SettingsHeroFact
-          label="Evidence"
-          tone={evidence.tone}
-          value={evidence.label}
-        />
-      </div>
     </VpwSection>
-  )
-}
-
-function SettingsHeroFact({
-  label,
-  tone,
-  value,
-}: {
-  label: string
-  tone: VpwBadgeTone
-  value: string | number
-}) {
-  return (
-    <div className="inline-flex min-w-0 items-center gap-2 rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] px-3 py-2 shadow-[var(--vpw-shadow-0)]">
-      <p className="vpw-label">{label}</p>
-      <div className="min-w-0">
-        <VpwBadge tone={tone}>{value}</VpwBadge>
-      </div>
-    </div>
   )
 }

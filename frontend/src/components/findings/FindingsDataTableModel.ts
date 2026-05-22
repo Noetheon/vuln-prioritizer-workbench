@@ -1,6 +1,12 @@
 import type { FindingPriority, FindingPublic } from "@/api-client"
 import { optionalText } from "@/lib/ui-copy"
-import { componentLabel, ownerLabel, serviceLabel, type FindingsDirection, type QueueSort } from "./remediation-queue-model"
+import {
+  componentLabel,
+  ownerLabel,
+  serviceLabel,
+  type FindingsDirection,
+  type QueueSort,
+} from "./remediation-queue-model"
 
 export { formatDateTime, formatShortDate } from "../../lib/date-format.ts"
 export { componentLabel, ownerLabel, serviceLabel }
@@ -27,6 +33,13 @@ export function findingWhyNowCompact(finding: FindingPublic) {
   const firstSentence = why.match(/^(.+?[.!?])(?:\s|$)/)?.[1] ?? why
   if (firstSentence.length <= 110) return firstSentence
   return `${firstSentence.slice(0, 107).trimEnd()}...`
+}
+
+export function findingActionLabel(finding: FindingPublic) {
+  const scope = [componentLabel(finding), assetLabel(finding)]
+    .filter((value) => value && value !== "Unknown component")
+    .join(" on ")
+  return scope ? `${finding.cve_id} for ${scope}` : finding.cve_id
 }
 
 export function findingSlaLabel(priority: FindingPriority | undefined) {

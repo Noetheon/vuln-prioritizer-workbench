@@ -10,11 +10,11 @@ import {
 const scrollableOverflowValues = new Set(["auto", "scroll", "overlay"])
 const scrollExemptSelector =
   '[role="dialog"], [data-radix-popper-content-wrapper], [data-vpw-scroll-lock-exempt]'
-const wheelDeltaScale = 0.54
-const wheelDeltaMaxViewportRatio = 0.42
-const wheelDeltaMinCap = 120
-const wheelDeltaMaxCap = 360
-const smoothScrollEasing = 0.28
+const wheelDeltaScale = 0.42
+const wheelDeltaMaxViewportRatio = 0.32
+const wheelDeltaMinCap = 96
+const wheelDeltaMaxCap = 260
+const smoothScrollEasing = 0.22
 
 function normalizedWheelDeltaY(
   event: WheelEvent<HTMLElement>,

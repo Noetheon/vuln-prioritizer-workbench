@@ -215,11 +215,11 @@
 }
 
 .findings-filter-field--search {
-  flex: 0 1 19rem;
+  flex: 1 1 18rem;
 }
 
 .findings-filter-field--owner {
-  flex: 0 1 14rem;
+  flex: 1 1 13rem;
 }
 
 .findings-filter-field--select {
@@ -235,7 +235,7 @@
 }
 
 .findings-filter-field--views {
-  flex: 0 1 31rem;
+  flex: 1 1 24rem;
 }
 
 .findings-filter-actions {

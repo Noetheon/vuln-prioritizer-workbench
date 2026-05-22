@@ -62,7 +62,7 @@ export function buildWaiverRegisterColumns({
       },
       header: "Scope",
       id: "scope",
-      width: "18%",
+      width: "17%",
     },
     {
       cell: (waiver) => (
@@ -72,22 +72,25 @@ export function buildWaiverRegisterColumns({
       ),
       header: "Decision",
       id: "decision",
-      width: "18%",
+      width: "15%",
     },
     {
       cell: (waiver) => (
-        <div className="grid gap-0.5">
-          <strong className="text-sm text-[var(--vpw-text-primary)]">
+        <div className="vpw-table-cell-stack">
+          <strong
+            className="vpw-table-cell-primary vpw-table-cell-nowrap"
+            title={waiver.owner}
+          >
             {waiver.owner}
           </strong>
-          <span className="text-xs text-[var(--vpw-text-muted)]">
+          <span className="vpw-table-cell-secondary">
             accountable owner
           </span>
         </div>
       ),
       header: "Owner",
       id: "owner",
-      width: "10%",
+      width: "13%",
     },
     {
       cell: (waiver) => (
@@ -98,20 +101,23 @@ export function buildWaiverRegisterColumns({
       ),
       header: "State",
       id: "state",
-      width: "11%",
+      width: "12%",
     },
     {
       cell: (waiver) => (
-        <div className="grid min-w-32 gap-1">
-          <span>Expires {formatDate(waiver.expires_at)}</span>
-          <small className="text-xs text-[var(--vpw-text-muted)]">
+        <div className="vpw-table-cell-stack">
+          <span className="vpw-table-cell-primary">
+            Expires {formatDate(waiver.expires_at)}
+          </span>
+          <span className="vpw-table-cell-secondary">
             {daysLabel(waiver.days_remaining)}
-          </small>
-          <small className="text-xs text-[var(--vpw-text-muted)]">
+          </span>
+          <span className="vpw-table-cell-secondary">
             Review due {formatDate(waiver.review_at)}
-          </small>
+          </span>
         </div>
       ),
+      className: "min-w-0",
       header: "Review / Expiry",
       id: "lifecycle",
       width: "13%",
@@ -136,23 +142,24 @@ export function buildWaiverRegisterColumns({
       ),
       header: "Matched findings",
       id: "matched-findings",
-      width: "10%",
+      width: "11%",
     },
     {
       cell: (waiver) => (
-        <div className="grid min-w-32 gap-1">
+        <div className="vpw-table-cell-stack">
           <StatusLozenge
             label={evidenceStateLabel(waiver)}
             status={evidenceStateToken(waiver)}
           />
-          <small className="truncate text-xs text-[var(--vpw-text-muted)]">
+          <span className="vpw-table-cell-secondary">
             {evidenceDetail(waiver)}
-          </small>
+          </span>
         </div>
       ),
+      className: "min-w-0",
       header: "Evidence",
       id: "evidence",
-      width: "12%",
+      width: "11%",
     },
     {
       cell: (waiver) => (

@@ -22,6 +22,39 @@ async function expectNoGlobalStatusStrip(page: Page) {
   await expect(page.getByLabel("Workbench status summary")).toHaveCount(0)
 }
 
+async function expectNoHiddenTableClipping(page: Page) {
+  const clippedElements = await page.evaluate(() =>
+    Array.from(
+      document.querySelectorAll<HTMLElement>(
+        ".vpw-table-container, td.vpw-table-cell",
+      ),
+    )
+      .map((element) => {
+        const style = window.getComputedStyle(element)
+        const text = (element.textContent ?? "").replace(/\s+/g, " ").trim()
+        const intentionallyTruncated =
+          element.classList.contains("truncate") ||
+          element.className.includes("line-clamp") ||
+          element.querySelector(".truncate, .line-clamp-1, .line-clamp-2") !==
+            null
+        return {
+          className: element.className.toString(),
+          hiddenClip:
+            !intentionallyTruncated &&
+            element.scrollWidth > element.clientWidth + 2 &&
+            ["clip", "hidden"].includes(style.overflowX),
+          overflowX: style.overflowX,
+          preview: text.slice(0, 96),
+          scrollWidth: element.scrollWidth,
+          clientWidth: element.clientWidth,
+        }
+      })
+      .filter((candidate) => candidate.hiddenClip),
+  )
+
+  expect(clippedElements).toEqual([])
+}
+
 async function expectWqhdContainerBehavior(
   page: Page,
   viewport: { width: number; height: number },
@@ -163,7 +196,7 @@ async function expectFindingsMobileCards(page: Page) {
   )
 
   const card = page.getByRole("article", {
-    name: `Finding ${mockFinding.cve_id}`,
+    name: new RegExp(`Finding ${mockFinding.cve_id}`),
   })
   await expect(card).toContainText("xz")
   await expect(card).toContainText("payments / build-host-1")
@@ -173,7 +206,9 @@ async function expectFindingsMobileCards(page: Page) {
   await expect(card).toContainText("Known exploited dependency")
 
   await page
-    .getByRole("button", { name: `Quick view ${mockFinding.cve_id}` })
+    .getByRole("button", {
+      name: new RegExp(`Quick view ${mockFinding.cve_id}`),
+    })
     .click()
   const drawer = page.getByRole("dialog", {
     name: new RegExp(mockFinding.cve_id),
@@ -340,6 +375,20 @@ test("Workbench routes keep content within desktop, tablet, and mobile viewports
       await expectNoGlobalStatusStrip(page)
       await expectWqhdContainerBehavior(page, viewport)
     }
+  }
+})
+
+test("dense evidence and risk tables do not clip internal table content", async ({
+  page,
+}) => {
+  await openWorkbench(page)
+  await page.setViewportSize({ height: 956, width: 1470 })
+
+  for (const route of ["/reports", "/waivers"] as const) {
+    await page.goto(route)
+    await expect(page.getByRole("main")).toBeVisible()
+    await expectNoPageOverflow(page)
+    await expectNoHiddenTableClipping(page)
   }
 })
 

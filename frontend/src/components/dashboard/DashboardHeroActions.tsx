@@ -56,7 +56,10 @@ export function DashboardHeroActions({
       </div>
 
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:justify-end">
-        <Button asChild className="w-full justify-center font-semibold sm:w-auto">
+        <Button
+          asChild
+          className="w-full justify-center font-semibold sm:w-auto"
+        >
           <Link search={projectSearch} to="/imports">
             <Import aria-hidden="true" data-icon="inline-start" />
             Import findings
@@ -65,7 +68,7 @@ export function DashboardHeroActions({
         <Button
           asChild
           className="w-full justify-center sm:w-auto"
-          variant="ghost"
+          variant="outline"
         >
           <Link search={projectSearch} to="/reports">
             <BellRing aria-hidden="true" data-icon="inline-start" />
@@ -94,13 +97,14 @@ export function DashboardHeroActions({
         ) : null}
         <Button
           aria-label="Refresh dashboard"
-          className="self-start text-[var(--vpw-text-muted)] sm:self-auto"
+          className="w-full justify-center sm:w-auto"
           onClick={onRefresh}
-          size="icon"
+          size="sm"
           type="button"
-          variant="ghost"
+          variant="outline"
         >
-          <RefreshCw aria-hidden="true" />
+          <RefreshCw aria-hidden="true" data-icon="inline-start" />
+          Refresh
         </Button>
       </div>
     </div>

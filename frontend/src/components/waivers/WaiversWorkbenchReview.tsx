@@ -30,11 +30,14 @@ type ReviewQueueItem = {
 const ownerColumns: readonly VpwDataTableColumn<WaiverOwnerRollup>[] = [
   {
     cell: (row) => (
-      <div className="grid gap-0.5">
-        <strong className="text-sm text-[var(--vpw-text-primary)]">
+      <div className="vpw-table-cell-stack">
+        <strong
+          className="vpw-table-cell-primary vpw-table-cell-nowrap"
+          title={row.owner}
+        >
           {row.owner}
         </strong>
-        <span className="text-xs text-[var(--vpw-text-muted)]">
+        <span className="vpw-table-cell-secondary">
           accountable owner
         </span>
       </div>
@@ -174,7 +177,7 @@ export function WaiverReviewSection({
               }
               getRowKey={(row) => row.owner}
               className="waivers-owner-rollup-table"
-              minWidth="560px"
+              minWidth="520px"
             />
           </div>
         </VpwGrid>

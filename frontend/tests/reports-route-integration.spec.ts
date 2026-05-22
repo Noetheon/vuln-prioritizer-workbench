@@ -80,6 +80,45 @@ test("Evidence Center separates artifacts, decision, manifest, history, and data
   await expect(page.getByText("Ignored rows")).toBeVisible()
 })
 
+test("Evidence Center run context stays compact on mobile", async ({ page }) => {
+  await page.setViewportSize({ height: 844, width: 390 })
+  await routeWorkbenchShell(page, {
+    projects: [mockProject],
+    runSummaries: { [runId]: runSummary() },
+    runs: [analysisRun()],
+  })
+  await page.route(`**/api/v1/runs/${runId}/reports`, (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ count: 2, data: [reportHtml, reportZip] }),
+    }),
+  )
+  await page.route(`**/api/v1/runs/${runId}/reports?*`, (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ count: 2, data: [reportHtml, reportZip] }),
+    }),
+  )
+
+  await page.goto(`/reports?projectId=${mockProject.id}&runId=${runId}`)
+  await expect(page.getByRole("heading", { name: "Evidence Center" })).toBeVisible()
+
+  const metrics = await page.locator(".evidence-run-context-panel").evaluate((panel) => {
+    const rect = panel.getBoundingClientRect()
+    return {
+      bodyOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      height: rect.height,
+      position: window.getComputedStyle(panel).position,
+      right: rect.right,
+      viewportWidth: document.documentElement.clientWidth,
+    }
+  })
+  expect(metrics.bodyOverflow).toBeLessThanOrEqual(1)
+  expect(metrics.position).toBe("static")
+  expect(metrics.right).toBeLessThanOrEqual(metrics.viewportWidth + 1)
+  expect(metrics.height).toBeLessThanOrEqual(360)
+})
+
 function analysisRun(): AnalysisRunPublic {
   return {
     filename: "reports-input.txt",

@@ -1,9 +1,6 @@
-import { expect, type Locator, type Page, test } from "@playwright/test"
+import { expect, test } from "@playwright/test"
 import { evidenceScreenshotPath } from "./evidence-paths"
-import {
-  backendBaseUrl,
-  localApiHeaders,
-} from "./workbench-runtime-helpers"
+import { localApiHeaders } from "./workbench-runtime-helpers"
 
 const validOccurrenceCsv = Buffer.from(
   [
@@ -27,65 +24,6 @@ function dateValueFromOffset(days: number) {
   return date.toISOString().slice(0, 10)
 }
 
-async function selectRadixOption(
-  page: Page,
-  trigger: Locator,
-  optionName: string | RegExp,
-) {
-  await expect(trigger).toBeVisible()
-  await trigger.click()
-  if (typeof optionName === "string") {
-    const option = page.getByRole("option", { exact: true, name: optionName })
-    await expect(option).toBeAttached()
-    await option.evaluate((element) => {
-      const target = element as HTMLElement
-      let parent = target.parentElement
-      while (parent) {
-        if (parent.scrollHeight > parent.clientHeight) {
-          parent.scrollTop = target.offsetTop - parent.clientHeight / 2
-          break
-        }
-        parent = parent.parentElement
-      }
-      target.scrollIntoView({ block: "nearest" })
-    })
-    try {
-      await option.click({ timeout: 3000 })
-    } catch {
-      await option.dispatchEvent("pointerdown")
-      await option.dispatchEvent("pointerup")
-      await option.dispatchEvent("click")
-    }
-    return
-  }
-  const option = page.getByRole("option", { name: optionName })
-  try {
-    await option.scrollIntoViewIfNeeded({ timeout: 1000 })
-    await option.click({ timeout: 3000 })
-  } catch {
-    await option.click({ force: true })
-  }
-}
-
-async function selectRadixOptionByLabel(
-  page: Page,
-  scope: Page | Locator,
-  label: string,
-  optionName: string | RegExp,
-) {
-  await selectRadixOption(
-    page,
-    scope.getByRole("combobox", { exact: true, name: label }),
-    optionName,
-  )
-}
-
-async function selectDashboardProject(page: Page, projectName: string) {
-  const projectTrigger = page.getByRole("combobox").first()
-  await selectRadixOption(page, projectTrigger, projectName)
-  await expect(projectTrigger).toContainText(projectName)
-}
-
 test("workbench waiver workflow keeps accepted risk visible", async ({
   page,
 }) => {
@@ -95,21 +33,18 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
 
   const headers = localApiHeaders()
 
-  const projectResponse = await page.request.post(
-    `${backendBaseUrl}/api/v1/projects/`,
-    {
-      data: {
-        description: "Playwright accepted-risk project",
-        name: projectName,
-      },
-      headers,
+  const projectResponse = await page.request.post("/api/v1/projects/", {
+    data: {
+      description: "Playwright accepted-risk project",
+      name: projectName,
     },
-  )
+    headers,
+  })
   expect(projectResponse.ok()).toBeTruthy()
   const project = (await projectResponse.json()) as { id: string }
 
   const importResponse = await page.request.post(
-    `${backendBaseUrl}/api/v1/projects/${project.id}/imports`,
+    `/api/v1/projects/${project.id}/imports`,
     {
       headers,
       multipart: {
@@ -124,16 +59,16 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
   )
   expect(importResponse.ok(), await importResponse.text()).toBeTruthy()
 
-  await page.goto("/waivers")
+  await page.goto(`/waivers?projectId=${project.id}`)
   await expect(
     page.getByRole("link", { name: "Risk Acceptance" }),
   ).toBeVisible()
-  await selectRadixOptionByLabel(
-    page,
-    page,
-    "Risk Acceptance project",
-    projectName,
-  )
+  await expect(
+    page.getByRole("combobox", {
+      exact: true,
+      name: "Risk Acceptance project",
+    }),
+  ).toContainText(projectName)
 
   await page
     .getByRole("button", { name: "Record accepted risk" })
@@ -150,9 +85,7 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
     .fill("Temporary accepted risk for VPW-064 browser evidence.")
   await createWaiver.getByLabel("Acceptance expires at").fill("2099-12-31")
   await createWaiver.getByLabel("Acceptance review at").fill("2099-12-01")
-  await createWaiver
-    .getByLabel("Acceptance approval reference")
-    .fill("CAB-064")
+  await createWaiver.getByLabel("Acceptance approval reference").fill("CAB-064")
   await createWaiver.getByRole("button", { name: "Create acceptance" }).click()
 
   const waiversTable = page.getByRole("table", {
@@ -164,7 +97,7 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
   await expect(waiversTable).toContainText("CAB-064")
 
   const findingsResponse = await page.request.get(
-    `${backendBaseUrl}/api/v1/projects/${project.id}/findings/?sort=cve`,
+    `/api/v1/projects/${project.id}/findings/?sort=cve`,
     { headers },
   )
   expect(findingsResponse.ok()).toBeTruthy()
@@ -189,13 +122,13 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
     path: evidenceScreenshotPath("vpw-064-waiver-risk-acceptance.png"),
   })
 
-  await page.goto("/waivers")
-  await selectRadixOptionByLabel(
-    page,
-    page,
-    "Risk Acceptance project",
-    projectName,
-  )
+  await page.goto(`/waivers?projectId=${project.id}`)
+  await expect(
+    page.getByRole("combobox", {
+      exact: true,
+      name: "Risk Acceptance project",
+    }),
+  ).toContainText(projectName)
   await waiversTable
     .getByRole("button", {
       name: /Expire accepted-risk decision for .*CVE-2024-3094/,
@@ -222,21 +155,18 @@ test("workbench governance rollups show service risk and accepted-risk debt", as
 
   const headers = localApiHeaders()
 
-  const projectResponse = await page.request.post(
-    `${backendBaseUrl}/api/v1/projects/`,
-    {
-      data: {
-        description: "Playwright governance rollup project",
-        name: projectName,
-      },
-      headers,
+  const projectResponse = await page.request.post("/api/v1/projects/", {
+    data: {
+      description: "Playwright governance rollup project",
+      name: projectName,
     },
-  )
+    headers,
+  })
   expect(projectResponse.ok()).toBeTruthy()
   const project = (await projectResponse.json()) as { id: string }
 
   const importResponse = await page.request.post(
-    `${backendBaseUrl}/api/v1/projects/${project.id}/imports`,
+    `/api/v1/projects/${project.id}/imports`,
     {
       headers,
       multipart: {
@@ -252,7 +182,7 @@ test("workbench governance rollups show service risk and accepted-risk debt", as
   expect(importResponse.ok(), await importResponse.text()).toBeTruthy()
 
   const reviewDueWaiver = await page.request.post(
-    `${backendBaseUrl}/api/v1/projects/${project.id}/waivers/`,
+    `/api/v1/projects/${project.id}/waivers/`,
     {
       data: {
         approval_ref: "CAB-067-A",
@@ -268,7 +198,7 @@ test("workbench governance rollups show service risk and accepted-risk debt", as
   expect(reviewDueWaiver.ok(), await reviewDueWaiver.text()).toBeTruthy()
 
   const expiredWaiver = await page.request.post(
-    `${backendBaseUrl}/api/v1/projects/${project.id}/waivers/`,
+    `/api/v1/projects/${project.id}/waivers/`,
     {
       data: {
         approval_ref: "CAB-067-B",
@@ -284,7 +214,7 @@ test("workbench governance rollups show service risk and accepted-risk debt", as
   expect(expiredWaiver.ok(), await expiredWaiver.text()).toBeTruthy()
 
   const rollupsResponse = await page.request.get(
-    `${backendBaseUrl}/api/v1/projects/${project.id}/governance/rollups/`,
+    `/api/v1/projects/${project.id}/governance/rollups/`,
     { headers },
   )
   expect(rollupsResponse.ok()).toBeTruthy()
@@ -301,8 +231,7 @@ test("workbench governance rollups show service risk and accepted-risk debt", as
     review_due_count: 1,
   })
 
-  await page.goto("/")
-  await selectDashboardProject(page, projectName)
+  await page.goto(`/?projectId=${project.id}`)
   await page.getByRole("tab", { name: "Top Services" }).click()
   await expect(page.getByText("Top Services by Risk")).toBeVisible()
   await expect(page.getByText("checkout").first()).toBeVisible()
@@ -311,13 +240,13 @@ test("workbench governance rollups show service risk and accepted-risk debt", as
     path: evidenceScreenshotPath("vpw-067-top-services-by-risk.png"),
   })
 
-  await page.goto("/waivers")
-  await selectRadixOptionByLabel(
-    page,
-    page,
-    "Risk Acceptance project",
-    projectName,
-  )
+  await page.goto(`/waivers?projectId=${project.id}`)
+  await expect(
+    page.getByRole("combobox", {
+      exact: true,
+      name: "Risk Acceptance project",
+    }),
+  ).toContainText(projectName)
   await expect(page.getByText("Governance overview")).toBeVisible()
   await expect(page.getByText("Review queue").first()).toBeVisible()
   await expect(page.getByText("Owner rollup").first()).toBeVisible()

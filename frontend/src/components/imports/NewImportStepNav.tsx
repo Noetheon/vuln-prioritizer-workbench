@@ -33,8 +33,8 @@ export function StepNav({
   const canReachStep4 = canReachStep3
 
   return (
-    <VpwPanel className="overflow-hidden p-0 lg:h-full">
-      <ol className="relative flex flex-col gap-1.5 p-3">
+    <VpwPanel className="imports-step-nav overflow-hidden p-0 lg:h-full">
+      <ol className="imports-step-nav__list relative flex flex-col gap-1.5 p-3">
         {stepLabels.map((item, index) => {
           const reachable =
             item.id === 1 ||
@@ -59,6 +59,7 @@ export function StepNav({
                 <span
                   aria-hidden="true"
                   className={cn(
+                    "imports-step-nav__line",
                     "absolute top-8 bottom-[-0.85rem] left-[1.55rem] w-px",
                     completed
                       ? "bg-[var(--vpw-green)]"
@@ -69,6 +70,7 @@ export function StepNav({
               <Button
                 aria-current={active ? "step" : undefined}
                 className={cn(
+                  "imports-step-nav__button",
                   "relative z-10 grid h-auto min-h-[3.875rem] w-full grid-cols-[2.25rem_minmax(0,1fr)] items-center justify-start gap-2.5 rounded-[var(--vpw-radius-md)] px-2.5 py-2.5 text-left whitespace-normal transition-[background,box-shadow,color]",
                   active
                     ? "bg-[var(--vpw-bg-card)] shadow-[var(--vpw-shadow-1)] ring-1 ring-[var(--vpw-border-default)]"
@@ -86,6 +88,7 @@ export function StepNav({
               >
                 <span
                   className={cn(
+                    "imports-step-nav__marker",
                     "relative z-10 flex size-7 shrink-0 items-center justify-center rounded-full border bg-[var(--vpw-bg-card)] font-mono text-[0.72rem] font-semibold",
                     completed &&
                       "border-[var(--vpw-green)] bg-[var(--vpw-green)] text-[var(--vpw-bg-card)]",
@@ -103,7 +106,7 @@ export function StepNav({
                     item.id
                   )}
                 </span>
-                <span className="min-w-0">
+                <span className="imports-step-nav__copy min-w-0">
                   <span
                     className={cn(
                       "block text-[0.8125rem] font-semibold leading-4",

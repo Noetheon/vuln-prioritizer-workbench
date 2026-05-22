@@ -185,7 +185,7 @@ export function RemediationQueueFilters({
             <VpwSearchInput
               id={queueSearchId}
               onChange={(e) => setQueryDraft(e.target.value)}
-              placeholder="CVE, component, asset"
+              placeholder="CVE, asset"
               value={queryDraft}
             />
           </label>
@@ -200,7 +200,7 @@ export function RemediationQueueFilters({
             <VpwSearchInput
               id={ownerServiceSearchId}
               onChange={(e) => setOwnerServiceDraft(e.target.value)}
-              placeholder="payments, infra-team"
+              placeholder="Owner or service"
               value={ownerServiceDraft}
             />
           </label>

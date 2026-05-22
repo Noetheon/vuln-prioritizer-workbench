@@ -1,7 +1,4 @@
-import { Clipboard, Download, ShieldCheck } from "lucide-react"
 import type { ReportPublic, ReportVerificationPublic } from "@/api-client"
-import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { VpwDataTableColumn } from "@/components/vpw"
 import { formatReportDateTime, reportSizeLabel } from "@/lib/report-format"
 import {
@@ -11,6 +8,7 @@ import {
   reportRunLabel,
   verificationSummary,
 } from "./evidence-center-model"
+import { ReportHistoryActionsCell } from "./EvidenceCenterHistoryActions"
 import {
   ReportArtifactCell,
   ReportChecksumCell,
@@ -81,7 +79,11 @@ export function buildReportHistoryColumns({
         width: "22%",
       },
       {
-        cell: (report) => artifactFormatLabel(report),
+        cell: (report) => (
+          <span className="vpw-table-cell-nowrap">
+            {artifactFormatLabel(report)}
+          </span>
+        ),
         header: "Format",
         id: "format",
         width: "10%",
@@ -133,7 +135,11 @@ export function buildReportHistoryColumns({
       width: "23%",
     },
     {
-      cell: (report) => artifactFormatLabel(report),
+      cell: (report) => (
+        <span className="vpw-table-cell-nowrap">
+          {artifactFormatLabel(report)}
+        </span>
+      ),
       header: "Format",
       id: "format",
       width: "10%",
@@ -244,75 +250,10 @@ function actionColumn({
         verificationReportTarget={verificationReportTarget}
       />
     ),
-    className: "min-w-[15rem] text-right",
+    className: "min-w-28 text-right",
     header: "Actions",
     headerClassName: "text-right",
     id: "actions",
-    width: "15rem",
+    width: "7rem",
   }
-}
-
-function ReportHistoryActionsCell({
-  isDemo,
-  onDownload,
-  onVerify,
-  report,
-  verificationLoading,
-  verificationReportTarget,
-}: {
-  isDemo: boolean
-  onDownload: (report: ReportPublic) => void
-  onVerify: (report: ReportPublic) => void
-  report: ReportPublic
-  verificationLoading: boolean
-  verificationReportTarget: ReportPublic | null
-}) {
-  const isVerificationTarget = verificationReportTarget?.id === report.id
-  const verificationDisabled = verificationLoading && isVerificationTarget
-
-  return (
-    <div className="vpw-table-actions">
-      {report.format === "zip" && !isDemo ? (
-        <Button
-          aria-label={`Verify ${report.filename}`}
-          aria-busy={verificationDisabled}
-          disabled={verificationDisabled}
-          onClick={() => onVerify(report)}
-          size="xs"
-          type="button"
-          variant="outline"
-        >
-          <ShieldCheck aria-hidden="true" data-icon="inline-start" />
-          Verify
-        </Button>
-      ) : null}
-      <Button
-        aria-label={`Download ${report.filename}`}
-        disabled={isDemo}
-        onClick={() => !isDemo && onDownload(report)}
-        size="xs"
-        type="button"
-        variant="outline"
-      >
-        <Download aria-hidden="true" data-icon="inline-start" />
-        Download
-      </Button>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            aria-label={`Copy checksum for ${report.filename}`}
-            className="vpw-table-action-button"
-            disabled={isDemo}
-            onClick={() => void navigator.clipboard.writeText(report.sha256)}
-            size="icon-sm"
-            type="button"
-            variant="outline"
-          >
-            <Clipboard aria-hidden="true" className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="left">Copy checksum</TooltipContent>
-      </Tooltip>
-    </div>
-  )
 }

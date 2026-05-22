@@ -41,6 +41,7 @@ export function buildAssetColumns({
     {
       cell: (asset) => (
         <Button
+          aria-label={assetSelectionLabel(asset)}
           aria-current={selectedAssetId === asset.id ? "true" : undefined}
           className="h-auto justify-start px-2 py-1 text-left"
           onClick={() => setSelectedAssetId(asset.id)}
@@ -155,6 +156,14 @@ export function buildAssetColumns({
       width: "9rem",
     },
   ]
+}
+
+function assetSelectionLabel(asset: AssetPublic): string {
+  const target = asset.target_ref ?? asset.asset_key
+  if (!target || target === asset.name) {
+    return `Select asset ${asset.name}`
+  }
+  return `Select asset ${asset.name}, target ${target}`
 }
 
 function AssetTableAction({

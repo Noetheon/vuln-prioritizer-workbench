@@ -517,9 +517,10 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
           name: "Asset context workspace",
         }),
       ).toBeVisible({ timeout: 15_000 })
-      await expect(
-        page.getByRole("table", { name: "Assets table" }),
-      ).toContainText("build-host-1")
+      const assetsInventory = page.locator(
+        '[aria-label="Assets table"]:visible, [aria-label="Assets table cards"]:visible',
+      )
+      await expect(assetsInventory).toContainText("build-host-1")
       await expect(
         page.getByRole("button", { name: "Add asset" }),
       ).toBeVisible()
@@ -536,7 +537,10 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
           name: "Accepted risk control center",
         }),
       ).toBeVisible({ timeout: 15_000 })
-      await expect(page.getByText("CAB-2026-014").first()).toBeVisible()
+      const waiverRegister = page.locator(
+        '[aria-label="Risk acceptance register table"]:visible, [aria-label="Risk acceptance register table cards"]:visible',
+      )
+      await expect(waiverRegister).toContainText("CAB-2026-014")
     },
     id: "waivers",
     path: "/waivers",

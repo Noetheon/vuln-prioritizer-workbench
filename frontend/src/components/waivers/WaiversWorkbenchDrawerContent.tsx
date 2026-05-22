@@ -1,9 +1,6 @@
 import type { WaiverPublic } from "@/api-client"
 import { VpwStatusBanner } from "@/components/vpw"
-import {
-  type WaiversWorkbenchProps,
-  waiverScopeLabel,
-} from "./waivers-workbench-model"
+import type { WaiversWorkbenchProps } from "./waivers-workbench-model"
 import { WaiverDetailContent } from "./WaiversWorkbenchDrawerDetail"
 import { WaiverExpireContent } from "./WaiversWorkbenchDrawerExpire"
 import { WaiverForm } from "./WaiversWorkbenchForm"
@@ -79,15 +76,13 @@ export function WaiverDrawerContent({
 
 export function waiverDrawerTitle(
   mode: WaiversWorkbenchProps["waiverDrawerMode"],
-  waiver: WaiverPublic | null,
+  _waiver: WaiverPublic | null,
 ) {
   switch (mode) {
     case "create":
       return "Record accepted risk"
     case "review":
-      return waiver
-        ? `Review accepted risk for ${waiverScopeLabel(waiver)}`
-        : "Review accepted risk"
+      return "Review accepted risk"
     case "expire":
       return "Expire accepted-risk decision?"
     case "detail":

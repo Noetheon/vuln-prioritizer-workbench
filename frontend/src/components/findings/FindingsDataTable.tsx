@@ -48,6 +48,7 @@ export function FindingsDataTable({
           density="standard"
           getRowKey={(finding) => finding.id}
           minWidth="1040px"
+          mobileCards={false}
           tableClassName="table-fixed"
         />
       </div>

@@ -62,7 +62,7 @@ const rowActionContractFiles = [
   "src/components/imports/ImportsWorkbenchHistoryActions.tsx",
   "src/components/projects/ProjectsWorkbenchDirectoryColumns.tsx",
   "src/components/providers/ProvidersWorkbenchSourcesColumns.tsx",
-  "src/components/reports/EvidenceCenterHistoryColumns.tsx",
+  "src/components/reports/EvidenceCenterHistoryActions.tsx",
   "src/components/waivers/WaiversWorkbenchRegisterColumns.tsx",
 ]
 
@@ -79,7 +79,6 @@ const inventoryActionColumnContractFiles = [
   "src/components/assets/AssetTableColumns.tsx",
   "src/components/providers/ProvidersWorkbenchSourcesColumns.tsx",
   "src/components/waivers/WaiversWorkbenchRegisterColumns.tsx",
-  "src/components/reports/EvidenceCenterHistoryColumns.tsx",
   "src/components/projects/ProjectsWorkbenchDirectoryColumns.tsx",
 ]
 
@@ -87,6 +86,10 @@ const splitInventoryActionContractFiles = [
   {
     actions: "src/components/imports/ImportsWorkbenchHistoryActions.tsx",
     columns: "src/components/imports/ImportsWorkbenchHistoryColumns.tsx",
+  },
+  {
+    actions: "src/components/reports/EvidenceCenterHistoryActions.tsx",
+    columns: "src/components/reports/EvidenceCenterHistoryColumns.tsx",
   },
 ]
 

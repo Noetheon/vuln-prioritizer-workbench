@@ -88,7 +88,7 @@ export function ReportHistory({
           />
         }
         getRowKey={(report) => report.id}
-        minWidth="860px"
+        minWidth={mode === "inventory" ? "1040px" : "960px"}
       />
     </VpwTableCard>
   )

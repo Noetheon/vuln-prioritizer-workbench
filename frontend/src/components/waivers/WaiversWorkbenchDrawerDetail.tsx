@@ -69,44 +69,48 @@ export function WaiverDetailContent({
     <div className="flex flex-col gap-4">
       <VpwPanel className="flex flex-col gap-4 p-5">
         <VpwSectionHeader
-          actions={
-            <VpwToolbarGroup>
-              <Button
-                onClick={() => void copyAcceptanceId()}
-                type="button"
-                variant="outline"
-              >
-                <Clipboard aria-hidden="true" />
-                {copyState}
-              </Button>
-              {waiver.status !== "expired" ? (
-                <>
-                  <Button
-                    onClick={() => openWaiverDrawer("review", waiver)}
-                    type="button"
-                    variant="outline"
-                  >
-                    <Pencil aria-hidden="true" />
-                    Review/edit
-                  </Button>
-                  <Button
-                    aria-busy={waiverActionLoading}
-                    disabled={waiverActionLoading}
-                    onClick={() => openWaiverDrawer("expire", waiver)}
-                    type="button"
-                    variant="outline"
-                  >
-                    <ShieldAlert aria-hidden="true" />
-                    Expire acceptance
-                  </Button>
-                </>
-              ) : null}
-            </VpwToolbarGroup>
-          }
+          className="sm:flex-col sm:items-start"
           description="Decision audit, lifecycle state, evidence, and current finding matches."
           eyebrow="Accepted risk decision"
           title={scope.primary}
         />
+        <div className="flex flex-col gap-2 border-t border-[var(--vpw-border-subtle)] pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-[var(--vpw-text-muted)]">
+            Acceptance ID remains available for audit and review records.
+          </p>
+          <VpwToolbarGroup>
+            <Button
+              onClick={() => void copyAcceptanceId()}
+              type="button"
+              variant="outline"
+            >
+              <Clipboard aria-hidden="true" />
+              {copyState}
+            </Button>
+            {waiver.status !== "expired" ? (
+              <>
+                <Button
+                  onClick={() => openWaiverDrawer("review", waiver)}
+                  type="button"
+                  variant="outline"
+                >
+                  <Pencil aria-hidden="true" />
+                  Review/edit
+                </Button>
+                <Button
+                  aria-busy={waiverActionLoading}
+                  disabled={waiverActionLoading}
+                  onClick={() => openWaiverDrawer("expire", waiver)}
+                  type="button"
+                  variant="outline"
+                >
+                  <ShieldAlert aria-hidden="true" />
+                  Expire acceptance
+                </Button>
+              </>
+            ) : null}
+          </VpwToolbarGroup>
+        </div>
         <VpwKeyValueList
           columns={2}
           items={[

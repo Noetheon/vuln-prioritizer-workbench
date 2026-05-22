@@ -87,8 +87,8 @@ export function RunContext({
           run to generate production evidence.
         </VpwDemoBanner>
       ) : null}
-      <VpwPanel className="sticky top-0 z-10 flex flex-col gap-4 bg-[var(--vpw-bg-page)] p-4">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1fr_1.4fr_1fr_1fr]">
+      <VpwPanel className="evidence-run-context-panel flex flex-col gap-4 bg-[var(--vpw-bg-page)] p-4">
+        <div className="evidence-run-context-facts grid gap-4 md:grid-cols-2 xl:grid-cols-[1fr_1.4fr_1fr_1fr]">
           <ContextFact
             label="Project"
             value={
@@ -119,8 +119,12 @@ export function RunContext({
             </VpwBadge>
           </ContextFact>
         </div>
-        <VpwToolbar label="Run context actions" variant="plain">
-          <VpwToolbarGroup className="min-w-0 flex-1">
+        <VpwToolbar
+          className="evidence-run-context-toolbar"
+          label="Run context actions"
+          variant="plain"
+        >
+          <VpwToolbarGroup className="evidence-run-context-selectors min-w-0 flex-1">
             {!isDemo ? (
               <ReportProjectSelect
                 disabled={projectListLoading || projects.length === 0}
@@ -138,8 +142,9 @@ export function RunContext({
               />
             ) : null}
           </VpwToolbarGroup>
-          <VpwToolbarGroup>
+          <VpwToolbarGroup className="evidence-run-context-actions">
             <Button
+              className="evidence-run-context-change-run"
               disabled={isDemo || projectRuns.length === 0}
               onClick={() => {
                 document
@@ -177,7 +182,7 @@ function ContextFact({
   value: string
 }) {
   return (
-    <div className="min-w-0">
+    <div className="evidence-run-context-fact min-w-0">
       <p className="vpw-label">{label}</p>
       <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
         <p className="min-w-0 truncate text-sm font-semibold text-[var(--vpw-text-primary)]">

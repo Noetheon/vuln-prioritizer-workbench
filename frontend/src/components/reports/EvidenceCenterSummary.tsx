@@ -7,8 +7,8 @@ import type {
   ReportPublic,
 } from "@/api-client"
 import {
-  VpwGrid,
-  VpwMetricCard,
+  VpwCompactMetric,
+  VpwMetricStrip,
   VpwSection,
   VpwSectionHeader,
 } from "@/components/vpw"
@@ -57,8 +57,8 @@ export function EvidenceSummary({
         description="Run status, finding scope, bundle availability, and generated artifacts."
         title="Evidence summary"
       />
-      <VpwGrid columns={4} className="xl:grid-cols-5">
-        <VpwMetricCard
+      <VpwMetricStrip minCardWidth="11.5rem">
+        <VpwCompactMetric
           description={
             isDemo
               ? "demo run 2025-04-30"
@@ -77,14 +77,14 @@ export function EvidenceSummary({
                 : "No run"
           }
         />
-        <VpwMetricCard
+        <VpwCompactMetric
           description="Across all priorities"
           icon={<Layers aria-hidden="true" className="h-4 w-4" />}
           label="Findings in scope"
           tone="info"
           value={String(effectiveSummary?.finding_count ?? 0)}
         />
-        <VpwMetricCard
+        <VpwCompactMetric
           description={`${critical} critical - ${high} high`}
           icon={<AlertTriangle aria-hidden="true" className="h-4 w-4" />}
           label="Critical + High"
@@ -97,21 +97,21 @@ export function EvidenceSummary({
           }
           value={String(criticalHigh)}
         />
-        <VpwMetricCard
+        <VpwCompactMetric
           description={zipReport ? "Evidence ZIP exists" : "Not built"}
           icon={<ShieldCheck aria-hidden="true" className="h-4 w-4" />}
           label="Evidence bundle"
           tone={zipReport ? "success" : "neutral"}
           value={zipReport ? "Available" : "Not built"}
         />
-        <VpwMetricCard
+        <VpwCompactMetric
           description={generatedArtifactsDetail(effectiveReports)}
           icon={<Globe aria-hidden="true" className="h-4 w-4" />}
           label="Generated artifacts"
           tone={effectiveReports.length > 0 ? "success" : "neutral"}
           value={reportCount}
         />
-      </VpwGrid>
+      </VpwMetricStrip>
     </VpwSection>
   )
 }
