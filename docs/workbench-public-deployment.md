@@ -27,6 +27,8 @@ ALLOWED_HOSTS=workbench.example.com,api.workbench.example.com
 API_DOCS_ENABLED=false
 DECISION_API_MAX_FINDINGS=1000
 TRAEFIK_APP_ENABLED=true
+TRAEFIK_APP_IP_ALLOWLIST=<operator-or-private-network-cidr>
+TRAEFIK_API_IP_ALLOWLIST=<automation-source-cidr>
 TRAEFIK_DASHBOARD_ENABLED=false
 ```
 
@@ -50,14 +52,21 @@ must be reviewed in the same change.
 ## Reverse Proxy And TLS
 
 `compose.traefik.yml` provides the public reverse proxy. App routing is opt-in
-with `TRAEFIK_APP_ENABLED=true`.
+with `TRAEFIK_APP_ENABLED=true`, and the HTTPS app router is always guarded by
+the `workbench-app-ipallowlist` Traefik middleware. The default source range is
+`127.0.0.1/32`, so enabling the route without an operator-supplied
+`TRAEFIK_APP_IP_ALLOWLIST` stays fail-closed for remote clients.
 
 - Frontend route: `https://${DOMAIN}`.
 - Browser API route: same-origin `https://${DOMAIN}/api/...`.
 - Optional direct API route for automation: `https://api.${DOMAIN}` only when
-  its CSP/CORS contract is reviewed as a split-domain deployment.
+  its CSP/CORS contract is reviewed as a split-domain deployment and
+  `TRAEFIK_API_IP_ALLOWLIST` is set to the exact automation source range.
 - HTTP is redirected to HTTPS.
 - Traefik terminates TLS through the configured ACME resolver.
+- The Workbench app and optional direct API routers must keep Traefik
+  `ipallowlist` middleware in front of every HTTPS route because the active
+  Workbench does not implement browser login, RBAC, or API-token enforcement.
 - The Traefik container uses a read-only root filesystem, `no-new-privileges`,
   dropped Linux capabilities with only `NET_BIND_SERVICE` restored, a writable
   `/tmp` tmpfs, and a dedicated ACME certificate volume.
@@ -79,7 +88,10 @@ local override files.
 
 This checklist is not part of the normal single-user local/private path. Use it
 only if a future reviewed decision intentionally exposes the Workbench beyond a
-trusted local or private network.
+trusted local host. For the current product scope, acceptable exposure is a
+private network or an operator edge protected by the Traefik app/API IP
+allowlists documented above. Do not use this checklist to certify unauthenticated
+internet-wide Workbench access.
 
 Before claiming public-production readiness, capture public-safe evidence from
 the exact deployed candidate. Redact cookies, tokens, IP addresses that identify
@@ -105,19 +117,25 @@ Required browser/API behavior evidence:
 
 - `https://${DOMAIN}/` returns the frontend with security headers and a CSP that
   keeps same-origin API routing unless a split-domain deployment is explicitly
-  approved.
+  approved. Capture this only from an allowed operator source address.
 - `https://${DOMAIN}/api/v1/workbench/health` returns the minimal public health
-  response.
+  response for allowed operator sources.
 - `https://${DOMAIN}/api/v1/workbench/status` returns local Workbench readiness
-  without requiring a browser login.
+  without requiring a browser login only after the edge allowlist permits the
+  operator source.
 - `https://${DOMAIN}/api/v1/providers/status` returns redacted provider
-  diagnostics for the local Workbench status UI.
+  diagnostics for the local Workbench status UI only after the edge allowlist
+  permits the operator source.
 - `https://${DOMAIN}/docs` and `/api/v1/openapi.json` are not public when
   `API_DOCS_ENABLED=false`.
 - `https://api.${DOMAIN}/api/v1/workbench/health` is treated as the Optional
   direct API route for automation; if exposed publicly, record the split-domain
-  CORS, CSP, and host-routing decision in the release evidence ledger.
+  CORS, CSP, host-routing, and `TRAEFIK_API_IP_ALLOWLIST` decision in the release
+  evidence ledger.
 - HTTP requests redirect to HTTPS.
+- Requests from outside `TRAEFIK_APP_IP_ALLOWLIST` and
+  `TRAEFIK_API_IP_ALLOWLIST` are denied by Traefik before reaching the
+  Workbench services.
 - Traefik dashboard routing stays disabled unless a short maintenance window,
   IP allowlist, and dashboard Basic Auth users are documented.
 
@@ -159,7 +177,10 @@ proxy CIDRs. Leave it blank when the backend is reachable directly.
 The active browser Workbench is local single-user and does not require a login
 step. The active API no longer exposes login, user-management, API-token, or
 session-list routes. Bearer headers are ignored by the local principal path
-rather than enabling scoped token enforcement.
+rather than enabling scoped token enforcement. Because of that product boundary,
+private or edge-allowlisted deployments must keep the Traefik app/API
+allowlists active; do not replace them with CORS, Host validation, or API docs
+disablement, because none of those controls authenticate an operator.
 
 The current migration head drops the inactive API-token and auth-session
 tables. Treat any future reintroduction of

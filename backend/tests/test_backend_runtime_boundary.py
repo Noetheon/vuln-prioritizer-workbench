@@ -407,6 +407,21 @@ def test_compose_public_app_routes_are_opt_in_and_https_only() -> None:
     assert "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https" in backend_labels
     assert "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true" in backend_labels
     assert (
+        "traefik.http.routers.workbench-backend-https.middlewares="
+        "workbench-api-ipallowlist,workbench-upload-limit"
+    ) in backend_labels
+    assert (
+        "traefik.http.middlewares.workbench-api-ipallowlist.ipallowlist.sourcerange="
+        "${TRAEFIK_API_IP_ALLOWLIST:-127.0.0.1/32}"
+    ) in backend_labels
+    assert (
+        "traefik.http.routers.workbench-frontend-https.middlewares=workbench-app-ipallowlist"
+    ) in frontend_labels
+    assert (
+        "traefik.http.middlewares.workbench-app-ipallowlist.ipallowlist.sourcerange="
+        "${TRAEFIK_APP_IP_ALLOWLIST:-127.0.0.1/32}"
+    ) in frontend_labels
+    assert (
         "traefik.http.middlewares.workbench-upload-limit.buffering.maxRequestBodyBytes="
         "${TRAEFIK_MAX_REQUEST_BODY_BYTES:-26214400}"
     ) in backend_labels
@@ -448,6 +463,8 @@ def test_env_example_does_not_pin_api_docs_on_for_shared_deployments() -> None:
     assert "\nRATE_LIMIT_ENABLED=true\n" in env_example
     assert "\nTRUSTED_PROXY_CIDRS=\n" in env_example
     assert "\nTRAEFIK_APP_ENABLED=false\n" in env_example
+    assert "\nTRAEFIK_APP_IP_ALLOWLIST=127.0.0.1/32\n" in env_example
+    assert "\nTRAEFIK_API_IP_ALLOWLIST=127.0.0.1/32\n" in env_example
     assert "\nMAX_UPLOAD_MB=25\n" in env_example
     assert "\nMAX_REPORT_MB=50\n" in env_example
     assert "\nMAX_REPORTS_PER_RUN=20\n" in env_example
@@ -477,6 +494,8 @@ def test_public_deployment_runbook_documents_backup_retention_and_tls() -> None:
     assert "/app/template-import-uploads" not in runbook
     assert "python -m app.core.retention --dry-run" in runbook
     assert "TRAEFIK_APP_ENABLED=true" in runbook
+    assert "TRAEFIK_APP_IP_ALLOWLIST=<operator-or-private-network-cidr>" in runbook
+    assert "TRAEFIK_API_IP_ALLOWLIST=<automation-source-cidr>" in runbook
     assert "BACKEND_CORS_ORIGINS=https://workbench.example.com" in runbook
 
 

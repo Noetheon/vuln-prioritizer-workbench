@@ -34,6 +34,7 @@ function ProjectsRouteContainer() {
     projectSummariesQuery.data?.failedProjectIds.length ?? 0
   const [createProjectForm, setCreateProjectForm] =
     useState<ProjectFormState>(emptyProjectForm)
+  const [createProjectDrawerOpen, setCreateProjectDrawerOpen] = useState(false)
   const [createProjectError, setCreateProjectError] = useState("")
   const [projectActionError, setProjectActionError] = useState("")
   const [projectActionMessage, setProjectActionMessage] = useState("")
@@ -80,6 +81,7 @@ function ProjectsRouteContainer() {
         projectRequestBody(createProjectForm),
       )
       setCreateProjectForm(emptyProjectForm)
+      setCreateProjectDrawerOpen(false)
       setProjectActionMessage(`Project ${project.name} created.`)
       await refreshProjects(project.id)
     } catch (caught) {
@@ -160,14 +162,24 @@ function ProjectsRouteContainer() {
     .filter(Boolean)
     .join(" ")
 
+  function setCreateProjectDrawer(open: boolean) {
+    setCreateProjectDrawerOpen(open)
+    setCreateProjectError("")
+    if (open) {
+      setProjectActionError("")
+    }
+  }
+
   return (
     <ProjectsWorkbench
+      createProjectDrawerOpen={createProjectDrawerOpen}
       createProjectError={createProjectError}
       createProjectForm={createProjectForm}
       deleteConfirmed={deleteConfirmed}
       editProjectForm={editProjectForm}
       editProjectId={editProjectId}
       onCancelEditProject={() => setEditProjectId("")}
+      onCreateProjectDrawerOpenChange={setCreateProjectDrawer}
       onCreateProject={createProject}
       onCreateProjectDescriptionChange={(description) =>
         setCreateProjectForm((form) => ({

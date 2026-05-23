@@ -1,20 +1,17 @@
 import { Link } from "@/lib/router"
-
+import { useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
+import { ExternalLink, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
-  VpwBadge,
-  type VpwBadgeTone,
   VpwCommandPanel,
   VpwSection,
   VpwToolbar,
   VpwToolbarGroup,
 } from "@/components/vpw"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
-import {
-  evidenceReadiness,
-  providerHealth,
-  type SettingsWorkbenchProps,
-} from "./settings-workbench-model"
+import { SettingsStatusGrid } from "./SettingsStatusGrid"
+import type { SettingsWorkbenchProps } from "./settings-workbench-model"
 
 type SettingsContextProps = Pick<
   SettingsWorkbenchProps,
@@ -32,20 +29,47 @@ export function SettingsContext({
   status,
   statusError,
 }: SettingsContextProps) {
-  const provider = providerHealth(providerStatus)
-  const evidence = evidenceReadiness(
-    providerStatus,
-    providerStatusError,
-    statusError,
-  )
-  const backend = backendState(status?.status, statusError)
+  const queryClient = useQueryClient()
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  async function handleRefresh() {
+    setIsRefreshing(true)
+    await queryClient.invalidateQueries({ queryKey: ["workbench"] })
+    await new Promise((resolve) => setTimeout(resolve, 600))
+    setIsRefreshing(false)
+  }
 
   return (
-    <VpwSection aria-label="Workspace settings">
+    <VpwSection aria-label="Workspace settings" className="flex flex-col gap-6">
       <VpwCommandPanel
         actions={
           <VpwToolbar label="Settings actions" variant="plain">
             <VpwToolbarGroup>
+              <Button
+                className="cursor-pointer"
+                disabled={isRefreshing}
+                onClick={handleRefresh}
+                type="button"
+                variant="outline"
+              >
+                <RefreshCw
+                  className={`mr-1.5 size-4 ${isRefreshing ? "animate-spin" : ""}`}
+                />
+                {isRefreshing ? "Scanning..." : "Run Diagnostics"}
+              </Button>
+
+              <Button asChild variant="outline">
+                <a
+                  className="inline-flex cursor-pointer items-center"
+                  href="http://localhost:8000/docs"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  API Explorer
+                  <ExternalLink className="ml-1.5 size-3.5 opacity-60" />
+                </a>
+              </Button>
+
               <Button asChild variant="outline">
                 <Link
                   search={selectedProjectRouteSearch(selectedProjectId)}
@@ -55,34 +79,19 @@ export function SettingsContext({
                 </Link>
               </Button>
             </VpwToolbarGroup>
-            <VpwToolbarGroup>
-              <VpwBadge tone="success">Local workspace</VpwBadge>
-              <VpwBadge tone={backend.tone}>{backend.label}</VpwBadge>
-              <VpwBadge tone={provider.tone}>Providers {provider.label}</VpwBadge>
-              <VpwBadge tone={evidence.tone}>Evidence {evidence.label}</VpwBadge>
-            </VpwToolbarGroup>
           </VpwToolbar>
         }
         description="Review local Workbench runtime, provider freshness, diagnostics, and safe operational defaults."
         eyebrow="Settings console"
         title="Workspace settings console"
       />
+
+      <SettingsStatusGrid
+        providerStatus={providerStatus}
+        providerStatusError={providerStatusError}
+        status={status}
+        statusError={statusError}
+      />
     </VpwSection>
   )
-}
-
-function backendState(
-  status: string | null | undefined,
-  statusError: string,
-): { label: string; tone: VpwBadgeTone } {
-  if (statusError) {
-    return { label: "Backend review", tone: "critical" }
-  }
-  if (!status) {
-    return { label: "Backend checking", tone: "info" }
-  }
-  if (status === "ready") {
-    return { label: "Backend ready", tone: "success" }
-  }
-  return { label: `Backend ${status}`, tone: "warning" }
 }

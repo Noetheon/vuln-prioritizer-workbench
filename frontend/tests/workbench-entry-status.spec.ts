@@ -269,41 +269,47 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     page.getByRole("heading", { level: 1, name: "Projects" }),
   ).toBeVisible()
   await expect(page.getByText("Create Project").first()).toBeVisible()
-  await page.getByRole("button", { name: "Create project" }).click()
+  await page.getByRole("button", { name: "Create project" }).first().click()
+  await page.getByRole("dialog", { name: "Create project" }).getByRole("button", { name: "Create project" }).click()
   await expect(page.getByText("Project name is required.")).toBeVisible()
   await page.getByLabel("Project name").fill(uiProjectName)
   await page
     .getByLabel("Description")
     .fill("Created through the Projects page E2E workflow")
-  await page.getByRole("button", { name: "Create project" }).click()
+  await page.getByRole("dialog", { name: "Create project" }).getByRole("button", { name: "Create project" }).click()
   await expect(
     page.getByText(`Project ${uiProjectName} created.`),
   ).toBeVisible()
   const projectsTable = page.getByRole("table", { name: "Projects" })
   await expect(projectsTable).toContainText(uiProjectName)
-  await expect(
-    page.getByRole("heading", { name: "Active Project" }),
-  ).toBeVisible()
-  await expect(page.getByText(uiProjectName).first()).toBeVisible()
-  await page.getByRole("button", { name: "Edit" }).click()
+
+  // Open settings drawer for the created project
+  await page.getByRole("button", { name: `Settings for ${uiProjectName}` }).click()
+  await expect(page.getByRole("dialog").getByRole("heading", { name: uiProjectName })).toBeVisible()
+
+  // Navigate to Configuration tab
+  await page.getByRole("tab", { name: "Configuration" }).click()
   await page.getByLabel("Edit project name").fill(editedUiProjectName)
   await page
     .getByLabel("Edit description")
     .fill("Updated through the Projects page E2E workflow")
   await page.getByRole("button", { name: "Save project" }).click()
+
   await expect(
     page.getByText(`Project ${editedUiProjectName} updated.`),
   ).toBeVisible()
   await expect(projectsTable).toContainText(editedUiProjectName)
-  await expect(
-    page.getByRole("heading", { name: editedUiProjectName }),
-  ).toBeVisible()
+
+  // Open settings drawer again for the edited project to delete it
+  await page.getByRole("button", { name: `Settings for ${editedUiProjectName}` }).click()
+  await page.getByRole("tab", { name: "Configuration" }).click()
   await page.getByLabel(/Confirm deletion for this project/).check()
   await page.getByRole("button", { name: "Delete project" }).click()
   await expect(
     page.getByText(`Project ${editedUiProjectName} deleted.`),
   ).toBeVisible()
   await expect(projectsTable.getByText(editedUiProjectName)).toHaveCount(0)
+
 
   await navigation.getByRole("link", { name: "Imports" }).click()
   await expect(page).toHaveURL(/\/imports(?:\?.*)?$/)

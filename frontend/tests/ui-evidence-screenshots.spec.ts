@@ -440,7 +440,11 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
         page.getByRole("heading", { level: 1, name: "Projects" }),
       ).toBeVisible({ timeout: 15_000 })
       await expect(
-        page.getByRole("heading", { name: mockProject.name }).first(),
+        page
+          .getByRole("link", {
+            name: `Open findings for ${mockProject.name}`,
+          })
+          .first(),
       ).toBeVisible()
     },
     id: "projects",

@@ -118,10 +118,29 @@ def _check_app_labels(compose: dict[str, Any]) -> list[str]:
 
     if not any("workbench-upload-limit" in label for label in backend_labels):
         failures.append("compose.yml backend route must keep upload-limit middleware.")
+    if (
+        "traefik.http.routers.workbench-backend-https.middlewares="
+        "workbench-api-ipallowlist,workbench-upload-limit"
+    ) not in backend_labels:
+        failures.append("compose.yml backend HTTPS route must require the API IP allowlist.")
+    if (
+        "traefik.http.middlewares.workbench-api-ipallowlist.ipallowlist.sourcerange="
+        "${TRAEFIK_API_IP_ALLOWLIST:-127.0.0.1/32}"
+    ) not in backend_labels:
+        failures.append("compose.yml backend route must define a default-deny API IP allowlist.")
     if not any("api.${DOMAIN" in label for label in backend_labels):
         failures.append("compose.yml backend direct API route must remain explicit for review.")
     if not any("Host(`${DOMAIN" in label for label in frontend_labels):
         failures.append("compose.yml frontend route must bind to the public Workbench host.")
+    if (
+        "traefik.http.routers.workbench-frontend-https.middlewares=workbench-app-ipallowlist"
+    ) not in frontend_labels:
+        failures.append("compose.yml frontend HTTPS route must require the app IP allowlist.")
+    if (
+        "traefik.http.middlewares.workbench-app-ipallowlist.ipallowlist.sourcerange="
+        "${TRAEFIK_APP_IP_ALLOWLIST:-127.0.0.1/32}"
+    ) not in frontend_labels:
+        failures.append("compose.yml frontend route must define a default-deny app IP allowlist.")
     return failures
 
 
@@ -164,6 +183,8 @@ def _check_docs() -> list[str]:
         "Optional direct API route for automation",
         "curl -I https://${DOMAIN}/",
         "TRAEFIK_API_ENABLED=true",
+        "TRAEFIK_APP_IP_ALLOWLIST",
+        "TRAEFIK_API_IP_ALLOWLIST",
         "Do not include secrets",
     )
     for phrase in required_deployment_phrases:

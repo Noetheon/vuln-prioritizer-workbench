@@ -1,10 +1,9 @@
 import { Link } from "@/lib/router"
 import {
-  CheckCircle2,
-  Circle,
   FileInput,
   FileText,
   ListChecks,
+  Settings,
 } from "lucide-react"
 import type { ReactNode } from "react"
 import type { ProjectPublic } from "@/api-client"
@@ -15,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { VpwBadge, type VpwDataTableColumn } from "@/components/vpw"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   evidenceState,
   formatDateTime,
@@ -31,6 +31,7 @@ type BuildProjectDirectoryColumnsArgs = Pick<
   | "projectListLoading"
   | "projectSummaryById"
   | "selectedProjectId"
+  | "onStartEditProject"
 >
 
 function ProjectTableAction({
@@ -53,11 +54,12 @@ export function buildProjectDirectoryColumns({
   projectListLoading,
   projectSummaryById,
   selectedProjectId,
+  onStartEditProject,
 }: BuildProjectDirectoryColumnsArgs): VpwDataTableColumn<ProjectPublic>[] {
   return [
     {
       cell: (project) => (
-        <div className="max-w-sm">
+        <div className="projects-project-cell">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold">{project.name}</span>
             {project.id === selectedProjectId ? (
@@ -120,77 +122,63 @@ export function buildProjectDirectoryColumns({
       id: "updated",
     },
     {
-      cell: (project) => (
-        <div className="vpw-table-actions">
-          <ProjectTableAction
-            label={
-              project.id === selectedProjectId
-                ? "Active project"
-                : "Select project"
-            }
-          >
-            <Button
-              aria-current={
-                project.id === selectedProjectId ? "true" : undefined
-              }
-              aria-label={
-                project.id === selectedProjectId
-                  ? `${project.name} is active`
-                  : `Select ${project.name}`
-              }
-              className="vpw-table-action-button"
-              disabled={projectListLoading}
-              onClick={() => onSelectProject(project.id)}
-              size="icon-sm"
-              type="button"
-              variant={
-                project.id === selectedProjectId ? "secondary" : "outline"
-              }
-            >
-              {project.id === selectedProjectId ? (
-                <CheckCircle2 aria-hidden="true" />
-              ) : (
-                <Circle aria-hidden="true" />
-              )}
-            </Button>
-          </ProjectTableAction>
-          {(["imports", "findings", "reports"] as const).map((route) => (
-            <ProjectTableAction
-              key={route}
-              label={
-                route === "imports"
-                  ? "Open imports"
-                  : route === "findings"
-                    ? "Open findings"
-                    : "Open evidence"
-              }
-            >
+      cell: (project) => {
+        const projectSearch = selectedProjectRouteSearch(project.id)
+
+        return (
+          <div className="vpw-table-actions">
+            <ProjectTableAction label="Workspace settings">
               <Button
-                asChild
+                aria-label={`Settings for ${project.name}`}
                 className="vpw-table-action-button"
-                onClick={() => onSelectProject(project.id)}
+                disabled={projectListLoading}
+                onClick={() => onStartEditProject(project)}
                 size="icon-sm"
+                type="button"
                 variant="outline"
               >
-                <Link
-                  aria-label={`Open ${
-                    route === "reports" ? "evidence" : route
-                  } for ${project.name}`}
-                  to={`/${route}`}
-                >
-                  {route === "imports" ? (
-                    <FileInput aria-hidden="true" />
-                  ) : route === "findings" ? (
-                    <ListChecks aria-hidden="true" />
-                  ) : (
-                    <FileText aria-hidden="true" />
-                  )}
-                </Link>
+                <Settings className="size-4" aria-hidden="true" />
               </Button>
             </ProjectTableAction>
-          ))}
-        </div>
-      ),
+            {(["imports", "findings", "reports"] as const).map((route) => (
+              <ProjectTableAction
+                key={route}
+                label={
+                  route === "imports"
+                    ? "Open imports"
+                    : route === "findings"
+                      ? "Open findings"
+                      : "Open evidence"
+                }
+              >
+                <Button
+                  asChild
+                  className="vpw-table-action-button"
+                  onClick={() => onSelectProject(project.id)}
+                  size="icon-sm"
+                  variant="outline"
+                >
+                  <Link
+                    aria-label={`Open ${
+                      route === "reports" ? "evidence" : route
+                    } for ${project.name}`}
+                    search={projectSearch}
+                    to={`/${route}`}
+                  >
+                    {route === "imports" ? (
+                      <FileInput aria-hidden="true" />
+                    ) : route === "findings" ? (
+                      <ListChecks aria-hidden="true" />
+                    ) : (
+                      <FileText aria-hidden="true" />
+                    )}
+                  </Link>
+                </Button>
+              </ProjectTableAction>
+            ))}
+          </div>
+        )
+      },
       className: "min-w-[10rem] text-right",
       header: "Actions",
       headerClassName: "text-right",

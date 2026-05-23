@@ -1,7 +1,8 @@
-export { ActiveProjectSection } from "./ProjectsWorkbenchActive"
 export { ProjectDirectory } from "./ProjectsWorkbenchDirectory"
+export { ActiveProjectPanel } from "./ProjectsWorkbenchActive"
+export { ProjectDetailDrawer } from "./ProjectsWorkbenchProjectDrawer"
 export {
   ProjectContext,
   ProjectMetrics,
 } from "./ProjectsWorkbenchOverview"
-export { ProjectSetupSection } from "./ProjectsWorkbenchSetup"
+export { CreateProjectDrawer } from "./ProjectsWorkbenchSetup"
