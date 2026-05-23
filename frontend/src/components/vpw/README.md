@@ -5,8 +5,16 @@ These components install the shared Vuln Prioritizer Workbench product patterns 
 Use them when refactoring routes in later passes so Dashboard, Findings, Finding Detail, and Evidence Center share the same containers, cards, badges, tables, and product states.
 
 Current design direction: `frontend/DESIGN.md` defines the VPW Precision Light
-Analyst designset. Apply these wrappers as the default read/write analyst
-surface before adding route-local structure.
+Analyst designset. `frontend/VPW_PAGE_PATTERNS.md` is the implementation
+contract for route type, component choice, and the no-new-local-pattern rule.
+Apply these wrappers as the default read/write analyst surface before adding
+route-local structure.
+
+Future Codex prompt for UI work:
+
+> Use `frontend/DESIGN.md` plus `frontend/VPW_PAGE_PATTERNS.md`; do not add new
+> route-local card, heading, shadow, radius, or page-stack patterns without an
+> existing VPW wrapper or a documented VPW component follow-up.
 
 Use VPW wrappers for reusable Workbench structure: page containers, sections,
 panels, metric cards, status/empty states, badges, toolbars, tables, and
@@ -49,7 +57,7 @@ Installed VPW product components:
 - `VpwGrid`
 - `VpwPanel`
 - `VpwSectionHeader`
-- `VpwMetricCard`
+- `VpwMetricStrip` / `VpwCompactMetric`
 - `VpwBadge`
 - `VpwBreadcrumbs`
 - `VpwDataTable`

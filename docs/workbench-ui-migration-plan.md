@@ -1,6 +1,7 @@
 # Workbench UI Migration Plan
 
-Status: implementation checklist for future route migrations. This document does not migrate route code.
+Status: completed UI-normalization plan plus retained guardrails for future
+route work. This document does not migrate route code.
 
 The migration must preserve the current frontend architecture: React, Vite, TypeScript, TanStack Query, local route adapter, `WorkbenchShell`, route containers, shared components, and shared CSS. Do not reintroduce old file-route scaffolding or generated route-tree assumptions. Do not edit generated client files manually.
 
@@ -13,9 +14,10 @@ Inputs:
 - `frontend/src/components/vpw/README.md`
 - `frontend/src/styles/README.md`
 
-## Route Migration Order
+## Original Route Migration Order
 
-Use this order unless a dependency requires a smaller preparatory step in shared components first.
+This was the order used for the baseline migration. Reuse it only if a future
+route-level visual-normalization batch needs the same dependency sequence.
 
 1. Findings/Triage
 2. Finding Detail
@@ -35,15 +37,124 @@ Rationale:
 - Dashboard and reports should be simplified after core row/evidence/decision primitives exist.
 - Projects, TTP context, and settings are best handled after shared patterns are stable.
 
-## Shared Components to Introduce
+## Recorded Design-Debt Closure Plan
 
-Introduce these in `frontend/src/components/vpw/` or a clearly named Workbench shared component folder that wraps VPW primitives. Keep exports centralized and documented.
+This plan recorded the remaining drift after the first VPW pattern pass. It is
+retained as a guardrail for future route work rather than as an open work queue.
 
-| Component | Exact responsibility | Existing starting point |
+### Done or enforced in the current baseline
+
+- `frontend/DESIGN.md` defines the Linear/Sentry/HashiCorp-inspired product
+  posture and the "evidence first, decoration last" design target.
+- `frontend/VPW_PAGE_PATTERNS.md` turns that direction into concrete page
+  archetypes and a component decision matrix.
+- `frontend/tests/workbench-design-audit.spec.ts` captures 36 route-section
+  screenshots and asserts no oversized route-local `h2`/`h3` headings, no
+  horizontal page overflow, and no raised content shadows.
+- `make frontend-design-audit` and the frontend CI job run the screenshot audit
+  as a named gate before the full Playwright suite.
+- Projects, settings, imports, providers, assets, waivers, and reports now use
+  shared VPW primitives for the main command, metric, table, key-value, and
+  section surfaces.
+
+### Executed route phases
+
+1. Dashboard cleanup
+   - Replaced the route-local `DashboardHero` name and wrapper with a shared
+     context/command primitive.
+   - Replaced `MetricCard` usage in the dashboard with a direct
+     `VpwMetricStrip`/`VpwCompactMetric` composition.
+   - Converted side-panel summaries to a factual `DetailRail` pattern.
+   - Kept chart frames, but made them shared page sections instead of
+     dashboard-only card language.
+
+2. Findings queue cleanup
+   - Kept the table-first queue behavior intact.
+   - Moved remaining summary/filter/table shell decisions into shared VPW
+     queue primitives only when the shared version preserves width, density,
+     keyboard behavior, and mobile scanability.
+   - Replaced quick-view review-card sections with `DetailDrawer`,
+     `DecisionSummary`, `DefinitionList`, `SignalBadge`, and `EvidenceRow`.
+
+3. Finding detail cleanup
+   - Replaced the remaining hero/detail-specific heading scales with shared
+     context and section roles.
+   - Converted decision, evidence, governance, occurrence, and TTP detail blocks
+     into `DecisionSummary`, `DefinitionList`, `EvidenceRow`, `Callout`, and
+     compact lists.
+   - Reduced the three `finding-detail-*.css` core files until they mostly hold
+     task-specific layout hooks, not page-specific typography or panel systems.
+
+4. Residual route normalization
+   - Rechecked assets, providers, waivers, reports, imports, projects, and
+     settings after the dashboard/findings/detail cleanup.
+   - Removed duplicated route-local aliases where a VPW class now expresses the
+     same layout.
+   - Kept artifact cards only for real generated artifacts and selectable cards
+     only for real choices.
+
+Status: completed. Dashboard, Findings Quick View, Finding Detail, drawers, and
+the residual route context/metric surfaces now use shared VPW command, metric,
+definition-list, detail-drawer, and evidence-row primitives. At the recorded
+completion point, the batch was locked by lint, typecheck, unit tests, full
+Playwright, and the 36-section design audit.
+
+### Batch definition of done
+
+Each batch is complete only when all of these are true:
+
+- Route behavior, loading, filters, tabs, drawers, forms, and navigation are
+  unchanged.
+- Changed route sections pass the 36-screenshot design audit.
+- No new raw `Card`, local hero, route-local heading scale, non-overlay
+  content shadow, or route-local radius pattern is introduced.
+- Primary repeated information is table/list/row based; object facts use
+  definition rows; rationale uses decision summaries; provenance uses evidence
+  rows.
+- `npm --prefix frontend run lint`, `npm --prefix frontend run test:types`,
+  `npm --prefix frontend run build`, and `npm --prefix frontend run
+  test:design-audit` pass for implementation batches.
+
+## Visual regression guardrails
+
+These rules are mandatory for future route migrations. They come from the Findings/Triage regression and the native AppShell scrolling repair.
+
+1. Preserve the best existing visual baseline before replacing implementation details.
+2. Canonical components must not be forced when they degrade width, density, scanability, or scroll behavior.
+3. Dense operational queues may keep route-specific table shells until shared table wrappers can match the same full-width, table-first behavior.
+4. Page scroll ownership must remain native and predictable. Do not intercept wheel events for artificial smooth scrolling.
+5. Route migrations must be incremental and reversible.
+6. Every route migration starts with a no-code visual baseline audit.
+7. Every implementation pass must name what visual baseline is preserved, which component is replaced, which behavior is unchanged, and which screenshots should be checked manually.
+8. Badge labels in dense tables must stay compact: `Critical`, `High`, `Medium`, `Low`, `Open`, `Fixed`, `KEV`, `EPSS 94.5%`, `CVSS 10.0`, `Risk 100.0`.
+9. Do not replace a stable route-local layout wrapper with a shared wrapper unless the shared wrapper preserves or improves the visual result.
+10. Passing TypeScript/build tests is not sufficient for UI migration acceptance; visual review is required.
+11. If a migration causes a visual regression, revert or repair before touching another route.
+12. Scroll regressions are blocker bugs and must be fixed before continuing visual migration.
+
+### Atomic migration sequence
+
+Use this sequence for each route and for each small replacement inside a route:
+
+1. Visual baseline audit, no code.
+2. Identify safe atomic replacement.
+3. Implement one small replacement.
+4. Run checks.
+5. Perform screenshot/manual review.
+6. Commit.
+7. Continue to next atomic replacement.
+
+## Shared Component Contracts
+
+Use these contracts in `frontend/src/components/vpw/` or a clearly named
+Workbench shared component folder that wraps VPW primitives. Keep exports
+centralized and documented.
+
+| Component | Exact responsibility | Existing or current starting point |
 | --- | --- | --- |
 | `PageHeader` | Shell-owned route title, eyebrow, description, optional top action. Route content should not own page headers. | `frontend/src/components/app/AppShell.tsx`, `frontend/src/lib/app-route-config.ts` |
 | `ContextBar` | Compact current-context row with object/project/provider/run state, freshness, and primary action. | `VpwCommandPanel`, `VpwPanel`, `VpwKeyValueList` |
-| `MetricStrip` | Compact metrics with label, value, context, optional severity/status. | `VpwMetricStrip`, `VpwCompactMetric`, `VpwMetricCard` |
+| `MetricStrip` | Compact metrics with label, value, context, optional severity/status. | `VpwMetricStrip`, `VpwCompactMetric` |
 | `PageSection` | Shared section wrapper with title/description/action slots and loading/empty slots. | `VpwSection`, `VpwSectionHeader`, `VpwPanel` |
 | `FilterBar` | Shared search/filter/reset/result-count controls for queues and registries. | `VpwFilterBar` |
 | `DataTableFrame` | Standard table container with header/actions/loading/empty/pagination/responsive row mode. | `VpwTableCard`, `VpwDataTable` |
@@ -52,8 +163,8 @@ Introduce these in `frontend/src/components/vpw/` or a clearly named Workbench s
 | `DefinitionList` | Metadata and diagnostic key/value rows. | `VpwKeyValueList` |
 | `DecisionSummary` | Remediation or acceptance rationale summary. | `VpwExecutiveDecisionSummary`, finding/waiver decision blocks |
 | `EvidenceRow` | Provenance row with source, timestamp, parser/provider, confidence/status, caveat, artifact/reference. | `VpwEvidenceArtifactCard`, report/finding evidence sections |
-| `DetailRail` | Persistent side summary for detail/report/context pages. | `DashboardSidePanel`, finding action rail, import summary rail |
-| `DetailDrawer` | Standard object inspection drawer for queues and registries. | `components/ui/sheet.tsx`, quick view, asset drawer, waiver drawer |
+| `DetailRail` | Persistent side summary for detail/report/context pages. | `DashboardDetailRail`, finding action rail, `NewImportSummaryRail`, `EvidenceCenterRunContext` |
+| `DetailDrawer` | Standard object inspection drawer for queues and registries. | `components/ui/sheet.tsx`, `RemediationQueueQuickViewSheet`, asset drawer, waiver drawer |
 | `EmptyState` | Unified empty/loading/error presentation for page, section, table, and drawer contexts. | `VpwEmptyState`, `VpwStateBlock`, `VpwSkeletonStack` |
 | `Callout` | Warning, blocked, degraded, stale, validation, or caveat block. | `VpwStatusBanner` |
 
@@ -63,11 +174,12 @@ Shared style work:
 - Keep route CSS as layout-only after migration.
 - Do not add a dependency for any listed component.
 
-## Route-Local Patterns to Remove
+## Route-Local Patterns Removed or Still Guarded
 
-Remove or replace these patterns as routes migrate.
+Keep these patterns out of future route work. Former examples are retained so
+regressions can be recognized quickly.
 
-| Pattern to remove | Current examples | Replacement |
+| Pattern to remove | Former examples | Replacement |
 | --- | --- | --- |
 | Route-local page headers/heroes | `DashboardHero.tsx`, `RemediationQueueSummary.tsx`, `FindingDetailHero.tsx`, `ProjectHero.tsx`, `SettingsWorkbenchHero.tsx`, provider/waiver/asset/import hero blocks. | Shell `PageHeader`, route `ContextBar`, `MetricStrip`, or `PageSection`. |
 | Route-local metric cards | `components/risk/MetricCard.tsx`, `DashboardMetricGrid.tsx`, `ProjectMetrics.tsx`, custom findings/provider/waiver metric wrappers. | `MetricStrip`. |
@@ -75,7 +187,7 @@ Remove or replace these patterns as routes migrate.
 | Route-local badges | Findings status/signal chips, provider freshness chips, waiver status chips, evidence quality badges, asset state badges. | `StatusBadge` and `SignalBadge`. |
 | Route-local filter bars | `RemediationQueueFilters.tsx`, report run selector groups, import/provider toolbar filters. | `FilterBar`. |
 | Route-local table frames | Per-route pagination wrappers, mobile cards, local table headers. | `DataTableFrame`. |
-| Route-local drawer shells | `QuickViewSheet.tsx`, `AssetDrawer.tsx`, `ImportDiagnosticsDrawer.tsx`, `EvidenceGenerateDrawer.tsx`, waiver drawers/forms. | `DetailDrawer`. |
+| Route-local drawer shells | `RemediationQueueQuickViewSheet.tsx`, `AssetDrawer.tsx`, `ImportDiagnosticsDrawer.tsx`, `EvidenceGenerateDrawer.tsx`, waiver drawers/forms. | `DetailDrawer`. |
 | Route-local right rails | `DashboardSidePanel.tsx`, `FindingDetailActionRail`, import summary rail, evidence run context panel. | `DetailRail`. |
 | Route-local tab systems | Finding detail tabs, providers tabs, settings tabs, evidence center tabs, import run tabs. | Shared tabs styling through `PageSection` or a shared Workbench tab wrapper. |
 | Route-local typography | Negative tracking, page-specific h2/h3 scales, hero typography, card heading scales. | Typography roles from `docs/workbench-ui-system.md`. |
@@ -93,7 +205,12 @@ CSS cleanup targets:
 - `frontend/src/styles/waivers.css`
 - `frontend/src/styles/responsive.css`
 
-## Migration Checklist by Route
+## Historical Baseline Checklist by Route
+
+This checklist records the original route-by-route migration scope. File names
+below are kept current where the active replacement is clear; former names in
+the pattern tables above are historical examples, not active implementation
+claims.
 
 ### 1. Findings/Triage
 
@@ -106,7 +223,7 @@ Files:
 - `frontend/src/components/findings/RemediationQueueTableSection.tsx`
 - `frontend/src/components/findings/FindingsDataTable.tsx`
 - `frontend/src/components/findings/FindingsMobileCards.tsx`
-- `frontend/src/components/findings/QuickViewSheet.tsx`
+- `frontend/src/components/findings/RemediationQueueQuickViewSheet.tsx`
 - `frontend/src/components/findings/RemediationQueueQuickViewSections.tsx`
 - `frontend/src/styles/findings.css`
 
@@ -124,9 +241,9 @@ Tasks:
 Files:
 
 - `frontend/src/components/finding-detail/FindingDetailRoute.tsx`
-- `frontend/src/components/finding-detail/FindingDetailHero.tsx`
-- `frontend/src/components/finding-detail/FindingDetailDecisionTab.tsx`
-- `frontend/src/components/finding-detail/FindingDetailEvidenceTab.tsx`
+- `frontend/src/components/finding-detail/FindingDetailContext.tsx`
+- `frontend/src/components/finding-detail/FindingDecisionTab.tsx`
+- `frontend/src/components/finding-detail/FindingEvidenceTab.tsx`
 - `frontend/src/components/finding-detail/FindingTtpContextTab.tsx`
 - `frontend/src/components/finding-detail/FindingTtpContextSections.tsx`
 - `frontend/src/styles/finding-detail-decision-core.css`
@@ -170,7 +287,7 @@ Files:
 
 - `frontend/src/components/providers/ProvidersRouteContainer.tsx`
 - `frontend/src/components/providers/ProvidersWorkbench.tsx`
-- `frontend/src/components/providers/ProvidersWorkbenchHero.tsx`
+- `frontend/src/components/providers/ProvidersWorkbenchContext.tsx`
 - `frontend/src/components/providers/ProvidersWorkbenchSources.tsx`
 - `frontend/src/components/providers/ProvidersWorkbenchDiagnostics.tsx`
 - `frontend/src/styles/providers.css`
@@ -187,7 +304,7 @@ Tasks:
 
 Files:
 
-- `frontend/src/components/assets/AssetsWorkbench.tsx`
+- `frontend/src/components/assets/AssetsRoute.tsx`
 - `frontend/src/components/assets/AssetSummaryCards.tsx`
 - `frontend/src/components/assets/AssetFilters.tsx`
 - `frontend/src/components/assets/AssetTable.tsx`
@@ -210,7 +327,7 @@ Tasks:
 Files:
 
 - `frontend/src/components/waivers/WaiversWorkbench.tsx`
-- `frontend/src/components/waivers/WaiversWorkbenchHero.tsx`
+- `frontend/src/components/waivers/WaiversWorkbenchContext.tsx`
 - `frontend/src/components/waivers/WaiversWorkbenchRegister.tsx`
 - `frontend/src/components/waivers/WaiversWorkbenchReview.tsx`
 - `frontend/src/components/waivers/WaiversWorkbenchDrawerDetail.tsx`
@@ -231,11 +348,10 @@ Tasks:
 Files:
 
 - `frontend/src/components/dashboard/RiskOperationsDashboard.tsx`
-- `frontend/src/components/dashboard/DashboardHero.tsx`
-- `frontend/src/components/dashboard/DashboardMetricGrid.tsx`
-- `frontend/src/components/dashboard/DashboardSidePanel.tsx`
+- `frontend/src/components/dashboard/DashboardContextBar.tsx`
+- `frontend/src/components/dashboard/DashboardMetricStrip.tsx`
+- `frontend/src/components/dashboard/DashboardDetailRail.tsx`
 - `frontend/src/components/dashboard/DashboardChartShared.tsx`
-- `frontend/src/components/risk/MetricCard.tsx`
 - `frontend/src/styles/dashboard.css`
 
 Tasks:
@@ -253,7 +369,7 @@ Files:
 
 - `frontend/src/components/reports/EvidenceCenter.tsx`
 - `frontend/src/components/reports/EvidenceCenterRunContext.tsx`
-- `frontend/src/components/reports/EvidenceCenterSummary.tsx`
+- `frontend/src/components/reports/EvidenceCenterSections.tsx`
 - `frontend/src/components/reports/EvidenceCenterTabs.tsx`
 - `frontend/src/components/reports/EvidenceCenterDecision.tsx`
 - `frontend/src/components/reports/EvidenceArtifactSection.tsx`
@@ -274,14 +390,14 @@ Tasks:
 Files:
 
 - `frontend/src/components/projects/ProjectsWorkbench.tsx`
-- `frontend/src/components/projects/ProjectHero.tsx`
+- `frontend/src/components/projects/ProjectContext.tsx`
 - `frontend/src/components/projects/ProjectMetrics.tsx`
-- `frontend/src/components/projects/ProjectSelectionStrip.tsx`
+- `frontend/src/components/projects/ProjectsWorkbenchActive.tsx`
 - `frontend/src/components/projects/ProjectsWorkbenchDirectory.tsx`
 - `frontend/src/components/finding-detail/FindingTtpContextTab.tsx`
 - `frontend/src/components/finding-detail/FindingTtpContextSections.tsx`
 - `frontend/src/components/settings/SettingsWorkbench.tsx`
-- `frontend/src/components/settings/SettingsWorkbenchHero.tsx`
+- `frontend/src/components/settings/SettingsWorkbenchContext.tsx`
 - `frontend/src/components/settings/SettingsWorkbenchOverview.tsx`
 
 Tasks:

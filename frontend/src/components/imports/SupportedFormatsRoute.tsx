@@ -63,7 +63,7 @@ export function SupportedFormatsRoute({
   })
 
   return (
-    <div className="imports-page-shell flex w-full min-w-0 flex-col gap-6">
+    <div className="imports-page-shell vpw-page-stack w-full min-w-0">
       <div className="flex flex-wrap justify-end gap-2">
         <Button asChild variant="outline">
           <Link search={projectSearch} to="/imports">

@@ -9,11 +9,14 @@ surfaces follow the same safety contract.
 
 ## Source Contract
 
-Workbench ATT&CK context uses CTID Mappings Explorer JSON as the canonical source for CVE-to-ATT&CK mappings.
+Workbench ATT&CK context prefers CTID Mappings Explorer JSON as the canonical
+source for CVE-to-ATT&CK mappings. Reviewed `local-curated` files are also
+accepted as explicit local evidence artifacts.
 
-- CTID JSON is the only canonical source for Workbench CVE-to-ATT&CK mapping decisions.
-- Reviewed local CSV mappings remain an explicit local override path, but they
-  are not the Workbench source of record.
+- CTID JSON is the canonical source of record for Workbench CVE-to-ATT&CK
+  mapping decisions.
+- Reviewed `local-curated` mappings remain an explicit local evidence path, but
+  they are not the preferred source of record.
 - Imported technique metadata enriches names, tactics, URLs, STIX spec/version metadata, and deprecation state; it does not create new CVE mappings.
 - Pinned ATT&CK STIX bundles are versioned catalog snapshots for tactics,
   techniques, mitigations, and mitigation relationships. They are not
@@ -23,8 +26,12 @@ Workbench ATT&CK context uses CTID Mappings Explorer JSON as the canonical sourc
   ProviderSnapshot metadata. Mapping validation can check CTID or curated
   technique IDs against the imported catalog, but it still does not infer new
   mappings.
-- CTID-enabled imports record source provenance in run and finding context: source kind, source path, source checksum, ATT&CK version/domain metadata when available, and mapped-CVE counts.
-- CVEs absent from the selected CTID source are stored as unmapped. Enabling `ctid-json` without the required mapping file fails import validation instead of falling back to inferred mappings.
+- ATT&CK-enabled imports record source provenance in run and finding context:
+  source kind, source path, source checksum, ATT&CK version/domain metadata when
+  available, and mapped-CVE counts.
+- CVEs absent from the selected CTID or reviewed local source are stored as
+  unmapped. Enabling `ctid-json` or `local-curated` without the required mapping
+  file fails import validation instead of falling back to inferred mappings.
 
 ## No Generated Mapping
 
@@ -34,7 +41,8 @@ Workbench ATT&CK enrichment is evidence-based and deterministic.
 - Do not use LLM-generated mappings.
 - Do not use fuzzy matching, keyword matching, or tactic guesses to fill CTID gaps.
 - Do not silently promote analyst notes into canonical ATT&CK mappings.
-- If a CVE is absent from the CTID JSON source, report it as unmapped.
+- If a CVE is absent from the selected CTID or reviewed local source, report it
+  as unmapped.
 - Curated local mappings require source, confidence, rationale, review status,
   and a defensive note. Free-text comments must stay at defensive triage or
   detection-context level and must not include exploit payloads, commands, or
@@ -57,9 +65,12 @@ The Workbench exposes ATT&CK context separately through fields such as `attack_m
 
 The current Workbench API preserves project, import, finding, report, and evidence endpoints while adding ATT&CK context through stable `/api/v1` response fields and report artifacts.
 
-- `POST /api/v1/projects/{project_id}/imports` accepts `attack_source=ctid-json`, `attack_mapping_file`, and `attack_technique_metadata_file` values rooted in the configured ATT&CK artifact directory.
+- `POST /api/v1/projects/{project_id}/imports` accepts
+  `attack_source=ctid-json` or `attack_source=local-curated`, plus
+  `attack_mapping_file` and optional `attack_technique_metadata_file` values
+  rooted in the configured ATT&CK artifact directory.
 - `GET /api/v1/runs/{run_id}` and `GET /api/v1/runs/{run_id}/summary` include ATT&CK summary fields such as `attack_enabled`, `attack_mapped_cves`, `attack_source`, `attack_version`, `attack_domain`, `attack_mapping_file_sha256`, `attack_technique_metadata_file_sha256`, `attack_metadata_format`, and `attack_stix_spec_version`.
-- `GET /api/v1/projects/{project_id}/findings` includes per-finding `attack_mapped` and `threat_context_rank` while keeping base priority fields separate.
+- `GET /api/v1/projects/{project_id}/findings/` includes per-finding `attack_mapped` and `threat_context_rank` while keeping base priority fields separate.
 - `GET /api/v1/findings/{finding_id}` returns the base finding detail and stored ATT&CK context.
 - `GET /api/v1/projects/{project_id}/attack/summary` returns project-level tactic and technique rollups from persisted finding ATT&CK context.
 - Report creation supports `POST /api/v1/runs/{run_id}/reports`
@@ -73,7 +84,8 @@ The current Workbench API preserves project, import, finding, report, and eviden
 
 The Workbench UI makes ATT&CK useful for triage without presenting it as a hidden score.
 
-- Import flows accept local CTID mapping and technique metadata artifacts when ATT&CK context is enabled.
+- Import flows accept CTID mapping artifacts or reviewed local curated mappings,
+  plus technique metadata artifacts when ATT&CK context is enabled.
 - Dashboard and findings views surface mapped ATT&CK context separately from the base priority column.
 - Finding detail and TTP views show CTID mapping evidence, tactics, techniques, mapping type, source checksum, metadata checksum, and explicit unmapped states.
 - "Why this priority?" remains separate from ATT&CK context so users can see that CVSS, EPSS, and KEV still drive the base priority.

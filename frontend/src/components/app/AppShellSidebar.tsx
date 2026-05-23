@@ -7,11 +7,7 @@ import type {
   WorkbenchPath,
 } from "../../lib/workbench-navigation"
 import { Button } from "../ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "../ui/tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip"
 
 type AppShellSidebarProps = {
   activePath: WorkbenchPath | null
@@ -131,7 +127,7 @@ export function AppShellSidebar({
                           ? "mx-auto size-10 justify-center p-0"
                           : "min-h-10 w-full px-3",
                         isActive
-                          ? "bg-[var(--vpw-text-primary)] text-[var(--vpw-bg-card)] shadow-[var(--vpw-shadow-1)]"
+                          ? "bg-[var(--vpw-text-primary)] text-[var(--vpw-bg-card)]"
                           : "text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]",
                       )}
                       to={entry.to}

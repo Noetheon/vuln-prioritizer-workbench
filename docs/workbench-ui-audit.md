@@ -1,8 +1,14 @@
 # Workbench UI Audit
 
-Status: audit and migration checklist only. No UI behavior has been changed.
+Status: baseline audit and retained migration reference. Route/file examples
+called out below were observed during the UI normalization audit; some have
+since been renamed, removed, or replaced by the completed migration.
 
-Scope: current Workbench frontend routes, shared UI primitives, route-local CSS, and test contracts. The product boundary remains a local-first, single-user vulnerability prioritization and evidence workbench for already-known CVEs from supplied evidence. This audit does not propose scanner, exploit, SaaS, RBAC, authentication, or autopatching behavior.
+Scope: Workbench frontend routes, shared UI primitives, route-local CSS, and
+test contracts. The product boundary remains a local-first, single-user
+vulnerability prioritization and evidence workbench for already-known CVEs from
+supplied evidence. This audit does not propose scanner, exploit, SaaS, RBAC,
+authentication, or autopatching behavior.
 
 ## 1. Current Route Inventory
 
@@ -22,32 +28,32 @@ Active route ownership is centralized in `frontend/src/AppRouter.tsx`, with disp
 | `/reports` | `frontend/src/workbench/routes/ReportsRoute.tsx`, `frontend/src/components/reports/EvidenceCenter.tsx` | Evidence/report page | Evidence center for artifacts, decisions, manifests, history, and report generation. |
 | `/settings` | `frontend/src/workbench/routes/SettingsRoute.tsx`, `frontend/src/components/settings/SettingsRouteContainer.tsx`, `frontend/src/components/settings/SettingsWorkbench.tsx` | Settings/form page | Local runtime, diagnostics, provider configuration, and persistence status. |
 | `/waivers` | `frontend/src/workbench/routes/WaiversRoute.tsx`, `frontend/src/components/waivers/WaiversWorkbench.tsx` | Registry page | Risk acceptance and waiver register with review/detail surfaces. |
-| `/assets` | `frontend/src/workbench/routes/AssetsRoute.tsx`, `frontend/src/components/assets/AssetsWorkbench.tsx` | Registry page | Asset inventory, evidence context, service rollups, and asset detail drawer. |
+| `/assets` | `frontend/src/workbench/routes/AssetsRoute.tsx`, `frontend/src/components/assets/AssetsRoute.tsx` | Registry page | Asset inventory, evidence context, service rollups, and asset detail drawer. |
 
 Route-adjacent surfaces that should be migrated with the same system:
 
 - Finding detail TTP context is a tab under `/findings/:findingId`, not a standalone route. Relevant files include `frontend/src/components/finding-detail/FindingTtpContextTab.tsx`, `frontend/src/components/finding-detail/FindingTtpContextSections.tsx`, and `frontend/src/styles/finding-detail-ttp-history-core.css`.
 - Import diagnostics is a detail drawer inside `/imports/runs/:runId`. Relevant files include `frontend/src/components/imports/ImportDiagnosticsDrawer.tsx` and import run tab components.
 
-## 2. Visual Inconsistency Inventory
+## 2. Baseline Visual Inconsistency Inventory
 
-| Pattern | Current examples | Remove or replace with |
+| Pattern | Baseline examples at audit time | Remove or replace with |
 | --- | --- | --- |
-| Page headers | Global page title is already owned by `frontend/src/components/app/AppShell.tsx` and `frontend/src/lib/app-route-config.ts`, but routes still add page-like headers in `DashboardHero.tsx`, `RemediationQueueSummary.tsx`, `FindingDetailHero.tsx`, `ProjectHero.tsx`, `SettingsWorkbenchHero.tsx`, `ProvidersWorkbenchHero.tsx`, `WaiversWorkbenchHero.tsx`, `AssetsWorkbench.tsx`, `ImportsHomeRoute.tsx`, and `ImportRunDetailRoute.tsx`. | Keep one shell-owned page header. Route content should use a context bar, metric strip, or section header rather than route-local hero/header blocks. |
+| Page headers | Global page title was already owned by `frontend/src/components/app/AppShell.tsx` and `frontend/src/lib/app-route-config.ts`, while routes still added page-like dashboard, findings, detail, project, settings, provider, waiver, asset, import-home, and import-detail header blocks. | Keep one shell-owned page header. Route content should use a context bar, metric strip, or section header rather than route-local hero/header blocks. |
 | Section headers | Shared `VpwSectionHeader` exists, but local variants appear in dashboard chart frames, findings triage summary, finding tabs, import sections, settings panels, provider tabs, and evidence center tabs. | Use one canonical section header with consistent label, title, description, actions, and density. Remove page-specific heading scales and action layouts. |
-| Metric cards | Existing variants include `VpwMetricStrip`/`VpwCompactMetric`, `VpwMetricCard`, `components/risk/MetricCard.tsx`, `DashboardMetricGrid.tsx`, `ProjectMetrics.tsx`, `RemediationQueueSummary.tsx` custom `dl`, and custom provider/waiver context cards. | Standardize on a compact metric strip. Keep cards only for bounded summaries or warnings. Replace large metric cards with strip items or status rows. |
+| Metric cards | Audit-time variants included `VpwMetricStrip`/`VpwCompactMetric`, former route-local metric cards, `ProjectMetrics.tsx`, `RemediationQueueSummary.tsx` custom `dl`, and custom provider/waiver context cards. | Standardize on a compact metric strip. Keep cards only for bounded summaries or warnings. Replace large metric cards with strip items or status rows. |
 | Cards and panels | Shared `VpwPanel`, `VpwSurface`, `VpwTableCard`, and `components/ui/card.tsx` coexist with route-local card classes such as `dashboard-readiness-card`, `chart-card`, `finding-drawer-decision-hero`, `finding-ttp-narrative-card`, `asset-detail-context-card`, waiver review cards, and evidence decision panels. | Use shared panels only for bounded summaries, warnings, right rails, drawers, and empty states. Convert repeated record/data content to table rows, compact lists, definition lists, evidence rows, or status rows. |
 | Badges | Shared `VpwBadge` and semantic badge helpers exist, but route-specific badge treatments appear in findings, dashboard provider summaries, import run statuses, asset detail, waivers, and evidence quality sections. | Split badge semantics into canonical `StatusBadge` for lifecycle/state and `SignalBadge` for risk/evidence/provider signals. Remove local color and shape definitions. |
 | Filter bars | `VpwFilterBar` is used in assets, projects, and waivers, while findings uses `RemediationQueueFilters.tsx` with custom classes; reports use run context controls; imports and providers have local toolbar/filter groups. | Use one compact filter bar with consistent field density, label behavior, reset affordance, and mobile wrapping. |
 | Tables | `VpwTableCard` and `VpwDataTable` are established for findings, assets, waivers, imports history, projects, reports history, and provider sources. Inconsistent alternatives remain as mobile cards, quick-start card lists, panel lists, service rollup cards, and drawer panel stacks. | Keep `VpwDataTable` as the registry/queue default. Use a shared data table frame for title, description, actions, loading, empty, pagination, and mobile fallback. |
-| Detail drawers | Different drawer structures exist in `QuickViewSheet.tsx`, `AssetDrawer.tsx`, `ImportDiagnosticsDrawer.tsx`, `EvidenceGenerateDrawer.tsx`, and waiver drawer/form components. Widths, header hierarchy, footer/actions, panel usage, and metadata layout differ. | Create a canonical detail drawer with standardized header, object summary, body sections, evidence/definition rows, and sticky action area. |
-| Right rails | Route-local rails include `DashboardSidePanel.tsx`, `FindingDetailActionRail` inside `FindingDetailRoute.tsx`, `NewImportSummaryRail`, `EvidenceCenterRunContext.tsx`, and asset/finding drawer side summaries. | Use one right-rail summary pattern for current context, decision state, data freshness, and next action. |
+| Detail drawers | Different drawer structures existed in `RemediationQueueQuickViewSheet.tsx`, `AssetDrawer.tsx`, `ImportDiagnosticsDrawer.tsx`, `EvidenceGenerateDrawer.tsx`, and waiver drawer/form components. Widths, header hierarchy, footer/actions, panel usage, and metadata layout differed. | Create a canonical detail drawer with standardized header, object summary, body sections, evidence/definition rows, and sticky action area. |
+| Right rails | Route-local rails included the former dashboard side panel, `FindingDetailActionRail` inside `FindingDetailRoute.tsx`, `NewImportSummaryRail`, `EvidenceCenterRunContext.tsx`, and asset/finding drawer side summaries. | Use one right-rail summary pattern for current context, decision state, data freshness, and next action. |
 | Empty states | Shared `VpwEmptyState` and `VpwStateBlock` exist, but `components/states/EmptyState.tsx`, `LoadingSkeleton.tsx`, and `ErrorState.tsx` still use generic `Card`; several route components define their own empty/callout blocks. | Standardize on a single empty state component for table, panel, drawer, and page-empty contexts. Remove generic Card-based state wrappers from Workbench routes. |
 | Alert/callout blocks | `VpwStatusBanner` exists, but dashboard demo/provider warnings, provider alerts, waiver alerts, settings alerts, evidence action status, and import diagnostics use local severity layouts. | Use a canonical status/callout block with severity, title, body, metadata, and action slot. |
 | Tabs | Tabs are route-local in finding detail, providers, settings, evidence center, and import run detail. Each has its own shell/list/trigger classes and spacing. | Use one Workbench tab component with compact density, consistent active state, overflow behavior, and section relationship. |
-| Typography | Route CSS defines separate heading scales and labels. `SettingsWorkbenchHero.tsx` includes local negative tracking; dashboard, finding detail, and imports use page-specific hero typography. | Route content should use shared typography tokens/classes for section titles, labels, metadata, table text, and body copy. No page-specific type scales. |
+| Typography | Route CSS defined separate heading scales and labels. Former route-local hero blocks included page-specific typography and local negative tracking. | Route content should use shared typography tokens/classes for section titles, labels, metadata, table text, and body copy. No page-specific type scales. |
 | Spacing | Page wrappers vary between `VpwPageContainer`, `imports-page-shell`, dashboard grids, route-local `gap-*` chains, drawer body spacing, and local tab panels. | One page container and section rhythm should define route spacing. Drawers, right rails, tables, and forms should share density tokens. |
-| Shadows and borders | The design direction favors thin borders, but generic `Card` defaults, `risk/MetricCard.tsx` hover shadows, dashboard CSS, active settings tabs, and TTP context cards still use shadows or heavier visual treatment. | Prefer hairline borders and background layers. Remove decorative hover shadows and page-specific shadow language outside overlays/popovers. |
+| Shadows and borders | The design direction favored thin borders, but generic `Card` defaults, `risk/MetricCard.tsx` hover shadows, dashboard CSS, active settings tabs, and TTP context cards still used shadows or heavier visual treatment. | Prefer hairline borders and background layers. Remove decorative hover shadows and page-specific shadow language outside overlays/popovers. |
 
 CSS files that concentrate the inconsistencies:
 
@@ -72,16 +78,16 @@ Shared guidance already exists and should be preserved:
 - `frontend/tests/route-organization.test.ts`
 - `frontend/tests/product-copy-guardrails.test.ts`
 
-## 3. Card Misuse Inventory
+## 3. Baseline Card Misuse Inventory
 
-| Location | Current shape | Should become | Rationale |
+| Location | Baseline shape | Should become | Rationale |
 | --- | --- | --- | --- |
-| `frontend/src/components/dashboard/DashboardMetricGrid.tsx`, `frontend/src/components/risk/MetricCard.tsx` | Large metric cards with accent borders and hover shadow. | Compact metric strip and status rows. | Metrics should scan as operational facts, not dominate the overview page. |
-| `frontend/src/components/dashboard/DashboardSidePanel.tsx` | Stacked side-panel cards for readiness, recommendations, takeaways, and next action. | Right-rail summary with compact lists, status rows, and one decision/next-action block. | The right rail should summarize context and the next operational step without competing with the queue. |
+| Former dashboard metric-grid and risk metric-card implementations | Large metric cards with accent borders and hover shadow. | Compact metric strip and status rows. | Metrics should scan as operational facts, not dominate the overview page. |
+| Former dashboard side-panel implementation | Stacked side-panel cards for readiness, recommendations, takeaways, and next action. | Right-rail summary with compact lists, status rows, and one decision/next-action block. | The right rail should summarize context and the next operational step without competing with the queue. |
 | `frontend/src/components/findings/RemediationQueueSummary.tsx` | Route-local overview panel and custom metric `dl`. | Context bar plus canonical metric strip. | Findings is a queue page; the table and prioritization controls should be primary. |
 | `frontend/src/components/findings/RemediationQueueQuickViewSections.tsx` | Drawer hero cards, assignment strips, signal cards, and evidence snapshot cards. | Decision summary, signal rows, definition list, and evidence rows. | Quick view should support a fast triage decision with provenance visible in row form. |
 | `frontend/src/components/findings/FindingsMobileCards.tsx` | Mobile fallback as individual record cards. | Shared responsive table/list rows. | Repeated queue data should keep table/list semantics across breakpoints. |
-| `frontend/src/components/finding-detail/FindingDetailHero.tsx` | Large detail hero with metrics and narrative emphasis. | Detail page context bar plus decision summary. | The primary object is one finding; evidence and remediation rationale should be immediately comparable and compact. |
+| Former finding-detail hero implementation | Large detail hero with metrics and narrative emphasis. | Detail page context bar plus decision summary. | The primary object is one finding; evidence and remediation rationale should be immediately comparable and compact. |
 | `frontend/src/components/finding-detail/FindingDetailRoute.tsx` `FindingDetailActionRail` | Custom action rail with panel-like metadata blocks. | Canonical right-rail summary with definition/status rows. | Detail actions, owner, SLA, KEV/EPSS/VEX, and waiver state need consistent scannable rows. |
 | `frontend/src/components/finding-detail/FindingTtpContextSections.tsx` | Narrative/action cards and TTP chain cards. | Evidence rows, compact lists, and explicit caveat/status rows. | TTP context is supporting evidence, not a decorative story surface. Avoid speculative visual emphasis. |
 | `frontend/src/components/imports/ImportsHomeRoute.tsx` | Quick-start and format content in panel/card rows. | Compact workflow list and registry rows. | Imports home should route users to supplied-evidence workflows and recent runs without card sprawl. |
@@ -93,9 +99,9 @@ Shared guidance already exists and should be preserved:
 | `frontend/src/components/waivers/WaiversWorkbenchDrawerDetail.tsx` | Stacked drawer panels and nested key/value blocks. | Canonical drawer sections, definition list, evidence rows, and decision summary. | Drawer content should match finding and asset detail density. |
 | `frontend/src/components/waivers/WaiversWorkbenchForm.tsx` | Multi-panel form sections. | Form sections inside canonical drawer/form layout. | Forms need clear grouping without each group becoming a decorative card. |
 | `frontend/src/components/providers/ProvidersWorkbenchDiagnostics.tsx` and provider quality/snapshot sections | Diagnostic fact panels. | Definition lists and status rows. | Provider state is registry metadata and health evidence. |
-| `frontend/src/components/reports/EvidenceCenterDecision.tsx`, `EvidenceCenterQuality.tsx`, `EvidenceGenerateDrawer.tsx` | Decision, quality, and generate workflows as panel stacks. | Decision summary, evidence rows, definition lists, and canonical drawer. | Evidence center should read as proof/provenance and report artifacts, not dashboard cards. |
-| `frontend/src/components/projects/ProjectMetrics.tsx`, `ProjectSelectionStrip.tsx` | Metric cards and selection strip blocks. | Metric strip, registry table rows, and context bar. | Projects is a registry/context route; project facts should not become page-level cards. |
-| `frontend/src/components/settings/SettingsWorkbenchOverview.tsx` and `SettingsWorkbenchHero.tsx` | Hero and many settings panels. | Definition/status rows inside settings sections. | Settings should be compact configuration facts and diagnostics, not a dashboard. |
+| `frontend/src/components/reports/EvidenceCenterDecision.tsx`, `QualityFacts` in `EvidenceCenterDecision.tsx`, `EvidenceGenerateDrawer.tsx` | Decision, quality, and generate workflows as panel stacks. | Decision summary, evidence rows, definition lists, and canonical drawer. | Evidence center should read as proof/provenance and report artifacts, not dashboard cards. |
+| `frontend/src/components/projects/ProjectMetrics.tsx` and the former project selection-strip implementation | Metric cards and selection strip blocks. | Metric strip, registry table rows, and context bar. | Projects is a registry/context route; project facts should not become page-level cards. |
+| `frontend/src/components/settings/SettingsWorkbenchOverview.tsx` and the former settings hero implementation | Hero and many settings panels. | Definition/status rows inside settings sections. | Settings should be compact configuration facts and diagnostics, not a dashboard. |
 | `frontend/src/components/states/EmptyState.tsx`, `LoadingSkeleton.tsx`, `ErrorState.tsx` | Generic Card-based state wrappers. | Canonical Workbench empty/loading/error states. | Workbench states should follow the same thin-border, compact system as route content. |
 
 ## 4. Information Architecture Problems
@@ -124,7 +130,7 @@ Build these as shared Workbench/VPW components or adapters over existing VPW pri
 | Component | Purpose | Replaces or consolidates |
 | --- | --- | --- |
 | `WorkbenchPageLayout` | One route body container with standard width, density, section rhythm, and responsive behavior. | `imports-page-shell`, dashboard route wrappers, ad hoc route page containers, and local spacing chains. |
-| `WorkbenchPageHeader` | Shell-owned route title, eyebrow, description, and optional top action using `app-route-config.ts`. Route bodies should not define their own page headers. | `DashboardHero`, `SettingsWorkbenchHero`, `ProjectHero`, findings summary header blocks, and page-like h2 headers. |
+| `WorkbenchPageHeader` | Shell-owned route title, eyebrow, description, and optional top action using `app-route-config.ts`. Route bodies should not define their own page headers. | Former route-local dashboard/settings/project hero blocks, findings summary header blocks, and page-like h2 headers. |
 | `WorkbenchContextBar` | Compact current-context row for project, provider, run, object state, freshness, and primary action. | Route-local hero/context panels in dashboard, providers, waivers, assets, imports, projects, reports, and finding detail. |
 | `WorkbenchMetricStrip` and `WorkbenchMetric` | Dense row of operational metrics with label, value, trend/context, and severity. | `VpwMetricCard`, `risk/MetricCard`, dashboard metric grid, project metrics, custom `findings-triage-strip`, waiver/provider KPI cards. |
 | `WorkbenchPageSection` | Shared section frame with optional `WorkbenchSectionHeader`, body, actions, and loading/empty state slots. | Route-specific section headings, panel headers, chart frames, and tab section wrappers. |
@@ -135,8 +141,8 @@ Build these as shared Workbench/VPW components or adapters over existing VPW pri
 | `WorkbenchDefinitionList` | Canonical key/value metadata rows with optional grouped sections and copy/action affordances. | Raw `dl` grids, drawer metadata panels, asset/finding/project/settings facts, and provider diagnostics facts. |
 | `WorkbenchDecisionSummary` | Compact decision/rationale block with recommendation, why-now, evidence basis, residual risk, owner, deadline, and caveats. | Finding detail hero decision copy, quick-view decision hero, waiver review cards, evidence executive decision panels. |
 | `WorkbenchEvidenceRow` and `WorkbenchEvidenceList` | Provenance-first row pattern for source, timestamp, parser/provider, confidence, artifact link, and caveat. | Evidence cards, report artifact cards where row comparison matters, finding evidence snapshots, import diagnostics, TTP context cards. |
-| `WorkbenchDetailDrawer` | Standard drawer shell with object header, status/metadata summary, sections, evidence rows, and sticky actions. | `QuickViewSheet`, `AssetDrawer`, `ImportDiagnosticsDrawer`, `EvidenceGenerateDrawer`, and waiver drawers/forms. |
-| `WorkbenchRightRail` | Optional route/detail side rail for bounded context, next action, summary metrics, and status rows. | `DashboardSidePanel`, `FindingDetailActionRail`, import summary rail, evidence run context panel, and asset/finding drawer side summaries. |
+| `WorkbenchDetailDrawer` | Standard drawer shell with object header, status/metadata summary, sections, evidence rows, and sticky actions. | `RemediationQueueQuickViewSheet`, `AssetDrawer`, `ImportDiagnosticsDrawer`, `EvidenceGenerateDrawer`, and waiver drawers/forms. |
+| `WorkbenchRightRail` | Optional route/detail side rail for bounded context, next action, summary metrics, and status rows. | Former dashboard side panel, `FindingDetailActionRail`, import summary rail, evidence run context panel, and asset/finding drawer side summaries. |
 | `WorkbenchEmptyState` | Unified empty, loading, and error state pattern with compact copy and optional action. | Generic Card-based `EmptyState`, `LoadingSkeleton`, `ErrorState`, and route-local empty panels. |
 
 Implementation rule for these components:
@@ -146,19 +152,22 @@ Implementation rule for these components:
 - Keep cards reserved for bounded summaries, warnings, right rails, drawers, and empty states.
 - Repeated data should default to tables, compact lists, status rows, evidence rows, or definition lists.
 
-## 6. Route-by-Route Migration Order
+## 6. Baseline Route-by-Route Migration Order
 
-Use this order to minimize churn and establish shared components where the inconsistency is most visible.
+This records the original audit order used to minimize churn and establish
+shared components where the inconsistency was most visible. It is retained as
+historical planning context; use `docs/workbench-ui-migration-plan.md` and the
+current route files for current implementation status.
 
 1. Findings/Triage
    - [ ] Replace `RemediationQueueSummary.tsx` with context bar plus metric strip.
    - [ ] Convert `RemediationQueueFilters.tsx` to the canonical filter bar.
    - [ ] Normalize `RemediationQueueTableSection.tsx`, pagination, and mobile fallback through the data table frame.
-   - [ ] Convert `QuickViewSheet.tsx` and `RemediationQueueQuickViewSections.tsx` to canonical drawer, decision summary, definition list, signal rows, and evidence rows.
+   - [ ] Convert `RemediationQueueQuickViewSheet.tsx` and `RemediationQueueQuickViewSections.tsx` to canonical drawer, decision summary, definition list, signal rows, and evidence rows.
    - [ ] Remove or collapse route-local findings card/header CSS from `frontend/src/styles/findings.css`.
 
 2. Finding Detail
-   - [ ] Replace `FindingDetailHero.tsx` with detail context bar plus decision summary.
+   - [ ] Replace the former finding detail hero with detail context bar plus decision summary.
    - [ ] Convert `FindingDetailActionRail` to canonical right rail.
    - [ ] Normalize tabs and section headers across decision, evidence, activity, and related surfaces.
    - [ ] Convert metadata and provider facts to `WorkbenchDefinitionList`.
@@ -172,7 +181,7 @@ Use this order to minimize churn and establish shared components where the incon
    - [ ] Keep import copy scoped to supplied evidence and scanner-export inputs only; do not imply scanning behavior.
 
 4. Providers/Data Sources
-   - [ ] Keep `ProvidersWorkbenchHero.tsx` close to the shared context/metric model, but remove provider-specific context item wrappers.
+   - [ ] Keep the provider context surface close to the shared context/metric model, but remove provider-specific context item wrappers.
    - [ ] Normalize provider tabs, alerts, diagnostics, snapshots, and quality panels to shared tabs, status badges, definition lists, and status rows.
    - [ ] Preserve provider source inventory as table-first.
 
@@ -256,7 +265,7 @@ Shared components, styling, docs, and tests:
 - `frontend/src/components/states/ErrorState.tsx`
 - `frontend/src/styles/tokens.css`
 - `frontend/src/styles/vpw-components.css`
-- `frontend/src/styles/layout.css`
+- `frontend/src/styles/layout-tokens.css`
 - `frontend/src/styles/base.css`
 - `frontend/src/styles/accessibility.css`
 - `frontend/src/index.css`

@@ -70,7 +70,7 @@ Active routes are defined in `frontend/src/AppRouter.tsx`.
 | `/reports` | `frontend/src/workbench/routes/ReportsRoute.tsx`, `frontend/src/components/reports/EvidenceCenter.tsx` | Evidence/report | Generate and inspect evidence-backed reports, artifacts, manifests, and history. |
 | `/settings` | `frontend/src/workbench/routes/SettingsRoute.tsx`, `frontend/src/components/settings/SettingsRouteContainer.tsx` | Settings/form | Inspect local runtime, persistence, diagnostics, and configuration. |
 | `/waivers` | `frontend/src/workbench/routes/WaiversRoute.tsx`, `frontend/src/components/waivers/WaiversWorkbench.tsx` | Registry | Review, create, renew, revoke, and inspect risk acceptance records. |
-| `/assets` | `frontend/src/workbench/routes/AssetsRoute.tsx`, `frontend/src/components/assets/AssetsWorkbench.tsx` | Registry | Inspect asset inventory and asset context used in prioritization. |
+| `/assets` | `frontend/src/workbench/routes/AssetsRoute.tsx`, `frontend/src/components/assets/AssetsRoute.tsx` | Registry | Inspect asset inventory and asset context used in prioritization. |
 
 Route-adjacent IA:
 

@@ -13,6 +13,10 @@ nav:
       - Current Product State: current-product-state.md
       - Documentation Map: documentation-map.md
       - Product Architecture: architecture.md
+      - Workbench Information Architecture: workbench-information-architecture.md
+      - Workbench UI System: workbench-ui-system.md
+      - Workbench UI Audit: workbench-ui-audit.md
+      - Workbench UI Migration Plan: workbench-ui-migration-plan.md
       - Dependency and Package Policy: dependency-and-package-policy.md
       - Scoring Methodology: scoring-methodology.md
       - ATT&CK/TTP Methodology: attack-ttp-methodology.md

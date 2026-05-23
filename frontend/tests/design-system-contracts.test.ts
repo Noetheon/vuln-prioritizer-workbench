@@ -20,6 +20,7 @@ import {
 } from "../src/components/vpw/semantic-badge-model.ts"
 
 const frontendRoot = fileURLToPath(new URL("../", import.meta.url))
+const repoRoot = fileURLToPath(new URL("../../", import.meta.url))
 const srcRoot = fileURLToPath(new URL("../src/", import.meta.url))
 
 const sourceExtensions = new Set([".css", ".ts", ".tsx"])
@@ -100,17 +101,53 @@ const inventoryFilterContractFiles = [
 ]
 
 const commandPanelContractFiles = [
+  "src/components/dashboard/DashboardContextBar.tsx",
+  "src/components/assets/AssetDetailContent.tsx",
   "src/components/assets/AssetsRoute.tsx",
-  "src/components/waivers/WaiversWorkbenchHero.tsx",
-  "src/components/providers/ProvidersWorkbenchHero.tsx",
+  "src/components/findings/RemediationQueueSummary.tsx",
+  "src/components/finding-detail/FindingDetailContext.tsx",
+  "src/components/finding-detail/FindingTtpContextSections.tsx",
+  "src/components/imports/ImportsHomeRoute.tsx",
+  "src/components/imports/ImportRunDetailRoute.tsx",
+  "src/components/projects/ProjectContext.tsx",
+  "src/components/reports/EvidenceCenterRunContext.tsx",
+  "src/components/settings/SettingsWorkbenchContext.tsx",
+  "src/components/waivers/WaiversWorkbenchContext.tsx",
+  "src/components/providers/ProvidersWorkbenchContext.tsx",
 ]
 
 const compactMetricContractFiles = [
   "src/components/assets/AssetSummaryCards.tsx",
-  "src/components/assets/AssetsRoute.tsx",
-  "src/components/waivers/WaiversWorkbenchHero.tsx",
-  "src/components/providers/ProvidersWorkbenchHero.tsx",
+  "src/components/dashboard/DashboardMetricStrip.tsx",
+  "src/components/findings/RemediationQueueSummary.tsx",
+  "src/components/finding-detail/FindingDetailContext.tsx",
+  "src/components/imports/ImportsHomeRoute.tsx",
+  "src/components/imports/ImportRunDetailRoute.tsx",
+  "src/components/projects/ProjectMetrics.tsx",
+  "src/components/waivers/WaiversWorkbenchContext.tsx",
+  "src/components/providers/ProvidersWorkbenchContext.tsx",
   "src/components/providers/ProvidersWorkbenchMetrics.tsx",
+]
+
+const metricLocalPatternContractFiles = [
+  "src/components/assets/AssetSummaryCards.tsx",
+  "src/components/assets/AssetsRoute.tsx",
+  "src/components/dashboard/DashboardMetricStrip.tsx",
+  "src/components/findings/RemediationQueueSummary.tsx",
+  "src/components/finding-detail/FindingDetailContext.tsx",
+  "src/styles/assets.css",
+  "src/styles/dashboard.css",
+  "src/styles/findings.css",
+  "src/styles/finding-detail-decision-core.css",
+]
+
+const detailDrawerContractFiles = [
+  "src/components/assets/AssetDrawer.tsx",
+  "src/components/dashboard/DashboardRemediationColumns.tsx",
+  "src/components/findings/RemediationQueueQuickViewSheet.tsx",
+  "src/components/imports/ImportDiagnosticsDrawer.tsx",
+  "src/components/reports/EvidenceGenerateDrawer.tsx",
+  "src/components/waivers/WaiversWorkbenchDrawer.tsx",
 ]
 
 const filterControlFiles = [
@@ -158,6 +195,10 @@ const viewportFontSizePattern =
 
 function readProjectFile(path: string) {
   return readFileSync(join(frontendRoot, path), "utf8")
+}
+
+function readRepoFile(path: string) {
+  return readFileSync(join(repoRoot, path), "utf8")
 }
 
 function readShowcaseSources() {
@@ -519,6 +560,64 @@ test("raw controls and tables are isolated to UI adapters", () => {
   assert.deepEqual(rawTableOffenders, [])
 })
 
+test("interactive UI primitives expose pointer cursor affordance", () => {
+  const contracts = [
+    {
+      path: "src/components/ui/button.tsx",
+      required: [/cursor-pointer/, /aria-busy:cursor-wait/],
+    },
+    {
+      path: "src/components/ui/select.tsx",
+      required: [
+        /vpw-select-trigger[\s\S]*cursor-pointer/,
+        /SelectPrimitive\.Item[\s\S]*cursor-pointer/,
+      ],
+      forbidden: [/cursor-default/],
+    },
+    {
+      path: "src/components/ui/tabs.tsx",
+      required: [/TabsPrimitive\.Trigger[\s\S]*cursor-pointer/],
+    },
+    {
+      path: "src/components/ui/dropdown-menu.tsx",
+      required: [
+        /DropdownMenuPrimitive\.Trigger[\s\S]*cursor-pointer/,
+        /DropdownMenuPrimitive\.Item[\s\S]*cursor-pointer/,
+      ],
+      forbidden: [/cursor-default/],
+    },
+    {
+      path: "src/components/ui/checkbox.tsx",
+      required: [/data-slot="checkbox"[\s\S]*cursor-pointer/],
+    },
+    {
+      path: "src/components/ui/toggle.tsx",
+      required: [/cursor-pointer/],
+    },
+    {
+      path: "src/components/ui/dialog.tsx",
+      required: [/data-slot="dialog-close"[\s\S]*cursor-pointer/],
+    },
+    {
+      path: "src/components/ui/sheet.tsx",
+      required: [/data-slot="sheet-close"[\s\S]*cursor-pointer/],
+    },
+  ]
+  const offenders: string[] = []
+
+  for (const { path, required, forbidden = [] } of contracts) {
+    const source = readProjectFile(path)
+    for (const pattern of required) {
+      if (!pattern.test(source)) offenders.push(`${path}: missing ${pattern}`)
+    }
+    for (const pattern of forbidden) {
+      if (pattern.test(source)) offenders.push(`${path}: forbidden ${pattern}`)
+    }
+  }
+
+  assert.deepEqual(offenders, [])
+})
+
 test("domain styles do not target shadcn internals or global elements", () => {
   const domainCssFiles = [
     "src/styles/dashboard.css",
@@ -634,8 +733,14 @@ test("filter bars keep the Workbench scope-search-filter-action order", () => {
   const assets = readProjectFile("src/components/assets/AssetFilters.tsx")
   assertSourceOrder("src/components/assets/AssetFilters.tsx", assets, [
     'label="Project"',
-    'searchTitle="Service"',
+    'searchTitle="Asset"',
+    'label="Service"',
     'label="Owner"',
+    'label="Environment"',
+    'label="Exposure"',
+    'label="Criticality"',
+    'label="Findings"',
+    'label="Rescore"',
   ])
   assert.match(assets, /searchClassName="vpw-filter-field--md"/)
   assert.match(assets, />\s*Reset\s*</)
@@ -704,7 +809,7 @@ test("filter reset controls use the standard reset icon and text", () => {
   }
 })
 
-test("workspace hero and summary surfaces use shared VPW shell primitives", () => {
+test("workspace context and summary surfaces use shared VPW shell primitives", () => {
   const layout = readProjectFile("src/components/vpw/VpwLayout.tsx")
   const vpwStyles = readProjectFile("src/styles/vpw-components.css")
 
@@ -712,11 +817,40 @@ test("workspace hero and summary surfaces use shared VPW shell primitives", () =
   assert.match(layout, /export function VpwMetricStrip/)
   assert.match(layout, /export function VpwCompactMetric/)
   assert.match(vpwStyles, /\.vpw-command-panel/)
+  assert.match(
+    vpwStyles,
+    /\.vpw-command-panel__header\s*\{[\s\S]*border-bottom: 1px solid var\(--vpw-border-subtle\)/,
+  )
   assert.match(vpwStyles, /\.vpw-metric-strip/)
   assert.match(vpwStyles, /\.vpw-compact-metric/)
+  assert.match(vpwStyles, /container-type: inline-size/)
+  assert.match(vpwStyles, /aspect-ratio: var\(--vpw-compact-metric-ratio/)
+  assert.match(vpwStyles, /\.vpw-compact-metric\[data-tone="neutral"\]/)
+  assert.doesNotMatch(
+    vpwStyles,
+    /--vpw-compact-metric-rail:\s*transparent/,
+  )
+  assert.match(vpwStyles, /@container \(min-width: 20rem\)/)
+  assert.match(vpwStyles, /max-width: var\(--vpw-metric-strip-max\)/)
+  assert.doesNotMatch(readProjectFile("src/components/vpw/index.ts"), /VpwMetricCard/)
+  assert.doesNotMatch(vpwStyles, /\.vpw-metric-card/)
+  assert.doesNotMatch(vpwStyles, /\.vpw-fact/)
+  assert.doesNotMatch(vpwStyles, /"label description"/)
 
   for (const path of commandPanelContractFiles) {
     assert.match(readProjectFile(path), /VpwCommandPanel/, `${path}: command shell`)
+  }
+
+  for (const path of [
+    "src/styles/assets.css",
+    "src/styles/providers.css",
+    "src/styles/reports.css",
+  ]) {
+    assert.doesNotMatch(
+      readProjectFile(path),
+      /\.vpw-command-panel__header\s*\{[^}]*border-bottom/,
+      `${path}: command panel divider belongs in vpw-components.css`,
+    )
   }
 
   for (const path of compactMetricContractFiles) {
@@ -725,12 +859,34 @@ test("workspace hero and summary surfaces use shared VPW shell primitives", () =
     assert.match(source, /VpwCompactMetric/, `${path}: compact metric`)
   }
 
+  const settingsOverview = readProjectFile(
+    "src/components/settings/SettingsWorkbenchOverview.tsx",
+  )
+  assert.match(settingsOverview, /VpwTableCard/, "settings: console surface")
+  assert.match(settingsOverview, /VpwDataTable/, "settings: row-based state")
+  assert.match(settingsOverview, /VpwStatusBanner/, "settings: review banner")
+  assert.doesNotMatch(
+    settingsOverview,
+    /VpwMetricStrip|VpwCompactMetric/,
+    "settings routes are consoles, not KPI dashboards",
+  )
+
+  for (const path of detailDrawerContractFiles) {
+    const source = readProjectFile(path)
+    assert.match(source, /DetailDrawer/, `${path}: detail drawer`)
+    assert.doesNotMatch(
+      source,
+      /Sheet(?:Content|Header|Footer|Title|Description)|ui\/sheet|\.{2}\/ui\/sheet/,
+      `${path}: no route-local sheet shell`,
+    )
+  }
+
   const localPatternOffenders: string[] = []
   for (const path of [
     "src/components/assets/AssetsRoute.tsx",
     "src/components/assets/AssetSummaryCards.tsx",
-    "src/components/waivers/WaiversWorkbenchHero.tsx",
-    "src/components/providers/ProvidersWorkbenchHero.tsx",
+    "src/components/waivers/WaiversWorkbenchContext.tsx",
+    "src/components/providers/ProvidersWorkbenchContext.tsx",
     "src/components/providers/ProvidersWorkbenchMetrics.tsx",
     "src/styles/assets.css",
     "src/styles/waivers.css",
@@ -746,6 +902,19 @@ test("workspace hero and summary surfaces use shared VPW shell primitives", () =
     }
   }
   assert.deepEqual(localPatternOffenders, [])
+
+  const routeMetricPatternOffenders: string[] = []
+  for (const path of metricLocalPatternContractFiles) {
+    const source = readProjectFile(path)
+    const matches = violationsFor(
+      /(?:dashboard-metric-strip|dashboard-compact-metric|findings-triage-strip|assets-kpi-strip|assets-context-strip|finding-detail-signal-strip)/g,
+      source,
+    )
+    if (matches.length > 0) {
+      routeMetricPatternOffenders.push(`${path}: ${matches.join(", ")}`)
+    }
+  }
+  assert.deepEqual(routeMetricPatternOffenders, [])
 })
 
 test("app shell owns page scrolling in the content region", () => {
@@ -771,6 +940,34 @@ test("app shell owns page scrolling in the content region", () => {
   assert.doesNotMatch(scrollOwner, /onWheelCapture/)
   assert.doesNotMatch(scrollOwner, /preventDefault/)
   assert.doesNotMatch(scrollOwner, /requestAnimationFrame/)
+})
+
+test("VPW design audit stays exposed as a named local and CI gate", () => {
+  const packageJson = JSON.parse(readProjectFile("package.json")) as {
+    scripts: Record<string, string>
+  }
+  const makefile = readRepoFile("Makefile")
+  const ci = readRepoFile(".github/workflows/ci.yml")
+  const auditSpec = readProjectFile("tests/workbench-design-audit.spec.ts")
+
+  assert.equal(
+    packageJson.scripts["test:design-audit"],
+    "playwright test tests/workbench-design-audit.spec.ts --project=chromium",
+  )
+  assert.match(makefile, /\.PHONY:.*frontend-design-audit/)
+  assert.match(
+    makefile,
+    /frontend-design-audit:\n\tcd frontend && npm run test:design-audit/,
+  )
+  assert.match(
+    ci,
+    /Run VPW design audit screenshots[\s\S]{0,180}make frontend-design-audit/,
+  )
+  assert.ok(
+    ci.indexOf("Run VPW design audit screenshots") <
+      ci.indexOf("Run full frontend Playwright suite"),
+  )
+  assert.match(auditSpec, /expect\(manifest\)\.toHaveLength\(36\)/)
 })
 
 test("stylesheets do not couple to shadcn data-slot internals", () => {

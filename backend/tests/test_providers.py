@@ -348,7 +348,7 @@ def test_nvd_uses_cache_on_second_fetch(tmp_path: Path) -> None:
 def test_nvd_fetch_many_preserves_input_order_and_counts_diagnostics(tmp_path: Path) -> None:
     class Session:
         def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
-            cve_id = kwargs["params"]["cveId"]
+            cve_id = kwargs["params"]["cveIds"]
             return FakeResponse(
                 {
                     "vulnerabilities": [
@@ -397,7 +397,7 @@ def test_nvd_fetch_many_bounds_network_concurrency() -> None:
             self.monitor = monitor
 
         def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
-            cve_id = kwargs["params"]["cveId"]
+            cve_id = kwargs["params"]["cveIds"]
             with self.monitor.lock:
                 self.monitor.seen += 1
                 self.monitor.in_flight += 1
@@ -450,7 +450,7 @@ def test_nvd_fetch_many_bounds_network_concurrency() -> None:
 def test_nvd_fetch_many_degrades_gracefully_and_keeps_warning_order() -> None:
     class Session:
         def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
-            cve_id = kwargs["params"]["cveId"]
+            cve_id = kwargs["params"]["cveIds"]
             if cve_id == "CVE-2026-0202":
                 raise requests.RequestException("boom")
             return FakeResponse(
@@ -572,7 +572,7 @@ def test_nvd_fetch_many_warns_on_cache_load_failure_and_deduplicates_inputs() ->
             self.requests: list[str] = []
 
         def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
-            cve_id = kwargs["params"]["cveId"]
+            cve_id = kwargs["params"]["cveIds"]
             self.requests.append(cve_id)
             return FakeResponse(
                 {
@@ -698,7 +698,7 @@ def test_nvd_parse_payload_falls_back_to_non_english_description_and_metric_seve
 def test_enrichment_service_tracks_last_nvd_diagnostics() -> None:
     class Session:
         def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
-            cve_id = kwargs["params"]["cveId"]
+            cve_id = kwargs["params"]["cveIds"]
             return FakeResponse(
                 {
                     "vulnerabilities": [

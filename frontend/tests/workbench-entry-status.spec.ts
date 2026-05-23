@@ -189,7 +189,8 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   ).toBeVisible()
   await expect(
     page.getByRole("combobox", { name: "Select analysis run" }),
-  ).toBeVisible()
+  ).toHaveCount(0)
+  await expect(page.getByText("Analysis run").first()).toBeVisible()
   await expect(page.getByText("Ready for generation").first()).toBeVisible()
   await expect(page.getByRole("tab", { name: "Artifacts" })).toHaveAttribute(
     "aria-selected",
@@ -817,7 +818,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     page.getByRole("heading", { level: 1, name: "Workspace Settings" }),
   ).toBeVisible()
   await expect(
-    page.getByRole("region", { name: "Workspace settings" }),
+    page.getByRole("region", { exact: true, name: "Workspace settings" }),
   ).toContainText("Local workspace")
 
   await expect(page.getByLabel("Local workspace status")).toBeVisible()

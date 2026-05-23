@@ -1,4 +1,8 @@
-import { isValidElement, type ComponentPropsWithoutRef, type ReactNode } from "react"
+import {
+  isValidElement,
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+} from "react"
 
 import {
   Sheet,
@@ -263,7 +267,9 @@ export function PageSection({
           titleLevel={titleLevel}
         />
       ) : actions ? (
-        <div className="flex min-w-0 flex-wrap justify-end gap-2">{actions}</div>
+        <div className="flex min-w-0 flex-wrap justify-end gap-2">
+          {actions}
+        </div>
       ) : null}
       <div className={cn("min-w-0", bodyClassName)}>{children}</div>
       {footer ? (
@@ -421,9 +427,7 @@ function resolveEmptyState(emptyState: DataTableFrameEmptyState | undefined) {
       />
     )
   }
-  if (
-    isEmptyStateConfig(emptyState)
-  ) {
+  if (isEmptyStateConfig(emptyState)) {
     return <EmptyState {...emptyState} />
   }
   return emptyState as ReactNode
@@ -730,9 +734,9 @@ export function EvidenceRow({
             </h3>
           ) : null}
           {description ? (
-            <p className="mt-1 text-sm leading-6 text-[var(--vpw-text-secondary)]">
+            <div className="mt-1 text-sm leading-6 text-[var(--vpw-text-secondary)]">
               {description}
-            </p>
+            </div>
           ) : null}
         </div>
         {actions || status || signal ? (
@@ -878,9 +882,14 @@ export function DetailDrawer({
             ) : null}
           </div>
         </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <section
+          aria-label="Drawer content"
+          className="min-h-0 flex-1 overflow-y-auto px-5 py-4"
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: Scrollable drawer bodies must be keyboard-focusable.
+          tabIndex={0}
+        >
           {children}
-        </div>
+        </section>
         {footer ? (
           <SheetFooter className="border-t border-[var(--vpw-border-subtle)] px-5 py-4">
             {footer}

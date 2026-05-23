@@ -38,18 +38,21 @@ Analysis metadata records:
 
 ## Workbench API
 
-Workbench exposes provider snapshot artifacts through:
+The active Workbench API does not expose standalone provider snapshot
+list/download/import routes. Snapshot use is anchored in the import and provider
+status/update surfaces:
 
-- `GET /api/providers/snapshots`
-- `GET /api/providers/snapshots/{snapshot_id}`
-- `GET /api/providers/snapshots/{snapshot_id}/download`
-- `POST /api/providers/snapshots/import`
+- `POST /api/v1/projects/{project_id}/imports` accepts
+  `provider_snapshot_file` and `locked_provider_data`.
+- `GET /api/v1/providers/status` reports the latest persisted provider snapshot,
+  provider cache settings, and latest update job.
+- `GET /api/v1/providers/update-jobs` and `POST /api/v1/providers/update-jobs`
+  expose provider refresh jobs that can write a new provider snapshot.
 
 Imports validate the explicit v1 contract, including
 `metadata.snapshot_format = provider-snapshot.v1.json` and
-`metadata.source_metadata`, store a canonical copy under the configured provider
-snapshot directory, and persist the content hash before the snapshot can be used
-for locked replay.
+`metadata.source_metadata`, then persist the content hash before the snapshot can
+be used for locked replay.
 
 ## Evidence Bundles
 

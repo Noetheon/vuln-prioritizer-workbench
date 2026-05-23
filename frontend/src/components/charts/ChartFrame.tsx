@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { VpwSection, VpwSectionHeader } from "@/components/vpw"
 
 type ChartFrameProps = {
   children: ReactNode
@@ -8,12 +9,14 @@ type ChartFrameProps = {
 
 export function ChartFrame({ children, description, title }: ChartFrameProps) {
   return (
-    <section className="chart-card" aria-label={title}>
-      <div className="chart-card-header">
-        <h3>{title}</h3>
-        <span>{description}</span>
-      </div>
+    <VpwSection aria-label={title} className="vpw-chart-frame">
+      <VpwSectionHeader
+        className="vpw-chart-frame__header"
+        description={description}
+        title={title}
+        titleLevel={3}
+      />
       {children}
-    </section>
+    </VpwSection>
   )
 }

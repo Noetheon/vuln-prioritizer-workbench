@@ -5,7 +5,7 @@ import {
   Gauge,
   ShieldCheck,
 } from "lucide-react"
-import { VpwGrid, VpwMetricCard, VpwSection } from "@/components/vpw"
+import { VpwCompactMetric, VpwMetricStrip, VpwSection } from "@/components/vpw"
 import {
   evidenceState,
   latestRunLabel,
@@ -29,47 +29,49 @@ export function ProjectMetrics({
 
   return (
     <VpwSection>
-      <VpwGrid columns={4} className="xl:grid-cols-5">
-        <VpwMetricCard
+      <VpwMetricStrip minCardWidth="12rem">
+        <VpwCompactMetric
           description="Workbench projects"
           icon={<FolderKanban aria-hidden="true" className="h-5 w-5" />}
           label="Total projects"
           tone="info"
           value={projects.length}
         />
-        <VpwMetricCard
+        <VpwCompactMetric
           description={selectedProject?.name ?? "Create or select a project"}
           icon={<CheckCircle2 aria-hidden="true" className="h-5 w-5" />}
           label="Active project"
           tone={selectedProject ? "success" : "warning"}
           value={selectedProject ? "Selected" : "Required"}
         />
-        <VpwMetricCard
+        <VpwCompactMetric
           description={latestRunLabel(projectSummary)}
           icon={<Clock3 aria-hidden="true" className="h-5 w-5" />}
           label="Latest import run"
           tone={runTone(projectSummary?.latest_run_status)}
           value={latestRunStatus(projectSummary)}
         />
-        <VpwMetricCard
+        <VpwCompactMetric
           description="Open or total findings"
           icon={<Gauge aria-hidden="true" className="h-5 w-5" />}
           label="Open findings"
           tone={
-            typeof totalOpen === "number" && totalOpen > 0
-              ? "warning"
-              : "neutral"
+            typeof totalOpen === "number"
+              ? totalOpen > 0
+                ? "warning"
+                : "success"
+              : "info"
           }
           value={totalOpen ?? "No data"}
         />
-        <VpwMetricCard
+        <VpwCompactMetric
           description={evidence.detail}
           icon={<ShieldCheck aria-hidden="true" className="h-5 w-5" />}
           label="Evidence readiness"
           tone={evidence.tone === "neutral" ? "info" : evidence.tone}
           value={evidence.label}
         />
-      </VpwGrid>
+      </VpwMetricStrip>
     </VpwSection>
   )
 }

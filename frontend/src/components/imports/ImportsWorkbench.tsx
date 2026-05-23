@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { VpwStatusBanner } from "@/components/vpw"
+import { VpwPageStack, VpwStatusBanner } from "@/components/vpw"
 import type { ImportsWorkbenchProps } from "./imports-workbench-model"
 import {
   ImportDiagnosticsDrawer,
@@ -34,7 +34,7 @@ export function ImportsWorkbench(props: ImportsWorkbenchProps) {
   )
 
   return (
-    <div className="flex flex-col gap-6">
+    <VpwPageStack>
       {props.projectListError ? (
         <VpwStatusBanner title="Projects unavailable" tone="critical">
           {props.projectListError}
@@ -62,6 +62,6 @@ export function ImportsWorkbench(props: ImportsWorkbenchProps) {
         />
       ) : null}
       {diagnosticsDrawer}
-    </div>
+    </VpwPageStack>
   )
 }

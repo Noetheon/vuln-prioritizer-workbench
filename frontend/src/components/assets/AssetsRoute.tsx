@@ -1,7 +1,7 @@
 import "@/styles/assets.css"
 
 import { Link } from "@/lib/router"
-import { Activity, Database, FileInput, FolderKanban, Plus } from "lucide-react"
+import { Activity, FileInput, ListChecks, Plus } from "lucide-react"
 import type { Dispatch, FormEvent, SetStateAction } from "react"
 
 import type {
@@ -13,26 +13,25 @@ import type {
 import { Button } from "../ui/button"
 import { selectedProjectRouteSearch } from "../../workbench/selected-project-search"
 import {
-  VpwBadge,
   VpwCommandPanel,
-  VpwCompactMetric,
-  VpwMetricStrip,
   VpwPageContainer,
   VpwSection,
   VpwStatusBanner,
   VpwToolbar,
   VpwToolbarGroup,
 } from "../vpw"
-import {
-  providerSnapshotHealth,
-  providerSnapshotSummary,
-} from "../../lib/provider-format"
 import { AssetDrawer } from "./AssetDrawer"
 import { AssetInventoryShell } from "./AssetFilters"
 import { AssetServiceRollup } from "./AssetServiceRollup"
 import { AssetSummaryCards } from "./AssetSummaryCards"
 import { AssetTable } from "./AssetTable"
-import type { AssetFormState, AssetSummary, ServiceRollup } from "./asset-model"
+import type {
+  AssetFindingFilter,
+  AssetFormState,
+  AssetRescoreFilter,
+  AssetSummary,
+  ServiceRollup,
+} from "./asset-model"
 
 export type AssetDrawerMode =
   | "detail"
@@ -50,8 +49,16 @@ export type AssetsWorkbenchProps = {
   assetFindings: FindingPublic[]
   assetFindingsError: string
   assetFindingsLoading: boolean
+  assetCriticalityFilter: string
+  assetEnvironmentFilter: string
+  assetExposureFilter: string
+  assetFindingFilter: AssetFindingFilter
+  assetHasActiveFilters: boolean
   assetMessage: string
   assetOwnerFilter: string
+  assetRecordsTotal: number
+  assetRescoreFilter: AssetRescoreFilter
+  assetSearchFilter: string
   assets: AssetPublic[]
   assetsError: string
   assetsLoading: boolean
@@ -84,8 +91,14 @@ export type AssetsWorkbenchProps = {
   selectedProject: ProjectPublic | null
   selectedProjectId: string
   serviceRollups: ServiceRollup[]
+  setAssetCriticalityFilter: Dispatch<SetStateAction<string>>
   setAssetContextFile: Dispatch<SetStateAction<File | null>>
+  setAssetEnvironmentFilter: Dispatch<SetStateAction<string>>
+  setAssetExposureFilter: Dispatch<SetStateAction<string>>
+  setAssetFindingFilter: Dispatch<SetStateAction<AssetFindingFilter>>
   setAssetOwnerFilter: Dispatch<SetStateAction<string>>
+  setAssetRescoreFilter: Dispatch<SetStateAction<AssetRescoreFilter>>
+  setAssetSearchFilter: Dispatch<SetStateAction<string>>
   setAssetServiceFilter: Dispatch<SetStateAction<string>>
   setCreateForm: Dispatch<SetStateAction<AssetFormState>>
   setEditForm: Dispatch<SetStateAction<AssetFormState>>
@@ -95,12 +108,12 @@ export type AssetsWorkbenchProps = {
 
 export function AssetsWorkbench(state: AssetsWorkbenchProps) {
   const projectSearch = selectedProjectRouteSearch(state.selectedProjectId)
-  const providerHealthy = state.providerStatus?.status === "ok"
 
   return (
-    <VpwPageContainer className="assets-workbench flex flex-col gap-6 px-0 py-0">
+    <VpwPageContainer className="assets-workbench vpw-page-stack px-0 py-0">
       <VpwSection>
         <VpwCommandPanel
+          className="assets-context-panel"
           actions={
             <VpwToolbar label="Asset actions" variant="plain">
               <VpwToolbarGroup>
@@ -123,6 +136,7 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
                 </Button>
                 <Button asChild variant="outline">
                   <Link search={projectSearch} to="/findings">
+                    <ListChecks aria-hidden="true" data-icon="inline-start" />
                     View findings
                   </Link>
                 </Button>
@@ -141,36 +155,11 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
               </VpwToolbarGroup>
             </VpwToolbar>
           }
-          description="Maintain ownership, service, exposure, and criticality context used by Triage prioritization."
+          description="Maintain owner, service, exposure, and criticality data used by Triage prioritization."
           eyebrow="Asset exposure"
-          title="Asset context workspace"
+          title="Asset context"
         >
           <AssetSummaryCards assetSummary={state.assetSummary} />
-          <div className="assets-context-strip">
-            <VpwMetricStrip minCardWidth="14rem">
-              <VpwCompactMetric
-                icon={<FolderKanban aria-hidden="true" />}
-                label="Active project"
-                value={state.activeProjectLabel}
-              />
-              <VpwCompactMetric
-                description={`${providerSnapshotHealth(
-                  state.providerStatus,
-                )} · snapshot ${state.providerStatus?.snapshot_mode ?? "missing"}`}
-                icon={<Database aria-hidden="true" />}
-                label="Provider snapshot"
-                tone={providerHealthy ? "success" : "warning"}
-                value={providerSnapshotSummary(state.providerStatus)}
-              />
-              <div className="assets-context-strip__status">
-                <VpwBadge tone={providerHealthy ? "success" : "warning"}>
-                  {providerHealthy
-                    ? "Ready for scoring"
-                    : "Review provider data"}
-                </VpwBadge>
-              </div>
-            </VpwMetricStrip>
-          </div>
         </VpwCommandPanel>
       </VpwSection>
 
@@ -191,7 +180,15 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
       ) : null}
 
       <AssetInventoryShell
+        assetCriticalityFilter={state.assetCriticalityFilter}
+        assetEnvironmentFilter={state.assetEnvironmentFilter}
+        assetExposureFilter={state.assetExposureFilter}
+        assetFindingFilter={state.assetFindingFilter}
+        assetHasActiveFilters={state.assetHasActiveFilters}
         assetOwnerFilter={state.assetOwnerFilter}
+        assetRecordsTotal={state.assetRecordsTotal}
+        assetRescoreFilter={state.assetRescoreFilter}
+        assetSearchFilter={state.assetSearchFilter}
         assetServiceFilter={state.assetServiceFilter}
         assetsLoading={state.assetsLoading}
         clearAssetFilters={state.clearAssetFilters}
@@ -203,7 +200,13 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
         selectProject={state.selectProject}
         selectedProject={state.selectedProject}
         selectedProjectId={state.selectedProjectId}
+        setAssetCriticalityFilter={state.setAssetCriticalityFilter}
+        setAssetEnvironmentFilter={state.setAssetEnvironmentFilter}
+        setAssetExposureFilter={state.setAssetExposureFilter}
+        setAssetFindingFilter={state.setAssetFindingFilter}
         setAssetOwnerFilter={state.setAssetOwnerFilter}
+        setAssetRescoreFilter={state.setAssetRescoreFilter}
+        setAssetSearchFilter={state.setAssetSearchFilter}
         setAssetServiceFilter={state.setAssetServiceFilter}
       >
         {state.assets.length > 0 ? (

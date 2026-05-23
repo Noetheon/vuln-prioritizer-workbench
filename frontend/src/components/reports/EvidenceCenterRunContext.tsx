@@ -1,16 +1,22 @@
-import { ShieldCheck } from "lucide-react"
+import {
+  BriefcaseBusiness,
+  Database,
+  FileCheck2,
+  GitBranch,
+  ShieldCheck,
+} from "lucide-react"
 import type {
   AnalysisRunPublic,
   AnalysisRunSummaryPublic,
   ProjectPublic,
   ProviderStatusPublic,
 } from "@/api-client"
-import type { ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import {
-  VpwBadge,
+  VpwCommandPanel,
+  VpwCompactMetric,
   VpwDemoBanner,
-  VpwPanel,
+  VpwMetricStrip,
   VpwSection,
   VpwToolbar,
   VpwToolbarGroup,
@@ -22,10 +28,9 @@ import {
   evidenceReadinessLabel,
   evidenceReadinessTone,
   providerSnapshotLabel,
-  runBadgeTone,
+  runMetricTone,
   runShortId,
 } from "./evidence-center-model"
-import { ReportProjectSelect, ReportRunSelect } from "./EvidenceCenterRunSelectors"
 
 type RunContextProps = {
   selectedProject: ProjectPublic | null
@@ -48,18 +53,11 @@ type RunContextProps = {
 export function RunContext({
   isDemo,
   onOpenGenerateDrawer,
-  onProjectChange,
-  onRunIdChange,
-  projectListLoading,
-  projectRuns,
-  projects,
   providerStatus,
   reportActionsEnabled,
   runsLoading,
   selectedProject,
-  selectedProjectId,
   selectedReportRun,
-  selectedRunId,
 }: RunContextProps) {
   const run = isDemo ? DEMO_RUNS[0] : selectedReportRun
   const readiness = evidenceReadinessLabel({
@@ -75,8 +73,16 @@ export function RunContext({
         ? "Loading"
         : "No run selected"
   const runDetail = run
-    ? `${runShortId(run)} · ${runStatus.toLowerCase()} · ${formatReportDateTime(run.finished_at)}`
+    ? `${runStatus.toLowerCase()} · ${formatReportDateTime(run.finished_at)}`
     : "Select a completed import run"
+  const projectName = isDemo
+    ? DEMO_PROJECT.name
+    : (selectedProject?.name ?? "None selected")
+  const snapshotLabel = isDemo
+    ? "demo · locked"
+    : providerSnapshotLabel(selectedReportRun, providerStatus)
+  const readinessTone = evidenceReadinessTone(readiness)
+  const runTone = runsLoading ? "neutral" : runMetricTone(run, isDemo)
 
   return (
     <VpwSection>
@@ -87,109 +93,60 @@ export function RunContext({
           run to generate production evidence.
         </VpwDemoBanner>
       ) : null}
-      <VpwPanel className="evidence-run-context-panel flex flex-col gap-4 bg-[var(--vpw-bg-page)] p-4">
-        <div className="evidence-run-context-facts grid gap-4 md:grid-cols-2 xl:grid-cols-[1fr_1.4fr_1fr_1fr]">
-          <ContextFact
-            label="Project"
-            value={
-              isDemo
-                ? DEMO_PROJECT.name
-                : (selectedProject?.name ?? "None selected")
-            }
-          />
-          <ContextFact label="Analysis run" value={runDetail}>
-            {run ? (
-              <VpwBadge tone={runBadgeTone(run.status)}>
-                Run {runStatus.toLowerCase()}
-              </VpwBadge>
-            ) : null}
-          </ContextFact>
-          <ContextFact
-            label="Provider snapshot"
-            value={
-              isDemo
-                ? "demo · locked"
-                : providerSnapshotLabel(selectedReportRun, providerStatus)
-            }
-          />
-          <ContextFact label="Evidence state" value={readiness}>
-            <VpwBadge tone={evidenceReadinessTone(readiness)}>
-              <ShieldCheck aria-hidden="true" data-icon="inline-start" />
-              {readiness}
-            </VpwBadge>
-          </ContextFact>
-        </div>
-        <VpwToolbar
-          className="evidence-run-context-toolbar"
-          label="Run context actions"
-          variant="plain"
+      <VpwCommandPanel
+        actions={
+          <VpwToolbar label="Evidence actions" variant="plain">
+            <VpwToolbarGroup>
+              <Button
+                disabled={!reportActionsEnabled}
+                onClick={onOpenGenerateDrawer}
+                type="button"
+              >
+                <FileCheck2 aria-hidden="true" data-icon="inline-start" />
+                Generate evidence
+              </Button>
+            </VpwToolbarGroup>
+          </VpwToolbar>
+        }
+        className="evidence-run-context-panel"
+        description="Select the project and import run that generated artifacts should represent."
+        eyebrow="Govern"
+        title="Evidence run context"
+      >
+        <VpwMetricStrip
+          className="evidence-run-context-facts"
+          minCardWidth="13rem"
         >
-          <VpwToolbarGroup className="evidence-run-context-selectors min-w-0 flex-1">
-            {!isDemo ? (
-              <ReportProjectSelect
-                disabled={projectListLoading || projects.length === 0}
-                onProjectChange={onProjectChange}
-                projects={projects}
-                selectedProjectId={selectedProjectId}
-              />
-            ) : null}
-            {!isDemo ? (
-              <ReportRunSelect
-                disabled={runsLoading || projectRuns.length === 0}
-                onRunIdChange={onRunIdChange}
-                runs={projectRuns}
-                selectedRunId={selectedRunId}
-              />
-            ) : null}
-          </VpwToolbarGroup>
-          <VpwToolbarGroup className="evidence-run-context-actions">
-            <Button
-              className="evidence-run-context-change-run"
-              disabled={isDemo || projectRuns.length === 0}
-              onClick={() => {
-                document
-                  .querySelector<HTMLButtonElement>(
-                    "[aria-label='Select analysis run']",
-                  )
-                  ?.focus()
-              }}
-              type="button"
-              variant="outline"
-            >
-              Change run
-            </Button>
-            <Button
-              disabled={!reportActionsEnabled}
-              onClick={onOpenGenerateDrawer}
-              type="button"
-            >
-              Generate evidence
-            </Button>
-          </VpwToolbarGroup>
-        </VpwToolbar>
-      </VpwPanel>
+          <VpwCompactMetric
+            description="Artifact ownership scope"
+            icon={<BriefcaseBusiness aria-hidden="true" />}
+            label="Project"
+            tone="neutral"
+            value={projectName}
+          />
+          <VpwCompactMetric
+            description={runDetail}
+            icon={<GitBranch aria-hidden="true" />}
+            label="Analysis run"
+            tone={runTone}
+            value={run ? runShortId(run) : runStatus}
+          />
+          <VpwCompactMetric
+            description="Provider replay basis"
+            icon={<Database aria-hidden="true" />}
+            label="Provider snapshot"
+            tone="support"
+            value={snapshotLabel}
+          />
+          <VpwCompactMetric
+            description="Generation readiness"
+            icon={<ShieldCheck aria-hidden="true" />}
+            label="Evidence state"
+            tone={readinessTone}
+            value={readiness}
+          />
+        </VpwMetricStrip>
+      </VpwCommandPanel>
     </VpwSection>
-  )
-}
-
-function ContextFact({
-  children,
-  label,
-  value,
-}: {
-  children?: ReactNode
-  label: string
-  value: string
-}) {
-  return (
-    <div className="evidence-run-context-fact min-w-0">
-      <p className="vpw-label">{label}</p>
-      <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
-        <p className="min-w-0 truncate text-sm font-semibold text-[var(--vpw-text-primary)]">
-          {value}
-        </p>
-        {children}
-      </div>
-    </div>
   )
 }

@@ -1,10 +1,4 @@
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
+import { DetailDrawer } from "@/components/vpw"
 import type { WaiversWorkbenchProps } from "./waivers-workbench-model"
 import {
   WaiverDrawerContent,
@@ -17,23 +11,18 @@ export function WaiverDrawer({ state }: { state: WaiversWorkbenchProps }) {
   const description = waiverDrawerDescription(state.waiverDrawerMode)
 
   return (
-    <Sheet
+    <DetailDrawer
+      className="w-[min(100vw,52rem)] sm:max-w-none"
+      description={description}
       onOpenChange={(open) => {
         if (!open) {
           state.closeWaiverDrawer()
         }
       }}
       open={state.waiverDrawerMode !== null}
+      title={title}
     >
-      <SheetContent className="flex w-[min(100vw,52rem)] flex-col overflow-hidden p-0 sm:max-w-none">
-        <SheetHeader className="shrink-0 border-b border-[var(--vpw-border-subtle)] p-6 pr-12">
-          <SheetTitle>{title}</SheetTitle>
-          <SheetDescription>{description}</SheetDescription>
-        </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto p-6">
-          <WaiverDrawerContent state={state} />
-        </div>
-      </SheetContent>
-    </Sheet>
+      <WaiverDrawerContent state={state} />
+    </DetailDrawer>
   )
 }

@@ -1,4 +1,10 @@
-import { VpwBadge, type VpwBadgeTone } from "@/components/vpw"
+import {
+  DefinitionList,
+  EvidenceRow,
+  VpwBadge,
+  type VpwBadgeTone,
+  VpwCommandPanel,
+} from "@/components/vpw"
 
 import type { FindingAttackContext } from "./finding-detail-model"
 import { attackConfidenceLabel } from "./finding-detail-model"
@@ -7,7 +13,7 @@ export function confidenceTone(value: string | null | undefined): VpwBadgeTone {
   return value === "high" ? "success" : value === "low" ? "critical" : "warning"
 }
 
-export function FindingTtpContextHero({
+export function FindingTtpContextSummary({
   attackContext,
   attackSource,
   coverageStatus,
@@ -21,42 +27,32 @@ export function FindingTtpContextHero({
   techniqueLabel: string
 }) {
   return (
-    <section
+    <VpwCommandPanel
       aria-label="Threat informed context"
-      className="finding-ttp-context-hero finding-ttp-context-hero-simple"
+      className="finding-ttp-context-summary"
+      description="This mapping explains why the finding is treated as an internet-facing Initial Access risk. It supports remediation priority and detection coverage review, but does not prove exploitation."
+      eyebrow="Threat informed context"
+      role="region"
+      title={techniqueLabel}
     >
-      <div className="finding-ttp-main-copy">
-        <span>Threat informed context</span>
-        <h3>{techniqueLabel}</h3>
-        <p>
-          This mapping explains why the finding is treated as an internet-facing
-          Initial Access risk. It supports remediation priority and detection
-          coverage review, but does not prove exploitation.
-        </p>
-      </div>
-      <dl className="finding-ttp-main-facts">
-        <div>
-          <dt>Tactic</dt>
-          <dd>{tacticLabel}</dd>
-        </div>
-        <div>
-          <dt>Confidence</dt>
-          <dd>
-            <VpwBadge tone={confidenceTone(attackContext?.confidence)}>
-              {attackConfidenceLabel(attackContext?.confidence)}
-            </VpwBadge>
-          </dd>
-        </div>
-        <div>
-          <dt>Source</dt>
-          <dd>{attackSource ?? "Not supplied"}</dd>
-        </div>
-        <div>
-          <dt>Coverage</dt>
-          <dd>{coverageStatus}</dd>
-        </div>
-      </dl>
-    </section>
+      <DefinitionList
+        className="finding-ttp-main-facts"
+        columns={2}
+        items={[
+          { label: "Tactic", value: tacticLabel },
+          {
+            label: "Confidence",
+            value: (
+              <VpwBadge tone={confidenceTone(attackContext?.confidence)}>
+                {attackConfidenceLabel(attackContext?.confidence)}
+              </VpwBadge>
+            ),
+          },
+          { label: "Source", value: attackSource ?? "Not supplied" },
+          { label: "Coverage", value: coverageStatus },
+        ]}
+      />
+    </VpwCommandPanel>
   )
 }
 
@@ -111,7 +107,7 @@ export function FindingTtpDecisionFlow({
   )
 }
 
-export function FindingTtpDecisionCards({
+export function FindingTtpDecisionRows({
   actionItems,
 }: {
   actionItems: readonly string[]
@@ -129,27 +125,31 @@ export function FindingTtpDecisionCards({
   return (
     <section
       aria-label="Threat informed decision context"
-      className="finding-ttp-decision-grid finding-ttp-decision-grid-simple"
+      className="finding-ttp-decision-list"
     >
-      <article className="finding-ttp-narrative-card">
-        <span>Why this matters</span>
-        <strong>Decision support</strong>
-        <ul className="finding-ttp-meaning-list">
-          <li>Frames the CVE as an Initial Access risk.</li>
-          <li>Explains why internet exposure raises urgency.</li>
-          <li>Connects remediation priority with detection review.</li>
-          <li>Keeps the boundary clear: no proof of exploitation.</li>
-        </ul>
-      </article>
-      <article className="finding-ttp-narrative-card finding-ttp-actions-card">
-        <span>Recommended defensive actions</span>
-        <strong>Close exposure and validate coverage</strong>
-        <ul className="finding-ttp-checklist">
-          {defensiveActions.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      </article>
+      <EvidenceRow
+        description={
+          <ul className="finding-ttp-meaning-list">
+            <li>Frames the CVE as an Initial Access risk.</li>
+            <li>Explains why internet exposure raises urgency.</li>
+            <li>Connects remediation priority with detection review.</li>
+            <li>Keeps the boundary clear: no proof of exploitation.</li>
+          </ul>
+        }
+        source="Why this matters"
+        title="Decision support"
+      />
+      <EvidenceRow
+        description={
+          <ul className="finding-ttp-checklist">
+            {defensiveActions.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        }
+        source="Recommended defensive actions"
+        title="Close exposure and validate coverage"
+      />
     </section>
   )
 }

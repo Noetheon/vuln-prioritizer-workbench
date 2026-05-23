@@ -9,6 +9,8 @@ import type { FindingsUrlSearch } from "@/components/findings/findings-search-st
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
+  DefinitionList,
+  DetailRail,
   RiskBadge,
   SignalChip,
   StatusLozenge,
@@ -20,7 +22,7 @@ import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 import { findingWaiverEvidence } from "@/lib/waiver-view"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 
-import { FindingDetailHero } from "./FindingDetailHero"
+import { FindingDetailContext } from "./FindingDetailContext"
 import { FindingDecisionTab } from "./FindingDecisionTab"
 import { FindingEvidenceTab } from "./FindingEvidenceTab"
 import { FindingGovernanceTab } from "./FindingGovernanceTab"
@@ -115,7 +117,7 @@ export function FindingDetailRoute({
 
       {!loading && !error && finding ? (
         <>
-          <FindingDetailHero
+          <FindingDetailContext
             explanation={explanation}
             finding={finding}
             isDemo={isDemoFindingDetail(finding)}
@@ -298,67 +300,61 @@ function FindingDetailActionRail({
   ]
 
   return (
-    <aside className="finding-detail-action-rail" aria-label="Triage summary">
-      <div className="finding-detail-action-rail__header">
-        <span>Triage state</span>
-        <strong>{findingComponentDetailLabel(finding)}</strong>
-      </div>
-
-      <div className="finding-detail-action-rail__badges">
-        <RiskBadge level={finding.priority} />
-        <StatusLozenge status={finding.status} />
-        {finding.in_kev ? <SignalChip kind="kev" /> : null}
-      </div>
-
+    <DetailRail
+      aria-label="Triage summary"
+      className="finding-detail-action-rail"
+      description={findingComponentDetailLabel(finding)}
+      footer={
+        <div className="finding-detail-action-buttons">
+          <Button asChild size="sm">
+            <Link search={findingsBackSearch} to="/findings">
+              Open in Triage
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link search={projectSearch} to="/waivers">
+              Risk acceptance
+            </Link>
+          </Button>
+          <Button onClick={onRefresh} size="sm" type="button" variant="outline">
+            <RefreshCcw aria-hidden="true" size={14} />
+            Refresh evidence
+          </Button>
+        </div>
+      }
+      status={
+        <>
+          <RiskBadge level={finding.priority} />
+          <StatusLozenge status={finding.status} />
+          {finding.in_kev ? <SignalChip kind="kev" /> : null}
+        </>
+      }
+      title="Triage state"
+    >
       <div className="finding-detail-action-block">
         <span>Next step</span>
         <p>{findingNextStepLabel(finding)}</p>
       </div>
 
-      <dl className="finding-detail-action-list">
-        {scopeRows.map((row) => (
-          <div key={row.label}>
-            <dt>{row.label}</dt>
-            <dd>{row.value}</dd>
-          </div>
-        ))}
-      </dl>
+      <DefinitionList columns={1} items={scopeRows} />
 
-      <dl className="finding-detail-action-list">
-        <div>
-          <dt>VEX</dt>
-          <dd>
-            {finding.suppressed_by_vex
+      <DefinitionList
+        columns={1}
+        items={[
+          {
+            label: "VEX",
+            value: finding.suppressed_by_vex
               ? "Suppressed by VEX"
               : occurrences
-                    .map((occurrence) => optionalText(String(occurrence.vex_status ?? "")))
-                    .find((value) => value !== "Not supplied") ?? "No VEX overlay"}
-          </dd>
-        </div>
-        {decisionRows.map((row) => (
-          <div key={row.label}>
-            <dt>{row.label}</dt>
-            <dd>{row.value}</dd>
-          </div>
-        ))}
-      </dl>
-
-      <div className="finding-detail-action-buttons">
-        <Button asChild size="sm">
-          <Link search={findingsBackSearch} to="/findings">
-            Open in Triage
-          </Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link search={projectSearch} to="/waivers">
-            Risk acceptance
-          </Link>
-        </Button>
-        <Button onClick={onRefresh} size="sm" type="button" variant="outline">
-          <RefreshCcw aria-hidden="true" size={14} />
-          Refresh evidence
-        </Button>
-      </div>
-    </aside>
+                  .map((occurrence) =>
+                    optionalText(String(occurrence.vex_status ?? "")),
+                  )
+                  .find((value) => value !== "Not supplied") ??
+                "No VEX overlay",
+          },
+          ...decisionRows,
+        ]}
+      />
+    </DetailRail>
   )
 }

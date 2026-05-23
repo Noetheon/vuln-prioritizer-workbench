@@ -31,6 +31,23 @@ These rules are mandatory for Workbench route UI.
 - Use existing architecture: `AppRouter`, local route adapter, `WorkbenchShell`, route containers, shared VPW/Workbench components, and shared CSS.
 - Do not add product scope. The UI must stay focused on supplied evidence, provider trust, prioritization, remediation rationale, risk acceptance, and evidence/report export.
 
+## Visual regression guardrails
+
+These guardrails apply before and during every route migration. The goal is to preserve the best existing operational UI while replacing implementation details incrementally.
+
+1. Preserve the best existing visual baseline before replacing implementation details.
+2. Canonical components must not be forced when they degrade width, density, scanability, or scroll behavior.
+3. Dense operational queues may keep route-specific table shells until shared table wrappers can match the same full-width, table-first behavior.
+4. Page scroll ownership must remain native and predictable. Do not intercept wheel events for artificial smooth scrolling.
+5. Route migrations must be incremental and reversible.
+6. Every route migration starts with a no-code visual baseline audit.
+7. Every implementation pass must name what visual baseline is preserved, which component is replaced, which behavior is unchanged, and which screenshots should be checked manually.
+8. Badge labels in dense tables must stay compact: `Critical`, `High`, `Medium`, `Low`, `Open`, `Fixed`, `KEV`, `EPSS 94.5%`, `CVSS 10.0`, `Risk 100.0`.
+9. Do not replace a stable route-local layout wrapper with a shared wrapper unless the shared wrapper preserves or improves the visual result.
+10. Passing TypeScript/build tests is not sufficient for UI migration acceptance; visual review is required.
+11. If a migration causes a visual regression, revert or repair before touching another route.
+12. Scroll regressions are blocker bugs and must be fixed before continuing visual migration.
+
 ## 2. Typography Scale
 
 Typography must be shared and token-driven. Route files should not create their own heading scales, letter spacing, or page-specific text classes.
@@ -177,8 +194,9 @@ Components to narrow or retire from Workbench route use:
 
 - Generic `Card` route wrappers from `frontend/src/components/ui/card.tsx`.
 - Card-based state wrappers in `frontend/src/components/states/EmptyState.tsx`, `LoadingSkeleton.tsx`, and `ErrorState.tsx`.
-- Route-local metric cards such as `frontend/src/components/risk/MetricCard.tsx`.
-- Route-local hero, tab, drawer, panel, and badge variants listed in `docs/workbench-ui-audit.md`.
+- Former route-local metric-card implementations.
+- Route-local hero, tab, drawer, panel, and badge variants listed as baseline
+  findings in `docs/workbench-ui-audit.md`.
 
 ### Component Usage Examples
 

@@ -21,7 +21,7 @@ The project exposes three active interface families:
 | Import upload | `POST /api/v1/projects/{project_id}/imports` with multipart local evidence files and explicit `input_type`. |
 | Report creation | `POST /api/v1/runs/{run_id}/reports` for completed visible Workbench runs. |
 | Report download | `GET /api/v1/reports/{report_id}/download`. |
-| Evidence verification | `GET /api/v1/reports/{report_id}/verify` for evidence ZIP reports. |
+| Evidence verification | `POST /api/v1/reports/{report_id}/verify` for evidence ZIP reports. |
 | Analysis JSON | `analysis-result.v1.json`, validated by `docs/schemas/analysis-result.v1.schema.json`. |
 | Provider snapshot | `provider-snapshot-report.schema.json` validates Workbench provider snapshot artifacts used by locked/demo imports. |
 | Findings CSV | `findings.csv` with headers from `CSV_FINDINGS_COLUMNS`. |

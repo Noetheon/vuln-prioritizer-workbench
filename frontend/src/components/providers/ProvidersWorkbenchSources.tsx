@@ -41,17 +41,6 @@ export function ProviderSourcesTable({
       <VpwTableCard
         className="providers-table-card"
         description="Configured vulnerability intelligence sources and whether they are available for prioritization evidence."
-        actions={
-          <Button
-            aria-busy={providerStatusLoading}
-            disabled={providerStatusLoading}
-            onClick={onRefreshProviderStatus}
-            type="button"
-            variant="outline"
-          >
-            Refresh status
-          </Button>
-        }
         eyebrow="Data sources"
         title="Source inventory"
       >

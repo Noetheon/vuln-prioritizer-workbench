@@ -655,8 +655,9 @@ def test_workbench_route_shells_delegate_interaction_state() -> None:
     assert "AssetsService" in assets_state_source
     assert "useWorkbenchContext" in assets_state_source
     assert "AssetsWorkbenchProps" in assets_state_source
+    assert "filterAssets" in assets_state_source
     assert len(assets_route_source.splitlines()) <= 20
-    assert len(assets_state_source.splitlines()) <= 380
+    assert len(assets_state_source.splitlines()) <= 450
 
 
 def test_workbench_reports_route_state_is_split_from_shell() -> None:
@@ -891,7 +892,8 @@ def test_findings_queue_uses_vpw_product_surfaces() -> None:
     )
 
     assert "@/components/vpw" in source
-    assert "findings-triage-strip" in source
+    assert "VpwMetricStrip" in source
+    assert "VpwCompactMetric" in source
     assert "VpwEmptyState" in source
     assert "VpwStatusBanner" in source
     assert "@/components/ui/card" not in source
@@ -938,15 +940,15 @@ def test_findings_quick_view_sheet_is_split_from_dialog_facade() -> None:
 def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     dashboard_paths = [
         REPO_ROOT / "frontend/src/components/dashboard/RiskOperationsDashboard.tsx",
-        REPO_ROOT / "frontend/src/components/dashboard/DashboardHero.tsx",
-        REPO_ROOT / "frontend/src/components/dashboard/DashboardHeroActions.tsx",
-        REPO_ROOT / "frontend/src/components/dashboard/DashboardHeroProjectPicker.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardContextBar.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardContextActions.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardContextProjectPicker.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardProviderWarning.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardRemediationSection.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardSignalOverviewFallback.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/dashboard-summary-model.ts",
-        REPO_ROOT / "frontend/src/components/dashboard/ProviderFreshnessPanel.tsx",
-        REPO_ROOT / "frontend/src/components/dashboard/DashboardSidePanel.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardMetricStrip.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardDetailRail.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardOperationsStatePanel.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardRecentRunsPanel.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardDataQualityPanel.tsx",
@@ -955,11 +957,10 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
         REPO_ROOT / "frontend/src/components/dashboard/DashboardSignalTabs.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardKeyTakeaways.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardRemediationColumns.tsx",
-        REPO_ROOT / "frontend/src/components/risk/MetricCard.tsx",
     ]
     finding_detail_paths = [
         REPO_ROOT / "frontend/src/components/finding-detail/FindingDetailRoute.tsx",
-        REPO_ROOT / "frontend/src/components/finding-detail/FindingDetailHero.tsx",
+        REPO_ROOT / "frontend/src/components/finding-detail/FindingDetailContext.tsx",
         REPO_ROOT / "frontend/src/components/finding-detail/WhyPriorityPanel.tsx",
         REPO_ROOT / "frontend/src/components/finding-detail/FindingEvidenceTab.tsx",
         REPO_ROOT / "frontend/src/components/finding-detail/FindingEvidenceSummaryGrid.tsx",
@@ -977,11 +978,12 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
         assert "components/ui/card" not in source, path
 
     dashboard_source = dashboard_paths[0].read_text(encoding="utf-8")
-    dashboard_hero_source = dashboard_paths[1].read_text(encoding="utf-8")
-    dashboard_hero_actions_source = dashboard_paths[2].read_text(encoding="utf-8")
-    dashboard_hero_project_picker_source = dashboard_paths[3].read_text(encoding="utf-8")
+    dashboard_context_source = dashboard_paths[1].read_text(encoding="utf-8")
+    dashboard_context_actions_source = dashboard_paths[2].read_text(encoding="utf-8")
+    dashboard_context_project_picker_source = dashboard_paths[3].read_text(encoding="utf-8")
     dashboard_summary_source = dashboard_paths[7].read_text(encoding="utf-8")
-    dashboard_side_panel_source = dashboard_paths[9].read_text(encoding="utf-8")
+    dashboard_metric_strip_source = dashboard_paths[8].read_text(encoding="utf-8")
+    dashboard_detail_rail_source = dashboard_paths[9].read_text(encoding="utf-8")
     dashboard_operations_source = dashboard_paths[10].read_text(encoding="utf-8")
     dashboard_recent_runs_source = dashboard_paths[11].read_text(encoding="utf-8")
     dashboard_data_quality_source = dashboard_paths[12].read_text(encoding="utf-8")
@@ -990,17 +992,18 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     dashboard_signal_tabs_source = dashboard_paths[15].read_text(encoding="utf-8")
     dashboard_key_takeaways_source = dashboard_paths[16].read_text(encoding="utf-8")
     dashboard_remediation_columns_source = dashboard_paths[17].read_text(encoding="utf-8")
-    metric_card_source = dashboard_paths[18].read_text(encoding="utf-8")
+    finding_context_source = finding_detail_paths[1].read_text(encoding="utf-8")
     assert "DashboardProviderWarning" in dashboard_source
     assert "DashboardSignalOverviewFallback" in dashboard_source
+    assert "DashboardContextBar" in dashboard_source
+    assert "DashboardMetricStrip" in dashboard_source
+    assert "DashboardDetailRail" in dashboard_source
     assert "dashboard-summary-model" in dashboard_source
-    assert "./DashboardHeroActions" in dashboard_hero_source
-    assert "./DashboardHeroProjectPicker" in dashboard_hero_source
-    assert "selectedProjectRouteSearch" not in dashboard_hero_source
-    assert "DashboardHeroActions" in dashboard_hero_actions_source
-    assert "ProviderStatusBadge" in dashboard_hero_actions_source
-    assert "DashboardHeroProjectPicker" in dashboard_hero_project_picker_source
-    assert "SelectTrigger" in dashboard_hero_project_picker_source
+    assert "VpwCommandPanel" in dashboard_context_source
+    assert "DashboardContextActions" in dashboard_context_source
+    assert "DashboardContextProjectPicker" in dashboard_context_source
+    assert "ProviderStatusBadge" in dashboard_context_actions_source
+    assert "SelectTrigger" in dashboard_context_project_picker_source
     assert "buildDashboardMetricSummaries" in dashboard_summary_source
     assert "rankedDashboardQueueFindings" in dashboard_summary_source
     assert "./DashboardRemediationColumns" in dashboard_paths[5].read_text(encoding="utf-8")
@@ -1009,12 +1012,11 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     assert "buildDashboardRemediationColumns" in dashboard_remediation_columns_source
     assert "vpw-table-actions" in dashboard_remediation_columns_source
     assert "vpw-table-action-button" in dashboard_remediation_columns_source
-    assert "SheetContent" in dashboard_remediation_columns_source
-    assert "./DashboardOperationsStatePanel" in dashboard_side_panel_source
-    assert "./DashboardRecentRunsPanel" in dashboard_side_panel_source
-    assert "./DashboardDataQualityPanel" in dashboard_side_panel_source
-    assert "./DashboardRecommendedActionsPanel" in dashboard_side_panel_source
-    assert "VpwSurface" not in dashboard_side_panel_source
+    assert "DetailDrawer" in dashboard_remediation_columns_source
+    assert "./DashboardOperationsStatePanel" in dashboard_detail_rail_source
+    assert "./DashboardRecentRunsPanel" in dashboard_detail_rail_source
+    assert "./DashboardDataQualityPanel" in dashboard_detail_rail_source
+    assert "./DashboardRecommendedActionsPanel" in dashboard_detail_rail_source
     assert "DashboardOperationsStatePanel" in dashboard_operations_source
     assert "ProviderStatusBadge" in dashboard_operations_source
     assert "DashboardRecentRunsPanel" in dashboard_recent_runs_source
@@ -1031,12 +1033,15 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     assert "DashboardPriorityChart" in dashboard_signal_tabs_source
     assert "DashboardKeyTakeaways" in dashboard_key_takeaways_source
     assert "CheckCircle2" in dashboard_key_takeaways_source
+    assert "VpwMetricStrip" in dashboard_metric_strip_source
+    assert "VpwCompactMetric" in dashboard_metric_strip_source
     assert len(dashboard_source.splitlines()) <= 340
-    assert len(dashboard_hero_source.splitlines()) <= 80
-    assert len(dashboard_hero_actions_source.splitlines()) <= 130
-    assert len(dashboard_hero_project_picker_source.splitlines()) <= 110
+    assert len(dashboard_context_source.splitlines()) <= 90
+    assert len(dashboard_context_actions_source.splitlines()) <= 130
+    assert len(dashboard_context_project_picker_source.splitlines()) <= 80
     assert len(dashboard_summary_source.splitlines()) <= 180
-    assert len(dashboard_side_panel_source.splitlines()) <= 80
+    assert len(dashboard_metric_strip_source.splitlines()) <= 90
+    assert len(dashboard_detail_rail_source.splitlines()) <= 80
     assert len(dashboard_operations_source.splitlines()) <= 120
     assert len(dashboard_recent_runs_source.splitlines()) <= 90
     assert len(dashboard_data_quality_source.splitlines()) <= 110
@@ -1050,15 +1055,16 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     assert "VpwSurface" in dashboard_paths[5].read_text(encoding="utf-8")
     assert "VpwDataTable" in dashboard_paths[5].read_text(encoding="utf-8")
     assert "VpwSurface" in dashboard_paths[6].read_text(encoding="utf-8")
-    assert "VpwPanel" in dashboard_paths[8].read_text(encoding="utf-8")
+    assert "VpwMetricStrip" in dashboard_paths[8].read_text(encoding="utf-8")
     assert "VpwSurface" in dashboard_operations_source
     assert "VpwSurface" in dashboard_recent_runs_source
     assert "VpwSurface" in dashboard_data_quality_source
     assert "VpwSurface" in dashboard_recommended_actions_source
     assert "VpwSurface" in dashboard_signal_overview_source
-    assert "VpwSurface" in metric_card_source
     assert "VpwStatusBanner" in finding_detail_paths[0].read_text(encoding="utf-8")
-    assert "finding-detail-header-band" in finding_detail_paths[1].read_text(encoding="utf-8")
+    assert "VpwCommandPanel" in finding_context_source
+    assert "VpwMetricStrip" in finding_context_source
+    assert "VpwCompactMetric" in finding_context_source
     assert "finding-decision-brief__facts" in finding_detail_paths[2].read_text(encoding="utf-8")
     assert "FindingEvidenceSummaryGrid" in finding_detail_paths[3].read_text(encoding="utf-8")
     assert "FindingOccurrencesPanel" in finding_detail_paths[3].read_text(encoding="utf-8")
@@ -1078,7 +1084,7 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     assert "VpwDataTable" not in finding_detail_paths[7].read_text(encoding="utf-8")
     assert "FindingTtpContextSections" in finding_detail_paths[7].read_text(encoding="utf-8")
     assert "./FindingTtpTechnicalEvidence" in finding_detail_paths[7].read_text(encoding="utf-8")
-    assert "FindingTtpContextHero" in finding_detail_paths[8].read_text(encoding="utf-8")
+    assert "VpwCommandPanel" in finding_detail_paths[8].read_text(encoding="utf-8")
     assert "VpwDataTable" in finding_detail_paths[9].read_text(encoding="utf-8")
     assert "techniqueColumns" in finding_detail_paths[9].read_text(encoding="utf-8")
     assert len(finding_detail_paths[3].read_text(encoding="utf-8").splitlines()) <= 60
@@ -1142,6 +1148,7 @@ def test_findings_search_and_asset_models_are_split_by_behavior() -> None:
         "asset-errors.ts": "export function apiErrorMessage",
         "asset-form-model.ts": "export function validateAssetForm",
         "asset-format-model.ts": "export function formatDateTime",
+        "asset-filter-model.ts": "export function filterAssets",
         "asset-finding-model.ts": "export function matchesAsset",
         "asset-rollup-model.ts": "export function buildServiceRollups",
         "asset-tone-model.ts": "export function criticalityTone",
@@ -1235,7 +1242,8 @@ def test_waivers_drawer_delegates_mode_content() -> None:
     assert "function WaiverDrawerContent" not in drawer_source
     assert "function WaiverDetailContent" not in drawer_source
     assert "function WaiverExpireContent" not in drawer_source
-    assert "SheetContent" in drawer_source
+    assert "DetailDrawer" in drawer_source
+    assert "SheetContent" not in drawer_source
     assert "export function WaiverDrawerContent" in content_source
     assert "./WaiversWorkbenchDrawerDetail" in content_source
     assert "./WaiversWorkbenchDrawerExpire" in content_source
@@ -1423,8 +1431,8 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     reports_run_context_source = (
         REPO_ROOT / "frontend/src/components/reports/EvidenceCenterRunContext.tsx"
     ).read_text(encoding="utf-8")
-    reports_summary_source = (
-        REPO_ROOT / "frontend/src/components/reports/EvidenceCenterSummary.tsx"
+    reports_tabs_source = (
+        REPO_ROOT / "frontend/src/components/reports/EvidenceCenterTabs.tsx"
     ).read_text(encoding="utf-8")
     reports_lifecycle_source = (
         REPO_ROOT / "frontend/src/components/reports/EvidenceCenterLifecycle.tsx"
@@ -1526,14 +1534,11 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     projects_overview_source = (
         REPO_ROOT / "frontend/src/components/projects/ProjectsWorkbenchOverview.tsx"
     ).read_text(encoding="utf-8")
-    projects_hero_source = (
-        REPO_ROOT / "frontend/src/components/projects/ProjectHero.tsx"
+    projects_context_source = (
+        REPO_ROOT / "frontend/src/components/projects/ProjectContext.tsx"
     ).read_text(encoding="utf-8")
     projects_metrics_source = (
         REPO_ROOT / "frontend/src/components/projects/ProjectMetrics.tsx"
-    ).read_text(encoding="utf-8")
-    projects_selection_source = (
-        REPO_ROOT / "frontend/src/components/projects/ProjectSelectionStrip.tsx"
     ).read_text(encoding="utf-8")
     projects_setup_source = (
         REPO_ROOT / "frontend/src/components/projects/ProjectsWorkbenchSetup.tsx"
@@ -1556,8 +1561,8 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     waivers_sections_source = (
         REPO_ROOT / "frontend/src/components/waivers/WaiversWorkbenchSections.tsx"
     ).read_text(encoding="utf-8")
-    waivers_hero_source = (
-        REPO_ROOT / "frontend/src/components/waivers/WaiversWorkbenchHero.tsx"
+    waivers_context_source = (
+        REPO_ROOT / "frontend/src/components/waivers/WaiversWorkbenchContext.tsx"
     ).read_text(encoding="utf-8")
     waivers_create_source = (
         REPO_ROOT / "frontend/src/components/waivers/WaiversWorkbenchCreate.tsx"
@@ -1586,8 +1591,8 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     settings_sections_source = (
         REPO_ROOT / "frontend/src/components/settings/SettingsWorkbenchSections.tsx"
     ).read_text(encoding="utf-8")
-    settings_hero_source = (
-        REPO_ROOT / "frontend/src/components/settings/SettingsWorkbenchHero.tsx"
+    settings_context_source = (
+        REPO_ROOT / "frontend/src/components/settings/SettingsWorkbenchContext.tsx"
     ).read_text(encoding="utf-8")
     settings_overview_source = (
         REPO_ROOT / "frontend/src/components/settings/SettingsWorkbenchOverview.tsx"
@@ -1616,8 +1621,8 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     providers_runtime_facts_source = (
         REPO_ROOT / "frontend/src/components/providers/ProviderRuntimeFactsPanel.tsx"
     ).read_text(encoding="utf-8")
-    providers_hero_source = (
-        REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbenchHero.tsx"
+    providers_context_source = (
+        REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbenchContext.tsx"
     ).read_text(encoding="utf-8")
     providers_metrics_source = (
         REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbenchMetrics.tsx"
@@ -1669,7 +1674,9 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert "./RemediationQueueSummary" in findings_view_source
     assert "./RemediationQueueTableSection" in findings_view_source
     assert "EvidenceCenterRunContext" in reports_sections_source
-    assert "EvidenceCenterSummary" in reports_sections_source
+    assert "EvidenceCenterTabs" in reports_source
+    assert "ArtifactSection" in reports_tabs_source
+    assert "EvidenceLifecycle" in reports_tabs_source
     assert "EvidenceCenterLifecycle" in reports_sections_source
     assert "EvidenceCenterHistory" in reports_sections_source
     assert "./EvidenceArtifactSection" in reports_lifecycle_source
@@ -1715,17 +1722,15 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     for file_name in legacy_imports_all_in_one_files:
         assert not (REPO_ROOT / f"frontend/src/components/imports/{file_name}").exists()
     assert "ProjectsWorkbenchOverview" in projects_sections_source
-    assert "./ProjectHero" in projects_overview_source
+    assert "./ProjectContext" in projects_overview_source
     assert "./ProjectMetrics" in projects_overview_source
-    assert "./ProjectSelectionStrip" in projects_overview_source
-    assert "ProjectHero" in projects_hero_source
-    assert "VpwToolbar" in projects_hero_source
+    assert "ProjectContext" in projects_context_source
+    assert "VpwToolbar" in projects_context_source
+    assert "VpwCommandPanel" in projects_context_source
     assert "ProjectMetrics" in projects_metrics_source
-    assert "VpwMetricCard" in projects_metrics_source
-    assert "ProjectSelectionStrip" in projects_selection_source
-    assert "VpwSelectionCard" in projects_selection_source
+    assert "VpwMetricStrip" in projects_metrics_source
+    assert "VpwCompactMetric" in projects_metrics_source
     assert "VpwMetricCard" not in projects_overview_source
-    assert "VpwSelectionCard" not in projects_overview_source
     assert "ProjectsWorkbenchSetup" in projects_sections_source
     assert "ProjectsWorkbenchDirectory" in projects_sections_source
     assert "ProjectsWorkbenchActive" in projects_sections_source
@@ -1734,7 +1739,9 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert "ActiveProjectEditForm" in projects_active_controls_source
     assert "ActiveProjectDeletePanel" in projects_active_controls_source
     assert "selectedProjectRouteSearch" not in projects_active_source
-    assert "WaiversWorkbenchHero" in waivers_sections_source
+    assert "WaiversContext" in waivers_sections_source
+    assert "VpwCommandPanel" in waivers_context_source
+    assert "VpwMetricStrip" in waivers_context_source
     assert "WaiversWorkbenchCreate" in waivers_sections_source
     assert "WaiversWorkbenchRegister" in waivers_sections_source
     assert "WaiversWorkbenchReview" in waivers_sections_source
@@ -1747,12 +1754,14 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert "./waivers-register-model" in waivers_register_source
     assert "matchesWaiverSearch" in waivers_register_model_source
     assert "function matchesWaiverSearch" not in waivers_register_source
-    assert "SettingsWorkbenchHero" in settings_sections_source
+    assert "SettingsContext" in settings_sections_source
+    assert "VpwCommandPanel" in settings_context_source
     assert "SettingsWorkbenchOverview" in settings_sections_source
     assert "SettingsWorkbenchRuntime" in settings_sections_source
     assert "SettingsWorkbenchTokens" not in settings_sections_source
     assert not settings_tokens_path.exists()
-    assert "ProvidersWorkbenchHero" in providers_sections_source
+    assert "ProvidersContext" in providers_sections_source
+    assert "VpwCommandPanel" in providers_context_source
     assert "ProvidersWorkbenchMetrics" in providers_sections_source
     assert "ProviderDiagnosticsSection" in providers_sections_source
     assert "Runtime facts" in providers_diagnostics_source
@@ -1779,7 +1788,7 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert len(reports_source.splitlines()) <= 240
     assert len(reports_sections_source.splitlines()) <= 40
     assert len(reports_run_context_source.splitlines()) <= 210
-    assert len(reports_summary_source.splitlines()) <= 240
+    assert len(reports_tabs_source.splitlines()) <= 260
     assert len(reports_lifecycle_source.splitlines()) <= 50
     assert len(reports_artifact_section_source.splitlines()) <= 280
     assert len(reports_lifecycle_flow_source.splitlines()) <= 150
@@ -1802,9 +1811,8 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert len(projects_source.splitlines()) <= 120
     assert len(projects_sections_source.splitlines()) <= 40
     assert len(projects_overview_source.splitlines()) <= 20
-    assert len(projects_hero_source.splitlines()) <= 90
+    assert len(projects_context_source.splitlines()) <= 90
     assert len(projects_metrics_source.splitlines()) <= 100
-    assert len(projects_selection_source.splitlines()) <= 90
     assert len(projects_setup_source.splitlines()) <= 190
     assert len(projects_directory_source.splitlines()) <= 230
     assert len(projects_active_source.splitlines()) <= 180
@@ -1812,17 +1820,17 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert len(projects_model_source.splitlines()) <= 170
     assert len(waivers_source.splitlines()) <= 130
     assert len(waivers_sections_source.splitlines()) <= 40
-    assert len(waivers_hero_source.splitlines()) <= 270
+    assert len(waivers_context_source.splitlines()) <= 190
     assert len(waivers_create_source.splitlines()) <= 80
     assert len(waivers_create_guidance_source.splitlines()) <= 90
     assert len(waivers_form_source.splitlines()) <= 330
-    assert len(waivers_register_source.splitlines()) <= 230
-    assert len(waivers_register_model_source.splitlines()) <= 90
+    assert len(waivers_register_source.splitlines()) <= 290
+    assert len(waivers_register_model_source.splitlines()) <= 130
     assert len(waivers_review_source.splitlines()) <= 200
     assert len(waivers_model_source.splitlines()) <= 500
     assert len(settings_source.splitlines()) <= 120
     assert len(settings_sections_source.splitlines()) <= 40
-    assert len(settings_hero_source.splitlines()) <= 130
+    assert len(settings_context_source.splitlines()) <= 110
     assert len(settings_overview_source.splitlines()) <= 220
     assert len(settings_runtime_source.splitlines()) <= 200
     assert len(settings_model_source.splitlines()) <= 220
@@ -1831,7 +1839,7 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert len(providers_diagnostics_source.splitlines()) <= 240
     assert len(providers_update_job_source.splitlines()) <= 110
     assert len(providers_runtime_facts_source.splitlines()) <= 110
-    assert len(providers_hero_source.splitlines()) <= 230
+    assert len(providers_context_source.splitlines()) <= 230
     assert len(providers_metrics_source.splitlines()) <= 120
     assert len(providers_sources_source.splitlines()) <= 130
     assert len(providers_sources_columns_source.splitlines()) <= 120

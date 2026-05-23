@@ -3,9 +3,10 @@ import { FileSearch, ListChecks } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
+  VpwCommandPanel,
   VpwEmptyState,
-  VpwGrid,
-  VpwMetricCard,
+  VpwCompactMetric,
+  VpwMetricStrip,
   VpwPanel,
   VpwSection,
   VpwSkeletonStack,
@@ -72,58 +73,78 @@ export function ImportRunDetailRoute({
     )
   }
 
-  const projectSearch = selectedProjectRouteSearch(selectedRunSummary.project_id)
+  const projectSearch = selectedProjectRouteSearch(
+    selectedRunSummary.project_id,
+  )
   const reviewFindingsPrimary =
     (selectedRunSummary.finding_count ?? 0) > 0 ||
     (selectedRunSummary.created_findings ?? 0) > 0 ||
     (selectedRunSummary.updated_findings ?? 0) > 0
 
   return (
-    <div className="imports-page-shell flex w-full min-w-0 flex-col gap-6">
+    <div className="imports-page-shell vpw-page-stack w-full min-w-0">
       <VpwSection>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-[var(--vpw-text-secondary)]">
-            {formatDisplayType(selectedRunSummary.input_type)} ·{" "}
-            {runFileLabel(selectedRunSummary)} ·{" "}
-            {formatDateTime(selectedRunSummary.started_at)}
-          </p>
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              onClick={() => onOpenDiagnostics(selectedRunId)}
-              type="button"
-              variant={reviewFindingsPrimary ? "outline" : "default"}
-            >
-              <FileSearch aria-hidden="true" data-icon="inline-start" />
-              Diagnostics
-            </Button>
-            <Button asChild variant={reviewFindingsPrimary ? "default" : "outline"}>
-              <Link search={projectSearch} to="/findings">
-                <ListChecks aria-hidden="true" data-icon="inline-start" />
-                Review findings
-              </Link>
-            </Button>
-          </div>
-        </div>
-        <VpwGrid columns={4}>
-          <VpwMetricCard
-            label="Status"
-            tone={runTone(selectedRunSummary.status)}
-            value={runStatusLabel(selectedRunSummary.status)}
-          />
-          <VpwMetricCard
-            label="Created findings"
-            value={selectedRunSummary.created_findings ?? 0}
-          />
-          <VpwMetricCard
-            label="Updated findings"
-            value={selectedRunSummary.updated_findings ?? 0}
-          />
-          <VpwMetricCard
-            label="Ignored lines"
-            tone={(selectedRunSummary.ignored_lines ?? 0) > 0 ? "warning" : "neutral"}
-            value={selectedRunSummary.ignored_lines ?? 0}
-          />
-        </VpwGrid>
+        <VpwCommandPanel
+          actions={
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                onClick={() => onOpenDiagnostics(selectedRunId)}
+                type="button"
+                variant={reviewFindingsPrimary ? "outline" : "default"}
+              >
+                <FileSearch aria-hidden="true" data-icon="inline-start" />
+                Diagnostics
+              </Button>
+              <Button
+                asChild
+                variant={reviewFindingsPrimary ? "default" : "outline"}
+              >
+                <Link search={projectSearch} to="/findings">
+                  <ListChecks aria-hidden="true" data-icon="inline-start" />
+                  Review findings
+                </Link>
+              </Button>
+            </div>
+          }
+          description={`${formatDisplayType(selectedRunSummary.input_type)} - ${runFileLabel(selectedRunSummary)} - ${formatDateTime(selectedRunSummary.started_at)}`}
+          eyebrow="Import run"
+          title="Run evidence context"
+        >
+          <VpwMetricStrip minCardWidth="10rem">
+            <VpwCompactMetric
+              label="Status"
+              tone={runTone(selectedRunSummary.status)}
+              value={runStatusLabel(selectedRunSummary.status)}
+            />
+            <VpwCompactMetric
+              label="Created findings"
+              tone={
+                (selectedRunSummary.created_findings ?? 0) > 0
+                  ? "success"
+                  : "info"
+              }
+              value={selectedRunSummary.created_findings ?? 0}
+            />
+            <VpwCompactMetric
+              label="Updated findings"
+              tone={
+                (selectedRunSummary.updated_findings ?? 0) > 0
+                  ? "info"
+                  : "support"
+              }
+              value={selectedRunSummary.updated_findings ?? 0}
+            />
+            <VpwCompactMetric
+              label="Ignored lines"
+              tone={
+                (selectedRunSummary.ignored_lines ?? 0) > 0
+                  ? "warning"
+                  : "success"
+              }
+              value={selectedRunSummary.ignored_lines ?? 0}
+            />
+          </VpwMetricStrip>
+        </VpwCommandPanel>
       </VpwSection>
 
       <Tabs defaultValue="overview">

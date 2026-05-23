@@ -37,6 +37,9 @@ Design direction:
 - `frontend/DESIGN.md` is the durable VPW Precision Light Analyst designset for
   read/write redesign slices. Treat it as guidance for density, tone, component
   choice, and state language.
+- `frontend/VPW_PAGE_PATTERNS.md` is the implementation contract for route
+  structure. Use it to decide whether a route is a list/register, detail,
+  wizard, evidence, or settings surface before adding new page-local patterns.
 - The designset adapts only the `frontend-design-awesome-design-md` references
   selected for VPW: Linear precision, Sentry triage, and HashiCorp enterprise
   infrastructure discipline.

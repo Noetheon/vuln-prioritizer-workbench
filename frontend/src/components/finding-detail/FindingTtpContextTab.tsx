@@ -20,8 +20,8 @@ import {
   defensiveActionItems,
 } from "./finding-detail-model"
 import {
-  FindingTtpContextHero,
-  FindingTtpDecisionCards,
+  FindingTtpContextSummary,
+  FindingTtpDecisionRows,
   FindingTtpDecisionFlow,
 } from "./FindingTtpContextSections"
 import { FindingTtpTechnicalEvidence } from "./FindingTtpTechnicalEvidence"
@@ -108,7 +108,7 @@ export function FindingTtpContextTab({
           </section>
         ) : (
           <>
-            <FindingTtpContextHero
+            <FindingTtpContextSummary
               attackContext={attackContext}
               attackSource={attackSource}
               coverageStatus={coverageStatus}
@@ -121,7 +121,7 @@ export function FindingTtpContextTab({
               techniqueId={techniqueId}
             />
 
-            <FindingTtpDecisionCards actionItems={actionItems} />
+            <FindingTtpDecisionRows actionItems={actionItems} />
 
             <FindingTtpTechnicalEvidence
               attackContext={attackContext}

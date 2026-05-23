@@ -1,9 +1,10 @@
 import type { ProjectPublic, ProviderStatusPublic } from "@/api-client"
+import { VpwCommandPanel } from "@/components/vpw"
 import type { ProviderFreshnessSummary } from "@/lib/provider-format"
-import { DashboardHeroActions } from "./DashboardHeroActions"
-import { DashboardHeroProjectPicker } from "./DashboardHeroProjectPicker"
+import { DashboardContextActions } from "./DashboardContextActions"
+import { DashboardContextProjectPicker } from "./DashboardContextProjectPicker"
 
-type DashboardHeroProps = {
+type DashboardContextBarProps = {
   effectiveProjects: readonly ProjectPublic[]
   effectiveProviderStatus: ProviderStatusPublic | null
   effectiveSelectedProject: ProjectPublic | null
@@ -21,7 +22,7 @@ type DashboardHeroProps = {
   selectedProjectId: string
 }
 
-export function DashboardHero({
+export function DashboardContextBar({
   effectiveProjects,
   effectiveProviderStatus,
   effectiveSelectedProject,
@@ -37,18 +38,28 @@ export function DashboardHero({
   projectListLoading,
   providerStatusLoading,
   selectedProjectId,
-}: DashboardHeroProps) {
+}: DashboardContextBarProps) {
   return (
-    <div className="dashboard-analyst-hero">
-      <DashboardHeroProjectPicker
-        effectiveProjects={effectiveProjects}
-        effectiveSelectedProject={effectiveSelectedProject}
-        isDemoMode={isDemoMode}
-        onProjectChange={onProjectChange}
-        projectListLoading={projectListLoading}
-        selectedProjectId={selectedProjectId}
-      />
-      <DashboardHeroActions
+    <VpwCommandPanel
+      actions={
+        <DashboardContextProjectPicker
+          effectiveProjects={effectiveProjects}
+          isDemoMode={isDemoMode}
+          onProjectChange={onProjectChange}
+          projectListLoading={projectListLoading}
+          selectedProjectId={selectedProjectId}
+        />
+      }
+      className="dashboard-context-bar"
+      description="Prioritized vulnerability operations for this project."
+      eyebrow="Security Operations"
+      title={
+        effectiveSelectedProject
+          ? effectiveSelectedProject.name
+          : "No project selected"
+      }
+    >
+      <DashboardContextActions
         demoWorkspaceEnabled={demoWorkspaceEnabled}
         demoWorkspacePending={demoWorkspacePending}
         effectiveProviderStatus={effectiveProviderStatus}
@@ -61,6 +72,6 @@ export function DashboardHero({
         providerStatusLoading={providerStatusLoading}
         selectedProjectId={selectedProjectId}
       />
-    </div>
+    </VpwCommandPanel>
   )
 }

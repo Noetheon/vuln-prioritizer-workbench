@@ -1,5 +1,5 @@
 import type { ProviderStatusPublic } from "@/api-client"
-import type { VpwMetricTone } from "@/components/vpw"
+import type { VpwCompactTone } from "@/components/vpw"
 import type { VpwTimelineItem } from "@/components/vpw/VpwTimeline"
 import { formatDateTime as formatWorkbenchDateTime } from "../../lib/date-format.ts"
 
@@ -15,7 +15,7 @@ function cacheAgeDays(providerStatus: ProviderStatusPublic | null) {
 
 export function providerHealthTone(
   providerStatus: ProviderStatusPublic | null,
-): VpwMetricTone {
+): VpwCompactTone {
   if (providerStatus === null) {
     return "info"
   }
@@ -69,7 +69,7 @@ export function evidenceReadinessTone(
 
 export function evidenceReadinessCardTone(
   providerStatus: ProviderStatusPublic | null,
-): VpwMetricTone {
+): VpwCompactTone {
   if (providerStatus === null) {
     return "info"
   }
@@ -210,7 +210,7 @@ export function providerFreshnessLabel(
 
 export function providerFreshnessTone(
   providerStatus: ProviderStatusPublic | null,
-): VpwMetricTone {
+): VpwCompactTone {
   switch (providerFreshnessLabel(providerStatus)) {
     case "Fresh":
       return "success"

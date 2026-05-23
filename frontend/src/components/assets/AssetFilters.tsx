@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, RotateCcw, Server } from "lucide-react"
+import { BriefcaseBusiness, FilterX, RotateCcw, Server } from "lucide-react"
 
 import type { ProjectPublic } from "../../api-client"
 import { Button } from "../ui/button"
@@ -7,7 +7,6 @@ import {
   VpwField,
   VpwFilterBar,
   VpwSection,
-  VpwSectionHeader,
   VpwSearchControl,
   VpwSelectControl,
   VpwSkeletonStack,
@@ -15,9 +14,48 @@ import {
 } from "../vpw"
 import { Link } from "@/lib/router"
 import type { ReactNode } from "react"
+import {
+  criticalityOptions,
+  environmentOptions,
+  exposureOptions,
+  type AssetFindingFilter,
+  type AssetRescoreFilter,
+} from "./asset-model"
+
+const allOption = { label: "All", value: "all" }
+const environmentFilterOptions = [
+  allOption,
+  ...environmentOptions.map((value) => ({ label: labelizeFilter(value), value })),
+]
+const exposureFilterOptions = [
+  allOption,
+  ...exposureOptions.map((value) => ({ label: labelizeFilter(value), value })),
+]
+const criticalityFilterOptions = [
+  allOption,
+  ...criticalityOptions.map((value) => ({ label: labelizeFilter(value), value })),
+]
+const findingFilterOptions = [
+  allOption,
+  { label: "Linked", value: "linked" },
+  { label: "None", value: "none" },
+]
+const rescoreFilterOptions = [
+  allOption,
+  { label: "Needed", value: "needed" },
+  { label: "Current", value: "current" },
+]
 
 export function AssetInventoryShell({
+  assetCriticalityFilter,
+  assetEnvironmentFilter,
+  assetExposureFilter,
+  assetFindingFilter,
+  assetHasActiveFilters,
   assetOwnerFilter,
+  assetRecordsTotal,
+  assetRescoreFilter,
+  assetSearchFilter,
   assetServiceFilter,
   assetsLoading,
   children,
@@ -30,10 +68,24 @@ export function AssetInventoryShell({
   selectProject,
   selectedProject,
   selectedProjectId,
+  setAssetCriticalityFilter,
+  setAssetEnvironmentFilter,
+  setAssetExposureFilter,
+  setAssetFindingFilter,
   setAssetOwnerFilter,
+  setAssetRescoreFilter,
+  setAssetSearchFilter,
   setAssetServiceFilter,
 }: {
+  assetCriticalityFilter: string
+  assetEnvironmentFilter: string
+  assetExposureFilter: string
+  assetFindingFilter: AssetFindingFilter
+  assetHasActiveFilters: boolean
   assetOwnerFilter: string
+  assetRecordsTotal: number
+  assetRescoreFilter: AssetRescoreFilter
+  assetSearchFilter: string
   assetServiceFilter: string
   assetsLoading: boolean
   children: ReactNode
@@ -46,16 +98,17 @@ export function AssetInventoryShell({
   selectProject: (projectId: string) => void
   selectedProject: ProjectPublic | null
   selectedProjectId: string
+  setAssetCriticalityFilter: (value: string) => void
+  setAssetEnvironmentFilter: (value: string) => void
+  setAssetExposureFilter: (value: string) => void
+  setAssetFindingFilter: (value: AssetFindingFilter) => void
   setAssetOwnerFilter: (value: string) => void
+  setAssetRescoreFilter: (value: AssetRescoreFilter) => void
+  setAssetSearchFilter: (value: string) => void
   setAssetServiceFilter: (value: string) => void
 }) {
   return (
     <VpwSection className="assets-inventory-shell">
-      <VpwSectionHeader
-        description="Filter by project context, then inspect the asset records that change prioritization."
-        eyebrow="In-scope assets"
-        title="Asset inventory"
-      />
       <VpwFilterBar
         className="assets-filter-bar"
         leading={
@@ -73,13 +126,33 @@ export function AssetInventoryShell({
             />
           </VpwField>
         }
-        onSearchChange={setAssetServiceFilter}
+        actions={
+          <Button
+            aria-label="Reset asset filters"
+            disabled={!assetHasActiveFilters}
+            onClick={clearAssetFilters}
+            type="button"
+            variant="outline"
+          >
+            <RotateCcw aria-hidden="true" />
+            Reset
+          </Button>
+        }
+        onSearchChange={setAssetSearchFilter}
         searchClassName="vpw-filter-field--md"
-        searchLabel="Asset service filter"
-        searchPlaceholder="Filter by service"
-        searchTitle="Service"
-        searchValue={assetServiceFilter}
+        searchLabel="Asset search"
+        searchPlaceholder="Name, key, target"
+        searchTitle="Asset"
+        searchValue={assetSearchFilter}
       >
+        <VpwField className="vpw-filter-field--md" label="Service">
+          <VpwSearchControl
+            aria-label="Asset service filter"
+            onChange={(event) => setAssetServiceFilter(event.target.value)}
+            placeholder="Filter by service"
+            value={assetServiceFilter}
+          />
+        </VpwField>
         <VpwField className="vpw-filter-field--md" label="Owner">
           <VpwSearchControl
             aria-label="Asset owner filter"
@@ -88,16 +161,50 @@ export function AssetInventoryShell({
             value={assetOwnerFilter}
           />
         </VpwField>
-        <Button
-          aria-label="Reset asset filters"
-          disabled={!assetOwnerFilter && !assetServiceFilter}
-          onClick={clearAssetFilters}
-          type="button"
-          variant="outline"
-        >
-          <RotateCcw aria-hidden="true" />
-          Reset
-        </Button>
+        <VpwField className="vpw-filter-field--sm" label="Environment">
+          <VpwSelectControl
+            ariaLabel="Asset environment filter"
+            onValueChange={setAssetEnvironmentFilter}
+            options={environmentFilterOptions}
+            value={assetEnvironmentFilter}
+          />
+        </VpwField>
+        <VpwField className="vpw-filter-field--sm" label="Exposure">
+          <VpwSelectControl
+            ariaLabel="Asset exposure filter"
+            onValueChange={setAssetExposureFilter}
+            options={exposureFilterOptions}
+            value={assetExposureFilter}
+          />
+        </VpwField>
+        <VpwField className="vpw-filter-field--sm" label="Criticality">
+          <VpwSelectControl
+            ariaLabel="Asset criticality filter"
+            onValueChange={setAssetCriticalityFilter}
+            options={criticalityFilterOptions}
+            value={assetCriticalityFilter}
+          />
+        </VpwField>
+        <VpwField className="vpw-filter-field--sm" label="Findings">
+          <VpwSelectControl
+            ariaLabel="Asset finding linkage filter"
+            onValueChange={(value) =>
+              setAssetFindingFilter(value as AssetFindingFilter)
+            }
+            options={findingFilterOptions}
+            value={assetFindingFilter}
+          />
+        </VpwField>
+        <VpwField className="vpw-filter-field--sm" label="Rescore">
+          <VpwSelectControl
+            ariaLabel="Asset rescore filter"
+            onValueChange={(value) =>
+              setAssetRescoreFilter(value as AssetRescoreFilter)
+            }
+            options={rescoreFilterOptions}
+            value={assetRescoreFilter}
+          />
+        </VpwField>
       </VpwFilterBar>
 
       {projects.length === 0 && !projectLoading ? (
@@ -113,7 +220,7 @@ export function AssetInventoryShell({
         />
       ) : null}
 
-      {!assetsLoading && selectedProject && !hasAssets ? (
+      {!assetsLoading && selectedProject && assetRecordsTotal === 0 ? (
         <VpwEmptyState
           action={
             <Button onClick={openImportAssets} type="button" variant="outline">
@@ -123,6 +230,25 @@ export function AssetInventoryShell({
           icon={<Server aria-hidden="true" />}
           title="No asset context yet"
           description="Import asset context to improve prioritization and ownership."
+        />
+      ) : null}
+
+      {!assetsLoading && selectedProject && assetRecordsTotal > 0 && !hasAssets ? (
+        <VpwEmptyState
+          action={
+            <Button
+              disabled={!assetHasActiveFilters}
+              onClick={clearAssetFilters}
+              type="button"
+              variant="outline"
+            >
+              <RotateCcw aria-hidden="true" />
+              Reset filters
+            </Button>
+          }
+          icon={<FilterX aria-hidden="true" />}
+          title="No matching assets"
+          description="Adjust the register filters to return to the project asset list."
         />
       ) : null}
 
@@ -139,4 +265,11 @@ export function AssetInventoryShell({
       {children}
     </VpwSection>
   )
+}
+
+function labelizeFilter(value: string) {
+  return value
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
 }

@@ -15,7 +15,7 @@ import {
   VpwCommandPanel,
   VpwCompactMetric,
   VpwMetricStrip,
-  type VpwMetricTone,
+  type VpwCompactTone,
   VpwPanel,
   VpwSection,
   VpwSkeletonStack,
@@ -53,7 +53,7 @@ function ProviderContextItem({
   detail: string
   icon: ReactNode
   label: string
-  tone: VpwMetricTone
+  tone: VpwCompactTone
   value: string
 }) {
   return (
@@ -67,7 +67,7 @@ function ProviderContextItem({
   )
 }
 
-export function ProvidersHero({
+export function ProvidersContext({
   onRefreshProviderStatus,
   providerStatus,
   providerStatusLoading,
@@ -76,7 +76,7 @@ export function ProvidersHero({
   const evidenceReadiness = evidenceReadinessLabel(providerStatus)
   const projectSearch = selectedProjectRouteSearch(selectedProjectId)
   const warningCount = providerStatus?.warnings?.length ?? 0
-  const snapshotTone: VpwMetricTone = providerStatus?.snapshot
+  const snapshotTone: VpwCompactTone = providerStatus?.snapshot
     .locked_provider_data
     ? "support"
     : "info"
@@ -84,6 +84,7 @@ export function ProvidersHero({
   return (
     <VpwSection>
       <VpwCommandPanel
+        className="providers-context-panel"
         actions={
           <VpwToolbar label="Provider actions" variant="plain">
             <VpwToolbarGroup>
@@ -107,8 +108,7 @@ export function ProvidersHero({
         }
         description="Monitor vulnerability intelligence sources, provider snapshot freshness, and evidence data quality."
         eyebrow="Data source trust"
-        note="Evidence Center uses recorded provider snapshots and report artifacts for reproducible review. Refresh status reloads stored provider state from the backend; it does not scan systems."
-        title="Provider evidence workspace"
+        title="Provider status"
       >
         <VpwMetricStrip className="providers-context-strip" minCardWidth="13rem">
           <ProviderContextItem
