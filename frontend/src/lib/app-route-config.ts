@@ -18,11 +18,11 @@ export const routeDetails: Record<WorkbenchPath, RouteDetail> = {
     panelDetail: "Current risk posture and next remediation priorities.",
   },
   "/projects": {
-    description: "Manage local Workbench projects.",
+    description: "Create, select, and maintain local Workbench project scopes.",
     eyebrow: "System",
     title: "Projects",
     panelTitle: "Projects",
-    panelDetail: "Manage local Workbench projects.",
+    panelDetail: "Project scopes, imports, and evidence context.",
   },
   "/imports": {
     description:

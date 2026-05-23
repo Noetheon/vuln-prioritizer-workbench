@@ -83,7 +83,8 @@ services:
       - traefik.http.routers.workbench-backend-https.rule=Host(`api.${DOMAIN:-localhost}`)
       - traefik.http.routers.workbench-backend-https.tls=true
       - traefik.http.routers.workbench-backend-https.tls.certresolver=le
-      - traefik.http.routers.workbench-backend-https.middlewares=workbench-upload-limit
+      - traefik.http.routers.workbench-backend-https.middlewares=workbench-api-ipallowlist,workbench-upload-limit
+      - traefik.http.middlewares.workbench-api-ipallowlist.ipallowlist.sourcerange=${TRAEFIK_API_IP_ALLOWLIST:-127.0.0.1/32}
       - traefik.http.middlewares.workbench-upload-limit.buffering.maxRequestBodyBytes=${TRAEFIK_MAX_REQUEST_BODY_BYTES:-26214400}
     healthcheck:
       test:
@@ -128,6 +129,8 @@ services:
       - traefik.http.routers.workbench-frontend-https.rule=Host(`${DOMAIN:-localhost}`)
       - traefik.http.routers.workbench-frontend-https.tls=true
       - traefik.http.routers.workbench-frontend-https.tls.certresolver=le
+      - traefik.http.routers.workbench-frontend-https.middlewares=workbench-app-ipallowlist
+      - traefik.http.middlewares.workbench-app-ipallowlist.ipallowlist.sourcerange=${TRAEFIK_APP_IP_ALLOWLIST:-127.0.0.1/32}
 
 volumes:
   app-db-data:

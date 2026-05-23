@@ -1,5 +1,5 @@
 import { Link } from "@/lib/router"
-import { Archive, PlayCircle, Upload } from "lucide-react"
+import { Archive, FileCheck2, FileInput, Pencil } from "lucide-react"
 import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,17 +22,18 @@ export function ActiveProjectActions({
         type="button"
         variant="outline"
       >
+        <Pencil aria-hidden="true" />
         Edit
       </Button>
       <Button asChild variant="outline">
         <Link search={projectSearch} to="/imports">
-          <Upload aria-hidden="true" />
+          <FileInput aria-hidden="true" />
           Import findings
         </Link>
       </Button>
       <Button asChild>
         <Link search={projectSearch} to="/reports">
-          <PlayCircle aria-hidden="true" />
+          <FileCheck2 aria-hidden="true" />
           Generate evidence
         </Link>
       </Button>
@@ -109,8 +110,8 @@ export function ActiveProjectDeletePanel({
   selectedProject: ProjectPublic
 }) {
   return (
-    <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className="projects-danger-zone">
+      <div className="projects-danger-zone__content">
         <label
           className="flex items-start gap-3 text-sm text-[var(--vpw-text-secondary)]"
           htmlFor="project-delete-confirmed"

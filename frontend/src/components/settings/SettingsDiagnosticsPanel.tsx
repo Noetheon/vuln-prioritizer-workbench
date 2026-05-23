@@ -11,6 +11,8 @@ import {
   safeDiagnosticsCode,
 } from "./settings-workbench-model"
 import { SettingsFactRows } from "./SettingsFactRows"
+import { Button } from "@/components/ui/button"
+import { Download } from "lucide-react"
 
 type SettingsDiagnosticsPanelProps = {
   evidence: ReturnType<typeof evidenceReadiness>
@@ -31,8 +33,32 @@ export function SettingsDiagnosticsPanel({
     statusError,
   })
 
+  const handleDownload = () => {
+    const blob = new Blob([diagnosticsCode], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `workbench-diagnostics-${new Date().toISOString().split("T")[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <VpwTableCard
+      actions={
+        <Button
+          onClick={handleDownload}
+          size="sm"
+          variant="outline"
+          className="cursor-pointer"
+          type="button"
+        >
+          <Download className="size-4 mr-1.5" />
+          Download Diagnostics
+        </Button>
+      }
       description="Support-only facts for troubleshooting. Expand JSON only when you need to share safe diagnostics."
       eyebrow="Diagnostics"
       title="Safe diagnostics"
@@ -56,7 +82,7 @@ export function SettingsDiagnosticsPanel({
         ]}
       />
 
-      <details className="group rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)]">
+      <details className="group rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] mt-4">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-[var(--vpw-text-primary)] marker:hidden">
           Safe diagnostics payload
           <span className="font-mono text-xs text-[var(--vpw-text-muted)] group-open:hidden">
@@ -75,7 +101,7 @@ export function SettingsDiagnosticsPanel({
         </div>
       </details>
 
-      <VpwStatusBanner title="Generated client stays managed" tone="warning">
+      <VpwStatusBanner title="Generated client stays managed" tone="warning" className="mt-4">
         API contracts are consumed through the generated client and should not
         be edited by hand.
       </VpwStatusBanner>

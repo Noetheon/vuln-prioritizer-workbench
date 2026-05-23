@@ -97,7 +97,6 @@ const splitInventoryActionContractFiles = [
 const inventoryFilterContractFiles = [
   "src/components/assets/AssetFilters.tsx",
   "src/components/waivers/WaiversWorkbenchRegister.tsx",
-  "src/components/projects/ProjectsWorkbenchDirectory.tsx",
 ]
 
 const commandPanelContractFiles = [
@@ -748,8 +747,8 @@ test("filter bars keep the Workbench scope-search-filter-action order", () => {
   const projects = readProjectFile(
     "src/components/projects/ProjectsWorkbenchDirectory.tsx",
   )
-  assert.match(projects, /<VpwFilterBar/)
-  assert.match(projects, /searchLabel="Project search"/)
+  assert.doesNotMatch(projects, /<VpwFilterBar/)
+  assert.doesNotMatch(projects, /searchLabel="Project search"/)
   assert.doesNotMatch(projects, /VpwSearchInput/)
 
   const waivers = readProjectFile(

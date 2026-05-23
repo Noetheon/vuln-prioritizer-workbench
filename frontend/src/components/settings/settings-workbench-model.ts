@@ -148,14 +148,14 @@ export function providerConfigRows(
       id: "epss",
       setting: "EPSS provider",
       value: epss.label,
-      detail: "Exploit probability source used for prioritization.",
+      detail: "EPSS probability source used for prioritization.",
       tone: epss.tone,
     },
     {
       id: "kev",
       setting: "KEV provider",
       value: kev.label,
-      detail: "Known Exploited Vulnerabilities signal used for evidence.",
+      detail: "CISA KEV signal used for evidence.",
       tone: kev.tone,
     },
     {
