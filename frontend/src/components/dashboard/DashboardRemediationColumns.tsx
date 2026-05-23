@@ -3,19 +3,15 @@ import { Eye } from "lucide-react"
 import type { FindingPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import type { VpwDataTableColumn } from "@/components/vpw"
+import {
+  DefinitionList,
+  DetailDrawer,
+  type VpwDataTableColumn,
+} from "@/components/vpw"
 import { optionalText } from "@/lib/ui-copy"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import { RiskScore } from "../risk/RiskScore"
@@ -108,8 +104,30 @@ export function buildDashboardRemediationColumns(): readonly VpwDataTableColumn<
       header: <span className="sr-only">View</span>,
       cell: (finding) => (
         <div className="vpw-table-actions">
-          <Sheet>
-            <SheetTrigger asChild>
+          <DetailDrawer
+            className="w-[calc(100vw-2rem)] max-w-[460px] sm:w-[460px]"
+            description="Quick view - open full detail for complete context."
+            footer={
+              <Button asChild className="w-full" size="sm" variant="outline">
+                <Link
+                  params={{ findingId: finding.id }}
+                  search={selectedProjectRouteSearch(finding.project_id)}
+                  to="/findings/$findingId"
+                >
+                  Open full detail
+                </Link>
+              </Button>
+            }
+            status={
+              <>
+                <SeverityBadge severity={finding.priority} />
+                <RiskScore value={finding.risk_score} />
+              </>
+            }
+            title={
+              <span className="font-mono">{finding.cve_id ?? "Finding"}</span>
+            }
+            trigger={
               <Button
                 aria-label={`View ${finding.cve_id}`}
                 className="vpw-table-action-button"
@@ -118,63 +136,29 @@ export function buildDashboardRemediationColumns(): readonly VpwDataTableColumn<
               >
                 <Eye aria-hidden="true" className="size-3.5" />
               </Button>
-            </SheetTrigger>
-            <SheetContent className="w-[calc(100vw-2rem)] max-w-[460px] overflow-y-auto sm:w-[460px]">
-              <SheetHeader>
-                <SheetTitle className="font-mono">
-                  {finding.cve_id ?? "Finding"}
-                </SheetTitle>
-                <SheetDescription>
-                  Quick view - open full detail for complete context.
-                </SheetDescription>
-              </SheetHeader>
-              <div className="mt-6 flex flex-col gap-5">
-                <div className="flex flex-wrap gap-2">
-                  <SeverityBadge severity={finding.priority} />
-                  <RiskScore value={finding.risk_score} />
-                </div>
-                <dl className="flex flex-col gap-3 text-sm">
-                  <div>
-                    <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                      Component
-                    </dt>
-                    <dd className="mt-0.5">{finding.component_name ?? "-"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                      Service
-                    </dt>
-                    <dd className="mt-0.5">
-                      {finding.business_service ?? "-"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                      Owner
-                    </dt>
-                    <dd className="mt-0.5">{finding.owner ?? "-"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                      Why now
-                    </dt>
-                    <dd className="mt-0.5 text-muted-foreground">
-                      {findingWhyNow(finding)}
-                    </dd>
-                  </div>
-                </dl>
-                <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link
-                    params={{ findingId: finding.id }}
-                    search={selectedProjectRouteSearch(finding.project_id)}
-                    to="/findings/$findingId"
-                  >
-                    Open full detail
-                  </Link>
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
+            }
+          >
+            <DefinitionList
+              items={[
+                {
+                  label: "Component",
+                  value: finding.component_name ?? "-",
+                },
+                {
+                  label: "Service",
+                  value: finding.business_service ?? "-",
+                },
+                {
+                  label: "Owner",
+                  value: finding.owner ?? "-",
+                },
+                {
+                  label: "Why now",
+                  value: findingWhyNow(finding),
+                },
+              ]}
+            />
+          </DetailDrawer>
         </div>
       ),
       className: "w-12",

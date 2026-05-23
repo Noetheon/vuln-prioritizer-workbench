@@ -1,9 +1,6 @@
 export { SettingsAlerts } from "./SettingsWorkbenchAlerts"
-export { SettingsHero } from "./SettingsWorkbenchHero"
-export {
-  SettingsMetrics,
-  SettingsWorkspaceHealth,
-} from "./SettingsWorkbenchOverview"
+export { SettingsContext } from "./SettingsWorkbenchContext"
+export { SettingsWorkspaceHealth } from "./SettingsWorkbenchOverview"
 export {
   SettingsDiagnostics,
   SettingsRuntimeProviders,

@@ -1,4 +1,4 @@
-export { ProviderStatusAlerts, ProvidersHero } from "./ProvidersWorkbenchHero"
+export { ProviderStatusAlerts, ProvidersContext } from "./ProvidersWorkbenchContext"
 export { ProviderMetricsGrid } from "./ProvidersWorkbenchMetrics"
 export { ProviderDiagnosticsSection } from "./ProvidersWorkbenchDiagnostics"
 export { ProviderDataQualitySection } from "./ProvidersWorkbenchQuality"

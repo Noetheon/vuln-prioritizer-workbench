@@ -412,6 +412,14 @@ def test_import_artifact_resolvers_reject_unmanaged_paths(tmp_path: Path) -> Non
         )
         == AttackSource.ctid_json
     )
+    assert (
+        validate_attack_import_options(
+            attack_source="local-curated",
+            attack_mapping_path=attack_root / "ctid-map.json",
+            attack_metadata_path=None,
+        )
+        == AttackSource.local_curated
+    )
 
 
 def test_analysis_service_error_and_snapshot_edge_paths(

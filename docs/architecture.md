@@ -57,11 +57,11 @@ components:
 
 | Route | Main owner | Notes |
 | --- | --- | --- |
-| Dashboard | `components/dashboard/RiskOperationsDashboard.tsx` | Subcomponents own hero, metrics, charts, queue, side panel. Recharts is lazy-loaded through `DashboardSignalOverview`. |
+| Dashboard | `components/dashboard/RiskOperationsDashboard.tsx` | Subcomponents own the context bar, metric strip, charts, queue, and detail rail. Recharts is lazy-loaded through `DashboardSignalOverview`. |
 | Projects | `components/projects/ProjectsWorkbench.tsx` | Project CRUD UI; data and handlers are still supplied by `WorkbenchShell`. |
 | Imports | `components/imports/ImportsWorkbench.tsx` | Import wizard, run selection, parse errors, and run detail UI; API timing remains in `WorkbenchShell`. |
 | Findings | `components/findings/RemediationQueue.tsx` | Uses `useFindingsRouteState` for filters/sort/pagination and `FindingsDataTable` for the table surface. |
-| Finding Detail | `components/finding-detail/FindingDetailRoute.tsx` | Hero, priority explanation, evidence, TTP Context, and history are extracted from `WorkbenchShell`. |
+| Finding Detail | `components/finding-detail/FindingDetailRoute.tsx` | Context summary, priority explanation, evidence, governance, occurrences, TTP Context, and history are extracted from `WorkbenchShell`. |
 | Waivers | `components/waivers/WaiversWorkbench.tsx` | VPW-based waiver register and governance workflow; handlers remain shell-owned. |
 | Assets | `workbench/routes/AssetsRoute.tsx` + `components/assets/*` | Assets module owns route state, filters, forms, asset table, service rollup, linked findings panel, and helpers. |
 | Providers | `components/providers/ProvidersRouteContainer.tsx` | Typed container over `ProvidersWorkbench`; provider status remains shared state. |
@@ -90,7 +90,7 @@ and preserve API timing plus selected project behavior.
 ## VPW Design System Role
 
 The VPW design system lives under `frontend/src/components/vpw`. It provides
-shared surfaces, panels, badges, tables, filter bars, metric cards, skeletons,
+shared surfaces, panels, badges, tables, filter bars, metric strips, skeletons,
 status banners, key-value lists, timeline, toolbar, evidence cards, and
 selection cards.
 

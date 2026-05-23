@@ -1,18 +1,4 @@
-.finding-ttp-context-hero {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-  border: 1px solid color-mix(in srgb, var(--vpw-blue) 24%, var(--vpw-bg-card));
-  border-radius: var(--vpw-radius-lg);
-  padding: 18px;
-  background: color-mix(in srgb, var(--vpw-bg-info) 46%, var(--vpw-bg-card));
-  box-shadow: var(--vpw-shadow-1);
-}
-
-.finding-ttp-context-hero span,
 .finding-ttp-chain small,
-.finding-ttp-narrative-card span,
 .finding-ttp-technical-heading span {
   color: var(--vpw-teal);
   font-size: 0.74rem;
@@ -21,81 +7,8 @@
   text-transform: uppercase;
 }
 
-.finding-ttp-context-hero h3 {
-  max-width: 680px;
-  margin: 4px 0 0;
-  color: var(--vpw-text-primary);
-  font-size: 1.38rem;
-  font-weight: 850;
-  line-height: 1.2;
-}
-
-.finding-ttp-context-hero p {
-  max-width: 760px;
-  margin: 8px 0 0;
-  color: var(--vpw-text-muted);
-  font-size: 0.95rem;
-  line-height: 1.55;
-}
-
-.finding-ttp-context-hero-simple {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.54fr);
-  align-items: stretch;
-  padding: 20px;
-}
-
-.finding-ttp-main-copy {
-  display: grid;
-  align-content: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.finding-ttp-main-copy h3 {
-  max-width: 780px;
-  margin: 0;
-  font-size: 1.5rem;
-}
-
-.finding-ttp-main-copy p {
-  max-width: 860px;
-  margin: 0;
-}
-
-.finding-ttp-main-facts {
-  display: grid;
-  flex: 0 0 min(430px, 40%);
-  width: 100%;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin: 0;
-}
-
-.finding-ttp-main-facts div {
-  display: grid;
-  gap: 5px;
-  border: 1px solid var(--vpw-border-strong);
-  border-radius: var(--vpw-radius-lg);
-  padding: 11px;
-  background: color-mix(in srgb, var(--vpw-bg-card) 76%, transparent);
-}
-
-.finding-ttp-main-facts dt {
-  color: var(--vpw-text-muted);
-  font-size: 0.72rem;
-  font-weight: 850;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-.finding-ttp-main-facts dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-  color: var(--vpw-text-primary);
-  font-size: 0.92rem;
-  font-weight: 800;
-  line-height: 1.3;
+.finding-ttp-context-summary .vpw-command-panel__body {
+  max-width: 52rem;
 }
 
 .finding-ttp-chain {
@@ -206,38 +119,12 @@
   font-size: 0.9rem;
 }
 
-.finding-ttp-narrative-card p {
-  margin: 0;
-  color: var(--vpw-text-muted);
-  font-size: 0.92rem;
-  line-height: 1.55;
-}
-
-.finding-ttp-decision-grid {
+.finding-ttp-decision-list {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr) minmax(
-      300px,
-      0.8fr
-    );
-  gap: 12px;
-}
-
-.finding-ttp-decision-grid-simple {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-}
-
-.finding-ttp-narrative-card {
-  display: grid;
-  gap: 10px;
   border: 1px solid var(--vpw-border-default);
   border-radius: var(--vpw-radius-lg);
-  padding: 15px;
   background: var(--vpw-bg-card);
-}
-
-.finding-ttp-narrative-card strong {
-  color: var(--vpw-text-primary);
-  font-size: 0.95rem;
+  padding: 0 0.9rem;
 }
 
 .finding-ttp-meaning-list {
@@ -252,11 +139,6 @@
   color: var(--vpw-text-secondary);
   font-size: 0.92rem;
   line-height: 1.45;
-}
-
-.finding-ttp-actions-card {
-  border-color: color-mix(in srgb, var(--vpw-green) 28%, var(--vpw-bg-card));
-  background: color-mix(in srgb, var(--vpw-bg-success) 68%, var(--vpw-bg-card));
 }
 
 .finding-ttp-checklist {
@@ -414,47 +296,9 @@
   padding-top: 0.25rem;
 }
 
-.finding-ttp-context-hero {
-  border-color: var(--vpw-border-default);
-  border-radius: var(--vpw-radius-md);
-  background: var(--vpw-bg-card);
-  box-shadow: none;
-}
-
-.finding-ttp-context-hero-simple {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.85rem;
-  padding: 0.92rem;
-}
-
-.finding-ttp-context-hero span,
 .finding-ttp-chain small,
-.finding-ttp-narrative-card span,
 .finding-ttp-technical-heading span {
   color: var(--vpw-text-muted);
-}
-
-.finding-ttp-main-copy h3 {
-  font-size: 1.12rem;
-  line-height: 1.25;
-}
-
-.finding-ttp-main-copy p {
-  max-width: 58rem;
-  color: var(--vpw-text-secondary);
-  font-size: 0.9rem;
-}
-
-.finding-ttp-main-facts {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.finding-ttp-main-facts div {
-  border-color: var(--vpw-border-subtle);
-  border-radius: var(--vpw-radius-md);
-  padding: 0.62rem 0.68rem;
-  background: var(--vpw-bg-card);
 }
 
 .finding-ttp-chain {
@@ -520,22 +364,10 @@
   font-size: 0.8rem;
 }
 
-.finding-ttp-decision-grid-simple {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 0.75rem;
-}
-
-.finding-ttp-narrative-card {
+.finding-ttp-decision-list {
   border-color: var(--vpw-border-subtle);
   border-radius: var(--vpw-radius-md);
-  padding: 0.9rem;
-  background: var(--vpw-bg-card);
-}
-
-.finding-ttp-actions-card {
-  border-color: var(--vpw-border-subtle);
-  background: var(--vpw-bg-card);
-  box-shadow: inset 2px 0 0 var(--vpw-teal);
+  padding: 0 0.85rem;
 }
 
 .finding-ttp-technical-evidence {
@@ -573,11 +405,6 @@
 }
 
 @media (max-width: 1180px) {
-  .finding-ttp-context-hero-simple,
-  .finding-ttp-decision-grid-simple {
-    grid-template-columns: 1fr;
-  }
-
   .finding-ttp-chain {
     flex-direction: column;
   }

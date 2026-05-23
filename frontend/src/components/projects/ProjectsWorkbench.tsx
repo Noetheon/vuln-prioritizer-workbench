@@ -1,10 +1,9 @@
-import { VpwStatusBanner } from "@/components/vpw"
+import { VpwPageStack, VpwStatusBanner } from "@/components/vpw"
 import {
   ActiveProjectSection,
   ProjectDirectory,
-  ProjectHero,
+  ProjectContext,
   ProjectMetrics,
-  ProjectSelectionStrip,
   ProjectSetupSection,
 } from "./ProjectsWorkbenchSections"
 import type { ProjectsWorkbenchProps } from "./projects-workbench-model"
@@ -16,8 +15,8 @@ export type {
 
 export function ProjectsWorkbench(props: ProjectsWorkbenchProps) {
   return (
-    <div className="flex flex-col gap-6">
-      <ProjectHero
+    <VpwPageStack>
+      <ProjectContext
         projectSummary={props.projectSummary}
         projects={props.projects}
         selectedProject={props.selectedProject}
@@ -45,6 +44,14 @@ export function ProjectsWorkbench(props: ProjectsWorkbenchProps) {
         projects={props.projects}
         selectedProject={props.selectedProject}
       />
+      <ProjectDirectory
+        onRefreshProjects={props.onRefreshProjects}
+        onSelectProject={props.onSelectProject}
+        projectListLoading={props.projectListLoading}
+        projectSummaryById={props.projectSummaryById}
+        projects={props.projects}
+        selectedProjectId={props.selectedProjectId}
+      />
       <ActiveProjectSection
         deleteConfirmed={props.deleteConfirmed}
         editProjectForm={props.editProjectForm}
@@ -70,20 +77,6 @@ export function ProjectsWorkbench(props: ProjectsWorkbenchProps) {
         onCreateProjectNameChange={props.onCreateProjectNameChange}
         projectActionLoading={props.projectActionLoading}
       />
-      <ProjectSelectionStrip
-        onSelectProject={props.onSelectProject}
-        projectSummaryById={props.projectSummaryById}
-        projects={props.projects}
-        selectedProjectId={props.selectedProjectId}
-      />
-      <ProjectDirectory
-        onRefreshProjects={props.onRefreshProjects}
-        onSelectProject={props.onSelectProject}
-        projectListLoading={props.projectListLoading}
-        projectSummaryById={props.projectSummaryById}
-        projects={props.projects}
-        selectedProjectId={props.selectedProjectId}
-      />
-    </div>
+    </VpwPageStack>
   )
 }

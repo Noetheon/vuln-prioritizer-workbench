@@ -1,15 +1,14 @@
 import {
   CountBadge,
+  VpwBadge,
   type VpwBadgeTone,
   VpwDataTable,
   type VpwDataTableColumn,
   VpwEmptyState,
   VpwGrid,
-  VpwKeyValueList,
   VpwPanel,
   VpwSection,
   VpwSectionHeader,
-  VpwWaiverDecisionCard,
 } from "@/components/vpw"
 import {
   ownerRollups,
@@ -72,20 +71,10 @@ const ownerColumns: readonly VpwDataTableColumn<WaiverOwnerRollup>[] = [
 ]
 
 export function WaiverReviewSection({
-  acceptedFindings,
-  expired,
-  expiringSoon,
-  missingApprovals,
   queue,
-  reviewDue,
   waivers,
 }: {
-  acceptedFindings: string
-  expired: string
-  expiringSoon: string
-  missingApprovals: number
   queue: readonly ReviewQueueItem[]
-  reviewDue: string
   waivers: WaiversWorkbenchProps["waivers"]
 }) {
   const rollups = ownerRollups(waivers)
@@ -107,54 +96,37 @@ export function WaiverReviewSection({
               eyebrow="Review queue"
               title="Review queue"
             />
-            <VpwKeyValueList
-              columns={2}
-              density="compact"
-              items={[
-                {
-                  label: "Review due",
-                  tone: Number(reviewDue) > 0 ? "warning" : "neutral",
-                  value: reviewDue,
-                },
-                {
-                  label: "Expiring soon",
-                  tone: Number(expiringSoon) > 0 ? "warning" : "neutral",
-                  value: expiringSoon,
-                },
-                {
-                  label: "Expired",
-                  tone: Number(expired) > 0 ? "critical" : "neutral",
-                  value: expired,
-                },
-                {
-                  label: "Evidence incomplete",
-                  tone: missingApprovals > 0 ? "warning" : "success",
-                  value: missingApprovals,
-                },
-                {
-                  label: "Accepted findings",
-                  value: acceptedFindings,
-                },
-              ]}
-            />
             {queue.length === 0 ? (
               <VpwEmptyState
                 description="No accepted-risk lifecycle debt is currently recorded for this project."
                 title="No review queue"
               />
             ) : (
-              <div className="waivers-review-queue-list">
+              <ol className="waivers-review-queue-list">
                 {queue.map((item) => (
-                  <VpwWaiverDecisionCard
-                    key={item.id}
-                    owner={item.owner}
-                    reason={`${item.scope}. ${item.reason}`}
-                    reviewDate={item.reviewDate}
-                    status={item.status}
-                    statusTone={item.statusTone}
-                  />
+                  <li className="waivers-review-row" key={item.id}>
+                    <div className="waivers-review-row__main">
+                      <div className="waivers-review-row__header">
+                        <strong title={item.scope}>{item.scope}</strong>
+                        <VpwBadge density="compact" tone={item.statusTone}>
+                          {item.status}
+                        </VpwBadge>
+                      </div>
+                      <p>{item.reason}</p>
+                    </div>
+                    <dl className="waivers-review-row__meta">
+                      <div>
+                        <dt>Owner</dt>
+                        <dd>{item.owner}</dd>
+                      </div>
+                      <div>
+                        <dt>Review</dt>
+                        <dd>{item.reviewDate}</dd>
+                      </div>
+                    </dl>
+                  </li>
                 ))}
-              </div>
+              </ol>
             )}
           </div>
 

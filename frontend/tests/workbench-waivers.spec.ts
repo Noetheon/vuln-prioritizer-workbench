@@ -252,7 +252,7 @@ test("workbench governance rollups show service risk and accepted-risk debt", as
   await expect(page.getByText("Owner rollup").first()).toBeVisible()
   await expect(page.getByText("Expired").first()).toBeVisible()
   await expect(page.getByText("Review due").first()).toBeVisible()
-  await expect(page.getByText("service:checkout").first()).toBeVisible()
+  await expect(page.getByText("checkout").first()).toBeVisible()
   await expect(page.getByText("legacy-risk").first()).toBeVisible()
   await expect(page.getByText("risk-team").first()).toBeVisible()
 

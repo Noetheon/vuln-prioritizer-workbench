@@ -98,7 +98,7 @@ test("providers route presents health-first data source diagnostics", async ({
     page.getByText("KEV catalog cache is missing").first(),
   ).toBeVisible()
   await expect(
-    page.getByText("Provider evidence workspace").first(),
+    page.getByRole("heading", { level: 2, name: "Provider status" }),
   ).toBeVisible()
   await expect(page.getByText("Provider health").first()).toBeVisible()
   await expect(page.getByText("Freshness").first()).toBeVisible()

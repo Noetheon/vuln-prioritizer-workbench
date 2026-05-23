@@ -35,7 +35,7 @@ export function VpwSegmentedControl({
           className={cn(
             "h-8 rounded-[var(--vpw-radius-sm)] px-3 text-sm font-medium text-[var(--vpw-text-secondary)] transition-colors",
             option.value === value &&
-              "bg-[var(--vpw-bg-card)] text-[var(--vpw-text-primary)] shadow-[var(--vpw-shadow-1)]",
+              "bg-[var(--vpw-bg-card)] text-[var(--vpw-text-primary)]",
           )}
           key={option.value}
           onClick={() => onChange?.(option.value)}

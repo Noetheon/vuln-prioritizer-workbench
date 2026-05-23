@@ -79,7 +79,7 @@ def validate_attack_import_options(
         if attack_mapping_path is not None or attack_metadata_path is not None:
             raise ImportServiceError(
                 status_code=422,
-                detail="ATT&CK mapping files require attack_source=ctid-json.",
+                detail="ATT&CK mapping files require attack_source=ctid-json or local-curated.",
             )
         return normalized_source
     if normalized_source not in {AttackSource.ctid_json, AttackSource.local_curated}:

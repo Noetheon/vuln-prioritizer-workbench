@@ -70,7 +70,7 @@ export function ArtifactSection({
         }
         title="Recommended artifacts"
       />
-      <VpwGrid columns={3}>
+      <VpwGrid className="evidence-artifact-action-grid" columns={3}>
         {RECOMMENDED_ARTIFACT_FORMATS.map((format) => (
           <RecommendedArtifactCard
             activeReportFormat={activeReportFormat}
@@ -121,7 +121,7 @@ function RecommendedArtifactCard({
   const generating = activeReportFormat === format
 
   return (
-    <VpwPanel className="flex h-full flex-col gap-4 p-4">
+    <VpwPanel className="evidence-artifact-card flex h-full flex-col gap-4 p-4">
       <div className="flex items-start gap-3">
         <div className="rounded-[var(--vpw-radius-md)] bg-[var(--vpw-bg-panel)] p-2 text-[var(--vpw-text-secondary)]">
           <Icon aria-hidden="true" className="h-4 w-4" />
@@ -173,7 +173,7 @@ function AdditionalExports({
   reports: ReportPublic[]
 }) {
   return (
-    <VpwPanel className="flex flex-col gap-3 p-4">
+    <VpwPanel className="evidence-additional-exports flex flex-col gap-3 p-4">
       <VpwSectionHeader
         description="Compact exports for spreadsheets, automation, CI, and defensive ATT&CK review."
         eyebrow="Additional exports"
@@ -187,7 +187,7 @@ function AdditionalExports({
           const generating = activeReportFormat === format
           return (
             <div
-              className="grid gap-3 rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center"
+              className="evidence-additional-export-row grid gap-3 rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center"
               key={format}
             >
               <div className="min-w-0">

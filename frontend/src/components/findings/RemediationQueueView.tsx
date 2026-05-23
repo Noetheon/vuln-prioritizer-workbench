@@ -1,9 +1,4 @@
-import {
-  type Dispatch,
-  type SetStateAction,
-  useEffect,
-  useState,
-} from "react"
+import { type Dispatch, type SetStateAction, useEffect, useState } from "react"
 import type {
   FindingDetailPublic,
   FindingExplanationPublic,
@@ -146,7 +141,7 @@ export function RemediationQueueView({
     <TooltipProvider>
       <div
         aria-busy={isLoading}
-        className="findings-remediation-layout flex flex-col gap-5"
+        className="findings-remediation-layout vpw-page-stack"
       >
         {isDemo ? <DemoBanner /> : null}
         <RemediationQueueSummary

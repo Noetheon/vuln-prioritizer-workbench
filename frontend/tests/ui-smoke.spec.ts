@@ -89,7 +89,7 @@ test("smoke: settings renders", async ({ page }) => {
   ).toBeVisible()
   await expect(page.getByRole("tab", { name: "Diagnostics" })).toBeVisible()
   await expect(
-    page.getByRole("heading", { name: "Workspace access" }),
+    page.getByRole("heading", { name: "Workspace state" }),
   ).toBeVisible()
 })
 

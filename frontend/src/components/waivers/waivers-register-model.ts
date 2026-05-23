@@ -18,6 +18,21 @@ export const waiverEvidenceViews = [
   { label: "Complete", value: "recorded" },
 ] as const
 
+export const waiverFindingViews = [
+  { label: "All", value: "all" },
+  { label: "Matched", value: "matched" },
+  { label: "None", value: "none" },
+] as const
+
+export const waiverScopeTypeViews = [
+  { label: "All", value: "all" },
+  { label: "CVE", value: "cve" },
+  { label: "Asset", value: "asset" },
+  { label: "Service", value: "service" },
+  { label: "Finding", value: "finding" },
+  { label: "Project", value: "project" },
+] as const
+
 export function matchesWaiverEvidenceView(
   waiver: WaiversWorkbenchProps["waivers"][number],
   view: string,
@@ -43,6 +58,45 @@ export function matchesWaiverView(
       waiver.days_remaining >= 0 &&
       waiver.days_remaining <= 30
     )
+  }
+  return true
+}
+
+export function matchesWaiverFindingView(
+  waiver: WaiversWorkbenchProps["waivers"][number],
+  view: string,
+) {
+  const matchedFindings = waiver.matched_findings ?? 0
+  if (view === "matched") return matchedFindings > 0
+  if (view === "none") return matchedFindings === 0
+  return true
+}
+
+export function matchesWaiverOwnerView(
+  waiver: WaiversWorkbenchProps["waivers"][number],
+  owner: string,
+) {
+  if (owner === "all") return true
+  return waiver.owner === owner
+}
+
+export function matchesWaiverScopeTypeView(
+  waiver: WaiversWorkbenchProps["waivers"][number],
+  view: string,
+) {
+  if (view === "all") return true
+  if (view === "cve") return Boolean(waiver.cve_id)
+  if (view === "asset") return Boolean(waiver.asset_id || waiver.asset_key)
+  if (view === "service") return Boolean(waiver.service)
+  if (view === "finding") return Boolean(waiver.finding_id)
+  if (view === "project") {
+    return ![
+      waiver.cve_id,
+      waiver.asset_id,
+      waiver.asset_key,
+      waiver.service,
+      waiver.finding_id,
+    ].some(Boolean)
   }
   return true
 }

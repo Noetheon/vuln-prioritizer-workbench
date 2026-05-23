@@ -7,6 +7,40 @@
     min-width: 0;
   }
 
+  .providers-context-panel {
+    gap: 1.05rem;
+    padding: 1.1rem 1.2rem 1.15rem;
+  }
+
+  .providers-context-panel .vpw-command-panel__header {
+    align-items: center;
+  }
+
+  .providers-context-panel .vpw-command-panel__copy h2 {
+    font-size: 1.08rem;
+    line-height: 1.2;
+  }
+
+  .providers-context-panel .vpw-command-panel__copy p:not(.vpw-label) {
+    margin-top: 0.3rem;
+    max-width: 50rem;
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  .providers-context-panel .vpw-command-panel__body {
+    padding-top: 0.05rem;
+  }
+
+  .providers-context-strip {
+    gap: 0.8rem;
+  }
+
+  .providers-context-strip .vpw-compact-metric {
+    --vpw-compact-metric-ratio: 4 / 1;
+    min-height: 5.85rem;
+  }
+
   .providers-warning-badge {
     min-height: 100%;
     justify-content: center;

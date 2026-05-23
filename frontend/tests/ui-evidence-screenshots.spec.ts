@@ -497,7 +497,7 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
   {
     assertReady: async (page) => {
       await expect(
-        page.getByRole("heading", { level: 2, name: "Evidence summary" }),
+        page.getByRole("heading", { level: 2, name: "Evidence run context" }),
       ).toBeVisible({ timeout: 15_000 })
       await expect(
         page.getByRole("tab", { name: "Artifacts" }),
@@ -514,7 +514,7 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
       await expect(
         page.getByRole("heading", {
           level: 2,
-          name: "Asset context workspace",
+          name: "Asset context",
         }),
       ).toBeVisible({ timeout: 15_000 })
       const assetsInventory = page.locator(
@@ -560,11 +560,14 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
   {
     assertReady: async (page) => {
       await expect(
-        page.getByRole("heading", { level: 2, name: "Workspace controls" }),
+        page.getByRole("heading", {
+          level: 2,
+          name: "Workspace settings console",
+        }),
       ).toBeVisible({ timeout: 15_000 })
       await expect(page.getByRole("tab", { name: "Overview" })).toBeVisible()
       await expect(
-        page.getByRole("heading", { name: "Workspace access" }),
+        page.getByRole("heading", { name: "Workspace state" }),
       ).toBeVisible()
       await expect(
         page.getByRole("heading", { name: "Account " + "and session" }),

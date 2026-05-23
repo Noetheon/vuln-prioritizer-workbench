@@ -1,3 +1,2 @@
-export { ProjectHero } from "./ProjectHero"
+export { ProjectContext } from "./ProjectContext"
 export { ProjectMetrics } from "./ProjectMetrics"
-export { ProjectSelectionStrip } from "./ProjectSelectionStrip"

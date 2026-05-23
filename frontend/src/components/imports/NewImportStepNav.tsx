@@ -73,7 +73,7 @@ export function StepNav({
                   "imports-step-nav__button",
                   "relative z-10 grid h-auto min-h-[3.875rem] w-full grid-cols-[2.25rem_minmax(0,1fr)] items-center justify-start gap-2.5 rounded-[var(--vpw-radius-md)] px-2.5 py-2.5 text-left whitespace-normal transition-[background,box-shadow,color]",
                   active
-                    ? "bg-[var(--vpw-bg-card)] shadow-[var(--vpw-shadow-1)] ring-1 ring-[var(--vpw-border-default)]"
+                    ? "bg-[var(--vpw-bg-card)] ring-1 ring-[var(--vpw-border-default)]"
                     : "bg-transparent",
                   reachable
                     ? "hover:bg-[var(--vpw-bg-panel)]"

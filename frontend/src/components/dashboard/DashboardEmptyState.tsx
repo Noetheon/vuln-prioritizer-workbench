@@ -75,7 +75,7 @@ export function DashboardSetupEmptyState({
     >
       <div className="mx-auto max-w-lg">
         <div className="flex flex-col items-center text-center">
-          <div className="mb-4 flex size-14 items-center justify-center rounded-[var(--vpw-radius-lg)] bg-[var(--vpw-navy)] shadow-[var(--vpw-shadow-2)]">
+          <div className="mb-4 flex size-14 items-center justify-center rounded-[var(--vpw-radius-lg)] bg-[var(--vpw-navy)]">
             <ShieldCheck className="size-7 text-[var(--vpw-amber)]" />
           </div>
           <h3 className="text-lg font-semibold text-[var(--vpw-text-primary)]">

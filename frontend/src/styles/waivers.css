@@ -7,34 +7,9 @@
     gap: 0;
   }
 
-  .waivers-context-strip {
+  .waivers-command-section .vpw-command-panel__body {
     display: grid;
-    grid-template-columns: minmax(16rem, 1.15fr) minmax(0, 3fr);
-    gap: 0.75rem;
-    align-items: stretch;
-    border-top: 1px solid var(--vpw-border-subtle);
-    padding-top: 0.95rem;
-  }
-
-  .waivers-project-control {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    border: 1px solid var(--vpw-border-default);
-    border-radius: var(--vpw-radius-xl);
-    background: var(--vpw-bg-card);
-    padding: 0.8rem;
-  }
-
-  .waivers-project-control__hint {
-    display: block;
-    overflow: hidden;
-    margin-top: 0.35rem;
-    color: var(--vpw-text-secondary);
-    font-size: 0.78rem;
-    line-height: 1.35;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    gap: 1rem;
   }
 
   .waivers-register-card,
@@ -43,8 +18,10 @@
   }
 
   .waivers-filter-bar {
-    align-items: flex-end;
-    background: color-mix(in srgb, var(--vpw-bg-panel) 52%, var(--vpw-bg-card));
+    border: 1px solid var(--vpw-border-default);
+    border-radius: var(--vpw-radius-xl);
+    background: var(--vpw-bg-card);
+    padding: 1rem;
     box-shadow: var(--vpw-shadow-0);
   }
 
@@ -68,7 +45,7 @@
 
   .waivers-governance-panel h2,
   .waivers-governance-header .vpw-section-header h2 {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
   }
 
   .waivers-governance-grid {
@@ -92,16 +69,166 @@
 
   .waivers-review-queue-list {
     display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--vpw-border-subtle);
+  }
+
+  .waivers-review-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(13rem, 0.38fr);
+    gap: 0.9rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--vpw-border-subtle);
+  }
+
+  .waivers-review-row__main {
+    display: grid;
+    min-width: 0;
+    gap: 0.3rem;
+  }
+
+  .waivers-review-row__header {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .waivers-review-row__header strong {
+    overflow: hidden;
+    color: var(--vpw-text-primary);
+    font-size: 0.9rem;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .waivers-review-row__main p {
+    margin: 0;
+    color: var(--vpw-text-secondary);
+    font-size: 0.83rem;
+    line-height: 1.45;
+  }
+
+  .waivers-review-row__meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.75rem;
+    margin: 0;
+    align-content: start;
+  }
+
+  .waivers-review-row__meta div {
+    min-width: 0;
+  }
+
+  .waivers-review-row__meta dt {
+    color: var(--vpw-text-tertiary);
+    font-family: var(--vpw-font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .waivers-review-row__meta dd {
+    overflow: hidden;
+    margin: 0.2rem 0 0;
+    color: var(--vpw-text-primary);
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .waivers-owner-rollup-table {
     --vpw-table-frame-padding: 0;
   }
 
-  @media (max-width: 1280px) {
-    .waivers-context-strip {
-      grid-template-columns: 1fr;
+  @media (min-width: 901px) and (max-width: 1320px) {
+    .waivers-kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .waivers-kpi-strip > * {
+      max-width: none;
+      min-height: 5rem;
+      aspect-ratio: auto;
+      gap: 0.55rem;
+      padding: 0.72rem 0.78rem;
+    }
+
+    .waivers-kpi-strip .vpw-compact-metric__icon {
+      width: 1.45rem;
+      height: 1.45rem;
+    }
+
+    .waivers-kpi-strip .vpw-compact-metric__icon svg {
+      width: 0.82rem;
+      height: 0.82rem;
+    }
+
+    .waivers-kpi-strip .vpw-compact-metric__body {
+      gap: 0.1rem;
+    }
+
+    .waivers-kpi-strip .vpw-label {
+      font-size: 0.68rem;
+      line-height: 0.9rem;
+    }
+
+    .waivers-kpi-strip .vpw-compact-metric__body strong {
+      font-size: 1rem;
+    }
+
+    .waivers-kpi-strip .vpw-compact-metric__body small {
+      font-size: 0.72rem;
+      line-height: 1.2;
+    }
+
+    .waivers-filter-bar {
+      gap: 0.425rem;
+      padding: 0.65rem;
+    }
+
+    .waivers-filter-bar .vpw-filter-bar__leading,
+    .waivers-filter-bar .vpw-filter-bar__controls,
+    .waivers-filter-bar .vpw-filter-bar__actions {
+      gap: 0.425rem;
+    }
+
+    .waivers-filter-bar .vpw-filter-field--search {
+      min-width: 7rem;
+      flex-basis: 7rem;
+    }
+
+    .waivers-filter-bar .vpw-filter-field--md {
+      min-width: 7rem;
+      flex-basis: 7rem;
+    }
+
+    .waivers-filter-bar .vpw-filter-field--sm {
+      min-width: 5.15rem;
+      flex-basis: 5.25rem;
+    }
+
+    .waivers-filter-bar .vpw-filter-field--lg {
+      min-width: 8.75rem;
+      flex-basis: 9rem;
+    }
+
+    .waivers-filter-bar .vpw-filter-bar__actions {
+      margin-left: 0;
+    }
+
+    .waivers-filter-bar .vpw-filter-bar__actions > .vpw-button {
+      padding-right: 0.55rem;
+      padding-left: 0.55rem;
     }
   }
 
@@ -115,14 +242,8 @@
       justify-content: flex-start;
     }
 
-    .waivers-context-strip {
+    .waivers-review-row {
       grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 640px) {
-    .waivers-project-control__hint {
-      display: none;
     }
   }
 }

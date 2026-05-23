@@ -10,7 +10,7 @@ import { DashboardOperationsStatePanel } from "./DashboardOperationsStatePanel"
 import { DashboardRecentRunsPanel } from "./DashboardRecentRunsPanel"
 import { DashboardRecommendedActionsPanel } from "./DashboardRecommendedActionsPanel"
 
-type DashboardSidePanelProps = {
+type DashboardDetailRailProps = {
   dataQualityError: string | null
   dataQualityWarnings: readonly string[]
   effectiveProviderStatus: ProviderStatusPublic | null
@@ -24,7 +24,7 @@ type DashboardSidePanelProps = {
   staleProvider: boolean
 }
 
-export function DashboardSidePanel({
+export function DashboardDetailRail({
   dataQualityError,
   dataQualityWarnings,
   effectiveProviderStatus,
@@ -36,9 +36,12 @@ export function DashboardSidePanel({
   providerStatusLoading,
   selectedProjectId,
   staleProvider,
-}: DashboardSidePanelProps) {
+}: DashboardDetailRailProps) {
   return (
-    <div className="flex flex-col gap-4">
+    <aside
+      aria-label="Dashboard context rail"
+      className="dashboard-detail-rail flex flex-col gap-4"
+    >
       <DashboardOperationsStatePanel
         effectiveProviderStatus={effectiveProviderStatus}
         effectiveRuns={effectiveRuns}
@@ -57,6 +60,6 @@ export function DashboardSidePanel({
         dataQualityWarnings={dataQualityWarnings}
       />
       <DashboardRecommendedActionsPanel selectedProjectId={selectedProjectId} />
-    </div>
+    </aside>
   )
 }

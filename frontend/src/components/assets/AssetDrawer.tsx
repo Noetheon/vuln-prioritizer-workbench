@@ -1,11 +1,4 @@
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "../ui/sheet"
-import { VpwStatusBanner } from "../vpw"
+import { DetailDrawer, VpwStatusBanner } from "../vpw"
 import { AssetContextImportForm, AssetForm } from "./AssetContextForm"
 import {
   AssetDetailContent,
@@ -23,22 +16,19 @@ export function AssetDrawer({ state }: AssetDrawerProps) {
   const drawerDescription = assetDrawerDescription(state)
 
   return (
-    <Sheet
+    <DetailDrawer
+      className="asset-drawer w-[min(100vw,48rem)] sm:max-w-none"
+      description={drawerDescription}
       onOpenChange={(open) => {
         if (!open) {
           state.closeAssetDrawer()
         }
       }}
       open={state.assetDrawerMode !== null}
+      title={drawerTitle}
     >
-      <SheetContent className="asset-drawer w-[min(100vw,48rem)] overflow-y-auto sm:max-w-none">
-        <SheetHeader>
-          <SheetTitle>{drawerTitle}</SheetTitle>
-          <SheetDescription>{drawerDescription}</SheetDescription>
-        </SheetHeader>
-        <AssetDrawerContent state={state} />
-      </SheetContent>
-    </Sheet>
+      <AssetDrawerContent state={state} />
+    </DetailDrawer>
   )
 }
 
