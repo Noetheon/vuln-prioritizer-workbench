@@ -51,6 +51,7 @@ export function DashboardDetailRail({
         providerStatusLoading={providerStatusLoading}
         staleProvider={staleProvider}
       />
+      <DashboardRecommendedActionsPanel selectedProjectId={selectedProjectId} />
       <DashboardRecentRunsPanel
         latestRunFactsRows={latestRunFactsRows}
         selectedProjectId={selectedProjectId}
@@ -59,7 +60,6 @@ export function DashboardDetailRail({
         dataQualityError={dataQualityError}
         dataQualityWarnings={dataQualityWarnings}
       />
-      <DashboardRecommendedActionsPanel selectedProjectId={selectedProjectId} />
     </aside>
   )
 }

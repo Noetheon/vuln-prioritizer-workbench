@@ -1,7 +1,8 @@
 # Workbench UI Migration Plan
 
 Status: completed UI-normalization plan plus retained guardrails for future
-route work. This document does not migrate route code.
+route work. This document does not migrate route code, and it does not track
+active open route-migration tasks.
 
 The migration must preserve the current frontend architecture: React, Vite, TypeScript, TanStack Query, local route adapter, `WorkbenchShell`, route containers, shared components, and shared CSS. Do not reintroduce old file-route scaffolding or generated route-tree assumptions. Do not edit generated client files manually.
 
@@ -41,6 +42,17 @@ Rationale:
 
 This plan recorded the remaining drift after the first VPW pattern pass. It is
 retained as a guardrail for future route work rather than as an open work queue.
+
+## Current Open Risks
+
+No active UI-normalization backlog is tracked in this document. New UI risks
+should be opened as concrete issues or added to a current audit page with owner,
+route, acceptance criteria, and evidence requirements.
+
+The current baseline is protected by the named design-audit gate, responsive
+shell checks, accessibility checks, and the component contract tests. Historical
+checklists below are retained only to explain the migration sequence and to help
+reviewers recognize regressions.
 
 ### Done or enforced in the current baseline
 
@@ -229,12 +241,12 @@ Files:
 
 Tasks:
 
-- [ ] Replace route-local summary/header with `ContextBar` plus `MetricStrip`.
-- [ ] Replace custom filters with `FilterBar`.
-- [ ] Wrap the queue in `DataTableFrame`.
-- [ ] Replace mobile cards with shared responsive row mode.
-- [ ] Replace quick-view card sections with `DetailDrawer`, `DecisionSummary`, `DefinitionList`, `SignalBadge`, and `EvidenceRow`.
-- [ ] Remove findings-specific typography, shadow, card, and tab styles that become redundant.
+- Historical target: Replace route-local summary/header with `ContextBar` plus `MetricStrip`.
+- Historical target: Replace custom filters with `FilterBar`.
+- Historical target: Wrap the queue in `DataTableFrame`.
+- Historical target: Replace mobile cards with shared responsive row mode.
+- Historical target: Replace quick-view card sections with `DetailDrawer`, `DecisionSummary`, `DefinitionList`, `SignalBadge`, and `EvidenceRow`.
+- Historical target: Remove findings-specific typography, shadow, card, and tab styles that become redundant.
 
 ### 2. Finding Detail
 
@@ -252,13 +264,13 @@ Files:
 
 Tasks:
 
-- [ ] Replace hero with `ContextBar` and `DecisionSummary`.
-- [ ] Replace `FindingDetailActionRail` with `DetailRail`.
-- [ ] Normalize detail tabs through shared tab styling.
-- [ ] Convert object/provider/assignment facts to `DefinitionList`.
-- [ ] Convert source/proof sections to `EvidenceRow`.
-- [ ] Convert TTP context narrative/action cards to evidence rows, compact lists, and caveat callouts.
-- [ ] Remove detail-specific page typography and heavy card styles.
+- Historical target: Replace hero with `ContextBar` and `DecisionSummary`.
+- Historical target: Replace `FindingDetailActionRail` with `DetailRail`.
+- Historical target: Normalize detail tabs through shared tab styling.
+- Historical target: Convert object/provider/assignment facts to `DefinitionList`.
+- Historical target: Convert source/proof sections to `EvidenceRow`.
+- Historical target: Convert TTP context narrative/action cards to evidence rows, compact lists, and caveat callouts.
+- Historical target: Remove detail-specific page typography and heavy card styles.
 
 ### 3. Imports
 
@@ -274,12 +286,12 @@ Files:
 
 Tasks:
 
-- [ ] Normalize imports home with `ContextBar`, `MetricStrip`, compact lists, and `DataTableFrame`.
-- [ ] Convert new import wizard panels to form `PageSection`s plus `DetailRail` for validation/context.
-- [ ] Convert run detail metrics to `MetricStrip`.
-- [ ] Convert diagnostics to `DetailDrawer`, `Callout`, `DefinitionList`, and `EvidenceRow`.
-- [ ] Convert supported formats to registry rows and definition/status rows.
-- [ ] Keep copy scoped to supplied evidence and local import results.
+- Historical target: Normalize imports home with `ContextBar`, `MetricStrip`, compact lists, and `DataTableFrame`.
+- Historical target: Convert new import wizard panels to form `PageSection`s plus `DetailRail` for validation/context.
+- Historical target: Convert run detail metrics to `MetricStrip`.
+- Historical target: Convert diagnostics to `DetailDrawer`, `Callout`, `DefinitionList`, and `EvidenceRow`.
+- Historical target: Convert supported formats to registry rows and definition/status rows.
+- Historical target: Keep copy scoped to supplied evidence and local import results.
 
 ### 4. Providers/Data Sources
 
@@ -294,11 +306,11 @@ Files:
 
 Tasks:
 
-- [ ] Replace provider-specific context wrappers with `ContextBar` and `MetricStrip`.
-- [ ] Preserve sources as `DataTableFrame`.
-- [ ] Convert snapshots, diagnostics, and quality facts to `DefinitionList` and status rows.
-- [ ] Align provider states with `StatusBadge` and source signals with `SignalBadge`.
-- [ ] Remove provider-specific tabs/panel styles where shared styles apply.
+- Historical target: Replace provider-specific context wrappers with `ContextBar` and `MetricStrip`.
+- Historical target: Preserve sources as `DataTableFrame`.
+- Historical target: Convert snapshots, diagnostics, and quality facts to `DefinitionList` and status rows.
+- Historical target: Align provider states with `StatusBadge` and source signals with `SignalBadge`.
+- Historical target: Remove provider-specific tabs/panel styles where shared styles apply.
 
 ### 5. Assets
 
@@ -315,12 +327,12 @@ Files:
 
 Tasks:
 
-- [ ] Preserve table-first inventory through `FilterBar` and `DataTableFrame`.
-- [ ] Convert summary cards to `MetricStrip`.
-- [ ] Convert asset drawer to `DetailDrawer`.
-- [ ] Convert asset metadata and scoring panels to `DefinitionList`, status rows, and `SignalBadge`.
-- [ ] Convert service rollup cards to compact list or table rows.
-- [ ] Remove asset-specific card and typography styles.
+- Historical target: Preserve table-first inventory through `FilterBar` and `DataTableFrame`.
+- Historical target: Convert summary cards to `MetricStrip`.
+- Historical target: Convert asset drawer to `DetailDrawer`.
+- Historical target: Convert asset metadata and scoring panels to `DefinitionList`, status rows, and `SignalBadge`.
+- Historical target: Convert service rollup cards to compact list or table rows.
+- Historical target: Remove asset-specific card and typography styles.
 
 ### 6. Risk Acceptance/Waivers
 
@@ -336,12 +348,12 @@ Files:
 
 Tasks:
 
-- [ ] Preserve register as `DataTableFrame`.
-- [ ] Replace waiver KPI wrappers with `MetricStrip`.
-- [ ] Convert review cards to `DecisionSummary` and status rows.
-- [ ] Convert drawer/form panel stacks to `DetailDrawer`, form `PageSection`s, `DefinitionList`, and `EvidenceRow`.
-- [ ] Align waiver lifecycle and expiry states with `StatusBadge`.
-- [ ] Remove waiver-specific card and badge styles.
+- Historical target: Preserve register as `DataTableFrame`.
+- Historical target: Replace waiver KPI wrappers with `MetricStrip`.
+- Historical target: Convert review cards to `DecisionSummary` and status rows.
+- Historical target: Convert drawer/form panel stacks to `DetailDrawer`, form `PageSection`s, `DefinitionList`, and `EvidenceRow`.
+- Historical target: Align waiver lifecycle and expiry states with `StatusBadge`.
+- Historical target: Remove waiver-specific card and badge styles.
 
 ### 7. Overview/Dashboard
 
@@ -356,12 +368,12 @@ Files:
 
 Tasks:
 
-- [ ] Replace dashboard hero with `ContextBar`.
-- [ ] Replace large metric cards with `MetricStrip`.
-- [ ] Convert side panel cards to `DetailRail`.
-- [ ] Normalize chart frames with `PageSection`.
-- [ ] Keep the dashboard focused on current next action and evidence freshness.
-- [ ] Remove hover shadows and page-specific hero typography.
+- Historical target: Replace dashboard hero with `ContextBar`.
+- Historical target: Replace large metric cards with `MetricStrip`.
+- Historical target: Convert side panel cards to `DetailRail`.
+- Historical target: Normalize chart frames with `PageSection`.
+- Historical target: Keep the dashboard focused on current next action and evidence freshness.
+- Historical target: Remove hover shadows and page-specific hero typography.
 
 ### 8. Reports/Evidence Center
 
@@ -378,12 +390,12 @@ Files:
 
 Tasks:
 
-- [ ] Replace run context panel with `ContextBar` or `DetailRail`.
-- [ ] Preserve history as `DataTableFrame`.
-- [ ] Convert decision and quality panels to `DecisionSummary`, `DefinitionList`, `EvidenceRow`, and `Callout`.
-- [ ] Convert generate drawer to `DetailDrawer`.
-- [ ] Keep artifact cards only when representing bounded generated artifacts; use rows for provenance comparison.
-- [ ] Normalize evidence center tabs.
+- Historical target: Replace run context panel with `ContextBar` or `DetailRail`.
+- Historical target: Preserve history as `DataTableFrame`.
+- Historical target: Convert decision and quality panels to `DecisionSummary`, `DefinitionList`, `EvidenceRow`, and `Callout`.
+- Historical target: Convert generate drawer to `DetailDrawer`.
+- Historical target: Keep artifact cards only when representing bounded generated artifacts; use rows for provenance comparison.
+- Historical target: Normalize evidence center tabs.
 
 ### 9. Projects, TTP Context, Settings
 
@@ -402,11 +414,11 @@ Files:
 
 Tasks:
 
-- [ ] Convert project hero/metrics/selection strip to `ContextBar`, `MetricStrip`, and registry rows.
-- [ ] Preserve project directory as `DataTableFrame`.
-- [ ] Convert TTP context cards to `EvidenceRow`, compact lists, and caveat `Callout`s.
-- [ ] Convert settings hero/cards/tabs to settings `PageSection`s, `DefinitionList`, `Callout`, and status rows.
-- [ ] Remove remaining route-local typography and shadow styles.
+- Historical target: Convert project hero/metrics/selection strip to `ContextBar`, `MetricStrip`, and registry rows.
+- Historical target: Preserve project directory as `DataTableFrame`.
+- Historical target: Convert TTP context cards to `EvidenceRow`, compact lists, and caveat `Callout`s.
+- Historical target: Convert settings hero/cards/tabs to settings `PageSection`s, `DefinitionList`, `Callout`, and status rows.
+- Historical target: Remove remaining route-local typography and shadow styles.
 
 ## Test Commands After Each Migration
 
@@ -439,21 +451,21 @@ If a command fails because dependencies are missing, install dependencies using 
 
 For each migrated route, capture or verify the following before considering the migration complete:
 
-- [ ] Desktop screenshot of the route first viewport.
-- [ ] Mobile screenshot of the route first viewport.
-- [ ] Screenshot of the primary table/list with realistic data.
-- [ ] Screenshot of the empty state.
-- [ ] Screenshot of loading or skeleton state when the route supports it.
-- [ ] Screenshot of the main drawer or right rail if present.
-- [ ] Screenshot of the primary form state if the route has a form.
-- [ ] Evidence that page header appears once and is shell-owned.
-- [ ] Evidence that repeated data uses table/list/row semantics, not decorative cards.
-- [ ] Evidence that object metadata uses definition lists.
-- [ ] Evidence that remediation or acceptance rationale uses decision summaries.
-- [ ] Evidence that source proof/provenance uses evidence rows.
-- [ ] Evidence that badges use shared status/signal semantics.
-- [ ] Evidence that color remains low, density remains compact, borders are thin, and shadows are limited to legitimate overlays/popovers.
-- [ ] Evidence that no new product scope or speculative inference was introduced in route copy.
+- Historical target: Desktop screenshot of the route first viewport.
+- Historical target: Mobile screenshot of the route first viewport.
+- Historical target: Screenshot of the primary table/list with realistic data.
+- Historical target: Screenshot of the empty state.
+- Historical target: Screenshot of loading or skeleton state when the route supports it.
+- Historical target: Screenshot of the main drawer or right rail if present.
+- Historical target: Screenshot of the primary form state if the route has a form.
+- Historical target: Evidence that page header appears once and is shell-owned.
+- Historical target: Evidence that repeated data uses table/list/row semantics, not decorative cards.
+- Historical target: Evidence that object metadata uses definition lists.
+- Historical target: Evidence that remediation or acceptance rationale uses decision summaries.
+- Historical target: Evidence that source proof/provenance uses evidence rows.
+- Historical target: Evidence that badges use shared status/signal semantics.
+- Historical target: Evidence that color remains low, density remains compact, borders are thin, and shadows are limited to legitimate overlays/popovers.
+- Historical target: Evidence that no new product scope or speculative inference was introduced in route copy.
 
 ## Completion Criteria for Each Migration
 

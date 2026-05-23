@@ -14,8 +14,8 @@ import {
 import { Button } from "@/components/ui/button"
 import {
   VpwCommandPanel,
-  VpwCompactMetric,
-  VpwMetricStrip,
+  MetricStrip,
+  type MetricStripMetric,
   VpwPanel,
   VpwSection,
   VpwSectionHeader,
@@ -43,6 +43,33 @@ export function ImportsHomeRoute(props: ImportsHomeRouteProps) {
   const providerSummary = formatProviderFreshness(props.providerStatus)
   const lastRun = props.projectRuns[0] ?? null
   const projectSearch = selectedProjectRouteSearch(props.selectedProjectId)
+  const metrics: MetricStripMetric[] = [
+    {
+      description: props.selectedProject
+        ? "Active project"
+        : "No project selected",
+      icon: <ListChecks aria-hidden="true" className="h-4 w-4" />,
+      label: "Current project",
+      tone: props.selectedProject ? "info" : "warning",
+      value: props.selectedProject?.name ?? "Required",
+    },
+    {
+      description: providerSummary.detail,
+      icon: <Database aria-hidden="true" className="h-4 w-4" />,
+      label: "Provider data",
+      tone: props.providerStatus?.status === "ok" ? "success" : "warning",
+      value: providerSummary.value,
+    },
+    {
+      description: lastRun
+        ? `${runFileLabel(lastRun)} - ${formatDateTime(lastRun.started_at)}`
+        : "No import run recorded yet",
+      icon: <History aria-hidden="true" className="h-4 w-4" />,
+      label: "Last import",
+      tone: lastRun?.status ? runTone(lastRun.status) : "info",
+      value: lastRun ? runStatusLabel(lastRun.status) : "None yet",
+    },
+  ]
 
   return (
     <div className="imports-page-shell vpw-page-stack w-full min-w-0">
@@ -71,37 +98,7 @@ export function ImportsHomeRoute(props: ImportsHomeRouteProps) {
           eyebrow="Evidence intake"
           title="Import workspace"
         >
-          <VpwMetricStrip minCardWidth="13rem">
-            <VpwCompactMetric
-              description={
-                props.selectedProject ? "Active project" : "No project selected"
-              }
-              icon={<ListChecks aria-hidden="true" className="h-4 w-4" />}
-              label="Current project"
-              tone={props.selectedProject ? "info" : "warning"}
-              value={props.selectedProject?.name ?? "Required"}
-            />
-            <VpwCompactMetric
-              description={providerSummary.detail}
-              icon={<Database aria-hidden="true" className="h-4 w-4" />}
-              label="Provider data"
-              tone={
-                props.providerStatus?.status === "ok" ? "success" : "warning"
-              }
-              value={providerSummary.value}
-            />
-            <VpwCompactMetric
-              description={
-                lastRun
-                  ? `${runFileLabel(lastRun)} - ${formatDateTime(lastRun.started_at)}`
-                  : "No import run recorded yet"
-              }
-              icon={<History aria-hidden="true" className="h-4 w-4" />}
-              label="Last import"
-              tone={lastRun?.status ? runTone(lastRun.status) : "info"}
-              value={lastRun ? runStatusLabel(lastRun.status) : "None yet"}
-            />
-          </VpwMetricStrip>
+          <MetricStrip metrics={metrics} minCardWidth="13rem" />
         </VpwCommandPanel>
       </VpwSection>
 

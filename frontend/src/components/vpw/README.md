@@ -42,6 +42,10 @@ Precision Light Analyst usage rules:
 - Use fields, segmented controls, selection cards, status banners, and explicit
   action buttons for write surfaces such as decision capture, waiver review,
   report generation, and provider verification.
+- Route-level KPI/status summaries should use the canonical `MetricStrip`
+  adapter from `WorkbenchComponents.tsx`. Direct `VpwMetricStrip` and
+  `VpwCompactMetric` composition is reserved for VPW primitives and showcase
+  evidence, so route wrappers cannot silently drift into a second KPI system.
 - Keep severity and provider state visible through component tone props and
   state copy. Color alone is not enough.
 - Preserve demo/sample labeling whenever showcase or seeded evidence could be

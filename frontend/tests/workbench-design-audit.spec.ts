@@ -21,6 +21,7 @@ type AuditRoute = {
   readyText: RegExp | string
   segments: number
   slug: string
+  stableText?: RegExp | string
 }
 
 type ScreenshotManifestEntry = {
@@ -43,6 +44,7 @@ const auditRoutes: AuditRoute[] = [
     readyText: /Critical Priority|Priority distribution/i,
     segments: 3,
     slug: "overview",
+    stableText: "Top Remediation Queue",
   },
   {
     name: "Triage",
@@ -50,6 +52,7 @@ const auditRoutes: AuditRoute[] = [
     readyText: /Prioritized findings|Findings queue/i,
     segments: 3,
     slug: "triage",
+    stableText: /Showing|CVE-/,
   },
   {
     name: "Finding Detail",
@@ -58,6 +61,7 @@ const auditRoutes: AuditRoute[] = [
     readyText: /Why this priority\?|Decision core/i,
     segments: 3,
     slug: "finding-detail",
+    stableText: "Recommended action:",
   },
   {
     name: "Imports",
@@ -65,6 +69,7 @@ const auditRoutes: AuditRoute[] = [
     readyText: /Recent Imports|Quick start/i,
     segments: 2,
     slug: "imports",
+    stableText: /Recent Imports|Import history/i,
   },
   {
     name: "New Import",
@@ -72,6 +77,7 @@ const auditRoutes: AuditRoute[] = [
     readyText: "Choose source",
     segments: 3,
     slug: "imports-new",
+    stableText: "CVE list",
   },
   {
     name: "Supported Formats",
@@ -79,6 +85,7 @@ const auditRoutes: AuditRoute[] = [
     readyText: "CVE list",
     segments: 2,
     slug: "imports-formats",
+    stableText: "Trivy JSON",
   },
   {
     name: "Import Run",
@@ -87,6 +94,7 @@ const auditRoutes: AuditRoute[] = [
     readyText: "Source details",
     segments: 2,
     slug: "imports-run",
+    stableText: /Review findings|Diagnostics/,
   },
   {
     name: "Assets",
@@ -94,6 +102,7 @@ const auditRoutes: AuditRoute[] = [
     readyText: /Asset inventory|Asset register/i,
     segments: 4,
     slug: "assets",
+    stableText: /Asset register|analytics-etl-01/,
   },
   {
     name: "Data Sources",
@@ -101,6 +110,7 @@ const auditRoutes: AuditRoute[] = [
     readyText: /Provider status|Source inventory/i,
     segments: 2,
     slug: "providers",
+    stableText: /Source inventory|Provider diagnostics/,
   },
   {
     name: "Risk Acceptance",
@@ -108,6 +118,7 @@ const auditRoutes: AuditRoute[] = [
     readyText: /Decision register|Accepted risk control center/i,
     segments: 4,
     slug: "waivers",
+    stableText: /DEMO-RISK|No accepted-risk lifecycle debt/,
   },
   {
     name: "Evidence Center",
@@ -115,6 +126,7 @@ const auditRoutes: AuditRoute[] = [
     readyText: /Evidence summary|Generated artifacts/i,
     segments: 3,
     slug: "reports",
+    stableText: /Generated artifacts|evidence-bundle\.zip/,
   },
   {
     name: "Workspace Settings",
@@ -122,6 +134,7 @@ const auditRoutes: AuditRoute[] = [
     readyText: "Workspace state",
     segments: 1,
     slug: "settings",
+    stableText: "Credentials are never displayed",
   },
   {
     name: "Projects",
@@ -129,6 +142,7 @@ const auditRoutes: AuditRoute[] = [
     readyText: /Workspace projects|Projects directory/i,
     segments: 4,
     slug: "projects",
+    stableText: /Projects directory|Online Shop Demo Workspace/,
   },
 ]
 
@@ -146,6 +160,7 @@ test("design audit captures the 36 VPW route section screenshots", async ({
     await page.goto(route.path(workspace, findingId))
     await expect(page.getByRole("main")).toBeVisible()
     await waitForVisibleText(page, route.readyText)
+    await waitForStableRouteContent(page, route)
     await page.evaluate(() => document.fonts.ready.then(() => undefined))
 
     const content = page
@@ -236,6 +251,54 @@ async function waitForVisibleText(page: Page, text: RegExp | string) {
       )
     },
     matcher,
+    { timeout: 60_000 },
+  )
+}
+
+async function waitForStableRouteContent(page: Page, route: AuditRoute) {
+  if (route.stableText) {
+    await waitForVisibleText(page, route.stableText)
+  }
+
+  await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {
+    // Some runs keep dev-server bookkeeping requests alive; DOM stability below
+    // is the authoritative screenshot gate.
+  })
+
+  await page.waitForFunction(
+    () => {
+      const content = document.querySelector(
+        'section[aria-label="Workbench page content"]',
+      )
+      if (!content) return false
+
+      const visible = (element: Element) => {
+        const rect = element.getBoundingClientRect()
+        const style = getComputedStyle(element)
+        return (
+          rect.width > 0 &&
+          rect.height > 0 &&
+          style.display !== "none" &&
+          style.visibility !== "hidden"
+        )
+      }
+
+      const visiblePendingSurfaces = [
+        ...content.querySelectorAll('[data-slot="skeleton"], .animate-pulse'),
+      ].filter(visible)
+      if (visiblePendingSurfaces.length > 0) return false
+
+      const visibleLoadingText = [...content.querySelectorAll("*")]
+        .filter(visible)
+        .some((element) =>
+          /^(?:Loading|Loading\.\.\.)$/i.test(
+            (element.textContent ?? "").trim(),
+          ),
+        )
+
+      return !visibleLoadingText
+    },
+    {},
     { timeout: 60_000 },
   )
 }

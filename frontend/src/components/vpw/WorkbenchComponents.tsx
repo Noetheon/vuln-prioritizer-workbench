@@ -13,6 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
 import { VpwBadge, type BadgeDensity, type VpwBadgeTone } from "./VpwBadge"
@@ -190,6 +191,7 @@ export function ContextBar({
 }
 
 export type MetricStripMetric = {
+  ariaLabel?: string
   label: string
   value: ReactNode
   description?: ReactNode
@@ -201,32 +203,57 @@ export type MetricStripProps = Omit<
   ComponentPropsWithoutRef<"section">,
   "children"
 > & {
+  loading?: boolean
+  loadingCardClassName?: string
+  loadingCount?: number
+  maxCardWidth?: string
   maxVisible?: 3 | 4 | 5
   metrics: readonly MetricStripMetric[]
+  minCardWidth?: string
 }
 
 export function MetricStrip({
   className,
+  loading = false,
+  loadingCardClassName,
+  loadingCount,
+  maxCardWidth,
   maxVisible = 5,
   metrics,
+  minCardWidth = "10rem",
   ...props
 }: MetricStripProps) {
+  const visibleMetrics = metrics.slice(0, maxVisible)
+  const loadingSlotKeys = Array.from(
+    { length: loadingCount ?? Math.max(visibleMetrics.length, 3) },
+    (_, index) => `metric-loading-slot-${index + 1}`,
+  )
+
   return (
     <VpwMetricStrip
       className={cn("workbench-metric-strip", className)}
-      minCardWidth="10rem"
+      maxCardWidth={maxCardWidth}
+      minCardWidth={minCardWidth}
       {...props}
     >
-      {metrics.slice(0, maxVisible).map((metric) => (
-        <VpwCompactMetric
-          description={metric.description}
-          icon={metric.icon}
-          key={metric.label}
-          label={metric.label}
-          tone={metric.tone}
-          value={metric.value}
-        />
-      ))}
+      {loading
+        ? loadingSlotKeys.map((slotKey) => (
+            <Skeleton
+              className={cn("h-[4.5rem]", loadingCardClassName)}
+              key={slotKey}
+            />
+          ))
+        : visibleMetrics.map((metric) => (
+            <VpwCompactMetric
+              aria-label={metric.ariaLabel}
+              description={metric.description}
+              icon={metric.icon}
+              key={metric.label}
+              label={metric.label}
+              tone={metric.tone}
+              value={metric.value}
+            />
+          ))}
     </VpwMetricStrip>
   )
 }

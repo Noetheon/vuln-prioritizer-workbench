@@ -195,6 +195,9 @@ Components to narrow or retire from Workbench route use:
 - Generic `Card` route wrappers from `frontend/src/components/ui/card.tsx`.
 - Card-based state wrappers in `frontend/src/components/states/EmptyState.tsx`, `LoadingSkeleton.tsx`, and `ErrorState.tsx`.
 - Former route-local metric-card implementations.
+- Direct route composition with `VpwMetricStrip` and `VpwCompactMetric`; route
+  code should use the canonical `MetricStrip` adapter, while VPW primitives and
+  showcase evidence may continue to use the lower-level components.
 - Route-local hero, tab, drawer, panel, and badge variants listed as baseline
   findings in `docs/workbench-ui-audit.md`.
 

@@ -5,8 +5,8 @@ import type {
 import { formatEpss, formatNullableNumber } from "@/lib/risk-format"
 import {
   VpwCommandPanel,
-  VpwCompactMetric,
-  VpwMetricStrip,
+  MetricStrip,
+  type MetricStripMetric,
   RiskBadge,
   SignalChip,
   StatusLozenge,
@@ -41,6 +41,32 @@ export function FindingDetailContext({
     `${action.title}. Validate affected assets, then record the fix path in Triage.`,
     150,
   )
+  const riskMetrics: MetricStripMetric[] = [
+    {
+      description: "Operational priority",
+      label: "Risk score",
+      tone: "critical",
+      value: formatNullableNumber(finding.risk_score),
+    },
+    {
+      description: "Probability signal",
+      label: "EPSS",
+      tone: "warning",
+      value: formatEpss(finding.epss),
+    },
+    {
+      description: "Impact signal",
+      label: "CVSS",
+      tone: "info",
+      value: formatNullableNumber(finding.cvss_base_score),
+    },
+    {
+      description: "Response target",
+      label: "SLA",
+      tone: "success",
+      value: findingSlaLabel(finding.priority),
+    },
+  ]
 
   return (
     <>
@@ -90,32 +116,11 @@ export function FindingDetailContext({
         role="region"
         title={<span className="font-mono">{finding.cve_id}</span>}
       >
-        <VpwMetricStrip aria-label="Risk indicators" minCardWidth="10.75rem">
-          <VpwCompactMetric
-            description="Operational priority"
-            label="Risk score"
-            tone="critical"
-            value={formatNullableNumber(finding.risk_score)}
-          />
-          <VpwCompactMetric
-            description="Probability signal"
-            label="EPSS"
-            tone="warning"
-            value={formatEpss(finding.epss)}
-          />
-          <VpwCompactMetric
-            description="Impact signal"
-            label="CVSS"
-            tone="info"
-            value={formatNullableNumber(finding.cvss_base_score)}
-          />
-          <VpwCompactMetric
-            description="Response target"
-            label="SLA"
-            tone="success"
-            value={findingSlaLabel(finding.priority)}
-          />
-        </VpwMetricStrip>
+        <MetricStrip
+          aria-label="Risk indicators"
+          metrics={riskMetrics}
+          minCardWidth="10.75rem"
+        />
       </VpwCommandPanel>
     </>
   )

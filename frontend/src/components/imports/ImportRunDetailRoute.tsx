@@ -5,8 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   VpwCommandPanel,
   VpwEmptyState,
-  VpwCompactMetric,
-  VpwMetricStrip,
+  MetricStrip,
+  type MetricStripMetric,
   VpwPanel,
   VpwSection,
   VpwSkeletonStack,
@@ -80,6 +80,31 @@ export function ImportRunDetailRoute({
     (selectedRunSummary.finding_count ?? 0) > 0 ||
     (selectedRunSummary.created_findings ?? 0) > 0 ||
     (selectedRunSummary.updated_findings ?? 0) > 0
+  const metrics: MetricStripMetric[] = [
+    {
+      label: "Status",
+      tone: runTone(selectedRunSummary.status),
+      value: runStatusLabel(selectedRunSummary.status),
+    },
+    {
+      label: "Created findings",
+      tone:
+        (selectedRunSummary.created_findings ?? 0) > 0 ? "success" : "info",
+      value: selectedRunSummary.created_findings ?? 0,
+    },
+    {
+      label: "Updated findings",
+      tone:
+        (selectedRunSummary.updated_findings ?? 0) > 0 ? "info" : "support",
+      value: selectedRunSummary.updated_findings ?? 0,
+    },
+    {
+      label: "Ignored lines",
+      tone:
+        (selectedRunSummary.ignored_lines ?? 0) > 0 ? "warning" : "success",
+      value: selectedRunSummary.ignored_lines ?? 0,
+    },
+  ]
 
   return (
     <div className="imports-page-shell vpw-page-stack w-full min-w-0">
@@ -110,40 +135,7 @@ export function ImportRunDetailRoute({
           eyebrow="Import run"
           title="Run evidence context"
         >
-          <VpwMetricStrip minCardWidth="10rem">
-            <VpwCompactMetric
-              label="Status"
-              tone={runTone(selectedRunSummary.status)}
-              value={runStatusLabel(selectedRunSummary.status)}
-            />
-            <VpwCompactMetric
-              label="Created findings"
-              tone={
-                (selectedRunSummary.created_findings ?? 0) > 0
-                  ? "success"
-                  : "info"
-              }
-              value={selectedRunSummary.created_findings ?? 0}
-            />
-            <VpwCompactMetric
-              label="Updated findings"
-              tone={
-                (selectedRunSummary.updated_findings ?? 0) > 0
-                  ? "info"
-                  : "support"
-              }
-              value={selectedRunSummary.updated_findings ?? 0}
-            />
-            <VpwCompactMetric
-              label="Ignored lines"
-              tone={
-                (selectedRunSummary.ignored_lines ?? 0) > 0
-                  ? "warning"
-                  : "success"
-              }
-              value={selectedRunSummary.ignored_lines ?? 0}
-            />
-          </VpwMetricStrip>
+          <MetricStrip metrics={metrics} minCardWidth="10rem" />
         </VpwCommandPanel>
       </VpwSection>
 
