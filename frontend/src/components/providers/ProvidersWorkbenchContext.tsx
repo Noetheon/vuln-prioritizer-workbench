@@ -13,8 +13,8 @@ import type { ProviderStatusPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
   VpwCommandPanel,
-  VpwCompactMetric,
-  VpwMetricStrip,
+  MetricStrip,
+  type MetricStripMetric,
   type VpwCompactTone,
   VpwPanel,
   VpwSection,
@@ -55,16 +55,14 @@ function ProviderContextItem({
   label: string
   tone: VpwCompactTone
   value: string
-}) {
-  return (
-    <VpwCompactMetric
-      description={detail}
-      icon={icon}
-      label={label}
-      tone={tone}
-      value={value}
-    />
-  )
+}): MetricStripMetric {
+  return {
+    description: detail,
+    icon,
+    label,
+    tone,
+    value,
+  }
 }
 
 export function ProvidersContext({
@@ -80,6 +78,47 @@ export function ProvidersContext({
     .locked_provider_data
     ? "support"
     : "info"
+  const metrics: MetricStripMetric[] = [
+    ProviderContextItem({
+      detail: "Provider signals for prioritization",
+      icon: <Signal aria-hidden="true" />,
+      label: "Provider health",
+      tone: providerHealthTone(providerStatus),
+      value: providerHealthLabel(providerStatus),
+    }),
+    ProviderContextItem({
+      detail: "Stored cache age and sync state",
+      icon: <Database aria-hidden="true" />,
+      label: "Freshness",
+      tone: providerFreshnessTone(providerStatus),
+      value: providerFreshnessLabel(providerStatus),
+    }),
+    ProviderContextItem({
+      detail: "Replay behavior for reports",
+      icon: <LockKeyhole aria-hidden="true" />,
+      label: "Snapshot",
+      tone: snapshotTone,
+      value: snapshotModeLabel(providerStatus),
+    }),
+    ProviderContextItem({
+      detail: "Report artifact metadata",
+      icon: <FileCheck2 aria-hidden="true" />,
+      label: "Evidence readiness",
+      tone: evidenceReadinessCardTone(providerStatus),
+      value: evidenceReadiness,
+    }),
+    ProviderContextItem({
+      detail: "Source warnings and update errors",
+      icon: <AlertTriangle aria-hidden="true" />,
+      label: "Warnings",
+      tone: providerStatus?.last_error
+        ? "critical"
+        : warningCount > 0
+          ? "warning"
+          : "success",
+      value: warningSummary(providerStatus),
+    }),
+  ]
 
   return (
     <VpwSection>
@@ -110,49 +149,11 @@ export function ProvidersContext({
         eyebrow="Data source trust"
         title="Provider status"
       >
-        <VpwMetricStrip className="providers-context-strip" minCardWidth="13rem">
-          <ProviderContextItem
-            detail="Provider signals for prioritization"
-            icon={<Signal aria-hidden="true" />}
-            label="Provider health"
-            tone={providerHealthTone(providerStatus)}
-            value={providerHealthLabel(providerStatus)}
-          />
-          <ProviderContextItem
-            detail="Stored cache age and sync state"
-            icon={<Database aria-hidden="true" />}
-            label="Freshness"
-            tone={providerFreshnessTone(providerStatus)}
-            value={providerFreshnessLabel(providerStatus)}
-          />
-          <ProviderContextItem
-            detail="Replay behavior for reports"
-            icon={<LockKeyhole aria-hidden="true" />}
-            label="Snapshot"
-            tone={snapshotTone}
-            value={snapshotModeLabel(providerStatus)}
-          />
-          <ProviderContextItem
-            detail="Report artifact metadata"
-            icon={<FileCheck2 aria-hidden="true" />}
-            label="Evidence readiness"
-            tone={evidenceReadinessCardTone(providerStatus)}
-            value={evidenceReadiness}
-          />
-          <ProviderContextItem
-            detail="Source warnings and update errors"
-            icon={<AlertTriangle aria-hidden="true" />}
-            label="Warnings"
-            tone={
-              providerStatus?.last_error
-                ? "critical"
-                : warningCount > 0
-                  ? "warning"
-                  : "success"
-            }
-            value={warningSummary(providerStatus)}
-          />
-        </VpwMetricStrip>
+        <MetricStrip
+          className="providers-context-strip"
+          metrics={metrics}
+          minCardWidth="13rem"
+        />
       </VpwCommandPanel>
     </VpwSection>
   )
