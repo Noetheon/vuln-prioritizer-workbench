@@ -17,7 +17,7 @@ test("assets route uses inventory table with drawer modes", async ({ page }) => 
 
   await page.goto("/assets")
   await expect(
-    page.getByRole("heading", { level: 2, name: "Asset context workspace" }),
+    page.getByRole("heading", { level: 2, name: "Asset context" }),
   ).toBeVisible()
   const assetsTable = page.getByRole("table", { name: "Assets table" })
   await expect(assetsTable).toContainText("build-host-1")

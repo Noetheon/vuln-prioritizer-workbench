@@ -22,11 +22,11 @@ import {
   DashboardDemoBanner,
   DashboardSetupEmptyState,
 } from "./DashboardEmptyState"
-import { DashboardHero } from "./DashboardHero"
-import { DashboardMetricGrid } from "./DashboardMetricGrid"
+import { DashboardContextBar } from "./DashboardContextBar"
+import { DashboardDetailRail } from "./DashboardDetailRail"
+import { DashboardMetricStrip } from "./DashboardMetricStrip"
 import { DashboardProviderWarning } from "./DashboardProviderWarning"
 import { DashboardRemediationSection } from "./DashboardRemediationSection"
-import { DashboardSidePanel } from "./DashboardSidePanel"
 import { DashboardSignalOverviewFallback } from "./DashboardSignalOverviewFallback"
 import {
   latestRunFacts,
@@ -145,7 +145,7 @@ export function RiskOperationsDashboard({
 
   const latestRun = effectiveRuns[0] ?? null
   const acceptedRiskCount = effectiveSummary?.counts_by_status?.accepted ?? 0
-  const summaryCards = useMemo(
+  const summaryMetrics = useMemo(
     () =>
       buildDashboardMetricSummaries({
         acceptedRiskCount,
@@ -188,7 +188,7 @@ export function RiskOperationsDashboard({
 
   const dashboardContent = (
     <div className="min-w-0 flex flex-col gap-4">
-      <DashboardHero
+      <DashboardContextBar
         demoWorkspaceEnabled={demoWorkspaceEnabled}
         demoWorkspacePending={demoWorkspacePending}
         effectiveProjects={effectiveProjects}
@@ -246,7 +246,10 @@ export function RiskOperationsDashboard({
         />
       ) : (
         <>
-          <DashboardMetricGrid cards={summaryCards} isLoading={isLoading} />
+          <DashboardMetricStrip
+            isLoading={isLoading}
+            metrics={summaryMetrics}
+          />
           <Suspense fallback={<DashboardSignalOverviewFallback />}>
             <DashboardSignalOverview
               epssItems={epssItems}
@@ -299,7 +302,7 @@ export function RiskOperationsDashboard({
         >
           {dashboardContent}
           {!showEmptyState ? (
-            <DashboardSidePanel
+            <DashboardDetailRail
               dataQualityError={dataQualityError}
               dataQualityWarnings={dataQualityWarnings}
               effectiveProviderStatus={effectiveProviderStatus}

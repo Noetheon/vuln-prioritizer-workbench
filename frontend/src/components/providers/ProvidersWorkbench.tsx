@@ -8,7 +8,7 @@ import {
   ProviderSnapshotDetails,
   ProviderSourcesTable,
   ProviderStatusAlerts,
-  ProvidersHero,
+  ProvidersContext,
 } from "./ProvidersWorkbenchSections"
 import {
   type ProvidersWorkbenchProps,
@@ -30,8 +30,8 @@ export function ProvidersWorkbench({
   const counts = providerSourceCounts(rows)
 
   return (
-    <VpwPageContainer className="providers-workbench flex flex-col gap-6 px-0 py-0">
-      <ProvidersHero
+    <VpwPageContainer className="providers-workbench vpw-page-stack px-0 py-0">
+      <ProvidersContext
         onRefreshProviderStatus={onRefreshProviderStatus}
         providerStatus={providerStatus}
         providerStatusError={providerStatusError}

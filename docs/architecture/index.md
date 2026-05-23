@@ -89,13 +89,13 @@ Current normalized types:
 
 Supported input families currently normalize into the same occurrence model:
 
-- line-oriented CVE lists
-- scanner JSON
+- line-oriented CVE lists and generic occurrence CSV
+- scanner JSON and XML exports
 - SBOM JSON
 - advisory/export JSON
 
-The old `backend/src/vuln_prioritizer/parser.py` compatibility facade has been
-removed. Active Workbench and domain code should use `InputLoader`, importer
+The old `parser.py` compatibility facade under `backend/src/vuln_prioritizer`
+has been removed. Active Workbench and domain code should use `InputLoader`, importer
 adapters, or the focused parser modules under
 `backend/src/vuln_prioritizer/inputs/parsers/`.
 
@@ -127,7 +127,8 @@ Current data sources:
 - NVD for CVSS, description, references, and selected metadata
 - FIRST EPSS
 - CISA KEV
-- optional local ATT&CK mappings from `local-csv` or `ctid-json`
+- optional local ATT&CK mappings from `local-csv`, `local-curated`, or
+  `ctid-json`
 
 ATT&CK remains optional and file-based. There is no required remote ATT&CK dependency in the current design.
 
@@ -154,8 +155,8 @@ Current architectural boundary:
 
 ### Reporting
 
-The old `backend/src/vuln_prioritizer/reporter.py` facade has been removed.
-Active report generation is owned by the Workbench services under
+The old `reporter.py` facade under `backend/src/vuln_prioritizer` has been
+removed. Active report generation is owned by the Workbench services under
 `backend/app/services/report_*` plus framework-neutral renderers under
 `backend/src/vuln_prioritizer/reporting_*`.
 

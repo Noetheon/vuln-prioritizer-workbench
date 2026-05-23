@@ -1,8 +1,7 @@
 export { ActiveProjectSection } from "./ProjectsWorkbenchActive"
 export { ProjectDirectory } from "./ProjectsWorkbenchDirectory"
 export {
-  ProjectHero,
+  ProjectContext,
   ProjectMetrics,
-  ProjectSelectionStrip,
 } from "./ProjectsWorkbenchOverview"
 export { ProjectSetupSection } from "./ProjectsWorkbenchSetup"

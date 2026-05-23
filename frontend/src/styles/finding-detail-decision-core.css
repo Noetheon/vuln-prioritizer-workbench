@@ -32,103 +32,18 @@
   gap: 16px;
 }
 
-.finding-decision-hero {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(360px, 0.58fr);
-  align-items: stretch;
-  gap: 20px;
-  overflow: hidden;
-  border: 1px solid var(--vpw-border-default);
-  border-radius: var(--vpw-radius-lg);
-  padding: 24px;
-  background: var(--vpw-bg-card);
-  box-shadow: none;
-}
-
-.finding-decision-hero::before {
-  content: none;
-}
-
-.finding-decision-hero-copy {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  justify-content: center;
-  gap: 12px;
-}
-
-.finding-decision-kicker {
-  width: fit-content;
-  border: 1px solid color-mix(in srgb, var(--vpw-teal) 30%, var(--vpw-bg-card));
-  background: color-mix(in srgb, var(--vpw-teal) 18%, var(--vpw-bg-card));
-  color: color-mix(in srgb, var(--vpw-teal) 76%, var(--vpw-text-primary));
-}
-
-.finding-decision-hero h2 {
-  margin: 0;
-  color: var(--vpw-text-primary);
-  font-size: 2.45rem;
-  font-weight: 780;
-  letter-spacing: 0;
-  line-height: 1.05;
-}
-
-.finding-decision-hero p {
-  max-width: 940px;
-  margin: 0;
-  color: var(--vpw-text-secondary);
-  font-size: 1rem;
-  line-height: 1.55;
-}
-
 .finding-decision-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.finding-decision-hero-metrics {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.finding-decision-hero-metrics li,
 .finding-evidence-summary-card {
   border: 1px solid var(--vpw-border-default);
   border-radius: var(--vpw-radius-lg);
   background: var(--vpw-bg-card);
 }
 
-.finding-decision-hero-metrics li {
-  display: grid;
-  min-height: 106px;
-  align-content: center;
-  gap: 7px;
-  padding: 14px;
-  box-shadow: none;
-}
-
-.finding-hero-metric-support {
-  background: var(--vpw-bg-card);
-}
-
-.finding-hero-metric-primary {
-  border-color: var(--vpw-border-default);
-  background: var(--vpw-bg-card);
-  box-shadow: none;
-}
-
-.finding-hero-metric-decision {
-  border-color: var(--vpw-border-default);
-  background: var(--vpw-bg-card);
-}
-
-.finding-decision-hero-metrics span,
 .finding-decision-reasons dt,
 .finding-decision-definition-list dt,
 .finding-provider-reasons > span,
@@ -141,24 +56,12 @@
   text-transform: uppercase;
 }
 
-.finding-decision-hero-metrics strong {
-  color: var(--vpw-text-primary);
-  font-size: 1.82rem;
-  line-height: 1;
-}
-
 .finding-decision-workflow .vpw-label,
 .finding-decision-reasons dt,
 .finding-decision-definition-list dt {
   color: var(--vpw-text-secondary);
 }
 
-.finding-hero-metric-primary strong {
-  color: var(--vpw-teal);
-  font-size: 2.34rem;
-}
-
-.finding-decision-hero-metrics small,
 .finding-decision-fact-grid p,
 .finding-evidence-grid p,
 .finding-detection-note p {
@@ -357,85 +260,8 @@
   margin-top: 14px;
 }
 
-.finding-detail-header-band {
-  display: grid;
-  grid-template-areas:
-    "copy action"
-    "metrics metrics";
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
-  gap: 1px;
-  overflow: hidden;
-  border: 1px solid var(--vpw-border-default);
-  border-radius: var(--vpw-radius-xl);
-  background: var(--vpw-border-subtle);
-  box-shadow: none;
-}
-
-.finding-detail-header-copy,
-.finding-detail-header-action {
-  background: var(--vpw-bg-card);
-  padding: clamp(1rem, 1.45vw, 1.35rem);
-}
-
-.finding-detail-header-copy {
-  display: grid;
-  grid-area: copy;
-  align-content: center;
-  gap: 0.55rem;
-}
-
-.finding-detail-kicker {
-  width: fit-content;
-}
-
-.finding-detail-header-copy h2 {
-  margin: 0;
-  color: var(--vpw-text-primary);
-  font-size: 2rem;
-  font-weight: 780;
-  letter-spacing: 0;
-  line-height: 1.08;
-}
-
-.finding-detail-header-copy p {
-  max-width: 76ch;
-  margin: 0;
-  color: var(--vpw-text-secondary);
-  line-height: 1.55;
-}
-
-.finding-detail-header-copy .finding-detail-component-line {
-  color: var(--vpw-text-primary);
-  font-weight: 700;
-}
-
-.finding-detail-header-metrics {
-  display: grid;
-  grid-area: metrics;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1px;
-  margin: 0;
-  padding: 0;
-  background: var(--vpw-border-subtle);
-  list-style: none;
-}
-
-.finding-detail-header-metrics li {
-  display: grid;
-  min-height: 5.8rem;
-  align-content: center;
-  gap: 0.35rem;
-  padding: 0.82rem 1rem;
-  background: var(--vpw-bg-card);
-}
-
-.finding-detail-header-metrics span,
-.finding-detail-header-action span,
 .finding-decision-section__header span,
-.finding-detail-action-rail__header span,
-.finding-detail-action-score span,
 .finding-detail-action-block span,
-.finding-detail-action-list dt,
 .finding-provider-reasons summary > div > span,
 .finding-provider-reasons__count {
   color: var(--vpw-text-muted);
@@ -445,52 +271,11 @@
   text-transform: uppercase;
 }
 
-.finding-detail-header-metrics .vpw-badge__label,
-.finding-detail-action-score .vpw-badge__label {
-  color: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-  text-transform: none;
-}
-
-.finding-detail-header-metrics strong {
-  color: var(--vpw-text-primary);
-  font-size: 1.45rem;
-  line-height: 1;
-}
-
-.finding-detail-header-metrics small {
-  color: var(--vpw-text-muted);
-  font-size: 0.78rem;
-  line-height: 1.25;
-}
-
-.finding-detail-header-action {
-  display: grid;
-  grid-area: action;
-  align-content: center;
-  gap: 0.45rem;
-  background: color-mix(in srgb, var(--vpw-bg-panel) 74%, var(--vpw-bg-card));
-  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--vpw-teal) 72%, var(--vpw-bg-card));
-}
-
-.finding-detail-header-action strong {
-  color: var(--vpw-text-primary);
-  font-size: 1rem;
-  line-height: 1.45;
-}
-
-.finding-detail-header-action small {
-  color: var(--vpw-text-muted);
-  font-size: 0.8rem;
-  line-height: 1.35;
-}
-
 .finding-detail-workspace-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+  grid-template-columns: minmax(0, 1fr) minmax(290px, 320px);
   align-items: start;
-  gap: 1rem;
+  gap: 1.1rem;
 }
 
 .finding-detail-workspace-main {
@@ -502,28 +287,8 @@
 .finding-detail-action-rail {
   position: sticky;
   top: 1rem;
-  display: grid;
-  min-width: 0;
-  gap: 0.85rem;
-  border: 1px solid var(--vpw-border-default);
-  border-radius: var(--vpw-radius-lg);
-  padding: 0.95rem;
-  background: var(--vpw-bg-card);
 }
 
-.finding-detail-action-rail__header {
-  display: grid;
-  gap: 0.25rem;
-}
-
-.finding-detail-action-rail__header strong {
-  color: var(--vpw-text-primary);
-  font-size: 0.95rem;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-}
-
-.finding-detail-action-rail__badges,
 .finding-detail-action-buttons {
   display: flex;
   min-width: 0;
@@ -531,45 +296,12 @@
   gap: 0.5rem;
 }
 
-.finding-detail-action-score,
-.finding-detail-action-block {
-  display: grid;
-  gap: 0.4rem;
-  border-top: 1px solid var(--vpw-border-subtle);
-  padding-top: 0.85rem;
-}
-
 .finding-detail-action-block p {
   margin: 0;
   color: var(--vpw-text-primary);
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1.45;
-}
-
-.finding-detail-action-list {
-  display: grid;
-  gap: 0;
-  margin: 0;
-  border-top: 1px solid var(--vpw-border-subtle);
-  background: transparent;
-}
-
-.finding-decision-workflow .finding-detail-action-list div {
-  display: grid;
-  gap: 0.25rem;
-  border-bottom: 1px solid var(--vpw-border-subtle);
-  padding: 0.68rem 0;
-  background: transparent;
-}
-
-.finding-detail-action-list dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-  color: var(--vpw-text-primary);
   font-size: 0.88rem;
-  font-weight: 700;
-  line-height: 1.35;
+  font-weight: 650;
+  line-height: 1.45;
 }
 
 .finding-detail-action-buttons .vpw-button {
@@ -706,7 +438,7 @@
   min-width: 0;
 }
 
-.finding-provider-reasons summary strong {
+.finding-decision-workflow .finding-provider-reasons summary strong {
   color: var(--vpw-text-primary);
   font-size: 0.95rem;
   font-weight: 760;
@@ -779,25 +511,7 @@
   line-height: 1.42;
 }
 
-@media (max-width: 1280px) {
-  .finding-detail-workspace-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .finding-detail-action-rail {
-    position: static;
-    grid-row: 1;
-  }
-}
-
 @media (max-width: 980px) {
-  .finding-detail-header-band {
-    grid-template-areas:
-      "copy"
-      "metrics";
-    grid-template-columns: 1fr;
-  }
-
   .finding-decision-section .finding-decision-reasons {
     grid-template-columns: 1fr;
   }
@@ -807,121 +521,6 @@
   .finding-decision-section__header {
     flex-direction: column;
   }
-
-  .finding-detail-header-metrics {
-    grid-template-columns: 1fr;
-  }
-
-  .finding-detail-header-action {
-    box-shadow: none;
-  }
-}
-
-.finding-detail-header-band {
-  grid-template-areas:
-    "copy"
-    "metrics";
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-  border-radius: var(--vpw-radius-lg);
-  background: var(--vpw-bg-card);
-}
-
-.finding-detail-header-copy,
-.finding-detail-header-action {
-  padding: clamp(1rem, 1.2vw, 1.25rem);
-}
-
-.finding-detail-header-copy {
-  gap: 0.48rem;
-}
-
-.finding-detail-header-copy h2 {
-  font-size: 1.9rem;
-}
-
-.finding-detail-header-copy p {
-  max-width: 86ch;
-  font-size: 0.92rem;
-}
-
-.finding-detail-header-copy .finding-detail-recommendation-line {
-  display: flex;
-  max-width: 96ch;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.55rem;
-  border-top: 1px solid var(--vpw-border-subtle);
-  padding-top: 0.58rem;
-  color: var(--vpw-text-secondary);
-  font-size: 0.88rem;
-}
-
-.finding-detail-recommendation-line span {
-  color: var(--vpw-text-muted);
-  font-size: 0.72rem;
-  font-weight: 840;
-  text-transform: uppercase;
-}
-
-.finding-detail-header-action {
-  border-left: 1px solid var(--vpw-border-subtle);
-  background: var(--vpw-bg-card);
-  box-shadow: none;
-}
-
-.finding-detail-header-action strong {
-  font-size: 1.02rem;
-  line-height: 1.3;
-}
-
-.finding-detail-header-action p {
-  margin: 0;
-  color: var(--vpw-text-secondary);
-  font-size: 0.88rem;
-  line-height: 1.45;
-}
-
-.finding-detail-header-metrics {
-  border-top: 1px solid var(--vpw-border-subtle);
-  background: var(--vpw-bg-card);
-}
-
-.finding-detail-header-metrics li {
-  min-height: 4.9rem;
-  border-right: 1px solid var(--vpw-border-subtle);
-  padding: 0.78rem 1rem;
-}
-
-.finding-detail-header-metrics li:last-child {
-  border-right: 0;
-}
-
-.finding-detail-header-metrics strong {
-  font-size: 1.18rem;
-}
-
-.finding-detail-workspace-grid {
-  grid-template-columns: minmax(0, 1fr) minmax(290px, 320px);
-  gap: 1.1rem;
-}
-
-.finding-detail-action-rail {
-  position: sticky;
-  grid-row: auto;
-  top: 1rem;
-  gap: 0.7rem;
-  border-radius: var(--vpw-radius-lg);
-  padding: 1rem;
-  box-shadow: none;
-}
-
-.finding-detail-action-rail__header {
-  border-bottom: 1px solid var(--vpw-border-subtle);
-  padding-bottom: 0.78rem;
-}
-
-.finding-detail-action-rail__badges {
-  gap: 0.42rem;
 }
 
 @media (max-width: 1320px) {
@@ -940,29 +539,6 @@
   border-radius: var(--vpw-radius-md);
   padding: 0.75rem;
   background: var(--vpw-bg-panel);
-}
-
-.finding-detail-action-block p {
-  color: var(--vpw-text-primary);
-  font-size: 0.88rem;
-  font-weight: 650;
-}
-
-.finding-detail-action-list {
-  border-top: 0;
-}
-
-.finding-decision-workflow .finding-detail-action-list div {
-  grid-template-columns: minmax(6.8rem, 0.5fr) minmax(0, 1fr);
-  align-items: start;
-  gap: 0.6rem;
-  padding: 0.58rem 0;
-}
-
-.finding-detail-action-list dd {
-  font-size: 0.86rem;
-  font-weight: 650;
-  text-align: right;
 }
 
 .finding-decision-section {
@@ -1064,8 +640,8 @@
   text-transform: uppercase;
 }
 
-.finding-decision-owner-summary strong,
-.finding-decision-reasons-heading strong {
+.finding-decision-workflow .finding-decision-owner-summary strong,
+.finding-decision-workflow .finding-decision-reasons-heading strong {
   color: var(--vpw-text-primary);
   font-size: 0.95rem;
   line-height: 1.3;
@@ -1308,13 +884,6 @@
 }
 
 @media (max-width: 980px) {
-  .finding-detail-header-band {
-    grid-template-areas:
-      "copy"
-      "metrics";
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .finding-decision-brief,
   .finding-decision-brief__facts {
     grid-template-columns: 1fr;
@@ -1327,21 +896,5 @@
 
   .finding-decision-section .finding-decision-brief__facts div:last-child {
     border-bottom: 0;
-  }
-}
-
-@media (max-width: 640px) {
-  .finding-detail-header-action {
-    border-left: 0;
-    border-top: 1px solid var(--vpw-border-subtle);
-    box-shadow: inset 0 2px 0 var(--vpw-red);
-  }
-
-  .finding-decision-workflow .finding-detail-action-list div {
-    grid-template-columns: 1fr;
-  }
-
-  .finding-detail-action-list dd {
-    text-align: left;
   }
 }

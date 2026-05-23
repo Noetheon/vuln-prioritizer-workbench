@@ -184,28 +184,17 @@ export function useProjectRunsQuery(projectId: string, enabled: boolean) {
 }
 
 export function useProjectAssetsQuery({
-  owner,
   projectId,
-  service,
 }: {
-  owner: string
   projectId: string
-  service: string
 }) {
-  const ownerFilter = owner.trim()
-  const serviceFilter = service.trim()
   return useQuery({
     enabled: Boolean(projectId),
     queryFn: ({ signal }) =>
       AssetsService.readProjectAssets({
-        owner: ownerFilter || undefined,
         project_id: projectId,
-        service: serviceFilter || undefined,
       }, { signal }),
-    queryKey: workbenchQueryKeys.assets(projectId, {
-      owner: ownerFilter,
-      service: serviceFilter,
-    }),
+    queryKey: workbenchQueryKeys.assets(projectId),
     retry: false,
     staleTime: 10_000,
   })

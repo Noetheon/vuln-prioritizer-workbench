@@ -2,10 +2,9 @@ import "@/styles/waivers.css"
 
 import { VpwPageContainer, VpwStatusBanner } from "@/components/vpw"
 import {
-  WaiverMetrics,
   WaiverRegister,
   WaiverReviewSection,
-  WaiversHero,
+  WaiversContext,
 } from "./WaiversWorkbenchSections"
 import { WaiverDrawer } from "./WaiversWorkbenchDrawer"
 import {
@@ -27,7 +26,6 @@ export function WaiversWorkbench(props: WaiversWorkbenchProps) {
     (waiver) => waiver.status === "active",
   ).length
   const expiringSoon = summaryValue(props.waiverDebtSummary, "Expiring soon")
-  const expired = summaryValue(props.waiverDebtSummary, "Expired")
   const reviewDue = summaryValue(props.waiverDebtSummary, "Review due")
   const acceptedFindings = summaryValue(
     props.waiverDebtSummary,
@@ -37,15 +35,18 @@ export function WaiversWorkbench(props: WaiversWorkbenchProps) {
   const queue = reviewQueue(props.waiverDebtItems, props.waivers)
 
   return (
-    <VpwPageContainer className="waivers-workbench flex flex-col gap-6 px-0 py-0">
-      <WaiversHero
+    <VpwPageContainer className="waivers-workbench vpw-page-stack px-0 py-0">
+      <WaiversContext
+        acceptedFindings={acceptedFindings}
+        activeWaivers={activeWaivers}
+        expiringSoon={expiringSoon}
+        missingApprovals={missingApprovals}
         openWaiverDrawer={props.openWaiverDrawer}
-        onProjectChange={props.onProjectChange}
         projectListLoading={props.projectListLoading}
-        projectSummary={props.projectSummary}
         projects={props.projects}
-        selectedProject={props.selectedProject}
+        reviewDue={reviewDue}
         selectedProjectId={props.selectedProjectId}
+        waiversLoading={props.waiversLoading}
       />
 
       {props.waiversError ? (
@@ -69,32 +70,19 @@ export function WaiversWorkbench(props: WaiversWorkbenchProps) {
         </VpwStatusBanner>
       ) : null}
 
-      <WaiverMetrics
-        acceptedFindings={acceptedFindings}
-        activeWaivers={activeWaivers}
-        expiringSoon={expiringSoon}
-        missingApprovals={missingApprovals}
-        reviewDue={reviewDue}
-        waiversLoading={props.waiversLoading}
-      />
       <WaiverRegister
         openWaiverDrawer={props.openWaiverDrawer}
+        onProjectChange={props.onProjectChange}
         onRefreshWaivers={props.onRefreshWaivers}
+        projectListLoading={props.projectListLoading}
+        projects={props.projects}
         selectedWaiverId={props.selectedWaiverId}
         selectedProjectId={props.selectedProjectId}
         waiverActionLoading={props.waiverActionLoading}
         waivers={props.waivers}
         waiversLoading={props.waiversLoading}
       />
-      <WaiverReviewSection
-        acceptedFindings={acceptedFindings}
-        expired={expired}
-        expiringSoon={expiringSoon}
-        missingApprovals={missingApprovals}
-        queue={queue}
-        reviewDue={reviewDue}
-        waivers={props.waivers}
-      />
+      <WaiverReviewSection queue={queue} waivers={props.waivers} />
       <WaiverDrawer state={props} />
     </VpwPageContainer>
   )

@@ -122,12 +122,19 @@ export function waiverScopeLines(waiver: WaiverPublic) {
 
 export function debtScopeLabel(item: GovernanceWaiverDebtEntryPublic) {
   return joinedValues([
-    item.scope,
-    item.cve_id ? `CVE ${item.cve_id}` : null,
+    item.cve_id ?? normalizedDebtScope(item.scope),
     item.asset_key ? `Asset ${item.asset_key}` : null,
     item.service ? `Service ${item.service}` : null,
     item.finding_id ? `Finding ${shortId(item.finding_id)}` : null,
   ])
+}
+
+function normalizedDebtScope(scope: string | null | undefined) {
+  if (!scope) return null
+  const normalized = scope.replace(/^(?:asset|cve|finding|service):/i, "")
+  if (!normalized) return null
+  if (normalized === "project") return "Project scope"
+  return normalized
 }
 
 export function statusTone(status: string | null | undefined): VpwBadgeTone {

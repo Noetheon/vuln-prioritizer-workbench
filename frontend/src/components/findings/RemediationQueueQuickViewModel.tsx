@@ -2,21 +2,6 @@ import type { FindingDetailPublic, FindingPublic } from "@/api-client"
 import type { FindingOccurrenceRow } from "@/components/finding-detail/finding-detail-model"
 import { stringValue } from "@/lib/app-errors"
 
-export function DrawerFact({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
-  return (
-    <div>
-      <dt>{label}</dt>
-      <dd>{value}</dd>
-    </div>
-  )
-}
-
 export function drawerAssetLabel(finding: FindingPublic | FindingDetailPublic) {
   return (
     finding.asset_name ??

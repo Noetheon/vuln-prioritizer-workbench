@@ -16,7 +16,7 @@ import type {
 } from "@/api-client"
 import type {
   VpwBadgeTone,
-  VpwMetricTone,
+  VpwCompactTone,
   VpwStatusBannerTone,
 } from "@/components/vpw"
 import { objectRecord } from "@/lib/app-errors"
@@ -373,9 +373,9 @@ export function runBadgeTone(
 export function runMetricTone(
   run: AnalysisRunPublic | null,
   isDemo: boolean,
-): VpwMetricTone {
+): VpwCompactTone {
   if (isDemo) return "success"
-  if (!run) return "neutral"
+  if (!run) return "info"
   return runBadgeTone(run.status)
 }
 

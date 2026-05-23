@@ -5,7 +5,8 @@ imports.
 
 ## Provider Behavior
 
-- NVD lookups use the NVD CVE API 2.0 endpoint once per requested CVE.
+- NVD lookups use the NVD CVE API 2.0 endpoint once per requested CVE,
+  using the current `cveIds=<CVE>` query parameter.
 - `NVD_API_KEY` remains optional. When configured, the key is sent only in the
   `apiKey` request header.
 - Unauthenticated demo and local runs continue through provider snapshots or

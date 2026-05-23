@@ -11,7 +11,7 @@ import type { ProviderStatusPublic } from "@/api-client"
 import {
   VpwCompactMetric,
   VpwMetricStrip,
-  type VpwMetricTone,
+  type VpwCompactTone,
 } from "@/components/vpw"
 import {
   evidenceReadinessCardTone,
@@ -40,7 +40,7 @@ function ProviderKpiCard({
   description: string
   icon: ReactNode
   label: string
-  tone: VpwMetricTone
+  tone: VpwCompactTone
   value: string
 }) {
   return (

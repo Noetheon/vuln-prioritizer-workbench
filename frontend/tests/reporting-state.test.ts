@@ -10,10 +10,6 @@ const evidenceCenterSectionsFile = new URL(
   "../src/components/reports/EvidenceCenterSections.tsx",
   import.meta.url,
 )
-const evidenceCenterSummaryFile = new URL(
-  "../src/components/reports/EvidenceCenterSummary.tsx",
-  import.meta.url,
-)
 const evidenceCenterDecisionFile = new URL(
   "../src/components/reports/EvidenceCenterDecision.tsx",
   import.meta.url,
@@ -35,7 +31,6 @@ test("Evidence Center consumes selected run summaries and verification state", (
   const source = [
     evidenceCenterFile,
     evidenceCenterSectionsFile,
-    evidenceCenterSummaryFile,
     evidenceCenterManifestFile,
   ]
     .map(text)
@@ -49,6 +44,15 @@ test("Evidence Center consumes selected run summaries and verification state", (
   )
   assert.match(source, /verificationReportTarget/)
   assert.match(source, /verificationStatus/)
+})
+
+test("Evidence Center does not stack duplicate KPI summary under run context", () => {
+  const source = text(evidenceCenterFile)
+
+  assert.doesNotMatch(source, /EvidenceSummary/)
+  assert.doesNotMatch(source, /Evidence summary/)
+  assert.match(source, /RunContext/)
+  assert.match(source, /EvidenceCenterTabs/)
 })
 
 test("reports route state exposes evidence verification results to the UI", () => {

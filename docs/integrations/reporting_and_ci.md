@@ -74,7 +74,7 @@ GET /api/v1/reports/{report_id}/download
 Evidence ZIP verification uses:
 
 ```text
-GET /api/v1/reports/{report_id}/verify
+POST /api/v1/reports/{report_id}/verify
 ```
 
 ## SARIF

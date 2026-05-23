@@ -1,4 +1,4 @@
 export { CreateWaiverSection } from "./WaiversWorkbenchCreate"
-export { WaiverMetrics, WaiversHero } from "./WaiversWorkbenchHero"
+export { WaiverMetrics, WaiversContext } from "./WaiversWorkbenchContext"
 export { WaiverRegister } from "./WaiversWorkbenchRegister"
 export { WaiverReviewSection } from "./WaiversWorkbenchReview"

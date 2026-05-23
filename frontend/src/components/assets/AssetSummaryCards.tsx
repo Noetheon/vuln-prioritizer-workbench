@@ -12,8 +12,8 @@ export function AssetSummaryCards({
   return (
     <VpwMetricStrip
       aria-label="Asset summary"
-      className="assets-kpi-strip"
-      minCardWidth="11.5rem"
+      className="assets-summary-strip"
+      minCardWidth="11.75rem"
     >
       <AssetKpi
         description="Assets and target references in scope"
@@ -57,13 +57,13 @@ function AssetKpi({
   description,
   icon,
   label,
-  tone = "neutral",
+  tone = "info",
   value,
 }: {
   description: string
   icon: ReactNode
   label: string
-  tone?: "neutral" | "success" | "warning" | "critical" | "info"
+  tone?: "success" | "warning" | "critical" | "info"
   value: ReactNode
 }) {
   return (

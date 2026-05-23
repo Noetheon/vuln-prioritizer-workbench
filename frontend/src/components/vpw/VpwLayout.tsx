@@ -3,6 +3,11 @@ import type { CSSProperties, ComponentPropsWithoutRef, ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import { VpwSectionHeader } from "./VpwSectionHeader"
 
+export type VpwPageStackProps = ComponentPropsWithoutRef<"div"> & {
+  children: ReactNode
+  density?: "default" | "compact"
+}
+
 export type VpwSectionProps = ComponentPropsWithoutRef<"section"> & {
   children: ReactNode
 }
@@ -30,7 +35,7 @@ export type VpwCompactTone =
   | "info"
   | "support"
 
-export type VpwCommandPanelProps = Omit<VpwPanelProps, "children"> & {
+export type VpwCommandPanelProps = Omit<VpwPanelProps, "children" | "title"> & {
   actions?: ReactNode
   children?: ReactNode
   description?: ReactNode
@@ -41,6 +46,7 @@ export type VpwCommandPanelProps = Omit<VpwPanelProps, "children"> & {
 
 export type VpwMetricStripProps = ComponentPropsWithoutRef<"section"> & {
   children: ReactNode
+  maxCardWidth?: string
   minCardWidth?: string
 }
 
@@ -59,6 +65,27 @@ const gridClass: Record<NonNullable<VpwGridProps["columns"]>, string> = {
   4: "grid-cols-1 sm:grid-cols-2 xl:grid-cols-4",
 }
 
+export function VpwPageStack({
+  children,
+  className,
+  density = "default",
+  ...props
+}: VpwPageStackProps) {
+  return (
+    <div
+      className={cn(
+        "vpw-page-stack",
+        density === "compact" && "vpw-page-stack--compact",
+        className,
+      )}
+      data-density={density}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+}
+
 export function VpwSection({ children, className, ...props }: VpwSectionProps) {
   return (
     <section className={cn("flex flex-col gap-4", className)} {...props}>
@@ -70,7 +97,11 @@ export function VpwSection({ children, className, ...props }: VpwSectionProps) {
 export function VpwGrid({ children, className, columns = 3 }: VpwGridProps) {
   return (
     <div
-      className={cn("grid min-w-0 gap-4 [&>*]:min-w-0", gridClass[columns], className)}
+      className={cn(
+        "grid min-w-0 gap-4 [&>*]:min-w-0",
+        gridClass[columns],
+        className,
+      )}
     >
       {children}
     </div>
@@ -188,6 +219,9 @@ export function VpwCommandPanel({
   title,
   ...props
 }: VpwCommandPanelProps) {
+  const hasBody =
+    children !== undefined && children !== null && children !== false
+
   return (
     <VpwPanel className={cn("vpw-command-panel", className)} {...props}>
       <div className="vpw-command-panel__header">
@@ -202,7 +236,7 @@ export function VpwCommandPanel({
           <div className="vpw-command-panel__actions">{actions}</div>
         ) : null}
       </div>
-      {children ? (
+      {hasBody ? (
         <div className="vpw-command-panel__body">{children}</div>
       ) : null}
       {note ? <p className="vpw-command-panel__note">{note}</p> : null}
@@ -213,6 +247,7 @@ export function VpwCommandPanel({
 export function VpwMetricStrip({
   children,
   className,
+  maxCardWidth = "none",
   minCardWidth = "12rem",
   style,
   ...props
@@ -222,6 +257,7 @@ export function VpwMetricStrip({
       className={cn("vpw-metric-strip", className)}
       style={
         {
+          "--vpw-metric-strip-max": maxCardWidth,
           "--vpw-metric-strip-min": minCardWidth,
           ...style,
         } as CSSProperties
@@ -244,7 +280,11 @@ export function VpwCompactMetric({
 }: VpwCompactMetricProps) {
   return (
     <div
-      className={cn("vpw-compact-metric", className)}
+      className={cn(
+        "vpw-compact-metric",
+        !icon && "vpw-compact-metric--plain",
+        className,
+      )}
       data-tone={tone}
       {...props}
     >

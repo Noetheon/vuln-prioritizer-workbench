@@ -1,11 +1,9 @@
-import { FolderKanban, Plus, ShieldCheck, Upload } from "lucide-react"
+import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  VpwBadge,
   VpwField,
-  VpwGrid,
   VpwPanel,
   VpwSection,
   VpwSectionHeader,
@@ -82,62 +80,6 @@ function CreateProjectPanel({
   )
 }
 
-function ProjectWorkflowGuide() {
-  const steps = [
-    {
-      body: "Name the workspace that owns the vulnerability intake.",
-      icon: <FolderKanban aria-hidden="true" className="h-5 w-5" />,
-      meta: "Step 1",
-      title: "Create project",
-    },
-    {
-      body: "Upload scanner, SBOM, or CVE-list data into that project.",
-      icon: <Upload aria-hidden="true" className="h-5 w-5" />,
-      meta: "Step 2",
-      title: "Import data",
-    },
-    {
-      body: "Review prioritized findings and generate decision evidence.",
-      icon: <ShieldCheck aria-hidden="true" className="h-5 w-5" />,
-      meta: "Step 3",
-      title: "Generate evidence",
-    },
-  ]
-
-  return (
-    <VpwPanel className="flex flex-col gap-5">
-      <VpwSectionHeader
-        eyebrow="Workflow"
-        title="Next best path"
-        description="Projects keep imports, findings, and evidence grouped for review."
-      />
-      <div className="grid gap-3">
-        {steps.map((step) => (
-          <div
-            className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-4"
-            key={step.title}
-          >
-            <div className="flex items-start gap-3">
-              <div className="rounded-[var(--vpw-radius-md)] bg-[var(--vpw-bg-info)] p-2 text-[var(--vpw-blue)]">
-                {step.icon}
-              </div>
-              <div>
-                <VpwBadge tone="info">{step.meta}</VpwBadge>
-                <h3 className="mt-2 font-semibold text-[var(--vpw-text-primary)]">
-                  {step.title}
-                </h3>
-                <p className="mt-1 text-sm leading-5 text-[var(--vpw-text-secondary)]">
-                  {step.body}
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </VpwPanel>
-  )
-}
-
 export function ProjectSetupSection(
   props: Pick<
     ProjectsWorkbenchProps,
@@ -151,10 +93,7 @@ export function ProjectSetupSection(
 ) {
   return (
     <VpwSection>
-      <VpwGrid columns={2}>
-        <CreateProjectPanel {...props} />
-        <ProjectWorkflowGuide />
-      </VpwGrid>
+      <CreateProjectPanel {...props} />
     </VpwSection>
   )
 }

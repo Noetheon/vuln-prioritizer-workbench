@@ -2,18 +2,20 @@
 
 ## Input
 
-Supported input formats:
+Supported Workbench `input_type` values:
 
-- TXT files with one CVE per line
-- CSV files with a `cve` or `cve_id` column
-- Trivy JSON
-- Grype JSON
-- CycloneDX JSON
-- SPDX JSON
-- OWASP Dependency-Check JSON
-- documented GitHub alerts JSON export
-- Nessus XML export (`.nessus`)
-- pinned OpenVAS XML export
+- `cve-list`: TXT files with one CVE per line, or CSV files with a `cve` or
+  `cve_id` column
+- `generic-occurrence-csv`: manual occurrence rows with CVE, component, asset,
+  owner, service, and fix/version context
+- `trivy-json`: Trivy JSON exports
+- `grype-json`: Grype JSON exports
+- `cyclonedx-json`: CycloneDX JSON with vulnerability data
+- `spdx-json`: SPDX JSON with vulnerability data
+- `dependency-check-json`: OWASP Dependency-Check JSON
+- `github-alerts-json`: documented GitHub alerts JSON export
+- `nessus-xml`: Nessus XML export (`.nessus` or XML)
+- `openvas-xml`: pinned OpenVAS XML export
 
 Input is normalized, validated, and deduplicated. Invalid lines become warnings instead of aborting the whole run.
 For XML ingest, the parser rejects `DOCTYPE` and `ENTITY` declarations before parsing.
@@ -22,7 +24,8 @@ For XML ingest, the parser rejects `DOCTYPE` and `ENTITY` declarations before pa
 
 ### NVD
 
-- one request per CVE via `cveId`
+- one lookup per CVE against NVD CVE API 2.0 using the current `cveIds`
+  query parameter
 - English description preferred
 - CVSS selection order: `v4.0 -> v3.1 -> v3.0 -> v2`
 - the chosen CVSS family is stored as `cvss_version`
@@ -235,7 +238,8 @@ Important boundary:
 ## Limitations
 
 - ATT&CK coverage depends on available CTID mappings
-- demo regeneration still depends on live upstream responses for NVD, EPSS, and KEV
+- live-provider demo regeneration without locked provider snapshots still
+  depends on upstream NVD, EPSS, and KEV responses
 - ATT&CK context is intentionally not an asset-aware scoring engine
 - VEX status is only applied when a statement matches the occurrence CVE plus component/product or target scope; unmatched or ambiguous real-world product identity still needs human review
 - CycloneDX VEX does not infer applicability from the BOM root component, services, dependencies, ratings, or advisory metadata; only `affects[].ref` component/PURL scope is considered

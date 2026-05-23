@@ -7,6 +7,10 @@ Linear precision, Sentry incident triage, and HashiCorp enterprise
 infrastructure discipline. This is not a brand clone. VPW keeps its existing
 tokens, component wrappers, and product vocabulary.
 
+Implementation contract: `frontend/VPW_PAGE_PATTERNS.md` defines the allowed
+route structures and component choices. Treat it as the concrete gate for UI
+edits after reading this designset.
+
 ## Product Posture
 
 VPW is a security operations workbench for analysts who need to read evidence,
@@ -117,6 +121,8 @@ tables, sidebars, banners, and mobile panels.
 - Use `VpwPageContainer` for the route content boundary.
 - Use `VpwSection`, `VpwGrid`, `VpwPanel`, and `VpwSectionHeader` for repeated
   page rhythm.
+- Use `frontend/VPW_PAGE_PATTERNS.md` to choose the page type before adding
+  route-local markup.
 - Keep cards at 8px radius or less unless an existing VPW wrapper maps to a
   token with the same value.
 - Use full-width unframed route sections. Cards are for repeated objects,

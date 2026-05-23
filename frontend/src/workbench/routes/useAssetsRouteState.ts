@@ -22,10 +22,15 @@ import {
   assetRequestBody,
   assetUpdateBody,
   buildServiceRollups,
+  defaultAssetFilters,
   emptyAssetForm,
+  filterAssets,
+  hasActiveAssetFilters,
   highestFindingPriority,
   summarizeAssets,
   validateAssetForm,
+  type AssetFindingFilter,
+  type AssetRescoreFilter,
 } from "../../components/assets/asset-model"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import {
@@ -46,6 +51,20 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
   } = useWorkbenchContext()
   const [assetOwnerFilter, setAssetOwnerFilter] = useState("")
   const [assetServiceFilter, setAssetServiceFilter] = useState("")
+  const [assetSearchFilter, setAssetSearchFilter] = useState("")
+  const [assetEnvironmentFilter, setAssetEnvironmentFilter] = useState(
+    defaultAssetFilters.environment,
+  )
+  const [assetExposureFilter, setAssetExposureFilter] = useState(
+    defaultAssetFilters.exposure,
+  )
+  const [assetCriticalityFilter, setAssetCriticalityFilter] = useState(
+    defaultAssetFilters.criticality,
+  )
+  const [assetFindingFilter, setAssetFindingFilter] =
+    useState<AssetFindingFilter>(defaultAssetFilters.findings)
+  const [assetRescoreFilter, setAssetRescoreFilter] =
+    useState<AssetRescoreFilter>(defaultAssetFilters.rescore)
   const [assetMessage, setAssetMessage] = useState("")
   const [assetsError, setAssetsError] = useState("")
   const [assetContextFile, setAssetContextFile] = useState<File | null>(null)
@@ -58,12 +77,35 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
   const [assetDrawerMode, setAssetDrawerMode] =
     useState<AssetDrawerMode>(null)
   const previousProjectId = useRef(selectedProjectId)
-  const assetsQuery = useProjectAssetsQuery({
-    owner: assetOwnerFilter,
-    projectId: selectedProjectId,
-    service: assetServiceFilter,
-  })
-  const assets = assetsQuery.data?.data ?? []
+  const assetsQuery = useProjectAssetsQuery({ projectId: selectedProjectId })
+  const allAssets = assetsQuery.data?.data ?? []
+  const assetFilters = useMemo(
+    () => ({
+      criticality: assetCriticalityFilter,
+      environment: assetEnvironmentFilter,
+      exposure: assetExposureFilter,
+      findings: assetFindingFilter,
+      owner: assetOwnerFilter,
+      query: assetSearchFilter,
+      rescore: assetRescoreFilter,
+      service: assetServiceFilter,
+    }),
+    [
+      assetCriticalityFilter,
+      assetEnvironmentFilter,
+      assetExposureFilter,
+      assetFindingFilter,
+      assetOwnerFilter,
+      assetRescoreFilter,
+      assetSearchFilter,
+      assetServiceFilter,
+    ],
+  )
+  const assets = useMemo(
+    () => filterAssets(allAssets, assetFilters),
+    [allAssets, assetFilters],
+  )
+  const hasAssetFilters = hasActiveAssetFilters(assetFilters)
   const selectedAsset = useMemo(
     () => assets.find((asset) => asset.id === selectedAssetId) ?? null,
     [assets, selectedAssetId],
@@ -132,6 +174,17 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
     [queryClient, selectedProjectId],
   )
 
+  const clearAssetFilters = useCallback(() => {
+    setAssetOwnerFilter("")
+    setAssetServiceFilter("")
+    setAssetSearchFilter("")
+    setAssetEnvironmentFilter(defaultAssetFilters.environment)
+    setAssetExposureFilter(defaultAssetFilters.exposure)
+    setAssetCriticalityFilter(defaultAssetFilters.criticality)
+    setAssetFindingFilter(defaultAssetFilters.findings)
+    setAssetRescoreFilter(defaultAssetFilters.rescore)
+  }, [])
+
   useEffect(() => {
     if (previousProjectId.current === selectedProjectId) {
       return
@@ -143,7 +196,8 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
     setAssetMessage("")
     setAssetsError("")
     setAssetContextFile(null)
-  }, [selectedProjectId])
+    clearAssetFilters()
+  }, [clearAssetFilters, selectedProjectId])
 
   useEffect(() => {
     setSelectedAssetId((currentAssetId) =>
@@ -299,11 +353,6 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
     setAssetMessage("")
   }
 
-  function clearAssetFilters() {
-    setAssetOwnerFilter("")
-    setAssetServiceFilter("")
-  }
-
   const assetActionLoading =
     createAssetMutation.isPending ||
     updateAssetMutation.isPending ||
@@ -327,13 +376,21 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
     assetFindingsError,
     assetFindingsLoading:
       assetFindingsQuery.isLoading || assetFindingsQuery.isFetching,
+    assetCriticalityFilter,
+    assetEnvironmentFilter,
+    assetExposureFilter,
+    assetFindingFilter,
+    assetHasActiveFilters: hasAssetFilters,
     assetMessage,
     assetOwnerFilter,
+    assetRecordsTotal: allAssets.length,
+    assetRescoreFilter,
+    assetSearchFilter,
     assets,
     assetsError: assetsError || assetQueryError,
     assetsLoading: assetsQuery.isLoading || assetsQuery.isFetching,
     assetServiceFilter,
-    assetSummary: summarizeAssets(assets),
+    assetSummary: summarizeAssets(allAssets),
     clearAssetFilters,
     closeAssetDrawer,
     createAsset,
@@ -357,9 +414,15 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
     selectedHighestPriority: highestFindingPriority(assetFindings),
     selectedProject,
     selectedProjectId,
-    serviceRollups: buildServiceRollups(assets),
+    serviceRollups: buildServiceRollups(allAssets),
+    setAssetCriticalityFilter,
     setAssetContextFile,
+    setAssetEnvironmentFilter,
+    setAssetExposureFilter,
+    setAssetFindingFilter,
     setAssetOwnerFilter,
+    setAssetRescoreFilter,
+    setAssetSearchFilter,
     setAssetServiceFilter,
     setCreateForm,
     setEditForm,

@@ -5,7 +5,10 @@ import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
-  VpwPanel,
+  VpwCommandPanel,
+  VpwCompactMetric,
+  type VpwCompactTone,
+  VpwMetricStrip,
   VpwSection,
   VpwDemoBanner,
 } from "@/components/vpw"
@@ -23,7 +26,7 @@ type SummaryMetric = {
   description: string
   icon: ReactNode
   label: string
-  tone: "critical" | "warning" | "support" | "info"
+  tone: VpwCompactTone
   value: number
 }
 
@@ -77,18 +80,8 @@ export function RemediationQueueSummary({
 
   return (
     <VpwSection>
-      <VpwPanel className="findings-triage-overview" padded={false}>
-        <div className="findings-triage-overview__header">
-          <div>
-            <p className="vpw-label text-[var(--vpw-teal)]">
-              Remediation workspace
-            </p>
-            <h2>Findings queue</h2>
-            <p>
-              Prioritized vulnerability findings for {projectName}. Review
-              owner-ready evidence, context, and remediation state.
-            </p>
-          </div>
+      <VpwCommandPanel
+        actions={
           <div className="findings-triage-overview__actions">
             <Button asChild size="sm" variant="outline">
               <Link search={projectSearch} to="/reports">
@@ -103,24 +96,28 @@ export function RemediationQueueSummary({
               </Link>
             </Button>
           </div>
-        </div>
-        <dl className="findings-triage-strip" aria-label="Queue signal summary">
+        }
+        className="findings-triage-overview"
+        description={`Prioritized vulnerability findings for ${projectName}. Review owner-ready evidence, context, and remediation state.`}
+        eyebrow="Remediation workspace"
+        title="Findings queue"
+      >
+        <VpwMetricStrip
+          aria-label="Queue signal summary"
+          minCardWidth="10.75rem"
+        >
           {metrics.map((metric) => (
-            <div data-tone={metric.tone} key={metric.label}>
-              <dt>
-                <span className="findings-triage-strip__icon">
-                  {metric.icon}
-                </span>
-                {metric.label}
-              </dt>
-              <dd>{metric.value}</dd>
-              <dd className="findings-triage-strip__description">
-                {metric.description}
-              </dd>
-            </div>
+            <VpwCompactMetric
+              description={metric.description}
+              icon={metric.icon}
+              key={metric.label}
+              label={metric.label}
+              tone={metric.tone}
+              value={metric.value}
+            />
           ))}
-        </dl>
-      </VpwPanel>
+        </VpwMetricStrip>
+      </VpwCommandPanel>
     </VpwSection>
   )
 }

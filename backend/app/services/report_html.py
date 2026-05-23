@@ -84,7 +84,7 @@ def render_html_executive_report(payload: MarkdownReportPayload) -> str:
         "    <header>\n"
         '      <p class="eyebrow">Executive Vulnerability Report</p>\n'
         f"      <h1>{_safe_html(payload.project_name)}</h1>\n"
-        '      <p class="lede">Decision-ready vulnerability prioritization summary '
+        '      <p class="lede">Evidence-backed vulnerability prioritization summary '
         f"for analysis run {_safe_html(payload.run_id)} generated at {generated_at}.</p>\n"
         '      <dl class="meta-grid">\n'
         f"        <div><dt>Project ID</dt><dd>{_safe_html(payload.project_id)}</dd></div>\n"

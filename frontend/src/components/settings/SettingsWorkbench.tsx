@@ -2,9 +2,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VpwPageContainer } from "@/components/vpw"
 import {
   SettingsAlerts,
-  SettingsHero,
+  SettingsContext,
   SettingsDiagnostics,
-  SettingsMetrics,
   SettingsRuntimeProviders,
   SettingsWorkspaceHealth,
 } from "./SettingsWorkbenchSections"
@@ -18,9 +17,13 @@ export type { SettingsWorkbenchProps } from "./settings-workbench-model"
 
 export function SettingsWorkbench(props: SettingsWorkbenchProps) {
   return (
-    <VpwPageContainer className="flex flex-col gap-5 px-0 py-0">
-      <SettingsHero
+    <VpwPageContainer className="settings-workbench vpw-page-stack px-0 py-0">
+      <SettingsContext
+        providerStatus={props.providerStatus}
+        providerStatusError={props.providerStatusError}
         selectedProjectId={props.selectedProjectId}
+        status={props.status}
+        statusError={props.statusError}
       />
       <SettingsAlerts
         providerStatusError={props.providerStatusError}
@@ -33,14 +36,14 @@ export function SettingsWorkbench(props: SettingsWorkbenchProps) {
         }
         value={props.activeSettingsTab}
       >
-        <div className="flex min-w-0 border-b border-[var(--vpw-border-default)] pb-3">
+        <div className="flex min-w-0">
           <TabsList
             aria-label="Settings sections"
-            className="grid h-auto w-full min-w-0 grid-cols-1 gap-1 rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-panel)] p-1 sm:inline-grid sm:w-auto sm:grid-cols-3"
+            className="h-auto max-w-full flex-wrap justify-start gap-2 rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] p-1"
           >
             {settingsTabOptions.map((option) => (
               <TabsTrigger
-                className="min-h-9 min-w-0 rounded-[var(--vpw-radius-md)] border border-transparent px-2 py-2 text-center text-xs font-medium leading-tight text-[var(--vpw-text-secondary)] data-[state=active]:border-[var(--vpw-border-default)] data-[state=active]:bg-[var(--vpw-bg-card)] data-[state=active]:text-[var(--vpw-text-primary)] data-[state=active]:shadow-[var(--vpw-shadow-1)] sm:px-4 sm:text-sm"
+                className="min-w-0 px-3 py-1.5 text-sm"
                 key={option.value}
                 value={option.value}
               >
@@ -51,20 +54,13 @@ export function SettingsWorkbench(props: SettingsWorkbenchProps) {
         </div>
 
         <TabsContent className="mt-5" value="overview">
-          <div className="flex flex-col gap-4">
-            <SettingsMetrics
-              providerStatus={props.providerStatus}
-              providerStatusError={props.providerStatusError}
-              statusError={props.statusError}
-            />
-            <SettingsWorkspaceHealth
-              providerStatus={props.providerStatus}
-              providerStatusError={props.providerStatusError}
-              providerStatusLoading={props.providerStatusLoading}
-              status={props.status}
-              statusError={props.statusError}
-            />
-          </div>
+          <SettingsWorkspaceHealth
+            providerStatus={props.providerStatus}
+            providerStatusError={props.providerStatusError}
+            providerStatusLoading={props.providerStatusLoading}
+            status={props.status}
+            statusError={props.statusError}
+          />
         </TabsContent>
 
         <TabsContent className="mt-5" value="runtime">

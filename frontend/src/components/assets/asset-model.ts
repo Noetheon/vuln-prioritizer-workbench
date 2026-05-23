@@ -11,6 +11,12 @@ export {
   type AssetFormState,
 } from "./asset-form-model"
 export { formatDateTime } from "./asset-format-model"
+export { defaultAssetFilters, filterAssets, hasActiveAssetFilters } from "./asset-filter-model"
+export type {
+  AssetFindingFilter,
+  AssetRegisterFilters,
+  AssetRescoreFilter,
+} from "./asset-filter-model"
 export {
   assetFindingsHref,
   findingAssetLabel,

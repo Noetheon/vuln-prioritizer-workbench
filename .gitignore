@@ -40,6 +40,9 @@ backend/.coverage.*
 coverage.xml
 htmlcov/
 test-results/
+output/
+outputs/
+frontend/output/
 
 # Local application caches
 .cache/

@@ -208,6 +208,10 @@ jobs:
         working-directory: frontend
         run: npx playwright install --with-deps chromium firefox webkit
 
+      - name: Run VPW design audit screenshots
+        if: steps.frontend-scope.outputs.run-frontend == 'true'
+        run: make frontend-design-audit
+
       - name: Run full frontend Playwright suite
         if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: npm --prefix frontend run test

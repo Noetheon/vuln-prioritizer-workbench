@@ -183,7 +183,7 @@ class NvdProvider:
 
     def _request_cve(self, cve_id: str) -> dict:
         headers = {"apiKey": self.api_key} if self.api_key else {}
-        params = {"cveId": cve_id}
+        params = {"cveIds": cve_id}
 
         attempt = 0
         last_error: Exception | None = None

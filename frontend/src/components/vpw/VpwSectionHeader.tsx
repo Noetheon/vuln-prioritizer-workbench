@@ -30,15 +30,11 @@ export function VpwSectionHeader({
     >
       <div className="min-w-0">
         {eyebrow ? (
-          <p className="vpw-label text-[var(--vpw-teal)]">{eyebrow}</p>
+          <p className="vpw-label vpw-section-header__eyebrow">{eyebrow}</p>
         ) : null}
-        <TitleTag className="mt-1 text-2xl font-semibold text-[var(--vpw-text-primary)]">
-          {title}
-        </TitleTag>
+        <TitleTag className="vpw-section-header__title">{title}</TitleTag>
         {description ? (
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--vpw-text-secondary)]">
-            {description}
-          </p>
+          <p className="vpw-section-header__description">{description}</p>
         ) : null}
       </div>
       {actions ? (

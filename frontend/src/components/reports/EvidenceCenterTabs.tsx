@@ -71,10 +71,10 @@ export function EvidenceCenterTabs({
     !isDemo && selectedReportRun?.status === "failed"
 
   return (
-    <Tabs className="flex flex-col gap-4" defaultValue="artifacts">
+    <Tabs className="evidence-tabs flex flex-col gap-4" defaultValue="artifacts">
       <TabsList
         aria-label="Evidence Center sections"
-        className="flex h-auto flex-wrap justify-start gap-2 rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] p-1"
+        className="evidence-tabs-list flex h-auto flex-wrap justify-start gap-2 rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] p-1"
       >
         <TabsTrigger value="artifacts">Artifacts</TabsTrigger>
         <TabsTrigger value="decision">Decision Summary</TabsTrigger>

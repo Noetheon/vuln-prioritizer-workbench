@@ -71,7 +71,6 @@ export const chartTooltipProps = {
     background: "var(--vpw-bg-card)",
     border: "1px solid var(--vpw-border-default)",
     borderRadius: "var(--vpw-radius-md)",
-    boxShadow: "var(--vpw-shadow-2)",
     color: "var(--vpw-text-primary)",
   },
   cursor: {

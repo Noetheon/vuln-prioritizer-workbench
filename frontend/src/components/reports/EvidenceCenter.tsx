@@ -10,9 +10,9 @@ import type {
 import { useState } from "react"
 import type { ReportFormat } from "@/lib/report-format"
 import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
+import { VpwPageStack } from "@/components/vpw"
 import {
   ActionStatus,
-  EvidenceSummary,
   RunContext,
 } from "./EvidenceCenterSections"
 import { EvidenceCenterTabs } from "./EvidenceCenterTabs"
@@ -95,7 +95,7 @@ export function EvidenceCenter({
   const hasDecisionContext = isDemo || selectedReportRun
 
   return (
-    <div className="flex flex-col gap-6">
+    <VpwPageStack className="evidence-center">
       <RunContext
         isDemo={isDemo}
         onOpenGenerateDrawer={() => setGenerateDrawerOpen(true)}
@@ -111,16 +111,6 @@ export function EvidenceCenter({
         selectedProjectId={selectedProjectId}
         selectedReportRun={selectedReportRun}
         selectedRunId={selectedRunId}
-        selectedRunSummary={selectedRunSummary}
-      />
-
-      <EvidenceSummary
-        isDemo={isDemo}
-        projectSummary={projectSummary}
-        providerStatus={providerStatus}
-        reports={reports}
-        reportsLoading={reportsLoading}
-        selectedReportRun={selectedReportRun}
         selectedRunSummary={selectedRunSummary}
       />
 
@@ -158,6 +148,6 @@ export function EvidenceCenter({
         selectedReportRun={selectedReportRun}
         selectedRunSummary={selectedRunSummary}
       />
-    </div>
+    </VpwPageStack>
   )
 }

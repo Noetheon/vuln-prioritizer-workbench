@@ -1,4 +1,4 @@
-export * from "./FindingDetailHero"
+export * from "./FindingDetailContext"
 export * from "./FindingDetailRoute"
 export * from "./FindingDecisionTab"
 export * from "./FindingEvidenceTab"

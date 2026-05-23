@@ -1540,9 +1540,9 @@ sqlmodel==0.0.38 \
     --hash=sha256:84e3fa990a77395461ded72a6c73173438ce8449d5c1c4d97fbff1b1df692649 \
     --hash=sha256:d583ec237b14103809f74e8630032bc40ab68cd6b754a610f0813c56911a547b
     # via vuln-prioritizer
-starlette==1.0.0 \
-    --hash=sha256:6a4beaf1f81bb472fd19ea9b918b50dc3a77a6f2e190a12954b25e6ed5eea149 \
-    --hash=sha256:d3ec55e0bb321692d275455ddfd3df75fff145d009685eb40dc91fc66b03d38b
+starlette==1.0.1 \
+    --hash=sha256:512399c5f1de7fac99c88572212ded9ddeddef2fb32afa82d724000e88b38f4f \
+    --hash=sha256:7c0e69b2ee1c848bd54669d908500117a3ee13de603a21427e5c6fc1adf98dcd
     # via fastapi
 textual==8.2.6 \
     --hash=sha256:17c92bec7ff1617bd7db2a3d9734b0c3b7d2c274c67d5eba94371ea2f99a63fd \

@@ -6,7 +6,7 @@ import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import type { ProviderFreshnessSummary } from "@/lib/provider-format"
 import { ProviderStatusBadge } from "../risk/ProviderStatusBadge"
 
-type DashboardHeroActionsProps = {
+type DashboardContextActionsProps = {
   demoWorkspaceEnabled: boolean
   demoWorkspacePending: boolean
   effectiveProviderStatus: ProviderStatusPublic | null
@@ -20,7 +20,7 @@ type DashboardHeroActionsProps = {
   selectedProjectId: string
 }
 
-export function DashboardHeroActions({
+export function DashboardContextActions({
   demoWorkspaceEnabled,
   demoWorkspacePending,
   effectiveProviderStatus,
@@ -32,13 +32,13 @@ export function DashboardHeroActions({
   onResetDemoWorkspace,
   providerStatusLoading,
   selectedProjectId,
-}: DashboardHeroActionsProps) {
+}: DashboardContextActionsProps) {
   const projectSearch = selectedProjectRouteSearch(
     isDemoMode ? "" : selectedProjectId,
   )
 
   return (
-    <div className="mt-4 flex flex-col gap-3 border-t border-[var(--vpw-border-subtle)] pt-3 xl:flex-row xl:items-center xl:justify-between">
+    <div className="dashboard-context-actions flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
       <div className="flex flex-wrap items-center gap-3">
         <ProviderStatusBadge
           status={

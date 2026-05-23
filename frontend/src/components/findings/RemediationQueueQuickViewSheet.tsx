@@ -6,14 +6,7 @@ import type {
 } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
-import {
+  DetailDrawer,
   VpwSkeletonStack,
   VpwStatusBanner,
 } from "@/components/vpw"
@@ -91,74 +84,11 @@ export function QuickViewSheet({
   const projectSearch = selectedProjectRouteSearch(effectiveFinding.project_id)
 
   return (
-    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="vpw-sheet-content finding-detail-drawer max-sm:left-0 max-sm:right-0 max-sm:w-auto max-sm:max-w-none w-[min(100vw,39rem)] gap-0 overflow-hidden p-0 sm:max-w-none">
-        <SheetHeader className="border-b border-[var(--vpw-border-default)] px-5 py-4 pr-12 text-left">
-          <SheetTitle className="text-base leading-tight text-[var(--vpw-text-primary)]">
-            <span className="font-mono">{finding.cve_id}</span>
-            <span className="font-normal text-[var(--vpw-text-muted)]">
-              {" "}
-              · {component}
-            </span>
-          </SheetTitle>
-          <SheetDescription>
-            {component}
-          </SheetDescription>
-          <QuickViewStatusRow finding={effectiveFinding} />
-        </SheetHeader>
-
-        <section
-          aria-label="Finding quick view content"
-          className="finding-drawer-body"
-          // biome-ignore lint/a11y/noNoninteractiveTabindex: Drawer body is the scroll owner and must be keyboard reachable.
-          tabIndex={0}
-        >
-          {error ? (
-            <VpwStatusBanner title={error} tone="critical">
-              <Button
-                className="mt-2 h-8 px-2"
-                onClick={onRefresh}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                Retry detail
-              </Button>
-            </VpwStatusBanner>
-          ) : null}
-          {explanationWarning ? (
-            <VpwStatusBanner title={explanationWarning} tone="critical" />
-          ) : null}
-
-          {loading ? (
-            <section aria-label="Loading finding drawer detail" role="status">
-              <VpwSkeletonStack rows={4} />
-            </section>
-          ) : null}
-
-          <QuickViewDecisionSummary
-            finding={effectiveFinding}
-            rationale={rationale}
-            recommendedAction={recommendedAction}
-          />
-          <QuickViewSignalBrief finding={effectiveFinding} />
-          <QuickViewEvidenceSnapshot
-            dataQualityRows={dataQualityRows}
-            evidenceRows={evidenceRows}
-          />
-          <QuickViewOccurrencesPreview occurrences={occurrences} />
-          <QuickViewAttackContextSection
-            attackContext={attackContext}
-            attackEmpty={attackEmpty}
-            attackTechniques={attackTechniques}
-          />
-          <QuickViewGovernanceSection
-            finding={effectiveFinding}
-            projectSearch={projectSearch}
-          />
-        </section>
-
-        <SheetFooter className="border-t border-[var(--vpw-border-default)] px-5 py-4">
+    <DetailDrawer
+      className="finding-detail-drawer max-sm:left-0 max-sm:right-0 max-sm:w-auto max-sm:max-w-none w-[min(100vw,39rem)] sm:max-w-none"
+      description={component}
+      footer={
+        <>
           <Button
             className="sm:order-1"
             onClick={onClose}
@@ -176,8 +106,69 @@ export function QuickViewSheet({
               Open full detail
             </Link>
           </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </>
+      }
+      onOpenChange={(v) => !v && onClose()}
+      open={open}
+      status={<QuickViewStatusRow finding={effectiveFinding} />}
+      title={
+        <>
+          <span className="font-mono">{finding.cve_id}</span>
+          <span className="font-normal text-[var(--vpw-text-muted)]">
+            {" "}
+            / {component}
+          </span>
+        </>
+      }
+    >
+      <section
+        aria-label="Finding quick view content"
+        className="finding-drawer-body"
+      >
+        {error ? (
+          <VpwStatusBanner title={error} tone="critical">
+            <Button
+              className="mt-2 h-8 px-2"
+              onClick={onRefresh}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Retry detail
+            </Button>
+          </VpwStatusBanner>
+        ) : null}
+        {explanationWarning ? (
+          <VpwStatusBanner title={explanationWarning} tone="critical" />
+        ) : null}
+
+        {loading ? (
+          <section aria-label="Loading finding drawer detail" role="status">
+            <VpwSkeletonStack rows={4} />
+          </section>
+        ) : null}
+
+        <QuickViewDecisionSummary
+          finding={effectiveFinding}
+          rationale={rationale}
+          recommendedAction={recommendedAction}
+        />
+        <QuickViewSignalBrief finding={effectiveFinding} />
+        <QuickViewEvidenceSnapshot
+          dataQualityRows={dataQualityRows}
+          evidenceRows={evidenceRows}
+        />
+        <QuickViewOccurrencesPreview occurrences={occurrences} />
+        <QuickViewAttackContextSection
+          attackContext={attackContext}
+          attackEmpty={attackEmpty}
+          attackTechniques={attackTechniques}
+        />
+        <QuickViewGovernanceSection
+          finding={effectiveFinding}
+          projectSearch={projectSearch}
+        />
+      </section>
+    </DetailDrawer>
   )
 }

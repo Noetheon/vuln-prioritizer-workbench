@@ -13,8 +13,9 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
-  VpwGrid,
-  VpwMetricCard,
+  VpwCommandPanel,
+  VpwCompactMetric,
+  VpwMetricStrip,
   VpwPanel,
   VpwSection,
   VpwSectionHeader,
@@ -44,55 +45,67 @@ export function ImportsHomeRoute(props: ImportsHomeRouteProps) {
   const projectSearch = selectedProjectRouteSearch(props.selectedProjectId)
 
   return (
-    <div className="imports-page-shell flex w-full min-w-0 flex-col gap-6">
+    <div className="imports-page-shell vpw-page-stack w-full min-w-0">
       <VpwSection>
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button asChild variant="outline">
-            <Link search={projectSearch} to="/imports/formats">
-              <TableProperties aria-hidden="true" data-icon="inline-start" />
-              Supported formats
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link search={projectSearch} to="/imports/new">
-              <Plus aria-hidden="true" data-icon="inline-start" />
-              New import
-            </Link>
-          </Button>
-        </div>
-        <VpwGrid columns={3}>
-          <VpwMetricCard
-            description={props.selectedProject ? "Active project" : "No project selected"}
-            icon={<ListChecks aria-hidden="true" className="h-4 w-4" />}
-            label="Current project"
-            tone={props.selectedProject ? "neutral" : "warning"}
-            value={props.selectedProject?.name ?? "Required"}
-          />
-          <VpwMetricCard
-            description={providerSummary.detail}
-            icon={<Database aria-hidden="true" className="h-4 w-4" />}
-            label="Provider data"
-            tone={props.providerStatus?.status === "ok" ? "success" : "warning"}
-            value={providerSummary.value}
-          />
-          <VpwMetricCard
-            description={
-              lastRun
-                ? `${runFileLabel(lastRun)} - ${formatDateTime(lastRun.started_at)}`
-                : "No import run recorded yet"
-            }
-            icon={<History aria-hidden="true" className="h-4 w-4" />}
-            label="Last import"
-            tone={lastRun?.status ? runTone(lastRun.status) : "neutral"}
-            value={lastRun ? runStatusLabel(lastRun.status) : "None yet"}
-          />
-        </VpwGrid>
+        <VpwCommandPanel
+          actions={
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button asChild variant="outline">
+                <Link search={projectSearch} to="/imports/formats">
+                  <TableProperties
+                    aria-hidden="true"
+                    data-icon="inline-start"
+                  />
+                  Supported formats
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link search={projectSearch} to="/imports/new">
+                  <Plus aria-hidden="true" data-icon="inline-start" />
+                  New import
+                </Link>
+              </Button>
+            </div>
+          }
+          description="Load scanner, SBOM, CVE, and network evidence into the selected workbench project."
+          eyebrow="Evidence intake"
+          title="Import workspace"
+        >
+          <VpwMetricStrip minCardWidth="13rem">
+            <VpwCompactMetric
+              description={
+                props.selectedProject ? "Active project" : "No project selected"
+              }
+              icon={<ListChecks aria-hidden="true" className="h-4 w-4" />}
+              label="Current project"
+              tone={props.selectedProject ? "info" : "warning"}
+              value={props.selectedProject?.name ?? "Required"}
+            />
+            <VpwCompactMetric
+              description={providerSummary.detail}
+              icon={<Database aria-hidden="true" className="h-4 w-4" />}
+              label="Provider data"
+              tone={
+                props.providerStatus?.status === "ok" ? "success" : "warning"
+              }
+              value={providerSummary.value}
+            />
+            <VpwCompactMetric
+              description={
+                lastRun
+                  ? `${runFileLabel(lastRun)} - ${formatDateTime(lastRun.started_at)}`
+                  : "No import run recorded yet"
+              }
+              icon={<History aria-hidden="true" className="h-4 w-4" />}
+              label="Last import"
+              tone={lastRun?.status ? runTone(lastRun.status) : "info"}
+              value={lastRun ? runStatusLabel(lastRun.status) : "None yet"}
+            />
+          </VpwMetricStrip>
+        </VpwCommandPanel>
       </VpwSection>
 
-      <RecentImports
-        {...props}
-        onOpenDiagnostics={props.onOpenDiagnostics}
-      />
+      <RecentImports {...props} onOpenDiagnostics={props.onOpenDiagnostics} />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <VpwPanel className="flex flex-col gap-4">
@@ -112,7 +125,7 @@ export function ImportsHomeRoute(props: ImportsHomeRouteProps) {
               ["4", "Review import", "Check readiness and start the run."],
             ].map(([number, title, description]) => (
               <Link
-                className="group flex items-center gap-4 rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] px-4 py-3 text-sm transition-colors hover:border-[var(--vpw-border-strong)] hover:bg-[var(--vpw-bg-panel)]"
+                className="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-[var(--vpw-border-subtle)] px-2 py-3 text-sm transition-colors last:border-b-0 hover:bg-[var(--vpw-bg-panel)]"
                 key={number}
                 search={projectSearch}
                 to="/imports/new"
@@ -164,22 +177,22 @@ export function ImportsHomeRoute(props: ImportsHomeRouteProps) {
                 label: "Network scanner exports",
               },
             ].map(({ description, icon: Icon, label }) => (
-                <div
-                  className="flex items-start gap-3 border-b border-[var(--vpw-border-subtle)] py-2 last:border-b-0"
-                  key={label}
-                >
-                  <Icon
-                    aria-hidden="true"
-                    className="mt-0.5 size-4 shrink-0 text-[var(--vpw-green)]"
-                  />
-                  <span className="min-w-0">
-                    <span className="block font-semibold text-[var(--vpw-text-primary)]">
-                      {label}
-                    </span>
-                    <span className="block text-xs leading-5">{description}</span>
+              <div
+                className="flex items-start gap-3 border-b border-[var(--vpw-border-subtle)] py-2 last:border-b-0"
+                key={label}
+              >
+                <Icon
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 text-[var(--vpw-green)]"
+                />
+                <span className="min-w-0">
+                  <span className="block font-semibold text-[var(--vpw-text-primary)]">
+                    {label}
                   </span>
-                </div>
-              ))}
+                  <span className="block text-xs leading-5">{description}</span>
+                </span>
+              </div>
+            ))}
           </div>
           <Button asChild size="sm" variant="outline">
             <Link search={projectSearch} to="/imports/formats">

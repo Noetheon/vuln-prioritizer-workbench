@@ -16,7 +16,7 @@ export function VpwTokenSwatch({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] shadow-[var(--vpw-shadow-1)]",
+        "overflow-hidden rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)]",
         className,
       )}
     >

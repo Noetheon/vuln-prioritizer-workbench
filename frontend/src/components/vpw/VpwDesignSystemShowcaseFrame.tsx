@@ -6,8 +6,7 @@ import {
 } from "lucide-react"
 
 import { VpwAppFrame } from "./VpwAppFrame"
-import { VpwGrid } from "./VpwLayout"
-import { VpwMetricCard } from "./VpwMetricCard"
+import { VpwCompactMetric, VpwMetricStrip } from "./VpwLayout"
 
 export function VpwDesignSystemShowcaseFrame() {
   return (
@@ -27,44 +26,44 @@ export function VpwDesignSystemShowcaseFrame() {
         ]}
         title="Risk Operations"
       >
-        <VpwGrid columns={4}>
-          <VpwMetricCard label="Critical" tone="critical" value="12" />
-          <VpwMetricCard label="KEV" tone="warning" value="5" />
-          <VpwMetricCard label="Runs" tone="info" value="28" />
-          <VpwMetricCard label="Evidence" tone="success" value="9" />
-        </VpwGrid>
+        <VpwMetricStrip minCardWidth="8rem">
+          <VpwCompactMetric label="Critical" tone="critical" value="12" />
+          <VpwCompactMetric label="KEV" tone="warning" value="5" />
+          <VpwCompactMetric label="Runs" tone="info" value="28" />
+          <VpwCompactMetric label="Evidence" tone="success" value="9" />
+        </VpwMetricStrip>
       </VpwAppFrame>
 
-      <section className="grid gap-4 lg:grid-cols-4">
-        <VpwMetricCard
+      <VpwMetricStrip minCardWidth="12rem">
+        <VpwCompactMetric
           description="Open high-impact findings"
           icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
           label="Critical"
           tone="critical"
           value="12"
         />
-        <VpwMetricCard
+        <VpwCompactMetric
           description="Known exploited signals"
           icon={<Activity className="h-5 w-5" aria-hidden="true" />}
           label="KEV"
           tone="warning"
           value="5"
         />
-        <VpwMetricCard
+        <VpwCompactMetric
           description="Generated artifacts"
           icon={<FileArchive className="h-5 w-5" aria-hidden="true" />}
           label="Evidence"
           tone="success"
           value="9"
         />
-        <VpwMetricCard
+        <VpwCompactMetric
           description="Provider snapshot mode"
           icon={<Database className="h-5 w-5" aria-hidden="true" />}
           label="Providers"
           tone="info"
           value="Fresh"
         />
-      </section>
+      </VpwMetricStrip>
     </>
   )
 }

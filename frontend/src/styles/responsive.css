@@ -1,17 +1,4 @@
 @media (min-width: 1600px) {
-  .finding-decision-hero {
-    grid-template-columns: minmax(0, 1.24fr) minmax(440px, 0.56fr);
-    padding: 28px;
-  }
-
-  .finding-decision-hero h2 {
-    font-size: 2.85rem;
-  }
-
-  .finding-decision-hero p {
-    max-width: 1080px;
-  }
-
   .finding-decision-fact-grid {
     grid-template-columns:
       minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr)
@@ -36,31 +23,9 @@
     grid-template-columns: repeat(5, minmax(140px, 1fr));
   }
 
-  .finding-ttp-context-hero-simple {
-    grid-template-columns: minmax(0, 1.34fr) minmax(460px, 0.56fr);
-    padding: 22px;
-  }
-
-  .finding-ttp-main-copy p {
-    max-width: 980px;
-  }
-
-  .finding-ttp-decision-grid-simple {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
 }
 
 @media (max-width: 1280px) {
-  .finding-decision-hero {
-    grid-template-columns: minmax(0, 1fr) minmax(360px, 0.58fr);
-    gap: 20px;
-    padding: 22px;
-  }
-
-  .finding-decision-hero h2 {
-    font-size: 2.35rem;
-  }
-
   .finding-decision-main-grid {
     grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
   }
@@ -69,7 +34,7 @@
   .finding-evidence-grid,
   .finding-history-timeline,
   .finding-ttp-chain,
-  .finding-ttp-decision-grid {
+  .governance-debt-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -87,7 +52,6 @@
 }
 
 @media (max-width: 1180px) {
-  .finding-decision-hero,
   .finding-decision-main-grid {
     grid-template-columns: 1fr;
   }
@@ -96,26 +60,16 @@
 @media (max-width: 960px) {
   .dashboard-chart-grid,
   .dashboard-cockpit-grid,
-  .dashboard-readiness-facts,
   .dashboard-signal-layout,
-  .freshness-facts,
   .finding-decision-fact-grid,
-  .finding-decision-hero-metrics,
   .finding-decision-reasons,
   .finding-evidence-detail-grid,
   .finding-evidence-grid,
   .finding-history-timeline,
   .finding-ttp-chain,
-  .finding-ttp-context-hero-simple,
-  .finding-ttp-decision-grid,
   .finding-ttp-main-facts,
-  .governance-debt-grid,
-  .summary-list {
+  .governance-debt-grid {
     grid-template-columns: 1fr;
-  }
-
-  .dashboard-panel-heading {
-    flex-direction: column;
   }
 
   .finding-tabs-toolbar {
@@ -123,7 +77,6 @@
     flex-direction: column;
   }
 
-  .finding-ttp-context-hero,
   .finding-ttp-technical-heading {
     align-items: stretch;
     flex-direction: column;
@@ -133,14 +86,6 @@
 @media (max-width: 640px) {
   .finding-decision-workflow {
     width: 100%;
-  }
-
-  .finding-decision-hero {
-    padding: 20px;
-  }
-
-  .finding-decision-hero h2 {
-    font-size: 2rem;
   }
 
   .finding-card-heading,

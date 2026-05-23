@@ -61,7 +61,7 @@ export function FieldLabel({
     <label
       data-slot="field-label"
       className={cn(
-        "vpw-field-label flex w-fit items-center gap-1 text-sm font-medium leading-snug text-[var(--vpw-text-primary)] group-data-[disabled=true]/field:opacity-50",
+        "vpw-field-label flex w-fit items-center gap-1 group-data-[disabled=true]/field:opacity-50",
         className,
       )}
       {...props}

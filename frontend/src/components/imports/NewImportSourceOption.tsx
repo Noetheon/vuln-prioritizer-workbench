@@ -21,7 +21,7 @@ export function FormatOptionCard({
       className={cn(
         "group flex h-auto min-h-[5.4rem] w-full items-center justify-between gap-4 whitespace-normal rounded-[var(--vpw-radius-lg)] border bg-[var(--vpw-bg-card)] p-4 text-left shadow-[var(--vpw-shadow-0)] transition-[background,border-color,box-shadow]",
         checked
-          ? "border-[var(--vpw-green)] bg-[color-mix(in_srgb,var(--vpw-bg-success)_54%,var(--vpw-bg-card))] shadow-[var(--vpw-shadow-1)] ring-1 ring-[color-mix(in_srgb,var(--vpw-green)_18%,transparent)]"
+          ? "border-[var(--vpw-green)] bg-[color-mix(in_srgb,var(--vpw-bg-success)_54%,var(--vpw-bg-card))] ring-1 ring-[color-mix(in_srgb,var(--vpw-green)_18%,transparent)]"
           : "border-[var(--vpw-border-default)] hover:border-[var(--vpw-border-strong)] hover:bg-[var(--vpw-bg-panel)]",
       )}
       onClick={onClick}

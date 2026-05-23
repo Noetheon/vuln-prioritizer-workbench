@@ -1,9 +1,9 @@
 import type { ProviderStatusPublic } from "@/api-client"
-import { Info } from "lucide-react"
 
 import {
   VpwBadge,
   VpwDataTable,
+  VpwStatusBanner,
   type VpwDataTableColumn,
   VpwTableCard,
 } from "@/components/vpw"
@@ -55,21 +55,10 @@ export function SettingsRuntimeProviderPanel({
         density="compact"
         getRowKey={(row) => row.id}
       />
-      <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] bg-[color-mix(in_srgb,var(--vpw-blue)_6%,var(--vpw-bg-card))] px-4 py-3">
-        <p className="flex gap-2 text-sm leading-6 text-[var(--vpw-text-secondary)]">
-          <Info
-            aria-hidden="true"
-            className="mt-1 h-4 w-4 shrink-0 text-[var(--vpw-blue)]"
-          />
-          <span>
-            <span className="font-medium text-[var(--vpw-text-primary)]">
-              Secrets are not displayed.
-            </span>{" "}
-            Provider keys, environment secrets, and stored credentials stay outside
-            Settings.
-          </span>
-        </p>
-      </div>
+      <VpwStatusBanner title="Secrets are not displayed" tone="info">
+        Provider keys, environment secrets, and stored credentials stay outside
+        Settings.
+      </VpwStatusBanner>
     </VpwTableCard>
   )
 }

@@ -115,7 +115,7 @@ def test_nvd_fixture_response_fetch_many_maps_live_contract_without_network() ->
     records, warnings = provider.fetch_many(["CVE-2026-2001"])
 
     assert warnings == []
-    assert session.calls[0]["params"] == {"cveId": "CVE-2026-2001"}
+    assert session.calls[0]["params"] == {"cveIds": "CVE-2026-2001"}
     assert records["CVE-2026-2001"].cve_id == "CVE-2026-2001"
     assert records["CVE-2026-2001"].description == (
         "Example Product allows command injection through a crafted request."
