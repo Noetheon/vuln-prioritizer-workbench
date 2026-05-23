@@ -855,8 +855,12 @@ test("workspace context and summary surfaces use shared VPW shell primitives", (
 
   for (const path of compactMetricContractFiles) {
     const source = readProjectFile(path)
-    assert.match(source, /VpwMetricStrip/, `${path}: metric strip`)
-    assert.match(source, /VpwCompactMetric/, `${path}: compact metric`)
+    assert.match(source, /MetricStrip/, `${path}: canonical metric strip`)
+    assert.doesNotMatch(
+      source,
+      /VpwMetricStrip|VpwCompactMetric/,
+      `${path}: route metrics should use the canonical MetricStrip adapter`,
+    )
   }
 
   const settingsOverview = readProjectFile(

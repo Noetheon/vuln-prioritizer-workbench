@@ -1,8 +1,7 @@
-import { Skeleton } from "@/components/ui/skeleton"
 import {
-  VpwCompactMetric,
   type VpwCompactTone,
-  VpwMetricStrip,
+  MetricStrip,
+  type MetricStripMetric,
 } from "@/components/vpw"
 import type { DashboardMetricSummary } from "./dashboard-model"
 
@@ -15,39 +14,26 @@ export function DashboardMetricStrip({
   isLoading,
   metrics,
 }: DashboardMetricStripProps) {
-  if (isLoading) {
-    return (
-      <VpwMetricStrip
-        aria-label="Dashboard metrics loading"
-        minCardWidth="8.25rem"
-      >
-        {Array.from({ length: 5 }, (_, i) => i).map((i) => (
-          <Skeleton className="h-[4.5rem]" key={i} />
-        ))}
-      </VpwMetricStrip>
-    )
-  }
+  const dashboardMetrics: MetricStripMetric[] = metrics.map((metric) => {
+    const Icon = metric.icon
+    return {
+      ariaLabel: `${metric.label} summary card`,
+      description: metric.detail,
+      icon: <Icon aria-hidden="true" />,
+      label: metric.label,
+      tone: dashboardMetricTone(metric.tone),
+      value: metric.value,
+    }
+  })
 
   return (
-    <VpwMetricStrip
-      aria-label="Dashboard metrics"
+    <MetricStrip
+      aria-label={isLoading ? "Dashboard metrics loading" : "Dashboard metrics"}
+      loading={isLoading}
+      loadingCount={5}
+      metrics={dashboardMetrics}
       minCardWidth="8.25rem"
-    >
-      {metrics.map((metric) => {
-        const Icon = metric.icon
-        return (
-          <VpwCompactMetric
-            aria-label={`${metric.label} summary card`}
-            description={metric.detail}
-            icon={<Icon aria-hidden="true" />}
-            key={metric.label}
-            label={metric.label}
-            tone={dashboardMetricTone(metric.tone)}
-            value={metric.value}
-          />
-        )
-      })}
-    </VpwMetricStrip>
+    />
   )
 }
 

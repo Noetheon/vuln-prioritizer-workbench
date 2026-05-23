@@ -1,14 +1,12 @@
 import { Link } from "@/lib/router"
 import { AlertTriangle, ArrowUp, Eye, FileDown, Upload } from "lucide-react"
-import type { ReactNode } from "react"
 import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   VpwCommandPanel,
-  VpwCompactMetric,
-  type VpwCompactTone,
-  VpwMetricStrip,
+  MetricStrip,
+  type MetricStripMetric,
   VpwSection,
   VpwDemoBanner,
 } from "@/components/vpw"
@@ -20,14 +18,6 @@ export function DemoBanner() {
       findings. Connect a real project to see live data.
     </VpwDemoBanner>
   )
-}
-
-type SummaryMetric = {
-  description: string
-  icon: ReactNode
-  label: string
-  tone: VpwCompactTone
-  value: number
 }
 
 type RemediationQueueSummaryProps = {
@@ -47,7 +37,7 @@ export function RemediationQueueSummary({
 }: RemediationQueueSummaryProps) {
   const projectSearch = selectedProjectRouteSearch(displayProject?.id ?? "")
   const projectName = displayProject?.name ?? "the selected project"
-  const metrics: SummaryMetric[] = [
+  const metrics: MetricStripMetric[] = [
     {
       description: "Immediate owner attention",
       icon: <AlertTriangle aria-hidden="true" className="h-4 w-4" />,
@@ -102,21 +92,11 @@ export function RemediationQueueSummary({
         eyebrow="Remediation workspace"
         title="Findings queue"
       >
-        <VpwMetricStrip
+        <MetricStrip
           aria-label="Queue signal summary"
+          metrics={metrics}
           minCardWidth="10.75rem"
-        >
-          {metrics.map((metric) => (
-            <VpwCompactMetric
-              description={metric.description}
-              icon={metric.icon}
-              key={metric.label}
-              label={metric.label}
-              tone={metric.tone}
-              value={metric.value}
-            />
-          ))}
-        </VpwMetricStrip>
+        />
       </VpwCommandPanel>
     </VpwSection>
   )

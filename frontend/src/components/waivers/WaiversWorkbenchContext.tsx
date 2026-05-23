@@ -13,8 +13,8 @@ import { Button } from "@/components/ui/button"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   VpwCommandPanel,
-  VpwCompactMetric,
-  VpwMetricStrip,
+  MetricStrip,
+  type MetricStripMetric,
   VpwSection,
   VpwToolbar,
   VpwToolbarGroup,
@@ -106,48 +106,51 @@ export function WaiverMetrics({
   reviewDue,
   waiversLoading,
 }: WaiverMetricValues) {
+  const metrics: MetricStripMetric[] = [
+    WaiverKpiCard({
+      description: "accepted risk currently active",
+      icon: <ShieldCheck aria-hidden="true" className="h-4 w-4" />,
+      label: "Active decisions",
+      tone: "success",
+      value: waiversLoading ? "Loading" : activeWaivers,
+    }),
+    WaiverKpiCard({
+      description: "requires owner review",
+      icon: <ClipboardCheck aria-hidden="true" className="h-4 w-4" />,
+      label: "Review due",
+      tone: Number(reviewDue) > 0 ? "warning" : "success",
+      value: reviewDue,
+    }),
+    WaiverKpiCard({
+      description: "within the review window",
+      icon: <CalendarClock aria-hidden="true" className="h-4 w-4" />,
+      label: "Expiring soon",
+      tone: Number(expiringSoon) > 0 ? "warning" : "success",
+      value: expiringSoon,
+    }),
+    WaiverKpiCard({
+      description: "findings currently accepted",
+      icon: <FileCheck2 aria-hidden="true" className="h-4 w-4" />,
+      label: "Accepted findings",
+      tone: "info",
+      value: acceptedFindings,
+    }),
+    WaiverKpiCard({
+      description: "missing approval reference or ticket",
+      icon: <AlertTriangle aria-hidden="true" className="h-4 w-4" />,
+      label: "Evidence incomplete",
+      tone: missingApprovals > 0 ? "warning" : "success",
+      value: waiversLoading ? "Loading" : missingApprovals,
+    }),
+  ]
+
   return (
-    <VpwMetricStrip
+    <MetricStrip
       aria-label="Risk acceptance summary"
       className="waivers-kpi-strip"
+      metrics={metrics}
       minCardWidth="11.5rem"
-    >
-      <WaiverKpiCard
-        description="accepted risk currently active"
-        icon={<ShieldCheck aria-hidden="true" className="h-4 w-4" />}
-        label="Active decisions"
-        tone="success"
-        value={waiversLoading ? "Loading" : activeWaivers}
-      />
-      <WaiverKpiCard
-        description="requires owner review"
-        icon={<ClipboardCheck aria-hidden="true" className="h-4 w-4" />}
-        label="Review due"
-        tone={Number(reviewDue) > 0 ? "warning" : "success"}
-        value={reviewDue}
-      />
-      <WaiverKpiCard
-        description="within the review window"
-        icon={<CalendarClock aria-hidden="true" className="h-4 w-4" />}
-        label="Expiring soon"
-        tone={Number(expiringSoon) > 0 ? "warning" : "success"}
-        value={expiringSoon}
-      />
-      <WaiverKpiCard
-        description="findings currently accepted"
-        icon={<FileCheck2 aria-hidden="true" className="h-4 w-4" />}
-        label="Accepted findings"
-        tone="info"
-        value={acceptedFindings}
-      />
-      <WaiverKpiCard
-        description="missing approval reference or ticket"
-        icon={<AlertTriangle aria-hidden="true" className="h-4 w-4" />}
-        label="Evidence incomplete"
-        tone={missingApprovals > 0 ? "warning" : "success"}
-        value={waiversLoading ? "Loading" : missingApprovals}
-      />
-    </VpwMetricStrip>
+    />
   )
 }
 
@@ -163,14 +166,6 @@ function WaiverKpiCard({
   label: string
   tone?: VpwCompactTone
   value: ReactNode
-}) {
-  return (
-    <VpwCompactMetric
-      description={description}
-      icon={icon}
-      label={label}
-      tone={tone}
-      value={value}
-    />
-  )
+}): MetricStripMetric {
+  return { description, icon, label, tone, value }
 }

@@ -625,14 +625,14 @@
 
 .findings-mobile-cards {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .findings-mobile-card {
   min-width: 0;
   border: 1px solid var(--findings-analyst-border);
   border-radius: var(--vpw-radius-xl);
-  padding: 14px;
+  padding: 11px;
   background: var(--vpw-bg-card);
   box-shadow: none;
 }
@@ -656,19 +656,19 @@
 
 .findings-mobile-cve {
   overflow-wrap: anywhere;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .findings-mobile-component {
   display: grid;
   min-width: 0;
   gap: 3px;
-  margin-top: 12px;
+  margin-top: 9px;
 }
 
 .findings-mobile-component-name {
   color: var(--vpw-text-primary);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   overflow-wrap: anywhere;
 }
 
@@ -682,42 +682,50 @@
 
 .findings-mobile-meta-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
-  margin-top: 12px;
+  gap: 7px;
+  margin-top: 9px;
+  border-block: 1px solid var(--findings-analyst-soft-border);
+  padding-block: 8px;
 }
 
 .findings-mobile-meta-grid > div {
   display: grid;
+  grid-template-columns: 4.25rem minmax(0, 1fr);
   min-width: 0;
   align-content: start;
-  gap: 4px;
-  border: 1px solid var(--findings-analyst-border);
-  border-radius: var(--vpw-radius-lg);
-  padding: 9px;
-  background: var(--findings-analyst-muted-fill);
+  align-items: start;
+  gap: 3px 8px;
 }
 
 .findings-mobile-meta-value {
   color: var(--vpw-text-primary);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   overflow-wrap: anywhere;
+}
+
+.findings-mobile-meta-grid .finding-meta-tags,
+.findings-mobile-meta-grid .findings-mobile-meta-detail {
+  grid-column: 2;
 }
 
 .findings-mobile-label {
   color: var(--vpw-text-muted);
   font-size: 0.7rem;
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.25;
   text-transform: uppercase;
 }
 
 .findings-mobile-signals {
-  margin-top: 12px;
+  margin-top: 9px;
 }
 
 .findings-mobile-why {
-  margin-top: 12px;
+  display: -webkit-box;
+  margin-top: 9px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   color: var(--vpw-text-secondary);
   font-size: 0.83rem;
   line-height: 1.45;
@@ -726,7 +734,9 @@
 
 .findings-mobile-card-actions {
   align-items: center;
-  margin-top: 8px;
+  margin-top: 9px;
+  border-top: 1px solid var(--findings-analyst-soft-border);
+  padding-top: 9px;
 }
 
 @media (min-width: 760px) {

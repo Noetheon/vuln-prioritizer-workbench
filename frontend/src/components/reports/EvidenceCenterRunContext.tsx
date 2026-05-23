@@ -14,9 +14,9 @@ import type {
 import { Button } from "@/components/ui/button"
 import {
   VpwCommandPanel,
-  VpwCompactMetric,
   VpwDemoBanner,
-  VpwMetricStrip,
+  MetricStrip,
+  type MetricStripMetric,
   VpwSection,
   VpwToolbar,
   VpwToolbarGroup,
@@ -83,6 +83,36 @@ export function RunContext({
     : providerSnapshotLabel(selectedReportRun, providerStatus)
   const readinessTone = evidenceReadinessTone(readiness)
   const runTone = runsLoading ? "neutral" : runMetricTone(run, isDemo)
+  const metrics: MetricStripMetric[] = [
+    {
+      description: "Artifact ownership scope",
+      icon: <BriefcaseBusiness aria-hidden="true" />,
+      label: "Project",
+      tone: "neutral",
+      value: projectName,
+    },
+    {
+      description: runDetail,
+      icon: <GitBranch aria-hidden="true" />,
+      label: "Analysis run",
+      tone: runTone,
+      value: run ? runShortId(run) : runStatus,
+    },
+    {
+      description: "Provider replay basis",
+      icon: <Database aria-hidden="true" />,
+      label: "Provider snapshot",
+      tone: "support",
+      value: snapshotLabel,
+    },
+    {
+      description: "Generation readiness",
+      icon: <ShieldCheck aria-hidden="true" />,
+      label: "Evidence state",
+      tone: readinessTone,
+      value: readiness,
+    },
+  ]
 
   return (
     <VpwSection>
@@ -113,39 +143,11 @@ export function RunContext({
         eyebrow="Govern"
         title="Evidence run context"
       >
-        <VpwMetricStrip
+        <MetricStrip
           className="evidence-run-context-facts"
+          metrics={metrics}
           minCardWidth="13rem"
-        >
-          <VpwCompactMetric
-            description="Artifact ownership scope"
-            icon={<BriefcaseBusiness aria-hidden="true" />}
-            label="Project"
-            tone="neutral"
-            value={projectName}
-          />
-          <VpwCompactMetric
-            description={runDetail}
-            icon={<GitBranch aria-hidden="true" />}
-            label="Analysis run"
-            tone={runTone}
-            value={run ? runShortId(run) : runStatus}
-          />
-          <VpwCompactMetric
-            description="Provider replay basis"
-            icon={<Database aria-hidden="true" />}
-            label="Provider snapshot"
-            tone="support"
-            value={snapshotLabel}
-          />
-          <VpwCompactMetric
-            description="Generation readiness"
-            icon={<ShieldCheck aria-hidden="true" />}
-            label="Evidence state"
-            tone={readinessTone}
-            value={readiness}
-          />
-        </VpwMetricStrip>
+        />
       </VpwCommandPanel>
     </VpwSection>
   )

@@ -9,6 +9,12 @@ REPO_ROOT = ROOT.parent
 SRC_ROOT = ROOT / "src" / "vuln_prioritizer"
 
 
+def _assert_metric_strip_adapter(source: str, label: str) -> None:
+    assert "MetricStrip" in source, label
+    assert "VpwMetricStrip" not in source, label
+    assert "VpwCompactMetric" not in source, label
+
+
 def _imported_modules(path: str) -> set[str]:
     tree = ast.parse((ROOT / path).read_text(encoding="utf-8"))
     modules: set[str] = set()
@@ -892,8 +898,7 @@ def test_findings_queue_uses_vpw_product_surfaces() -> None:
     )
 
     assert "@/components/vpw" in source
-    assert "VpwMetricStrip" in source
-    assert "VpwCompactMetric" in source
+    _assert_metric_strip_adapter(source, "findings queue metric strip")
     assert "VpwEmptyState" in source
     assert "VpwStatusBanner" in source
     assert "@/components/ui/card" not in source
@@ -1033,8 +1038,10 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     assert "DashboardPriorityChart" in dashboard_signal_tabs_source
     assert "DashboardKeyTakeaways" in dashboard_key_takeaways_source
     assert "CheckCircle2" in dashboard_key_takeaways_source
-    assert "VpwMetricStrip" in dashboard_metric_strip_source
-    assert "VpwCompactMetric" in dashboard_metric_strip_source
+    _assert_metric_strip_adapter(
+        dashboard_metric_strip_source,
+        "dashboard metric strip",
+    )
     assert len(dashboard_source.splitlines()) <= 340
     assert len(dashboard_context_source.splitlines()) <= 90
     assert len(dashboard_context_actions_source.splitlines()) <= 130
@@ -1055,7 +1062,10 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     assert "VpwSurface" in dashboard_paths[5].read_text(encoding="utf-8")
     assert "VpwDataTable" in dashboard_paths[5].read_text(encoding="utf-8")
     assert "VpwSurface" in dashboard_paths[6].read_text(encoding="utf-8")
-    assert "VpwMetricStrip" in dashboard_paths[8].read_text(encoding="utf-8")
+    _assert_metric_strip_adapter(
+        dashboard_paths[8].read_text(encoding="utf-8"),
+        "dashboard route metric strip",
+    )
     assert "VpwSurface" in dashboard_operations_source
     assert "VpwSurface" in dashboard_recent_runs_source
     assert "VpwSurface" in dashboard_data_quality_source
@@ -1063,8 +1073,7 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     assert "VpwSurface" in dashboard_signal_overview_source
     assert "VpwStatusBanner" in finding_detail_paths[0].read_text(encoding="utf-8")
     assert "VpwCommandPanel" in finding_context_source
-    assert "VpwMetricStrip" in finding_context_source
-    assert "VpwCompactMetric" in finding_context_source
+    _assert_metric_strip_adapter(finding_context_source, "finding detail metric strip")
     assert "finding-decision-brief__facts" in finding_detail_paths[2].read_text(encoding="utf-8")
     assert "FindingEvidenceSummaryGrid" in finding_detail_paths[3].read_text(encoding="utf-8")
     assert "FindingOccurrencesPanel" in finding_detail_paths[3].read_text(encoding="utf-8")
@@ -1728,8 +1737,7 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert "VpwToolbar" in projects_context_source
     assert "VpwCommandPanel" in projects_context_source
     assert "ProjectMetrics" in projects_metrics_source
-    assert "VpwMetricStrip" in projects_metrics_source
-    assert "VpwCompactMetric" in projects_metrics_source
+    _assert_metric_strip_adapter(projects_metrics_source, "projects metric strip")
     assert "VpwMetricCard" not in projects_overview_source
     assert "ProjectsWorkbenchSetup" in projects_sections_source
     assert "ProjectsWorkbenchDirectory" in projects_sections_source
@@ -1741,7 +1749,7 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert "selectedProjectRouteSearch" not in projects_active_source
     assert "WaiversContext" in waivers_sections_source
     assert "VpwCommandPanel" in waivers_context_source
-    assert "VpwMetricStrip" in waivers_context_source
+    _assert_metric_strip_adapter(waivers_context_source, "waivers metric strip")
     assert "WaiversWorkbenchCreate" in waivers_sections_source
     assert "WaiversWorkbenchRegister" in waivers_sections_source
     assert "WaiversWorkbenchReview" in waivers_sections_source
