@@ -13,12 +13,14 @@ export type ProjectFormStateLike = {
 }
 
 export type ProjectsWorkbenchProps = {
+  createProjectDrawerOpen: boolean
   createProjectError: string
   createProjectForm: ProjectFormStateLike
   deleteConfirmed: boolean
   editProjectForm: ProjectFormStateLike
   editProjectId: string
   onCancelEditProject: () => void
+  onCreateProjectDrawerOpenChange: (open: boolean) => void
   onCreateProject: FormEventHandler<HTMLFormElement>
   onCreateProjectDescriptionChange: (value: string) => void
   onCreateProjectNameChange: (value: string) => void

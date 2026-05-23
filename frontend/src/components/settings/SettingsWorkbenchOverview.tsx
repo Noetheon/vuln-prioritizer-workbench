@@ -1,11 +1,11 @@
 import {
   VpwBadge,
   VpwDataTable,
-  type VpwDataTableColumn,
   VpwSkeletonStack,
   VpwStatusBanner,
   VpwTableCard,
   type VpwBadgeTone,
+  type VpwDataTableColumn,
 } from "@/components/vpw"
 import { formatCacheAge, providerSnapshotSummary } from "@/lib/provider-format"
 import {
@@ -34,42 +34,42 @@ type SettingsStateRow = {
   tone: VpwBadgeTone
 }
 
-const settingsStateColumns: VpwDataTableColumn<SettingsStateRow>[] = [
+const settingsStateColumns: readonly VpwDataTableColumn<SettingsStateRow>[] = [
   {
-    id: "setting",
-    header: "Setting",
-    width: "26%",
     cell: (row) => (
-      <div className="vpw-table-cell-stack">
-        <span className="vpw-table-cell-primary">{row.label}</span>
-        <span className="vpw-table-cell-secondary">{row.description}</span>
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="font-semibold text-sm text-[var(--vpw-text-primary)]">
+          {row.label}
+        </span>
+        <span className="text-xs text-[var(--vpw-text-muted)]">
+          {row.description}
+        </span>
       </div>
     ),
+    header: "Setting",
+    id: "setting",
+    width: "25%",
   },
   {
-    id: "state",
-    header: "State",
-    width: "16%",
     cell: (row) => <VpwBadge tone={row.tone}>{row.state}</VpwBadge>,
+    header: "State",
+    id: "state",
+    width: "16%",
   },
   {
+    cell: (row) => row.detail,
+    header: "Detail",
     id: "detail",
-    header: "Details",
-    cell: (row) => (
-      <span className="text-sm text-[var(--vpw-text-secondary)]">
-        {row.detail}
-      </span>
-    ),
   },
   {
-    id: "signal",
-    header: "Signal",
-    width: "24%",
     cell: (row) => (
-      <span className="text-sm font-medium text-[var(--vpw-text-primary)]">
+      <span className="font-mono text-xs text-[var(--vpw-text-primary)]">
         {row.signal}
       </span>
     ),
+    header: "Signal",
+    id: "signal",
+    width: "24%",
   },
 ]
 
@@ -82,6 +82,12 @@ export function SettingsWorkspaceHealth({
 }: SettingsWorkspaceHealthProps) {
   const errorMessage =
     providerStatus?.last_error || providerStatusError || statusError
+  const rows = settingsStateRows({
+    providerStatus,
+    providerStatusError,
+    status,
+    statusError,
+  })
 
   return (
     <VpwTableCard
@@ -93,25 +99,21 @@ export function SettingsWorkspaceHealth({
         <VpwSkeletonStack rows={5} />
       ) : (
         <VpwDataTable
-          ariaLabel="Workspace settings state"
-          caption="Workspace settings state"
+          caption="Workspace state"
           columns={settingsStateColumns}
-          data={settingsStateRows({
-            providerStatus,
-            providerStatusError,
-            status,
-            statusError,
-          })}
-          density="compact"
+          data={rows}
+          density="comfortable"
           getRowKey={(row) => row.id}
-          minWidth="860px"
+          minWidth="820px"
         />
       )}
 
       {errorMessage ? (
-        <VpwStatusBanner title="Settings need review" tone="critical">
-          {errorMessage}
-        </VpwStatusBanner>
+        <div className="mt-5">
+          <VpwStatusBanner title="Settings need review" tone="critical">
+            {errorMessage}
+          </VpwStatusBanner>
+        </div>
       ) : null}
     </VpwTableCard>
   )
@@ -138,63 +140,63 @@ function settingsStateRows({
 
   return [
     {
+      description: "Local operator scope",
+      detail: "This browser is connected directly to the local Workbench.",
       id: "workspace-profile",
       label: "Workspace profile",
-      description: "Local operator scope",
-      state: "Local workspace",
-      detail: "This browser is connected directly to the local Workbench.",
       signal: "No remote tenancy configured",
+      state: "Local workspace",
       tone: "success",
     },
     {
+      description: "Operator mode",
+      detail: "The local operator can manage imports, evidence, and settings.",
       id: "access-model",
       label: "Access model",
-      description: "Operator mode",
-      state: "Single-user",
-      detail: "The local operator can manage imports, evidence, and settings.",
       signal: "Role switching unavailable",
+      state: "Single-user",
       tone: "info",
     },
     {
-      id: "backend-service",
-      label: "Backend service",
       description: status?.app ?? "Workbench API",
-      state: backend.label,
       detail: `Database ${status?.database_status ?? "not reported"}; schema ${
         status?.schema_status ?? "not reported"
       }.`,
+      id: "backend-service",
+      label: "Backend service",
       signal: status?.core_version
         ? `Core ${status.core_version}`
         : "Core version not reported",
+      state: backend.label,
       tone: backend.tone,
     },
     {
+      description: "NVD, EPSS, KEV readiness",
+      detail: providerSnapshotSummary(providerStatus),
       id: "provider-snapshot",
       label: "Provider snapshot",
-      description: "NVD, EPSS, KEV readiness",
-      state: provider.label,
-      detail: providerSnapshotSummary(providerStatus),
       signal: `Cache ${formatCacheAge(providerStatus?.cache_age_seconds)}`,
+      state: provider.label,
       tone: provider.tone,
     },
     {
-      id: "evidence-readiness",
-      label: "Evidence readiness",
       description: "Bundle generation basis",
-      state: evidence.label,
       detail: providerStatus?.last_sync
         ? `Last provider sync ${formatDateTime(providerStatus.last_sync)}.`
         : "No provider sync timestamp has been reported.",
+      id: "evidence-readiness",
+      label: "Evidence readiness",
       signal: providerStatus?.snapshot_mode ?? "Snapshot mode not reported",
+      state: evidence.label,
       tone: evidence.tone,
     },
     {
+      description: "Safe operational signal",
+      detail: latestError,
       id: "api-errors",
       label: "Latest API error",
-      description: "Safe operational signal",
-      state: latestError === "None" ? "None" : "Review",
-      detail: latestError,
       signal: "Credentials are never displayed",
+      state: latestError === "None" ? "None" : "Review",
       tone: latestError === "None" ? "success" : "critical",
     },
   ]

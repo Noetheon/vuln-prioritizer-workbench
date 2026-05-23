@@ -5,9 +5,9 @@ import {
   VpwKeyValueList,
   VpwPanel,
   VpwProgress,
-  VpwSection,
   VpwSectionHeader,
 } from "@/components/vpw"
+import type { ProjectUrlSearch } from "@/workbench/selected-project-search"
 import {
   evidenceState,
   formatDateTime,
@@ -20,22 +20,13 @@ import {
   ActiveProjectDeletePanel,
   ActiveProjectEditForm,
 } from "./ProjectsWorkbenchActiveControls"
+import { ActiveProjectWorkflowLinks } from "./ProjectsWorkbenchActiveWorkflow"
 
-function ActiveProjectPanel({
-  deleteConfirmed,
-  editProjectForm,
-  editProjectId,
-  onCancelEditProject,
-  onDeleteConfirmedChange,
-  onDeleteProject,
-  onEditProjectDescriptionChange,
-  onEditProjectNameChange,
-  onSaveProject,
-  onStartEditProject,
-  projectActionLoading,
-  projectSummary,
-  selectedProject,
-}: Pick<
+type ActiveProjectWorkflowProps = {
+  projectSearch: ProjectUrlSearch
+}
+
+type ActiveProjectPanelProps = Pick<
   ProjectsWorkbenchProps,
   | "deleteConfirmed"
   | "editProjectForm"
@@ -50,10 +41,28 @@ function ActiveProjectPanel({
   | "projectActionLoading"
   | "projectSummary"
   | "selectedProject"
->) {
+> &
+  ActiveProjectWorkflowProps
+
+export function ActiveProjectPanel({
+  deleteConfirmed,
+  editProjectForm,
+  editProjectId,
+  onCancelEditProject,
+  onDeleteConfirmedChange,
+  onDeleteProject,
+  onEditProjectDescriptionChange,
+  onEditProjectNameChange,
+  onSaveProject,
+  onStartEditProject,
+  projectActionLoading,
+  projectSearch,
+  projectSummary,
+  selectedProject,
+}: ActiveProjectPanelProps) {
   if (!selectedProject) {
     return (
-      <VpwPanel>
+      <VpwPanel className="projects-active-panel">
         <VpwEmptyState
           icon={<FolderKanban aria-hidden="true" className="h-5 w-5" />}
           title="No active project selected"
@@ -65,10 +74,12 @@ function ActiveProjectPanel({
 
   const evidence = evidenceState(projectSummary)
   const readiness = readinessProgress(selectedProject, projectSummary)
+  const openFindingCount =
+    projectSummary?.open_finding_count ?? projectSummary?.finding_count ?? null
 
   return (
-    <VpwPanel className="flex flex-col gap-5 border-[color-mix(in_srgb,var(--vpw-blue)_24%,var(--vpw-border-subtle))] bg-[var(--vpw-bg-card)]">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <VpwPanel className="projects-active-panel">
+      <div className="projects-active-panel__header">
         <VpwSectionHeader
           actions={<VpwBadge tone={evidence.tone}>{evidence.label}</VpwBadge>}
           eyebrow="Active workspace"
@@ -80,6 +91,24 @@ function ActiveProjectPanel({
         <ActiveProjectActions
           onStartEditProject={onStartEditProject}
           selectedProject={selectedProject}
+        />
+      </div>
+
+      <div className="projects-active-panel__readiness">
+        <div className="projects-active-panel__readiness-copy">
+          <p className="vpw-label">Project readiness</p>
+          <p>
+            {openFindingCount === null
+              ? "Summary data is still loading for this project."
+              : `${openFindingCount} finding${
+                  openFindingCount === 1 ? "" : "s"
+                } currently drive project follow-up.`}
+          </p>
+        </div>
+        <VpwProgress
+          label="Project readiness"
+          tone={evidence.tone === "critical" ? "critical" : "info"}
+          value={readiness}
         />
       </div>
 
@@ -106,11 +135,7 @@ function ActiveProjectPanel({
         ]}
       />
 
-      <VpwProgress
-        label="Project readiness"
-        tone={evidence.tone === "critical" ? "critical" : "info"}
-        value={readiness}
-      />
+      <ActiveProjectWorkflowLinks projectSearch={projectSearch} />
 
       {editProjectId === selectedProject.id ? (
         <ActiveProjectEditForm
@@ -131,35 +156,5 @@ function ActiveProjectPanel({
         selectedProject={selectedProject}
       />
     </VpwPanel>
-  )
-}
-
-export function ActiveProjectSection(
-  props: Pick<
-    ProjectsWorkbenchProps,
-    | "deleteConfirmed"
-    | "editProjectForm"
-    | "editProjectId"
-    | "onCancelEditProject"
-    | "onDeleteConfirmedChange"
-    | "onDeleteProject"
-    | "onEditProjectDescriptionChange"
-    | "onEditProjectNameChange"
-    | "onSaveProject"
-    | "onStartEditProject"
-    | "projectActionLoading"
-    | "projectSummary"
-    | "selectedProject"
-  >,
-) {
-  return (
-    <VpwSection>
-      <VpwSectionHeader
-        eyebrow="Project detail"
-        title="Active Project"
-        description="Inspect and manage the currently selected project."
-      />
-      <ActiveProjectPanel {...props} />
-    </VpwSection>
   )
 }

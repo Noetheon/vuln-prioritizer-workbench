@@ -5,7 +5,7 @@ import {
   Gauge,
   ShieldCheck,
 } from "lucide-react"
-import { MetricStrip, type MetricStripMetric, VpwSection } from "@/components/vpw"
+import { MetricStrip, type MetricStripMetric } from "@/components/vpw"
 import {
   evidenceState,
   latestRunLabel,
@@ -70,8 +70,11 @@ export function ProjectMetrics({
   ]
 
   return (
-    <VpwSection>
-      <MetricStrip metrics={metrics} minCardWidth="12rem" />
-    </VpwSection>
+    <MetricStrip
+      aria-label="Project summary"
+      className="projects-summary-strip"
+      metrics={metrics}
+      minCardWidth="11.75rem"
+    />
   )
 }

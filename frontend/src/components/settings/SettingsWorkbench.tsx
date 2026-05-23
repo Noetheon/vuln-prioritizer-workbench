@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VpwPageContainer } from "@/components/vpw"
+import "@/styles/projects.css"
 import {
   SettingsAlerts,
   SettingsContext,

@@ -1,10 +1,11 @@
-import { VpwPageStack, VpwStatusBanner } from "@/components/vpw"
+import "@/styles/projects.css"
+
+import { VpwPageContainer, VpwStatusBanner } from "@/components/vpw"
 import {
-  ActiveProjectSection,
+  CreateProjectDrawer,
+  ProjectDetailDrawer,
   ProjectDirectory,
   ProjectContext,
-  ProjectMetrics,
-  ProjectSetupSection,
 } from "./ProjectsWorkbenchSections"
 import type { ProjectsWorkbenchProps } from "./projects-workbench-model"
 
@@ -15,9 +16,15 @@ export type {
 
 export function ProjectsWorkbench(props: ProjectsWorkbenchProps) {
   return (
-    <VpwPageStack>
+    <VpwPageContainer className="projects-workbench vpw-page-stack px-0 py-0">
       <ProjectContext
+        onCreateProjectDrawerOpenChange={
+          props.onCreateProjectDrawerOpenChange
+        }
+        onRefreshProjects={props.onRefreshProjects}
+        projectListLoading={props.projectListLoading}
         projectSummary={props.projectSummary}
+        projectSummaryById={props.projectSummaryById}
         projects={props.projects}
         selectedProject={props.selectedProject}
       />
@@ -38,21 +45,33 @@ export function ProjectsWorkbench(props: ProjectsWorkbenchProps) {
         </VpwStatusBanner>
       ) : null}
 
-      <ProjectMetrics
-        projectSummary={props.projectSummary}
-        projectSummaryById={props.projectSummaryById}
-        projects={props.projects}
-        selectedProject={props.selectedProject}
-      />
       <ProjectDirectory
-        onRefreshProjects={props.onRefreshProjects}
+        onCreateProjectDrawerOpenChange={
+          props.onCreateProjectDrawerOpenChange
+        }
         onSelectProject={props.onSelectProject}
         projectListLoading={props.projectListLoading}
         projectSummaryById={props.projectSummaryById}
         projects={props.projects}
         selectedProjectId={props.selectedProjectId}
+        onStartEditProject={props.onStartEditProject}
       />
-      <ActiveProjectSection
+
+      <CreateProjectDrawer
+        createProjectDrawerOpen={props.createProjectDrawerOpen}
+        createProjectError={props.createProjectError}
+        createProjectForm={props.createProjectForm}
+        onCreateProject={props.onCreateProject}
+        onCreateProjectDescriptionChange={
+          props.onCreateProjectDescriptionChange
+        }
+        onCreateProjectDrawerOpenChange={
+          props.onCreateProjectDrawerOpenChange
+        }
+        onCreateProjectNameChange={props.onCreateProjectNameChange}
+        projectActionLoading={props.projectActionLoading}
+      />
+      <ProjectDetailDrawer
         deleteConfirmed={props.deleteConfirmed}
         editProjectForm={props.editProjectForm}
         editProjectId={props.editProjectId}
@@ -62,21 +81,13 @@ export function ProjectsWorkbench(props: ProjectsWorkbenchProps) {
         onEditProjectDescriptionChange={props.onEditProjectDescriptionChange}
         onEditProjectNameChange={props.onEditProjectNameChange}
         onSaveProject={props.onSaveProject}
-        onStartEditProject={props.onStartEditProject}
+        onSelectProject={props.onSelectProject}
         projectActionLoading={props.projectActionLoading}
-        projectSummary={props.projectSummary}
-        selectedProject={props.selectedProject}
+        projectListLoading={props.projectListLoading}
+        projectSummaryById={props.projectSummaryById}
+        projects={props.projects}
+        selectedProjectId={props.selectedProjectId}
       />
-      <ProjectSetupSection
-        createProjectError={props.createProjectError}
-        createProjectForm={props.createProjectForm}
-        onCreateProject={props.onCreateProject}
-        onCreateProjectDescriptionChange={
-          props.onCreateProjectDescriptionChange
-        }
-        onCreateProjectNameChange={props.onCreateProjectNameChange}
-        projectActionLoading={props.projectActionLoading}
-      />
-    </VpwPageStack>
+    </VpwPageContainer>
   )
 }
