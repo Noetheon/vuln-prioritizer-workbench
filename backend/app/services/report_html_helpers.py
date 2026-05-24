@@ -556,6 +556,7 @@ def _html_deduplicated_recommendations_helper(findings: list[MarkdownReportFindi
             if gov_notes
             else ""
         )
+        gov_note_line = f"    {gov_note_str}\n" if gov_note_str else ""
 
         items.append(
             f"<li>\n"
@@ -568,7 +569,7 @@ def _html_deduplicated_recommendations_helper(findings: list[MarkdownReportFindi
             f"    SLA: {_safe_html(sla_str)}<br>\n"
             f"    Owner: {_safe_html(owners)}<br>\n"
             f"    Evidence basis: {_safe_html(_evidence_signal_summary(campaign))}\n"
-            f"    {gov_note_str}\n"
+            f"{gov_note_line}"
             f"  </span>\n"
             f"</li>\n"
         )
