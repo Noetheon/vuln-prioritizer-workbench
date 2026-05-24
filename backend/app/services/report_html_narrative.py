@@ -2,7 +2,21 @@
 
 from __future__ import annotations
 
+from typing import Any
+
+from app.services.report_html_helpers import (
+    _executive_verdict_summary_helper,
+    _html_business_impact_table_helper,
+)
 from app.services.report_models import MarkdownReportFinding
+
+
+def _executive_verdict_summary(payload: Any) -> str:
+    return _executive_verdict_summary_helper(payload)
+
+
+def _html_business_impact_table(findings: list[MarkdownReportFinding]) -> str:
+    return _html_business_impact_table_helper(findings)
 
 
 def _executive_summary_text(
@@ -50,4 +64,6 @@ __all__ = [
     "_business_impact_summary",
     "_decision_statement",
     "_executive_summary_text",
+    "_executive_verdict_summary",
+    "_html_business_impact_table",
 ]

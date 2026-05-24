@@ -98,3 +98,4 @@ class MarkdownReportPayload:
     run_finished_at: datetime | None = None
     run_error: str | None = None
     run_errors: dict[str, Any] = field(default_factory=dict)
+    input_file_hash: str | None = None

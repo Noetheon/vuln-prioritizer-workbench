@@ -7,7 +7,7 @@ from app.services.report_formatting import safe_html as _safe_html
 
 def _metric_tone(label: str) -> str:
     normalized = label.casefold()
-    if "critical" in normalized or "expired" in normalized:
+    if "critical" in normalized or "expired" in normalized or "emergency" in normalized:
         return "critical"
     if "high" in normalized or "review due" in normalized or "expiring" in normalized:
         return "warning"

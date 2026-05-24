@@ -197,6 +197,9 @@ def _waiver_debt_summary(
                 service=waiver.service,
                 asset_key=waiver.asset_key,
                 finding_id=waiver.finding_id,
+                reason=waiver.reason,
+                approval_ref=waiver.approval_ref,
+                ticket_url=waiver.ticket_url,
             )
         )
 

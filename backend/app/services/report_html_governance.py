@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from app.services.report_formatting import dict_value as _dict_value
@@ -15,35 +16,22 @@ from app.services.report_renderer_common import _dict_list, _governance_vex_summ
 def _html_governance_rollups(
     governance_rollups: dict[str, Any],
     findings: list[MarkdownReportFinding],
+    generated_at: datetime | None = None,
 ) -> str:
-    services = _dict_list(governance_rollups.get("top_services_by_risk"))[:5]
-    assets = _dict_list(governance_rollups.get("top_assets_by_risk"))[:5]
     waiver_debt = _dict_value(governance_rollups.get("waiver_debt"))
     waiver_items = _dict_list(waiver_debt.get("items"))[:5]
     vex_summary = _governance_vex_summary(findings)
-    service_rows = "\n".join(_html_service_rollup_row(service) for service in services)
-    if not service_rows:
-        service_rows = (
-            '<tr><td colspan="6" class="empty-state">'
-            "No service rollups are available for this analysis run.</td></tr>"
-        )
-    asset_rows = "\n".join(_html_asset_rollup_row(asset) for asset in assets)
-    if not asset_rows:
-        asset_rows = (
-            '<tr><td colspan="7" class="empty-state">'
-            "No asset rollups are available for this analysis run.</td></tr>"
-        )
-    waiver_rows = "\n".join(_html_waiver_debt_row(item) for item in waiver_items)
+    waiver_rows = "\n".join(_html_waiver_debt_row(item, generated_at) for item in waiver_items)
     if not waiver_rows:
         waiver_rows = (
-            '<tr><td colspan="6" class="empty-state">'
+            '<tr><td colspan="7" class="empty-state">'
             "No accepted-risk waiver debt is currently recorded for this run.</td></tr>"
         )
     return (
         '    <section aria-labelledby="governance-rollups">\n'
         '      <div class="section-heading">\n'
         '        <p class="eyebrow">Governance</p>\n'
-        '        <h2 id="governance-rollups">Service Risk, Accepted Risk, and VEX</h2>\n'
+        '        <h2 id="governance-rollups">Governance Exceptions</h2>\n'
         "      </div>\n"
         '      <div class="metric-grid">\n'
         f"        {_html_metric('Waivers', waiver_debt.get('waiver_count', 0))}\n"
@@ -53,33 +41,15 @@ def _html_governance_rollups(
         "        "
         f"{_html_metric('Accepted Findings', waiver_debt.get('accepted_finding_count', 0))}\n"
         f"        {_html_metric('VEX Suppressed', vex_summary['suppressed_by_vex_count'])}\n"
+        f"        {_html_metric('Fixed Findings', vex_summary['fixed_count'])}\n"
         "      </div>\n"
-        "      <h3>Service Rollup</h3>\n"
+        "      <h3>Accepted Risk and Waiver Review</h3>\n"
         '      <div class="table-wrap">\n'
         "        <table>\n"
         "          <thead>\n"
-        "            <tr><th>Service</th><th>Findings</th><th>Critical</th><th>High</th>"
-        "<th>Risk Score</th><th>Waiver Debt</th></tr>\n"
-        "          </thead>\n"
-        f"          <tbody>\n{service_rows}\n          </tbody>\n"
-        "        </table>\n"
-        "      </div>\n"
-        "      <h3>Asset Rollup</h3>\n"
-        '      <div class="table-wrap">\n'
-        "        <table>\n"
-        "          <thead>\n"
-        "            <tr><th>Asset</th><th>Findings</th><th>Critical</th><th>High</th>"
-        "<th>Risk Score</th><th>Accepted</th><th>VEX Suppressed</th></tr>\n"
-        "          </thead>\n"
-        f"          <tbody>\n{asset_rows}\n          </tbody>\n"
-        "        </table>\n"
-        "      </div>\n"
-        "      <h3>Accepted Risk and Expiring Waivers</h3>\n"
-        '      <div class="table-wrap">\n'
-        "        <table>\n"
-        "          <thead>\n"
-        "            <tr><th>Scope</th><th>Owner</th><th>Status</th><th>Expires</th>"
-        "<th>Review</th><th>Matched</th></tr>\n"
+        "            <tr><th>Scope</th><th>Owner</th><th>Status</th><th>Expiry</th>"
+        "<th>Review Date</th><th>Matched Findings</th>"
+        "<th>Required Governance Action</th></tr>\n"
         "          </thead>\n"
         f"          <tbody>\n{waiver_rows}\n          </tbody>\n"
         "        </table>\n"
@@ -118,17 +88,49 @@ def _html_asset_rollup_row(asset: dict[str, Any]) -> str:
     )
 
 
-def _html_waiver_debt_row(item: dict[str, Any]) -> str:
+def _html_waiver_debt_row(item: dict[str, Any], generated_at: datetime | None = None) -> str:
+    status = item.get("status")
+    review_at = item.get("review_at")
+    status_badge = _safe_html(_status_label(status))
+    required_action = "Accepted risk active"
+    if generated_at and review_at:
+        try:
+            dt = datetime.strptime(review_at.split("T")[0], "%Y-%m-%d")
+            if dt.date() < generated_at.date():
+                status_badge = '<span class="badge badge-overdue">Review Overdue</span>'
+                required_action = "Review now"
+        except ValueError:
+            pass
+
+    matched_findings = int(item.get("matched_findings") or 0)
+    expires_at = item.get("expires_at")
+    normalized_status = str(status or "").strip().lower()
+    if required_action != "Review now":
+        if normalized_status in {"expired", "review_due", "due"}:
+            required_action = "Review now"
+        elif normalized_status in {"expiring_soon", "active_expiring"}:
+            required_action = "Review before expiry"
+        elif matched_findings > 0:
+            required_action = "Accepted risk active"
+        else:
+            required_action = "No immediate action"
+
     return (
         "            <tr>"
         f"<td>{_safe_html(item.get('scope'))}</td>"
         f"<td>{_safe_html(item.get('owner'))}</td>"
-        f"<td>{_safe_html(item.get('status'))}</td>"
-        f"<td>{_safe_html(item.get('expires_at'))}</td>"
-        f"<td>{_safe_html(item.get('review_at'))}</td>"
-        f"<td>{_safe_html(item.get('matched_findings', 0))}</td>"
+        f"<td>{status_badge}</td>"
+        f"<td>{_safe_html(expires_at)}</td>"
+        f"<td>{_safe_html(review_at)}</td>"
+        f"<td>{_safe_html(matched_findings)}</td>"
+        f"<td>{_safe_html(required_action)}</td>"
         "</tr>"
     )
+
+
+def _status_label(value: object) -> str:
+    text = str(value or "").strip().replace("_", " ")
+    return text.title() if text else "N/A"
 
 
 __all__ = [

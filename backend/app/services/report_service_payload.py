@@ -68,7 +68,14 @@ def build_report_payload(
         run_finished_at=run.finished_at,
         run_error=run.error_message,
         run_errors=dict(run.error_json or {}),
+        input_file_hash=(
+            run.summary_json.get("input_sha256")
+            or run.summary_json.get("input_upload", {}).get("sha256")
+            if run.summary_json
+            else None
+        ),
     )
+
     return payload, findings, generated_at
 
 

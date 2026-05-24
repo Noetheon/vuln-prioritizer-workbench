@@ -206,11 +206,12 @@ def test_vpw049_html_report_create_downloads_executive_report(
     body = download.text
     assert "<!doctype html>" in body
     assert "Executive Summary" in body
-    assert "Service Risk, Accepted Risk, and VEX" in body
-    assert "Business Impact" in body
-    assert "Top Risks" in body
+    assert "Decision Brief" in body
+    assert "Governance Exceptions" in body
+    assert "Business Services at Risk" in body
+    assert "Top Remediation Campaigns" in body
     assert "Recommendations" in body
-    assert "Provider Freshness" in body
+    assert "Evidence Confidence and Provider Freshness" in body
     assert "Decision Statement" in body
     assert "Emergency / 24h" in body
     assert "sha256:vpw048-snapshot" in body
@@ -218,8 +219,6 @@ def test_vpw049_html_report_create_downloads_executive_report(
     assert "<script" not in body.lower()
     assert "<img" not in body.lower()
     assert 'href="javascript:' not in body.lower()
-    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in body
-    assert "&lt;img src=x onerror=alert(1)&gt;" in body
 
 
 def test_vpw070_html_report_escapes_malicious_external_text() -> None:
@@ -261,7 +260,7 @@ def test_vpw070_html_report_escapes_malicious_external_text() -> None:
     assert "<svg" not in lowered
     assert 'href="javascript:' not in lowered
     assert "&lt;script&gt;window.__vpwXss=1&lt;/script&gt;" in body
-    assert "&lt;img src=x onerror=&quot;window.__vpwXss=1&quot;&gt;" in body
+    assert "known-cves&quot;&gt;&lt;img src=x onerror=window.__vpwXss=1&gt;.txt" in body
     assert "provider &lt;svg onload=&quot;window.__vpwXss=1&quot;&gt;" in body
     assert "Source Hash: provider &lt;script&gt;window.__vpwXss=1&lt;/script&gt;" in body
 
@@ -709,12 +708,14 @@ def test_vpw051_evidence_bundle_zip_create_downloads_manifest_integrity(
         assert names == [
             "analysis.json",
             "executive.html",
+            "findings.csv",
             "governance/asset-context.json",
             "governance/rollups.json",
             "governance/vex-summary.json",
             "governance/waivers.json",
             "manifest.json",
             "provider-snapshot.json",
+            "results.sarif",
             "technical.md",
         ]
         manifest = json.loads(archive.read("manifest.json"))
@@ -769,7 +770,7 @@ def test_vpw051_evidence_bundle_zip_create_downloads_manifest_integrity(
         assert "Top Assets by Risk" in technical_report
         assert "Accepted Risk and Expiring Waivers" in technical_report
         assert "VEX Summary" in technical_report
-        assert "Service Risk, Accepted Risk, and VEX" in executive_report
+        assert "Governance Exceptions" in executive_report
         assert "manifest.json" not in {item["path"] for item in manifest["files"]}
         for item in manifest["files"]:
             content = archive.read(item["path"])
@@ -805,8 +806,8 @@ def test_vpw068_reports_and_evidence_bundle_export_governance_context() -> None:
     assert _normalize_html_snapshot(html) == (_repo_root() / VPW068_HTML_SNAPSHOT).read_text(
         encoding="utf-8"
     )
-    assert "Service Risk, Accepted Risk, and VEX" in html
-    assert "Accepted Risk and Expiring Waivers" in html
+    assert "Governance Exceptions" in html
+    assert "Accepted Risk and Waiver Review" in html
     assert "Expiring Soon" in html
     assert "service:checkout" in html
 
@@ -1024,9 +1025,9 @@ def test_vpw052_evidence_bundle_verify_api_reports_clean_bundle(
     assert payload["metadata"]["manifest_schema_version"] == "1.1.0"
     assert payload["summary"] == {
         "ok": True,
-        "total_members": 9,
-        "expected_files": 8,
-        "verified_files": 8,
+        "total_members": 11,
+        "expected_files": 10,
+        "verified_files": 10,
         "missing_files": 0,
         "modified_files": 0,
         "unexpected_files": 0,
@@ -1080,7 +1081,7 @@ def test_vpw052_evidence_bundle_verify_api_reports_modified_member(
     jsonschema.validate(payload, _load_schema("evidence-bundle-verification-report.schema.json"))
     assert payload["summary"]["ok"] is False
     assert payload["summary"]["modified_files"] == 1
-    assert payload["summary"]["verified_files"] == 7
+    assert payload["summary"]["verified_files"] == 9
     modified_items = [item for item in payload["items"] if item["status"] == "modified"]
     assert len(modified_items) == 1
     assert modified_items[0]["path"] == "analysis.json"
@@ -1144,8 +1145,10 @@ def test_vpw051_evidence_bundle_renderer_snapshot_is_stable() -> None:
         assert sorted(archive.namelist()) == [
             "analysis.json",
             "executive.html",
+            "findings.csv",
             "manifest.json",
             "provider-snapshot.json",
+            "results.sarif",
             "technical.md",
         ]
         stored_manifest = json.loads(archive.read("manifest.json"))
