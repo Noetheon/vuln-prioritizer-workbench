@@ -1,12 +1,34 @@
-"""Finding rows for executive HTML reports."""
+"""Finding rows and campaign groups for executive HTML reports."""
 
 from __future__ import annotations
 
 from app.services.report_formatting import format_number as _format_number
 from app.services.report_formatting import safe_html as _safe_html
+from app.services.report_html_helpers import (
+    _actionability_summary_helper,
+    _get_remediation_campaigns_helper,
+    _html_deduplicated_recommendations_helper,
+    _html_remediation_campaigns_helper,
+)
 from app.services.report_html_narrative import _decision_statement
 from app.services.report_models import MarkdownReportFinding
 from app.services.report_renderer_common import _priority_label
+
+
+def _html_remediation_campaigns(findings: list[MarkdownReportFinding]) -> str:
+    return _html_remediation_campaigns_helper(findings)
+
+
+def _html_deduplicated_recommendations(findings: list[MarkdownReportFinding]) -> str:
+    return _html_deduplicated_recommendations_helper(findings)
+
+
+def _actionability_summary(findings: list[MarkdownReportFinding]) -> str:
+    return _actionability_summary_helper(findings)
+
+
+def _get_remediation_campaigns(findings: list[MarkdownReportFinding]) -> list[dict[str, object]]:
+    return _get_remediation_campaigns_helper(findings)
 
 
 def _html_top_risk_row(finding: MarkdownReportFinding) -> str:
@@ -27,16 +49,10 @@ def _html_top_risk_row(finding: MarkdownReportFinding) -> str:
     )
 
 
-def _html_recommendation_item(finding: MarkdownReportFinding) -> str:
-    sla = f" SLA: {finding.decision_sla}" if finding.decision_sla else ""
-    action = finding.recommended_action or _decision_statement(finding)
-    heading = f"{finding.cve_id} - {_priority_label(finding.priority)}"
-    return (
-        "        <li>"
-        f"<strong>{_safe_html(heading)}</strong>"
-        f"<span>{_safe_html(action + sla)}</span>"
-        "</li>"
-    )
-
-
-__all__ = ["_html_recommendation_item", "_html_top_risk_row"]
+__all__ = [
+    "_actionability_summary",
+    "_get_remediation_campaigns",
+    "_html_top_risk_row",
+    "_html_remediation_campaigns",
+    "_html_deduplicated_recommendations",
+]

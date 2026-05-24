@@ -48,6 +48,9 @@ class GovernanceWaiverDebtEntryPublic(SQLModel):
     service: str | None = None
     asset_key: str | None = None
     finding_id: uuid.UUID | None = None
+    reason: str | None = None
+    approval_ref: str | None = None
+    ticket_url: str | None = None
 
 
 class GovernanceWaiverDebtPublic(SQLModel):

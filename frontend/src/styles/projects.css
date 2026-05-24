@@ -245,45 +245,13 @@
     }
   }
 
-  /* Workspace Settings Dashboard custom styling & animations */
-  .settings-card-glow {
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .settings-card-glow:hover {
-    box-shadow: 0 10px 25px -5px color-mix(in srgb, var(--vpw-blue) 8%, transparent), 0 8px 10px -6px color-mix(in srgb, var(--vpw-blue) 8%, transparent);
-    border-color: color-mix(in srgb, var(--vpw-blue) 30%, transparent);
-    transform: translateY(-2px);
-  }
-
-  @keyframes status-pulse-green {
-    0%, 100% {
-      opacity: 1;
-      box-shadow: 0 0 0 0 color-mix(in srgb, var(--vpw-green) 70%, transparent);
-    }
-    70% {
-      opacity: 0.5;
-      box-shadow: 0 0 0 6px color-mix(in srgb, var(--vpw-green) 0%, transparent);
-    }
-  }
-
-  @keyframes status-pulse-amber {
-    0%, 100% {
-      opacity: 1;
-      box-shadow: 0 0 0 0 color-mix(in srgb, var(--vpw-amber) 70%, transparent);
-    }
-    70% {
-      opacity: 0.5;
-      box-shadow: 0 0 0 6px color-mix(in srgb, var(--vpw-amber) 0%, transparent);
-    }
-  }
-
-  .status-light-pulse-green {
-    animation: status-pulse-green 2s infinite ease-in-out;
-  }
-
-  .status-light-pulse-amber {
-    animation: status-pulse-amber 2s infinite ease-in-out;
+  /* Workspace Settings context metrics */
+  .settings-context-strip .vpw-compact-metric {
+    --vpw-compact-metric-ratio: 4 / 1;
+    --vpw-compact-metric-value-size: 1rem;
+    --vpw-compact-metric-value-size-wide: 1rem;
+    --vpw-compact-metric-value-size-xwide: 1.08rem;
+    min-height: 5.55rem;
   }
 
   /* Project settings drawer custom styling */

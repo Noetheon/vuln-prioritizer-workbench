@@ -32,10 +32,14 @@ from app.services.report_bundle_verification import _evidence_bundle_verificatio
 from app.services.report_contracts import (
     EVIDENCE_BUNDLE_MANIFEST_SCHEMA_VERSION,
     REPORT_FILENAME_ATTACK_NAVIGATOR,
+    REPORT_FILENAME_FINDINGS_CSV,
+    REPORT_FILENAME_SARIF_RESULTS,
     REPORT_KIND_ATTACK_NAVIGATOR,
     REPORT_KIND_EVIDENCE_BUNDLE,
+    REPORT_KIND_FINDINGS_CSV,
+    REPORT_KIND_SARIF_RESULTS,
 )
-from app.services.report_exports import render_analysis_result_json
+from app.services.report_exports import render_analysis_result_json, render_findings_csv
 from app.services.report_formatting import iso_datetime as _iso_datetime
 from app.services.report_html import render_html_executive_report
 from app.services.report_markdown import render_markdown_report
@@ -46,6 +50,7 @@ from app.services.report_renderer_common import (
     _redact_bundle_value,
     _redacted_bundle_payload,
 )
+from app.services.report_sarif import render_sarif_report
 
 
 def render_evidence_bundle_zip(
@@ -82,6 +87,16 @@ def render_evidence_bundle_zip(
             "provider-snapshot.json",
             _json_bytes(redacted_provider),
             "provider-snapshot",
+        ),
+        (
+            REPORT_FILENAME_FINDINGS_CSV,
+            render_findings_csv(bundle_payload).encode("utf-8"),
+            REPORT_KIND_FINDINGS_CSV,
+        ),
+        (
+            REPORT_FILENAME_SARIF_RESULTS,
+            _json_bytes(render_sarif_report(bundle_payload)),
+            REPORT_KIND_SARIF_RESULTS,
         ),
     ]
     governance_entries = _governance_bundle_entries(bundle_payload)

@@ -1757,6 +1757,10 @@ export type GovernanceRollupPublic = {
  */
 export type GovernanceWaiverDebtEntryPublic = {
     /**
+     * Approval Ref
+     */
+    approval_ref?: string | null;
+    /**
      * Asset Key
      */
     asset_key?: string | null;
@@ -1789,6 +1793,10 @@ export type GovernanceWaiverDebtEntryPublic = {
      */
     owner: string;
     /**
+     * Reason
+     */
+    reason?: string | null;
+    /**
      * Review At
      */
     review_at?: string | null;
@@ -1804,6 +1812,10 @@ export type GovernanceWaiverDebtEntryPublic = {
      * Status
      */
     status: string;
+    /**
+     * Ticket Url
+     */
+    ticket_url?: string | null;
 };
 
 /**

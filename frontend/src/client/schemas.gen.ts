@@ -3223,6 +3223,17 @@ export const GovernanceRollupPublicSchema = {
 export const GovernanceWaiverDebtEntryPublicSchema = {
     description: 'One waiver lifecycle row in the aggregate debt view.',
     properties: {
+        approval_ref: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Approval Ref'
+        },
         asset_key: {
             anyOf: [
                 {
@@ -3280,6 +3291,17 @@ export const GovernanceWaiverDebtEntryPublicSchema = {
             title: 'Owner',
             type: 'string'
         },
+        reason: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reason'
+        },
         review_at: {
             anyOf: [
                 {
@@ -3310,6 +3332,17 @@ export const GovernanceWaiverDebtEntryPublicSchema = {
         status: {
             title: 'Status',
             type: 'string'
+        },
+        ticket_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ticket Url'
         }
     },
     required: [

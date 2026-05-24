@@ -1,6 +1,10 @@
 import type { ProviderStatusPublic, WorkbenchStatus } from "@/api-client"
 import { Cpu, Database, Laptop, ShieldCheck } from "lucide-react"
-import type { ReactNode } from "react"
+import {
+  MetricStrip,
+  type MetricStripMetric,
+  type VpwCompactTone,
+} from "@/components/vpw"
 import { formatCacheAge } from "@/lib/provider-format"
 import {
   evidenceReadiness,
@@ -26,83 +30,65 @@ export function SettingsStatusGrid({
     providerStatusError,
     statusError,
   )
-
-  return (
-    <div className="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <StatusCard
-        detail="Single-user operator scope"
-        icon={<Laptop className="size-5" />}
-        label="Workspace Mode"
-        title="Local workspace"
-        tone="blue"
-      />
-      <StatusCard
-        detail={
-          statusError
-            ? "Check server logs"
-            : `Core Version: ${status?.core_version || "1.1.0"}`
-        }
-        icon={<Cpu className="size-5" />}
-        label="Backend API"
-        pulseTone={statusError ? "red" : "green"}
-        title={statusError ? "Offline" : "API Connected"}
-        tone={statusError ? "red" : "blue"}
-      />
-      <StatusCard
-        detail={`Cache age: ${formatCacheAge(providerStatus?.cache_age_seconds)}`}
-        icon={<Database className="size-5" />}
-        label="Providers Health"
-        title={provider.tone === "success" ? "All synced" : "Needs attention"}
-        tone={provider.tone === "success" ? "green" : "amber"}
-      />
-      <StatusCard
-        detail={
-          evidence.tone === "success"
-            ? "Ready for generation"
-            : "Review provider and backend status"
-        }
-        icon={<ShieldCheck className="size-5" />}
-        label="Evidence Center"
-        title={evidence.label}
-        tone={evidence.tone === "success" ? "green" : "amber"}
-      />
-    </div>
-  )
-}
-
-function StatusCard({
-  detail,
-  icon,
-  label,
-  pulseTone,
-  title,
-  tone,
-}: {
-  detail: string
-  icon: ReactNode
-  label: string
-  pulseTone?: "green" | "red"
-  title: string
-  tone: "amber" | "blue" | "green" | "red"
-}) {
-  return (
-    <div className="settings-card-glow flex items-start gap-3.5 rounded-xl border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-4">
-      <div className={`rounded-lg p-2 ${toneClass[tone]}`}>{icon}</div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between">
-          <span className="block font-semibold text-xs text-[var(--vpw-text-muted)] uppercase">
-            {label}
+  const backendTone: VpwCompactTone = statusError ? "critical" : "success"
+  const providerTone: VpwCompactTone =
+    provider.tone === "success" ? "success" : "warning"
+  const evidenceTone: VpwCompactTone =
+    evidence.tone === "critical"
+      ? "critical"
+      : evidence.tone === "success"
+        ? "success"
+        : "warning"
+  const metrics: MetricStripMetric[] = [
+    {
+      description: "Single-user scope",
+      icon: <Laptop aria-hidden="true" />,
+      label: "Workspace Mode",
+      tone: "info",
+      value: "Local workspace",
+    },
+    {
+      description: statusError
+        ? "Check server logs"
+        : `Core Version: ${status?.core_version || "1.1.0"}`,
+      icon: <Cpu aria-hidden="true" />,
+      label: "Backend API",
+      tone: backendTone,
+      value: (
+        <span className="inline-flex min-w-0 items-center gap-2">
+          <span className="truncate">
+            {statusError ? "Offline" : "API Connected"}
           </span>
-          {pulseTone ? <StatusPulse tone={pulseTone} /> : null}
-        </div>
-        <span className="mt-0.5 block font-bold text-sm text-[var(--vpw-text-primary)]">
-          {title}
+          <StatusPulse tone={statusError ? "red" : "green"} />
         </span>
-        <span className="mt-1 block truncate text-xs text-[var(--vpw-text-secondary)]">
-          {detail}
-        </span>
-      </div>
-    </div>
+      ),
+    },
+    {
+      description: `Cache age: ${formatCacheAge(providerStatus?.cache_age_seconds)}`,
+      icon: <Database aria-hidden="true" />,
+      label: "Providers Health",
+      tone: providerTone,
+      value: provider.tone === "success" ? "All synced" : "Needs attention",
+    },
+    {
+      description:
+        evidence.tone === "success"
+          ? "Ready for generation"
+          : "Review provider and backend status",
+      icon: <ShieldCheck aria-hidden="true" />,
+      label: "Evidence Center",
+      tone: evidenceTone,
+      value: evidence.label,
+    },
+  ]
+
+  return (
+    <MetricStrip
+      aria-label="Workspace runtime status"
+      className="settings-context-strip"
+      metrics={metrics}
+      minCardWidth="12rem"
+    />
   )
 }
 
@@ -119,10 +105,3 @@ function StatusPulse({ tone }: { tone: "green" | "red" }) {
     </span>
   )
 }
-
-const toneClass = {
-  amber: "bg-[color-mix(in_srgb,var(--vpw-amber)_10%,transparent)] text-[var(--vpw-amber)]",
-  blue: "bg-[color-mix(in_srgb,var(--vpw-blue)_10%,transparent)] text-[var(--vpw-blue)]",
-  green: "bg-[color-mix(in_srgb,var(--vpw-green)_10%,transparent)] text-[var(--vpw-green)]",
-  red: "bg-[color-mix(in_srgb,var(--vpw-red)_10%,transparent)] text-[var(--vpw-red)]",
-} as const

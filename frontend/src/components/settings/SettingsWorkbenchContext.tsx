@@ -40,8 +40,9 @@ export function SettingsContext({
   }
 
   return (
-    <VpwSection aria-label="Workspace settings" className="flex flex-col gap-6">
+    <VpwSection aria-label="Workspace settings">
       <VpwCommandPanel
+        className="settings-context-panel"
         actions={
           <VpwToolbar label="Settings actions" variant="plain">
             <VpwToolbarGroup>
@@ -84,14 +85,14 @@ export function SettingsContext({
         description="Review local Workbench runtime, provider freshness, diagnostics, and safe operational defaults."
         eyebrow="Settings console"
         title="Workspace settings console"
-      />
-
-      <SettingsStatusGrid
-        providerStatus={providerStatus}
-        providerStatusError={providerStatusError}
-        status={status}
-        statusError={statusError}
-      />
+      >
+        <SettingsStatusGrid
+          providerStatus={providerStatus}
+          providerStatusError={providerStatusError}
+          status={status}
+          statusError={statusError}
+        />
+      </VpwCommandPanel>
     </VpwSection>
   )
 }
