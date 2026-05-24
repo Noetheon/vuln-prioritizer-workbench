@@ -26,9 +26,9 @@ payload in `backend/tests/api/test_workbench_reports_api.py`.
 
 ```text
 bc8dc6af67958a6d5ef5c48dc487af7a9aaffa356db2a883f4294ff9b560033e  docs/examples/vpw-054-workbench-technical-report.md
-bc180b38891913a4fd053efa57f8c0a04168232e3d562db956abd7af3869620d  docs/examples/vpw-054-workbench-executive-report.html
+c1d20ba8ee36ec9b36065fb980337b2bac6e366e5eeef2a40db5ff1e4a9c28e9  docs/examples/vpw-054-workbench-executive-report.html
 e4dc50f25ffcd529e8104ca387d909144ede5ccc4ae56d28393a20fa6244708b  docs/examples/vpw-054-workbench-analysis-result.v1.json
-63248e197a9b08d71399ee87f2407b6a7f5436807891036a5135c0f429c380a7  backend/tests/api/snapshots/vpw_054_executive_report.normalized.html
+af14205bf1388e0e89790d3acd2f0c71e8355ea3631e60e6c2c09b82fc40e5db  backend/tests/api/snapshots/vpw_054_executive_report.normalized.html
 ```
 
 ## Update Process
