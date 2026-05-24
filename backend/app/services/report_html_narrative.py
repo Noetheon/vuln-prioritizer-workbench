@@ -4,18 +4,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.services.report_html_helpers import (
-    _executive_verdict_summary_helper,
-    _html_business_impact_table_helper,
-)
 from app.services.report_models import MarkdownReportFinding
 
 
 def _executive_verdict_summary(payload: Any) -> str:
+    from app.services.report_html_helpers import _executive_verdict_summary_helper
+
     return _executive_verdict_summary_helper(payload)
 
 
 def _html_business_impact_table(findings: list[MarkdownReportFinding]) -> str:
+    from app.services.report_html_helpers import _html_business_impact_table_helper
+
     return _html_business_impact_table_helper(findings)
 
 
