@@ -21,6 +21,7 @@ def _html_governance_rollups(
     waiver_debt = _dict_value(governance_rollups.get("waiver_debt"))
     waiver_items = _dict_list(waiver_debt.get("items"))[:5]
     vex_summary = _governance_vex_summary(findings)
+    under_investigation = sum(1 for finding in findings if finding.under_investigation)
     waiver_rows = "\n".join(_html_waiver_debt_row(item, generated_at) for item in waiver_items)
     if not waiver_rows:
         waiver_rows = (
@@ -28,11 +29,9 @@ def _html_governance_rollups(
             "No accepted-risk waiver debt is currently recorded for this run.</td></tr>"
         )
     return (
-        '    <section aria-labelledby="governance-rollups">\n'
-        '      <div class="section-heading">\n'
-        '        <p class="eyebrow">Governance</p>\n'
-        '        <h2 id="governance-rollups">Governance Exceptions</h2>\n'
-        "      </div>\n"
+        '    <section aria-labelledby="governance">\n'
+        '      <p class="eyebrow">Governance</p>\n'
+        '      <h2 id="governance">Governance Exceptions</h2>\n'
         '      <div class="metric-grid">\n'
         f"        {_html_metric('Waivers', waiver_debt.get('waiver_count', 0))}\n"
         f"        {_html_metric('Expired', waiver_debt.get('expired_count', 0))}\n"
@@ -42,13 +41,14 @@ def _html_governance_rollups(
         f"{_html_metric('Accepted Findings', waiver_debt.get('accepted_finding_count', 0))}\n"
         f"        {_html_metric('VEX Suppressed', vex_summary['suppressed_by_vex_count'])}\n"
         f"        {_html_metric('Fixed Findings', vex_summary['fixed_count'])}\n"
+        f"        {_html_metric('Under Investigation', under_investigation)}\n"
         "      </div>\n"
         "      <h3>Accepted Risk and Waiver Review</h3>\n"
         '      <div class="table-wrap">\n'
         "        <table>\n"
         "          <thead>\n"
-        "            <tr><th>Scope</th><th>Owner</th><th>Status</th><th>Expiry</th>"
-        "<th>Review Date</th><th>Matched Findings</th>"
+        "            <tr><th>Scope</th><th>Owner</th><th>Status</th><th>Expires</th>"
+        "<th>Review</th><th>Matched Findings</th>"
         "<th>Required Governance Action</th></tr>\n"
         "          </thead>\n"
         f"          <tbody>\n{waiver_rows}\n          </tbody>\n"
@@ -88,16 +88,27 @@ def _html_asset_rollup_row(asset: dict[str, Any]) -> str:
     )
 
 
+def _status_badge_helper(status: str) -> str:
+    status_lower = str(status or "").strip().lower().replace("_", " ")
+    if "overdue" in status_lower:
+        return f'<span class="badge badge-critical">{status_lower}</span>'
+    if "due" in status_lower:
+        return f'<span class="badge badge-warning">{status_lower}</span>'
+    if "active" in status_lower:
+        return f'<span class="badge badge-info">{status_lower}</span>'
+    return f'<span class="badge badge-neutral">{status_lower}</span>'
+
+
 def _html_waiver_debt_row(item: dict[str, Any], generated_at: datetime | None = None) -> str:
-    status = item.get("status")
+    status = str(item.get("status") or "")
     review_at = item.get("review_at")
-    status_badge = _safe_html(_status_label(status))
+    status_badge = _status_badge_helper(status)
     required_action = "Accepted risk active"
     if generated_at and review_at:
         try:
             dt = datetime.strptime(review_at.split("T")[0], "%Y-%m-%d")
             if dt.date() < generated_at.date():
-                status_badge = '<span class="badge badge-overdue">Review Overdue</span>'
+                status_badge = '<span class="badge badge-critical">review overdue</span>'
                 required_action = "Review now"
         except ValueError:
             pass

@@ -517,6 +517,11 @@ def _assert_demo_report_downloads(
         elif filename == "executive-report.html":
             assert "<!doctype html>" in download.text
             assert "Executive Summary" in download.text
+            assert "Decision Brief" in download.text
+            assert "Top Remediation Campaigns" in download.text
+            assert "CVE-2021-44228 / Log4Shell" in download.text
+            assert "CVE-2022-22965 / Spring4Shell" in download.text
+            assert "Decision Ready Recommendations" in download.text
         elif filename == "analysis-result.v1.json":
             payload = download.json()
             assert payload["schema"] == "analysis-result.v1"
