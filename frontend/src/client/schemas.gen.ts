@@ -4843,6 +4843,7 @@ export const WaiverCreateSchema = {
         reason: {
             anyOf: [
                 {
+                    maxLength: 4096,
                     type: 'string'
                 },
                 {
@@ -4998,6 +4999,7 @@ export const WaiverPublicSchema = {
             type: 'string'
         },
         reason: {
+            maxLength: 4096,
             minLength: 1,
             title: 'Reason',
             type: 'string'
@@ -5152,6 +5154,7 @@ export const WaiverUpdateSchema = {
         reason: {
             anyOf: [
                 {
+                    maxLength: 4096,
                     type: 'string'
                 },
                 {
@@ -5242,6 +5245,21 @@ export const WorkbenchHealthSchema = {
 export const WorkbenchStatusSchema = {
     description: 'Status response returned by the active Workbench runtime.',
     properties: {
+        api_docs_enabled: {
+            title: 'Api Docs Enabled',
+            type: 'boolean'
+        },
+        api_docs_path: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Api Docs Path'
+        },
         app: {
             title: 'App',
             type: 'string'
@@ -5273,7 +5291,8 @@ export const WorkbenchStatusSchema = {
         'core_package',
         'core_version',
         'database_status',
-        'schema_status'
+        'schema_status',
+        'api_docs_enabled'
     ],
     title: 'WorkbenchStatus',
     type: 'object'

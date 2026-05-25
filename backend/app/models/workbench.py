@@ -20,6 +20,8 @@ class WorkbenchStatus(SQLModel):
     core_version: str
     database_status: str
     schema_status: str
+    api_docs_enabled: bool
+    api_docs_path: str | None = None
 
 
 class WorkbenchHealth(SQLModel):

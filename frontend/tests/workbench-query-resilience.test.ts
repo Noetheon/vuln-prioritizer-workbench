@@ -27,7 +27,14 @@ test("Workbench queries propagate abort signals into generated client calls", ()
   const queries = source()
 
   assert.match(queries, /queryFn: \(\{ signal \}\)/)
-  assert.match(queries, /ProjectsService\.readProjects\(\{ signal \}\)/)
+  assert.match(queries, /readAllPages\(\(pagination\) =>/)
+  assert.match(
+    queries,
+    /ProjectsService\.readProjects\(pagination,\s*\{ signal \}\)/,
+  )
+  assert.match(queries, /RunsService\.readProjectRuns\(\s*\{[^}]*\.\.\.pagination/s)
+  assert.match(queries, /AssetsService\.readProjectAssets\(\s*\{[^}]*\.\.\.pagination/s)
+  assert.match(queries, /WaiversService\.readProjectWaivers\(\s*\{[^}]*\.\.\.pagination/s)
   assert.match(queries, /readProjectSummary\(\s*\{ project_id: projectId \},\s*\{ signal \}/s)
   assert.match(queries, /readProjectFindings\(params, \{ signal \}\)/)
   assert.match(queries, /if \(signal\.aborted\) \{\s*throw caught\s*\}/s)

@@ -1,4 +1,3 @@
-# ruff: noqa: D100, D103
 from __future__ import annotations
 
 import csv

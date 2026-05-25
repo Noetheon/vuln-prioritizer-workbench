@@ -198,7 +198,6 @@ export function DashboardSignalTabs({
               <SelectContent>
                 <SelectItem value="10">Last 10 runs</SelectItem>
                 <SelectItem value="30">Last 30 runs</SelectItem>
-                <SelectItem value="all">All runs</SelectItem>
               </SelectContent>
             </Select>
           }

@@ -6,9 +6,10 @@ import uuid
 from datetime import timedelta
 from typing import Any
 
-from sqlmodel import Session, col, select
+from sqlalchemy import case
+from sqlmodel import Session, col, func, select
 
-from app.models import Finding, FindingStatus, Waiver, WaiverCreate, WaiverUpdate
+from app.models import Asset, Finding, FindingStatus, Waiver, WaiverCreate, WaiverUpdate
 from app.models.base import get_datetime_utc
 
 
@@ -19,14 +20,113 @@ class WaiverRepository:
         """Initialize a new instance of WaiverRepository."""
         self.session = session
 
-    def list_project_waivers(self, project_id: uuid.UUID) -> list[Waiver]:
+    def list_project_waivers(
+        self,
+        project_id: uuid.UUID,
+        *,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> list[Waiver]:
         """Return project waivers in stable expiry order."""
         statement = (
             select(Waiver)
             .where(Waiver.project_id == project_id)
             .order_by(col(Waiver.expires_at), col(Waiver.created_at))
+            .offset(offset)
+        )
+        if limit is not None:
+            statement = statement.limit(limit)
+        return list(self.session.exec(statement).all())
+
+    def list_project_waivers_page(
+        self,
+        project_id: uuid.UUID,
+        *,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> tuple[list[Waiver], int]:
+        """Return a bounded waiver page and total count."""
+        count_statement = (
+            select(func.count()).select_from(Waiver).where(Waiver.project_id == project_id)
+        )
+        count = int(self.session.exec(count_statement).one())
+        return self.list_project_waivers(project_id, limit=limit, offset=offset), count
+
+    def list_project_waiver_debt_items(
+        self,
+        project_id: uuid.UUID,
+        *,
+        limit: int,
+    ) -> list[Waiver]:
+        """Return the highest-priority waiver debt rows for governance rollups."""
+        today = get_datetime_utc().date()
+        review_due_cutoff = today + timedelta(days=14)
+        expires_at = col(Waiver.expires_at)
+        review_at = col(Waiver.review_at)
+        status_rank = case(
+            (expires_at < today, 0),
+            (review_at <= today, 1),
+            (expires_at <= review_due_cutoff, 1),
+            else_=2,
+        )
+        statement = (
+            select(Waiver)
+            .where(Waiver.project_id == project_id)
+            .order_by(status_rank, col(Waiver.expires_at), col(Waiver.owner))
+            .limit(limit)
         )
         return list(self.session.exec(statement).all())
+
+    def project_waiver_lifecycle_summary(self, project_id: uuid.UUID) -> dict[str, Any]:
+        """Return waiver lifecycle counts without loading full waiver rows."""
+        today = get_datetime_utc().date()
+        review_due_cutoff = today + timedelta(days=14)
+        expires_at = col(Waiver.expires_at)
+        review_at = col(Waiver.review_at)
+        columns: list[Any] = [
+            func.sum(
+                _case_int(
+                    (expires_at >= today)
+                    & (
+                        (review_at.is_(None) | (review_at > today))
+                        & (expires_at > review_due_cutoff)
+                    )
+                )
+            ),
+            func.sum(
+                _case_int(
+                    (expires_at >= today)
+                    & ((review_at <= today) | (expires_at <= review_due_cutoff))
+                )
+            ),
+            func.sum(_case_int(expires_at < today)),
+            func.sum(_case_int((expires_at >= today) & (expires_at <= review_due_cutoff))),
+            func.count(),
+        ]
+        active_count, review_due_count, expired_count, expiring_soon_count, total = (
+            self.session.exec(
+                select(*columns).select_from(Waiver).where(Waiver.project_id == project_id)
+            ).one()
+        )
+        return {
+            "waiver_count": int(total or 0),
+            "active_count": int(active_count or 0),
+            "review_due_count": int(review_due_count or 0),
+            "expired_count": int(expired_count or 0),
+            "expiring_soon_count": int(expiring_soon_count or 0),
+            "owner_counts": self._waiver_group_counts(project_id, Waiver.owner),
+            "service_counts": self._waiver_group_counts(project_id, Waiver.service),
+        }
+
+    def _waiver_group_counts(self, project_id: uuid.UUID, column: Any) -> dict[str, int]:
+        statement = (
+            select(column, func.count())
+            .select_from(Waiver)
+            .where(Waiver.project_id == project_id, column.is_not(None), column != "")
+            .group_by(column)
+            .order_by(column)
+        )
+        return {str(label): int(count) for label, count in self.session.exec(statement).all()}
 
     def get_waiver(self, waiver_id: uuid.UUID) -> Waiver | None:
         """Return a waiver by primary key."""
@@ -86,11 +186,11 @@ class WaiverRepository:
 
     def matching_finding_count(self, waiver: Waiver) -> int:
         """Count project findings matching this waiver's scope."""
-        return sum(
-            1
-            for finding in self._project_findings(waiver.project_id)
-            if _waiver_matches_finding(waiver, finding)
-        )
+        statement = select(func.count()).select_from(Finding)
+        if waiver.asset_key or waiver.service:
+            statement = statement.outerjoin(Asset, col(Finding.asset_id) == col(Asset.id))
+        filters = _waiver_match_filters(waiver)
+        return int(self.session.exec(statement.where(*filters)).one())
 
     def _project_findings(self, project_id: uuid.UUID) -> list[Finding]:
         """Project findings method for WaiverRepository."""
@@ -224,6 +324,22 @@ def _waiver_matches_finding(waiver: Waiver, finding: Finding) -> bool:
     return True
 
 
+def _waiver_match_filters(waiver: Waiver) -> list[Any]:
+    """Return SQL filters equivalent to the in-memory waiver matcher."""
+    filters: list[Any] = [Finding.project_id == waiver.project_id]
+    if waiver.finding_id is not None:
+        filters.append(Finding.id == waiver.finding_id)
+    if waiver.cve_id:
+        filters.append(Finding.cve_id == waiver.cve_id)
+    if waiver.asset_id is not None:
+        filters.append(Finding.asset_id == waiver.asset_id)
+    if waiver.asset_key:
+        filters.append(func.lower(Asset.asset_key) == waiver.asset_key.casefold())
+    if waiver.service:
+        filters.append(func.lower(Asset.business_service) == waiver.service.casefold())
+    return filters
+
+
 def _waiver_status_sort_key(waiver: Waiver) -> int:
     """Waiver status sort key function."""
     status, _days_remaining = waiver_lifecycle_status(waiver)
@@ -233,3 +349,7 @@ def _waiver_status_sort_key(waiver: Waiver) -> int:
 def _object_value(value: object) -> dict[str, object]:
     """Object value function."""
     return value if isinstance(value, dict) else {}
+
+
+def _case_int(condition: Any) -> Any:
+    return case((condition, 1), else_=0)

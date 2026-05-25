@@ -18,7 +18,7 @@ export type DashboardSignalCounts = {
   epssBuckets: EpssBucketCounts
 }
 
-export type DashboardRunRange = "10" | "30" | "all"
+export type DashboardRunRange = "10" | "30"
 
 export type RiskOperationsDashboardProps = {
   dashboardError?: string

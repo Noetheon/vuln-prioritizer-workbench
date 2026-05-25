@@ -97,6 +97,9 @@ select = ["E", "F", "I", "UP", "D"]
 ignore = ["D105", "D107", "D203", "D212", "D401"]
 extend-select = ["B018"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D"]
+
 [tool.mypy]
 python_version = "3.11"
 files = ["app", "src"]

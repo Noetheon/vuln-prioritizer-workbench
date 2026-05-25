@@ -41,6 +41,17 @@ export function isLocalApiBaseUrl(value: string | undefined): boolean {
   }
 }
 
+export function workbenchApiUrl(path: string | null | undefined): string {
+  const normalizedPath = path?.trim()
+  if (!normalizedPath) {
+    return ""
+  }
+  const pathWithSlash = normalizedPath.startsWith("/")
+    ? normalizedPath
+    : `/${normalizedPath}`
+  return `${API_BASE_URL}${pathWithSlash}`
+}
+
 export function isExplicitDemoModeEnabled(env: RuntimeEnv | undefined) {
   return (
     env?.VITE_DEMO_MODE?.trim().toLowerCase() === "true" &&

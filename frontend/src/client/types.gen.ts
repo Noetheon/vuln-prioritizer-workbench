@@ -2920,6 +2920,14 @@ export type WorkbenchHealth = {
  */
 export type WorkbenchStatus = {
     /**
+     * Api Docs Enabled
+     */
+    api_docs_enabled: boolean;
+    /**
+     * Api Docs Path
+     */
+    api_docs_path?: string | null;
+    /**
      * App
      */
     app: string;
@@ -3106,9 +3114,27 @@ export type GetApiV1FindingsByFindingIdExplainResponse = GetApiV1FindingsByFindi
 export type GetApiV1ProjectsData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
     url: '/api/v1/projects/';
 };
+
+export type GetApiV1ProjectsErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1ProjectsError = GetApiV1ProjectsErrors[keyof GetApiV1ProjectsErrors];
 
 export type GetApiV1ProjectsResponses = {
     /**
@@ -3251,6 +3277,14 @@ export type GetApiV1ProjectsByProjectIdAssetsData = {
          * Service
          */
         service?: string | null;
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
     };
     url: '/api/v1/projects/{project_id}/assets/';
 };
@@ -3669,7 +3703,16 @@ export type GetApiV1ProjectsByProjectIdRunsData = {
          */
         project_id: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
     url: '/api/v1/projects/{project_id}/runs/';
 };
 
@@ -3729,7 +3772,16 @@ export type GetApiV1ProjectsByProjectIdWaiversData = {
          */
         project_id: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
     url: '/api/v1/projects/{project_id}/waivers/';
 };
 

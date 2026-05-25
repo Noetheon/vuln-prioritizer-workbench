@@ -5,6 +5,7 @@ import {
   isExplicitDemoModeEnabled,
   isLocalApiBaseUrl,
   normalizeApiBaseUrl,
+  workbenchApiUrl,
 } from "../src/lib/runtime-config.ts"
 
 test("normalizes same-origin API configuration to the generated /api paths", () => {
@@ -30,6 +31,12 @@ test("detects localhost API origins before production bundling", () => {
   assert.equal(isLocalApiBaseUrl("http://127.0.0.1:8000"), true)
   assert.equal(isLocalApiBaseUrl("http://[::1]:8000"), true)
   assert.equal(isLocalApiBaseUrl("https://api.example.com"), false)
+})
+
+test("builds runtime backend links from same-origin API configuration", () => {
+  assert.equal(workbenchApiUrl("/docs"), "/docs")
+  assert.equal(workbenchApiUrl("docs"), "/docs")
+  assert.equal(workbenchApiUrl(null), "")
 })
 
 test("enables demo mode only from an explicit non-production flag", () => {

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import Session
 
 from app.api.deps import LocalActor, SessionDep
@@ -21,14 +21,20 @@ def read_project_waivers(
     project_id: uuid.UUID,
     session: SessionDep,
     local_actor: LocalActor,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
 ) -> WaiversPublic:
     """List visible project waivers."""
     require_project(session, project_id)
     repository = WaiverRepository(session)
-    waivers = repository.list_project_waivers(project_id)
+    waivers, count = repository.list_project_waivers_page(
+        project_id,
+        limit=limit,
+        offset=offset,
+    )
     return WaiversPublic(
         data=[_waiver_public(repository, waiver) for waiver in waivers],
-        count=len(waivers),
+        count=count,
     )
 
 

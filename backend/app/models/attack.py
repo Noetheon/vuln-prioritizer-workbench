@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -626,6 +627,28 @@ class FindingAttackContextPublic(FindingAttackContextBase):
     analysis_run_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+
+
+@dataclass(frozen=True)
+class AttackSummaryFindingRow:
+    """Lightweight finding projection for ATT&CK summary aggregates."""
+
+    id: uuid.UUID
+    risk_score: float | None
+
+
+@dataclass(frozen=True)
+class AttackSummaryContextRow:
+    """Lightweight ATT&CK context projection for summary aggregates."""
+
+    finding_id: uuid.UUID
+    mapped: bool
+    technique_ids_json: list[str]
+    tactic_ids_json: list[str]
+    mappings_json: list[dict[str, Any]]
+    review_status: str
+    source: str | None
+    created_at: datetime
 
 
 class ProjectAttackTechniqueSummaryPublic(SQLModel):

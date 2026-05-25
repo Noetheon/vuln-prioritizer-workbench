@@ -38,6 +38,7 @@ def test_compose_uses_workbench_shell_without_legacy_runtime_services() -> None:
     assert "http://127.0.0.1:5173" in backend["environment"]["BACKEND_CORS_ORIGINS"]
     assert backend["environment"]["IMPORT_UPLOAD_DIR"] == "/app/workbench-import-uploads"
     assert backend["environment"]["REPORT_DIR"] == "/app/workbench-reports"
+    assert backend["environment"]["MAX_REQUEST_BODY_MB"] == "${MAX_REQUEST_BODY_MB:-2}"
     assert backend["environment"]["MAX_REPORT_MB"] == "${MAX_REPORT_MB:-50}"
     assert backend["environment"]["MAX_REPORTS_PER_RUN"] == "${MAX_REPORTS_PER_RUN:-20}"
     assert backend["environment"]["PROVIDER_SNAPSHOT_DIR"] == "/app/provider-snapshots"

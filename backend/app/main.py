@@ -160,7 +160,7 @@ async def _upload_size_guard(
     request: Request,
     call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
-    if request.method == "POST":
+    if _request_method_can_have_bounded_body(request.method):
         active_settings = workbench_settings(request, required=False)
         max_request_bytes = _request_size_limit(request.url.path, active_settings)
         if max_request_bytes is None:
@@ -211,11 +211,24 @@ async def _upload_size_guard(
 def _request_size_limit(path: str, active_settings: Settings) -> int | None:
     if _is_workbench_upload_path(path, active_settings.API_V1_STR):
         return active_settings.max_upload_bytes + 64 * 1024
+    if _is_bounded_api_write_path(path, active_settings.API_V1_STR):
+        return active_settings.max_request_body_bytes
     return None
 
 
 def _request_too_large_detail(path: str) -> str:
-    return "Upload exceeds configured limit."
+    if path.endswith("/imports") or path.endswith("/assets/import"):
+        return "Upload exceeds configured limit."
+    return "Request body exceeds configured limit."
+
+
+def _is_bounded_api_write_path(path: str, api_prefix: str) -> bool:
+    normalized_prefix = f"/{api_prefix.strip('/')}"
+    return path.startswith(f"{normalized_prefix}/")
+
+
+def _request_method_can_have_bounded_body(method: str) -> bool:
+    return method in {"POST", "PUT", "PATCH"}
 
 
 def _is_workbench_upload_path(path: str, api_prefix: str) -> bool:

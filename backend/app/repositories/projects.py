@@ -17,10 +17,12 @@ class ProjectRepository:
         """Initialize a new instance of ProjectRepository."""
         self.session = session
 
-    def list_projects(self) -> tuple[list[Project], int]:
-        """Return every local Workbench project."""
+    def list_projects(self, *, limit: int = 100, offset: int = 0) -> tuple[list[Project], int]:
+        """Return a bounded page of local Workbench projects."""
         count_statement = select(func.count()).select_from(Project)
-        statement = select(Project).order_by(col(Project.created_at).desc())
+        statement = (
+            select(Project).order_by(col(Project.created_at).desc()).offset(offset).limit(limit)
+        )
 
         count = self.session.exec(count_statement).one()
         projects = self.session.exec(statement).all()

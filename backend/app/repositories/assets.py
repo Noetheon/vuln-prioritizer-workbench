@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from app.models import (
     Asset,
@@ -163,6 +163,8 @@ class AssetRepository:
         *,
         owner: str | None = None,
         service: str | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[Asset]:
         """Return project assets ordered for stable API output."""
         filters: list[Any] = [Asset.project_id == project_id]
@@ -170,8 +172,36 @@ class AssetRepository:
             filters.append(col(Asset.owner).ilike(f"%{owner.strip()}%"))
         if service and service.strip():
             filters.append(col(Asset.business_service).ilike(f"%{service.strip()}%"))
-        statement = select(Asset).where(*filters).order_by(Asset.asset_key)
+        statement = select(Asset).where(*filters).order_by(Asset.asset_key).offset(offset)
+        if limit is not None:
+            statement = statement.limit(limit)
         return list(self.session.exec(statement).all())
+
+    def list_project_assets_page(
+        self,
+        project_id: uuid.UUID,
+        *,
+        owner: str | None = None,
+        service: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> tuple[list[Asset], int]:
+        """Return a bounded asset page and total count."""
+        filters: list[Any] = [Asset.project_id == project_id]
+        if owner and owner.strip():
+            filters.append(col(Asset.owner).ilike(f"%{owner.strip()}%"))
+        if service and service.strip():
+            filters.append(col(Asset.business_service).ilike(f"%{service.strip()}%"))
+        count_statement = select(func.count()).select_from(Asset).where(*filters)
+        count = int(self.session.exec(count_statement).one())
+        assets = self.list_project_assets(
+            project_id,
+            owner=owner,
+            service=service,
+            limit=limit,
+            offset=offset,
+        )
+        return assets, count
 
     def update_asset(self, asset: Asset, asset_in: AssetUpdate) -> Asset:
         """Update mutable asset fields without committing the transaction."""

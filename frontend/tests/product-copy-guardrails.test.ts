@@ -58,7 +58,7 @@ const allowedCurrentCopy = [
   },
   {
     path: /^src\/components\/(?:dashboard|finding-detail|findings|providers|reports|vpw)\//,
-    context: /\b(?:known[- ]exploited|known exploited vulnerabilities|exploitation (?:probability|risk)|exploit probability|exploit-probability|exploit likelihood|exploited signals?|defensive|detection coverage review|no exploit steps|no proof of exploitation|does not prove compromise|confirmed prioritization signal)\b/i,
+    context: /\b(?:known[- ]exploited|known exploited vulnerabilities|exploitation (?:probability|risk)|exploit probability|exploit-probability|exploit likelihood|exploited signals?|defensive|detection coverage review|no exploit steps|no proof of exploitation|does not prove exploitation|does not prove compromise|confirmed prioritization signal)\b/i,
   },
   {
     path: /^src\/components\/settings\//,

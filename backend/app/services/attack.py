@@ -7,9 +7,11 @@ from collections import Counter
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from app.models import (
+    AttackSummaryContextRow,
+    AttackSummaryFindingRow,
     Finding,
     FindingAttackContext,
     ProjectAttackSummaryPublic,
@@ -152,6 +154,22 @@ def build_project_attack_summary_payload(
         confidence_distribution=_ordered_counts(confidence_distribution, CONFIDENCE_BUCKETS),
         review_status_counts=_ordered_counts(review_status_counts, REVIEW_STATUS_BUCKETS),
         source_counts=dict(sorted(source_counts.items())),
+    )
+
+
+def build_project_attack_summary_payload_from_rows(
+    *,
+    project_id: uuid.UUID,
+    findings: Sequence[AttackSummaryFindingRow],
+    attack_contexts: Sequence[AttackSummaryContextRow],
+    top_limit: int = 5,
+) -> ProjectAttackSummaryPublic:
+    """Build a defensive ATT&CK dashboard summary from lightweight SQL rows."""
+    return build_project_attack_summary_payload(
+        project_id=project_id,
+        findings=cast(Sequence[Finding], findings),
+        attack_contexts=cast(Sequence[FindingAttackContext], attack_contexts),
+        top_limit=top_limit,
     )
 
 

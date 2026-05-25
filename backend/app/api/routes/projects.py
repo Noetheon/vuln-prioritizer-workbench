@@ -29,9 +29,9 @@ from app.repositories import (
 )
 from app.services import (
     build_cvss_only_comparison_payload,
-    build_project_attack_summary_payload,
-    build_project_dashboard_payload,
-    build_project_governance_rollups_payload,
+    build_project_attack_summary_payload_from_rows,
+    build_project_dashboard_payload_from_repositories,
+    build_project_governance_rollups_payload_from_repositories,
     build_project_summary_payload_from_counts,
 )
 from app.services.artifact_cleanup import cleanup_project_artifacts
@@ -41,10 +41,15 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 @router.get("/", response_model=ProjectsPublic)
-def read_projects(session: SessionDep, local_actor: LocalActor) -> ProjectsPublic:
+def read_projects(
+    session: SessionDep,
+    local_actor: LocalActor,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+) -> ProjectsPublic:
     """List local Workbench projects."""
     _ = local_actor
-    projects, count = ProjectRepository(session).list_projects()
+    projects, count = ProjectRepository(session).list_projects(limit=limit, offset=offset)
     return ProjectsPublic(
         data=[ProjectPublic.model_validate(project) for project in projects],
         count=count,
@@ -112,11 +117,10 @@ def read_project_dashboard(
     finding_repository = FindingRepository(session)
     run_repository = RunRepository(session)
     waiver_repository = WaiverRepository(session)
-    return build_project_dashboard_payload(
+    return build_project_dashboard_payload_from_repositories(
         project_id=project_id,
-        findings=finding_repository.list_project_findings(project_id),
-        runs=run_repository.list_analysis_runs(project_id),
-        waivers=waiver_repository.list_project_waivers(project_id),
+        finding_repository=finding_repository,
+        run_repository=run_repository,
         waiver_repository=waiver_repository,
     )
 
@@ -131,10 +135,11 @@ def read_project_attack_summary(
     """Read top ATT&CK techniques, tactics, and confidence distribution."""
     require_project(session, project_id)
     finding_repo = FindingRepository(session)
-    return build_project_attack_summary_payload(
+    findings, attack_contexts = finding_repo.list_project_attack_summary_inputs(project_id)
+    return build_project_attack_summary_payload_from_rows(
         project_id=project_id,
-        findings=finding_repo.list_project_findings(project_id),
-        attack_contexts=finding_repo.list_project_attack_contexts(project_id),
+        findings=findings,
+        attack_contexts=attack_contexts,
         top_limit=limit,
     )
 
@@ -148,11 +153,11 @@ def read_project_governance_rollups(
 ) -> ProjectGovernanceRollupsPublic:
     """Read owner, service, environment, and waiver-debt rollups."""
     require_project(session, project_id)
+    finding_repository = FindingRepository(session)
     waiver_repository = WaiverRepository(session)
-    return build_project_governance_rollups_payload(
+    return build_project_governance_rollups_payload_from_repositories(
         project_id=project_id,
-        findings=FindingRepository(session).list_project_findings(project_id),
-        waivers=waiver_repository.list_project_waivers(project_id),
+        finding_repository=finding_repository,
         waiver_repository=waiver_repository,
         limit=limit,
     )

@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from app.api.deps import LocalActor, SessionDep
 from app.api.errors import redact_public_payload
@@ -37,13 +37,19 @@ def read_project_runs(
     project_id: uuid.UUID,
     session: SessionDep,
     local_actor: LocalActor,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
 ) -> AnalysisRunsPublic:
     """List analysis runs for a visible project."""
     require_project(session, project_id)
-    runs = RunRepository(session).list_analysis_runs(project_id)
+    runs, count = RunRepository(session).list_analysis_runs_page(
+        project_id,
+        limit=limit,
+        offset=offset,
+    )
     return AnalysisRunsPublic(
         data=[_analysis_run_public(run) for run in runs],
-        count=len(runs),
+        count=count,
     )
 
 

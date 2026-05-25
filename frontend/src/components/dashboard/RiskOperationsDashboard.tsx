@@ -126,9 +126,7 @@ export function RiskOperationsDashboard({
     () =>
       runActivityTrendData(
         effectiveRuns,
-        filters.selectedRunRange === "all"
-          ? effectiveRuns.length
-          : Number.parseInt(filters.selectedRunRange, 10),
+        Number.parseInt(filters.selectedRunRange, 10),
       ),
     [effectiveRuns, filters.selectedRunRange],
   )

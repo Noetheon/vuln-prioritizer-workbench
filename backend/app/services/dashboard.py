@@ -22,9 +22,17 @@ from app.models import (
     Waiver,
 )
 from app.models.base import get_datetime_utc
+from app.repositories.findings import FindingRepository
+from app.repositories.runs import RunRepository
 from app.repositories.waivers import WaiverRepository
-from app.services.decisions import build_project_summary_payload
-from app.services.governance import build_project_governance_rollups_payload
+from app.services.decisions import (
+    build_project_summary_payload,
+    build_project_summary_payload_from_counts,
+)
+from app.services.governance import (
+    build_project_governance_rollups_payload,
+    build_project_governance_rollups_payload_from_repositories,
+)
 from vuln_prioritizer.security_redaction import redact_value
 
 
@@ -70,6 +78,62 @@ def build_project_dashboard_payload(
     )
 
 
+def build_project_dashboard_payload_from_repositories(
+    *,
+    project_id: uuid.UUID,
+    finding_repository: FindingRepository,
+    run_repository: RunRepository,
+    waiver_repository: WaiverRepository,
+    remediation_limit: int = 50,
+    run_limit: int = 30,
+    rollup_limit: int = 5,
+) -> ProjectDashboardPublic:
+    """Build the dashboard aggregate from bounded repository queries."""
+    bounded_remediation_limit = max(1, min(remediation_limit, 50))
+    bounded_run_limit = max(1, min(run_limit, 30))
+    remediation_findings, finding_count = finding_repository.list_project_findings_page(
+        project_id,
+        limit=bounded_remediation_limit,
+        offset=0,
+        sort="operational",
+        direction="asc",
+    )
+    runs, run_count = run_repository.list_analysis_runs_page(
+        project_id,
+        limit=bounded_run_limit,
+        offset=0,
+    )
+    latest_run = runs[0] if runs else None
+    return ProjectDashboardPublic(
+        project_id=project_id,
+        generated_at=get_datetime_utc(),
+        summary=build_project_summary_payload_from_counts(
+            project_id=project_id,
+            summary_counts=finding_repository.project_finding_summary_counts(project_id),
+            latest_run=latest_run,
+        ),
+        governance=build_project_governance_rollups_payload_from_repositories(
+            project_id=project_id,
+            finding_repository=finding_repository,
+            waiver_repository=waiver_repository,
+            limit=rollup_limit,
+        ),
+        runs=AnalysisRunsPublic(
+            data=[analysis_run_public(run) for run in runs],
+            count=run_count,
+        ),
+        findings=ProjectDashboardFindingsPublic(
+            remediation_queue=FindingsPublic(
+                data=[finding_public(finding) for finding in remediation_findings],
+                count=finding_count,
+            ),
+            signal_counts=dashboard_signal_counts_from_counts(
+                finding_repository.project_dashboard_signal_counts(project_id)
+            ),
+        ),
+    )
+
+
 def dashboard_signal_counts(findings: Sequence[Finding]) -> DashboardSignalCountsPublic:
     """Compute dashboard signal counts without issuing extra findings queries."""
     return DashboardSignalCountsPublic(
@@ -90,6 +154,21 @@ def dashboard_signal_counts(findings: Sequence[Finding]) -> DashboardSignalCount
                 1 for finding in findings if _epss_in_range(finding, minimum=0.5, maximum=0.7)
             ),
             critical=sum(1 for finding in findings if _epss_in_range(finding, minimum=0.7)),
+        ),
+    )
+
+
+def dashboard_signal_counts_from_counts(counts: dict[str, Any]) -> DashboardSignalCountsPublic:
+    """Build dashboard signal counts from pre-aggregated repository values."""
+    epss_buckets = dict(counts.get("epss_buckets") or {})
+    return DashboardSignalCountsPublic(
+        high_epss=int(counts.get("high_epss", 0)),
+        internet_facing_criticals=int(counts.get("internet_facing_criticals", 0)),
+        epss_buckets=DashboardEpssBucketsPublic(
+            low=int(epss_buckets.get("low", 0)),
+            medium=int(epss_buckets.get("medium", 0)),
+            high=int(epss_buckets.get("high", 0)),
+            critical=int(epss_buckets.get("critical", 0)),
         ),
     )
 

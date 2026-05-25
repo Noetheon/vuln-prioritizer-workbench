@@ -33,6 +33,7 @@ EXACT_MESSAGE_CODES = {
     "Report artifact checksum mismatch": "report_artifact_checksum_mismatch",
     "Report artifact not found": "report_artifact_not_found",
     "Report is not an evidence bundle": "report_not_evidence_bundle",
+    "Request body exceeds configured limit.": "request_body_too_large",
     "Too many requests.": "rate_limited",
     "Upload exceeds configured limit.": "upload_too_large",
     "VEX parsing failed.": "import_vex_parse_failed",

@@ -1554,7 +1554,7 @@ def _html_provider_snapshot_helper(
             generated_at,
             evidence_package_context,
         )
-        rows = "\n".join(
+        rows_html = "\n".join(
             f"            <tr>"
             f"<td><strong>{_safe_html(row['signal'])}</strong></td>"
             f"<td>{_safe_html(row['value'])}</td>"
@@ -1572,7 +1572,7 @@ def _html_provider_snapshot_helper(
             "            <tr><th>Signal</th><th>Value</th><th>Status</th>"
             "<th>Meaning</th></tr>\n"
             "          </thead>\n"
-            f"          <tbody>\n{rows}\n          </tbody>\n"
+            f"          <tbody>\n{rows_html}\n          </tbody>\n"
             "        </table>\n"
             "      </div>"
         )
@@ -1587,7 +1587,7 @@ def _html_provider_snapshot_helper(
         generated_at,
         evidence_package_context,
     )
-    rows = []
+    rows: list[str] = []
     for row in freshness_rows:
         value = row["value"]
         value_html = (

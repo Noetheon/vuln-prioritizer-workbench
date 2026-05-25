@@ -9,6 +9,7 @@ import {
   VpwToolbar,
   VpwToolbarGroup,
 } from "@/components/vpw"
+import { workbenchApiUrl } from "@/lib/runtime-config"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import { SettingsStatusGrid } from "./SettingsStatusGrid"
 import type { SettingsWorkbenchProps } from "./settings-workbench-model"
@@ -31,6 +32,10 @@ export function SettingsContext({
 }: SettingsContextProps) {
   const queryClient = useQueryClient()
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const apiDocsUrl =
+    status?.api_docs_enabled && status.api_docs_path
+      ? workbenchApiUrl(status.api_docs_path)
+      : ""
 
   async function handleRefresh() {
     setIsRefreshing(true)
@@ -59,17 +64,19 @@ export function SettingsContext({
                 {isRefreshing ? "Scanning..." : "Run Diagnostics"}
               </Button>
 
-              <Button asChild variant="outline">
-                <a
-                  className="inline-flex cursor-pointer items-center"
-                  href="http://localhost:8000/docs"
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  API Explorer
-                  <ExternalLink className="ml-1.5 size-3.5 opacity-60" />
-                </a>
-              </Button>
+              {apiDocsUrl ? (
+                <Button asChild variant="outline">
+                  <a
+                    className="inline-flex cursor-pointer items-center"
+                    href={apiDocsUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    API Explorer
+                    <ExternalLink className="ml-1.5 size-3.5 opacity-60" />
+                  </a>
+                </Button>
+              ) : null}
 
               <Button asChild variant="outline">
                 <Link

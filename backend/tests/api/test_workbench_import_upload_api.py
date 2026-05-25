@@ -130,6 +130,27 @@ def test_upload_middleware_allows_streaming_body_within_limit() -> None:
     assert response.status_code == 200
 
 
+def test_upload_middleware_rejects_oversized_non_upload_api_body() -> None:
+    response = asyncio.run(
+        _run_upload_size_guard(
+            [
+                {
+                    "type": "http.request",
+                    "body": b"A" * (1024 * 1024 + 1),
+                    "more_body": False,
+                },
+            ],
+            max_request_body_mb=1,
+            route_suffix="/waivers/",
+        )
+    )
+
+    assert response.status_code == 413
+    payload = json.loads(response.body)
+    assert payload["code"] == "request_body_too_large"
+    assert payload["detail"] == "Request body exceeds configured limit."
+
+
 def test_upload_middleware_rejects_streaming_body_with_custom_api_prefix() -> None:
     response = asyncio.run(
         _run_upload_size_guard(
@@ -2060,10 +2081,15 @@ async def _run_upload_size_guard(
     messages: list[dict[str, object]],
     *,
     api_prefix: str = "/api/v1",
+    max_request_body_mb: int = 2,
     route_suffix: str = "/imports",
 ) -> Response:
     app = Starlette()
-    app.state.workbench_settings = Settings(MAX_UPLOAD_MB=1, API_V1_STR=api_prefix)
+    app.state.workbench_settings = Settings(
+        MAX_REQUEST_BODY_MB=max_request_body_mb,
+        MAX_UPLOAD_MB=1,
+        API_V1_STR=api_prefix,
+    )
     message_iter = iter(messages)
 
     async def receive() -> dict[str, object]:

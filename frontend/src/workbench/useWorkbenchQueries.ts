@@ -57,11 +57,40 @@ export const emptyDashboardSignalCounts: DashboardSignalCounts = {
   },
 }
 
+type CollectionPage<T> = {
+  count: number
+  data: T[]
+}
+
 function emptyFindingPage() {
   return { count: 0, data: [] as FindingPublic[] }
 }
 
 const ASSET_FINDINGS_PAGE_LIMIT = 500
+const WORKBENCH_COLLECTION_PAGE_LIMIT = 500
+
+async function readAllPages<T>(
+  readPage: (pagination: {
+    limit: number
+    offset: number
+  }) => Promise<CollectionPage<T>>,
+): Promise<CollectionPage<T>> {
+  const data: T[] = []
+  let count = 0
+  let offset = 0
+  let received = 0
+  do {
+    const page = await readPage({
+      limit: WORKBENCH_COLLECTION_PAGE_LIMIT,
+      offset,
+    })
+    count = page.count
+    received = page.data.length
+    data.push(...page.data)
+    offset += received
+  } while (received > 0 && offset < count)
+  return { count, data }
+}
 
 async function readProjectSummariesWithLimit(
   projectIds: readonly string[],
@@ -104,7 +133,10 @@ async function readProjectSummariesWithLimit(
 
 export function useProjectsQuery() {
   return useQuery({
-    queryFn: ({ signal }) => ProjectsService.readProjects({ signal }),
+    queryFn: ({ signal }) =>
+      readAllPages((pagination) =>
+        ProjectsService.readProjects(pagination, { signal }),
+      ),
     queryKey: workbenchQueryKeys.projects(),
     retry: false,
     staleTime: 15_000,
@@ -176,7 +208,12 @@ export function useProjectRunsQuery(projectId: string, enabled: boolean) {
   return useQuery({
     enabled: enabled && Boolean(projectId),
     queryFn: ({ signal }) =>
-      RunsService.readProjectRuns({ project_id: projectId }, { signal }),
+      readAllPages((pagination) =>
+        RunsService.readProjectRuns({
+          project_id: projectId,
+          ...pagination,
+        }, { signal }),
+      ),
     queryKey: workbenchQueryKeys.projectRuns(projectId),
     retry: false,
     staleTime: 15_000,
@@ -191,9 +228,12 @@ export function useProjectAssetsQuery({
   return useQuery({
     enabled: Boolean(projectId),
     queryFn: ({ signal }) =>
-      AssetsService.readProjectAssets({
-        project_id: projectId,
-      }, { signal }),
+      readAllPages((pagination) =>
+        AssetsService.readProjectAssets({
+          project_id: projectId,
+          ...pagination,
+        }, { signal }),
+      ),
     queryKey: workbenchQueryKeys.assets(projectId),
     retry: false,
     staleTime: 10_000,
@@ -264,7 +304,12 @@ export function useWaiversQuery(projectId: string, enabled: boolean) {
   return useQuery({
     enabled: enabled && Boolean(projectId),
     queryFn: ({ signal }) =>
-      WaiversService.readProjectWaivers({ project_id: projectId }, { signal }),
+      readAllPages((pagination) =>
+        WaiversService.readProjectWaivers({
+          project_id: projectId,
+          ...pagination,
+        }, { signal }),
+      ),
     queryKey: workbenchQueryKeys.waivers(projectId),
     retry: false,
     staleTime: 15_000,
