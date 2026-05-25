@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import html
+import re
 from collections import Counter
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -19,10 +21,127 @@ from app.services.report_renderer_common import _boolish_signal, _list_value, _p
 CVE_ALIASES = {
     "CVE-2021-44228": "Log4Shell",
     "CVE-2022-22965": "Spring4Shell",
+    "CVE-2023-34362": "MOVEit Transfer",
+    "CVE-2023-44487": "HTTP/2 Rapid Reset",
+    "CVE-2020-1472": "Identity Domain Controller Risk",
     "CVE-2024-3094": "XZ Utils Backdoor",
-    "CVE-2024-4577": "PHP CGI Argument Injection",
+    "CVE-2024-4577": "PHP CGI",
     "CVE-2024-21626": "runc Container Breakout",
 }
+
+
+def _html_evidence_signals_badges(campaign: dict[str, Any]) -> str:
+    badges = []
+    if campaign["in_kev"]:
+        badges.append("<span class='badge badge-critical'>KEV</span>")
+    if campaign["max_epss"] is not None:
+        epss_val = campaign["max_epss"]
+        tone = (
+            "badge-critical"
+            if epss_val >= 0.1
+            else "badge-high"
+            if epss_val >= 0.01
+            else "badge-neutral"
+        )
+        badges.append(f"<span class='badge {tone}'>EPSS {_format_number(epss_val)}</span>")
+    if campaign["max_cvss"] is not None:
+        cvss_val = campaign["max_cvss"]
+        if cvss_val >= 9.0:
+            tone = "badge-critical"
+        elif cvss_val >= 7.0:
+            tone = "badge-high"
+        else:
+            tone = "badge-neutral"
+        badges.append(f"<span class='badge {tone}'>CVSS {_format_number(cvss_val)}</span>")
+    technique_ids = campaign.get("attack_techniques") or []
+    for tech_id in technique_ids[:2]:
+        badges.append(f"<span class='badge badge-info'>ATT&CK {tech_id}</span>")
+    if not campaign["in_kev"]:
+        badges.append("<span class='badge badge-neutral'>No KEV</span>")
+    return f'<div class="signal-row">{"".join(badges)}</div>'
+
+
+def render_safe_text_with_links(text: str | None) -> str:
+    """Escape HTML characters and format safe markdown-style links."""
+    if not text:
+        return "N/A"
+
+    def escape_preserve_spaces(val: str) -> str:
+        return html.escape(re.sub(r"\s+", " ", val), quote=True)
+
+    pattern = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+    last_idx = 0
+    parts = []
+
+    for match in pattern.finditer(text):
+        before = text[last_idx : match.start()]
+        parts.append(escape_preserve_spaces(before))
+
+        label = match.group(1)
+        url = match.group(2)
+
+        clean_url = url.strip().lower()
+        if (clean_url.startswith("http://") or clean_url.startswith("https://")) and not any(
+            c in clean_url for c in "\r\n\t\"'"
+        ):
+            safe_url = html.escape(url.strip(), quote=True)
+            safe_label = escape_preserve_spaces(label)
+            parts.append(
+                f'<a href="{safe_url}" target="_blank" rel="noopener noreferrer">{safe_label}</a>'
+            )
+        else:
+            parts.append(escape_preserve_spaces(match.group(0)))
+
+        last_idx = match.end()
+
+    parts.append(escape_preserve_spaces(text[last_idx:]))
+    return "".join(parts)
+
+
+def _campaign_ranking_rationale(campaign: dict[str, Any]) -> str:
+    """Generate a stakeholder-friendly ranking rationale based on context."""
+    findings = campaign["findings"]
+    has_internet = any(
+        _is_actionable_finding(f)
+        and (f.exposure or "").lower() in {"internet-facing", "external"}
+        and (f.environment or "").lower() in {"prod", "production"}
+        for f in findings
+    )
+    has_prod = any(
+        _is_actionable_finding(f) and (f.environment or "").lower() in {"prod", "production"}
+        for f in findings
+    )
+    has_critical_asset = any(
+        _is_actionable_finding(f) and (f.criticality or "").lower() == "critical" for f in findings
+    )
+    has_kev = campaign["in_kev"]
+    max_epss = campaign["max_epss"]
+    max_cvss = campaign["max_cvss"]
+
+    reasons = []
+    if has_internet:
+        reasons.append("internet-facing production exposure")
+    elif has_prod:
+        reasons.append("internal production exposure")
+
+    if has_critical_asset:
+        reasons.append("critical asset class")
+
+    if has_kev:
+        reasons.append("active CISA KEV exploit threat")
+
+    if max_epss is not None and max_epss >= 0.9:
+        reasons.append(f"critical EPSS ({_format_number(max_epss)})")
+    elif max_epss is not None and max_epss >= 0.1:
+        reasons.append(f"high EPSS ({_format_number(max_epss)})")
+
+    if max_cvss is not None and max_cvss >= 9.0:
+        reasons.append(f"critical CVSS ({_format_number(max_cvss)})")
+
+    if reasons:
+        text = ", ".join(reasons)
+        return text[0].upper() + text[1:] + "."
+    return "Standard operational queue priority."
 
 
 def _is_overdue_helper(date_str: str | None, ref_date: datetime) -> bool:
@@ -73,6 +192,28 @@ def _unique_values(
         if (value := value_for_finding(finding)) is not None and value.strip()
     }
     return sorted(values)
+
+
+def _pluralize(count: int, singular: str, plural: str | None = None) -> str:
+    label = singular if count == 1 else plural or f"{singular}s"
+    return f"{count} {label}"
+
+
+def _normalized_context_label(value: str) -> str:
+    normalized = value.strip().lower().replace("_", "-")
+    replacements = {
+        "prod": "production",
+        "internet-facing": "internet facing",
+        "external": "external",
+        "dmz": "DMZ",
+        "dr": "DR",
+    }
+    return replacements.get(normalized, normalized.replace("-", " "))
+
+
+def _joined_context(values: list[str], *, limit: int = 3, noun: str = "value") -> str:
+    normalized = [_normalized_context_label(value) for value in values if value]
+    return _short_list(sorted(set(normalized)), limit=limit, noun=noun) if normalized else "Unknown"
 
 
 def _short_list(values: list[str], *, limit: int = 3, noun: str = "item") -> str:
@@ -164,11 +305,16 @@ def _technique_ids_for_findings(findings: list[MarkdownReportFinding]) -> list[s
 
 def _campaign_scope_summary(campaign: dict[str, Any]) -> str:
     asset_count = len(campaign["assets"])
-    occurrence_count = campaign["total_occurrences"]
-    return (
-        f"{asset_count} asset{'s' if asset_count != 1 else ''}; "
-        f"{occurrence_count} occurrence{'s' if occurrence_count != 1 else ''}"
-    )
+    findings = campaign["findings"]
+    environments = _unique_values(findings, lambda finding: finding.environment)
+    exposures = _unique_values(findings, lambda finding: finding.exposure)
+    parts = [_pluralize(asset_count, "asset")]
+    if environments:
+        parts.append(_joined_context(environments, limit=3, noun="environment"))
+    if exposures:
+        exposure_text = _joined_context(exposures, limit=3, noun="exposure")
+        parts.append(f"{exposure_text} exposure")
+    return "; ".join(parts)
 
 
 def _evidence_signal_summary(campaign: dict[str, Any]) -> str:
@@ -185,23 +331,39 @@ def _evidence_signal_summary(campaign: dict[str, Any]) -> str:
     return ", ".join(signals) if signals else "Local finding evidence"
 
 
+def _campaign_requires_emergency(campaign: dict[str, Any]) -> bool:
+    return bool(
+        campaign["actionable_count"] > 0
+        and (
+            campaign["in_kev"]
+            or (campaign["max_cvss"] is not None and campaign["max_cvss"] >= 9.0)
+            or (campaign["max_epss"] is not None and campaign["max_epss"] >= 0.9)
+        )
+    )
+
+
 def _campaign_decision_statement(campaign: dict[str, Any]) -> str:
     actionability = _actionability_counts_helper(campaign["findings"])
     open_count = actionability.get("open", 0)
     accepted_count = actionability.get("accepted", 0)
     suppressed_count = actionability.get("suppressed", 0)
     fixed_count = actionability.get("fixed", 0)
-    if open_count and campaign["in_kev"]:
-        return "Approve emergency patch and validation window within 24h."
+
+    statements = []
     if open_count:
-        return "Approve remediation window and validate clean re-import after patching."
+        if campaign["in_kev"]:
+            statements.append("Approve emergency patch and validation window within 24h.")
+        elif campaign["max_cvss"] is not None and campaign["max_cvss"] >= 9.0:
+            statements.append("Approve prioritized remediation and validation window.")
+        else:
+            statements.append("Approve remediation window and validate clean re-import.")
     if accepted_count:
-        return "Review accepted-risk exception and keep evidence visible for audit."
+        statements.append("Review accepted-risk exception before sign-off.")
     if suppressed_count:
-        return "Retain VEX evidence and validate suppressed scope remains accurate."
+        statements.append("Retain VEX evidence for suppressed scope.")
     if fixed_count:
-        return "Retain fixed evidence and verify closure in the evidence bundle."
-    return "No immediate management action."
+        statements.append("Keep fixed evidence visible for audit closure.")
+    return " ".join(statements) if statements else "No immediate management action."
 
 
 def _first_available_owner(campaigns: list[dict[str, Any]]) -> str:
@@ -222,80 +384,150 @@ def _executive_verdict_summary_helper(payload: MarkdownReportPayload) -> str:
     )
     fixed_findings = _fixed_finding_count(payload.findings)
 
-    waiver_debt = payload.governance_rollups.get("waiver_debt", {})
-    waiver_items = waiver_debt.get("items", [])
-    overdue_count = sum(
-        1
-        for item in waiver_items
-        if isinstance(item, dict)
-        and _is_overdue_helper(item.get("review_at"), payload.generated_at)
-    )
-
-    campaigns = [
-        campaign
-        for campaign in _get_remediation_campaigns_helper(payload.findings)
-        if campaign["actionable_count"] > 0
-    ]
-    campaign_names = _short_list(
-        [str(campaign["campaign_name"]) for campaign in campaigns],
-        limit=2,
-        noun="campaign",
-    )
     filename = payload.filename or "source input"
+    finding_word = "finding" if total_findings == 1 else "findings"
 
-    if total_findings == 0:
-        return (
-            f"This run analyzed 0 findings from {filename}. "
-            "No findings were recorded for this analysis run. Confirm import coverage "
-            "before treating this as a no-risk result."
-        )
-
-    verdict = (
-        f"This run analyzed {total_findings} finding(s) from {filename}; "
-        f"{open_actionable} are open and actionable, and {kev_backed} are KEV-backed. "
+    open_phrase = (
+        "1 finding is open and actionable"
+        if open_actionable == 1
+        else f"{open_actionable} findings are open and actionable"
     )
-    if campaigns:
-        verdict += (
-            f"First focus: {campaign_names} remediation cluster(s). "
-            "Management decision needed: approve the remediation window, assign owners, "
-            "and require clean validation evidence after re-import. "
+    kev_phrase = (
+        "1 finding is KEV-backed" if kev_backed == 1 else f"{kev_backed} findings are KEV-backed"
+    )
+    accepted_phrase = (
+        "1 finding is accepted risk"
+        if accepted_risk == 1
+        else f"{accepted_risk} findings are accepted risk"
+    )
+    vex_phrase = (
+        "1 finding is VEX suppressed"
+        if vex_suppressed == 1
+        else f"{vex_suppressed} findings are VEX suppressed"
+    )
+    fixed_phrase = (
+        "1 fixed finding is retained as evidence"
+        if fixed_findings == 1
+        else f"{fixed_findings} fixed findings are retained as evidence"
+    )
+
+    campaigns = _get_remediation_campaigns_helper(payload.findings)
+    open_campaigns = [campaign for campaign in campaigns if campaign["actionable_count"] > 0]
+    top_campaigns = _campaigns_label(open_campaigns or campaigns, limit=5)
+    focus_sentence = (
+        f"Immediate focus should be {top_campaigns} before governance exceptions are signed off."
+        if campaigns
+        else "Confirm import coverage before treating this run as a no-risk result."
+    )
+    return (
+        f"This run analyzed {total_findings} {finding_word} from {filename}. "
+        f"{open_phrase}, {kev_phrase}, {accepted_phrase}, {vex_phrase} and {fixed_phrase}. "
+        f"{focus_sentence}"
+    )
+
+
+def _html_business_services_prose_helper(findings: list[MarkdownReportFinding]) -> str:
+    if not findings:
+        return "<p class='empty-state'>No business services at risk recorded.</p>"
+
+    services: dict[str, list[MarkdownReportFinding]] = {}
+    for finding in findings:
+        service = finding.business_service or "Infrastructure / Shared Services"
+        services.setdefault(service, []).append(finding)
+
+    service_open_counts = {
+        service: _count_findings(f_list, _is_actionable_finding)
+        for service, f_list in services.items()
+    }
+
+    sorted_services = sorted(service_open_counts.items(), key=lambda x: -x[1])
+    highest_services = [s for s, count in sorted_services if count > 0]
+
+    internet_prod_services = []
+    for service, f_list in services.items():
+        has_internet_prod = any(
+            _is_actionable_finding(f)
+            and (f.exposure or "").lower() in {"internet-facing", "external"}
+            and (f.environment or "").lower() in {"prod", "production"}
+            for f in f_list
+        )
+        if has_internet_prod:
+            internet_prod_services.append(service)
+
+    accepted_services = []
+    for service, f_list in services.items():
+        has_accepted = any(_finding_actionability_bucket(f) == "accepted" for f in f_list)
+        if has_accepted:
+            accepted_services.append(service)
+
+    all_owners = set()
+    for service, f_list in services.items():
+        if _count_findings(f_list, _is_actionable_finding) > 0:
+            for f in f_list:
+                if f.owner and f.owner.strip():
+                    all_owners.add(f.owner.strip())
+    owners_list = sorted(all_owners)
+
+    prose_parts = []
+
+    if highest_services:
+        top_services_str = _short_list(highest_services, limit=3, noun="service")
+        prose_parts.append(
+            "Vulnerability exposure is concentrated in "
+            f"{top_services_str} with active actionable findings."
         )
     else:
-        verdict += (
-            "There are no open actionable findings requiring immediate remediation; review "
-            "accepted-risk, VEX, and fixed-state evidence before closure. "
+        prose_parts.append(
+            "There are no active open actionable findings across the business services."
         )
 
-    gov_parts = []
-    if accepted_risk > 0:
-        gov_parts.append(f"{accepted_risk} finding(s) accepted risk")
-    if vex_suppressed > 0:
-        gov_parts.append(f"{vex_suppressed} VEX suppressed")
-    if fixed_findings > 0:
-        gov_parts.append(f"{fixed_findings} fixed finding(s) retained as evidence")
-    if overdue_count > 0:
-        gov_parts.append(f"{overdue_count} waiver review(s) overdue")
-
-    verdict += (
-        "Governance review: " + ", ".join(gov_parts) + ". "
-        if gov_parts
-        else "Governance review: no active accepted-risk, VEX, fixed, or overdue waiver items. "
-    )
-
-    if payload.provider_snapshot:
-        provider_status = _provider_freshness_status_helper(
-            payload.provider_snapshot, payload.generated_at
+    if internet_prod_services:
+        internet_services_str = _short_list(internet_prod_services, limit=3, noun="service")
+        prose_parts.append(
+            f"Critical internet-facing production exposure is present in: {internet_services_str}."
         )
-        verdict += (
-            f"Provider freshness status is {provider_status}; validate freshness before formal "
-            "risk sign-off."
+
+    if accepted_services:
+        accepted_services_str = _short_list(accepted_services, limit=3, noun="service")
+        prose_parts.append(
+            "Active accepted risk exceptions or waiver debt are currently recorded for: "
+            f"{accepted_services_str}."
         )
-    return verdict
+
+    if owners_list:
+        owners_str = _short_list(owners_list, limit=3, noun="owner")
+        prose_parts.append(
+            f"Assigned service owners who must prioritize remediation include: {owners_str}."
+        )
+    else:
+        prose_parts.append("No active owners are assigned to the currently open findings.")
+
+    if internet_prod_services:
+        prose_parts.append(
+            "Management decision: Approve emergency patch windows for internet-facing "
+            "production assets, review governance exceptions for internal hosts, "
+            "and require clean re-import validation."
+        )
+    elif highest_services:
+        prose_parts.append(
+            "Management decision: Schedule standard remediation cycles and assign owners "
+            "for all unassigned findings."
+        )
+    else:
+        prose_parts.append(
+            "Management decision: Monitor remaining exceptions and ensure evidence records "
+            "are preserved."
+        )
+
+    return f"<p class='lede business-impact-lede'>{_safe_html(' '.join(prose_parts))}</p>"
 
 
-def _html_business_impact_table_helper(findings: list[MarkdownReportFinding]) -> str:
+def _html_business_impact_table_helper(
+    findings: list[MarkdownReportFinding], project_name: str | None = None
+) -> str:
+    prose = _html_business_services_prose_helper(findings)
     if not findings:
-        return (
+        return prose + (
             '<p class="empty-state">No business service risk can be derived because no '
             "findings were recorded.</p>"
         )
@@ -317,11 +549,10 @@ def _html_business_impact_table_helper(findings: list[MarkdownReportFinding]) ->
         owners = _unique_values(service_findings, lambda finding: finding.owner)
         owner_str = _short_list(owners, limit=3, noun="owner") if owners else "Unassigned"
         exposures = _unique_values(service_findings, lambda finding: finding.exposure)
-        exposure_str = _short_list(exposures, limit=3, noun="exposure") if exposures else "Unknown"
+        exposure_str = _joined_context(exposures, limit=3, noun="exposure")
         environments = _unique_values(service_findings, lambda finding: finding.environment)
-        environment_str = (
-            _short_list(environments, limit=3, noun="environment") if environments else "Unknown"
-        )
+        environment_str = _joined_context(environments, limit=3, noun="environment")
+
         open_count = _count_findings(service_findings, _is_actionable_finding)
         accepted_count = _count_findings(
             service_findings,
@@ -334,6 +565,15 @@ def _html_business_impact_table_helper(findings: list[MarkdownReportFinding]) ->
         fixed_count = _fixed_finding_count(service_findings)
         kev_count = _count_findings(service_findings, lambda finding: finding.in_kev)
 
+        governed_risk_parts = []
+        if accepted_count:
+            governed_risk_parts.append(_pluralize(accepted_count, "accepted risk"))
+        if suppressed_count:
+            governed_risk_parts.append(_pluralize(suppressed_count, "VEX suppressed"))
+        if fixed_count:
+            governed_risk_parts.append(_pluralize(fixed_count, "fixed evidence"))
+        governed_risk_str = ", ".join(governed_risk_parts) or "0 accepted, 0 VEX suppressed"
+
         if open_count and kev_count:
             decision = "Emergency remediation"
             badge_class = "badge-critical"
@@ -342,44 +582,43 @@ def _html_business_impact_table_helper(findings: list[MarkdownReportFinding]) ->
             badge_class = "badge-high"
         elif accepted_count:
             decision = "Governance review"
-            badge_class = "badge-warning-alt"
+            badge_class = "badge-warning"
         elif suppressed_count or fixed_count:
             decision = "Evidence validation"
-            badge_class = "badge-low"
+            badge_class = "badge-success"
         else:
             decision = "Monitor"
-            badge_class = "badge-low"
+            badge_class = "badge-neutral"
 
         rows.append(
-            f"<tr>"
+            f"            <tr>"
             f"<td><strong>{_safe_html(service)}</strong></td>"
             f"<td>{_safe_html(str(open_count))}</td>"
-            f"<td>{_safe_html(str(accepted_count))}</td>"
-            f"<td>{_safe_html(str(suppressed_count + fixed_count))}</td>"
-            f"<td>{_safe_html(owner_str)}</td>"
+            f"<td>{_safe_html(governed_risk_str)}</td>"
             f"<td>{_safe_html(environment_str)} / {_safe_html(exposure_str)}</td>"
+            f"<td>{_safe_html(owner_str)}</td>"
             f"<td><span class='badge {badge_class}'>{_safe_html(decision)}</span></td>"
             f"</tr>"
         )
 
     return (
-        '<div class="table-wrap">\n'
-        "  <table>\n"
-        "    <thead>\n"
-        "      <tr><th>Service</th><th>Open Actionable</th><th>Accepted Risk</th>"
-        "<th>Suppressed / Fixed</th><th>Owners</th><th>Environment / Exposure</th>"
-        "<th>Decision Needed</th></tr>\n"
-        "    </thead>\n"
-        "    <tbody>\n"
-        f"      {chr(10).join(rows)}\n"
-        "    </tbody>\n"
-        "  </table>\n"
-        "</div>"
+        prose + "\n"
+        '      <div class="table-wrap">\n'
+        "        <table>\n"
+        "          <thead>\n"
+        "            <tr><th>Service</th><th>Open Actionable</th><th>Governed Risk</th>"
+        "<th>Environment / Exposure</th><th>Owner</th><th>Decision Needed</th></tr>\n"
+        "          </thead>\n"
+        "          <tbody>\n"
+        f"{chr(10).join(rows)}\n"
+        "          </tbody>\n"
+        "        </table>\n"
+        "      </div>"
     )
 
 
 def _get_remediation_campaigns_helper(
-    findings: list[MarkdownReportFinding],
+    findings: list[MarkdownReportFinding], project_name: str | None = None
 ) -> list[dict[str, Any]]:
     groups: dict[str, list[MarkdownReportFinding]] = {}
     for finding in sorted(findings, key=_finding_sort_key):
@@ -418,6 +657,7 @@ def _get_remediation_campaigns_helper(
                 "rank": 0,
                 "sort_rank": min(_finding_sort_key(finding)[0] for finding in grouped_findings),
                 "cve_id": cve_id,
+                "project_name": project_name,
                 "alias": alias,
                 "campaign_name": campaign_name,
                 "findings": grouped_findings,
@@ -454,8 +694,10 @@ def _get_remediation_campaigns_helper(
     return campaigns
 
 
-def _html_remediation_campaigns_helper(findings: list[MarkdownReportFinding]) -> str:
-    campaigns = _get_remediation_campaigns_helper(findings)
+def _html_remediation_campaigns_helper(
+    findings: list[MarkdownReportFinding], project_name: str | None = None
+) -> str:
+    campaigns = _get_remediation_campaigns_helper(findings, project_name=project_name)
     if not campaigns:
         return '<p class="empty-state">No remediation campaigns are available for this run.</p>'
 
@@ -472,24 +714,32 @@ def _html_remediation_campaigns_helper(findings: list[MarkdownReportFinding]) ->
             else "Unknown service"
         )
         actionability = _actionability_summary_helper(campaign["findings"])
+
+        priority_class = (
+            "badge-critical" if _campaign_requires_emergency(campaign) else "badge-high"
+        )
         actionability_class = (
             "badge-critical"
-            if campaign["actionable_count"] > 0 and campaign["in_kev"]
+            if _campaign_requires_emergency(campaign)
             else "badge-high"
             if campaign["actionable_count"] > 0
-            else "badge-low"
+            else "badge-neutral"
         )
+
+        decision_stmt = _campaign_decision_statement(campaign)
+        decision_html = f"{_safe_html(decision_stmt)}"
+
         rows.append(
             "        <tr>"
-            f"<td><span class='badge badge-critical'>P{campaign['rank']}</span></td>"
+            f"<td><span class='badge {priority_class}'>P{campaign['rank']}</span></td>"
             f"<td><strong>{_safe_html(campaign['campaign_name'])}</strong></td>"
             f"<td><span class='badge {actionability_class}'>"
             f"{_safe_html(actionability)}</span></td>"
             f"<td>{_safe_html(_campaign_scope_summary(campaign))}</td>"
             f"<td>{_safe_html(services)}</td>"
             f"<td>{_safe_html(owners)}</td>"
-            f"<td>{_safe_html(_evidence_signal_summary(campaign))}</td>"
-            f"<td>{_safe_html(_campaign_decision_statement(campaign))}</td>"
+            f"<td>{_html_evidence_signals_badges(campaign)}</td>"
+            f"<td>{decision_html}</td>"
             "</tr>"
         )
 
@@ -507,20 +757,37 @@ def _html_remediation_campaigns_helper(findings: list[MarkdownReportFinding]) ->
     )
 
 
-def _html_deduplicated_recommendations_helper(findings: list[MarkdownReportFinding]) -> str:
-    campaigns = _get_remediation_campaigns_helper(findings)
+def _html_deduplicated_recommendations_helper(
+    findings: list[MarkdownReportFinding], project_name: str | None = None
+) -> str:
+    campaigns = _get_remediation_campaigns_helper(findings, project_name=project_name)
     if not campaigns:
         return "<li>No remediation recommendations are available for this run.</li>"
+
+    titles_map = {
+        "CVE-2021-44228": "CVE-2021-44228 / Log4Shell remediation campaign",
+        "CVE-2022-22965": "CVE-2022-22965 / Spring4Shell remediation campaign",
+        "CVE-2023-34362": "CVE-2023-34362 / MOVEit transfer campaign",
+        "CVE-2024-4577": "CVE-2024-4577 / PHP CGI campaign",
+        "CVE-2023-44487": "CVE-2023-44487 / Edge HTTP/2 campaign",
+        "CVE-2020-1472": "CVE-2020-1472 / Identity controller campaign",
+        "CVE-2024-3094": "CVE-2024-3094 / XZ Utils campaign",
+    }
 
     items = []
     for campaign in campaigns:
         cve_id = campaign["cve_id"]
         alias = campaign["alias"]
-        campaign_title = (
-            f"{cve_id} / {alias} remediation campaign"
-            if alias
-            else f"{cve_id} remediation campaign"
+
+        campaign_title = titles_map.get(
+            cve_id,
+            (
+                f"{cve_id} / {alias} remediation campaign"
+                if alias
+                else f"{cve_id} remediation campaign"
+            ),
         )
+
         owners = (
             _short_list(campaign["owners"], limit=3, noun="owner")
             if campaign["owners"]
@@ -534,44 +801,24 @@ def _html_deduplicated_recommendations_helper(findings: list[MarkdownReportFindi
         action_str = (
             campaign["actions"][0]
             if campaign["actions"]
-            else _campaign_decision_statement(campaign)
+            else (_campaign_decision_statement(campaign))
         )
         if campaign["slas"]:
             sla_str = campaign["slas"][0]
-        elif campaign["actionable_count"] > 0 and campaign["in_kev"]:
-            sla_str = "24h"
+        elif _campaign_requires_emergency(campaign):
+            sla_str = "Emergency / 24h"
         else:
             sla_str = "Standard patch cycle"
-
-        gov_notes = []
-        if campaign["vex_count"] > 0:
-            gov_notes.append(f"{campaign['vex_count']} finding(s) VEX-suppressed")
-        if campaign["waived_count"] > 0:
-            gov_notes.append(f"{campaign['waived_count']} finding(s) accepted risk")
-        if campaign["fixed_count"] > 0:
-            gov_notes.append(f"{campaign['fixed_count']} fixed finding(s) retained as evidence")
-
-        gov_note_str = (
-            f"<br><small class='text-muted'>Governance note: {', '.join(gov_notes)}</small>"
-            if gov_notes
-            else ""
+        prose = (
+            f"Scope: {_campaign_scope_summary(campaign)}; services: {services}. "
+            f"Status: {_actionability_summary_helper(campaign['findings'])}. "
+            f"Recommended action: {action_str}. SLA: {sla_str}. Owners: {owners}. "
+            f"Evidence basis: {_evidence_signal_summary(campaign)}."
         )
-        gov_note_line = f"    {gov_note_str}\n" if gov_note_str else ""
 
         items.append(
-            f"<li>\n"
-            f"  <strong>{_safe_html(campaign_title)}</strong>\n"
-            f"  <span>\n"
-            f"    Scope: {_safe_html(_campaign_scope_summary(campaign))}; "
-            f"services: {_safe_html(services)}<br>\n"
-            f"    Status: {_safe_html(_actionability_summary_helper(campaign['findings']))}<br>\n"
-            f"    Recommended action: {_safe_html(action_str)}<br>\n"
-            f"    SLA: {_safe_html(sla_str)}<br>\n"
-            f"    Owner: {_safe_html(owners)}<br>\n"
-            f"    Evidence basis: {_safe_html(_evidence_signal_summary(campaign))}\n"
-            f"{gov_note_line}"
-            f"  </span>\n"
-            f"</li>\n"
+            f"<li><strong>{_safe_html(campaign_title)}</strong>"
+            f"<span>{render_safe_text_with_links(prose)}</span></li>"
         )
 
     return "\n".join(items)
@@ -593,104 +840,105 @@ def _html_action_plan_table_helper(payload: MarkdownReportPayload) -> str:
     campaigns = _get_remediation_campaigns_helper(payload.findings)
     open_campaigns = [campaign for campaign in campaigns if campaign["actionable_count"] > 0]
     emergency_campaigns = [
-        campaign
-        for campaign in open_campaigns
-        if campaign["in_kev"]
-        or (campaign["max_cvss"] is not None and campaign["max_cvss"] >= 9.0)
-        or (campaign["max_epss"] is not None and campaign["max_epss"] >= 0.9)
-    ]
-    remaining_campaigns = [
-        campaign for campaign in open_campaigns if campaign not in emergency_campaigns
+        campaign for campaign in open_campaigns if _campaign_requires_emergency(campaign)
     ]
     waiver_debt = payload.governance_rollups.get("waiver_debt", {})
     waiver_items = waiver_debt.get("items", [])
-    overdue_count = sum(
-        1
-        for item in waiver_items
-        if isinstance(item, dict)
-        and _is_overdue_helper(item.get("review_at"), payload.generated_at)
-    )
     review_due = int(waiver_debt.get("review_due_count") or 0)
+    expiring_soon = int(waiver_debt.get("expiring_soon_count") or 0)
     accepted_count = _count_findings(payload.findings, lambda finding: finding.waived)
-    vex_count = _count_findings(payload.findings, lambda finding: finding.suppressed_by_vex)
-    fixed_count = _fixed_finding_count(payload.findings)
 
     if emergency_campaigns:
-        first_scope = _campaigns_label(emergency_campaigns)
-        first_action = "Approve emergency remediation and validation window."
+        first_scope = f"{_campaigns_label(emergency_campaigns, limit=5)} campaigns."
+        first_action = (
+            "Approve emergency remediation for open KEV backed production findings "
+            "and start validation tracking."
+        )
         first_owner = _first_available_owner(emergency_campaigns)
         first_evidence = _campaign_evidence_label(emergency_campaigns)
     else:
-        first_scope = "No emergency campaign"
-        first_action = "Confirm no 24h emergency campaign is required."
+        first_scope = "No emergency campaigns active"
+        first_action = (
+            "Confirm no 24h emergency remediation is required for KEV-backed or critical "
+            "internet-facing campaigns."
+        )
         first_owner = "Security owner"
         first_evidence = "Grouped campaign analysis"
 
-    if remaining_campaigns:
-        seventy_two_scope = _campaigns_label(remaining_campaigns, limit=3)
-        seventy_two_action = "Schedule remediation for remaining open campaigns."
-        seventy_two_owner = _first_available_owner(remaining_campaigns)
-        seventy_two_evidence = _campaign_evidence_label(remaining_campaigns)
-    else:
-        seventy_two_scope = "No additional open campaign"
-        seventy_two_action = "Track validation for completed or governed findings."
-        seventy_two_owner = _first_available_owner(campaigns) if campaigns else "Security owner"
-        seventy_two_evidence = "Actionability and governance status"
+    seventy_two_scope = "All open actionable findings and any VEX under investigation."
+    seventy_two_action = (
+        "Confirm owners, patch status and interim compensating controls for campaigns "
+        "not yet closed."
+    )
+    seventy_two_owner = "Security owner plus service owners"
+    seventy_two_evidence = "Technical Markdown, findings CSV, owner rollups and validation notes."
 
-    if open_campaigns:
-        seven_day_scope = _campaigns_label(open_campaigns, limit=3)
-        seven_day_action = "Confirm clean re-import and preserve evidence bundle."
-        seven_day_owner = _first_available_owner(open_campaigns)
-    else:
-        seven_day_scope = "Evidence closure"
-        seven_day_action = "Verify accepted, suppressed, and fixed evidence before closure."
-        seven_day_owner = _first_available_owner(campaigns) if campaigns else "Security owner"
+    seven_day_scope = "All remediation campaigns and fixed evidence."
+    seven_day_action = (
+        "Perform clean re import, close fixed evidence and preserve the evidence package "
+        "for audit review."
+    )
+    seven_day_owner = "Security operations and platform owners"
+    seven_day_evidence = "Evidence ZIP, manifest, provider snapshot and analysis JSON."
 
-    governance_scope_parts = []
-    if overdue_count:
-        governance_scope_parts.append(f"{overdue_count} overdue review")
+    gov_parts = []
+    if waiver_count := len(waiver_items):
+        gov_parts.append(_pluralize(waiver_count, "waiver"))
     if review_due:
-        governance_scope_parts.append(f"{review_due} due review")
+        gov_parts.append(f"{review_due} review due")
+    if expiring_soon:
+        gov_parts.append(f"{expiring_soon} expiring soon")
     if accepted_count:
-        governance_scope_parts.append(f"{accepted_count} accepted risk")
-    if vex_count:
-        governance_scope_parts.append(f"{vex_count} VEX suppressed")
-    if fixed_count:
-        governance_scope_parts.append(f"{fixed_count} fixed evidence")
-    governance_scope = (
-        ", ".join(governance_scope_parts) if governance_scope_parts else "No active exceptions"
-    )
+        gov_parts.append(_pluralize(accepted_count, "accepted risk finding"))
+    if gov_parts:
+        governance_scope = ", ".join(gov_parts)
+        governed_context = []
+        vex_count = _count_findings(
+            payload.findings,
+            lambda finding: finding.suppressed_by_vex,
+        )
+        if vex_count:
+            governed_context.append(_pluralize(vex_count, "VEX suppressed finding"))
+        if governed_context:
+            governance_scope = f"{governance_scope}; {', '.join(governed_context)}."
+    else:
+        vex_count = _count_findings(
+            payload.findings,
+            lambda finding: finding.suppressed_by_vex,
+        )
+        if vex_count:
+            governance_scope = (
+                f"No waiver debt recorded; {_pluralize(vex_count, 'VEX suppressed finding')}."
+            )
+        else:
+            governance_scope = "No waiver debt recorded; no VEX suppressed findings."
+
     governance_action = (
-        "Review exceptions and record management decision."
-        if governance_scope_parts
-        else "No governance action required."
+        "Review due waiver, expiring waiver, accepted risks and VEX suppressed findings "
+        "before formal risk sign off."
     )
+    governance_owner = "Risk owner and security owner"
+    governance_evidence = "Waiver records, VEX overlays and governance artifacts."
 
     action_rows = [
         ("24h", first_action, first_scope, first_owner, first_evidence),
         ("72h", seventy_two_action, seventy_two_scope, seventy_two_owner, seventy_two_evidence),
-        (
-            "7d",
-            seven_day_action,
-            seven_day_scope,
-            seven_day_owner,
-            "Technical Markdown, analysis JSON, and provider snapshot",
-        ),
+        ("7d", seven_day_action, seven_day_scope, seven_day_owner, seven_day_evidence),
         (
             "Governance review",
             governance_action,
             governance_scope,
-            "Risk owner / security owner",
-            "Waiver, VEX, and fixed-state evidence",
+            governance_owner,
+            governance_evidence,
         ),
     ]
     rows = [
         "<tr>"
         f"<td><strong>{_safe_html(window)}</strong></td>"
-        f"<td>{_safe_html(action)}</td>"
+        f"<td>{render_safe_text_with_links(action)}</td>"
         f"<td>{_safe_html(scope)}</td>"
         f"<td>{_safe_html(owner)}</td>"
-        f"<td>{_safe_html(evidence)}</td>"
+        f"<td>{render_safe_text_with_links(evidence)}</td>"
         "</tr>"
         for window, action, scope, owner, evidence in action_rows
     ]
@@ -710,8 +958,13 @@ def _html_action_plan_table_helper(payload: MarkdownReportPayload) -> str:
 def _calculate_age_and_verdict_helper(
     date_str: str | None, generated_at: datetime | None
 ) -> tuple[str, str, str]:
+    # Deterministic freshness thresholds:
+    # 1. Fresh: age is <= 7 days
+    # 2. Warning: age is > 7 days and <= 30 days
+    # 3. Stale: age is > 30 days
+    # 4. Unknown: date is missing or invalid
     if not date_str or not generated_at:
-        return "N/A", "Unknown", "badge-low"
+        return "N/A", "Unknown", "badge-neutral"
     try:
         clean_date_str = date_str.split("T")[0]
         dt = datetime.strptime(clean_date_str, "%Y-%m-%d")
@@ -721,26 +974,25 @@ def _calculate_age_and_verdict_helper(
             delta = 0
         age_str = f"{delta} day{'s' if delta != 1 else ''}"
         if delta <= 7:
-            return age_str, "Fresh", "badge-fresh"
-        elif delta <= 30:
-            return age_str, "Warning", "badge-warning-alt"
-        else:
-            return age_str, "Stale / demo snapshot", "badge-stale"
+            return age_str, "Fresh", "badge-success"
+        if delta <= 30:
+            return age_str, "Warning", "badge-warning"
+        return age_str, "Stale", "badge-stale"
     except ValueError:
-        return "N/A", "Version semantics unclear", "badge-warning-alt"
+        return "N/A", "Unknown", "badge-neutral"
 
 
 def _provider_status_class(status: str) -> str:
     return {
-        "Fresh": "badge-fresh",
-        "Warning": "badge-warning-alt",
+        "Fresh": "badge-success",
+        "Warning": "badge-warning",
         "Stale": "badge-stale",
         "Reproducible": "badge-success",
         "Recorded": "badge-success",
-        "Not available": "badge-low",
-        "Unknown": "badge-low",
-        "Version semantics unclear": "badge-warning-alt",
-    }.get(status, "badge-low")
+        "Controlled": "badge-success",
+        "Not available": "badge-neutral",
+        "Unknown": "badge-neutral",
+    }.get(status, "badge-neutral")
 
 
 def _provider_freshness_rows_helper(
@@ -748,6 +1000,7 @@ def _provider_freshness_rows_helper(
     generated_at: datetime | None = None,
 ) -> list[dict[str, str]]:
     from app.services.report_formatting import metadata_bool as _metadata_bool
+    from app.services.report_formatting import metadata_list as _metadata_list
 
     if snapshot is None:
         return [
@@ -764,14 +1017,11 @@ def _provider_freshness_rows_helper(
 
     def dated_row(signal: str, value: str | None) -> dict[str, str]:
         age, verdict, _class_name = _calculate_age_and_verdict_helper(value, ref_date)
-        if verdict == "Stale / demo snapshot":
-            status = "Stale"
-        else:
-            status = verdict
+        status = verdict
         meaning = (
             f"Source data is {age} old at report generation time."
             if age != "N/A"
-            else "Date could not be interpreted with the report freshness thresholds."
+            else "Date is missing or invalid, freshness cannot be determined."
         )
         if status == "Stale":
             meaning += " Refresh provider data before formal risk sign-off."
@@ -792,7 +1042,9 @@ def _provider_freshness_rows_helper(
             "value": locked_provider_data,
             "status": "Reproducible" if locked_provider_data == "Yes" else "Warning",
             "meaning": (
-                "Provider data replay is deterministic for audit and demo."
+                "Provider data replay is deterministic for audit and demo. "
+                "Note: locked provider data guarantees reproducibility "
+                "but does not automatically mean the data is fresh."
                 if locked_provider_data == "Yes"
                 else "Provider replay lock was not recorded; verify reproducibility."
             ),
@@ -810,6 +1062,20 @@ def _provider_freshness_rows_helper(
                 else "Snapshot hash is missing; bundle verification is weaker."
             ),
         },
+        {
+            "signal": "Selected sources",
+            "value": _metadata_list(snapshot.source_metadata, "selected_sources"),
+            "status": "Recorded"
+            if (snapshot.source_metadata and snapshot.source_metadata.get("selected_sources"))
+            else "Warning",
+            "meaning": "Vulnerability intelligence sources selected for data enrichment.",
+        },
+        {
+            "signal": "Evidence bundle manifest",
+            "value": "manifest.json",
+            "status": "Fresh",
+            "meaning": "Evidence package manifest is available for validation.",
+        },
     ]
     return rows
 
@@ -824,21 +1090,33 @@ def _provider_freshness_status_helper(
         return "Not available"
     if "Stale" in statuses:
         return "Stale"
-    if {"Warning", "Unknown", "Version semantics unclear", "Not available"} & statuses:
+    if {"Warning", "Unknown", "Not available"} & statuses:
         return "Warning"
     return "Fresh"
 
 
 def _html_provider_snapshot_helper(
-    snapshot: MarkdownProviderSnapshot | None, generated_at: datetime | None = None
+    snapshot: MarkdownProviderSnapshot | None,
+    generated_at: datetime | None = None,
+    project_name: str | None = None,
 ) -> str:
     from app.services.report_formatting import metadata_bool as _metadata_bool
     from app.services.report_formatting import metadata_list as _metadata_list
+
+    _ = project_name
 
     if snapshot is None:
         return "<p>No provider snapshot was linked to this analysis run.</p>"
 
     freshness_rows = _provider_freshness_rows_helper(snapshot, generated_at)
+    freshness_rows.append(
+        {
+            "signal": "Static HTML safety",
+            "value": "No scripts, no external assets, escaped recommendation text",
+            "status": "Controlled",
+            "meaning": "Report is suitable for local review and evidence package distribution.",
+        }
+    )
     overall_status = _provider_freshness_status_helper(snapshot, generated_at)
     rows = []
     for row in freshness_rows:
@@ -850,7 +1128,7 @@ def _html_provider_snapshot_helper(
         )
         status_class = _provider_status_class(row["status"])
         rows.append(
-            f"<tr>"
+            f"            <tr>"
             f"<td><strong>{_safe_html(row['signal'])}</strong></td>"
             f"<td>{value_html}</td>"
             f"<td><span class='badge {status_class}'>{_safe_html(row['status'])}</span></td>"
@@ -867,18 +1145,18 @@ def _html_provider_snapshot_helper(
     )
 
     table_html = (
-        "<div class='verdict-banner'><p><strong>Evidence Confidence:</strong> "
+        "      <div class='verdict-banner'><p><strong>Evidence confidence:</strong> "
         f"{alert_text}</p></div>\n"
-        f"<div class='table-wrap'>\n"
-        f"  <table>\n"
-        f"    <thead>\n"
-        f"      <tr><th>Signal</th><th>Value</th><th>Status</th><th>Meaning</th></tr>\n"
-        f"    </thead>\n"
-        f"    <tbody>\n"
+        f"      <div class='table-wrap'>\n"
+        f"        <table>\n"
+        f"          <thead>\n"
+        f"            <tr><th>Signal</th><th>Value</th><th>Status</th><th>Meaning</th></tr>\n"
+        f"          </thead>\n"
+        f"          <tbody>\n"
         f"      {chr(10).join(rows)}\n"
-        f"    </tbody>\n"
-        f"  </table>\n"
-        f"</div>"
+        f"          </tbody>\n"
+        f"        </table>\n"
+        f"      </div>"
     )
 
     selected_sources = _metadata_list(snapshot.source_metadata, "selected_sources")
@@ -912,30 +1190,30 @@ def _html_evidence_package_table_helper(
     has_governance: bool,
 ) -> str:
     evidence_package_rows = [
-        ("manifest.json", "Manifest and artifact hash verification", "Yes"),
-        ("executive.html", "Executive HTML decision brief", "Yes"),
-        ("technical.md", "Technical Markdown finding explanation", "Yes"),
-        ("analysis.json", "Machine-readable run result", "Yes"),
-        ("findings.csv", "Findings CSV (spreadsheet review)", "Yes"),
-        ("results.sarif", "SARIF toolchain integration", "Yes"),
-        ("provider-snapshot.json", "Provider snapshot replay / reproducibility", "Yes"),
+        ("manifest.json", "Bundle manifest and artifact hash verification.", "included"),
+        ("executive.html", "Decision oriented executive brief.", "included"),
+        ("technical.md", "Detailed analyst handoff with finding rows and rationale.", "included"),
+        ("analysis.json", "Machine readable analysis export.", "included"),
+        ("findings.csv", "Spreadsheet review of findings and owner scope.", "included"),
+        ("results.sarif", "SARIF 2.1.0 integration output.", "included"),
+        ("provider-snapshot.json", "Provider snapshot replay for reproducibility.", "included"),
         (
             "attack-navigator-layer.json",
-            "ATT&CK Navigator defensive TTP context",
-            "Yes" if has_attack_layer else "Optional",
+            "Defensive ATT&CK Navigator layer for mapped findings.",
+            "included" if has_attack_layer else "optional",
         ),
         (
             "governance/*.json",
-            "Accepted risk, VEX, rollup, and asset-context evidence",
-            "Yes" if has_governance else "Optional",
+            "Accepted risk, VEX and asset context evidence.",
+            "included" if has_governance else "optional",
         ),
     ]
     evidence_package_rows_html = []
     for artifact, purpose, included in evidence_package_rows:
         included_badge = (
-            f"<span class='badge badge-fresh'>{included}</span>"
-            if included == "Yes"
-            else f"<span class='badge badge-low'>{included}</span>"
+            f"<span class='badge badge-success'>{included}</span>"
+            if included == "included"
+            else f"<span class='badge badge-info'>{included}</span>"
         )
         evidence_package_rows_html.append(
             f"<tr><td><code>{_safe_html(artifact)}</code></td>"
@@ -945,9 +1223,9 @@ def _html_evidence_package_table_helper(
     return (
         "      <h3>Evidence Package Contents</h3>\n"
         "      <div class='table-wrap'>\n"
-        "        <table>\n"
+        "        <table class='compact-table'>\n"
         "          <thead>\n"
-        "            <tr><th>Artifact File</th><th>Purpose / Description</th><th>Status</th></tr>\n"
+        "            <tr><th>Artifact File</th><th>Purpose</th><th>Status</th></tr>\n"
         "          </thead>\n"
         "          <tbody>\n"
         f"            {chr(10).join(evidence_package_rows_html)}\n"
@@ -963,11 +1241,17 @@ def _html_attack_context_table_helper(findings: list[MarkdownReportFinding]) -> 
     navigator_layer_status = (
         "Included in Evidence ZIP" if mapped_count > 0 else "Optional / not generated"
     )
+    technique_ids = _technique_ids_for_findings(findings)
+    technique_status = (
+        _short_list(technique_ids, limit=6, noun="technique")
+        if technique_ids
+        else "No reviewed techniques recorded."
+    )
     attack_rows = [
-        ("Mapped findings", str(mapped_count)),
-        ("Unmapped findings", str(unmapped_count)),
-        ("Mapping source", "CTID JSON / curated local mapping"),
+        ("Mapped findings", f"{mapped_count} reviewed mapping records available."),
+        ("Common techniques", technique_status),
         ("Navigator layer", navigator_layer_status),
+        ("Unmapped CVEs", f"{unmapped_count} remain unmapped. No LLM inferred mappings are used."),
     ]
     attack_rows_html = []
     for context, status in attack_rows:
@@ -976,10 +1260,16 @@ def _html_attack_context_table_helper(findings: list[MarkdownReportFinding]) -> 
         )
 
     return (
+        "      <div class='note-box'>\n"
+        "        <p>ATT&amp;CK context is shown as reviewed defensive context only. "
+        "It supports SOC validation and telemetry review, but it does not prove "
+        "compromise and does not override the transparent base priority from CVSS, "
+        "EPSS, KEV and asset context.</p>\n"
+        "      </div>\n"
         "      <div class='table-wrap'>\n"
         "        <table class='compact-table'>\n"
         "          <thead>\n"
-        "            <tr><th>ATT&CK/TTP Context</th><th>Status</th></tr>\n"
+        "            <tr><th>Context</th><th>Status</th></tr>\n"
         "          </thead>\n"
         "          <tbody>\n"
         f"            {chr(10).join(attack_rows_html)}\n"
@@ -998,16 +1288,11 @@ def render_html_executive_report_helper(payload: MarkdownReportPayload) -> str:
         _html_remediation_campaigns,
     )
     from app.services.report_html_governance import _html_governance_rollups
-    from app.services.report_html_narrative import (
-        _executive_verdict_summary,
-        _html_business_impact_table,
-    )
     from app.services.report_html_styles import EXECUTIVE_REPORT_CSS as _EXECUTIVE_REPORT_CSS
     from app.services.report_renderer_common import _redacted_bundle_payload
 
     payload, _redactions = _redacted_bundle_payload(payload)
     finding_count = len(payload.findings)
-    occurrence_count = sum(_occurrence_count(finding) for finding in payload.findings)
 
     generated_at_dt = payload.generated_at
     generated_at = _safe_html(_iso_datetime(generated_at_dt))
@@ -1027,7 +1312,6 @@ def render_html_executive_report_helper(payload: MarkdownReportPayload) -> str:
 
     unique_cves = len({finding.cve_id for finding in payload.findings})
     open_actionable = _count_findings(payload.findings, _is_actionable_finding)
-    critical_open = _severity_open_count(payload.findings, "Critical")
     kev_listed = _count_findings(payload.findings, lambda finding: finding.in_kev)
     internet_facing = _count_findings(
         payload.findings,
@@ -1051,11 +1335,69 @@ def render_html_executive_report_helper(payload: MarkdownReportPayload) -> str:
     )
     provider_freshness_status = _provider_freshness_status_helper(snapshot, generated_at_dt)
 
-    input_file_hash_val = getattr(payload, "input_file_hash", None) or "N/A"
-    verdict_text = _executive_verdict_summary(payload)
+    if finding_count == 0:
+        verdict_banner = (
+            '      <div class="verdict-banner">\n'
+            "        <p>No findings were recorded for this analysis run.</p>\n"
+            "        <p>Confirm import coverage before treating this as a no-risk result.</p>\n"
+            "      </div>"
+        )
+        decision_grid = ""
+    else:
+        campaigns = _get_remediation_campaigns_helper(payload.findings)
+        emergency_campaigns = [
+            campaign for campaign in campaigns if _campaign_requires_emergency(campaign)
+        ]
+        decision_needed_str = (
+            "approve emergency remediation for open KEV backed production findings"
+            if emergency_campaigns
+            else "approve owners and remediation windows for open actionable findings"
+        )
+        verdict_text_2 = _executive_verdict_summary_helper(payload)
+        caution_text = (
+            f"Provider snapshot freshness is {provider_freshness_status.lower()} for "
+            "formal sign off."
+        )
+
+        verdict_banner = (
+            '      <div class="verdict-banner">\n'
+            "        <p><strong>Decision needed:</strong> "
+            f"{_safe_html(decision_needed_str)}, assign owners for top campaigns and "
+            "require clean validation evidence after re import.</p>\n"
+            f"        <p>{_safe_html(verdict_text_2)}</p>\n"
+            "      </div>"
+        )
+
+        decision_grid = (
+            '      <div class="decision-grid">\n'
+            '        <div class="decision-card">\n'
+            '          <span class="status-label">What management should approve</span>\n'
+            "          <ul>\n"
+            "            <li>Remediation window for open production campaigns.</li>\n"
+            "            <li>Named owners for each remediation cluster.</li>\n"
+            "            <li>Validation evidence after clean re import.</li>\n"
+            "          </ul>\n"
+            "        </div>\n"
+            '        <div class="decision-card">\n'
+            '          <span class="status-label">What requires caution</span>\n'
+            "          <ul>\n"
+            f"            <li>{_safe_html(caution_text)}</li>\n"
+            "            <li>Accepted and VEX suppressed findings remain visible "
+            "as evidence.</li>\n"
+            "          </ul>\n"
+            "        </div>\n"
+            "      </div>"
+        )
+
     action_plan_table = _html_action_plan_table_helper(payload)
-    campaigns_section = _html_remediation_campaigns(payload.findings)
-    business_impact_table = _html_business_impact_table(payload.findings)
+    campaigns_section = _html_remediation_campaigns(
+        payload.findings,
+        project_name=payload.project_name,
+    )
+    business_impact_table = _html_business_impact_table_helper(
+        payload.findings,
+        project_name=payload.project_name,
+    )
     governance_section = (
         _html_governance_rollups(
             payload.governance_rollups,
@@ -1072,7 +1414,28 @@ def render_html_executive_report_helper(payload: MarkdownReportPayload) -> str:
         has_governance=bool(payload.governance_rollups),
     )
     attack_context_table = _html_attack_context_table_helper(payload.findings)
-    recommendations_list = _html_deduplicated_recommendations(payload.findings)
+    recommendations_list = _html_deduplicated_recommendations(
+        payload.findings,
+        project_name=payload.project_name,
+    )
+    header_lede = (
+        "Decision oriented vulnerability prioritization report for CISO and stakeholder "
+        "review. This report summarizes actionable remediation campaigns, governance "
+        "exceptions and evidence confidence for the current analysis run."
+    )
+    provider_snapshot_id = snapshot.id if snapshot else "N/A"
+    provider_snapshot_html = _html_provider_snapshot_helper(
+        snapshot,
+        generated_at_dt,
+        project_name=payload.project_name,
+    )
+    appendix_note = (
+        "Detailed finding rows, component versions, long remediation text, input "
+        "provenance, full rationale and per finding actions remain in the Technical "
+        "Markdown report, Analysis JSON, Findings CSV, SARIF and Evidence ZIP. "
+        "This Executive HTML report intentionally summarizes the decision path for "
+        "stakeholder review."
+    )
 
     return (
         "<!doctype html>\n"
@@ -1089,113 +1452,90 @@ def render_html_executive_report_helper(payload: MarkdownReportPayload) -> str:
         '  <main class="report-shell">\n'
         "    <header>\n"
         '      <p class="eyebrow">Executive Evidence Brief</p>\n'
-        "      <h1>Executive Vulnerability Report</h1>\n"
-        f'      <p class="lede">Decision-oriented evidence brief for '
-        f"{_safe_html(payload.project_name)}.</p>\n"
+        f"      <h1>{_safe_html(payload.project_name)}</h1>\n"
+        f'      <p class="lede">{_safe_html(header_lede)}</p>\n'
         '      <dl class="meta-grid">\n'
-        f"        <div><dt>Project Name</dt><dd>{_safe_html(payload.project_name)}</dd></div>\n"
+        f"        <div><dt>Report Type</dt><dd>Executive HTML</dd></div>\n"
         f"        <div><dt>Project ID</dt><dd>{_safe_html(payload.project_id)}</dd></div>\n"
         f"        <div><dt>Analysis Run ID</dt><dd>{_safe_html(payload.run_id)}</dd></div>\n"
         f"        <div><dt>Generated At</dt><dd>{generated_at}</dd></div>\n"
         f"        <div><dt>Run Status</dt><dd>{_safe_html(payload.run_status)}</dd></div>\n"
         f"        <div><dt>Input Type</dt><dd>{_safe_html(payload.input_type)}</dd></div>\n"
         f"        <div><dt>Input File</dt><dd>{_safe_html(payload.filename)}</dd></div>\n"
-        f"        <div><dt>Input File Hash</dt><dd>{_safe_html(input_file_hash_val)}</dd></div>\n"
-        "        <div><dt>Provider Snapshot ID</dt><dd>"
-        f"{_safe_html(snapshot.id if snapshot else 'N/A')}</dd></div>\n"
-        f"        <div><dt>Generator Version</dt><dd>v1.0.0</dd></div>\n"
+        "        <div><dt>Provider Snapshot</dt><dd>"
+        f"{_safe_html(provider_snapshot_id)}</dd></div>\n"
         "      </dl>\n"
         "    </header>\n"
         "\n"
         '    <section aria-labelledby="decision-brief">\n'
-        '      <div class="section-heading">\n'
-        '        <p class="eyebrow">Executive Summary</p>\n'
-        '        <h2 id="decision-brief">Decision Brief</h2>\n'
-        "      </div>\n"
-        f'      <div class="verdict-banner"><p>{_safe_html(verdict_text)}</p></div>\n'
+        '      <p class="eyebrow">Executive Summary</p>\n'
+        '      <h2 id="decision-brief">Decision Brief</h2>\n'
+        f"{verdict_banner}\n"
+        f"{decision_grid}\n"
         "    </section>\n"
         "\n"
         '    <section aria-labelledby="risk-posture">\n'
-        '      <div class="section-heading">\n'
-        '        <p class="eyebrow">Risk Posture</p>\n'
-        '        <h2 id="risk-posture">Risk Posture Cards</h2>\n'
-        "      </div>\n"
+        '      <p class="eyebrow">Risk Posture</p>\n'
+        '      <h2 id="risk-posture">Executive Risk Posture</h2>\n'
         '      <div class="metric-grid">\n'
         f"        {_html_metric('Total Findings', finding_count)}\n"
         f"        {_html_metric('Open Actionable', open_actionable)}\n"
-        f"        {_html_metric('Critical Open', critical_open)}\n"
         f"        {_html_metric('KEV Backed', kev_listed)}\n"
-        f"        {_html_metric('Internet-facing Prod', internet_facing)}\n"
+        f"        {_html_metric('Emergency SLA', emergency_sla)}\n"
         f"        {_html_metric('Accepted Risk', accepted_risk)}\n"
         f"        {_html_metric('VEX Suppressed', vex_suppressed)}\n"
         f"        {_html_metric('Fixed Evidence', fixed_findings)}\n"
         f"        {_html_metric('Review Due / Expiring', review_due_or_expiring)}\n"
-        f"        {_html_metric('Emergency SLA', emergency_sla)}\n"
+        f"        {_html_metric('Internet Facing Prod', internet_facing)}\n"
         f"        {_html_metric('Unique CVEs', unique_cves)}\n"
-        f"        {_html_metric('Occurrences', occurrence_count)}\n"
         f"        {_html_metric('Provider Freshness', provider_freshness_status)}\n"
+        f"        {_html_metric('Evidence Bundle', 'Ready')}\n"
         "      </div>\n"
         "    </section>\n"
         "\n"
         '    <section aria-labelledby="action-plan">\n'
-        '      <div class="section-heading">\n'
-        '        <p class="eyebrow">Action Plan</p>\n'
-        '        <h2 id="action-plan">First 24h and 7d Action Plan</h2>\n'
-        "      </div>\n"
+        '      <p class="eyebrow">Action Plan</p>\n'
+        '      <h2 id="action-plan">First 24h and 7d Action Plan</h2>\n'
         f"      {action_plan_table}\n"
         "    </section>\n"
         "\n"
-        '    <section aria-labelledby="remediation-campaigns">\n'
-        '      <div class="section-heading">\n'
-        '        <p class="eyebrow">Remediation</p>\n'
-        '        <h2 id="remediation-campaigns">Top Remediation Campaigns</h2>\n'
-        "      </div>\n"
+        '    <section aria-labelledby="campaigns">\n'
+        '      <p class="eyebrow">Remediation</p>\n'
+        '      <h2 id="campaigns">Top Remediation Campaigns</h2>\n'
         f"      {campaigns_section}\n"
         "    </section>\n"
         "\n"
-        '    <section aria-labelledby="business-services-risk">\n'
-        '      <div class="section-heading">\n'
-        '        <p class="eyebrow">Business Impact</p>\n'
-        '        <h2 id="business-services-risk">Business Services at Risk</h2>\n'
-        "      </div>\n"
+        '    <section aria-labelledby="business-services">\n'
+        '      <p class="eyebrow">Business Impact</p>\n'
+        '      <h2 id="business-services">Business Services at Risk</h2>\n'
         f"      {business_impact_table}\n"
         "    </section>\n"
         "\n"
         f"{governance_section}"
         "\n"
-        '    <section aria-labelledby="provider-freshness">\n'
-        '      <div class="section-heading">\n'
-        '        <p class="eyebrow">Evidence</p>\n'
-        '        <h2 id="provider-freshness">Evidence Confidence and Provider Freshness</h2>\n'
-        "      </div>\n"
-        f"{_html_provider_snapshot_helper(snapshot, generated_at_dt)}\n"
+        '    <section aria-labelledby="evidence">\n'
+        '      <p class="eyebrow">Evidence</p>\n'
+        '      <h2 id="evidence">Evidence Confidence and Provider Freshness</h2>\n'
+        f"{provider_snapshot_html}\n"
         f"      {evidence_package_table}\n"
         "    </section>\n"
         "\n"
         '    <section aria-labelledby="recommendations">\n'
-        '      <div class="section-heading">\n'
-        '        <p class="eyebrow">Recommendations</p>\n'
-        '        <h2 id="recommendations">Recommendations</h2>\n'
-        "      </div>\n"
+        '      <p class="eyebrow">Recommendations</p>\n'
+        '      <h2 id="recommendations">Decision Ready Recommendations</h2>\n'
         f'      <ol class="recommendation-list">\n{recommendations_list}\n      </ol>\n'
         "    </section>\n"
         "\n"
-        '    <section aria-labelledby="attack-context">\n'
-        '      <div class="section-heading">\n'
-        '        <p class="eyebrow">SOC Context</p>\n'
-        '        <h2 id="attack-context">ATT&CK/TTP Context</h2>\n'
-        "      </div>\n"
+        '    <section aria-labelledby="attack">\n'
+        '      <p class="eyebrow">SOC Context</p>\n'
+        '      <h2 id="attack">ATT&amp;CK/TTP Context</h2>\n'
         f"      {attack_context_table}\n"
         "    </section>\n"
         "\n"
-        '    <section aria-labelledby="technical-appendix">\n'
-        '      <div class="section-heading">\n'
-        '        <p class="eyebrow">Appendix</p>\n'
-        '        <h2 id="technical-appendix">Technical Markdown Separation</h2>\n'
-        "      </div>\n"
-        '      <p class="empty-state">Detailed finding rows, component versions, long '
-        "rationale, and per-finding actions remain in the Technical Markdown report, "
-        "Analysis JSON, Findings CSV, SARIF, and Evidence ZIP.</p>\n"
+        '    <section aria-labelledby="appendix">\n'
+        '      <p class="eyebrow">Appendix</p>\n'
+        '      <h2 id="appendix">Technical Markdown Separation</h2>\n'
+        f'      <p class="footer-note">{_safe_html(appendix_note)}</p>\n'
         "    </section>\n"
         "  </main>\n"
         "</body>\n"

@@ -13,10 +13,12 @@ def _executive_verdict_summary(payload: Any) -> str:
     return _executive_verdict_summary_helper(payload)
 
 
-def _html_business_impact_table(findings: list[MarkdownReportFinding]) -> str:
+def _html_business_impact_table(
+    findings: list[MarkdownReportFinding], project_name: str | None = None
+) -> str:
     from app.services.report_html_helpers import _html_business_impact_table_helper
 
-    return _html_business_impact_table_helper(findings)
+    return _html_business_impact_table_helper(findings, project_name=project_name)
 
 
 def _executive_summary_text(

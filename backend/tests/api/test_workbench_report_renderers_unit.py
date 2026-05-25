@@ -74,6 +74,7 @@ def test_markdown_and_html_reports_render_empty_states_without_snapshot() -> Non
     assert "Confirm import coverage before treating this as a no-risk result." in html
     assert "No business service risk can be derived because no findings were recorded." in html
     assert "No provider snapshot was linked to this analysis run." in html
+    assert "no VEX suppressed findings" in html
 
 
 def test_governance_and_detection_exports_render_empty_and_minimal_branches() -> None:
@@ -197,6 +198,14 @@ def test_report_renderer_boolish_and_vex_fallback_helpers() -> None:
     assert renderers._vex_status_counts_from_explanation(
         {"provenance": {"vex_status": "under_investigation"}}
     ) == renderers.Counter({"under_investigation": 1})
+
+
+def test_metric_tone_tracks_provider_freshness_value() -> None:
+    from app.services.report_html_components import _html_metric
+
+    assert 'data-tone="success"' in _html_metric("Provider Freshness", "Fresh")
+    assert 'data-tone="warning"' in _html_metric("Provider Freshness", "Warning")
+    assert 'data-tone="critical"' in _html_metric("Provider Freshness", "Stale")
 
 
 def test_executive_html_groups_campaigns_and_interprets_freshness() -> None:
@@ -325,7 +334,7 @@ def test_executive_html_groups_campaigns_and_interprets_freshness() -> None:
 
     headings = [heading.get_text(" ", strip=True) for heading in soup.select("h2")]
     assert "Decision Brief" in headings
-    assert "Risk Posture Cards" in headings
+    assert "Executive Risk Posture" in headings
     assert "First 24h and 7d Action Plan" in headings
     assert "Top Remediation Campaigns" in headings
     assert "Business Services at Risk" in headings
@@ -342,7 +351,7 @@ def test_executive_html_groups_campaigns_and_interprets_freshness() -> None:
 
     campaign_clusters = [
         row.select("td")[1].get_text(" ", strip=True)
-        for row in soup.select('section[aria-labelledby="remediation-campaigns"] tbody tr')
+        for row in soup.select('section[aria-labelledby="campaigns"] tbody tr')
     ]
     assert campaign_clusters.count("CVE-2021-44228 / Log4Shell") == 1
     assert campaign_clusters.count("CVE-2022-22965 / Spring4Shell") == 1
@@ -359,5 +368,180 @@ def test_executive_html_groups_campaigns_and_interprets_freshness() -> None:
     assert provider_statuses["NVD last sync"] == "Fresh"
     assert provider_statuses["EPSS date"] == "Warning"
     assert provider_statuses["KEV catalog version"] == "Stale"
+    assert provider_statuses["Snapshot locked"] == "Reproducible"
+    assert provider_statuses["Selected sources"] == "Recorded"
+    assert provider_statuses["Evidence bundle manifest"] == "Fresh"
     assert renderers._provider_freshness_status(snapshot, payload.generated_at) == "Stale"
     assert "+3 more" not in soup.get_text(" ", strip=True)
+
+
+def test_render_safe_text_with_links() -> None:
+    from app.services.report_html_helpers import render_safe_text_with_links
+
+    # Safe links
+    assert (
+        render_safe_text_with_links("Patch [here](https://example.com) now.")
+        == 'Patch <a href="https://example.com" target="_blank" '
+        'rel="noopener noreferrer">here</a> now.'
+    )
+    assert (
+        render_safe_text_with_links("Check [CISA](http://cisa.gov) details.")
+        == 'Check <a href="http://cisa.gov" target="_blank" '
+        'rel="noopener noreferrer">CISA</a> details.'
+    )
+
+    # Unsafe links (not http/https)
+    assert (
+        render_safe_text_with_links("Run [unsafe](javascript:alert(1)) code.")
+        == "Run [unsafe](javascript:alert(1)) code."
+    )
+    assert (
+        render_safe_text_with_links(
+            "Load [data](data:text/html,<script>alert(1)</script>) content."
+        )
+        == "Load [data](data:text/html,&lt;script&gt;alert(1)&lt;/script&gt;) content."
+    )
+
+    # XSS injection attempts
+    assert (
+        render_safe_text_with_links("<script>alert(1)</script>")
+        == "&lt;script&gt;alert(1)&lt;/script&gt;"
+    )
+    assert (
+        render_safe_text_with_links('<img src=x onerror="alert(1)">')
+        == "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;"
+    )
+
+
+def test_pluralization_grammar_decision_brief() -> None:
+    from app.services.report_html_helpers import _executive_verdict_summary_helper
+
+    # 1 finding, 1 KEV
+    finding1 = _finding(cve_id="CVE-2026-0001", priority="Critical", in_kev=True, status="open")
+    payload1 = _payload(findings=[finding1])
+    verdict1 = _executive_verdict_summary_helper(payload1)
+    assert "analyzed 1 finding from" in verdict1
+    assert "1 finding is open and actionable" in verdict1
+    assert "1 finding is KEV-backed" in verdict1
+
+    # 2 findings, 2 KEV
+    finding2 = _finding(cve_id="CVE-2026-0002", priority="Critical", in_kev=True, status="open")
+    payload2 = _payload(findings=[finding1, finding2])
+    verdict2 = _executive_verdict_summary_helper(payload2)
+    assert "analyzed 2 findings from" in verdict2
+    assert "2 findings are open and actionable" in verdict2
+    assert "2 findings are KEV-backed" in verdict2
+
+
+def test_executive_html_helper_edge_branches_are_decision_oriented() -> None:
+    from app.services.report_html_governance import (
+        _html_asset_rollup_row,
+        _html_service_rollup_row,
+        _html_waiver_debt_row,
+    )
+    from app.services.report_html_helpers import (
+        _actionability_summary_helper,
+        _calculate_age_and_verdict_helper,
+        _campaign_ranking_rationale,
+        _get_remediation_campaigns_helper,
+        _html_business_impact_table_helper,
+        _is_overdue_helper,
+        _provider_status_class,
+        _short_list,
+        _technique_ids_for_findings,
+        render_safe_text_with_links,
+    )
+
+    ref_date = datetime(2026, 5, 1, tzinfo=UTC)
+    assert render_safe_text_with_links(None) == "N/A"
+    assert _short_list([], noun="owner") == "N/A"
+    assert _actionability_summary_helper([]) == "No findings"
+    assert _is_overdue_helper("", ref_date) is False
+    assert _is_overdue_helper("not-a-date", ref_date) is False
+    assert _calculate_age_and_verdict_helper(None, ref_date) == (
+        "N/A",
+        "Unknown",
+        "badge-neutral",
+    )
+    assert _calculate_age_and_verdict_helper("not-a-date", ref_date) == (
+        "N/A",
+        "Unknown",
+        "badge-neutral",
+    )
+    assert _calculate_age_and_verdict_helper("2026-05-03", ref_date)[1] == "Fresh"
+    assert _provider_status_class("Controlled") == "badge-success"
+    assert _provider_status_class("unexpected") == "badge-neutral"
+
+    accepted = _finding(
+        cve_id="CVE-2026-0002",
+        status="accepted",
+        waived=True,
+        business_service="risk",
+        owner="risk-owner",
+    )
+    suppressed = _finding(
+        cve_id="CVE-2026-0003",
+        status="suppressed",
+        suppressed_by_vex=True,
+        business_service="risk",
+        owner="risk-owner",
+    )
+    fixed = _finding(
+        cve_id="CVE-2026-0004",
+        status="fixed",
+        business_service="closed",
+        owner="ops-owner",
+    )
+    business_html = _html_business_impact_table_helper([accepted, suppressed, fixed])
+    assert "Governance review" in business_html
+    assert "Evidence validation" in business_html
+    assert "VEX suppressed" in business_html
+
+    nested_attack = _finding(
+        attack_mapped=True,
+        explanation={
+            "attack_techniques": [{"technique_id": "T1190"}],
+            "attack_context": {"techniques": [{"attack_object_id": "T1210"}]},
+            "attack": {"techniques": ["T1499"]},
+        },
+    )
+    assert _technique_ids_for_findings([nested_attack]) == ["T1190", "T1210", "T1499"]
+
+    campaign = _get_remediation_campaigns_helper(
+        [
+            _finding(
+                cve_id="CVE-2026-0005",
+                status="open",
+                in_kev=True,
+                epss=0.2,
+                cvss_base_score=9.1,
+                environment="production",
+                exposure="internal",
+                criticality="critical",
+            )
+        ]
+    )[0]
+    assert _campaign_ranking_rationale(campaign).startswith("Internal production exposure")
+
+    assert "Review now" in _html_waiver_debt_row(
+        {"status": "expired", "matched_findings": 0},
+        ref_date,
+    )
+    assert "Review before expiry" in _html_waiver_debt_row(
+        {"status": "expiring_soon", "matched_findings": 0},
+        ref_date,
+    )
+    assert "No immediate action" in _html_waiver_debt_row(
+        {"status": "active", "matched_findings": 0, "review_at": "not-a-date"},
+        ref_date,
+    )
+    assert "Accepted risk active" in _html_waiver_debt_row(
+        {"status": "active", "matched_findings": 1},
+        ref_date,
+    )
+    assert "Checkout" in _html_service_rollup_row(
+        {"label": "Checkout", "risk_score_total": 12.5, "review_due_waiver_count": 1}
+    )
+    assert "checkout-api" in _html_asset_rollup_row(
+        {"label": "checkout-api", "risk_score_total": 9, "suppressed_by_vex_count": 1}
+    )
