@@ -7,7 +7,12 @@ successfully and still be misleading if it mixes current Workbench behavior,
 historical CLI/template material, archived demo evidence, or live provider
 facts.
 
-Last hygiene baseline recorded from this checkout: 2026-05-25.
+Last full documentation hygiene pass recorded from this checkout: 2026-05-25.
+Scope: Public + Root documentation. That means every MkDocs-published
+`docs/**/*.md` page plus root/community docs, `backend/README.md`,
+`frontend/README.md`, `frontend/DESIGN.md`, `frontend/VPW_PAGE_PATTERNS.md`,
+and relevant component README files. Archive files were checked only where
+current docs link to them.
 
 ## Current Evidence Rules
 
@@ -21,6 +26,28 @@ Last hygiene baseline recorded from this checkout: 2026-05-25.
   primary sources before updating public wording.
 - Downgrade unproven claims to limitations, historical notes, or evidence gaps.
   Do not convert local demo proof into public/shared deployment certification.
+
+## 2026-05-25 Hygiene Findings
+
+- MkDocs navigation covers 83 public pages; no public Markdown page was outside
+  navigation except the explicit non-public evidence-contract allowlist.
+- Supported Workbench import types in [Support Matrix](support_matrix.md)
+  matched `backend/src/vuln_prioritizer/options.py` and
+  `frontend/src/lib/import-format-types.ts`: `cve-list`,
+  `generic-occurrence-csv`, `trivy-json`, `grype-json`, `cyclonedx-json`,
+  `spdx-json`, `dependency-check-json`, `github-alerts-json`, `nessus-xml`,
+  and `openvas-xml`.
+- Supported Workbench report formats matched `backend/app/models/reports.py`
+  and `frontend/src/lib/report-format.ts`: `markdown`, `html`, `json`, `csv`,
+  `zip`, `attack-navigator`, and `sarif`.
+- External provider/version wording was rechecked against primary sources:
+  NVD CVE API 2.0 uses `cveIds`, FIRST EPSS exposes `/data/v1/epss`, CISA KEV
+  remains the canonical catalog with the official `cisagov/kev-data` mirror,
+  and MITRE lists ATT&CK v19.1 as current while VPW demo fixtures remain pinned
+  to ATT&CK 16.1.
+- Passing docs gates prove hygiene and renderability, not live provider
+  availability, public deployment certification, or current package registry
+  publication state.
 
 ## Claim-To-Evidence Matrix
 
@@ -51,6 +78,15 @@ python3 scripts/check_archive_evidence_manifest.py
 make docs-check
 VPW_RUN_LIVE_PROVIDER_TESTS=1 python3 -m pytest -q backend/tests/live/test_provider_live_contracts.py --no-cov
 make local-workbench-check
+```
+
+The 2026-05-25 hygiene implementation additionally used these targeted
+contract checks while auditing docs:
+
+```bash
+python3 -m pytest -q backend/tests/test_input_fixtures.py backend/tests/test_trivy_json_parser.py backend/tests/test_grype_json_parser.py --no-cov
+python3 -m pytest -q backend/tests/api/test_workbench_reports_api.py backend/tests/test_report_formatting.py --no-cov
+python3 -m pytest -q backend/tests/test_provider_response_contracts.py --no-cov
 ```
 
 Run release/public-deployment gates only when the edited wording touches that

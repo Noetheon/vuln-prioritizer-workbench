@@ -70,6 +70,14 @@ archive artifacts, or external primary sources own the major documentation
 claims. A passing docs build is necessary, but it is not sufficient proof that a
 provider, release, deployment, or archived-evidence statement is current.
 
+The last full documentation hygiene pass recorded in this checkout is
+2026-05-25. It covered the Public + Root documentation scope, verified MkDocs
+navigation coverage, checked import and report format claims against code, and
+rechecked provider/version wording against NVD, FIRST EPSS, CISA KEV, the
+official KEV mirror, and MITRE ATT&CK primary sources. Treat that as a
+documentation baseline, not as live-provider uptime proof or public deployment
+certification.
+
 The current package maturity classifier is `Development Status :: 4 - Beta`.
 That means the self-hosted Workbench is release-gated for local-first
 operation, while public or shared deployments remain candidate-specific

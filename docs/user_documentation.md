@@ -88,6 +88,11 @@ The Workbench normalizes existing vulnerability evidence into occurrence
 records, deduplicates CVEs for enrichment, and preserves provenance for review.
 Provider enrichment uses NVD, FIRST EPSS, and CISA KEV with local cache and
 locked snapshot support. ATT&CK context is optional and file-based.
+Provider identities are intentionally explicit: NVD data comes from NVD CVE API
+2.0, EPSS data comes from FIRST EPSS `/data/v1/epss`, and KEV data comes from
+CISA KEV or its official `cisagov/kev-data` mirror. Live-provider availability
+can vary, so locked snapshots are the reproducible path for demos and reviewer
+handoff.
 
 The base priority remains transparent:
 

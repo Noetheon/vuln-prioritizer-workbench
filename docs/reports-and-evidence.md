@@ -38,13 +38,18 @@ is labeled as demo-only and should not be presented as production evidence.
 
 ## Evidence ZIP Bundle
 
-The Evidence ZIP Bundle is the strongest audit artifact. It is expected to
-contain generated reports plus a manifest that records file names, sizes, and
-SHA256 checksums.
+The Evidence ZIP Bundle is the most complete local audit artifact. It contains
+generated reports plus a manifest that records file names, sizes, and SHA256
+checksums. Current bundle contents include `manifest.json`, `analysis.json`,
+`technical.md`, `executive.html`, `provider-snapshot.json`, `findings.csv`,
+`results.sarif`, optional `attack-navigator-layer.json`, and optional
+governance artifacts under `governance/`.
 
 Verification checks that bundle contents still match the manifest. Tampered or
 missing artifacts should fail verification instead of being treated as usable
-evidence.
+evidence. Verification is an integrity check for the generated ZIP; it is not a
+cryptographic signature, custody attestation, or proof that provider data was
+fresh at review time.
 
 ## Canonical Contract Artifacts
 
