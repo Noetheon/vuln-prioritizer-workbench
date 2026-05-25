@@ -29,6 +29,7 @@ REPORT_FORMATS = ("markdown", "html", "json", "csv", "sarif", "zip")
 
 
 def main() -> None:
+    """Exercise the production-like Workbench deployment smoke path."""
     _assert_frontend_headers()
     _assert_public_health_and_status()
     status = _json("/api/v1/workbench/status")
@@ -183,6 +184,8 @@ def _download_report(*, report_format: str, report: dict[str, object]) -> None:
 
 @dataclass(frozen=True)
 class RawResponse:
+    """Raw HTTP response returned by the production smoke helper."""
+
     body: bytes
     cookies: dict[str, str]
     headers: object

@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from app.services.report_formatting import format_number as _format_number
 from app.services.report_formatting import safe_html as _safe_html
-from app.services.report_html_helpers import (
-    _actionability_summary_helper,
-    _get_remediation_campaigns_helper,
+from app.services.report_html_campaign_model import _get_remediation_campaigns_helper
+from app.services.report_html_campaign_rendering import (
     _html_deduplicated_recommendations_helper,
     _html_remediation_campaigns_helper,
+)
+from app.services.report_html_common import (
+    _actionability_summary_helper,
 )
 from app.services.report_html_narrative import _decision_statement
 from app.services.report_models import MarkdownReportFinding

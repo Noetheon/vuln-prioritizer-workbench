@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from app.services.report_html_helpers import (
+from app.services.report_html_provider_freshness import (
     _html_provider_snapshot_helper,
     _provider_freshness_rows_helper,
     _provider_freshness_status_helper,

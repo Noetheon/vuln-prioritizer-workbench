@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.services.report_html_components import _html_metric
+from app.services.report_html_document import render_html_executive_report_helper
 from app.services.report_html_findings import (
     _actionability_summary,
     _get_remediation_campaigns,
@@ -13,10 +14,6 @@ from app.services.report_html_governance import (
     _html_governance_rollups,
     _html_service_rollup_row,
     _html_waiver_debt_row,
-)
-from app.services.report_html_helpers import (
-    build_executive_report_view_model,
-    render_html_executive_report_helper,
 )
 from app.services.report_html_narrative import (
     _business_impact_summary,
@@ -29,6 +26,7 @@ from app.services.report_html_provider import (
     _provider_freshness_status,
 )
 from app.services.report_html_styles import EXECUTIVE_REPORT_CSS as _EXECUTIVE_REPORT_CSS
+from app.services.report_html_view_model import build_executive_report_view_model
 from app.services.report_models import EvidencePackageContext, MarkdownReportPayload
 
 EXECUTIVE_REPORT_CSS = _EXECUTIVE_REPORT_CSS

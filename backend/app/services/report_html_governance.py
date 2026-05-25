@@ -8,12 +8,12 @@ from typing import Any
 from app.services.report_formatting import dict_value as _dict_value
 from app.services.report_formatting import format_number as _format_number
 from app.services.report_formatting import safe_html as _safe_html
-from app.services.report_html_components import _html_metric
-from app.services.report_html_governance_states import html_governed_state_summary
-from app.services.report_html_helpers import (
+from app.services.report_html_common import (
     _actionability_counts_helper,
     _is_under_investigation_finding,
 )
+from app.services.report_html_components import _html_metric
+from app.services.report_html_governance_states import html_governed_state_summary
 from app.services.report_models import MarkdownReportFinding
 from app.services.report_renderer_common import _dict_list
 

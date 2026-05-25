@@ -43,6 +43,15 @@ from this package, such as input normalization, provider clients, scoring,
 SARIF contract helpers, and redaction. Workbench-specific report rendering and
 evidence bundle verification belong in `backend/app/services`.
 
+Backend modules should keep HTTP, orchestration, projection, and persistence
+separate. Findings and asset routes are thin HTTP boundaries over repository
+queries plus service/domain projection helpers. Provider update jobs use focused
+input, locking, snapshot, and error modules behind a small orchestrator. The
+executive HTML report stack is split into view-model assembly, campaign
+modeling/rendering, provider freshness, evidence-package, governance/decision,
+and document composition modules, with compatibility facades kept only for
+stable internal imports.
+
 The old Workbench runtime packages, runtime database package, provider
 scheduler, and `web`/`db` CLI entrypoints have been removed. The active
 repository no longer ships a second FastAPI Workbench stack. `backend/app` must
@@ -59,7 +68,7 @@ components:
 | --- | --- | --- |
 | Dashboard | `components/dashboard/RiskOperationsDashboard.tsx` | Subcomponents own the context bar, metric strip, charts, queue, and detail rail. Recharts is lazy-loaded through `DashboardSignalOverview`. |
 | Projects | `components/projects/ProjectsWorkbench.tsx` | Project CRUD UI; data and handlers are still supplied by `WorkbenchShell`. |
-| Imports | `components/imports/ImportsWorkbench.tsx` | Import wizard, run selection, parse errors, and run detail UI; API timing remains in `WorkbenchShell`. |
+| Imports | `workbench/routes/ImportsRouteContainer.tsx` + `components/imports/ImportsWorkbench.tsx` | Import wizard, route canonicalization, upload mutation, run selection, parse errors, and run detail UI. |
 | Findings | `components/findings/RemediationQueue.tsx` | Uses `useFindingsRouteState` for filters/sort/pagination and `FindingsDataTable` for the table surface. |
 | Finding Detail | `components/finding-detail/FindingDetailRoute.tsx` | Context summary, priority explanation, evidence, governance, occurrences, TTP Context, and history are extracted from `WorkbenchShell`. |
 | Waivers | `components/waivers/WaiversWorkbench.tsx` | VPW-based waiver register and governance workflow; handlers remain shell-owned. |
@@ -78,8 +87,8 @@ composition root. It intentionally owns cross-route concerns:
 
 - selected project state and project list refresh
 - provider status and Workbench status
-- dashboard, findings, finding detail, import, report, project, waiver, and
-  settings API effects that are still shared or navigation-sensitive
+- dashboard, findings, finding detail, report, project, waiver, and settings API
+  effects that are still shared or navigation-sensitive
 - route-level lazy component boundaries
 - status strip and app shell props
 
@@ -93,6 +102,10 @@ The VPW design system lives under `frontend/src/components/vpw`. It provides
 shared surfaces, panels, badges, tables, filter bars, metric strips, skeletons,
 status banners, key-value lists, timeline, toolbar, evidence cards, and
 selection cards.
+
+`WorkbenchComponents.tsx` is a compatibility facade. New shared Workbench
+component work should target the focused modules behind it: badge adapters,
+surface/table adapters, detail/drawer components, or feedback/status wrappers.
 
 The design system is a frontend implementation layer. It does not define API
 contracts, scoring semantics, evidence manifests, or report schemas. Public VPW

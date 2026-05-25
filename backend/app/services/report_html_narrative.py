@@ -8,7 +8,7 @@ from app.services.report_models import MarkdownReportFinding
 
 
 def _executive_verdict_summary(payload: Any) -> str:
-    from app.services.report_html_helpers import _executive_verdict_summary_helper
+    from app.services.report_html_campaign_rendering import _executive_verdict_summary_helper
 
     return _executive_verdict_summary_helper(payload)
 
@@ -16,7 +16,7 @@ def _executive_verdict_summary(payload: Any) -> str:
 def _html_business_impact_table(
     findings: list[MarkdownReportFinding], project_name: str | None = None
 ) -> str:
-    from app.services.report_html_helpers import _html_business_impact_table_helper
+    from app.services.report_html_campaign_rendering import _html_business_impact_table_helper
 
     return _html_business_impact_table_helper(findings, project_name=project_name)
 

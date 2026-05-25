@@ -260,6 +260,39 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
     html_components_source = (ROOT / "app/services/report_html_components.py").read_text(
         encoding="utf-8"
     )
+    html_helpers_source = (ROOT / "app/services/report_html_helpers.py").read_text(encoding="utf-8")
+    html_helpers_imports = _imported_modules("app/services/report_html_helpers.py")
+    html_campaign_facade_source = (ROOT / "app/services/report_html_campaigns.py").read_text(
+        encoding="utf-8"
+    )
+    html_provider_evidence_source = (
+        ROOT / "app/services/report_html_provider_evidence.py"
+    ).read_text(encoding="utf-8")
+    html_common_source = (ROOT / "app/services/report_html_common.py").read_text(encoding="utf-8")
+    html_attack_source = (ROOT / "app/services/report_html_attack_context.py").read_text(
+        encoding="utf-8"
+    )
+    html_campaign_model_source = (ROOT / "app/services/report_html_campaign_model.py").read_text(
+        encoding="utf-8"
+    )
+    html_campaign_rendering_source = (
+        ROOT / "app/services/report_html_campaign_rendering.py"
+    ).read_text(encoding="utf-8")
+    html_provider_freshness_source = (
+        ROOT / "app/services/report_html_provider_freshness.py"
+    ).read_text(encoding="utf-8")
+    html_evidence_package_source = (
+        ROOT / "app/services/report_html_evidence_package.py"
+    ).read_text(encoding="utf-8")
+    html_decision_source = (ROOT / "app/services/report_html_decision.py").read_text(
+        encoding="utf-8"
+    )
+    html_view_model_source = (ROOT / "app/services/report_html_view_model.py").read_text(
+        encoding="utf-8"
+    )
+    html_document_source = (ROOT / "app/services/report_html_document.py").read_text(
+        encoding="utf-8"
+    )
     sarif_source = (ROOT / "app/services/report_sarif.py").read_text(encoding="utf-8")
     api_reports_test_source = (ROOT / "tests/api/test_workbench_reports_api.py").read_text(
         encoding="utf-8"
@@ -330,6 +363,26 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
     assert "def _executive_summary_text" in html_narrative_source
     assert "def _html_metric" not in html_source
     assert "def _html_metric" in html_components_source
+    assert {
+        "app.services.report_html_attack_context",
+        "app.services.report_html_campaigns",
+        "app.services.report_html_common",
+        "app.services.report_html_decision",
+        "app.services.report_html_document",
+        "app.services.report_html_provider_evidence",
+        "app.services.report_html_view_model",
+    }.issubset(html_helpers_imports)
+    assert "def _get_remediation_campaigns_helper" not in html_helpers_source
+    assert "def _html_provider_snapshot_helper" not in html_helpers_source
+    assert "def build_executive_report_view_model" not in html_source
+    assert "def render_html_executive_report_helper" not in html_source
+    assert "def _get_remediation_campaigns_helper" in html_campaign_model_source
+    assert "def _html_remediation_campaigns_helper" in html_campaign_rendering_source
+    assert "def _html_provider_snapshot_helper" in html_provider_freshness_source
+    assert "def _html_evidence_package_table_helper" in html_evidence_package_source
+    assert "def _action_plan_rows_helper" in html_decision_source
+    assert "def build_executive_report_view_model" in html_view_model_source
+    assert "def render_html_executive_report_helper" in html_document_source
     assert "EXECUTIVE_REPORT_CSS = " in html_styles_source
     assert len(html_source.splitlines()) <= 190
     assert len(html_styles_source.splitlines()) <= 240
@@ -338,6 +391,18 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
     assert len(html_provider_source.splitlines()) <= 70
     assert len(html_narrative_source.splitlines()) <= 80
     assert len(html_components_source.splitlines()) <= 40
+    assert len(html_helpers_source.splitlines()) <= 180
+    assert len(html_campaign_facade_source.splitlines()) <= 70
+    assert len(html_provider_evidence_source.splitlines()) <= 40
+    assert len(html_common_source.splitlines()) <= 290
+    assert len(html_attack_source.splitlines()) <= 190
+    assert len(html_campaign_model_source.splitlines()) <= 510
+    assert len(html_campaign_rendering_source.splitlines()) <= 510
+    assert len(html_provider_freshness_source.splitlines()) <= 420
+    assert len(html_evidence_package_source.splitlines()) <= 180
+    assert len(html_decision_source.splitlines()) <= 320
+    assert len(html_view_model_source.splitlines()) <= 230
+    assert len(html_document_source.splitlines()) <= 290
     assert "def render_evidence_bundle_zip" in bundle_source
     assert "app.services.report_bundle_archive" in bundle_imports
     assert "app.services.report_bundle_governance" in bundle_imports
@@ -380,6 +445,42 @@ def test_provider_status_projection_is_split_from_route_facade() -> None:
     assert "def _snapshot_status" not in route_source
     assert "def provider_status_payload" in status_source
     assert "def provider_update_job_public" in status_source
+
+
+def test_provider_update_orchestrator_uses_focused_services() -> None:
+    source = (ROOT / "app/services/provider_updates.py").read_text(encoding="utf-8")
+    imports = _imported_modules("app/services/provider_updates.py")
+    constants_source = (ROOT / "app/services/provider_update_constants.py").read_text(
+        encoding="utf-8"
+    )
+    inputs_source = (ROOT / "app/services/provider_update_inputs.py").read_text(encoding="utf-8")
+    locking_source = (ROOT / "app/services/provider_update_locking.py").read_text(encoding="utf-8")
+    snapshot_source = (ROOT / "app/services/provider_update_snapshot.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert {
+        "app.services.provider_update_constants",
+        "app.services.provider_update_errors",
+        "app.services.provider_update_inputs",
+        "app.services.provider_update_locking",
+        "app.services.provider_update_snapshot",
+    }.issubset(imports)
+    assert "def _provider_update_lock(" not in source
+    assert "def _write_provider_snapshot(" not in source
+    assert "class ProviderUpdateConflict" not in source
+    assert "KevProvider" not in source
+    assert "NvdProvider" not in source
+    assert "EpssProvider" not in source
+    assert "PROVIDER_UPDATE_INPUT_TYPE" in constants_source
+    assert "def _normalize_sources" in inputs_source
+    assert "def _provider_update_lock(" in locking_source
+    assert "def _write_provider_snapshot(" in snapshot_source
+    assert len(source.splitlines()) <= 430
+    assert len(constants_source.splitlines()) <= 40
+    assert len(inputs_source.splitlines()) <= 140
+    assert len(locking_source.splitlines()) <= 110
+    assert len(snapshot_source.splitlines()) <= 430
 
 
 def test_workbench_import_validation_and_storage_are_split_from_route_facade() -> None:
@@ -442,6 +543,48 @@ def test_findings_page_uses_internal_query_object() -> None:
     assert "FindingPageQuery(" in route_source
     assert "list_project_findings_query" in route_source
     assert "FindingPageQuery(" in github_issue_source
+
+
+def test_findings_route_delegates_public_projection() -> None:
+    route_source = (ROOT / "app/api/routes/findings.py").read_text(encoding="utf-8")
+    route_imports = _imported_modules("app/api/routes/findings.py")
+    projection_source = (ROOT / "app/services/finding_projection.py").read_text(encoding="utf-8")
+
+    assert "app.services.finding_projection" in route_imports
+    assert "def _finding_public" not in route_source
+    assert "FindingOccurrencePublic(" not in route_source
+    assert "FindingAttackContextDetailPublic(" not in route_source
+    assert "redact_value" not in route_source
+    assert "select(" not in route_source
+    assert "def _finding_public" in projection_source
+    assert "FindingOccurrencePublic(" in projection_source
+    assert "FindingAttackContextDetailPublic(" in projection_source
+    assert "redact_value" in projection_source
+    assert len(route_source.splitlines()) <= 140
+    assert len(projection_source.splitlines()) <= 480
+
+
+def test_asset_repository_delegates_projection_and_rescore_rules() -> None:
+    repository_source = (ROOT / "app/repositories/assets.py").read_text(encoding="utf-8")
+    repository_imports = _imported_modules("app/repositories/assets.py")
+    projection_source = (ROOT / "app/domain/asset_context_projection.py").read_text(
+        encoding="utf-8"
+    )
+    rescore_source = (ROOT / "app/domain/asset_rescore.py").read_text(encoding="utf-8")
+
+    assert "app.domain.asset_context_projection" in repository_imports
+    assert "app.domain.asset_rescore" in repository_imports
+    assert "vuln_prioritizer.scoring" not in repository_imports
+    assert "vuln_prioritizer.models" not in repository_imports
+    assert "PriorityPolicy" not in repository_source
+    assert "build_operational_score" not in repository_source
+    assert "def _with_rescore_flag" in projection_source
+    assert "def mark_finding_rescore_needed" in rescore_source
+    assert "def recalculate_asset_finding" in rescore_source
+    assert "build_operational_score" in rescore_source
+    assert len(repository_source.splitlines()) <= 280
+    assert len(projection_source.splitlines()) <= 400
+    assert len(rescore_source.splitlines()) <= 140
 
 
 def test_legacy_cli_adapter_modules_are_removed() -> None:
@@ -630,6 +773,28 @@ def test_semantic_badge_model_is_split_behind_facade() -> None:
         assert len(source.splitlines()) <= 120
 
 
+def test_workbench_components_are_split_behind_design_system_facade() -> None:
+    vpw_root = REPO_ROOT / "frontend/src/components/vpw"
+    facade_source = (vpw_root / "WorkbenchComponents.tsx").read_text(encoding="utf-8")
+    expected_slices = {
+        "WorkbenchBadges.tsx": "export function StatusBadge",
+        "WorkbenchDetail.tsx": "export function DetailDrawer",
+        "WorkbenchFeedback.tsx": "export function Callout",
+        "WorkbenchSurface.tsx": "export function DataTableFrame",
+    }
+
+    assert len(facade_source.splitlines()) <= 10
+    assert "export function DetailDrawer" not in facade_source
+    assert "export function DataTableFrame" not in facade_source
+    for filename, symbol in expected_slices.items():
+        source = (vpw_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert filename.removesuffix(".tsx") in facade_source
+        assert len(source.splitlines()) <= 500
+    assert "ui/sheet" not in (vpw_root / "WorkbenchSurface.tsx").read_text(encoding="utf-8")
+    assert "VpwDataTable" not in (vpw_root / "WorkbenchDetail.tsx").read_text(encoding="utf-8")
+
+
 def test_vpw_field_keeps_a11y_helper_logic_split_from_primitives() -> None:
     vpw_root = REPO_ROOT / "frontend/src/components/vpw"
     field_source = (vpw_root / "VpwField.tsx").read_text(encoding="utf-8")
@@ -652,6 +817,12 @@ def test_workbench_route_shells_delegate_interaction_state() -> None:
     assets_state_source = (
         REPO_ROOT / "frontend/src/workbench/routes/useAssetsRouteState.ts"
     ).read_text(encoding="utf-8")
+    imports_route_source = (REPO_ROOT / "frontend/src/workbench/routes/ImportsRoute.tsx").read_text(
+        encoding="utf-8"
+    )
+    imports_container_source = (
+        REPO_ROOT / "frontend/src/workbench/routes/ImportsRouteContainer.tsx"
+    ).read_text(encoding="utf-8")
 
     assert 'from "./useAssetsRouteState"' in assets_route_source
     assert "AssetsWorkbench" in assets_route_source
@@ -664,6 +835,15 @@ def test_workbench_route_shells_delegate_interaction_state() -> None:
     assert "filterAssets" in assets_state_source
     assert len(assets_route_source.splitlines()) <= 20
     assert len(assets_state_source.splitlines()) <= 450
+    assert 'from "./ImportsRouteContainer"' in imports_route_source
+    assert "ImportsService" not in imports_route_source
+    assert "useMutation" not in imports_route_source
+    assert "useWorkbenchContext" not in imports_route_source
+    assert "ImportsService" in imports_container_source
+    assert "useMutation" in imports_container_source
+    assert "useWorkbenchContext" in imports_container_source
+    assert len(imports_route_source.splitlines()) <= 10
+    assert len(imports_container_source.splitlines()) <= 460
 
 
 def test_workbench_reports_route_state_is_split_from_shell() -> None:
@@ -1298,6 +1478,14 @@ def test_provider_modules_do_not_import_service_layer_modules() -> None:
 
 def test_input_loader_uses_focused_parser_package() -> None:
     imports = _imported_modules("src/vuln_prioritizer/inputs/loader.py")
+    registry_imports = _imported_modules("src/vuln_prioritizer/inputs/parser_registry.py")
+    asset_context_source = (ROOT / "src/vuln_prioritizer/inputs/asset_context_loader.py").read_text(
+        encoding="utf-8"
+    )
+    vex_source = (ROOT / "src/vuln_prioritizer/inputs/vex_loader.py").read_text(encoding="utf-8")
+    format_source = (ROOT / "src/vuln_prioritizer/inputs/format_detection.py").read_text(
+        encoding="utf-8"
+    )
     tree = ast.parse((ROOT / "src/vuln_prioritizer/inputs/loader.py").read_text())
     parse_functions = [
         node.name
@@ -1305,11 +1493,29 @@ def test_input_loader_uses_focused_parser_package() -> None:
         if isinstance(node, ast.FunctionDef) and node.name.startswith("parse_")
     ]
 
-    assert "parsers" in imports
+    assert {
+        "asset_context_loader",
+        "format_detection",
+        "parser_registry",
+        "vex_loader",
+    }.issubset(imports)
+    assert "parsers" in registry_imports
+    assert "def load_asset_context_file" in asset_context_source
+    assert "def load_vex_files" in vex_source
+    assert "def detect_input_format" in format_source
+    assert "def load_asset_context_file" not in (
+        ROOT / "src/vuln_prioritizer/inputs/loader.py"
+    ).read_text(encoding="utf-8")
+    assert "def load_vex_files" not in (ROOT / "src/vuln_prioritizer/inputs/loader.py").read_text(
+        encoding="utf-8"
+    )
     assert parse_functions == []
 
     parser_modules = _python_module_paths("inputs/parsers")
     assert parser_modules
+    assert len(asset_context_source.splitlines()) <= 380
+    assert len(vex_source.splitlines()) <= 140
+    assert len(format_source.splitlines()) <= 180
     oversized = {
         str(path.relative_to(ROOT)): len(path.read_text(encoding="utf-8").splitlines())
         for path in parser_modules
