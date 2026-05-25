@@ -1,52 +1,94 @@
 import type { FindingAttackContextDetailPublic } from "@/api-client"
 
-export const DEMO_FINDING_ATTACK_CONTEXTS: Record<
+type MappingSeed = readonly [
   string,
-  FindingAttackContextDetailPublic
-> = {
-  "demo-f1": {
+  string,
+  string,
+  string,
+  readonly string[],
+  "high" | "medium",
+  string,
+]
+
+const mappings: readonly MappingSeed[] = [
+  ["CVE-2022-22965", "T1190", "Public-facing application exposure review", "defensive_review", ["Initial Access"], "high", "Spring framework exposure review"],
+  ["CVE-2021-44228", "T1190", "Public-facing application exposure review", "defensive_review", ["Initial Access"], "high", "Java logging runtime exposure review"],
+  ["CVE-2024-4577", "T1190", "Public-facing application exposure review", "defensive_review", ["Initial Access"], "high", "PHP CGI web exposure review"],
+  ["CVE-2023-34362", "T1190", "Public-facing application exposure review", "defensive_review", ["Initial Access"], "high", "Managed file-transfer exposure review"],
+  ["CVE-2020-1472", "T1210", "Remote services exposure review", "defensive_review", ["Lateral Movement"], "high", "Identity remote service review"],
+  ["CVE-2023-44487", "T1499", "Endpoint Denial of Service", "detection_context", ["Impact"], "medium", "Edge availability telemetry review"],
+]
+
+const mappingByCve = new Map(mappings.map((mapping) => [mapping[0], mapping]))
+
+const findingCves = {
+  "demo-f1": "CVE-2022-22965",
+  "demo-f2": "CVE-2021-44228",
+  "demo-f4": "CVE-2024-4577",
+  "demo-f7": "CVE-2020-1472",
+  "demo-f10": "CVE-2023-34362",
+  "demo-f16": "CVE-2023-44487",
+} as const
+
+function attackContext(cveId: string): FindingAttackContextDetailPublic {
+  const mapping = mappingByCve.get(cveId)
+  if (!mapping) {
+    return {
+      attack_relevance: "unmapped",
+      confidence: "unknown",
+      defensive_note:
+        "No reviewed ATT&CK mapping is attached. The CVE remains unmapped; no inference is generated.",
+      low_confidence: true,
+      mapped: false,
+      mappings: [],
+      rationale: "Unmapped CVEs remain unmapped in the demo preview.",
+      review_status: "unmapped",
+      source: "No reviewed mapping",
+      tactics: [],
+      technique_ids: [],
+      techniques: [],
+    } as FindingAttackContextDetailPublic
+  }
+  const [, techniqueId, techniqueName, mappingType, tactics, confidence, title] = mapping
+  const defensiveNote =
+    "Reviewed defensive context only. Use it for SOC validation and telemetry review; it does not prove compromise or override CVSS, EPSS, KEV, and asset context."
+  const technique = {
+    confidence,
+    defensive_note: defensiveNote,
+    name: techniqueName,
+    rationale: `${title}. This mapping is defensive review context and contains no procedure instructions.`,
+    review_status: "reviewed",
+    source: "Local curated demo mapping",
+    tactics: [...tactics],
+    technique_id: techniqueId,
+    url: `https://attack.mitre.org/techniques/${techniqueId}/`,
+  }
+  return {
     attack_relevance: "defensive_prioritization",
-    confidence: "high",
-    defensive_note:
-      "Partial / unknown coverage. Validate web, proxy, WAF, EDR, and application telemetry, then document detection coverage and residual risk before closure.",
+    confidence,
+    defensive_note: defensiveNote,
     low_confidence: false,
     mapped: true,
     mappings: [
       {
-        confidence: "high",
-        defensive_note:
-          "Patch or mitigate the vulnerable service.\nRestrict exposure while remediation is in progress.\nValidate web, proxy, WAF, EDR, and application telemetry.\nDocument detection coverage and residual risk.",
-        mapping_type: "curated_demo",
-        rationale:
-          "This finding affects an internet-facing service and represents a public-facing application exploitation risk. The mapping is used for defensive prioritization, detection planning, and remediation context.",
+        ...technique,
+        mapping_type: mappingType,
         references: ["Local curated demo mapping"],
-        review_status: "curated_demo",
-        source: "Local curated demo mapping",
-        tactics: ["Initial Access"],
-        technique_id: "T1190",
-        technique_name: "Exploit Public-Facing Application",
+        technique_name: techniqueName,
       },
     ],
-    rationale:
-      "This finding affects an internet-facing service and represents a public-facing application exploitation risk. The mapping is used for defensive prioritization, detection planning, and remediation context.",
-    review_status: "curated_demo",
+    rationale: technique.rationale,
+    review_status: "reviewed",
     source: "Local curated demo mapping",
-    tactics: ["Initial Access"],
-    technique_ids: ["T1190"],
-    techniques: [
-      {
-        confidence: "high",
-        defensive_note:
-          "Patch or mitigate the vulnerable service.\nRestrict exposure while remediation is in progress.\nValidate web, proxy, WAF, EDR, and application telemetry.\nDocument detection coverage and residual risk.",
-        name: "Exploit Public-Facing Application",
-        rationale:
-          "This finding affects an internet-facing service and represents a public-facing application exploitation risk. The mapping is used for defensive prioritization, detection planning, and remediation context.",
-        review_status: "curated_demo",
-        source: "Local curated demo mapping",
-        tactics: ["Initial Access"],
-        technique_id: "T1190",
-        url: "https://attack.mitre.org/techniques/T1190/",
-      },
-    ],
-  },
+    tactics: [...tactics],
+    technique_ids: [techniqueId],
+    techniques: [technique],
+  } as FindingAttackContextDetailPublic
 }
+
+export const DEMO_FINDING_ATTACK_CONTEXTS = Object.fromEntries(
+  Object.entries(findingCves).map(([findingId, cveId]) => [
+    findingId,
+    attackContext(cveId),
+  ]),
+) as Record<string, FindingAttackContextDetailPublic>

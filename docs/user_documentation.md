@@ -139,5 +139,6 @@ documented docs refresh change.
 - `docs/examples/media/workbench-dashboard.png`
 - `docs/examples/media/workbench-findings.png`
 - `docs/examples/media/workbench-finding-detail-ttp.png`
+- `docs/examples/media/workbench-risk-acceptance.png`
 - `docs/examples/media/workbench-reports-evidence.png`
 - `docs/media/grid.png`

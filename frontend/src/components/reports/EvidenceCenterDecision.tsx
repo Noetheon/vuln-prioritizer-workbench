@@ -238,8 +238,10 @@ export function QualityFacts({
           items={[
             {
               label: "Freshness",
-              tone: isDemo || providerStatus?.status === "ok" ? "success" : "warning",
-              value: isDemo ? "Fresh demo snapshot" : (providerStatus?.status ?? "Unavailable"),
+              tone: providerStatus?.status === "ok" ? "success" : "warning",
+              value: isDemo
+                ? "Locked replay - review freshness"
+                : (providerStatus?.status ?? "Unavailable"),
               description:
                 providerStatus?.snapshot.id ??
                 selectedReportRun?.provider_snapshot_id ??

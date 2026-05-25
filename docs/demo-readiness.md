@@ -6,19 +6,24 @@ Security Project review.
 
 ## Primary Demo Flow
 
-Use the Workbench as the first-screen experience:
+Use the Workbench as the first-screen experience. The canonical demo story is
+**Online Shop Demo Workspace**, a local risk operations review built from the
+checked-in occurrence CSV, OpenVEX file, locked provider snapshot, curated
+ATT&CK mapping, and seeded accepted-risk decisions.
 
 1. **Projects**: create or select a project.
 2. **Imports**: import CVE, scanner, SBOM, generic occurrence CSV, and optional
    VEX or asset-context inputs.
 3. **Findings**: review the remediation queue, filters, sort, priority, EPSS,
-   CVSS, KEV, status, and "Why now" context.
+   CVSS, KEV, status, and "Why now" context. Repeated CVEs are visible here as
+   occurrence evidence; executive reporting groups them into campaigns.
 4. **Finding Detail**: inspect hero metrics, priority explanation, evidence,
    TTP Context, and history.
 5. **TTP Context**: show the no-inference state for unmapped findings and the
    curated mapped demo proof when available.
-6. **Waivers**: create and review accepted-risk decisions with owner, scope,
-   expiry, review date, and waiver debt.
+6. **Waivers**: review accepted-risk decisions with owner, scope, expiry,
+   review date, and waiver debt. The demo includes active, expiring-soon, and
+   review-due states.
 7. **Evidence Center**: generate reports and inspect checksum metadata.
 8. **Evidence Bundle**: download and verify the ZIP bundle manifest.
 
@@ -58,6 +63,20 @@ Two TTP states should be shown:
 Both states should keep the defensive boundary visible. A mapped ATT&CK
 technique is not proof of local exploitation, and an unmapped finding is not
 safe by default.
+
+## Demo Data Contract
+
+- Backend persisted demo: `data/input_fixtures/demo_workspace_occurrences.csv`,
+  `data/input_fixtures/demo_workspace_openvex.json`,
+  `data/demo_provider_snapshot.json`, `data/attack/local_curated_demo_mappings.yml`,
+  and seeded waivers in the Workbench service.
+- Frontend preview demo: `frontend/src/lib/demo-data-*` mirrors the same Online
+  Shop scenario for empty local preview mode.
+- Core CVEs: `CVE-2020-1472`, `CVE-2021-44228`, `CVE-2022-22965`,
+  `CVE-2023-34362`, `CVE-2023-44487`, `CVE-2024-3094`, and `CVE-2024-4577`.
+- Controlled imperfections are intentional: locked replay is reproducible but
+  not automatically fresh, governance review is due, VEX/fixed evidence remains
+  visible, and unmapped CVEs remain unmapped.
 
 ## Readiness Checks
 

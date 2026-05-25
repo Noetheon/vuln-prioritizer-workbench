@@ -1,10 +1,13 @@
 # Workbench Offline Demo Runbook
 
-This runbook keeps the Workbench demo reproducible without live provider calls. It uses the checked-in locked provider snapshot and local fixture inputs.
+This runbook keeps the Workbench demo reproducible without live provider calls.
+It uses the checked-in locked provider snapshot and local fixture inputs for the
+**Online Shop Demo Workspace** risk operations review.
 
 ## Scope
 
-- Demonstrates import, prioritization, provider freshness, findings triage, reports, and evidence bundles.
+- Demonstrates import, prioritization, provider freshness, findings triage,
+  assets, risk acceptance, reports, and evidence bundles.
 - Uses existing CVE/scanner fixtures; the Workbench does not scan systems or test exploitability.
 - Keeps ATT&CK context defensive and optional. Do not present mappings as proof that exploitation occurred.
 
@@ -35,19 +38,30 @@ If `pip-audit`, npm, or advisory data is unavailable, record that as a release-c
 
 ## Demo Steps
 
-1. Open **Import**.
-2. Select `CVE list`.
-3. Upload `data/sample_cves.txt`.
-4. Set provider snapshot to `demo_provider_snapshot.json`; the checked-in source
-   file is `data/demo_provider_snapshot.json`.
-5. Enable locked provider data.
-6. Submit the import and open the generated reports page.
-7. Return to the dashboard and confirm provider freshness is visible.
-8. Open **Findings** and apply filters for `Critical`, `High`, `KEV`, owner, service, and CVE search.
-9. Open a critical finding and show `Why this priority?`, EPSS, CVSS, KEV, component, asset, owner, and raw evidence.
-10. Open **Providers** and show NVD, EPSS, and KEV status, cache age, snapshot mode, and provider data-quality notes.
-11. Open **Settings** and confirm local workspace access, runtime health, provider status, and diagnostics are visible without exposing secrets.
-12. Create JSON, Markdown, HTML, and Evidence ZIP artifacts from the run page.
+1. Open the Workbench dashboard.
+2. Select **Load demo workspace**. This seeds the deterministic Online Shop
+   workspace through normal import and report services.
+3. Confirm the dashboard shows 24 findings, high EPSS signals, KEV-backed
+   exposure, top services, recent runs, and locked provider replay status.
+4. Open **Findings** and apply filters for `Critical`, `High`, `KEV`, owner,
+   service, status, and CVE search.
+5. Open a mapped critical finding such as Log4Shell and show `Why this
+   priority?`, EPSS, CVSS, KEV, component, asset, owner, evidence, and TTP
+   context.
+6. Open an unmapped XZ finding and show that unmapped CVEs remain unmapped; no
+   ATT&CK inference is generated.
+7. Open **Assets** and show service, owner, environment, exposure, and linked
+   findings.
+8. Open **Risk Acceptance** and show active, expiring-soon, and review-due
+   accepted-risk records.
+9. Open **Providers** and show NVD, EPSS, and KEV status, cache age, snapshot
+   mode, and provider data-quality notes. State that locked replay means
+   reproducible, not automatically fresh.
+10. Open **Evidence Center** and show technical Markdown, Executive HTML,
+    analysis JSON, findings CSV, SARIF, ATT&CK Navigator layer, and Evidence ZIP.
+11. Download the Evidence ZIP and verify the manifest through the report API.
+12. Open **Settings** and confirm local workspace access, runtime health,
+    provider status, and diagnostics are visible without exposing secrets.
 
 ## Readiness Checks
 
@@ -90,6 +104,7 @@ and must not depend on reviewer API keys or live provider availability.
 - Findings table with filters applied.
 - Finding detail showing CVSS, EPSS, KEV, component, asset, owner, rationale, recommended action, and raw evidence.
 - Providers page showing NVD, EPSS, KEV status, cache state, and snapshot state.
+- Risk Acceptance page showing active, expiring soon, and review-due decisions.
 - Settings page showing local workspace, runtime, and provider diagnostics without secret values.
 - Reports page showing generated JSON, Markdown, HTML, and Evidence ZIP.
 - Downloaded Evidence ZIP verification output.
@@ -99,7 +114,11 @@ Checked-in README screenshots from the current offline demo path:
 - `docs/examples/media/workbench-dashboard.png`
 - `docs/examples/media/workbench-findings.png`
 - `docs/examples/media/workbench-finding-detail-ttp.png`
+- `docs/examples/media/workbench-risk-acceptance.png`
 - `docs/examples/media/workbench-reports-evidence.png`
+
+These screenshots should show the current Online Shop Demo Workspace. Refresh
+them intentionally after demo data or primary navigation changes.
 
 ## Fallback Artifacts
 

@@ -239,8 +239,9 @@ def _create_demo_project(session: Session) -> Project:
         id=DEMO_PROJECT_ID,
         name=DEMO_PROJECT_NAME,
         description=(
-            "Deterministic local demo workspace for exploring dashboard, findings, "
-            "waivers, provider replay, reports, and evidence bundles. "
+            "Deterministic local Online Shop risk operations review for exploring "
+            "dashboard, findings, assets, waivers, provider replay, reports, "
+            "and evidence bundles. "
             f"Managed marker: {DEMO_WORKSPACE_MARKER}."
         ),
     )

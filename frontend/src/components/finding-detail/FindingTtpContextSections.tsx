@@ -30,7 +30,7 @@ export function FindingTtpContextSummary({
     <VpwCommandPanel
       aria-label="Threat informed context"
       className="finding-ttp-context-summary"
-      description="This mapping explains why the finding is treated as an internet-facing Initial Access risk. It supports remediation priority and detection coverage review, but does not prove exploitation."
+      description="This mapping explains why the finding is treated as an internet-facing Initial Access risk. It supports remediation priority and detection coverage review, but does not prove compromise."
       eyebrow="Threat informed context"
       role="region"
       title={techniqueLabel}
@@ -133,7 +133,7 @@ export function FindingTtpDecisionRows({
             <li>Frames the CVE as an Initial Access risk.</li>
             <li>Explains why internet exposure raises urgency.</li>
             <li>Connects remediation priority with detection review.</li>
-            <li>Keeps the boundary clear: no proof of exploitation.</li>
+            <li>Keeps the boundary clear: no proof of compromise.</li>
           </ul>
         }
         source="Why this matters"

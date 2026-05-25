@@ -188,9 +188,7 @@ def render_evidence_bundle_zip(
 
 
 def verify_evidence_bundle_zip(
-    bundle_path: Path,
-    *,
-    display_path: str | None = None,
+    bundle_path: Path, *, display_path: str | None = None
 ) -> dict[str, Any]:
     """Verify an evidence bundle ZIP and return the published report contract."""
     try:
@@ -198,10 +196,7 @@ def verify_evidence_bundle_zip(
     except ValueError as exc:
         raise ReportVerificationError(str(exc)) from exc
     return _evidence_bundle_verification_payload(
-        metadata,
-        summary,
-        items,
-        display_path=display_path,
+        metadata, summary, items, display_path=display_path
     )
 
 
