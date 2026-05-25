@@ -15,12 +15,16 @@ from app.services.report_models import MarkdownReportFinding
 from app.services.report_renderer_common import _priority_label
 
 
-def _html_remediation_campaigns(findings: list[MarkdownReportFinding]) -> str:
-    return _html_remediation_campaigns_helper(findings)
+def _html_remediation_campaigns(
+    findings: list[MarkdownReportFinding], project_name: str | None = None
+) -> str:
+    return _html_remediation_campaigns_helper(findings, project_name=project_name)
 
 
-def _html_deduplicated_recommendations(findings: list[MarkdownReportFinding]) -> str:
-    return _html_deduplicated_recommendations_helper(findings)
+def _html_deduplicated_recommendations(
+    findings: list[MarkdownReportFinding], project_name: str | None = None
+) -> str:
+    return _html_deduplicated_recommendations_helper(findings, project_name=project_name)
 
 
 def _actionability_summary(findings: list[MarkdownReportFinding]) -> str:
