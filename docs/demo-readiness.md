@@ -36,7 +36,7 @@ Use these archived entrypoints for proof and presentation planning:
 
 | Flow area | Evidence reference |
 | --- | --- |
-| End-to-end demo screenshots and notes | `archive/vpw-evidence/final-demo-flow/demo-flow-summary.md` |
+| End-to-end demo summary | `archive/vpw-evidence/final-demo-flow/demo-flow-summary.md` |
 | Curated mapped TTP proof | `archive/vpw-evidence/final-demo-flow/attack-demo-mapping-summary.md` |
 | Presentation package overview | `archive/vpw-evidence/presentation-pack/README.md` |
 | Presentation evidence index | `archive/vpw-evidence/presentation-pack/evidence-index.md` |

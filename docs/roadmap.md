@@ -44,7 +44,10 @@ current acceptance source.
 
 ## Current Workbench App Direction
 
-Status: roadmap slices through Workbench v1.2 are implemented on `main`; the original implementation plan is preserved as a historical planning artifact in `archive/historical-planning/workbench-masterplan.md`.
+Status: roadmap slices through Workbench v1.2 are implemented on `main`; the
+superseded implementation plan was pruned from `archive/**` during the
+2026-05-25 archive trim. Current planning truth lives in this roadmap and the
+active issue/PR history, not in archived drafts.
 
 The current Workbench exposes the retained domain behavior as a local-first,
 self-hosted vulnerability prioritization application. The product direction is
@@ -78,6 +81,12 @@ Current local Workbench limits:
 - No vulnerability scanning, AI autopatching, or heuristic/AI CVE-to-ATT&CK mapping.
 
 ## Historical Package Line
+
+The following `0.x` entries describe the VPW product/milestone line used in the
+current documentation. They are not all equivalent to repository git tags. This
+repository also contains inherited historical/template-line `0.x` tags, several
+of which predate the VPW Workbench project. Verify exact tag state with git
+before using any `0.x` name as release evidence.
 
 ### `v0.3.1` OSS Public Readiness
 

@@ -24,21 +24,25 @@ For XML ingest, the parser rejects `DOCTYPE` and `ENTITY` declarations before pa
 
 ### NVD
 
-- one lookup per CVE against NVD CVE API 2.0 using the current `cveIds`
-  query parameter
+- VPW currently performs one lookup per CVE against NVD CVE API 2.0 using the
+  current `cveIds` query parameter
+- NVD documents `cveIds` as accepting a comma-separated list with a maximum of
+  100 CVE IDs per request
 - English description preferred
 - CVSS selection order: `v4.0 -> v3.1 -> v3.0 -> v2`
 - the chosen CVSS family is stored as `cvss_version`
 
 ### EPSS
 
-- batch requests with chunking under the documented query limit
+- batch requests with chunking under VPW's local `EPSS_QUERY_CHAR_LIMIT`, kept
+  below FIRST's documented 2000-character comma-separated `cve` parameter limit
 - fields used: `epss`, `percentile`, and response date
 
 ### KEV
 
-- default source: official CISA JSON feed
-- fallback: official `cisagov/kev-data` mirror
+- default source: authoritative CISA KEV JSON feed on cisa.gov
+- fallback: official `cisagov/kev-data` GitHub mirror, which CISA describes as
+  synchronized shortly after the canonical cisa.gov source
 - optional local JSON or CSV file
 
 ### ATT&CK
@@ -51,6 +55,11 @@ Three local ATT&CK modes exist:
 - `ctid-json`: structured CTID Mappings Explorer JSON plus local ATT&CK technique metadata
 
 The `ctid-json` workflow is the preferred current ATT&CK path.
+
+ATT&CK version wording must distinguish current upstream ATT&CK from pinned
+demo fixtures. As of the 2026-05-25 hygiene pass, MITRE lists ATT&CK v19.1 as
+the current website version. The checked-in Workbench demo and report fixtures
+remain pinned to ATT&CK 16.1 so evidence generation is deterministic.
 
 Detailed ATT&CK methodology, the Tactic/Technique/Procedure boundary, the
 confidence rubric, and the mapping review checklist are documented in

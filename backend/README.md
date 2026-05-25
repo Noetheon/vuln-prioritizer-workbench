@@ -11,3 +11,9 @@ Workbench-plus-domain-library boundary.
 
 Repository-level docs, fixtures, demo artifacts, and maintainer commands remain
 at the repository root.
+
+When backend behavior is referenced from documentation, verify the claim through
+the repository-level
+[`docs/documentation-evidence-matrix.md`](../docs/documentation-evidence-matrix.md)
+before treating historical CLI, template, or archive material as current
+Workbench evidence.

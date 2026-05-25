@@ -68,9 +68,9 @@ under `docs/evidence/`. The docs hygiene test enforces this boundary.
 | Location | Owner | Use | Boundary |
 | --- | --- | --- | --- |
 | `docs/evidence/` | Backend/API contract owners | Small, reviewed contract fixtures referenced by schemas or regression tests. | No screenshots, ad hoc logs, demo bundles, or historical issue proof. |
-| `archive/vpw-evidence/` | Release and roadmap maintainers | Selected public-safe historical VPW evidence, screenshots, and demo summaries. | Keep entrypoints in `archive/vpw-evidence/MANIFEST.md`; add tracked Markdown only when current docs or tests need it. |
+| `archive/vpw-evidence/` | Release and roadmap maintainers | Minimal public-safe historical VPW entrypoints, selected Markdown notes, and the retained evidence bundle. | Keep entrypoints in `archive/vpw-evidence/MANIFEST.md`; add tracked artifacts only when current docs or tests need them. |
 | CI artifacts | Release owner for the exact run | Ephemeral command output, package files, Docker logs, Playwright reports, and release-readiness bundles for a commit, tag, or PR. | Link from the PR/issue/release evidence comment; do not copy raw artifacts into `docs/evidence/`. |
-| Historical screenshots | Demo or submission owner | Locked UI proof referenced by submission and demo documentation. | Store under `archive/vpw-evidence/` or a named subdirectory; do not duplicate screenshots across docs pages. |
+| Historical screenshots | Demo or submission owner | Optional UI proof for a specific run. | Prefer CI artifacts or fresh Playwright output; do not commit screenshot sets to `archive/**` unless a maintainer explicitly accepts the repository-size cost. |
 
 New VPW-AUD evidence should normally live in the PR/issue closeout comment or
 as an external CI artifact for the exact workflow run. Do not add audit
@@ -89,9 +89,9 @@ entrypoints:
 - `archive/vpw-evidence/presentation-pack/README.md`
 - `archive/vpw-evidence/presentation-pack/evidence-index.md`
 
-The archive preserves selected screenshots, demo summaries, presentation-pack
-references, and machine-readable evidence without making the public
-`docs/evidence/` tree sprawl again.
+The archive now preserves compact demo summaries, presentation-pack references,
+selected Markdown evidence, and the retained evidence bundle without making the
+public `docs/evidence/` tree or `archive/**` sprawl again.
 
 ## Safety Boundary
 

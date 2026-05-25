@@ -42,7 +42,9 @@ If the live demo is stable, open the app in this order:
 7. `/waivers`
 8. `/reports`
 
-Archived fallback screens:
+Archived fallback screens are historical demo evidence. They are useful if the
+live demo is unavailable, but they do not certify the current `main` UI by
+themselves:
 
 - [Final demo flow summary](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/demo-flow-summary.md)
 - [Presentation evidence index](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/presentation-pack/evidence-index.md)
@@ -68,7 +70,7 @@ checksums, and verification. That makes the decision auditable."
 ## Fallback If Live Demo Fails
 
 1. Do not regenerate live data and do not force new screenshots.
-2. Switch to the archived flow:
+2. Switch to the historical archived flow:
    - [Demo Flow Summary](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/demo-flow-summary.md)
    - [Evidence Index](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/presentation-pack/evidence-index.md)
 3. Show the report/evidence contract artifacts:
