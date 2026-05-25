@@ -12,7 +12,8 @@ from app.models.base import get_datetime_utc
 
 
 class WaiverScopeBase(SQLModel):
-    """Shared waiver scope fields.
+    """
+    Shared waiver scope fields.
 
     Multiple scope fields are interpreted as an intersection. A CVE+asset waiver,
     for example, only matches findings with both that CVE and that asset.
@@ -119,7 +120,8 @@ class WaiverCreate(WaiverScopeBase):
 
 
 class WaiverUpdate(WaiverCreate):
-    """Update payload for a waiver.
+    """
+    Update payload for a waiver.
 
     Updates replace the waiver scope and governance fields so clients can move a
     waiver from one scope to another with one request.

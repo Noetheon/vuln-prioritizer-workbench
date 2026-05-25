@@ -34,6 +34,8 @@ _CONTEXT_FIELDS = set(DefensiveContext.model_fields)
 
 @dataclass(frozen=True)
 class DefensiveContextLoadResult:
+    """Data representation and logic for Defensive Context Load Result."""
+
     contexts: dict[str, list[DefensiveContext]]
     sources: list[str]
     warnings: list[str]
@@ -41,7 +43,6 @@ class DefensiveContextLoadResult:
 
 def load_defensive_context_file(path: Path | None) -> DefensiveContextLoadResult:
     """Load optional OSV/GHSA/Vulnrichment/SSVC context from a local JSON file."""
-
     if path is None:
         return DefensiveContextLoadResult(contexts={}, sources=[], warnings=[])
     try:
@@ -75,7 +76,6 @@ def merge_defensive_contexts(
     *context_sets: Mapping[str, Sequence[DefensiveContext]],
 ) -> dict[str, list[DefensiveContext]]:
     """Merge context maps while keeping deterministic order and removing duplicates."""
-
     merged: dict[str, list[DefensiveContext]] = {}
     seen: set[tuple[str, str, str | None, str | None]] = set()
     for context_set in context_sets:
@@ -93,7 +93,6 @@ def defensive_context_sources(
     contexts: Mapping[str, Sequence[DefensiveContext]],
 ) -> list[str]:
     """Return sorted source names present in the context map."""
-
     return sorted({context.source for items in contexts.values() for context in items})
 
 
@@ -102,7 +101,6 @@ def attach_defensive_contexts(
     contexts: Mapping[str, Sequence[DefensiveContext]],
 ) -> list[PrioritizedFinding]:
     """Attach context overlays to findings without changing priority or ranks."""
-
     updated: list[PrioritizedFinding] = []
     for finding in findings:
         finding_contexts = list(contexts.get(finding.cve_id, []))
@@ -123,10 +121,12 @@ def attach_defensive_contexts(
 
 
 def defensive_context_hit_count(findings: Iterable[PrioritizedFinding]) -> int:
+    """Defensive context hit count function."""
     return sum(1 for finding in findings if finding.defensive_contexts)
 
 
 def _iter_context_items(payload: Any) -> Iterable[Mapping[str, Any]]:
+    """Iter context items function."""
     if isinstance(payload, list):
         for item in payload:
             if isinstance(item, Mapping):
@@ -154,6 +154,7 @@ def _iter_context_items(payload: Any) -> Iterable[Mapping[str, Any]]:
 
 
 def _normalize_context_item(raw_item: Mapping[str, Any]) -> DefensiveContext:
+    """Normalize context item function."""
     cve_id = _first_text(raw_item, "cve_id", "cve", "cveId")
     normalized_cve = normalize_cve_id(cve_id or "")
     if normalized_cve is None:
@@ -193,6 +194,7 @@ def _normalize_context_item(raw_item: Mapping[str, Any]) -> DefensiveContext:
 
 
 def _normalize_source(value: str | None) -> str | None:
+    """Normalize source function."""
     if value is None:
         return None
     normalized = value.strip().lower().replace("_", "-")
@@ -201,6 +203,7 @@ def _normalize_source(value: str | None) -> str | None:
 
 
 def _first_text(mapping: Mapping[str, Any], *keys: str) -> str | None:
+    """First text function."""
     for key in keys:
         value = mapping.get(key)
         if value is None:
@@ -212,6 +215,7 @@ def _first_text(mapping: Mapping[str, Any], *keys: str) -> str | None:
 
 
 def _string_list(value: Any) -> list[str]:
+    """String list function."""
     if isinstance(value, list):
         return [str(item).strip() for item in value if str(item).strip()]
     if isinstance(value, str) and value.strip():
@@ -220,4 +224,5 @@ def _string_list(value: Any) -> list[str]:
 
 
 def _context_sort_key(context: DefensiveContext) -> tuple[str, str, str]:
+    """Context sort key function."""
     return (context.source, context.source_id or "", context.title or "")

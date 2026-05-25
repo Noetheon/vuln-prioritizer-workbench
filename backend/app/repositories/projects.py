@@ -14,6 +14,7 @@ class ProjectRepository:
     """Project persistence helpers for API routes and future services."""
 
     def __init__(self, session: Session) -> None:
+        """Initialize a new instance of ProjectRepository."""
         self.session = session
 
     def list_projects(self) -> tuple[list[Project], int]:

@@ -12,6 +12,8 @@ DecisionRecommendation = Literal["patch", "mitigate", "monitor", "review", "waiv
 
 
 class SlaTarget(StrictModel):
+    """Data representation and logic for Sla Target."""
+
     priority: str
     label: str
     target_hours: int | None = None
@@ -21,12 +23,16 @@ class SlaTarget(StrictModel):
 
 
 class BusinessImpactBlock(StrictModel):
+    """Data representation and logic for Business Impact Block."""
+
     level: Literal["critical", "high", "medium", "low", "governance"]
     text: str
     drivers: list[str] = Field(default_factory=list)
 
 
 class FindingDecisionGuidance(StrictModel):
+    """Data representation and logic for Finding Decision Guidance."""
+
     recommendation: DecisionRecommendation
     recommendation_label: str
     sla: SlaTarget

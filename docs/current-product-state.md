@@ -58,7 +58,7 @@ hosted SaaS product.
 ## Current Release And Evidence Posture
 
 The repository has strong local and CI-oriented gates, including backend
-format/lint/type/test coverage, docs hygiene, frontend lint/build/unit coverage,
+format/lint/docstrings/type/test coverage, docs hygiene, frontend lint/build/unit coverage,
 generated-client drift checks, Playwright browser tests, Docker smokes, package
 checks, local/private deployment guardrail checks, archive binary evidence
 manifest checks, and candidate-specific release automation.

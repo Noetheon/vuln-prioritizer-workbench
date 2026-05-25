@@ -13,6 +13,10 @@ from app.repositories import WaiverRepository
 from app.services.governance import build_project_governance_rollups_payload
 from app.services.report_models import MarkdownReportPayload, ReportGenerationError
 from app.services.report_projection import _finding_payload, _provider_snapshot_payload
+from app.services.report_service_payload_attack import (
+    merge_attack_context,
+    run_attack_contexts_by_finding,
+)
 
 REPORT_SUPPORTED_RUN_STATUSES = {
     AnalysisRunStatus.COMPLETED,
@@ -27,6 +31,7 @@ def build_report_payload(
     run: AnalysisRun,
     project: Project,
 ) -> tuple[MarkdownReportPayload, list[Finding], datetime]:
+    """Build report payload function."""
     if run.status not in REPORT_SUPPORTED_RUN_STATUSES:
         raise ReportGenerationError(
             f"Analysis run must be completed before reporting; current status is {run.status}."
@@ -35,10 +40,14 @@ def build_report_payload(
     generated_at = get_datetime_utc()
     findings = run_findings(session, run)
     run_occurrences = run_occurrences_by_finding(session, run)
+    attack_contexts = run_attack_contexts_by_finding(session, run)
     report_findings = [
-        _finding_payload(
-            finding,
-            occurrences=run_occurrences.get(finding.id, []),
+        merge_attack_context(
+            _finding_payload(
+                finding,
+                occurrences=run_occurrences.get(finding.id, []),
+            ),
+            attack_contexts.get(finding.id),
         )
         for finding in findings
     ]
@@ -80,6 +89,7 @@ def build_report_payload(
 
 
 def run_findings(session: Session, run: AnalysisRun) -> list[Finding]:
+    """Run findings function."""
     statement = (
         select(Finding)
         .join(FindingOccurrence)
@@ -100,6 +110,7 @@ def run_occurrences_by_finding(
     session: Session,
     run: AnalysisRun,
 ) -> dict[uuid.UUID, list[FindingOccurrence]]:
+    """Run occurrences by finding function."""
     statement = (
         select(FindingOccurrence)
         .where(FindingOccurrence.analysis_run_id == run.id)

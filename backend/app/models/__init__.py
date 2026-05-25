@@ -1,4 +1,5 @@
-"""Public model aggregator for the Workbench backend app.
+"""
+Public model aggregator for the Workbench backend app.
 
 Keep imports from this package stable while table definitions live in focused
 modules.

@@ -10,6 +10,8 @@ from vuln_prioritizer.model_base import StrictModel
 
 
 class EvidenceBundleFile(StrictModel):
+    """Data representation and logic for Evidence Bundle File."""
+
     path: str
     kind: str
     size_bytes: int
@@ -17,18 +19,24 @@ class EvidenceBundleFile(StrictModel):
 
 
 class EvidenceBundleInputHash(StrictModel):
+    """Data representation and logic for Evidence Bundle Input Hash."""
+
     path: str
     size_bytes: int
     sha256: str
 
 
 class EvidenceBundleGovernanceArtifact(StrictModel):
+    """Data representation and logic for Evidence Bundle Governance Artifact."""
+
     bundle_path: str
     kind: str
     sha256: str
 
 
 class EvidenceBundleManifest(StrictModel):
+    """Data representation and logic for Evidence Bundle Manifest."""
+
     schema_version: str = "1.1.0"
     bundle_kind: str = "evidence-bundle"
     generated_at: str
@@ -51,6 +59,8 @@ class EvidenceBundleManifest(StrictModel):
 
 
 class EvidenceBundleVerificationMetadata(StrictModel):
+    """Data representation and logic for Evidence Bundle Verification Metadata."""
+
     schema_version: str = "1.2.0"
     generated_at: str
     bundle_path: str
@@ -59,6 +69,8 @@ class EvidenceBundleVerificationMetadata(StrictModel):
 
 
 class EvidenceBundleVerificationSummary(StrictModel):
+    """Data representation and logic for Evidence Bundle Verification Summary."""
+
     ok: bool = False
     total_members: int = 0
     expected_files: int = 0
@@ -70,6 +82,8 @@ class EvidenceBundleVerificationSummary(StrictModel):
 
 
 class EvidenceBundleVerificationItem(StrictModel):
+    """Data representation and logic for Evidence Bundle Verification Item."""
+
     path: str
     kind: str | None = None
     status: str

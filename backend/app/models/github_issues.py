@@ -32,6 +32,7 @@ class GitHubIssuePreviewCreate(SQLModel):
     @field_validator("label_prefix")
     @classmethod
     def validate_label_prefix(cls, value: str) -> str:
+        """Validate the label prefix field."""
         stripped = value.strip()
         if not GITHUB_LABEL_PREFIX_RE.fullmatch(stripped):
             raise ValueError("label_prefix may contain only letters, numbers, '.', '_', ':', '-'.")
@@ -40,6 +41,7 @@ class GitHubIssuePreviewCreate(SQLModel):
     @field_validator("finding_ids")
     @classmethod
     def dedupe_finding_ids(cls, value: list[uuid.UUID]) -> list[uuid.UUID]:
+        """Dedupe finding ids method for GitHubIssuePreviewCreate."""
         seen: set[uuid.UUID] = set()
         deduped: list[uuid.UUID] = []
         for finding_id in value:
@@ -59,6 +61,7 @@ class GitHubIssueExportCreate(GitHubIssuePreviewCreate):
     @field_validator("repository")
     @classmethod
     def validate_repository(cls, value: str) -> str:
+        """Validate the repository field."""
         stripped = value.strip()
         if not GITHUB_REPOSITORY_RE.fullmatch(stripped):
             raise ValueError("repository must use owner/name format.")
@@ -67,6 +70,7 @@ class GitHubIssueExportCreate(GitHubIssuePreviewCreate):
     @field_validator("token_env")
     @classmethod
     def validate_token_env(cls, value: str | None) -> str | None:
+        """Validate the token env field."""
         if value is None:
             return None
         stripped = value.strip()

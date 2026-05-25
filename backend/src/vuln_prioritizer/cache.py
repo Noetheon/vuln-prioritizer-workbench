@@ -18,6 +18,7 @@ class FileCache:
     """JSON file cache with TTL semantics."""
 
     def __init__(self, cache_dir: Path, ttl_hours: int) -> None:
+        """Initialize a new instance of FileCache."""
         self.cache_dir = cache_dir
         self.ttl = timedelta(hours=ttl_hours)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -70,6 +71,7 @@ class FileCache:
             raise
 
     def _path_for(self, namespace: str, key: str) -> Path:
+        """Path for method for FileCache."""
         digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
         return self.cache_dir / namespace / f"{digest}.json"
 
@@ -134,6 +136,7 @@ class FileCache:
         }
 
     def _parse_cached_at(self, cached_at_raw: Any) -> datetime | None:
+        """Parse cached at method for FileCache."""
         if not cached_at_raw:
             return None
         try:

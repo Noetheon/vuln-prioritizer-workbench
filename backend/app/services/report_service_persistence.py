@@ -34,6 +34,7 @@ def persist_text_report(
     content_type: str,
     extra_metadata: dict[str, Any] | None = None,
 ) -> Report:
+    """Persist text report function."""
     content_bytes = content.encode("utf-8")
     return _persist_report_artifact(
         session,
@@ -69,6 +70,7 @@ def persist_binary_report(
     content_type: str,
     extra_metadata: dict[str, Any] | None = None,
 ) -> Report:
+    """Persist binary report function."""
     return _persist_report_artifact(
         session,
         settings,
@@ -104,6 +106,7 @@ def _persist_report_artifact(
     content_type: str,
     extra_metadata: dict[str, Any] | None,
 ) -> Report:
+    """Persist report artifact function."""
     _ensure_report_size_allowed(settings, content_size=len(content_bytes), filename=filename)
     report_id = uuid.uuid4()
     path = report_path(
@@ -147,10 +150,12 @@ def report_path(
     report_id: uuid.UUID,
     filename: str,
 ) -> Path:
+    """Report path function."""
     return settings.report_dir_path / str(project_id) / str(run_id) / str(report_id) / filename
 
 
 def _ensure_report_size_allowed(settings: Settings, *, content_size: int, filename: str) -> None:
+    """Ensure report size allowed function."""
     if content_size <= settings.max_report_bytes:
         return
     raise ReportGenerationError(
@@ -160,6 +165,7 @@ def _ensure_report_size_allowed(settings: Settings, *, content_size: int, filena
 
 
 def _remove_report_artifact_dir(settings: Settings, path: Path) -> None:
+    """Remove report artifact dir function."""
     report_root = settings.report_dir_path.resolve(strict=False)
     try:
         report_path = path.resolve(strict=False)

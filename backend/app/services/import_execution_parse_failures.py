@@ -37,6 +37,7 @@ def raise_parse_failure(
     exc: Exception,
     execution_mode: str = "request",
 ) -> NoReturn:
+    """Raise parse failure function."""
     parse_errors = _parse_errors(exc, filename=filename, input_type=input_type)
     failed_run = _finish_failed_parse_run(
         run_repo=run_repo,
@@ -87,6 +88,7 @@ def raise_sidecar_parse_failure(
     exc: Exception,
     execution_mode: str = "request",
 ) -> NoReturn:
+    """Raise sidecar parse failure function."""
     sidecar_error = _sidecar_error_payload(
         error_key=error_key,
         filename=filename,
@@ -134,6 +136,7 @@ def _finish_failed_parse_run(
     exc: Exception,
     execution_mode: str,
 ) -> AnalysisRun:
+    """Finish failed parse run function."""
     failed_history = [*job_history, _job_status_entry("failed")]
     return run_repo.finish_analysis_run(
         run.id,
@@ -174,6 +177,7 @@ def _sidecar_error_payload(
     stage: str,
     exc: Exception,
 ) -> dict[str, Any]:
+    """Sidecar error payload function."""
     return {
         "message": _sanitize_parser_error_message(str(exc)),
         "filename": filename,
@@ -193,6 +197,7 @@ def _finish_failed_sidecar_run(
     sidecar_error: dict[str, Any],
     execution_mode: str,
 ) -> AnalysisRun:
+    """Finish failed sidecar run function."""
     failed_history = [*job_history, _job_status_entry("failed")]
     return run_repo.finish_analysis_run(
         run.id,

@@ -1,3 +1,4 @@
+# ruff: noqa: D100, D103
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -8,6 +9,8 @@ import pytest
 
 from app.services import report_renderers as renderers
 from app.services.report_models import (
+    EvidencePackageArtifact,
+    EvidencePackageContext,
     MarkdownProviderSnapshot,
     MarkdownReportFinding,
     MarkdownReportPayload,
@@ -75,6 +78,13 @@ def test_markdown_and_html_reports_render_empty_states_without_snapshot() -> Non
     assert "No business service risk can be derived because no findings were recorded." in html
     assert "No provider snapshot was linked to this analysis run." in html
     assert "no VEX suppressed findings" in html
+    assert "attack-navigator-layer.json" in html
+    assert "optional" in html
+    lowered = html.lower()
+    assert "<script" not in lowered
+    assert "<link" not in lowered
+    assert " src=" not in lowered
+    assert "@import" not in lowered
 
 
 def test_governance_and_detection_exports_render_empty_and_minimal_branches() -> None:
@@ -340,6 +350,10 @@ def test_executive_html_groups_campaigns_and_interprets_freshness() -> None:
     assert "Business Services at Risk" in headings
     assert "Governance Exceptions" in headings
     assert "Evidence Confidence and Provider Freshness" in headings
+    assert "Evidence Package Contents" in headings
+    assert "Decision Ready Recommendations" in headings
+    assert "ATT&CK/TTP Context" in headings
+    assert "Technical Appendix note" in headings
 
     campaigns = renderers._get_remediation_campaigns(payload.findings)
     assert [campaign["campaign_name"] for campaign in campaigns[:2]] == [
@@ -370,9 +384,192 @@ def test_executive_html_groups_campaigns_and_interprets_freshness() -> None:
     assert provider_statuses["KEV catalog version"] == "Stale"
     assert provider_statuses["Snapshot locked"] == "Reproducible"
     assert provider_statuses["Selected sources"] == "Recorded"
-    assert provider_statuses["Evidence bundle manifest"] == "Fresh"
+    assert provider_statuses["Source hashes"] == "Recorded"
+    assert provider_statuses["Static HTML safety"] == "Controlled"
+    assert provider_statuses["Evidence bundle manifest"] == "Expected"
     assert renderers._provider_freshness_status(snapshot, payload.generated_at) == "Stale"
     assert "+3 more" not in soup.get_text(" ", strip=True)
+
+    view_model = renderers.build_executive_report_view_model(payload)
+    assert view_model.risk_posture["emergency_sla_count"] == 2
+    assert view_model.evidence_package[0]["artifact"] == "manifest.json"
+    assert view_model.evidence_package[0]["status"] == "expected"
+    assert view_model.technical_appendix["note"].startswith("Detailed finding rows")
+
+
+def test_executive_view_model_separates_overlapping_actionability_states() -> None:
+    findings = [
+        _finding(cve_id="CVE-2026-0001", status="accepted", waived=True),
+        _finding(cve_id="CVE-2026-0002", status="suppressed", suppressed_by_vex=True),
+        _finding(cve_id="CVE-2026-0003", status="fixed", waived=True, suppressed_by_vex=True),
+        _finding(
+            cve_id="CVE-2026-0004",
+            status="open",
+            suppressed_by_vex=True,
+            under_investigation=True,
+            explanation={"vex_status": "under_investigation"},
+        ),
+        _finding(cve_id="CVE-2026-0005", status="open"),
+    ]
+    payload = _payload(findings=findings)
+
+    view_model = renderers.build_executive_report_view_model(payload)
+
+    assert view_model.risk_posture["total_findings"] == 5
+    assert view_model.risk_posture["open_actionable_findings"] == 2
+    assert view_model.risk_posture["accepted_risk_findings"] == 1
+    assert view_model.risk_posture["vex_suppressed_findings"] == 1
+    assert view_model.risk_posture["fixed_evidence_findings"] == 1
+    assert view_model.governance_exceptions["under_investigation"] == 1
+
+
+def test_campaign_grouping_uses_stable_action_priority_component_key() -> None:
+    findings = [
+        _finding(
+            cve_id="CVE-2026-1000",
+            priority="Critical",
+            component="demo-lib 1.0.0",
+            recommended_action="Upgrade demo-lib to 1.2.0.",
+            asset="asset-a",
+        ),
+        _finding(
+            cve_id="CVE-2026-1000",
+            priority="Critical",
+            component="demo-lib 1.0.1",
+            recommended_action="Upgrade demo-lib to 1.2.0.",
+            asset="asset-b",
+        ),
+        _finding(
+            cve_id="CVE-2026-1000",
+            priority="Critical",
+            component="demo-lib 1.0.1",
+            recommended_action="Disable exposed demo module.",
+            asset="asset-c",
+        ),
+    ]
+
+    campaigns = renderers._get_remediation_campaigns(findings)
+
+    assert len(campaigns) == 2
+    assert sorted(campaign["open_actionable_count"] for campaign in campaigns) == [1, 2]
+
+
+def test_provider_freshness_needs_review_for_unknown_kev_version_semantics() -> None:
+    snapshot = MarkdownProviderSnapshot(
+        id="provider-snapshot-2",
+        content_hash="sha256:provider-fixture",
+        nvd_last_sync="2026-04-01",
+        epss_date="2026-04-28",
+        kev_catalog_version="kev-catalog-v2026.05",
+        source_hashes={"kev": "sha256:kev"},
+        source_metadata={"locked_provider_data": True, "selected_sources": ["kev"]},
+    )
+
+    rows = renderers._provider_freshness_rows(snapshot, datetime(2026, 5, 1, tzinfo=UTC))
+    statuses = {row["signal"]: row["status"] for row in rows}
+
+    assert statuses["Snapshot locked"] == "Reproducible"
+    assert statuses["NVD last sync"] == "Fresh"
+    assert statuses["EPSS date"] == "Fresh"
+    assert statuses["KEV catalog version"] == "Needs Review"
+    assert renderers._provider_freshness_status(snapshot, datetime(2026, 5, 1, tzinfo=UTC)) == (
+        "Warning"
+    )
+
+
+def test_executive_html_uses_bundle_evidence_package_context() -> None:
+    payload = _payload(findings=[_finding(cve_id="CVE-2026-3000")])
+    evidence_context = EvidencePackageContext(
+        mode="bundle",
+        artifacts=[
+            EvidencePackageArtifact(
+                artifact="manifest.json",
+                purpose="Bundle manifest and artifact hash verification.",
+                status="included",
+                note="Generated after artifact hashes are finalized.",
+            ),
+            EvidencePackageArtifact(
+                artifact="analysis.json",
+                purpose="Machine readable analysis export.",
+                status="included",
+                sha256="a" * 64,
+                size_bytes=1234,
+                kind="analysis-json",
+            ),
+            EvidencePackageArtifact(
+                artifact="executive.html",
+                purpose="Decision oriented executive brief.",
+                status="included",
+                note="Hash recorded in final manifest.json after this HTML is rendered.",
+            ),
+        ],
+    )
+
+    html = renderers.render_html_executive_report(
+        payload,
+        evidence_package_context=evidence_context,
+    )
+    view_model = renderers.build_executive_report_view_model(
+        payload,
+        evidence_package_context=evidence_context,
+    )
+
+    assert view_model.risk_posture["evidence_bundle_status"] == "Ready"
+    assert view_model.evidence_package[1]["sha256"] == "a" * 64
+    assert "1,234 bytes" in html
+    assert "Hash recorded in final manifest.json" in html
+    assert "Printable decision sign-off" in html
+    assert "Approval outcome" in html
+
+
+def test_attack_context_requires_reviewed_mapping_source_before_rendering_techniques() -> None:
+    reviewed = _finding(
+        cve_id="CVE-2026-2000",
+        attack_mapped=True,
+        explanation={
+            "attack_context": {
+                "mapped": True,
+                "source": "local-curated",
+                "review_status": "reviewed",
+                "mappings": [
+                    {
+                        "technique_id": "T1190",
+                        "technique_name": "Exploit Public-Facing Application",
+                    }
+                ],
+            }
+        },
+    )
+    unknown_source = _finding(
+        cve_id="CVE-2026-2001",
+        attack_mapped=True,
+        explanation={
+            "attack_context": {
+                "mapped": True,
+                "source": "unknown",
+                "review_status": "reviewed",
+                "mappings": [{"technique_id": "T1059"}],
+            }
+        },
+    )
+    unmapped = _finding(cve_id="CVE-2026-2002", attack_mapped=False)
+    payload = _payload(findings=[reviewed, unknown_source, unmapped])
+
+    html = renderers.render_html_executive_report(payload)
+    view_model = renderers.build_executive_report_view_model(payload)
+
+    assert view_model.attack_context["mapped_techniques"] == [
+        {
+            "technique_id": "T1190",
+            "name": "Exploit Public-Facing Application",
+            "source": "local-curated",
+        }
+    ]
+    assert "T1190" in html
+    assert "T1059" not in html
+    assert "No LLM inferred mappings are used" in html
+    assert "does not prove compromise" in html
+    assert "does not override" in html
 
 
 def test_render_safe_text_with_links() -> None:
@@ -533,6 +730,10 @@ def test_executive_html_helper_edge_branches_are_decision_oriented() -> None:
     )
     assert "No immediate action" in _html_waiver_debt_row(
         {"status": "active", "matched_findings": 0, "review_at": "not-a-date"},
+        ref_date,
+    )
+    assert "review due" in _html_waiver_debt_row(
+        {"status": "active", "matched_findings": 1, "review_at": "2026-05-01"},
         ref_date,
     )
     assert "Accepted risk active" in _html_waiver_debt_row(

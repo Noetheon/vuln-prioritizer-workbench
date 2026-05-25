@@ -42,6 +42,7 @@ class PrioritizationService:
     """Create final prioritized findings from enrichment data."""
 
     def __init__(self, policy: PriorityPolicy | None = None) -> None:
+        """Initialize a new instance of PrioritizationService."""
         self.policy = policy or PriorityPolicy()
 
     def prioritize(
@@ -55,6 +56,7 @@ class PrioritizationService:
         provenance_by_cve: dict[str, FindingProvenance] | None = None,
         context_profile: ContextPolicyProfile | None = None,
     ) -> tuple[list[PrioritizedFinding], dict[str, int]]:
+        """Prioritize method for PrioritizationService."""
         findings: list[PrioritizedFinding] = []
         active_context_profile = context_profile or ContextPolicyProfile()
         provenance_map = provenance_by_cve or {}
@@ -199,6 +201,7 @@ class PrioritizationService:
         return ranked_findings
 
     def _with_operational_score(self, finding: PrioritizedFinding) -> PrioritizedFinding:
+        """With operational score method for PrioritizationService."""
         score, reasons = build_operational_score(finding, self.policy)
         scored = finding.model_copy(
             update={
@@ -284,6 +287,7 @@ class PrioritizationService:
 
 
 def _attack_context_summary(cve_id: str, attack: AttackData) -> FindingAttackContextSummary:
+    """Attack context summary function."""
     confidence = _aggregate_mapping_confidence(attack)
     return FindingAttackContextSummary(
         cve_id=cve_id,
@@ -303,6 +307,7 @@ def _attack_context_summary(cve_id: str, attack: AttackData) -> FindingAttackCon
 
 
 def _aggregate_mapping_confidence(attack: AttackData) -> AttackConfidence | None:
+    """Aggregate mapping confidence function."""
     labels = [mapping.confidence for mapping in attack.mappings if mapping.confidence is not None]
     if not labels:
         return None
@@ -314,6 +319,7 @@ def _aggregate_mapping_confidence(attack: AttackData) -> AttackConfidence | None
 
 
 def _finding_sort_key(finding: PrioritizedFinding, sort_by: SortField) -> tuple:
+    """Finding sort key function."""
     if sort_by == "operational":
         return (
             finding.operational_rank or 999999,
@@ -348,6 +354,7 @@ def _finding_sort_key(finding: PrioritizedFinding, sort_by: SortField) -> tuple:
 
 
 def _comparison_sort_key(row: ComparisonFinding, sort_by: SortField) -> tuple:
+    """Comparison sort key function."""
     if sort_by == "operational":
         return (
             row.operational_rank or 999999,
@@ -382,12 +389,14 @@ def _comparison_sort_key(row: ComparisonFinding, sort_by: SortField) -> tuple:
 
 
 def _descending_numeric(value: float | None) -> tuple[int, float]:
+    """Descending numeric function."""
     if value is None:
         return 1, 0.0
     return 0, -value
 
 
 def _operational_sort_key(finding: PrioritizedFinding) -> tuple:
+    """Operational sort key function."""
     return (
         finding.priority_rank,
         -finding.operational_score,
@@ -405,6 +414,7 @@ def _operational_sort_key(finding: PrioritizedFinding) -> tuple:
 
 
 def _waiver_work_queue_bucket(finding: PrioritizedFinding) -> int:
+    """Waiver work queue bucket function."""
     if finding.waiver_status == "review_due":
         return 1
     if finding.waived:
@@ -413,6 +423,7 @@ def _waiver_work_queue_bucket(finding: PrioritizedFinding) -> int:
 
 
 def _kev_due_sort_key(finding: PrioritizedFinding) -> tuple[int, int]:
+    """Kev due sort key function."""
     if not finding.in_kev or finding.provider_evidence is None:
         return 2, 99999999
     due_date = _parse_date(finding.provider_evidence.kev.due_date)
@@ -423,6 +434,7 @@ def _kev_due_sort_key(finding: PrioritizedFinding) -> tuple[int, int]:
 
 
 def _parse_date(value: str | None) -> date | None:
+    """Parse date function."""
     if value is None:
         return None
     text = value.strip()
@@ -435,6 +447,7 @@ def _parse_date(value: str | None) -> date | None:
 
 
 def _is_internet_facing(finding: PrioritizedFinding) -> bool:
+    """Is internet facing function."""
     highest_exposure = finding.provenance.highest_asset_exposure
     if highest_exposure and highest_exposure.lower() == "internet-facing":
         return True
@@ -445,6 +458,7 @@ def _is_internet_facing(finding: PrioritizedFinding) -> bool:
 
 
 def _is_production(finding: PrioritizedFinding) -> bool:
+    """Is production function."""
     if any(
         environment.lower() in {"prod", "production"}
         for environment in finding.provenance.asset_environments
@@ -458,14 +472,17 @@ def _is_production(finding: PrioritizedFinding) -> bool:
 
 
 def _asset_criticality_sort_key(value: str | None) -> int:
+    """Asset criticality sort key function."""
     return {"critical": 0, "high": 1, "medium": 2, "low": 3}.get((value or "").lower(), 4)
 
 
 def _attack_relevance_sort_key(value: str) -> int:
+    """Attack relevance sort key function."""
     return {"High": 0, "Medium": 1, "Low": 2, "Unmapped": 3}.get(value, 4)
 
 
 def _context_rank_reasons(finding: PrioritizedFinding) -> list[str]:
+    """Context rank reasons function."""
     reasons: list[str] = []
     if finding.waiver_status == "expired":
         reasons.append("expired waiver requires reassessment")
@@ -501,6 +518,7 @@ def _context_rank_reasons(finding: PrioritizedFinding) -> list[str]:
 
 
 def _asset_business_services(finding: PrioritizedFinding) -> list[str]:
+    """Asset business services function."""
     if finding.provenance.asset_business_services:
         return finding.provenance.asset_business_services
     return sorted(
@@ -513,6 +531,7 @@ def _asset_business_services(finding: PrioritizedFinding) -> list[str]:
 
 
 def _asset_owners(finding: PrioritizedFinding) -> list[str]:
+    """Asset owners function."""
     if finding.provenance.asset_owners:
         return finding.provenance.asset_owners
     return sorted(
@@ -525,6 +544,7 @@ def _asset_owners(finding: PrioritizedFinding) -> list[str]:
 
 
 def _asset_context_unknown(finding: PrioritizedFinding) -> bool:
+    """Asset context unknown function."""
     provenance = finding.provenance
     if provenance.occurrence_count == 0 and not provenance.occurrences:
         return False

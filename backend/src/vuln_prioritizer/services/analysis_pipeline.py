@@ -89,6 +89,7 @@ def validate_requested_attack_mode(
     attack_mapping_file: Path | None,
     offline_attack_file: Path | None,
 ) -> None:
+    """Validate requested attack mode function."""
     if not attack_enabled or attack_source == ATTACK_SOURCE_NONE:
         return
     if attack_mapping_file is not None or offline_attack_file is not None:
@@ -118,6 +119,7 @@ def build_findings(
     provider_snapshot: ProviderSnapshotReport | None = None,
     locked_provider_data: bool = False,
 ) -> tuple[list[PrioritizedFinding], dict[str, int], EnrichmentResult]:
+    """Build findings function."""
     validate_requested_attack_mode(
         attack_enabled=attack_enabled,
         attack_source=attack_source,
@@ -182,7 +184,6 @@ def attach_provider_data_quality_flags(
     flags_by_source: dict[str, list[ProviderDataQualityFlag]],
 ) -> list[PrioritizedFinding]:
     """Copy run-level provider quality flags onto affected findings."""
-
     if not flags_by_source:
         return findings
     all_flags = [flag for flags in flags_by_source.values() for flag in flags]
@@ -205,6 +206,7 @@ def _finding_data_quality_flags(
     cve_id: str,
     flags: list[ProviderDataQualityFlag],
 ) -> list[ProviderDataQualityFlag]:
+    """Finding data quality flags function."""
     scoped_sources = {
         flag.source
         for flag in flags
@@ -231,6 +233,7 @@ def _finding_data_quality_flags(
 
 
 def _finding_data_quality_confidence(flags: list[ProviderDataQualityFlag]) -> str:
+    """Finding data quality confidence function."""
     material_flags = [flag for flag in flags if flag.code != "snapshot_locked"]
     if any(flag.severity == "error" for flag in material_flags):
         return "low"
@@ -240,6 +243,7 @@ def _finding_data_quality_confidence(flags: list[ProviderDataQualityFlag]) -> st
 
 
 def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding], AnalysisContext]:
+    """Prepare analysis function."""
     attack_enabled, resolved_attack_source, resolved_mapping_file, resolved_metadata_file = (
         resolve_attack_options(
             no_attack=request.no_attack,
@@ -432,6 +436,7 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
 
 
 def _provider_snapshot_hash(path: Path | None) -> str | None:
+    """Provider snapshot hash function."""
     if path is None:
         return None
     try:
@@ -441,6 +446,7 @@ def _provider_snapshot_hash(path: Path | None) -> str | None:
 
 
 def _provider_snapshot_metadata_path(path: Path | None, output_path: Path | None) -> str | None:
+    """Provider snapshot metadata path function."""
     if path is None:
         return None
     if output_path is not None:
@@ -452,6 +458,7 @@ def _provider_snapshot_metadata_path(path: Path | None, output_path: Path | None
 
 
 def prepare_explain(request: ExplainRequest) -> ExplainResult:
+    """Prepare explain function."""
     context_profile = load_analysis_context_profile(request.policy_profile, request.policy_file)
     if request.locked_provider_data and request.provider_snapshot_file is None:
         raise AnalysisInputError("Locked provider data requires a provider snapshot file.")

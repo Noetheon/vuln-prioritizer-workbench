@@ -16,6 +16,7 @@ class WaiverRepository:
     """Waiver persistence plus finding synchronization."""
 
     def __init__(self, session: Session) -> None:
+        """Initialize a new instance of WaiverRepository."""
         self.session = session
 
     def list_project_waivers(self, project_id: uuid.UUID) -> list[Waiver]:
@@ -92,6 +93,7 @@ class WaiverRepository:
         )
 
     def _project_findings(self, project_id: uuid.UUID) -> list[Finding]:
+        """Project findings method for WaiverRepository."""
         statement = (
             select(Finding)
             .where(Finding.project_id == project_id)
@@ -100,6 +102,7 @@ class WaiverRepository:
         return list(self.session.exec(statement).all())
 
     def _clear_workbench_waiver_state(self, finding: Finding) -> None:
+        """Clear workbench waiver state method for WaiverRepository."""
         explanation = dict(finding.explanation_json or {})
         evidence = dict(finding.evidence_json or {})
         waiver_record = _object_value(explanation.get("waiver"))
@@ -127,6 +130,7 @@ class WaiverRepository:
         self.session.add(finding)
 
     def _apply_waiver_to_finding(self, finding: Finding, waiver: Waiver) -> None:
+        """Apply waiver to finding method for WaiverRepository."""
         status, days_remaining = waiver_lifecycle_status(waiver)
         scope = waiver_scope_label(waiver)
         finding.waived = status in {"active", "review_due"}
@@ -193,6 +197,7 @@ def waiver_scope_label(waiver: Waiver) -> str:
 
 
 def _waiver_model_data(waiver_in: WaiverCreate | WaiverUpdate) -> dict[str, Any]:
+    """Waiver model data function."""
     data = waiver_in.model_dump()
     if data.get("cve_id"):
         data["cve_id"] = str(data["cve_id"]).upper()
@@ -200,6 +205,7 @@ def _waiver_model_data(waiver_in: WaiverCreate | WaiverUpdate) -> dict[str, Any]
 
 
 def _waiver_matches_finding(waiver: Waiver, finding: Finding) -> bool:
+    """Waiver matches finding function."""
     if waiver.finding_id is not None and waiver.finding_id != finding.id:
         return False
     if waiver.cve_id and waiver.cve_id != finding.cve_id:
@@ -219,9 +225,11 @@ def _waiver_matches_finding(waiver: Waiver, finding: Finding) -> bool:
 
 
 def _waiver_status_sort_key(waiver: Waiver) -> int:
+    """Waiver status sort key function."""
     status, _days_remaining = waiver_lifecycle_status(waiver)
     return {"review_due": 0, "active": 1, "expired": 2}.get(status, 9)
 
 
 def _object_value(value: object) -> dict[str, object]:
+    """Object value function."""
     return value if isinstance(value, dict) else {}

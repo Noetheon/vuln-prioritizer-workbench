@@ -226,7 +226,7 @@ The current local-first Workbench is readiness-aligned when:
 
 Maintain v1.2 readiness with local, repeatable checks:
 
-- `make check` for formatting, linting, typing, and the Python test suite.
+- `make check` for formatting, linting, docstrings, typing, and the Python test suite.
 - Focused VPW-071 tests for NVD API key env-name handling, staging/production
   default-secret rejection, provider URL immutability, and secret redaction in
   settings, reports, and diagnostics.

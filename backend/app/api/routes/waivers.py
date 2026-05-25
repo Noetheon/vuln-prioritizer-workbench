@@ -125,6 +125,7 @@ def _validate_project_scope(
     project_id: uuid.UUID,
     waiver_in: WaiverCreate | WaiverUpdate,
 ) -> None:
+    """Validate project scope function."""
     if waiver_in.finding_id is not None:
         finding = FindingRepository(session).get_finding(waiver_in.finding_id)
         if finding is None or finding.project_id != project_id:
@@ -141,6 +142,7 @@ def _waiver_public(
     *,
     matched_findings: int | None = None,
 ) -> WaiverPublic:
+    """Waiver public function."""
     status, days_remaining = repository_status(waiver)
     return WaiverPublic.model_validate(
         waiver,
@@ -155,6 +157,7 @@ def _waiver_public(
 
 
 def repository_status(waiver: Waiver) -> tuple[str, int | None]:
+    """Repository status function."""
     from app.repositories.waivers import waiver_lifecycle_status
 
     return waiver_lifecycle_status(waiver)

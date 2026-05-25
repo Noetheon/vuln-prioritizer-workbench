@@ -1,3 +1,4 @@
+# ruff: noqa: D100, D103
 from __future__ import annotations
 
 import csv
@@ -205,7 +206,7 @@ def test_vpw049_html_report_create_downloads_executive_report(
 
     body = download.text
     assert "<!doctype html>" in body
-    assert "Executive Summary" in body
+    assert "Executive Summary" not in body
     assert "Decision Brief" in body
     assert "Governance Exceptions" in body
     assert "Business Services at Risk" in body
@@ -215,7 +216,7 @@ def test_vpw049_html_report_create_downloads_executive_report(
     assert "Decision Statement" in body
     assert "Emergency / 24h" in body
     assert "sha256:vpw048-snapshot" in body
-    assert body.index(DEMO_CVE_XZ) < body.index(DEMO_CVE_LOG4SHELL)
+    assert body.index(DEMO_CVE_LOG4SHELL) < body.index(DEMO_CVE_XZ)
     assert "<script" not in body.lower()
     assert "<img" not in body.lower()
     assert 'href="javascript:' not in body.lower()
@@ -771,6 +772,12 @@ def test_vpw051_evidence_bundle_zip_create_downloads_manifest_integrity(
         assert "Accepted Risk and Expiring Waivers" in technical_report
         assert "VEX Summary" in technical_report
         assert "Governance Exceptions" in executive_report
+        assert (
+            "Hash recorded in final manifest.json after this HTML is rendered." in executive_report
+        )
+        assert manifest["artifact_hashes"]["analysis.json"] in executive_report
+        assert manifest["artifact_hashes"]["technical.md"] in executive_report
+        assert "Expected when Evidence ZIP is generated." not in executive_report
         assert "manifest.json" not in {item["path"] for item in manifest["files"]}
         for item in manifest["files"]:
             content = archive.read(item["path"])
@@ -1908,6 +1915,258 @@ def _vpw050_snapshot_payload() -> MarkdownReportPayload:
 
 def _vpw054_demo_payload() -> MarkdownReportPayload:
     payload = _vpw050_snapshot_payload()
+    xz_open = replace(
+        payload.findings[0],
+        id="00000000-0000-4000-8000-000000000541",
+        dedup_key="vpw054-xz-payments-open",
+        operational_rank=2,
+        status="open",
+        asset="Payments API",
+        asset_key="payments-api",
+        owner="platform-team",
+        business_service="checkout",
+        environment="prod",
+        exposure="internet-facing",
+        recommended_action="Upgrade xz package to the validated distro-fixed build.",
+        decision_statement=(
+            "Decision Statement: approve emergency remediation for CVE-2024-3094 "
+            "on the internet-facing Payments API."
+        ),
+        explanation={
+            **payload.findings[0].explanation,
+            "attack_context": {"mapped": False, "source": None, "review_status": "unmapped"},
+        },
+    )
+    log4shell_open = replace(
+        payload.findings[1],
+        id="00000000-0000-4000-8000-000000000542",
+        dedup_key="vpw054-log4shell-identity-open",
+        operational_rank=1,
+        priority="critical",
+        priority_rank=1,
+        status="open",
+        asset="Identity Gateway",
+        asset_key="identity-gateway",
+        owner="identity-team",
+        business_service="identity",
+        environment="prod",
+        exposure="internet-facing",
+        criticality="critical",
+        recommended_action="Upgrade log4j-core to 2.17.2 and redeploy Identity Gateway.",
+        decision_statement=(
+            "Decision Statement: approve emergency remediation for Log4Shell on "
+            "Identity Gateway and require clean re-import evidence."
+        ),
+        explanation={
+            **payload.findings[1].explanation,
+            "attack_context": {
+                "mapped": True,
+                "source": "local-curated",
+                "review_status": "reviewed",
+                "mappings": [
+                    {
+                        "technique_id": "T1190",
+                        "technique_name": "Exploit Public-Facing Application",
+                    }
+                ],
+            },
+        },
+    )
+    log4shell_fixed = replace(
+        payload.findings[1],
+        id="00000000-0000-4000-8000-000000000543",
+        dedup_key="vpw054-log4shell-ops-fixed",
+        operational_rank=7,
+        priority="critical",
+        priority_rank=1,
+        status="fixed",
+        asset="Ops API",
+        asset_key="ops-api",
+        owner="secops",
+        business_service="operations",
+        environment="prod",
+        exposure="internal",
+        recommended_action="Retain fixed-state validation evidence for Log4Shell.",
+        decision_statement=(
+            "Decision Statement: keep fixed evidence visible for the closed Ops API scope."
+        ),
+        explanation={
+            **payload.findings[1].explanation,
+            "attack_context": {
+                "mapped": True,
+                "source": "local-curated",
+                "review_status": "reviewed",
+                "mappings": [
+                    {
+                        "technique_id": "T1190",
+                        "technique_name": "Exploit Public-Facing Application",
+                    }
+                ],
+            },
+        },
+    )
+    accepted_risk = replace(
+        payload.findings[0],
+        id="00000000-0000-4000-8000-000000000544",
+        dedup_key="vpw054-php-billing-accepted",
+        operational_rank=4,
+        cve_id="CVE-2024-4577",
+        priority="high",
+        priority_rank=3,
+        status="accepted",
+        risk_score=72.5,
+        epss=0.037,
+        cvss_base_score=9.8,
+        in_kev=True,
+        waived=True,
+        attack_mapped=False,
+        asset="Billing Worker",
+        asset_key="billing-worker",
+        owner="risk-owner",
+        business_service="billing",
+        environment="prod",
+        exposure="internal",
+        criticality="medium",
+        component="php-cgi 8.2.18",
+        component_purl="pkg:generic/php-cgi@8.2.18",
+        recommended_action="Review accepted risk and replace the temporary compensating control.",
+        decision_statement=(
+            "Decision Statement: review accepted risk for CVE-2024-4577 before sign-off."
+        ),
+        explanation={
+            "waiver": {
+                "waiver_id": "00000000-0000-4000-8000-000000000545",
+                "waiver_status": "review_due",
+                "waiver_owner": "risk-owner",
+                "waiver_expires_on": "2026-05-07",
+                "waiver_review_on": "2026-04-29",
+                "waiver_scope": "service:billing",
+                "waiver_approval_ref": "CAB-054",
+            },
+            "waiver_status": "review_due",
+            "waiver_owner": "risk-owner",
+            "waiver_expires_on": "2026-05-07",
+            "waiver_review_on": "2026-04-29",
+        },
+    )
+    vex_suppressed = replace(
+        payload.findings[0],
+        id="00000000-0000-4000-8000-000000000546",
+        dedup_key="vpw054-http2-edge-vex",
+        operational_rank=5,
+        cve_id="CVE-2023-44487",
+        priority="high",
+        priority_rank=4,
+        status="suppressed",
+        risk_score=41.0,
+        epss=0.018,
+        cvss_base_score=7.5,
+        in_kev=False,
+        suppressed_by_vex=True,
+        attack_mapped=False,
+        asset="Edge Proxy",
+        asset_key="edge-proxy",
+        owner="edge-team",
+        business_service="edge ingress",
+        environment="prod",
+        exposure="internet-facing",
+        criticality="high",
+        component="nginx 1.25",
+        component_purl="pkg:generic/nginx@1.25",
+        recommended_action="Retain VEX evidence and reopen if affected HTTP/2 module is enabled.",
+        decision_statement=(
+            "Decision Statement: retain VEX evidence for CVE-2023-44487 edge scope."
+        ),
+        explanation={
+            "vex_status": "not_affected",
+            "vex_statuses": {"not_affected": 1},
+            "vex_justification": "vulnerable_code_not_in_execute_path",
+            "vex_source_format": "openvex",
+            "vex_source_record_id": "VEX-054-EDGE",
+        },
+    )
+    under_investigation = replace(
+        payload.findings[0],
+        id="00000000-0000-4000-8000-000000000547",
+        dedup_key="vpw054-moveit-investigation",
+        operational_rank=3,
+        cve_id="CVE-2023-34362",
+        priority="critical",
+        priority_rank=2,
+        status="open",
+        risk_score=88.0,
+        epss=0.911,
+        cvss_base_score=9.8,
+        in_kev=True,
+        suppressed_by_vex=True,
+        under_investigation=True,
+        attack_mapped=False,
+        asset="File Transfer Gateway",
+        asset_key="file-transfer-gateway",
+        owner="soc-team",
+        business_service="partner file transfer",
+        environment="prod",
+        exposure="external",
+        criticality="critical",
+        component="moveit-transfer 2023.0",
+        component_purl="pkg:generic/moveit-transfer@2023.0",
+        recommended_action=(
+            "Investigate VEX under-investigation status, validate exposure and patch if affected."
+        ),
+        decision_statement=(
+            "Decision Statement: keep CVE-2023-34362 actionable until "
+            "investigation evidence closes."
+        ),
+        explanation={
+            "vex_status": "under_investigation",
+            "vex_statuses": {"under_investigation": 1},
+            "vex_source_format": "openvex",
+            "vex_source_record_id": "VEX-054-MOVEIT",
+        },
+    )
+    fixed_evidence = replace(
+        payload.findings[1],
+        id="00000000-0000-4000-8000-000000000548",
+        dedup_key="vpw054-spring-fixed",
+        operational_rank=6,
+        cve_id="CVE-2022-22965",
+        priority="high",
+        priority_rank=5,
+        status="fixed",
+        risk_score=0.0,
+        epss=0.024,
+        cvss_base_score=9.8,
+        in_kev=True,
+        attack_mapped=False,
+        asset="Catalog API",
+        asset_key="catalog-api",
+        owner="catalog-team",
+        business_service="catalog",
+        environment="prod",
+        exposure="internal",
+        criticality="high",
+        component="spring-framework 5.3.18",
+        component_purl="pkg:maven/org.springframework/spring-core@5.3.18",
+        recommended_action="Retain fixed evidence for Spring4Shell closure.",
+        decision_statement="Decision Statement: keep fixed evidence available for audit closure.",
+        explanation={},
+    )
+    provider_snapshot = None
+    if payload.provider_snapshot is not None:
+        provider_snapshot = replace(
+            payload.provider_snapshot,
+            id="00000000-0000-4000-8000-000000000654",
+            content_hash="sha256:vpw054-snapshot",
+            nvd_last_sync="2026-04-28T10:15:00Z",
+            epss_date="2026-04-15",
+            kev_catalog_version="kev-catalog-v2026.04",
+            source_hashes={
+                "nvd": "sha256:vpw054-nvd",
+                "epss": "sha256:vpw054-epss",
+                "kev": "sha256:vpw054-kev",
+                "provider_snapshot": "sha256:vpw054-snapshot",
+            },
+        )
     return replace(
         payload,
         project_id="00000000-0000-4000-8000-000000000054",
@@ -1915,6 +2174,204 @@ def _vpw054_demo_payload() -> MarkdownReportPayload:
         project_description="Committed demo artifacts for VPW-054 report snapshot coverage.",
         run_id="00000000-0000-4000-8000-000000000540",
         filename="vpw-054-known-cves.txt",
+        summary={"finding_count": 7, "counts_by_priority": {"Critical": 3, "High": 4}},
+        findings=[
+            log4shell_open,
+            xz_open,
+            under_investigation,
+            accepted_risk,
+            vex_suppressed,
+            fixed_evidence,
+            log4shell_fixed,
+        ],
+        provider_snapshot=provider_snapshot,
+        governance_rollups={
+            "project_id": "00000000-0000-4000-8000-000000000054",
+            "generated_at": "2026-04-29T12:00:00Z",
+            "owners": [
+                _vpw068_rollup(
+                    "owner",
+                    "identity-team",
+                    finding_count=1,
+                    open_count=1,
+                    critical_count=1,
+                    kev_count=1,
+                    attack_mapped_count=1,
+                    risk_score_total=94.2,
+                    top_cves=[DEMO_CVE_LOG4SHELL],
+                ),
+                _vpw068_rollup(
+                    "owner",
+                    "platform-team",
+                    finding_count=1,
+                    open_count=1,
+                    critical_count=1,
+                    risk_score_total=100.0,
+                    top_cves=[DEMO_CVE_XZ],
+                ),
+                _vpw068_rollup(
+                    "owner",
+                    "risk-owner",
+                    finding_count=1,
+                    accepted_count=1,
+                    waived_count=1,
+                    review_due_waiver_count=1,
+                    high_count=1,
+                    kev_count=1,
+                    risk_score_total=72.5,
+                    top_cves=["CVE-2024-4577"],
+                ),
+            ],
+            "services": [
+                _vpw068_rollup(
+                    "service",
+                    "identity",
+                    finding_count=2,
+                    open_count=1,
+                    fixed_count=1,
+                    critical_count=2,
+                    kev_count=2,
+                    attack_mapped_count=2,
+                    risk_score_total=94.2,
+                    top_cves=[DEMO_CVE_LOG4SHELL],
+                ),
+                _vpw068_rollup(
+                    "service",
+                    "checkout",
+                    finding_count=1,
+                    open_count=1,
+                    critical_count=1,
+                    risk_score_total=100.0,
+                    top_cves=[DEMO_CVE_XZ],
+                ),
+                _vpw068_rollup(
+                    "service",
+                    "billing",
+                    finding_count=1,
+                    accepted_count=1,
+                    waived_count=1,
+                    review_due_waiver_count=1,
+                    high_count=1,
+                    kev_count=1,
+                    risk_score_total=72.5,
+                    top_cves=["CVE-2024-4577"],
+                ),
+            ],
+            "top_services_by_risk": [
+                _vpw068_rollup(
+                    "service",
+                    "identity",
+                    finding_count=2,
+                    open_count=1,
+                    fixed_count=1,
+                    critical_count=2,
+                    kev_count=2,
+                    attack_mapped_count=2,
+                    risk_score_total=94.2,
+                    top_cves=[DEMO_CVE_LOG4SHELL],
+                )
+            ],
+            "assets": [
+                _vpw068_rollup(
+                    "asset",
+                    "identity-gateway",
+                    finding_count=1,
+                    open_count=1,
+                    critical_count=1,
+                    kev_count=1,
+                    attack_mapped_count=1,
+                    risk_score_total=94.2,
+                    top_cves=[DEMO_CVE_LOG4SHELL],
+                ),
+                _vpw068_rollup(
+                    "asset",
+                    "payments-api",
+                    finding_count=1,
+                    open_count=1,
+                    critical_count=1,
+                    risk_score_total=100.0,
+                    top_cves=[DEMO_CVE_XZ],
+                ),
+                _vpw068_rollup(
+                    "asset",
+                    "billing-worker",
+                    finding_count=1,
+                    accepted_count=1,
+                    waived_count=1,
+                    review_due_waiver_count=1,
+                    high_count=1,
+                    kev_count=1,
+                    risk_score_total=72.5,
+                    top_cves=["CVE-2024-4577"],
+                ),
+            ],
+            "environments": [
+                _vpw068_rollup(
+                    "environment",
+                    "prod",
+                    finding_count=7,
+                    open_count=3,
+                    accepted_count=1,
+                    fixed_count=2,
+                    suppressed_count=1,
+                    critical_count=3,
+                    high_count=4,
+                    kev_count=5,
+                    attack_mapped_count=2,
+                    suppressed_by_vex_count=1,
+                    under_investigation_count=1,
+                    waived_count=1,
+                    review_due_waiver_count=1,
+                    risk_score_total=395.7,
+                    top_cves=[
+                        DEMO_CVE_LOG4SHELL,
+                        DEMO_CVE_XZ,
+                        "CVE-2023-34362",
+                        "CVE-2024-4577",
+                    ],
+                )
+            ],
+            "top_assets_by_risk": [
+                _vpw068_rollup(
+                    "asset",
+                    "payments-api",
+                    finding_count=1,
+                    open_count=1,
+                    critical_count=1,
+                    risk_score_total=100.0,
+                    top_cves=[DEMO_CVE_XZ],
+                )
+            ],
+            "waiver_debt": {
+                "waiver_count": 1,
+                "active_count": 0,
+                "review_due_count": 1,
+                "expired_count": 0,
+                "expiring_soon_count": 1,
+                "matched_finding_count": 1,
+                "accepted_finding_count": 1,
+                "expired_finding_count": 0,
+                "review_due_finding_count": 1,
+                "owner_counts": {"risk-owner": 1},
+                "service_counts": {"billing": 1},
+                "items": [
+                    {
+                        "id": "00000000-0000-4000-8000-000000000545",
+                        "owner": "risk-owner",
+                        "scope": "service:billing",
+                        "status": "review_due",
+                        "days_remaining": 8,
+                        "expires_at": "2026-05-07",
+                        "review_at": "2026-04-29",
+                        "matched_findings": 1,
+                        "cve_id": "CVE-2024-4577",
+                        "service": "billing",
+                        "asset_key": "billing-worker",
+                        "finding_id": "00000000-0000-4000-8000-000000000544",
+                    }
+                ],
+            },
+        },
     )
 
 

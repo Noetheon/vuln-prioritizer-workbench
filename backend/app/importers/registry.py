@@ -19,6 +19,7 @@ class UnsupportedInputTypeError(ImporterError, LookupError):
     """Raised when no importer is registered for an input type."""
 
     def __init__(self, input_type: str, supported: Iterable[str]) -> None:
+        """Initialize a new instance of UnsupportedInputTypeError."""
         supported_types = tuple(sorted(supported))
         message = f"Unsupported input type {input_type!r}"
         if supported_types:
@@ -32,6 +33,7 @@ class DuplicateInputTypeError(ImporterValidationError):
     """Raised when two importers claim the same input type."""
 
     def __init__(self, input_type: str) -> None:
+        """Initialize a new instance of DuplicateInputTypeError."""
         super().__init__(f"Duplicate importer input type: {input_type!r}")
         self.input_type = input_type
 
@@ -40,6 +42,7 @@ class ImporterRegistry:
     """Small in-memory registry for offline input importers."""
 
     def __init__(self, importers: Iterable[Importer] = ()) -> None:
+        """Initialize a new instance of ImporterRegistry."""
         self._importers: dict[str, Importer] = {}
         for importer in importers:
             self.register(importer)
@@ -89,6 +92,7 @@ def build_importer_registry(importers: Iterable[Importer] | None = None) -> Impo
 
 
 def _normalize_input_type(input_type: str) -> str:
+    """Normalize input type function."""
     normalized = input_type.strip().lower()
     if not normalized:
         raise ImporterValidationError("Importer input_type must not be blank")

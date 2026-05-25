@@ -18,6 +18,7 @@ from app.services.report_bundle_archive import (
 from app.services.report_bundle_archive_verification import (
     verify_evidence_bundle as verify_evidence_bundle_archive,
 )
+from app.services.report_bundle_evidence_package import evidence_package_context_from_entries
 from app.services.report_bundle_governance import (
     _asset_context_rows,
     _governance_asset_context_export,
@@ -67,27 +68,14 @@ def render_evidence_bundle_zip(
     }
     redacted_provider, provider_redactions = _redact_bundle_value(provider_payload)
 
-    entries = [
-        (
-            "analysis.json",
-            _json_bytes(redacted_analysis),
-            "analysis-json",
-        ),
+    entries_without_html = [
+        ("analysis.json", _json_bytes(redacted_analysis), "analysis-json"),
         (
             "technical.md",
             render_markdown_report(bundle_payload).encode("utf-8"),
             "technical-markdown",
         ),
-        (
-            "executive.html",
-            render_html_executive_report(bundle_payload).encode("utf-8"),
-            "executive-html",
-        ),
-        (
-            "provider-snapshot.json",
-            _json_bytes(redacted_provider),
-            "provider-snapshot",
-        ),
+        ("provider-snapshot.json", _json_bytes(redacted_provider), "provider-snapshot"),
         (
             REPORT_FILENAME_FINDINGS_CSV,
             render_findings_csv(bundle_payload).encode("utf-8"),
@@ -100,20 +88,38 @@ def render_evidence_bundle_zip(
         ),
     ]
     governance_entries = _governance_bundle_entries(bundle_payload)
-    entries.extend(governance_entries)
+    entries_without_html.extend(governance_entries)
     if attack_navigator_layer is not None:
         redacted_layer, layer_redactions = _redact_bundle_value(
             attack_navigator_layer,
             path_prefix="attack_navigator_layer",
         )
         provider_redactions.extend(layer_redactions)
-        entries.append(
+        entries_without_html.append(
             (
                 REPORT_FILENAME_ATTACK_NAVIGATOR,
                 _json_bytes(redacted_layer),
                 REPORT_KIND_ATTACK_NAVIGATOR,
             )
         )
+    preliminary_file_entries = [
+        _bundle_file_entry(path=path, content=content, kind=kind)
+        for path, content, kind in entries_without_html
+    ]
+    evidence_package_context = evidence_package_context_from_entries(
+        preliminary_file_entries,
+        has_governance=bool(governance_entries),
+        has_attack_layer=attack_navigator_layer is not None,
+    )
+    executive_html = render_html_executive_report(
+        bundle_payload,
+        evidence_package_context=evidence_package_context,
+    ).encode("utf-8")
+    entries = [
+        *entries_without_html[:2],
+        ("executive.html", executive_html, "executive-html"),
+        *entries_without_html[2:],
+    ]
     file_entries = [
         _bundle_file_entry(path=path, content=content, kind=kind) for path, content, kind in entries
     ]

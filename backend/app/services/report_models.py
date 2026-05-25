@@ -99,3 +99,43 @@ class MarkdownReportPayload:
     run_error: str | None = None
     run_errors: dict[str, Any] = field(default_factory=dict)
     input_file_hash: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EvidencePackageArtifact:
+    """Prepared evidence package artifact row for executive report rendering."""
+
+    artifact: str
+    purpose: str
+    status: str
+    sha256: str | None = None
+    size_bytes: int | None = None
+    kind: str | None = None
+    note: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EvidencePackageContext:
+    """Evidence package context for standalone HTML or generated bundle HTML."""
+
+    mode: str = "standalone"
+    manifest_path: str = "manifest.json"
+    artifacts: list[EvidencePackageArtifact] = field(default_factory=list)
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutiveReportViewModel:
+    """Prepared decision-brief model for the executive HTML renderer."""
+
+    report_identity: dict[str, Any]
+    decision_brief: dict[str, Any]
+    risk_posture: dict[str, Any]
+    action_plan: list[dict[str, Any]]
+    remediation_campaigns: list[dict[str, Any]]
+    business_services: list[dict[str, Any]]
+    governance_exceptions: dict[str, Any]
+    evidence_confidence: dict[str, Any]
+    evidence_package: list[dict[str, Any]]
+    recommendations: list[dict[str, Any]]
+    attack_context: dict[str, Any]
+    technical_appendix: dict[str, Any]

@@ -45,6 +45,7 @@ class EnrichmentService:
         cache_dir: Path = DEFAULT_CACHE_DIR,
         cache_ttl_hours: int = DEFAULT_CACHE_TTL_HOURS,
     ) -> None:
+        """Initialize a new instance of EnrichmentService."""
         shared_session = session or requests.Session()
         cache = FileCache(cache_dir, cache_ttl_hours) if use_cache else None
         nvd_session = session if session is not None else None
@@ -73,6 +74,7 @@ class EnrichmentService:
         provider_snapshot: ProviderSnapshotReport | None = None,
         locked_provider_data: bool = False,
     ) -> EnrichmentResult:
+        """Enrich method for EnrichmentService."""
         if locked_provider_data and provider_snapshot is None:
             raise ValueError("Locked provider data requires a provider snapshot file.")
 
@@ -170,6 +172,7 @@ class EnrichmentService:
         )
 
     def _provider_cache_timestamps(self) -> dict[str, str | None]:
+        """Provider cache timestamps method for EnrichmentService."""
         if self.cache is None:
             return {}
         return {
@@ -185,6 +188,7 @@ class EnrichmentService:
         provider_snapshot: ProviderSnapshotReport | None,
         locked_provider_data: bool,
     ) -> tuple[dict[str, NvdData], list[str]]:
+        """Resolve nvd results method for EnrichmentService."""
         snapshot_results: dict[str, NvdData] = {}
         missing_ids = list(cve_ids)
         if provider_snapshot is not None:
@@ -247,6 +251,7 @@ class EnrichmentService:
         provider_snapshot: ProviderSnapshotReport | None,
         locked_provider_data: bool,
     ) -> tuple[dict[str, EpssData], list[str]]:
+        """Resolve epss results method for EnrichmentService."""
         snapshot_results: dict[str, EpssData] = {}
         missing_ids = list(cve_ids)
         if provider_snapshot is not None:
@@ -312,6 +317,7 @@ class EnrichmentService:
         locked_provider_data: bool,
         offline_kev_file: Path | None,
     ) -> tuple[dict[str, KevData], list[str]]:
+        """Resolve kev results method for EnrichmentService."""
         snapshot_results: dict[str, KevData] = {}
         missing_ids = list(cve_ids)
         if provider_snapshot is not None:
@@ -370,6 +376,7 @@ def _snapshot_defensive_contexts(
     provider_snapshot: ProviderSnapshotReport | None,
     cve_ids: list[str],
 ) -> dict[str, list[DefensiveContext]]:
+    """Snapshot defensive contexts function."""
     if provider_snapshot is None:
         return {}
     indexed = {item.cve_id: item for item in provider_snapshot.items}
@@ -384,6 +391,7 @@ def _snapshot_source_selected(
     provider_snapshot: ProviderSnapshotReport,
     source_name: str,
 ) -> bool:
+    """Snapshot source selected function."""
     return source_name in set(provider_snapshot.metadata.selected_sources)
 
 
@@ -392,6 +400,7 @@ def _active_provider_sources(
     provider_snapshot: ProviderSnapshotReport | None,
     locked_provider_data: bool,
 ) -> set[str]:
+    """Active provider sources function."""
     if provider_snapshot is None or not locked_provider_data:
         return {"nvd", "epss", "kev"}
     return {
@@ -410,6 +419,7 @@ def _provider_data_quality_flags(
     active_provider_sources: set[str] | None = None,
     **sources: tuple[ProviderLookupDiagnostics, list[str]],
 ) -> dict[str, list[ProviderDataQualityFlag]]:
+    """Provider data quality flags function."""
     flags_by_source: dict[str, list[ProviderDataQualityFlag]] = {}
     for source, (diagnostics, warnings) in sources.items():
         if active_provider_sources is not None and source not in active_provider_sources:
@@ -459,6 +469,7 @@ def _append_provider_error_flag(
     diagnostics: ProviderLookupDiagnostics,
     warnings: list[str],
 ) -> None:
+    """Append provider error flag function."""
     if not diagnostics.failures and not any("failed" in warning.lower() for warning in warnings):
         return
     flags_by_source.setdefault(source, []).append(
@@ -475,6 +486,7 @@ def _append_nvd_missing_flags(
     flags_by_source: dict[str, list[ProviderDataQualityFlag]],
     results: dict[str, NvdData],
 ) -> None:
+    """Append nvd missing flags function."""
     for cve_id, item in results.items():
         if has_nvd_content(item):
             continue
@@ -492,6 +504,7 @@ def _append_epss_missing_flags(
     flags_by_source: dict[str, list[ProviderDataQualityFlag]],
     results: dict[str, EpssData],
 ) -> None:
+    """Append epss missing flags function."""
     for cve_id, item in results.items():
         if item.epss is not None or item.percentile is not None or item.date is not None:
             continue
@@ -509,6 +522,7 @@ def _append_epss_outdated_flag(
     flags_by_source: dict[str, list[ProviderDataQualityFlag]],
     source: tuple[ProviderLookupDiagnostics, list[str]] | None,
 ) -> None:
+    """Append epss outdated flag function."""
     if source is None:
         return
     diagnostics, _warnings = source
@@ -530,6 +544,7 @@ def _append_kev_unavailable_flag(
     flags_by_source: dict[str, list[ProviderDataQualityFlag]],
     source: tuple[ProviderLookupDiagnostics, list[str]] | None,
 ) -> None:
+    """Append kev unavailable flag function."""
     if source is None:
         return
     diagnostics, warnings = source
@@ -546,6 +561,7 @@ def _append_kev_unavailable_flag(
 
 
 def _nvd_missing_cvss_flags(results: dict[str, NvdData]) -> list[ProviderDataQualityFlag]:
+    """Nvd missing cvss flags function."""
     flags: list[ProviderDataQualityFlag] = []
     for cve_id, item in results.items():
         if has_nvd_content(item) and item.cvss_base_score is None and item.cvss_version is None:
@@ -569,6 +585,7 @@ def _merge_provider_results(
     live_results: dict[str, _T],
     model_cls: type[_T],
 ) -> dict[str, _T]:
+    """Merge provider results function."""
     merged: dict[str, _T] = {}
     for cve_id in cve_ids:
         if cve_id in snapshot_results:
@@ -585,6 +602,7 @@ def _build_fallback_diagnostics(
     results: dict[str, _T],
     model_cls: type[_T],
 ) -> ProviderLookupDiagnostics:
+    """Build fallback diagnostics function."""
     if model_cls is EpssData:
         content_hits = sum(
             1
@@ -611,6 +629,7 @@ def _build_nvd_fetch_diagnostics(
     cve_ids: list[str],
     results: dict[str, NvdData],
 ) -> NvdFetchDiagnostics:
+    """Build nvd fetch diagnostics function."""
     fallback = _build_fallback_diagnostics(cve_ids, results, NvdData)
     return NvdFetchDiagnostics(
         requested=fallback.requested,
@@ -625,6 +644,7 @@ def _build_nvd_fetch_diagnostics(
 
 
 def _safe_provider_error(exc: BaseException, *, provider: object) -> str:
+    """Safe provider error function."""
     message = str(exc)
     secret = getattr(provider, "api_key", None)
     if isinstance(secret, str) and secret:

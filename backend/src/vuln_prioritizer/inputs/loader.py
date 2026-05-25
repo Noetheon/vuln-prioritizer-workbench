@@ -75,6 +75,8 @@ _CSV_DELIMITERS = ",;\t|"
 
 @dataclass(frozen=True)
 class AssetContextRule:
+    """Data representation and logic for Asset Context Rule."""
+
     rule_id: str
     target_kind: str
     target_ref: str
@@ -86,6 +88,8 @@ class AssetContextRule:
 
 @dataclass(frozen=True)
 class AssetContextLoadDiagnostics:
+    """Data representation and logic for Asset Context Load Diagnostics."""
+
     total_rows: int
     loaded_rows: int
     skipped_rows: int
@@ -99,6 +103,8 @@ class AssetContextLoadDiagnostics:
 
 @dataclass(frozen=True)
 class VexLoadDiagnostics:
+    """Data representation and logic for Vex Load Diagnostics."""
+
     file_count: int
     statement_count: int
     skipped_statements: int
@@ -107,17 +113,22 @@ class VexLoadDiagnostics:
 
 @dataclass(frozen=True)
 class AssetContextCatalog(Mapping[tuple[str, str], AssetContextRecord]):
+    """Data representation and logic for Asset Context Catalog."""
+
     records: dict[tuple[str, str], AssetContextRecord]
     rules: tuple[AssetContextRule, ...]
     diagnostics: AssetContextLoadDiagnostics
 
     def __getitem__(self, key: tuple[str, str]) -> AssetContextRecord:
+        """Getitem   method for AssetContextCatalog."""
         return self.records[key]
 
     def __iter__(self) -> Iterator[tuple[str, str]]:
+        """Iter   method for AssetContextCatalog."""
         return iter(self.records)
 
     def __len__(self) -> int:
+        """Len   method for AssetContextCatalog."""
         return len(self.records)
 
 
@@ -135,6 +146,7 @@ class InputLoader:
         asset_records: Mapping[tuple[str, str], AssetContextRecord] | None = None,
         vex_statements: list[VexStatement] | None = None,
     ) -> ParsedInput:
+        """Load method for InputLoader."""
         return self.load_many(
             [InputSpec(path=path, input_format=input_format)],
             max_cves=max_cves,
@@ -154,6 +166,7 @@ class InputLoader:
         asset_records: Mapping[tuple[str, str], AssetContextRecord] | None = None,
         vex_statements: list[VexStatement] | None = None,
     ) -> ParsedInput:
+        """Load many method for InputLoader."""
         if not inputs:
             raise ValueError("At least one input file must be provided.")
 
@@ -256,15 +269,19 @@ class InputLoader:
 
 @dataclass(frozen=True)
 class InputSpec:
+    """Data representation and logic for Input Spec."""
+
     path: Path
     input_format: str = "auto"
 
 
 def _count_unique_cves(occurrences: list[InputOccurrence]) -> int:
+    """Count unique cves function."""
     return len({occurrence.cve_id for occurrence in occurrences})
 
 
 def _effective_input_format(resolved_formats: list[str]) -> str:
+    """Effective input format function."""
     unique_formats = {item for item in resolved_formats if item}
     if len(unique_formats) <= 1:
         return resolved_formats[0] if resolved_formats else "cve-list"
@@ -276,6 +293,7 @@ def _load_single_input(
     *,
     input_format: str,
 ) -> ParsedInput:
+    """Load single input function."""
     if not path.exists() or not path.is_file():
         raise ValueError(f"Input file does not exist: {path}")
 
@@ -653,6 +671,7 @@ def load_vex_files(
 
 
 def _looks_like_generic_occurrence_csv(path: Path) -> bool:
+    """Looks like generic occurrence csv function."""
     try:
         text = path.read_text(encoding="utf-8")
     except OSError:
@@ -674,6 +693,7 @@ def _looks_like_generic_occurrence_csv(path: Path) -> bool:
 
 
 def _csv_sample(text: str) -> str:
+    """Csv sample function."""
     sample = "\n".join(
         line
         for line in text.splitlines()
@@ -683,6 +703,7 @@ def _csv_sample(text: str) -> str:
 
 
 def _ignored_csv_record(record: list[str]) -> bool:
+    """Ignored csv record function."""
     if not record or all(not value.strip() for value in record):
         return True
     return record[0].strip().startswith(_COMMENT_PREFIX)
@@ -694,6 +715,7 @@ def _normalize_asset_criticality(
     warnings: list[str],
     row_number: int,
 ) -> str | None:
+    """Normalize asset criticality function."""
     if value is None:
         return None
     normalized = value.strip().lower().replace("_", "-")
@@ -720,6 +742,7 @@ def _normalize_asset_exposure(
     warnings: list[str],
     row_number: int,
 ) -> str | None:
+    """Normalize asset exposure function."""
     if value is None:
         return None
     normalized = value.strip().lower().replace("_", "-")
@@ -747,6 +770,7 @@ def _normalize_asset_environment(
     warnings: list[str],
     row_number: int,
 ) -> str | None:
+    """Normalize asset environment function."""
     if value is None:
         return None
     normalized = value.strip().lower().replace("_", "-")

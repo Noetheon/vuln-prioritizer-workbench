@@ -55,7 +55,8 @@ def sarif_fingerprint(
     components: Iterable[object],
     asset_ids: Iterable[object],
 ) -> str:
-    """Return the stable SARIF partial fingerprint identity.
+    """
+    Return the stable SARIF partial fingerprint identity.
 
     The identity intentionally excludes score, priority, and governance state so
     GitHub Code Scanning can track the same supplied vulnerability occurrence

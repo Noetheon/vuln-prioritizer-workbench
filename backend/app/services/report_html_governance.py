@@ -9,8 +9,13 @@ from app.services.report_formatting import dict_value as _dict_value
 from app.services.report_formatting import format_number as _format_number
 from app.services.report_formatting import safe_html as _safe_html
 from app.services.report_html_components import _html_metric
+from app.services.report_html_governance_states import html_governed_state_summary
+from app.services.report_html_helpers import (
+    _actionability_counts_helper,
+    _is_under_investigation_finding,
+)
 from app.services.report_models import MarkdownReportFinding
-from app.services.report_renderer_common import _dict_list, _governance_vex_summary
+from app.services.report_renderer_common import _dict_list
 
 
 def _html_governance_rollups(
@@ -20,8 +25,8 @@ def _html_governance_rollups(
 ) -> str:
     waiver_debt = _dict_value(governance_rollups.get("waiver_debt"))
     waiver_items = _dict_list(waiver_debt.get("items"))[:5]
-    vex_summary = _governance_vex_summary(findings)
-    under_investigation = sum(1 for finding in findings if finding.under_investigation)
+    actionability = _actionability_counts_helper(findings)
+    under_investigation = sum(1 for finding in findings if _is_under_investigation_finding(finding))
     waiver_rows = "\n".join(_html_waiver_debt_row(item, generated_at) for item in waiver_items)
     if not waiver_rows:
         waiver_rows = (
@@ -38,11 +43,12 @@ def _html_governance_rollups(
         f"        {_html_metric('Review Due', waiver_debt.get('review_due_count', 0))}\n"
         f"        {_html_metric('Expiring Soon', waiver_debt.get('expiring_soon_count', 0))}\n"
         "        "
-        f"{_html_metric('Accepted Findings', waiver_debt.get('accepted_finding_count', 0))}\n"
-        f"        {_html_metric('VEX Suppressed', vex_summary['suppressed_by_vex_count'])}\n"
-        f"        {_html_metric('Fixed Findings', vex_summary['fixed_count'])}\n"
+        f"{_html_metric('Accepted Findings', actionability.get('accepted', 0))}\n"
+        f"        {_html_metric('VEX Suppressed', actionability.get('suppressed', 0))}\n"
+        f"        {_html_metric('Fixed Findings', actionability.get('fixed', 0))}\n"
         f"        {_html_metric('Under Investigation', under_investigation)}\n"
         "      </div>\n"
+        f"{html_governed_state_summary(actionability, under_investigation)}\n"
         "      <h3>Accepted Risk and Waiver Review</h3>\n"
         '      <div class="table-wrap">\n'
         "        <table>\n"
@@ -109,6 +115,9 @@ def _html_waiver_debt_row(item: dict[str, Any], generated_at: datetime | None = 
             dt = datetime.strptime(review_at.split("T")[0], "%Y-%m-%d")
             if dt.date() < generated_at.date():
                 status_badge = '<span class="badge badge-critical">review overdue</span>'
+                required_action = "Review now"
+            elif dt.date() == generated_at.date():
+                status_badge = '<span class="badge badge-warning">review due</span>'
                 required_action = "Review now"
         except ValueError:
             pass

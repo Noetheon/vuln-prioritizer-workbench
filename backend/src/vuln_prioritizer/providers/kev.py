@@ -28,6 +28,7 @@ class KevProvider:
         mirror_url: str = KEV_MIRROR_URL,
         cache: FileCache | None = None,
     ) -> None:
+        """Initialize a new instance of KevProvider."""
         _validate_kev_url(feed_url, label="KEV feed URL")
         _validate_kev_url(mirror_url, label="KEV mirror URL")
         self.session = session or requests.Session()
@@ -88,6 +89,7 @@ class KevProvider:
     def _load_index(
         self, offline_file: Path | None, *, refresh: bool = False
     ) -> dict[str, KevData]:
+        """Load index method for KevProvider."""
         if offline_file is not None:
             index = self._load_offline_file(offline_file)
             if refresh:
@@ -111,6 +113,7 @@ class KevProvider:
         return index
 
     def _load_offline_file(self, path: Path) -> dict[str, KevData]:
+        """Load offline file method for KevProvider."""
         if not path.exists() or not path.is_file():
             raise FileNotFoundError(f"Offline KEV file not found: {path}")
 
@@ -127,11 +130,13 @@ class KevProvider:
         raise ValueError("Offline KEV file must be .json or .csv")
 
     def _download_json(self, url: str) -> dict:
+        """Download json method for KevProvider."""
         response = self.session.get(url, timeout=self.timeout_seconds)
         response.raise_for_status()
         return response.json()
 
     def _index_vulnerabilities(self, vulnerabilities: list[dict]) -> dict[str, KevData]:
+        """Index vulnerabilities method for KevProvider."""
         index: dict[str, KevData] = {}
         for vulnerability in vulnerabilities:
             cve_id = normalize_cve_id(
@@ -173,6 +178,7 @@ class KevProvider:
         return index
 
     def _load_from_cache(self, *, allow_expired: bool = False) -> dict[str, KevData] | None:
+        """Load from cache method for KevProvider."""
         if self.cache is None:
             return None
         cached_payload = self.cache.get_json("kev", "catalog", allow_expired=allow_expired)
@@ -181,6 +187,7 @@ class KevProvider:
         return {cve_id: KevData.model_validate(item) for cve_id, item in cached_payload.items()}
 
     def _store_in_cache(self, index: dict[str, KevData]) -> None:
+        """Store in cache method for KevProvider."""
         if self.cache is None:
             return
         self.cache.set_json(
@@ -191,6 +198,7 @@ class KevProvider:
 
 
 def _first_present(vulnerability: dict, *keys: str) -> str | None:
+    """First present function."""
     for key in keys:
         value = vulnerability.get(key)
         if value is not None and str(value).strip():
@@ -199,5 +207,6 @@ def _first_present(vulnerability: dict, *keys: str) -> str | None:
 
 
 def _validate_kev_url(value: str, *, label: str) -> None:
+    """Validate kev url function."""
     if value not in _ALLOWED_KEV_URLS:
         raise ValueError(f"{label} must use a pinned HTTPS public provider endpoint.")

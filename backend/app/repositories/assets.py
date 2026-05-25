@@ -34,6 +34,7 @@ class AssetRepository:
     """Asset persistence helpers."""
 
     def __init__(self, session: Session) -> None:
+        """Initialize a new instance of AssetRepository."""
         self.session = session
 
     def upsert_asset(
@@ -273,6 +274,7 @@ def _with_rescore_flag(
     changed_fields: Sequence[str],
     changed_at: datetime,
 ) -> dict[str, Any]:
+    """With rescore flag function."""
     data_quality = dict(payload or {})
     raw_flags = data_quality.get("flags")
     flags = (
@@ -301,6 +303,7 @@ def _with_rescore_flag(
 
 
 def _records_by_asset_key(records: Sequence[AssetContextRecord]) -> list[AssetContextRecord]:
+    """Records by asset key function."""
     deduped: dict[str, AssetContextRecord] = {}
     for record in records:
         deduped[record.asset_id] = record
@@ -308,6 +311,7 @@ def _records_by_asset_key(records: Sequence[AssetContextRecord]) -> list[AssetCo
 
 
 def _asset_snapshot(asset: Asset | None) -> dict[str, Any]:
+    """Asset snapshot function."""
     if asset is None:
         return {}
     return {
@@ -325,10 +329,12 @@ def _changed_asset_fields(
     before: dict[str, Any],
     after: dict[str, Any],
 ) -> list[str]:
+    """Changed asset fields function."""
     return sorted(field for field, previous in before.items() if after.get(field) != previous)
 
 
 def _asset_environment(value: str | None) -> AssetEnvironment:
+    """Asset environment function."""
     normalized = (value or "").strip().lower().replace("_", "-")
     return {
         "prod": AssetEnvironment.PRODUCTION,
@@ -344,6 +350,7 @@ def _asset_environment(value: str | None) -> AssetEnvironment:
 
 
 def _asset_exposure(value: str | None) -> AssetExposure:
+    """Asset exposure function."""
     normalized = (value or "").strip().lower().replace("_", "-")
     return {
         "external": AssetExposure.INTERNET_FACING,
@@ -357,6 +364,7 @@ def _asset_exposure(value: str | None) -> AssetExposure:
 
 
 def _asset_criticality(value: str | None) -> AssetCriticality:
+    """Asset criticality function."""
     normalized = (value or "").strip().lower().replace("_", "-")
     return {
         "critical": AssetCriticality.CRITICAL,
@@ -375,6 +383,7 @@ def _with_rescore_evidence(
     changed_fields: Sequence[str],
     changed_at: datetime,
 ) -> dict[str, Any]:
+    """With rescore evidence function."""
     evidence = dict(payload or {})
     evidence["asset_context"] = {
         "rescore_needed": True,
@@ -386,6 +395,7 @@ def _with_rescore_evidence(
 
 
 def _finding_as_prioritized(finding: Finding) -> PrioritizedFinding:
+    """Finding as prioritized function."""
     payload = dict(finding.explanation_json or {})
     if payload.get("cve_id") == finding.cve_id:
         try:
@@ -414,6 +424,7 @@ def _finding_as_prioritized(finding: Finding) -> PrioritizedFinding:
 
 
 def _with_current_asset_context(finding: PrioritizedFinding, asset: Asset) -> PrioritizedFinding:
+    """With current asset context function."""
     target_ref = asset.target_ref or asset.asset_key
     occurrence_updates = {
         "target_ref": target_ref,
@@ -468,6 +479,7 @@ def _with_current_asset_context(finding: PrioritizedFinding, asset: Asset) -> Pr
 
 
 def _provenance_from_finding(finding: Finding) -> FindingProvenance:
+    """Provenance from finding function."""
     asset = finding.asset
     if asset is None:
         return FindingProvenance()
@@ -507,6 +519,7 @@ def _recalculated_explanation_json(
     score: int,
     reasons: list[str],
 ) -> dict[str, Any]:
+    """Recalculated explanation json function."""
     updated = dict(payload or {})
     updated["provenance"] = prioritized.provenance.model_dump()
     updated["context_summary"] = prioritized.context_summary
@@ -534,6 +547,7 @@ def _recalculated_evidence_json(
     score: int,
     reasons: list[str],
 ) -> dict[str, Any]:
+    """Recalculated evidence json function."""
     evidence = dict(payload or {})
     evidence["asset_context"] = {
         "rescore_needed": False,
@@ -552,6 +566,7 @@ def _without_rescore_flag(
     flags_key: str,
     confidence_key: str,
 ) -> tuple[dict[str, Any], int]:
+    """Without rescore flag function."""
     updated = dict(payload or {})
     raw_flags = updated.get(flags_key)
     flags = (
@@ -569,6 +584,7 @@ def _without_rescore_flag(
 
 
 def _priority_label(value: str) -> str:
+    """Priority label function."""
     normalized = value.split(".", maxsplit=1)[-1].strip().lower()
     return {
         "critical": "Critical",
@@ -579,6 +595,7 @@ def _priority_label(value: str) -> str:
 
 
 def _value_list(value: Any) -> list[str]:
+    """Value list function."""
     if value is None:
         return []
     text = str(value).strip()

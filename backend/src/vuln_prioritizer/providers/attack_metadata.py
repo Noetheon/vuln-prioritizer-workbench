@@ -17,6 +17,7 @@ class AttackMetadataProvider:
         self,
         offline_file: Path,
     ) -> tuple[dict[str, AttackTechnique], dict[str, str | None], list[str]]:
+        """Load method for AttackMetadataProvider."""
         if not offline_file.exists() or not offline_file.is_file():
             raise FileNotFoundError(f"ATT&CK technique metadata file not found: {offline_file}")
         if offline_file.suffix.lower() != ".json":
@@ -85,6 +86,7 @@ class AttackMetadataProvider:
 
 
 def _normalize_optional_string(value: object) -> str | None:
+    """Normalize optional string function."""
     if value is None:
         return None
     normalized = str(value).strip()
@@ -92,6 +94,7 @@ def _normalize_optional_string(value: object) -> str | None:
 
 
 def _normalize_string_list(value: object) -> list[str]:
+    """Normalize string list function."""
     if not isinstance(value, list):
         return []
 

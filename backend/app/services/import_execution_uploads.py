@@ -90,6 +90,7 @@ def prepare_import_upload(
     *,
     settings: Settings,
 ) -> PreparedImportUpload:
+    """Prepare import upload function."""
     input_type = _normalize_input_type(upload.input_type)
     _validate_input_type(input_type)
     file = upload.file
@@ -156,6 +157,7 @@ def resolve_import_run(
     existing_run_id: uuid.UUID | None,
     execution_mode: str,
 ) -> ResolvedImportRun:
+    """Resolve import run function."""
     if existing_run_id is not None:
         run = run_repo.get_analysis_run(existing_run_id)
         if run is None:
@@ -196,6 +198,7 @@ def store_prepared_uploads(
     run_id: uuid.UUID,
     prepared: PreparedImportUpload,
 ) -> StoredImportArtifacts:
+    """Store prepared uploads function."""
     upload_path = _store_upload(
         settings,
         project_id=project_id,
@@ -237,6 +240,7 @@ def apply_stored_upload_summaries(
     artifacts: StoredImportArtifacts,
     execution_mode: str,
 ) -> None:
+    """Apply stored upload summaries function."""
     run.summary_json = {
         **run.summary_json,
         "import_job": _job_payload(
@@ -268,6 +272,7 @@ def mark_import_run_running(
     job_history: list[dict[str, str]],
     execution_mode: str,
 ) -> list[dict[str, str]]:
+    """Mark import run running function."""
     run.status = AnalysisRunStatus.RUNNING
     running_history = _append_job_status(job_history, "running")
     run.summary_json = {
@@ -286,6 +291,7 @@ def _append_job_status(
     status_history: list[dict[str, str]],
     status: str,
 ) -> list[dict[str, str]]:
+    """Append job status function."""
     if status_history and status_history[-1].get("status") == status:
         return status_history
     return [*status_history, _job_status_entry(status)]
@@ -296,6 +302,7 @@ def _prepare_asset_context_upload(
     *,
     reserved_filename: str,
 ) -> PreparedSidecarUpload:
+    """Prepare asset context upload function."""
     payload = _present_optional_upload(upload)
     if payload is None or payload.filename is None:
         return _empty_sidecar("asset-context-csv", default_filename="asset_context.csv")
@@ -319,6 +326,7 @@ def _prepare_vex_upload(
     *,
     reserved_filenames: set[str | None],
 ) -> PreparedSidecarUpload:
+    """Prepare vex upload function."""
     payload = _present_optional_upload(upload)
     if payload is None or payload.filename is None:
         return _empty_sidecar("vex-json", default_filename="openvex.json")
@@ -338,12 +346,14 @@ def _prepare_vex_upload(
 
 
 def _present_optional_upload(upload: ImportUploadContent | None) -> ImportUploadContent | None:
+    """Present optional upload function."""
     if upload is None or not _has_optional_upload(upload.filename):
         return None
     return upload
 
 
 def _empty_sidecar(summary_input_type: str, *, default_filename: str) -> PreparedSidecarUpload:
+    """Empty sidecar function."""
     return PreparedSidecarUpload(
         payload=None,
         original_filename=None,
@@ -362,6 +372,7 @@ def _prepared_sidecar(
     summary_input_type: str,
     default_filename: str,
 ) -> PreparedSidecarUpload:
+    """Prepared sidecar function."""
     return PreparedSidecarUpload(
         payload=payload,
         original_filename=payload.filename,
@@ -374,6 +385,7 @@ def _prepared_sidecar(
 
 
 def _optional_summary(sidecar: PreparedSidecarUpload) -> dict[str, Any] | None:
+    """Optional summary function."""
     return _optional_upload_summary(
         input_type=sidecar.summary_input_type,
         original_filename=sidecar.original_filename,
@@ -392,6 +404,7 @@ def _initial_run_summary(
     job_history: list[dict[str, str]],
     execution_mode: str,
 ) -> dict[str, Any]:
+    """Initial run summary function."""
     return {
         "import_job": _job_payload(
             job_id=job_id,
@@ -418,6 +431,7 @@ def _initial_run_summary(
 
 
 def _extract_existing_job_state(run: AnalysisRun) -> tuple[str, list[dict[str, str]]]:
+    """Extract existing job state function."""
     job_id = str(uuid.uuid4())
     job_history = [_job_status_entry("pending")]
     existing_job = run.summary_json.get("import_job")
@@ -438,6 +452,7 @@ def _store_sidecar_upload(
     run_id: uuid.UUID,
     sidecar: PreparedSidecarUpload,
 ) -> tuple[Path | None, str | None]:
+    """Store sidecar upload function."""
     if sidecar.content is None:
         return None, None
     filename = sidecar.stored_filename or sidecar.default_filename

@@ -31,6 +31,7 @@ def create_report_record(
     content_type: str,
     extra_metadata: dict[str, Any] | None = None,
 ) -> Report:
+    """Create report record function."""
     sha256 = hashlib.sha256(content_bytes).hexdigest()
     metadata_json = {
         "generated_at": generated_at.isoformat(),

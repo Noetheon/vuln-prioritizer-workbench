@@ -44,11 +44,13 @@ class AttackTacticBase(SQLModel):
     @field_validator("tactic_id")
     @classmethod
     def validate_tactic_id(cls, value: str) -> str:
+        """Validate the tactic id field."""
         return _validate_tactic_id(value)
 
     @field_validator("name")
     @classmethod
     def validate_name(cls, value: str) -> str:
+        """Validate the name field."""
         return _require_non_empty(value, "name")
 
 
@@ -96,15 +98,18 @@ class AttackTechniqueBase(SQLModel):
     @field_validator("technique_id")
     @classmethod
     def validate_technique_id(cls, value: str) -> str:
+        """Validate the technique id field."""
         return _validate_technique_id(value)
 
     @field_validator("name")
     @classmethod
     def validate_name(cls, value: str) -> str:
+        """Validate the name field."""
         return _require_non_empty(value, "name")
 
     @model_validator(mode="after")
     def validate_tactic_ids(self) -> AttackTechniqueBase:
+        """Validate the tactic ids field."""
         for tactic_id in self.tactic_ids_json:
             _validate_tactic_id(tactic_id)
         return self
@@ -155,6 +160,7 @@ class AttackStixSnapshotBase(SQLModel):
     @field_validator("attack_version", "domain", "bundle_sha256")
     @classmethod
     def validate_required_snapshot_text(cls, value: str, info: Any) -> str:
+        """Validate the required snapshot text field."""
         return _require_non_empty(value, str(info.field_name))
 
 
@@ -208,11 +214,13 @@ class AttackStixTacticBase(SQLModel):
     @field_validator("tactic_id")
     @classmethod
     def validate_tactic_id(cls, value: str) -> str:
+        """Validate the tactic id field."""
         return _validate_tactic_id(value)
 
     @field_validator("name", "stix_id")
     @classmethod
     def validate_required_text(cls, value: str, info: Any) -> str:
+        """Validate the required text field."""
         return _require_non_empty(value, str(info.field_name))
 
 
@@ -265,15 +273,18 @@ class AttackStixTechniqueBase(SQLModel):
     @field_validator("technique_id")
     @classmethod
     def validate_technique_id(cls, value: str) -> str:
+        """Validate the technique id field."""
         return _validate_technique_id(value)
 
     @field_validator("name", "stix_id")
     @classmethod
     def validate_required_text(cls, value: str, info: Any) -> str:
+        """Validate the required text field."""
         return _require_non_empty(value, str(info.field_name))
 
     @model_validator(mode="after")
     def validate_snapshot_tactic_ids(self) -> AttackStixTechniqueBase:
+        """Validate the snapshot tactic ids field."""
         for tactic_id in self.tactic_ids_json:
             _validate_tactic_id(tactic_id)
         return self
@@ -319,6 +330,7 @@ class AttackStixMitigationBase(SQLModel):
     @field_validator("name", "stix_id", "mitigation_id")
     @classmethod
     def validate_required_text(cls, value: str, info: Any) -> str:
+        """Validate the required text field."""
         return _require_non_empty(value, str(info.field_name))
 
 
@@ -359,11 +371,13 @@ class AttackStixTechniqueMitigationBase(SQLModel):
     @field_validator("technique_id")
     @classmethod
     def validate_technique_id(cls, value: str) -> str:
+        """Validate the technique id field."""
         return _validate_technique_id(value)
 
     @field_validator("relationship_id", "mitigation_id")
     @classmethod
     def validate_required_text(cls, value: str, info: Any) -> str:
+        """Validate the required text field."""
         return _require_non_empty(value, str(info.field_name))
 
 
@@ -431,16 +445,19 @@ class CveAttackMappingBase(SQLModel):
     @field_validator("technique_id")
     @classmethod
     def validate_technique_id(cls, value: str) -> str:
+        """Validate the technique id field."""
         return _validate_technique_id(value)
 
     @field_validator("source", "rationale", "defensive_note")
     @classmethod
     def validate_required_text(cls, value: str, info: Any) -> str:
+        """Validate the required text field."""
         return _require_non_empty(value, str(info.field_name))
 
     @field_validator("review_status")
     @classmethod
     def validate_review_status(cls, value: str) -> str:
+        """Validate the review status field."""
         normalized = value.strip()
         if normalized not in ATTACK_REVIEW_STATUSES:
             raise ValueError(f"review_status must be one of {sorted(ATTACK_REVIEW_STATUSES)}.")
@@ -449,6 +466,7 @@ class CveAttackMappingBase(SQLModel):
     @field_validator("mapping_type")
     @classmethod
     def validate_mapping_type(cls, value: str) -> str:
+        """Validate the mapping type field."""
         normalized = value.strip()
         if normalized not in ATTACK_MAPPING_TYPES:
             raise ValueError(f"mapping_type must be one of {sorted(ATTACK_MAPPING_TYPES)}.")
@@ -456,6 +474,7 @@ class CveAttackMappingBase(SQLModel):
 
     @model_validator(mode="after")
     def validate_tactic_ids(self) -> CveAttackMappingBase:
+        """Validate the tactic ids field."""
         for tactic_id in self.tactic_ids_json:
             _validate_tactic_id(tactic_id)
         return self
@@ -538,11 +557,13 @@ class FindingAttackContextBase(SQLModel):
     @field_validator("source", "defensive_note")
     @classmethod
     def validate_required_text(cls, value: str, info: Any) -> str:
+        """Validate the required text field."""
         return _require_non_empty(value, str(info.field_name))
 
     @field_validator("review_status")
     @classmethod
     def validate_review_status(cls, value: str) -> str:
+        """Validate the review status field."""
         normalized = value.strip()
         if normalized not in ATTACK_REVIEW_STATUSES:
             raise ValueError(f"review_status must be one of {sorted(ATTACK_REVIEW_STATUSES)}.")
@@ -550,6 +571,7 @@ class FindingAttackContextBase(SQLModel):
 
     @model_validator(mode="after")
     def validate_context_ids(self) -> FindingAttackContextBase:
+        """Validate the context ids field."""
         for technique_id in self.technique_ids_json:
             _validate_technique_id(technique_id)
         for tactic_id in self.tactic_ids_json:

@@ -19,6 +19,7 @@ from vuln_prioritizer.security_redaction import redact_value
 
 
 def _redacted_json_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Redacted json payload function."""
     redacted, _paths = redact_value(payload)
     return redacted if isinstance(redacted, dict) else {}
 
@@ -27,6 +28,7 @@ class RunRepository:
     """Analysis run, occurrence, and provider snapshot persistence helpers."""
 
     def __init__(self, session: Session) -> None:
+        """Initialize a new instance of RunRepository."""
         self.session = session
 
     def create_provider_snapshot(

@@ -45,6 +45,7 @@ class GitHubIssueCreationError(HTTPException):
         upstream_status_code: int | None = None,
         detail: str,
     ) -> None:
+        """Initialize a new instance of GitHubIssueCreationError."""
         super().__init__(status_code=502, detail=detail)
         self.failure_kind = failure_kind
         self.upstream_status_code = upstream_status_code
@@ -141,6 +142,7 @@ def _selected_findings(
     project_id: uuid.UUID,
     payload: GitHubIssuePreviewCreate,
 ) -> list[Finding]:
+    """Selected findings function."""
     repo = FindingRepository(session)
     if payload.finding_ids:
         findings: list[Finding] = []
@@ -170,6 +172,7 @@ def _preview_item(
     *,
     payload: GitHubIssuePreviewCreate,
 ) -> GitHubIssuePreviewRecord:
+    """Preview item function."""
     priority = _safe_text(str(finding.priority).title())
     title = f"{_safe_text(finding.cve_id)}: {priority} priority remediation"
     labels = [
@@ -207,6 +210,7 @@ def _issue_body(
     evidence_refs: list[str],
     duplicate_key: str,
 ) -> str:
+    """Issue body function."""
     finding_url = f"/api/v1/findings/{finding.id}"
     evidence_lines = [f"- {_safe_text(ref)}" for ref in evidence_refs] or [
         "- No additional evidence references captured."
@@ -263,6 +267,7 @@ def _issue_body(
 
 
 def _evidence_refs(finding: Finding) -> list[str]:
+    """Evidence refs function."""
     refs = [
         f"/api/v1/findings/{finding.id}",
         f"https://nvd.nist.gov/vuln/detail/{finding.cve_id}",
@@ -279,10 +284,12 @@ def _evidence_refs(finding: Finding) -> list[str]:
 
 
 def _extract_evidence_refs(value: Any) -> list[str]:
+    """Extract evidence refs function."""
     redacted, _paths = redact_value(value)
     refs: list[str] = []
 
     def walk(candidate: Any, key_hint: str = "") -> None:
+        """Walk function."""
         if isinstance(candidate, dict):
             for key, child in candidate.items():
                 walk(child, str(key).lower())
@@ -297,6 +304,7 @@ def _extract_evidence_refs(value: Any) -> list[str]:
 
 
 def _looks_like_evidence_ref(value: str, key_hint: str) -> bool:
+    """Looks like evidence ref function."""
     lower = value.lower()
     if value == "[REDACTED]":
         return False
@@ -308,11 +316,13 @@ def _looks_like_evidence_ref(value: str, key_hint: str) -> bool:
 
 
 def _safe_block(value: Any, *, fallback: str) -> str:
+    """Safe block function."""
     text = _safe_text(value).strip()
     return text or fallback
 
 
 def _safe_text(value: Any) -> str:
+    """Safe text function."""
     if value is None:
         return ""
     redacted = redact_text(str(value))
@@ -320,23 +330,27 @@ def _safe_text(value: Any) -> str:
 
 
 def _table_cell(value: Any) -> str:
+    """Table cell function."""
     text = _safe_text(value).strip() or "Not recorded"
     return text.replace("|", "\\|").replace("\n", " ")
 
 
 def _number_label(value: float | None) -> str:
+    """Number label function."""
     if value is None:
         return "Not recorded"
     return f"{value:.2f}".rstrip("0").rstrip(".")
 
 
 def _epss_label(value: float | None) -> str:
+    """Epss label function."""
     if value is None:
         return "Not recorded"
     return f"{value:.4f}".rstrip("0").rstrip(".")
 
 
 def _component_label(finding: Finding) -> str:
+    """Component label function."""
     if finding.component is None:
         return "Not recorded"
     if finding.component.version:
@@ -345,6 +359,7 @@ def _component_label(finding: Finding) -> str:
 
 
 def _asset_label(finding: Finding) -> str:
+    """Asset label function."""
     if finding.asset is None:
         return "Not recorded"
     return finding.asset.name or finding.asset.asset_key

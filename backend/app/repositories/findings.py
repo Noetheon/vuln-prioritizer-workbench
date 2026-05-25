@@ -29,6 +29,7 @@ class FindingRepository:
     """Finding, component, and vulnerability persistence helpers."""
 
     def __init__(self, session: Session) -> None:
+        """Initialize a new instance of FindingRepository."""
         self.session = session
 
     def upsert_component(
@@ -293,6 +294,7 @@ class FindingRepository:
         }
 
     def _count_project_findings_where(self, project_id: uuid.UUID, *criteria: Any) -> int:
+        """Count project findings where method for FindingRepository."""
         statement = (
             select(func.count())
             .select_from(Finding)

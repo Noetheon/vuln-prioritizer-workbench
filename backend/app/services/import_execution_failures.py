@@ -35,6 +35,7 @@ def raise_analysis_failure(
     exc: Exception,
     execution_mode: str = "request",
 ) -> NoReturn:
+    """Raise analysis failure function."""
     analysis_error_message = _sanitize_parser_error_message(str(exc))
     analysis_error = {
         "message": analysis_error_message,

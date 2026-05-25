@@ -8,11 +8,15 @@ from vuln_prioritizer.model_base import StrictModel
 
 
 class InputItem(StrictModel):
+    """Data representation and logic for Input Item."""
+
     cve_id: str
     source_format: str = "cve-list"
 
 
 class InputOccurrence(StrictModel):
+    """Data representation and logic for Input Occurrence."""
+
     cve_id: str
     source_format: str = "cve-list"
     source_id: str | None = Field(default=None, exclude_if=lambda value: value is None)
@@ -51,6 +55,8 @@ class InputOccurrence(StrictModel):
 
 
 class InputSourceSummary(StrictModel):
+    """Data representation and logic for Input Source Summary."""
+
     input_path: str
     input_format: str
     total_rows: int = 0
@@ -62,6 +68,8 @@ class InputSourceSummary(StrictModel):
 
 
 class ParsedInput(BaseModel):
+    """Pydantic model representing Parsed Input."""
+
     input_format: str = "cve-list"
     total_rows: int = 0
     occurrences: list[InputOccurrence] = Field(default_factory=list)
@@ -79,6 +87,8 @@ class ParsedInput(BaseModel):
 
 
 class FindingProvenance(StrictModel):
+    """Data representation and logic for Finding Provenance."""
+
     occurrence_count: int = 0
     active_occurrence_count: int = 0
     suppressed_occurrence_count: int = 0
@@ -99,6 +109,8 @@ class FindingProvenance(StrictModel):
 
 
 class AssetContextRecord(StrictModel):
+    """Data representation and logic for Asset Context Record."""
+
     target_kind: str
     target_ref: str
     asset_id: str
@@ -114,6 +126,8 @@ class AssetContextRecord(StrictModel):
 
 
 class ContextPolicyProfile(StrictModel):
+    """Data representation and logic for Context Policy Profile."""
+
     name: str = "default"
     narrative_only: bool = True
     enterprise_escalation: bool = False
@@ -121,6 +135,7 @@ class ContextPolicyProfile(StrictModel):
     prod_asset_boost: bool = False
 
     def describe(self, provenance: FindingProvenance) -> tuple[str | None, str | None]:
+        """Describe method for ContextPolicyProfile."""
         if provenance.occurrence_count == 0:
             return None, None
 
@@ -183,6 +198,7 @@ class ContextPolicyProfile(StrictModel):
 
 
 def _summarize_values(values: list[str], *, limit: int = 3) -> str:
+    """Summarize values function."""
     if len(values) <= limit:
         return ", ".join(values)
     shown = ", ".join(values[:limit])
@@ -190,6 +206,7 @@ def _summarize_values(values: list[str], *, limit: int = 3) -> str:
 
 
 def _asset_context_unknown(provenance: FindingProvenance) -> bool:
+    """Asset context unknown function."""
     if provenance.occurrence_count == 0:
         return False
     if (
@@ -213,6 +230,7 @@ def _asset_context_unknown(provenance: FindingProvenance) -> bool:
 
 
 def _has_production_environment(provenance: FindingProvenance) -> bool:
+    """Has production environment function."""
     if any(
         environment.lower() in {"prod", "production"}
         for environment in provenance.asset_environments
@@ -226,6 +244,8 @@ def _has_production_environment(provenance: FindingProvenance) -> bool:
 
 
 class VexStatement(StrictModel):
+    """Data representation and logic for Vex Statement."""
+
     source_format: str
     cve_id: str
     status: str

@@ -14,11 +14,14 @@ from app.services.import_execution_types import PreparedImportUpload
 
 @dataclass(frozen=True, slots=True)
 class ParsedPreparedUpload:
+    """Data representation and logic for Parsed Prepared Upload."""
+
     occurrences: list[NormalizedOccurrence]
     parsed_input: ParsedWorkbenchInput
 
 
 def parse_prepared_upload(prepared: PreparedImportUpload) -> ParsedPreparedUpload:
+    """Parse prepared upload function."""
     importer = build_importer_registry().get(prepared.input_type)
     parse_with_metadata = getattr(importer, "parse_with_metadata", None)
     if not callable(parse_with_metadata):
@@ -38,6 +41,7 @@ def parse_prepared_upload(prepared: PreparedImportUpload) -> ParsedPreparedUploa
 
 
 def summary_warnings(summary: dict[str, object] | None) -> list[str]:
+    """Summary warnings function."""
     if summary is None:
         return []
     raw_warnings = summary.get("warnings")
