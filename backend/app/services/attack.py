@@ -7,7 +7,6 @@ from collections import Counter
 from collections.abc import Iterable, Sequence
 from typing import cast
 
-import app.services.attack_support as attack_support
 from app.models import (
     AttackSummaryContextRow,
     AttackSummaryFindingRow,
@@ -19,6 +18,7 @@ from app.models import (
 )
 from app.services.attack_navigator import build_attack_navigator_layer_payload
 from app.services.attack_support import (
+    ATTACK_NAVIGATOR_FILTERS,
     CONFIDENCE_BUCKETS,
     REVIEW_STATUS_BUCKETS,
 )
@@ -46,8 +46,6 @@ from app.services.attack_support import (
 from app.services.attack_support import (
     technique_candidates as _technique_candidates,
 )
-
-ATTACK_NAVIGATOR_FILTERS = attack_support.ATTACK_NAVIGATOR_FILTERS
 
 __all__ = [
     "ATTACK_NAVIGATOR_FILTERS",
