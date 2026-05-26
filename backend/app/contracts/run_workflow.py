@@ -7,8 +7,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-RUN_WORKFLOW_SUMMARY_SCHEMA_VERSION = "run-workflow-summary.v1"
-RUN_WORKFLOW_ERROR_SCHEMA_VERSION = "run-workflow-error.v1"
+RUN_WORKFLOW_SUMMARY_SCHEMA_VERSION: Literal["run-workflow-summary.v1"] = "run-workflow-summary.v1"
+RUN_WORKFLOW_ERROR_SCHEMA_VERSION: Literal["run-workflow-error.v1"] = "run-workflow-error.v1"
 
 PriorityCounts = dict[str, int]
 
