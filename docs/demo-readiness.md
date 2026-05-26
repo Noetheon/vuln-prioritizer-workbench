@@ -70,8 +70,10 @@ safe by default.
   `data/input_fixtures/demo_workspace_openvex.json`,
   `data/demo_provider_snapshot.json`, `data/attack/local_curated_demo_mappings.yml`,
   and seeded waivers in the Workbench service.
-- Frontend preview demo: `frontend/src/lib/demo-data-*` mirrors the same Online
-  Shop scenario for empty local preview mode.
+- Frontend demo entry: the Dashboard shows **Load demo workspace** only when the
+  local backend exposes `/api/v1/workbench/demo` with
+  `DEMO_WORKSPACE_ENABLED=true`; all follow-up data comes from persisted
+  project, run, waiver, finding, and report APIs.
 - Core CVEs: `CVE-2020-1472`, `CVE-2021-44228`, `CVE-2022-22965`,
   `CVE-2023-34362`, `CVE-2023-44487`, `CVE-2024-3094`, and `CVE-2024-4577`.
 - Controlled imperfections are intentional: locked replay is reproducible but

@@ -17,7 +17,6 @@ import {
   VpwSectionHeader,
   VpwStatusBanner,
 } from "@/components/vpw"
-import { DEMO_REPORTS, DEMO_SUMMARY } from "@/lib/demo-data"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   artifactVerificationLabel,
@@ -35,13 +34,11 @@ type DecisionProps = {
   selectedRunSummary: AnalysisRunSummaryPublic | null
   selectedReportRun: AnalysisRunPublic | null
   reports: ReportPublic[]
-  isDemo: boolean
   onCreateReport: (format: "html" | "zip") => Promise<void>
   onDownloadReport: (report: ReportPublic) => Promise<void>
 }
 
 export function ExecutiveDecision({
-  isDemo,
   onCreateReport,
   onDownloadReport,
   projectSummary,
@@ -50,10 +47,8 @@ export function ExecutiveDecision({
   selectedReportRun,
   selectedRunSummary,
 }: DecisionProps) {
-  const effectiveSummary = isDemo
-    ? DEMO_SUMMARY
-    : (selectedRunSummary ?? projectSummary)
-  const effectiveReports = isDemo ? DEMO_REPORTS : reports
+  const effectiveSummary = selectedRunSummary ?? projectSummary
+  const effectiveReports = reports
   const critical = priorityCount(effectiveSummary, "critical")
   const high = priorityCount(effectiveSummary, "high")
   const kevHits = effectiveSummary?.kev_hits ?? 0
@@ -79,9 +74,7 @@ export function ExecutiveDecision({
   const priorityTone: VpwBadgeTone =
     critical > 0 ? "critical" : high > 0 ? "warning" : "success"
   const runId = selectedReportRun?.id.slice(0, 8) ?? "not selected"
-  const decisionStatement = isDemo
-    ? "Demo preview - connect a real project and run to generate evidence-backed decision language."
-    : `${openFindings} open findings require remediation owner assignment. Evidence artifacts for run ${runId} are available for audit review.`
+  const decisionStatement = `${openFindings} open findings require remediation owner assignment. Evidence artifacts for run ${runId} are available for audit review.`
   const evidenceBasis = [
     `Run ${runId}`,
     `Provider snapshot ${providerSnapshotShortId(selectedReportRun, null)}`,
@@ -100,7 +93,10 @@ export function ExecutiveDecision({
       <VpwGrid columns={2}>
         <DecisionBlock label="Problem" value={problem} />
         <DecisionBlock label="Business impact" value={businessImpact} />
-        <DecisionBlock label="Recommended owner action" value={recommendation} />
+        <DecisionBlock
+          label="Recommended owner action"
+          value={recommendation}
+        />
         <DecisionBlock
           label="Priority / SLA"
           tone={priorityTone}
@@ -141,7 +137,7 @@ export function ExecutiveDecision({
           </Button>
         ) : (
           <Button
-            disabled={isDemo || !selectedReportRun}
+            disabled={!selectedReportRun}
             onClick={() => void onCreateReport("html")}
             type="button"
             variant="outline"
@@ -159,7 +155,7 @@ export function ExecutiveDecision({
           </Button>
         ) : (
           <Button
-            disabled={isDemo || !selectedReportRun}
+            disabled={!selectedReportRun}
             onClick={() => void onCreateReport("zip")}
             type="button"
             variant="outline"
@@ -195,7 +191,6 @@ function DecisionBlock({
 }
 
 export function QualityFacts({
-  isDemo,
   providerStatus,
   reports,
   selectedReportRun,
@@ -204,7 +199,6 @@ export function QualityFacts({
   verificationReport,
   verificationReportTarget,
 }: {
-  isDemo: boolean
   providerStatus: ProviderStatusPublic | null
   reports: ReportPublic[]
   selectedReportRun: AnalysisRunPublic | null
@@ -213,12 +207,10 @@ export function QualityFacts({
   verificationReport: ReportVerificationPublic | null
   verificationReportTarget: ReportPublic | null
 }) {
-  const effectiveReports = isDemo ? DEMO_REPORTS : reports
+  const effectiveReports = reports
   const bundle = evidenceBundleReport(effectiveReports)
-  const parserIssueCount = isDemo
-    ? 0
-    : (selectedRunSummary?.parse_errors?.length ?? 0)
-  const ignoredLines = isDemo ? 0 : (selectedRunSummary?.ignored_lines ?? 0)
+  const parserIssueCount = selectedRunSummary?.parse_errors?.length ?? 0
+  const ignoredLines = selectedRunSummary?.ignored_lines ?? 0
   const coverage = contextCoverageFacts(selectedRunSummary, selectedReportRun)
   const htmlReport = reportForFormat(effectiveReports, "html")
   const markdownReport = reportForFormat(effectiveReports, "markdown")
@@ -239,9 +231,7 @@ export function QualityFacts({
             {
               label: "Freshness",
               tone: providerStatus?.status === "ok" ? "success" : "warning",
-              value: isDemo
-                ? "Locked replay - review freshness"
-                : (providerStatus?.status ?? "Unavailable"),
+              value: providerStatus?.status ?? "Unavailable",
               description:
                 providerStatus?.snapshot.id ??
                 selectedReportRun?.provider_snapshot_id ??
@@ -278,7 +268,9 @@ export function QualityFacts({
               label: "Evidence ZIP",
               tone: bundle ? "success" : "warning",
               value: bundle ? "Bundle checksum recorded" : "Not built",
-              description: bundle?.sha256 ?? "Build the bundle to record checksum evidence.",
+              description:
+                bundle?.sha256 ??
+                "Build the bundle to record checksum evidence.",
             },
             {
               label: "Verification",
@@ -287,7 +279,8 @@ export function QualityFacts({
             },
             {
               label: "Report completeness",
-              tone: htmlReport && markdownReport && bundle ? "success" : "warning",
+              tone:
+                htmlReport && markdownReport && bundle ? "success" : "warning",
               value: `${htmlReport ? "HTML generated" : "HTML missing"} · ${markdownReport ? "Markdown generated" : "Markdown missing"} · ${bundle ? "ZIP built" : "ZIP missing"}`,
             },
           ]}

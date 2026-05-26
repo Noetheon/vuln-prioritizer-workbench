@@ -1,18 +1,12 @@
 import { FileText } from "lucide-react"
 import type { ReportPublic, ReportVerificationPublic } from "@/api-client"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  VpwDataTable,
-  VpwEmptyState,
-  VpwTableCard,
-} from "@/components/vpw"
-import { DEMO_REPORTS } from "@/lib/demo-data"
+import { VpwDataTable, VpwEmptyState, VpwTableCard } from "@/components/vpw"
 import { buildReportHistoryColumns } from "./EvidenceCenterHistoryColumns"
 
 type HistoryProps = {
   reports: ReportPublic[]
   reportsLoading: boolean
-  isDemo: boolean
   verificationReport: ReportVerificationPublic | null
   verificationReportTarget: ReportPublic | null
   verificationLoading: boolean
@@ -26,7 +20,6 @@ type HistoryProps = {
 }
 
 export function ReportHistory({
-  isDemo,
   onDownload,
   onVerify,
   mode = "history",
@@ -40,9 +33,8 @@ export function ReportHistory({
   panelEyebrow = "Generated artifacts",
   panelTitle = "Report History",
 }: HistoryProps) {
-  const rows = isDemo ? DEMO_REPORTS : reports
+  const rows = reports
   const columns = buildReportHistoryColumns({
-    isDemo,
     mode,
     onDownload,
     onVerify,
@@ -51,7 +43,7 @@ export function ReportHistory({
     verificationReportTarget,
   })
 
-  if (reportsLoading && !isDemo) {
+  if (reportsLoading) {
     return (
       <VpwTableCard
         className="min-h-80"

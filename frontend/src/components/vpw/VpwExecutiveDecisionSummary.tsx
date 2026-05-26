@@ -16,7 +16,6 @@ export type VpwExecutiveDecisionSummaryProps = {
   priority: string
   decisionStatement: string
   className?: string
-  demo?: boolean
   priorityTone?: VpwBadgeTone
 }
 
@@ -24,7 +23,6 @@ export function VpwExecutiveDecisionSummary({
   businessImpact,
   className,
   decisionStatement,
-  demo = false,
   priority,
   priorityTone = "critical",
   problem,
@@ -32,14 +30,13 @@ export function VpwExecutiveDecisionSummary({
 }: VpwExecutiveDecisionSummaryProps) {
   return (
     <Card className={cn("vpw-card py-0", className)}>
-      <CardHeader className="flex-row items-start justify-between gap-4 pb-3 pt-6">
+      <CardHeader className="pb-3 pt-6">
         <div>
           <CardTitle className="text-lg">Executive Decision Summary</CardTitle>
           <CardDescription>
             Risk translated to business language for CISO review
           </CardDescription>
         </div>
-        {demo ? <VpwBadge tone="warning">Demo preview</VpwBadge> : null}
       </CardHeader>
       <CardContent className="flex flex-col gap-4 pb-6">
         <div className="grid gap-3 lg:grid-cols-2">

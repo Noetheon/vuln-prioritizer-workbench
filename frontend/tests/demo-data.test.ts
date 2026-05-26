@@ -1,91 +1,73 @@
 import assert from "node:assert/strict"
+import { existsSync, readFileSync, readdirSync } from "node:fs"
+import { join, relative } from "node:path"
 import test from "node:test"
+import { fileURLToPath } from "node:url"
 
-import {
-  DEMO_FINDING_ATTACK_CONTEXTS,
-  DEMO_FINDINGS,
-  DEMO_GOVERNANCE_ROLLUPS,
-  DEMO_PROJECT,
-  DEMO_PROVIDER_STATUS,
-  DEMO_REPORTS,
-  DEMO_SUMMARY,
-  DEMO_TOP_SERVICES,
-  DEMO_WAIVERS,
-} from "../src/lib/demo-data.ts"
-import { findingWhyNow } from "../src/lib/finding-urgency-summary.ts"
+const frontendRoot = fileURLToPath(new URL("..", import.meta.url))
+const srcRoot = join(frontendRoot, "src")
 
-test("frontend demo preview mirrors the Online Shop demo workspace story", () => {
-  const cves = new Set(DEMO_FINDINGS.map((finding) => finding.cve_id))
+type SourceFile = {
+  path: string
+  relativePath: string
+}
 
-  assert.equal(DEMO_PROJECT.name, "Online Shop Demo Workspace")
-  assert.equal(DEMO_FINDINGS.length, 24)
-  assert.deepEqual([...cves].sort(), [
-    "CVE-2020-1472",
-    "CVE-2021-44228",
-    "CVE-2022-22965",
-    "CVE-2023-34362",
-    "CVE-2023-44487",
-    "CVE-2024-3094",
-    "CVE-2024-4577",
-  ])
-  assert.equal(DEMO_SUMMARY.finding_count, DEMO_FINDINGS.length)
-  assert.equal(DEMO_SUMMARY.kev_hits, 21)
-  assert.equal(DEMO_TOP_SERVICES[0]?.label, "payments")
-})
+function sourceFiles(dir: string): SourceFile[] {
+  if (!existsSync(dir)) return []
 
-test("frontend demo preview exposes governance, VEX, fixed, and unmapped states", () => {
-  const statuses = new Set(DEMO_FINDINGS.map((finding) => finding.status))
-  const xzFinding = DEMO_FINDINGS.find(
-    (finding) => finding.cve_id === "CVE-2024-3094",
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name)
+    const relativePath = relative(frontendRoot, path)
+
+    if (entry.isDirectory()) {
+      if (relativePath === "src/client") return []
+      return sourceFiles(path)
+    }
+
+    if (!/\.(?:ts|tsx)$/.test(entry.name)) return []
+    if (entry.name.endsWith(".gen.ts")) return []
+
+    return [{ path, relativePath }]
+  })
+}
+
+test("frontend has no static demo data layer", () => {
+  const libRoot = join(srcRoot, "lib")
+  const demoDataFiles = readdirSync(libRoot).filter((name) =>
+    /^demo-data(?:-[a-z-]+)?\.ts$/.test(name),
   )
 
-  assert.ok(statuses.has("accepted"))
-  assert.ok(statuses.has("suppressed"))
-  assert.ok(statuses.has("fixed"))
-  assert.ok(statuses.has("in_review"))
-  assert.equal(DEMO_WAIVERS.length, 4)
-  assert.equal(DEMO_GOVERNANCE_ROLLUPS.waiver_debt?.review_due_count, 1)
-  assert.equal(DEMO_GOVERNANCE_ROLLUPS.waiver_debt?.expiring_soon_count, 1)
-  assert.equal(xzFinding?.attack_mapped, false)
+  assert.deepEqual(demoDataFiles, [])
 })
 
-test("frontend demo preview keeps provider replay and report inventory honest", () => {
-  const filenames = DEMO_REPORTS.map((report) => report.filename)
+test("frontend runtime has no frontend-only demo mode flag", () => {
+  const checkedFiles = [
+    ...sourceFiles(srcRoot),
+    {
+      path: join(frontendRoot, "vite.config.ts"),
+      relativePath: "vite.config.ts",
+    },
+  ]
+  const forbidden = ["DEMO_MODE_ENABLED", "VITE_DEMO_MODE", "__VPW_DEMO_MODE__"]
+  const offenders = checkedFiles.flatMap(({ path, relativePath }) => {
+    const source = readFileSync(path, "utf8")
 
-  assert.equal(DEMO_PROVIDER_STATUS.snapshot.locked_provider_data, true)
-  assert.equal(DEMO_PROVIDER_STATUS.status, "degraded")
-  assert.ok(DEMO_PROVIDER_STATUS.warnings?.[0]?.includes("reproducible"))
-  assert.deepEqual(filenames, [
-    "technical-report.md",
-    "executive-report.html",
-    "analysis-result.v1.json",
-    "findings.csv",
-    "results.sarif",
-    "attack-navigator-layer.json",
-    "evidence-bundle.zip",
-  ])
-  assert.ok(DEMO_REPORTS.every((report) => report.sha256.startsWith("demo-only")))
+    return forbidden
+      .filter((token) => source.includes(token))
+      .map((token) => `${relativePath}: ${token}`)
+  })
+
+  assert.deepEqual(offenders, [])
 })
 
-test("frontend demo ATT&CK mappings are reviewed defensive context only", () => {
-  const rendered = JSON.stringify(DEMO_FINDING_ATTACK_CONTEXTS)
+test("frontend source does not import removed demo data modules", () => {
+  const offenders = sourceFiles(srcRoot).flatMap(({ path, relativePath }) => {
+    const source = readFileSync(path, "utf8")
 
-  assert.match(rendered, /Local curated demo mapping/)
-  assert.match(rendered, /Reviewed defensive context only/)
-  assert.doesNotMatch(rendered, /LLM/i)
-  assert.doesNotMatch(rendered, /exploit/i)
-  assert.doesNotMatch(rendered, /payload/i)
-  assert.equal(DEMO_FINDING_ATTACK_CONTEXTS["demo-f24"], undefined)
-})
+    return source.includes("demo-data")
+      ? [`${relativePath}: demo-data import/reference`]
+      : []
+  })
 
-test("frontend demo preview has signal-derived why-now summaries", () => {
-  for (const finding of DEMO_FINDINGS) {
-    const whyNow = findingWhyNow(finding)
-
-    assert.notEqual(whyNow, finding.recommended_action)
-    assert.match(
-      whyNow,
-      /KEV|EPSS|CVSS|internet-facing|production|accepted risk|VEX|fixed|review|remediation|open/i,
-    )
-  }
+  assert.deepEqual(offenders, [])
 })

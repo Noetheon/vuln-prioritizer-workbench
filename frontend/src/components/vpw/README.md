@@ -70,7 +70,6 @@ Installed VPW product components:
 - `VpwBadge`
 - `VpwBreadcrumbs`
 - `VpwDataTable`
-- `VpwDemoBanner`
 - `VpwEmptyState`
 - `VpwStatusBanner`
 - `VpwToolbar` / `VpwToolbarGroup`

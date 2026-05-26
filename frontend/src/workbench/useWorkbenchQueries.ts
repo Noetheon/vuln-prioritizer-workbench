@@ -12,13 +12,8 @@ import {
   RunsService,
   WaiversService,
 } from "../api-client"
-import {
-  demoFindingDetailForId,
-  demoFindingExplanationForDetail,
-} from "../components/finding-detail/finding-detail-model"
 import { matchesAsset } from "../components/assets/asset-model"
 import { apiErrorMessage } from "../lib/app-errors"
-import { DEMO_MODE_ENABLED } from "../lib/runtime-config"
 import {
   ASSET_FINDINGS_PAGE_LIMIT,
   RUN_DETAIL_POLL_STATUSES,
@@ -79,7 +74,10 @@ export function useProjectDashboardQuery(projectId: string, enabled: boolean) {
   return useQuery({
     enabled: enabled && Boolean(projectId),
     queryFn: ({ signal }) =>
-      ProjectsService.readProjectDashboard({ project_id: projectId }, { signal }),
+      ProjectsService.readProjectDashboard(
+        { project_id: projectId },
+        { signal },
+      ),
     queryKey: workbenchQueryKeys.projectDashboard(projectId),
     retry: false,
     staleTime: 10_000,
@@ -104,10 +102,13 @@ export function useProjectGovernanceRollupsQuery(projectId: string) {
   return useQuery({
     enabled: Boolean(projectId),
     queryFn: ({ signal }) =>
-      ProjectsService.readProjectGovernanceRollups({
-        project_id: projectId,
-        limit: 5,
-      }, { signal }),
+      ProjectsService.readProjectGovernanceRollups(
+        {
+          project_id: projectId,
+          limit: 5,
+        },
+        { signal },
+      ),
     queryKey: workbenchQueryKeys.projectGovernanceRollups(projectId),
     retry: false,
     staleTime: 15_000,
@@ -119,10 +120,13 @@ export function useProjectRunsQuery(projectId: string, enabled: boolean) {
     enabled: enabled && Boolean(projectId),
     queryFn: ({ signal }) =>
       readAllPages((pagination) =>
-        RunsService.readProjectRuns({
-          project_id: projectId,
-          ...pagination,
-        }, { signal }),
+        RunsService.readProjectRuns(
+          {
+            project_id: projectId,
+            ...pagination,
+          },
+          { signal },
+        ),
       ),
     queryKey: workbenchQueryKeys.projectRuns(projectId),
     retry: false,
@@ -130,19 +134,18 @@ export function useProjectRunsQuery(projectId: string, enabled: boolean) {
   })
 }
 
-export function useProjectAssetsQuery({
-  projectId,
-}: {
-  projectId: string
-}) {
+export function useProjectAssetsQuery({ projectId }: { projectId: string }) {
   return useQuery({
     enabled: Boolean(projectId),
     queryFn: ({ signal }) =>
       readAllPages((pagination) =>
-        AssetsService.readProjectAssets({
-          project_id: projectId,
-          ...pagination,
-        }, { signal }),
+        AssetsService.readProjectAssets(
+          {
+            project_id: projectId,
+            ...pagination,
+          },
+          { signal },
+        ),
       ),
     queryKey: workbenchQueryKeys.assets(projectId),
     retry: false,
@@ -168,13 +171,16 @@ export function useAssetFindingsQuery({
       let total = 0
       let received = 0
       do {
-        const page = await FindingsService.readProjectFindings({
-          asset_id: asset.id,
-          limit: ASSET_FINDINGS_PAGE_LIMIT,
-          offset,
-          project_id: projectId,
-          sort: "operational",
-        }, { signal })
+        const page = await FindingsService.readProjectFindings(
+          {
+            asset_id: asset.id,
+            limit: ASSET_FINDINGS_PAGE_LIMIT,
+            offset,
+            project_id: projectId,
+            sort: "operational",
+          },
+          { signal },
+        )
         findings.push(
           ...page.data.filter((finding) => matchesAsset(finding, asset)),
         )
@@ -215,10 +221,13 @@ export function useWaiversQuery(projectId: string, enabled: boolean) {
     enabled: enabled && Boolean(projectId),
     queryFn: ({ signal }) =>
       readAllPages((pagination) =>
-        WaiversService.readProjectWaivers({
-          project_id: projectId,
-          ...pagination,
-        }, { signal }),
+        WaiversService.readProjectWaivers(
+          {
+            project_id: projectId,
+            ...pagination,
+          },
+          { signal },
+        ),
       ),
     queryKey: workbenchQueryKeys.waivers(projectId),
     retry: false,
@@ -232,7 +241,8 @@ export function useFindingsQuery(
 ) {
   return useQuery({
     enabled,
-    queryFn: ({ signal }) => FindingsService.readProjectFindings(params, { signal }),
+    queryFn: ({ signal }) =>
+      FindingsService.readProjectFindings(params, { signal }),
     queryKey: workbenchQueryKeys.findings(params),
     retry: false,
     staleTime: 10_000,
@@ -246,26 +256,21 @@ export function useFindingDetailQuery(findingId: string | null) {
       if (!findingId) {
         throw new Error("findingId is required")
       }
-      const demoDetail = DEMO_MODE_ENABLED && findingId.startsWith("demo-")
-        ? demoFindingDetailForId(findingId)
-        : null
-      if (demoDetail) {
-        return {
-          detail: demoDetail,
-          explanation: demoFindingExplanationForDetail(demoDetail),
-          explanationWarning: "",
-        }
-      }
-
-      const detail = await FindingsService.readFinding({
-        finding_id: findingId,
-      }, { signal })
+      const detail = await FindingsService.readFinding(
+        {
+          finding_id: findingId,
+        },
+        { signal },
+      )
       let explanation: FindingExplanationPublic | null = null
       let explanationWarning = ""
       try {
-        explanation = await FindingsService.explainFinding({
-          finding_id: findingId,
-        }, { signal })
+        explanation = await FindingsService.explainFinding(
+          {
+            finding_id: findingId,
+          },
+          { signal },
+        )
       } catch (caught) {
         if (signal.aborted) {
           throw caught

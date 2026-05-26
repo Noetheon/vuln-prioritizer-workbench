@@ -5,14 +5,6 @@ import { WaiversWorkbench } from "../../components/waivers/WaiversWorkbench"
 import type { WaiverDrawerMode } from "../../components/waivers"
 import { apiErrorMessage } from "../../lib/app-errors"
 import {
-  DEMO_FINDINGS,
-  DEMO_GOVERNANCE_ROLLUPS,
-  DEMO_PROJECT,
-  DEMO_SUMMARY,
-  DEMO_WAIVERS,
-} from "../../lib/demo-data"
-import { DEMO_MODE_ENABLED } from "../../lib/runtime-config"
-import {
   validateWaiverForm,
   waiverFormFromWaiver,
   type WaiverFormState,
@@ -21,10 +13,7 @@ import {
   waiverScopeLabel,
 } from "../../lib/waiver-view"
 import { useWorkbenchContext } from "../WorkbenchContext"
-import {
-  waiverDebtRows,
-  waiverDebtSummaryRows,
-} from "../route-utils"
+import { waiverDebtRows, waiverDebtSummaryRows } from "../route-utils"
 import {
   useProjectGovernanceRollupsQuery,
   useProjectSummaryQuery,
@@ -42,12 +31,7 @@ function WaiversRouteContent() {
     selectedProjectId,
     setSelectedProjectId,
   } = useWorkbenchContext()
-  const isDemoMode =
-    DEMO_MODE_ENABLED &&
-    !projectListLoading &&
-    projects.length === 0 &&
-    !selectedProject
-  const queryProjectId = isDemoMode ? "" : selectedProjectId
+  const queryProjectId = selectedProjectId
   const projectSummaryQuery = useProjectSummaryQuery(queryProjectId)
   const projectGovernanceRollupsQuery =
     useProjectGovernanceRollupsQuery(queryProjectId)
@@ -102,7 +86,7 @@ function WaiversRouteContent() {
       }),
   })
 
-  const waivers = isDemoMode ? DEMO_WAIVERS : (waiversQuery.data?.data ?? [])
+  const waivers = waiversQuery.data?.data ?? []
   const selectedWaiver = useMemo(
     () => waivers.find((waiver) => waiver.id === selectedWaiverId) ?? null,
     [selectedWaiverId, waivers],
@@ -113,9 +97,6 @@ function WaiversRouteContent() {
   }, [waiverDrawerMode])
 
   function refreshWaivers() {
-    if (isDemoMode) {
-      return
-    }
     if (!selectedProjectId) {
       return
     }
@@ -168,10 +149,6 @@ function WaiversRouteContent() {
       setWaiverActionError(validationError)
       return
     }
-    if (isDemoMode) {
-      setWaiverActionMessage("Demo preview risk decisions are read-only.")
-      return
-    }
     if (!selectedProjectId) {
       setWaiverActionError("Select a project before recording accepted risk.")
       return
@@ -207,11 +184,6 @@ function WaiversRouteContent() {
       setWaiverActionError("Select a risk acceptance before updating it.")
       return
     }
-    if (isDemoMode) {
-      setWaiverActionMessage("Demo preview risk decisions are read-only.")
-      return
-    }
-
     try {
       const waiver = await updateWaiverMutation.mutateAsync({
         waiverId: selectedWaiverId,
@@ -231,12 +203,6 @@ function WaiversRouteContent() {
   async function expireWaiver(waiver: WaiverPublic) {
     setWaiverActionError("")
     setWaiverActionMessage("")
-    if (isDemoMode) {
-      setSelectedWaiverId(waiver.id)
-      setWaiverDrawerMode("detail")
-      setWaiverActionMessage("Demo preview risk decisions are read-only.")
-      return
-    }
     try {
       const expired = await expireWaiverMutation.mutateAsync(waiver.id)
       setSelectedWaiverId(expired.id)
@@ -252,18 +218,9 @@ function WaiversRouteContent() {
     }
   }
 
-  const governanceRollups = isDemoMode
-    ? DEMO_GOVERNANCE_ROLLUPS
-    : (projectGovernanceRollupsQuery.data ?? null)
-  const effectiveProjectId = isDemoMode ? DEMO_PROJECT.id : selectedProjectId
-  const effectiveProjects = isDemoMode ? [DEMO_PROJECT] : projects
-  const effectiveSelectedProject = isDemoMode ? DEMO_PROJECT : selectedProject
-  const effectiveFindings = isDemoMode
-    ? DEMO_FINDINGS
-    : (findingsQuery.data?.data ?? [])
-  const effectiveSummary = isDemoMode
-    ? DEMO_SUMMARY
-    : (projectSummaryQuery.data ?? null)
+  const governanceRollups = projectGovernanceRollupsQuery.data ?? null
+  const effectiveFindings = findingsQuery.data?.data ?? []
+  const effectiveSummary = projectSummaryQuery.data ?? null
 
   return (
     <section className="w-full">
@@ -279,9 +236,6 @@ function WaiversRouteContent() {
         onExpireWaiver={(waiver) => void expireWaiver(waiver)}
         onFieldChange={updateWaiverFormField}
         onProjectChange={(projectId) => {
-          if (isDemoMode) {
-            return
-          }
           setSelectedProjectId(projectId)
           setWaiverDrawerMode(null)
           setSelectedWaiverId("")
@@ -295,11 +249,11 @@ function WaiversRouteContent() {
         closeWaiverDrawer={closeWaiverDrawer}
         projectListLoading={projectListLoading}
         projectSummary={effectiveSummary}
-        projects={effectiveProjects}
+        projects={projects}
         selectedWaiver={selectedWaiver}
         selectedWaiverId={selectedWaiverId}
-        selectedProject={effectiveSelectedProject}
-        selectedProjectId={effectiveProjectId}
+        selectedProject={selectedProject}
+        selectedProjectId={selectedProjectId}
         waiverActionError={waiverActionError}
         waiverActionLoading={
           createWaiverMutation.isPending ||
@@ -328,11 +282,10 @@ function WaiversRouteContent() {
             : "")
         }
         waiversLoading={
-          !isDemoMode &&
-          (waiversQuery.isLoading ||
-            waiversQuery.isFetching ||
-            projectGovernanceRollupsQuery.isLoading ||
-            projectGovernanceRollupsQuery.isFetching)
+          waiversQuery.isLoading ||
+          waiversQuery.isFetching ||
+          projectGovernanceRollupsQuery.isLoading ||
+          projectGovernanceRollupsQuery.isFetching
         }
       />
     </section>

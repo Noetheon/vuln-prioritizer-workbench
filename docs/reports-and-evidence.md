@@ -33,8 +33,9 @@ The current report surface supports:
 | ATT&CK Navigator | Defensive layer for mapped techniques when ATT&CK context exists. |
 | Evidence ZIP Bundle | Bundle containing reports, source artifacts, manifest, and SHA256 checksums. |
 
-Available formats depend on the selected run and report action state. Demo data
-is labeled as demo-only and should not be presented as production evidence.
+Available formats depend on the selected run and report action state. The local
+demo workspace is seeded through the backend and should be treated as sample
+evidence, not production evidence.
 
 ## Evidence ZIP Bundle
 

@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VpwDataTable } from "./VpwDataTable"
-import { VpwDemoBanner } from "./VpwDemoBanner"
 import { VpwEmptyState } from "./VpwEmptyState"
 import { VpwFilterBar } from "./VpwFilterBar"
 import { VpwGrid, VpwSection } from "./VpwLayout"
@@ -65,14 +64,13 @@ export function VpwDesignSystemShowcaseStates() {
 
         <div className="vpw-card flex flex-col gap-5 p-5">
           <VpwSectionHeader
-            description="Demo, empty, loading, success and error states share one token set."
+            description="Empty, loading, success and error states share one token set."
             eyebrow="States"
             title="Product State Rules"
           />
-          <VpwDemoBanner>
-            <strong>Demo preview</strong> - sample data only, not production
-            evidence.
-          </VpwDemoBanner>
+          <VpwStatusBanner title="Workspace sample loaded" tone="info">
+            Sample state copy stays tied to persisted project evidence.
+          </VpwStatusBanner>
           <VpwEmptyState
             description="Import project data to populate this queue."
             title="No findings yet"

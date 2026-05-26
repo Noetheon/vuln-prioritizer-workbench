@@ -168,7 +168,7 @@ The following are intentionally not backend or API contracts:
 - lazy-loading and bundle boundaries
 - VPW component composition inside routes
 - Dashboard chart chunking and Recharts placement
-- demo-only frontend data used when no project exists
+- Dashboard demo workspace controls that call the backend seed/reset endpoint
 
 Backend/API contracts are the generated OpenAPI surface, persisted models,
 report/evidence artifacts, schemas, and tested response behavior.

@@ -11,7 +11,6 @@ import {
   VpwSection,
   VpwStatusBanner,
 } from "@/components/vpw"
-import { DEMO_PROJECT, DEMO_REPORTS, DEMO_RUNS } from "@/lib/demo-data"
 import { formatReportDateTime, reportFormatLabel } from "@/lib/report-format"
 import {
   evidenceBundleReport,
@@ -23,7 +22,6 @@ type ManifestProps = {
   selectedReportRun: AnalysisRunPublic | null
   reports: ReportPublic[]
   providerStatus: ProviderStatusPublic | null
-  isDemo: boolean
   verificationReport: ReportVerificationPublic | null
   verificationReportTarget: ReportPublic | null
   verificationLoading: boolean
@@ -32,7 +30,6 @@ type ManifestProps = {
 }
 
 export function ManifestPreview({
-  isDemo,
   onDownload,
   onVerify,
   providerStatus,
@@ -43,18 +40,15 @@ export function ManifestPreview({
   verificationReport,
   verificationReportTarget,
 }: ManifestProps) {
-  const project = isDemo ? DEMO_PROJECT : selectedProject
-  const run = isDemo ? DEMO_RUNS[0] : selectedReportRun
-  const effectiveReports = isDemo ? DEMO_REPORTS : reports
+  const project = selectedProject
+  const run = selectedReportRun
+  const effectiveReports = reports
   const zipReport = evidenceBundleReport(effectiveReports)
   const providerSources =
-    providerStatus?.snapshot.selected_sources?.join(", ") ??
-    (isDemo ? "nvd, epss, kev" : "Unavailable")
-  const checksumStatus = isDemo
-    ? "Demo preview - not real checksums"
-    : zipReport?.sha256
-      ? zipReport.sha256
-      : "Not generated yet"
+    providerStatus?.snapshot.selected_sources?.join(", ") ?? "Unavailable"
+  const checksumStatus = zipReport?.sha256
+    ? zipReport.sha256
+    : "Not generated yet"
   const matchesVerifiedBundle =
     Boolean(zipReport) && verificationReportTarget?.id === zipReport?.id
   const verifiedSummary = matchesVerifiedBundle
@@ -63,9 +57,8 @@ export function ManifestPreview({
   const verifiedFiles = Number(verifiedSummary.verified_files ?? 0)
   const modifiedFiles = Number(verifiedSummary.modified_files ?? 0)
   const missingFiles = Number(verifiedSummary.missing_files ?? 0)
-  const verificationStatus = isDemo
-    ? "Demo preview"
-    : matchesVerifiedBundle && verificationLoading
+  const verificationStatus =
+    matchesVerifiedBundle && verificationLoading
       ? "Verification running"
       : matchesVerifiedBundle &&
           verificationReport &&
@@ -76,20 +69,19 @@ export function ManifestPreview({
           : zipReport
             ? "Ready for verification"
             : "Not generated yet"
-  const verificationTone =
-    verificationStatus.startsWith("Verified")
-      ? "success"
-      : verificationStatus.startsWith("Verification failed")
-        ? "critical"
-        : zipReport
-          ? "warning"
-          : "info"
+  const verificationTone = verificationStatus.startsWith("Verified")
+    ? "success"
+    : verificationStatus.startsWith("Verification failed")
+      ? "critical"
+      : zipReport
+        ? "warning"
+        : "info"
 
   return (
     <VpwSection>
       <VpwStatusBanner
         action={
-          zipReport && !isDemo ? (
+          zipReport ? (
             <Button
               aria-busy={verificationLoading}
               disabled={verificationLoading}
@@ -109,14 +101,9 @@ export function ManifestPreview({
       <VpwEvidenceManifestCard
         checksumStatus={checksumStatus}
         className="h-full"
-        demo={isDemo}
-        downloadDisabled={isDemo || !zipReport}
+        downloadDisabled={!zipReport}
         downloadLabel={
-          isDemo
-            ? "Demo manifest"
-            : zipReport
-              ? "Download Evidence ZIP"
-              : "Generate ZIP first"
+          zipReport ? "Download Evidence ZIP" : "Generate ZIP first"
         }
         files={effectiveReports.map((report) => ({
           label: reportFormatLabel(report.format),
@@ -127,9 +114,7 @@ export function ManifestPreview({
             ? formatReportDateTime(zipReport.created_at)
             : "Not generated yet"
         }
-        onDownload={
-          !isDemo && zipReport ? () => onDownload(zipReport) : undefined
-        }
+        onDownload={zipReport ? () => onDownload(zipReport) : undefined}
         project={project?.name ?? "None selected"}
         providerSources={providerSources}
         runId={run ? run.id : "Not selected"}

@@ -278,15 +278,12 @@ export function providerSnapshotLabel(
 }
 
 export function evidenceReadinessLabel({
-  isDemo,
   reportActionsEnabled,
   selectedReportRun,
 }: {
-  isDemo: boolean
   reportActionsEnabled: boolean
   selectedReportRun: AnalysisRunPublic | null
 }) {
-  if (isDemo) return "Demo mode"
   if (!selectedReportRun) return "No import run selected"
   if (selectedReportRun.status === "failed") return "Run failed"
   if (reportActionsEnabled) return "Ready for generation"
@@ -294,7 +291,7 @@ export function evidenceReadinessLabel({
 }
 
 export function evidenceReadinessTone(label: string): VpwBadgeTone {
-  if (label === "Ready for generation" || label === "Demo mode") {
+  if (label === "Ready for generation") {
     return "success"
   }
   if (label === "Run failed") return "critical"
@@ -370,11 +367,7 @@ export function runBadgeTone(
   return "neutral"
 }
 
-export function runMetricTone(
-  run: AnalysisRunPublic | null,
-  isDemo: boolean,
-): VpwCompactTone {
-  if (isDemo) return "success"
+export function runMetricTone(run: AnalysisRunPublic | null): VpwCompactTone {
   if (!run) return "info"
   return runBadgeTone(run.status)
 }

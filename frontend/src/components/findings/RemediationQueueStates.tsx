@@ -14,7 +14,6 @@ type RemediationQueueStatesProps = {
   displayFindings: FindingPublic[]
   findingsError: string
   hasError: boolean
-  isDemo: boolean
   isLoading: boolean
   onClearFilters: () => void
   projects: ProjectPublic[]
@@ -26,7 +25,6 @@ export function RemediationQueueStates({
   displayFindings,
   findingsError,
   hasError,
-  isDemo,
   isLoading,
   onClearFilters,
   projects,
@@ -47,7 +45,7 @@ export function RemediationQueueStates({
         </VpwPanel>
       ) : null}
 
-      {!isLoading && !hasError && !isDemo && projects.length === 0 ? (
+      {!isLoading && !hasError && projects.length === 0 ? (
         <VpwEmptyState
           action={
             <Button asChild>
@@ -62,7 +60,6 @@ export function RemediationQueueStates({
 
       {!isLoading &&
       !hasError &&
-      !isDemo &&
       selectedProject &&
       displayFindings.length === 0 &&
       !activeFindingFilters ? (

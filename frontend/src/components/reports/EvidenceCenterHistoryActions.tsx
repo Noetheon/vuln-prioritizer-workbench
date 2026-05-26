@@ -8,14 +8,12 @@ import {
 } from "@/components/ui/tooltip"
 
 export function ReportHistoryActionsCell({
-  isDemo,
   onDownload,
   onVerify,
   report,
   verificationLoading,
   verificationReportTarget,
 }: {
-  isDemo: boolean
   onDownload: (report: ReportPublic) => void
   onVerify: (report: ReportPublic) => void
   report: ReportPublic
@@ -27,7 +25,7 @@ export function ReportHistoryActionsCell({
 
   return (
     <div className="vpw-table-actions">
-      {report.format === "zip" && !isDemo ? (
+      {report.format === "zip" ? (
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -51,8 +49,7 @@ export function ReportHistoryActionsCell({
           <Button
             aria-label={`Download ${report.filename}`}
             className="vpw-table-action-button"
-            disabled={isDemo}
-            onClick={() => !isDemo && onDownload(report)}
+            onClick={() => onDownload(report)}
             size="icon-sm"
             type="button"
             variant="outline"
@@ -67,7 +64,6 @@ export function ReportHistoryActionsCell({
           <Button
             aria-label={`Copy checksum for ${report.filename}`}
             className="vpw-table-action-button"
-            disabled={isDemo}
             onClick={() => void navigator.clipboard.writeText(report.sha256)}
             size="icon-sm"
             type="button"

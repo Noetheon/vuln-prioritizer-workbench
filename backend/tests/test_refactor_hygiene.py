@@ -1169,24 +1169,33 @@ def test_import_format_metadata_is_split_by_contract_surface() -> None:
         assert len(source.splitlines()) <= 300
 
 
-def test_frontend_demo_data_is_split_by_product_surface() -> None:
+def test_frontend_static_demo_data_layer_is_removed() -> None:
     lib_root = REPO_ROOT / "frontend/src/lib"
-    facade_source = (lib_root / "demo-data.ts").read_text(encoding="utf-8")
-    expected_slices = {
-        "demo-data-attack-contexts.ts": "export const DEMO_FINDING_ATTACK_CONTEXTS",
-        "demo-data-findings.ts": "export const DEMO_FINDINGS",
-        "demo-data-project.ts": "export const DEMO_PROJECT_ID",
-        "demo-data-reports.ts": "export const DEMO_REPORTS",
+    demo_data_files = sorted(path.name for path in lib_root.glob("demo-data*.ts"))
+    frontend_files = [
+        path
+        for path in (REPO_ROOT / "frontend/src").rglob("*")
+        if path.suffix in {".ts", ".tsx"}
+        and "frontend/src/client" not in path.as_posix()
+        and not path.name.endswith(".gen.ts")
+    ]
+    frontend_files.append(REPO_ROOT / "frontend/vite.config.ts")
+    forbidden_tokens = {
+        "DEMO_MODE_ENABLED",
+        "VITE_DEMO_MODE",
+        "__VPW_DEMO_MODE__",
+        "demo-data",
     }
+    offenders = []
 
-    assert len(facade_source.splitlines()) <= 20
-    assert "export const DEMO_FINDINGS" not in facade_source
-    assert "export const DEMO_REPORTS" not in facade_source
-    for filename, symbol in expected_slices.items():
-        source = (lib_root / filename).read_text(encoding="utf-8")
-        assert symbol in source
-        assert filename.removesuffix(".ts") in facade_source
-        assert len(source.splitlines()) <= 260
+    for path in frontend_files:
+        source = path.read_text(encoding="utf-8")
+        for token in forbidden_tokens:
+            if token in source:
+                offenders.append(f"{path.relative_to(REPO_ROOT)}: {token}")
+
+    assert demo_data_files == []
+    assert offenders == []
 
 
 def test_import_step_and_run_detail_tabs_are_split_by_surface() -> None:
@@ -1538,7 +1547,6 @@ def test_finding_detail_model_is_split_by_behavior() -> None:
     )
     expected_top_slices = {
         "finding-detail-attack-model.ts": "export function attackTechniqueRows",
-        "finding-detail-demo-model.ts": "export function demoFindingDetailForId",
         "finding-detail-evidence-model.ts": "finding-detail-evidence-rows-model",
         "finding-detail-shared.ts": "export function findingHeroSummary",
     }
