@@ -3,6 +3,107 @@
 export const AnalysisRunPublicSchema = {
     description: 'Public analysis run response shape.',
     properties: {
+        analysis_error: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowFailure'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        asset_context: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Context'
+        },
+        asset_context_error: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowFailure'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        asset_context_upload: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowUploadRef'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        attack_mapped_cves: {
+            default: 0,
+            title: 'Attack Mapped Cves',
+            type: 'integer'
+        },
+        attack_mapping_file: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Attack Mapping File'
+        },
+        attack_source: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Attack Source'
+        },
+        background_error: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowFailure'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        counts_by_priority: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Counts By Priority',
+            type: 'object'
+        },
+        created_findings: {
+            default: 0,
+            title: 'Created Findings',
+            type: 'integer'
+        },
+        dedup_summary: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowDedupSummary'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         error_json: {
             additionalProperties: true,
             title: 'Error Json',
@@ -31,6 +132,11 @@ export const AnalysisRunPublicSchema = {
             ],
             title: 'Filename'
         },
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
         finished_at: {
             anyOf: [
                 {
@@ -48,16 +154,94 @@ export const AnalysisRunPublicSchema = {
             title: 'Id',
             type: 'string'
         },
+        ignored_lines: {
+            default: 0,
+            title: 'Ignored Lines',
+            type: 'integer'
+        },
+        import_job: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowJob'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        input_sha256: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Input Sha256'
+        },
         input_type: {
             maxLength: 80,
             minLength: 1,
             title: 'Input Type',
             type: 'string'
         },
+        input_upload: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowUploadRef'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        kev_hits: {
+            default: 0,
+            title: 'Kev Hits',
+            type: 'integer'
+        },
+        locked_provider_data: {
+            default: false,
+            title: 'Locked Provider Data',
+            type: 'boolean'
+        },
+        occurrence_count: {
+            default: 0,
+            title: 'Occurrence Count',
+            type: 'integer'
+        },
         project_id: {
             format: 'uuid',
             title: 'Project Id',
             type: 'string'
+        },
+        provider_degraded: {
+            default: false,
+            title: 'Provider Degraded',
+            type: 'boolean'
+        },
+        provider_snapshot_file: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Snapshot File'
+        },
+        provider_snapshot_hash: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Snapshot Hash'
         },
         provider_snapshot_id: {
             anyOf: [
@@ -70,6 +254,11 @@ export const AnalysisRunPublicSchema = {
                 }
             ],
             title: 'Provider Snapshot Id'
+        },
+        rows_read: {
+            default: 0,
+            title: 'Rows Read',
+            type: 'integer'
         },
         started_at: {
             format: 'date-time',
@@ -84,6 +273,81 @@ export const AnalysisRunPublicSchema = {
             additionalProperties: true,
             title: 'Summary Json',
             type: 'object'
+        },
+        suppressed_by_vex: {
+            default: 0,
+            title: 'Suppressed By Vex',
+            type: 'integer'
+        },
+        updated_findings: {
+            default: 0,
+            title: 'Updated Findings',
+            type: 'integer'
+        },
+        vex: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex'
+        },
+        vex_error: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowFailure'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        vex_upload: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowUploadRef'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        warnings: {
+            items: {
+                type: 'string'
+            },
+            title: 'Warnings',
+            type: 'array'
+        },
+        workflow_error: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowErrorV1'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        workflow_error_schema_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Workflow Error Schema Version'
+        },
+        workflow_schema_version: {
+            default: 'run-workflow-summary.v1',
+            title: 'Workflow Schema Version',
+            type: 'string'
         }
     },
     required: [
@@ -125,6 +389,85 @@ export const AnalysisRunSummaryPublicSchema = {
             ],
             title: 'Analysis Decision Scope'
         },
+        analysis_error: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowFailure'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        asset_context: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Context'
+        },
+        asset_context_error: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowFailure'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        asset_context_upload: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowUploadRef'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        attack_mapped_cves: {
+            default: 0,
+            title: 'Attack Mapped Cves',
+            type: 'integer'
+        },
+        attack_mapping_file: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Attack Mapping File'
+        },
+        attack_source: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Attack Source'
+        },
+        background_error: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowFailure'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         counts_by_priority: {
             additionalProperties: {
                 type: 'integer'
@@ -138,9 +481,14 @@ export const AnalysisRunSummaryPublicSchema = {
             type: 'integer'
         },
         dedup_summary: {
-            additionalProperties: true,
-            title: 'Dedup Summary',
-            type: 'object'
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowDedupSummary'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         },
         error_json: {
             additionalProperties: true,
@@ -186,23 +534,49 @@ export const AnalysisRunSummaryPublicSchema = {
             type: 'integer'
         },
         import_job: {
-            additionalProperties: true,
-            title: 'Import Job',
-            type: 'object'
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowJob'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        input_sha256: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Input Sha256'
         },
         input_type: {
             title: 'Input Type',
             type: 'string'
         },
         input_upload: {
-            additionalProperties: true,
-            title: 'Input Upload',
-            type: 'object'
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowUploadRef'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         },
         kev_hits: {
             default: 0,
             title: 'Kev Hits',
             type: 'integer'
+        },
+        locked_provider_data: {
+            default: false,
+            title: 'Locked Provider Data',
+            type: 'boolean'
         },
         occurrence_count: {
             default: 0,
@@ -237,6 +611,28 @@ export const AnalysisRunSummaryPublicSchema = {
             title: 'Provider Degraded',
             type: 'boolean'
         },
+        provider_snapshot_file: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Snapshot File'
+        },
+        provider_snapshot_hash: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Snapshot Hash'
+        },
         provider_snapshot_id: {
             anyOf: [
                 {
@@ -248,6 +644,11 @@ export const AnalysisRunSummaryPublicSchema = {
                 }
             ],
             title: 'Provider Snapshot Id'
+        },
+        rows_read: {
+            default: 0,
+            title: 'Rows Read',
+            type: 'integer'
         },
         started_at: {
             format: 'date-time',
@@ -262,10 +663,80 @@ export const AnalysisRunSummaryPublicSchema = {
             title: 'Summary Json',
             type: 'object'
         },
+        suppressed_by_vex: {
+            default: 0,
+            title: 'Suppressed By Vex',
+            type: 'integer'
+        },
         updated_findings: {
             default: 0,
             title: 'Updated Findings',
             type: 'integer'
+        },
+        vex: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex'
+        },
+        vex_error: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowFailure'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        vex_upload: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowUploadRef'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        warnings: {
+            items: {
+                type: 'string'
+            },
+            title: 'Warnings',
+            type: 'array'
+        },
+        workflow_error: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowErrorV1'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        workflow_error_schema_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Workflow Error Schema Version'
+        },
+        workflow_schema_version: {
+            default: 'run-workflow-summary.v1',
+            title: 'Workflow Schema Version',
+            type: 'string'
         }
     },
     required: [
@@ -4709,6 +5180,519 @@ export const ReportsPublicSchema = {
         'count'
     ],
     title: 'ReportsPublic',
+    type: 'object'
+} as const;
+
+export const RunWorkflowDedupDecisionSchema = {
+    additionalProperties: true,
+    description: 'One sampled import deduplication decision.',
+    properties: {
+        action: {
+            title: 'Action',
+            type: 'string'
+        },
+        asset_ref: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Ref'
+        },
+        component_identity: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Identity'
+        },
+        cve: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cve'
+        },
+        dedup_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Dedup Key'
+        },
+        finding_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Finding Id'
+        },
+        source_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Id'
+        }
+    },
+    required: [
+        'action'
+    ],
+    title: 'RunWorkflowDedupDecision',
+    type: 'object'
+} as const;
+
+export const RunWorkflowDedupSummarySchema = {
+    additionalProperties: true,
+    description: 'Import deduplication summary for a Workbench run.',
+    properties: {
+        created_findings: {
+            default: 0,
+            title: 'Created Findings',
+            type: 'integer'
+        },
+        decision_count: {
+            default: 0,
+            title: 'Decision Count',
+            type: 'integer'
+        },
+        decision_sample_limit: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Decision Sample Limit'
+        },
+        decisions: {
+            items: {
+                $ref: '#/components/schemas/RunWorkflowDedupDecision'
+            },
+            title: 'Decisions',
+            type: 'array'
+        },
+        key_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Key Version'
+        },
+        omitted_decisions: {
+            default: 0,
+            title: 'Omitted Decisions',
+            type: 'integer'
+        },
+        reused_findings: {
+            default: 0,
+            title: 'Reused Findings',
+            type: 'integer'
+        },
+        updated_findings: {
+            default: 0,
+            title: 'Updated Findings',
+            type: 'integer'
+        }
+    },
+    title: 'RunWorkflowDedupSummary',
+    type: 'object'
+} as const;
+
+export const RunWorkflowErrorV1Schema = {
+    additionalProperties: true,
+    description: 'Typed v1 contract for Workbench run error metadata.',
+    properties: {
+        analysis_error: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowFailure'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        asset_context_error: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowFailure'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        background_error: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowFailure'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        created_findings: {
+            default: 0,
+            title: 'Created Findings',
+            type: 'integer'
+        },
+        ignored_lines: {
+            default: 0,
+            title: 'Ignored Lines',
+            type: 'integer'
+        },
+        import_job: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowJob'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        parse_errors: {
+            items: {
+                $ref: '#/components/schemas/RunWorkflowParseError'
+            },
+            title: 'Parse Errors',
+            type: 'array'
+        },
+        schema_version: {
+            const: 'run-workflow-error.v1',
+            default: 'run-workflow-error.v1',
+            title: 'Schema Version',
+            type: 'string'
+        },
+        updated_findings: {
+            default: 0,
+            title: 'Updated Findings',
+            type: 'integer'
+        },
+        vex_error: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunWorkflowFailure'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    title: 'RunWorkflowErrorV1',
+    type: 'object'
+} as const;
+
+export const RunWorkflowFailureSchema = {
+    additionalProperties: true,
+    description: 'Structured workflow failure metadata.',
+    properties: {
+        error_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Error Type'
+        },
+        filename: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Filename'
+        },
+        message: {
+            title: 'Message',
+            type: 'string'
+        },
+        stage: {
+            title: 'Stage',
+            type: 'string'
+        }
+    },
+    required: [
+        'message',
+        'stage'
+    ],
+    title: 'RunWorkflowFailure',
+    type: 'object'
+} as const;
+
+export const RunWorkflowJobSchema = {
+    additionalProperties: true,
+    description: 'Stable job metadata exposed on run summaries.',
+    properties: {
+        execution_mode: {
+            default: 'request',
+            title: 'Execution Mode',
+            type: 'string'
+        },
+        id: {
+            title: 'Id',
+            type: 'string'
+        },
+        status: {
+            title: 'Status',
+            type: 'string'
+        },
+        status_history: {
+            items: {
+                $ref: '#/components/schemas/RunWorkflowJobStatusEntry'
+            },
+            title: 'Status History',
+            type: 'array'
+        },
+        updated_at: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Updated At'
+        }
+    },
+    required: [
+        'id',
+        'status'
+    ],
+    title: 'RunWorkflowJob',
+    type: 'object'
+} as const;
+
+export const RunWorkflowJobStatusEntrySchema = {
+    additionalProperties: true,
+    description: 'One recorded status transition for an import or provider job.',
+    properties: {
+        created_at: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created At'
+        },
+        status: {
+            title: 'Status',
+            type: 'string'
+        }
+    },
+    required: [
+        'status'
+    ],
+    title: 'RunWorkflowJobStatusEntry',
+    type: 'object'
+} as const;
+
+export const RunWorkflowParseErrorSchema = {
+    additionalProperties: true,
+    description: 'Stable parser diagnostic item.',
+    properties: {
+        error_type: {
+            title: 'Error Type',
+            type: 'string'
+        },
+        field: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Field'
+        },
+        filename: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Filename'
+        },
+        input_type: {
+            title: 'Input Type',
+            type: 'string'
+        },
+        line: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Line'
+        },
+        message: {
+            title: 'Message',
+            type: 'string'
+        },
+        value: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Value'
+        }
+    },
+    required: [
+        'input_type',
+        'message',
+        'error_type'
+    ],
+    title: 'RunWorkflowParseError',
+    type: 'object'
+} as const;
+
+export const RunWorkflowUploadRefSchema = {
+    additionalProperties: true,
+    description: 'Managed upload metadata without server-local filesystem paths.',
+    properties: {
+        content_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Content Type'
+        },
+        input_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Input Type'
+        },
+        original_filename: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Original Filename'
+        },
+        path: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Path'
+        },
+        sha256: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Sha256'
+        },
+        size_bytes: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Size Bytes'
+        },
+        storage_ref: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Storage Ref'
+        },
+        stored_filename: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Stored Filename'
+        }
+    },
+    title: 'RunWorkflowUploadRef',
     type: 'object'
 } as const;
 

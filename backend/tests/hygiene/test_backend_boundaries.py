@@ -601,6 +601,46 @@ def test_workbench_import_validation_and_storage_are_split_from_route_facade() -
     assert "def raise_sidecar_parse_failure" in parse_failure_source
 
 
+def test_run_workflow_metadata_uses_versioned_contract_projection() -> None:
+    contract_source = (ROOT / "app/contracts/run_workflow.py").read_text(encoding="utf-8")
+    projection_source = (ROOT / "app/services/run_workflow_projection.py").read_text(
+        encoding="utf-8"
+    )
+    model_source = (ROOT / "app/models/runs.py").read_text(encoding="utf-8")
+    run_route_imports = _imported_modules("app/api/routes/runs.py")
+    import_route_imports = _imported_modules("app/api/routes/imports.py")
+    writer_paths = (
+        "app/services/import_execution.py",
+        "app/services/import_execution_run_state.py",
+        "app/services/import_execution_failures.py",
+        "app/services/import_execution_parse_failures.py",
+        "app/services/import_background.py",
+        "app/services/provider_updates.py",
+    )
+
+    assert "RUN_WORKFLOW_SUMMARY_SCHEMA_VERSION" in contract_source
+    assert "class RunWorkflowSummaryV1" in contract_source
+    assert "class RunWorkflowErrorV1" in contract_source
+    assert "def workflow_public_fields" in contract_source
+    assert "app.contracts.run_workflow" in model_source
+    assert "app.services.run_workflow_projection" in run_route_imports
+    assert "app.services.run_workflow_projection" in import_route_imports
+    assert "workflow_public_fields(summary_json, error_json)" in projection_source
+    assert "AnalysisRunPublic.model_validate(run)" in projection_source
+    assert "AnalysisRunSummaryPublic(" in projection_source
+    for path in writer_paths:
+        source = (ROOT / path).read_text(encoding="utf-8")
+        assert "merge_workflow_summary" in source, path
+    for path in (
+        "app/services/import_execution_failures.py",
+        "app/services/import_execution_parse_failures.py",
+        "app/services/import_background.py",
+        "app/services/provider_updates.py",
+    ):
+        source = (ROOT / path).read_text(encoding="utf-8")
+        assert "merge_workflow_error" in source, path
+
+
 def test_findings_page_uses_internal_query_object() -> None:
     repository_source = (ROOT / "app/repositories/findings.py").read_text(encoding="utf-8")
     query_source = (ROOT / "app/repositories/finding_page_query.py").read_text(encoding="utf-8")

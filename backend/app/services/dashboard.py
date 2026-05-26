@@ -6,6 +6,7 @@ import uuid
 from collections.abc import Sequence
 from typing import Any
 
+from app.contracts.run_workflow import workflow_public_fields
 from app.models import (
     AnalysisRun,
     AnalysisRunPublic,
@@ -197,12 +198,15 @@ def finding_public(finding: Finding) -> FindingPublic:
 
 def analysis_run_public(run: AnalysisRun) -> AnalysisRunPublic:
     """Return a redacted analysis-run DTO for dashboard aggregate payloads."""
+    summary_json = _redacted_json_payload(run.summary_json or {})
+    error_json = _redacted_json_payload(run.error_json or {})
     public = AnalysisRunPublic.model_validate(run)
     return public.model_copy(
         update={
-            "summary_json": _redacted_json_payload(run.summary_json or {}),
-            "error_json": _redacted_json_payload(run.error_json or {}),
+            "summary_json": summary_json,
+            "error_json": error_json,
             "error_message": _redacted_value(run.error_message),
+            **workflow_public_fields(summary_json, error_json),
         }
     )
 

@@ -221,12 +221,11 @@ export function verificationTone(label: string): VpwBadgeTone {
 }
 
 export function runFileLabel(run: AnalysisRunPublic): string {
-  const summaryJson = run.summary_json as Record<string, unknown> | undefined
-  const inputUpload = summaryJson?.input_upload as
-    | Record<string, unknown>
-    | undefined
+  const inputUpload = objectRecord(run.input_upload)
   const uploadFilename =
-    typeof inputUpload?.filename === "string" ? inputUpload.filename : null
+    stringRecordValue(inputUpload, "original_filename") ??
+    stringRecordValue(inputUpload, "stored_filename") ??
+    stringRecordValue(inputUpload, "filename")
   return run.filename ?? uploadFilename ?? `${run.input_type} upload`
 }
 
@@ -303,8 +302,8 @@ export function runSummaryRecord(
   run: AnalysisRunPublic | null,
 ) {
   return {
-    ...objectRecord(run?.summary_json),
-    ...objectRecord(summary?.summary_json),
+    ...workflowRecord(run),
+    ...workflowRecord(summary),
   }
 }
 
@@ -326,6 +325,7 @@ export function contextCoverageFacts(
   const record = runSummaryRecord(summary, run)
   const assetContext = objectRecord(record.asset_context)
   const vex = objectRecord(record.vex)
+  const attackSource = stringRecordValue(record, "attack_source")
   return {
     acceptedRisk: "Recorded when accepted-risk decisions affect findings",
     assetContext:
@@ -333,14 +333,47 @@ export function contextCoverageFacts(
         ? "Present"
         : "Optional missing",
     attack:
-      attackNavigatorAvailable(summary, run) || record.attack_source !== "none"
+      attackNavigatorAvailable(summary, run) ||
+      (attackSource && attackSource !== "none")
         ? "Present"
         : "Optional missing",
     vex:
-      Object.keys(vex).length > 0 || Number(record.suppressed_by_vex ?? 0) > 0
+      Object.keys(vex).length > 0 ||
+      record.vex_upload ||
+      Number(record.suppressed_by_vex ?? 0) > 0
         ? "Present"
         : "Optional missing",
   }
+}
+
+function workflowRecord(
+  source: AnalysisRunSummaryPublic | AnalysisRunPublic | null,
+) {
+  if (!source) return {}
+  const record: Record<string, unknown> = {}
+  setDefined(record, "input_upload", source.input_upload)
+  setDefined(record, "asset_context_upload", source.asset_context_upload)
+  setDefined(record, "vex_upload", source.vex_upload)
+  setDefined(record, "attack_mapped_cves", source.attack_mapped_cves)
+  setDefined(record, "attack_mapping_file", source.attack_mapping_file)
+  setDefined(record, "attack_source", source.attack_source)
+  setDefined(record, "asset_context", source.asset_context)
+  setDefined(record, "vex", source.vex)
+  setDefined(record, "suppressed_by_vex", source.suppressed_by_vex)
+  return record
+}
+
+function setDefined(
+  record: Record<string, unknown>,
+  key: string,
+  value: unknown,
+) {
+  if (value !== undefined && value !== null) record[key] = value
+}
+
+function stringRecordValue(record: Record<string, unknown>, key: string) {
+  const value = record[key]
+  return typeof value === "string" && value.trim() ? value : null
 }
 
 export function reportHistoryAction(report: ReportPublic) {

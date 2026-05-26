@@ -10,9 +10,10 @@ from app.api.deps import LocalActor, SessionDep
 from app.api.routes.import_uploads import build_project_import_upload_request
 from app.api.routes.workbench_access import require_project
 from app.core.app_state import workbench_settings
-from app.models import AnalysisRun, AnalysisRunPublic
+from app.models import AnalysisRunPublic
 from app.services.import_errors import ImportServiceError
 from app.services.import_execution import execute_project_import_upload
+from app.services.run_workflow_projection import analysis_run_public
 
 router = APIRouter(tags=["imports"])
 
@@ -32,7 +33,7 @@ async def import_project_upload(
     attack_source: str = Form("none"),
     attack_mapping_file: str | None = Form(None),
     attack_technique_metadata_file: str | None = Form(None),
-) -> AnalysisRun:
+) -> AnalysisRunPublic:
     """Accept one upload request and delegate import execution to the service layer."""
     require_project(session, project_id)
     settings = workbench_settings(request)
@@ -49,7 +50,7 @@ async def import_project_upload(
             attack_mapping_file=attack_mapping_file,
             attack_technique_metadata_file=attack_technique_metadata_file,
         )
-        return await execute_project_import_upload(
+        run = await execute_project_import_upload(
             project_id=project_id,
             session=session,
             local_actor=local_actor,
@@ -57,5 +58,6 @@ async def import_project_upload(
             upload=upload,
             execution_mode="request",
         )
+        return analysis_run_public(run)
     except ImportServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc

@@ -226,6 +226,28 @@ def test_workbench_route_shells_delegate_interaction_state() -> None:
     assert "useWorkbenchContext" in imports_container_source
 
 
+def test_run_workflow_components_use_typed_contract_fields() -> None:
+    src_root = REPO_ROOT / "frontend/src"
+    error_json_allowlist = {
+        "frontend/src/components/imports/imports-workbench-model.ts",
+    }
+    summary_json_offenders: list[str] = []
+    error_json_offenders: list[str] = []
+
+    for path in sorted(src_root.rglob("*")):
+        if path.suffix not in {".ts", ".tsx"} or "src/client" in path.as_posix():
+            continue
+        source = path.read_text(encoding="utf-8")
+        relative = path.relative_to(REPO_ROOT).as_posix()
+        if "summary_json" in source:
+            summary_json_offenders.append(relative)
+        if "error_json" in source and relative not in error_json_allowlist:
+            error_json_offenders.append(relative)
+
+    assert summary_json_offenders == []
+    assert error_json_offenders == []
+
+
 def test_workbench_reports_route_state_is_split_from_shell() -> None:
     shell_source = (REPO_ROOT / "frontend/src/workbench/WorkbenchShell.tsx").read_text(
         encoding="utf-8"

@@ -81,13 +81,13 @@ export type ImportsWorkbenchProps = {
 export function runFileLabel(run: {
   filename?: string | null
   input_type: string
-  input_upload?: Record<string, unknown>
-  summary_json?: Record<string, unknown>
+  input_upload?: unknown
 }) {
-  const upload = objectRecord(
-    run.input_upload ?? run.summary_json?.input_upload,
-  )
-  const uploadFilename = stringValue(upload.filename)
+  const upload = objectRecord(run.input_upload)
+  const uploadFilename =
+    stringValue(upload.original_filename) ??
+    stringValue(upload.stored_filename) ??
+    stringValue(upload.filename)
   return run.filename ?? uploadFilename ?? `${run.input_type} upload`
 }
 
@@ -113,16 +113,45 @@ export function failedRunCause(
   summary: AnalysisRunSummaryPublic | null,
 ) {
   if (!run && !summary) return "No failure detail available."
+  const typedMessage =
+    run?.error_message ??
+    failureMessage(
+      summary?.analysis_error,
+      summary?.asset_context_error,
+      summary?.vex_error,
+      summary?.background_error,
+      summary?.workflow_error?.analysis_error,
+      summary?.workflow_error?.asset_context_error,
+      summary?.workflow_error?.vex_error,
+      summary?.workflow_error?.background_error,
+      run?.analysis_error,
+      run?.asset_context_error,
+      run?.vex_error,
+      run?.background_error,
+      run?.workflow_error?.analysis_error,
+      run?.workflow_error?.asset_context_error,
+      run?.workflow_error?.vex_error,
+      run?.workflow_error?.background_error,
+    )
+  if (typedMessage) return typedMessage
   const errorJson = objectRecord(summary?.error_json ?? run?.error_json)
   const analysisError = objectRecord(errorJson.analysis_error)
   return (
-    run?.error_message ??
     stringValue(errorJson.message) ??
     stringValue(errorJson.error) ??
     stringValue(errorJson.last_error) ??
     stringValue(analysisError.message) ??
     "No failure detail available."
   )
+}
+
+function failureMessage(
+  ...failures: ({ message?: string | null } | null | undefined)[]
+) {
+  for (const failure of failures) {
+    if (failure?.message?.trim()) return failure.message
+  }
+  return null
 }
 
 export function runTone(status: AnalysisRunPublic["status"]): VpwBadgeTone {

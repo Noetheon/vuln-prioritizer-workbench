@@ -7,6 +7,7 @@ from typing import Any, NoReturn
 
 from sqlmodel import Session
 
+from app.contracts.run_workflow import merge_workflow_error, merge_workflow_summary
 from app.core.local_actor import LocalWorkbenchActor
 from app.models import AnalysisRun, AnalysisRunStatus
 from app.repositories import RunRepository
@@ -142,31 +143,31 @@ def _finish_failed_parse_run(
         run.id,
         status=AnalysisRunStatus.FAILED,
         error_message=_sanitize_parser_error_message(str(exc)),
-        error_json={
-            "parse_errors": parse_errors,
-            "created_findings": 0,
-            "updated_findings": 0,
-            "ignored_lines": ignored_lines,
-            "import_job": _job_payload(
+        error_json=merge_workflow_error(
+            parse_errors=parse_errors,
+            created_findings=0,
+            updated_findings=0,
+            ignored_lines=ignored_lines,
+            import_job=_job_payload(
                 job_id=job_id,
                 status="failed",
                 status_history=failed_history,
                 execution_mode=execution_mode,
             ),
-        },
-        summary_json={
-            **run.summary_json,
-            "import_job": _job_payload(
+        ),
+        summary_json=merge_workflow_summary(
+            run.summary_json,
+            import_job=_job_payload(
                 job_id=job_id,
                 status="failed",
                 status_history=failed_history,
                 execution_mode=execution_mode,
             ),
-            "parse_errors": parse_errors,
-            "created_findings": 0,
-            "updated_findings": 0,
-            "ignored_lines": ignored_lines,
-        },
+            parse_errors=parse_errors,
+            created_findings=0,
+            updated_findings=0,
+            ignored_lines=ignored_lines,
+        ),
     )
 
 
@@ -203,30 +204,30 @@ def _finish_failed_sidecar_run(
         run.id,
         status=AnalysisRunStatus.FAILED,
         error_message=str(sidecar_error["message"]),
-        error_json={
-            error_key: sidecar_error,
-            "created_findings": 0,
-            "updated_findings": 0,
-            "ignored_lines": ignored_lines,
-            "import_job": _job_payload(
+        error_json=merge_workflow_error(
+            **{error_key: sidecar_error},
+            created_findings=0,
+            updated_findings=0,
+            ignored_lines=ignored_lines,
+            import_job=_job_payload(
                 job_id=job_id,
                 status="failed",
                 status_history=failed_history,
                 execution_mode=execution_mode,
             ),
-        },
-        summary_json={
-            **run.summary_json,
-            "import_job": _job_payload(
+        ),
+        summary_json=merge_workflow_summary(
+            run.summary_json,
+            import_job=_job_payload(
                 job_id=job_id,
                 status="failed",
                 status_history=failed_history,
                 execution_mode=execution_mode,
             ),
-            error_key: sidecar_error,
-            "parse_errors": [],
-            "created_findings": 0,
-            "updated_findings": 0,
-            "ignored_lines": ignored_lines,
-        },
+            **{error_key: sidecar_error},
+            parse_errors=[],
+            created_findings=0,
+            updated_findings=0,
+            ignored_lines=ignored_lines,
+        ),
     )

@@ -176,8 +176,8 @@ test("import model derives upload progress and safe file labels", () => {
   )
   assert.equal(
     runFileLabel({
+      input_upload: { original_filename: "findings.txt" },
       input_type: "cve-list",
-      summary_json: { input_upload: { filename: "findings.txt" } },
     }),
     "findings.txt",
   )
@@ -202,17 +202,24 @@ test("import model selects readable failure causes", () => {
     "Run level error",
   )
   assert.equal(
-    failedRunCause(null, { error_json: { error: "Parser error" } } as never),
+    failedRunCause(null, {
+      analysis_error: { message: "Parser error", stage: "analysis" },
+    } as never),
     "Parser error",
   )
   assert.equal(
-    failedRunCause(null, { error_json: { last_error: "Last parser error" } } as never),
+    failedRunCause(null, {
+      workflow_error: {
+        analysis_error: { message: "Last parser error", stage: "analysis" },
+      },
+    } as never),
     "Last parser error",
   )
   assert.equal(
     failedRunCause(null, {
-      error_json: {
-        analysis_error: { message: "Parser rejected the source file." },
+      analysis_error: {
+        message: "Parser rejected the source file.",
+        stage: "analysis",
       },
     } as never),
     "Parser rejected the source file.",
@@ -297,13 +304,11 @@ test("import run timeline only includes evidence-backed events", () => {
 
   const contextualSummary = {
     ...completedSummary,
+    asset_context_upload: { original_filename: "assets.csv" },
+    attack_source: "local-curated",
     created_findings: 2,
     provider_snapshot_id: "provider-snapshot-1",
-    summary_json: {
-      asset_context_upload: { original_filename: "assets.csv" },
-      attack_source: "local-curated",
-      provider_snapshot_file: "snapshot.json",
-    },
+    provider_snapshot_file: "snapshot.json",
   } as const
   assert.deepEqual(importRunTimelineItems(null, contextualSummary as never), [
     "Import started",

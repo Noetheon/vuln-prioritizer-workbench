@@ -44,6 +44,14 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert payload["input_type"] == "cve-list"
     assert payload["filename"] == "Team_Scan__prod_.txt"
     assert payload["status"] == "succeeded"
+    assert payload["workflow_schema_version"] == "run-workflow-summary.v1"
+    assert payload["summary_json"]["schema_version"] == "run-workflow-summary.v1"
+    assert payload["input_upload"]["sha256"] == expected_sha256
+    assert payload["input_upload"]["storage_ref"] == (
+        f"{project['id']}/{payload['id']}/Team_Scan__prod_.txt"
+    )
+    assert payload["import_job"]["status"] == "succeeded"
+    assert payload["dedup_summary"]["created_findings"] == 2
     assert payload["summary_json"]["input_sha256"] == expected_sha256
     assert payload["summary_json"]["occurrence_count"] == 2
     assert payload["summary_json"]["finding_count"] == 2
@@ -91,6 +99,8 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert runs.json()["count"] == 1
     assert runs.json()["data"][0]["id"] == payload["id"]
     assert runs.json()["data"][0]["status"] == "succeeded"
+    assert runs.json()["data"][0]["workflow_schema_version"] == "run-workflow-summary.v1"
+    assert runs.json()["data"][0]["input_upload"]["sha256"] == expected_sha256
     with Session(workbench_api_env.engine) as session:
         import_event = session.exec(
             select(app_models.AuditEvent).where(
@@ -136,7 +146,10 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert summary_payload["counts_by_priority"] == payload["summary_json"]["counts_by_priority"]
     assert summary_payload["kev_hits"] == payload["summary_json"]["kev_hits"]
     assert summary_payload["parse_errors"] == []
+    assert summary_payload["workflow_schema_version"] == "run-workflow-summary.v1"
     assert summary_payload["input_upload"]["sha256"] == expected_sha256
+    assert summary_payload["import_job"]["status"] == "succeeded"
+    assert summary_payload["dedup_summary"]["reused_findings"] == 0
 
 
 @pytest.mark.parametrize(

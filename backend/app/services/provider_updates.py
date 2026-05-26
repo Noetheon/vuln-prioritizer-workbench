@@ -8,6 +8,7 @@ from datetime import timedelta
 from sqlalchemy.engine import Engine
 from sqlmodel import Session
 
+from app.contracts.run_workflow import merge_workflow_error, merge_workflow_summary
 from app.core.config import Settings
 from app.models import AnalysisRun, AnalysisRunStatus, ProviderUpdateJobCreate
 from app.models.base import get_datetime_utc
@@ -151,14 +152,14 @@ def resume_provider_update_job(
 
     selected_sources, cve_ids = _provider_update_request_inputs(session, payload=payload)
     run.status = AnalysisRunStatus.RUNNING
-    run.summary_json = {
-        **_dict_payload(run.summary_json),
-        "requested_sources": selected_sources,
-        "requested_cves": len(cve_ids),
-        "cache_only": payload.cache_only,
-        "execution_mode": "background",
-        "mode": "workbench-provider-update",
-    }
+    run.summary_json = merge_workflow_summary(
+        _dict_payload(run.summary_json),
+        requested_sources=selected_sources,
+        requested_cves=len(cve_ids),
+        cache_only=payload.cache_only,
+        execution_mode="background",
+        mode="workbench-provider-update",
+    )
     session.add(run)
     session.flush()
     return _execute_provider_update_run(
@@ -286,7 +287,7 @@ def _execute_provider_update_run(
     run.provider_snapshot_id = snapshot.id
     run.status = AnalysisRunStatus.COMPLETED
     run.finished_at = get_datetime_utc()
-    run.summary_json = _redacted_payload(metadata)
+    run.summary_json = merge_workflow_summary(_redacted_payload(metadata))
     session.add(run)
     session.flush()
     return run
@@ -315,13 +316,14 @@ def _create_provider_update_run(
         project_id=project.id,
         input_type=PROVIDER_UPDATE_INPUT_TYPE,
         status=status,
-        summary_json={
-            "requested_sources": selected_sources,
-            "requested_cves": len(cve_ids),
-            "cache_only": cache_only,
-            "execution_mode": execution_mode,
-            "mode": "workbench-provider-update",
-        },
+        summary_json=merge_workflow_summary(
+            None,
+            requested_sources=selected_sources,
+            requested_cves=len(cve_ids),
+            cache_only=cache_only,
+            execution_mode=execution_mode,
+            mode="workbench-provider-update",
+        ),
     )
 
 
@@ -347,8 +349,8 @@ def _mark_provider_update_run_failed(
     run.status = AnalysisRunStatus.FAILED
     run.finished_at = get_datetime_utc()
     run.error_message = error_message
-    run.error_json = _redacted_payload({"detail": error_message})
-    run.summary_json = _redacted_payload(failed_metadata)
+    run.error_json = merge_workflow_error(None, **_redacted_payload({"detail": error_message}))
+    run.summary_json = merge_workflow_summary(_redacted_payload(failed_metadata))
     session.add(run)
     session.flush()
     return run

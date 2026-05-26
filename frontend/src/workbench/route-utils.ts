@@ -118,12 +118,12 @@ export function waiverDebtSummaryRows(
 export function runFileLabel(run: {
   filename?: string | null
   input_type: string
-  input_upload?: Record<string, unknown>
-  summary_json?: Record<string, unknown>
+  input_upload?: unknown
 }) {
-  const upload = objectRecord(
-    run.input_upload ?? run.summary_json?.input_upload,
-  )
-  const uploadFilename = stringValue(upload.filename)
+  const upload = objectRecord(run.input_upload)
+  const uploadFilename =
+    stringValue(upload.original_filename) ??
+    stringValue(upload.stored_filename) ??
+    stringValue(upload.filename)
   return run.filename ?? uploadFilename ?? `${run.input_type} upload`
 }

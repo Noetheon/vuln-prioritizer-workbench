@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+from app.contracts.run_workflow import merge_workflow_summary
 from app.models import AnalysisRun, AnalysisRunStatus
 from app.repositories import RunRepository
 from app.services.import_errors import ImportServiceError
@@ -70,28 +71,28 @@ def apply_stored_upload_summaries(
     execution_mode: str,
 ) -> None:
     """Attach storage refs for persisted upload artifacts to the run summary."""
-    run.summary_json = {
-        **run.summary_json,
-        "import_job": _job_payload(
+    run.summary_json = merge_workflow_summary(
+        run.summary_json,
+        import_job=_job_payload(
             job_id=resolved_run.job_id,
             status="pending",
             status_history=resolved_run.job_history,
             execution_mode=execution_mode,
         ),
-        "input_upload": {
+        input_upload={
             **run.summary_json["input_upload"],
             "path": artifacts.upload_ref,
             "storage_ref": artifacts.upload_ref,
         },
-        "asset_context_upload": _upload_summary_with_path(
+        asset_context_upload=_upload_summary_with_path(
             run.summary_json.get("asset_context_upload"),
             path=artifacts.asset_context_ref,
         ),
-        "vex_upload": _upload_summary_with_path(
+        vex_upload=_upload_summary_with_path(
             run.summary_json.get("vex_upload"),
             path=artifacts.vex_ref,
         ),
-    }
+    )
 
 
 def mark_import_run_running(
@@ -104,15 +105,15 @@ def mark_import_run_running(
     """Mark a pending import run as actively running."""
     run.status = AnalysisRunStatus.RUNNING
     running_history = _append_job_status(job_history, "running")
-    run.summary_json = {
-        **run.summary_json,
-        "import_job": _job_payload(
+    run.summary_json = merge_workflow_summary(
+        run.summary_json,
+        import_job=_job_payload(
             job_id=job_id,
             status="running",
             status_history=running_history,
             execution_mode=execution_mode,
         ),
-    }
+    )
     return running_history
 
 
@@ -133,18 +134,19 @@ def _initial_run_summary(
     execution_mode: str,
 ) -> dict[str, Any]:
     upload_summary = initial_upload_summary(prepared)
-    return {
-        "import_job": _job_payload(
+    return merge_workflow_summary(
+        None,
+        import_job=_job_payload(
             job_id=job_id,
             status="pending",
             status_history=job_history,
             execution_mode=execution_mode,
         ),
         **upload_summary,
-        "created_findings": 0,
-        "updated_findings": 0,
-        "parse_errors": [],
-    }
+        created_findings=0,
+        updated_findings=0,
+        parse_errors=[],
+    )
 
 
 def _extract_existing_job_state(run: AnalysisRun) -> tuple[str, list[dict[str, str]]]:

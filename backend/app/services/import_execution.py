@@ -8,6 +8,7 @@ from typing import Any, Literal
 
 from sqlmodel import Session
 
+from app.contracts.run_workflow import merge_workflow_summary
 from app.core.config import Settings
 from app.core.local_actor import LocalWorkbenchActor
 from app.importers import ImporterParseError, ImporterValidationError
@@ -270,9 +271,9 @@ async def execute_project_import_upload(
     finished_run = run_repo.finish_analysis_run(
         run.id,
         status=AnalysisRunStatus.SUCCEEDED,
-        summary_json={
-            **run.summary_json,
-            "import_job": _job_payload(
+        summary_json=merge_workflow_summary(
+            run.summary_json,
+            import_job=_job_payload(
                 job_id=resolved_run.job_id,
                 status="succeeded",
                 status_history=[*job_history, _job_status_entry("succeeded")],
@@ -280,12 +281,12 @@ async def execute_project_import_upload(
             ),
             **analysis_result.summary_json,
             **persist_summary,
-            "asset_context": asset_context_summary,
-            "vex": vex_summary,
-            "ignored_lines": prepared.ignored_lines,
-            "input_sha256": prepared.upload_sha256,
-            "parse_errors": [],
-        },
+            asset_context=asset_context_summary,
+            vex=vex_summary,
+            ignored_lines=prepared.ignored_lines,
+            input_sha256=prepared.upload_sha256,
+            parse_errors=[],
+        ),
     )
     _record_import_audit(
         session,

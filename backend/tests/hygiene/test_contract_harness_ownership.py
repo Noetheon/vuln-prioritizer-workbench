@@ -13,6 +13,7 @@ def test_import_contract_harness_owns_upload_and_parser_workflow_contracts() -> 
         "test_import_sidecar_contracts.py",
         "test_import_upload_boundary_contracts.py",
         "test_import_workflow_contracts.py",
+        "test_run_workflow_contract.py",
     }
 
     assert not (ROOT / "tests/api/test_workbench_import_upload_api.py").exists()
@@ -22,6 +23,7 @@ def test_import_contract_harness_owns_upload_and_parser_workflow_contracts() -> 
     )
     assert (ROOT / "tests/utils/import_contract_fixtures.py").exists()
     assert (ROOT / "tests/utils/import_contracts.py").exists()
+    assert (ROOT / "app/contracts/run_workflow.py").exists()
 
 
 def test_report_and_workflow_contract_harness_own_artifact_and_matrix_contracts() -> None:
