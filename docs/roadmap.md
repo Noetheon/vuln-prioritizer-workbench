@@ -35,7 +35,7 @@ current acceptance source.
 - Default prioritization stays grounded in `CVSS + EPSS + KEV`.
 - ATT&CK, asset context, and VEX remain explicit contextual layers.
 - The old composite GitHub Action is no longer an active delivery surface; Workbench/API flows are the supported direction.
-- Local quality gates now enforce backend coverage with `--cov-fail-under=95`,
+- Local quality gates now enforce backend coverage with `--cov-fail-under=96`,
   and docs/frontend/browser checks validate the active Workbench surface.
 - Docker and Compose provide a local runtime bootstrap for the Workbench.
 - Parser and provider contributions are governed by the static local

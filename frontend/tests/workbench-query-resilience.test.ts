@@ -6,6 +6,10 @@ const queriesFile = new URL(
   "../src/workbench/useWorkbenchQueries.ts",
   import.meta.url,
 )
+const queryModelFile = new URL(
+  "../src/workbench/workbench-query-model.ts",
+  import.meta.url,
+)
 const runtimeQueriesFile = new URL(
   "../src/workbench/useWorkbenchRuntimeQueries.ts",
   import.meta.url,
@@ -42,13 +46,26 @@ test("Workbench queries propagate abort signals into generated client calls", ()
 
 test("project summary fanout is concurrency-limited", () => {
   const queries = source()
+  const queryModel = source(queryModelFile)
 
-  assert.match(queries, /const PROJECT_SUMMARY_CONCURRENCY = 4/)
-  assert.match(queries, /readProjectSummariesWithLimit\(projectIds, signal\)/)
+  assert.match(queryModel, /const PROJECT_SUMMARY_CONCURRENCY = 4/)
+  assert.match(queries, /readProjectSummariesWithLimit\(/)
+  assert.match(queries, /ProjectsService\.readProjectSummary/)
   assert.match(
-    queries,
+    queryModel,
     /Math\.min\(PROJECT_SUMMARY_CONCURRENCY, projectIds\.length\)/,
   )
+})
+
+test("workbench query file delegates pure models to query model", () => {
+  const queries = source()
+  const queryModel = source(queryModelFile)
+
+  assert.match(queries, /from "\.\/workbench-query-model"/)
+  assert.doesNotMatch(queries, /function dashboardSignalCountsFromApi/)
+  assert.doesNotMatch(queries, /function emptyFindingQueryPage/)
+  assert.match(queryModel, /function dashboardSignalCountsFromApi/)
+  assert.match(queryModel, /function emptyFindingQueryPage/)
 })
 
 test("runtime and report queries propagate abort signals", () => {

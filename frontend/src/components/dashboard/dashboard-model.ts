@@ -10,7 +10,8 @@ import type {
 } from "@/api-client"
 import type { ChartDatum, EpssBucketCounts } from "@/lib/chart-data"
 import { runStatusLabel, runStatusTone } from "@/lib/risk-format"
-import { optionalText } from "@/lib/ui-copy"
+
+export { findingWhyNow } from "@/lib/finding-urgency-summary"
 
 export type DashboardSignalCounts = {
   highEpss: number
@@ -72,14 +73,6 @@ export type DashboardRunFact = {
   startedAt: string
   status: string
   tone: ReturnType<typeof runStatusTone>
-}
-
-export function findingWhyNow(finding: FindingPublic) {
-  return (
-    optionalText(finding.rationale) ??
-    optionalText(finding.recommended_action) ??
-    "No explanation was captured yet."
-  )
 }
 
 export function formatDateTime(value: string | null | undefined) {

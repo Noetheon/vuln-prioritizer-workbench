@@ -23,7 +23,7 @@ Clarify:
 | 1 | Dashboard | Overall view, provider freshness, top risks. | "This is the operations entrypoint: what is critical, which services are affected, and whether data sources are fresh." |
 | 2 | Projects | Project context. | "Every analysis belongs to a project so findings, waivers, and evidence do not get mixed." |
 | 3 | Imports | Import wizard and run context. | "VPW processes existing evidence: CVE lists, scanner/SBOM exports, VEX, and asset context. It does not start a scan." |
-| 4 | Findings | Remediation Queue, filters, sorting, Why Now. | "The queue shows priority, score, CVSS, EPSS, KEV, status, and explainable urgency." |
+| 4 | Findings | Remediation Queue, filters, sorting, Why Now. | "The queue shows priority, score, CVSS, EPSS, KEV, status, and a signal-derived reason for acting or reviewing now." |
 | 5 | Finding Detail | Hero, Why this priority, Evidence. | "This turns a technical finding into a justified decision record." |
 | 6 | TTP Context | No-inference and mapped demo proof. | "Unmapped stays unmapped. Only reviewed mapping sources appear as defensive ATT&CK context." |
 | 7 | Waivers | Accepted risk and governance. | "Accepted risks remain visible, scoped, and verifiable; they are not deleted." |

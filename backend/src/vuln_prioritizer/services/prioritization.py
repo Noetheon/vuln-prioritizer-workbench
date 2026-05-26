@@ -3,17 +3,12 @@
 from __future__ import annotations
 
 from collections import Counter
-from datetime import UTC, date, datetime
-from typing import Literal
 
-from vuln_prioritizer.explanations import build_priority_explanation
 from vuln_prioritizer.models import (
-    AttackConfidence,
     AttackData,
     ComparisonFinding,
     ContextPolicyProfile,
     EpssData,
-    FindingAttackContextSummary,
     FindingProvenance,
     KevData,
     NvdData,
@@ -23,19 +18,24 @@ from vuln_prioritizer.models import (
 )
 from vuln_prioritizer.scoring import (
     build_comparison_reason,
-    build_operational_score,
     build_priority_drivers,
     build_rationale,
     determine_cvss_only_priority,
     determine_priority,
-    determine_priority_state,
 )
 from vuln_prioritizer.services.contextualization import is_suppressed_by_vex, is_under_investigation
-from vuln_prioritizer.services.decision_guidance import DecisionGuidanceService
+from vuln_prioritizer.services.prioritization_attack import (
+    build_attack_context_summary as _attack_context_summary,
+)
+from vuln_prioritizer.services.prioritization_ranking import (
+    assign_operational_ranks as _assign_operational_ranks,
+)
+from vuln_prioritizer.services.prioritization_sorting import (
+    SortField,
+    sort_comparison_findings,
+    sort_prioritized_findings,
+)
 from vuln_prioritizer.services.remediation import RemediationService
-from vuln_prioritizer.utils import iso_utc_now
-
-SortField = Literal["priority", "epss", "cvss", "cve", "operational"]
 
 
 class PrioritizationService:
@@ -172,47 +172,14 @@ class PrioritizationService:
         sort_by: SortField = "priority",
     ) -> list[PrioritizedFinding]:
         """Sort findings for Workbench and report output."""
-        return sorted(findings, key=lambda finding: _finding_sort_key(finding, sort_by))
+        return sort_prioritized_findings(findings, sort_by=sort_by)
 
     def assign_operational_ranks(
         self,
         findings: list[PrioritizedFinding],
     ) -> list[PrioritizedFinding]:
         """Attach deterministic operational work-queue ranks without changing base priority."""
-        scored_findings = [self._with_operational_score(finding) for finding in findings]
-        ordered = sorted(scored_findings, key=_operational_sort_key)
-        rank_by_cve = {finding.cve_id: index for index, finding in enumerate(ordered, start=1)}
-        decision_guidance_service = DecisionGuidanceService()
-        ranked_findings: list[PrioritizedFinding] = []
-        for finding in scored_findings:
-            ranked = finding.model_copy(
-                update={
-                    "operational_rank": rank_by_cve[finding.cve_id],
-                    "context_rank_reasons": _context_rank_reasons(finding),
-                }
-            )
-            ranked_findings.append(
-                ranked.model_copy(
-                    update={
-                        "decision_guidance": decision_guidance_service.build(ranked),
-                    }
-                )
-            )
-        return ranked_findings
-
-    def _with_operational_score(self, finding: PrioritizedFinding) -> PrioritizedFinding:
-        """With operational score method for PrioritizationService."""
-        score, reasons = build_operational_score(finding, self.policy)
-        scored = finding.model_copy(
-            update={
-                "priority_state": determine_priority_state(finding).value,
-                "operational_score": score,
-                "operational_score_reasons": reasons,
-            }
-        )
-        return scored.model_copy(
-            update={"explanation": build_priority_explanation(scored, self.policy)}
-        )
+        return _assign_operational_ranks(findings, self.policy)
 
     def build_comparison(
         self,
@@ -277,293 +244,10 @@ class PrioritizationService:
                 )
             )
 
-        return sorted(comparisons, key=lambda row: _comparison_sort_key(row, sort_by))
+        return sort_comparison_findings(comparisons, sort_by=sort_by)
 
     @staticmethod
     def count_by_priority(findings: list[PrioritizedFinding]) -> dict[str, int]:
         """Count findings by enriched priority label."""
         counts = Counter(finding.priority_label for finding in findings)
         return dict(counts)
-
-
-def _attack_context_summary(cve_id: str, attack: AttackData) -> FindingAttackContextSummary:
-    """Attack context summary function."""
-    confidence = _aggregate_mapping_confidence(attack)
-    return FindingAttackContextSummary(
-        cve_id=cve_id,
-        mapped=attack.mapped,
-        source=attack.source,
-        source_version=attack.source_version,
-        attack_version=attack.attack_version,
-        domain=attack.domain,
-        attack_relevance=attack.attack_relevance,
-        rationale=attack.attack_rationale,
-        confidence=confidence,
-        low_confidence=confidence == "low",
-        techniques=attack.techniques if attack.mapped else [],
-        tactics=attack.attack_tactics if attack.mapped else [],
-        mappings=attack.mappings if attack.mapped else [],
-    )
-
-
-def _aggregate_mapping_confidence(attack: AttackData) -> AttackConfidence | None:
-    """Aggregate mapping confidence function."""
-    labels = [mapping.confidence for mapping in attack.mappings if mapping.confidence is not None]
-    if not labels:
-        return None
-    if "low" in labels:
-        return "low"
-    if "medium" in labels:
-        return "medium"
-    return "high"
-
-
-def _finding_sort_key(finding: PrioritizedFinding, sort_by: SortField) -> tuple:
-    """Finding sort key function."""
-    if sort_by == "operational":
-        return (
-            finding.operational_rank or 999999,
-            finding.cve_id,
-        )
-    if sort_by == "epss":
-        return (
-            _descending_numeric(finding.epss),
-            finding.priority_rank,
-            0 if finding.in_kev else 1,
-            _descending_numeric(finding.cvss_base_score),
-            finding.cve_id,
-        )
-    if sort_by == "cvss":
-        return (
-            _descending_numeric(finding.cvss_base_score),
-            finding.priority_rank,
-            0 if finding.in_kev else 1,
-            _descending_numeric(finding.epss),
-            finding.cve_id,
-        )
-    if sort_by == "cve":
-        return (finding.cve_id,)
-
-    return (
-        finding.priority_rank,
-        0 if finding.in_kev else 1,
-        _descending_numeric(finding.epss),
-        _descending_numeric(finding.cvss_base_score),
-        finding.cve_id,
-    )
-
-
-def _comparison_sort_key(row: ComparisonFinding, sort_by: SortField) -> tuple:
-    """Comparison sort key function."""
-    if sort_by == "operational":
-        return (
-            row.operational_rank or 999999,
-            row.cve_id,
-        )
-    if sort_by == "epss":
-        return (
-            _descending_numeric(row.epss),
-            row.enriched_rank,
-            0 if row.in_kev else 1,
-            _descending_numeric(row.cvss_base_score),
-            row.cve_id,
-        )
-    if sort_by == "cvss":
-        return (
-            _descending_numeric(row.cvss_base_score),
-            row.enriched_rank,
-            0 if row.in_kev else 1,
-            _descending_numeric(row.epss),
-            row.cve_id,
-        )
-    if sort_by == "cve":
-        return (row.cve_id,)
-
-    return (
-        row.enriched_rank,
-        0 if row.in_kev else 1,
-        _descending_numeric(row.epss),
-        _descending_numeric(row.cvss_base_score),
-        row.cve_id,
-    )
-
-
-def _descending_numeric(value: float | None) -> tuple[int, float]:
-    """Descending numeric function."""
-    if value is None:
-        return 1, 0.0
-    return 0, -value
-
-
-def _operational_sort_key(finding: PrioritizedFinding) -> tuple:
-    """Operational sort key function."""
-    return (
-        finding.priority_rank,
-        -finding.operational_score,
-        _waiver_work_queue_bucket(finding),
-        _kev_due_sort_key(finding),
-        0 if _is_internet_facing(finding) else 1,
-        0 if _is_production(finding) else 1,
-        _asset_criticality_sort_key(finding.highest_asset_criticality),
-        -finding.provenance.active_occurrence_count,
-        _attack_relevance_sort_key(finding.attack_relevance),
-        _descending_numeric(finding.epss),
-        _descending_numeric(finding.cvss_base_score),
-        finding.cve_id,
-    )
-
-
-def _waiver_work_queue_bucket(finding: PrioritizedFinding) -> int:
-    """Waiver work queue bucket function."""
-    if finding.waiver_status == "review_due":
-        return 1
-    if finding.waived:
-        return 2
-    return 0
-
-
-def _kev_due_sort_key(finding: PrioritizedFinding) -> tuple[int, int]:
-    """Kev due sort key function."""
-    if not finding.in_kev or finding.provider_evidence is None:
-        return 2, 99999999
-    due_date = _parse_date(finding.provider_evidence.kev.due_date)
-    if due_date is None:
-        return 1, 99999999
-    today = _parse_date(iso_utc_now()) or datetime.now(UTC).date()
-    return (0 if due_date <= today else 1), due_date.toordinal()
-
-
-def _parse_date(value: str | None) -> date | None:
-    """Parse date function."""
-    if value is None:
-        return None
-    text = value.strip()
-    if not text:
-        return None
-    try:
-        return date.fromisoformat(text[:10])
-    except ValueError:
-        return None
-
-
-def _is_internet_facing(finding: PrioritizedFinding) -> bool:
-    """Is internet facing function."""
-    highest_exposure = finding.provenance.highest_asset_exposure
-    if highest_exposure and highest_exposure.lower() == "internet-facing":
-        return True
-    return any(
-        occurrence.asset_exposure and occurrence.asset_exposure.lower() == "internet-facing"
-        for occurrence in finding.provenance.occurrences
-    )
-
-
-def _is_production(finding: PrioritizedFinding) -> bool:
-    """Is production function."""
-    if any(
-        environment.lower() in {"prod", "production"}
-        for environment in finding.provenance.asset_environments
-    ):
-        return True
-    return any(
-        occurrence.asset_environment
-        and occurrence.asset_environment.lower() in {"prod", "production"}
-        for occurrence in finding.provenance.occurrences
-    )
-
-
-def _asset_criticality_sort_key(value: str | None) -> int:
-    """Asset criticality sort key function."""
-    return {"critical": 0, "high": 1, "medium": 2, "low": 3}.get((value or "").lower(), 4)
-
-
-def _attack_relevance_sort_key(value: str) -> int:
-    """Attack relevance sort key function."""
-    return {"High": 0, "Medium": 1, "Low": 2, "Unmapped": 3}.get(value, 4)
-
-
-def _context_rank_reasons(finding: PrioritizedFinding) -> list[str]:
-    """Context rank reasons function."""
-    reasons: list[str] = []
-    if finding.waiver_status == "expired":
-        reasons.append("expired waiver requires reassessment")
-    elif finding.waiver_status == "review_due":
-        reasons.append("waiver review due")
-    elif finding.waived:
-        reasons.append("active waiver lowers work-queue urgency")
-    if finding.in_kev:
-        due_date = (
-            None if finding.provider_evidence is None else finding.provider_evidence.kev.due_date
-        )
-        if due_date:
-            reasons.append(f"KEV due date {due_date}")
-        else:
-            reasons.append("KEV-listed")
-    if _is_internet_facing(finding):
-        reasons.append("internet-facing exposure")
-    if _is_production(finding):
-        reasons.append("production environment")
-    if finding.highest_asset_criticality:
-        reasons.append(f"{finding.highest_asset_criticality} asset criticality")
-    for service in _asset_business_services(finding)[:3]:
-        reasons.append(f"business service {service}")
-    for owner in _asset_owners(finding)[:3]:
-        reasons.append(f"owner {owner}")
-    if _asset_context_unknown(finding):
-        reasons.append("asset context unknown; validate before scheduling")
-    if finding.provenance.active_occurrence_count > 1:
-        reasons.append(f"{finding.provenance.active_occurrence_count} active occurrences")
-    if finding.attack_relevance in {"High", "Medium"}:
-        reasons.append(f"ATT&CK {finding.attack_relevance}")
-    return reasons
-
-
-def _asset_business_services(finding: PrioritizedFinding) -> list[str]:
-    """Asset business services function."""
-    if finding.provenance.asset_business_services:
-        return finding.provenance.asset_business_services
-    return sorted(
-        {
-            occurrence.asset_business_service
-            for occurrence in finding.provenance.occurrences
-            if occurrence.asset_business_service
-        }
-    )
-
-
-def _asset_owners(finding: PrioritizedFinding) -> list[str]:
-    """Asset owners function."""
-    if finding.provenance.asset_owners:
-        return finding.provenance.asset_owners
-    return sorted(
-        {
-            occurrence.asset_owner
-            for occurrence in finding.provenance.occurrences
-            if occurrence.asset_owner
-        }
-    )
-
-
-def _asset_context_unknown(finding: PrioritizedFinding) -> bool:
-    """Asset context unknown function."""
-    provenance = finding.provenance
-    if provenance.occurrence_count == 0 and not provenance.occurrences:
-        return False
-    if (
-        provenance.asset_ids
-        or provenance.highest_asset_criticality
-        or provenance.highest_asset_exposure
-        or provenance.asset_environments
-        or provenance.asset_owners
-        or provenance.asset_business_services
-        or finding.highest_asset_criticality
-    ):
-        return False
-    return not any(
-        occurrence.asset_id
-        or occurrence.asset_criticality
-        or occurrence.asset_exposure
-        or occurrence.asset_environment
-        or occurrence.asset_owner
-        or occurrence.asset_business_service
-        for occurrence in provenance.occurrences
-    )

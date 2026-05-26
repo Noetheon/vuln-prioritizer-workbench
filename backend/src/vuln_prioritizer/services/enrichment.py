@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TypeVar
 
 import requests
 
@@ -14,12 +13,10 @@ from vuln_prioritizer.config import (
     DEFAULT_NVD_API_KEY_ENV,
 )
 from vuln_prioritizer.models import (
-    DefensiveContext,
     EnrichmentResult,
     EpssData,
     KevData,
     NvdData,
-    ProviderDataQualityFlag,
     ProviderLookupDiagnostics,
     ProviderSnapshotReport,
 )
@@ -28,9 +25,30 @@ from vuln_prioritizer.providers.attack import AttackProvider
 from vuln_prioritizer.providers.epss import EpssProvider
 from vuln_prioritizer.providers.kev import KevProvider
 from vuln_prioritizer.providers.nvd import NvdFetchDiagnostics, NvdProvider, has_nvd_content
-from vuln_prioritizer.providers.sdk import provider_data_quality_flags
-
-_T = TypeVar("_T", NvdData, EpssData, KevData)
+from vuln_prioritizer.services.enrichment_quality import (
+    provider_enrichment_quality_flags as _provider_data_quality_flags,
+)
+from vuln_prioritizer.services.enrichment_results import (
+    build_fallback_diagnostics as _build_fallback_diagnostics,
+)
+from vuln_prioritizer.services.enrichment_results import (
+    build_nvd_fetch_diagnostics as _build_nvd_fetch_diagnostics,
+)
+from vuln_prioritizer.services.enrichment_results import (
+    merge_provider_results as _merge_provider_results,
+)
+from vuln_prioritizer.services.enrichment_results import (
+    safe_provider_error as _safe_provider_error,
+)
+from vuln_prioritizer.services.enrichment_snapshot import (
+    active_provider_sources as _active_provider_sources,
+)
+from vuln_prioritizer.services.enrichment_snapshot import (
+    snapshot_defensive_contexts as _snapshot_defensive_contexts,
+)
+from vuln_prioritizer.services.enrichment_snapshot import (
+    snapshot_source_selected as _snapshot_source_selected,
+)
 
 
 class EnrichmentService:
@@ -369,284 +387,3 @@ class EnrichmentService:
                 content_hits=sum(1 for item in snapshot_results.values() if item.in_kev),
             )
         return _merge_provider_results(cve_ids, snapshot_results, live_results, KevData), warnings
-
-
-def _snapshot_defensive_contexts(
-    *,
-    provider_snapshot: ProviderSnapshotReport | None,
-    cve_ids: list[str],
-) -> dict[str, list[DefensiveContext]]:
-    """Snapshot defensive contexts function."""
-    if provider_snapshot is None:
-        return {}
-    indexed = {item.cve_id: item for item in provider_snapshot.items}
-    return {
-        cve_id: list(item.defensive_contexts)
-        for cve_id in cve_ids
-        if (item := indexed.get(cve_id)) is not None and item.defensive_contexts
-    }
-
-
-def _snapshot_source_selected(
-    provider_snapshot: ProviderSnapshotReport,
-    source_name: str,
-) -> bool:
-    """Snapshot source selected function."""
-    return source_name in set(provider_snapshot.metadata.selected_sources)
-
-
-def _active_provider_sources(
-    *,
-    provider_snapshot: ProviderSnapshotReport | None,
-    locked_provider_data: bool,
-) -> set[str]:
-    """Active provider sources function."""
-    if provider_snapshot is None or not locked_provider_data:
-        return {"nvd", "epss", "kev"}
-    return {
-        source
-        for source in provider_snapshot.metadata.selected_sources
-        if source in {"nvd", "epss", "kev"}
-    }
-
-
-def _provider_data_quality_flags(
-    *,
-    nvd_results: dict[str, NvdData] | None = None,
-    epss_results: dict[str, EpssData] | None = None,
-    provider_snapshot: ProviderSnapshotReport | None = None,
-    locked_provider_data: bool = False,
-    active_provider_sources: set[str] | None = None,
-    **sources: tuple[ProviderLookupDiagnostics, list[str]],
-) -> dict[str, list[ProviderDataQualityFlag]]:
-    """Provider data quality flags function."""
-    flags_by_source: dict[str, list[ProviderDataQualityFlag]] = {}
-    for source, (diagnostics, warnings) in sources.items():
-        if active_provider_sources is not None and source not in active_provider_sources:
-            continue
-        flags = provider_data_quality_flags(
-            source=source,
-            diagnostics=diagnostics,
-            warnings=warnings,
-        )
-        if flags:
-            flags_by_source[source] = flags
-        _append_provider_error_flag(
-            flags_by_source,
-            source=source,
-            diagnostics=diagnostics,
-            warnings=warnings,
-        )
-    active_sources = active_provider_sources or {"nvd", "epss", "kev"}
-    missing_cvss_flags = (
-        _nvd_missing_cvss_flags(nvd_results or {}) if "nvd" in active_sources else []
-    )
-    if missing_cvss_flags:
-        flags_by_source.setdefault("nvd", []).extend(missing_cvss_flags)
-    if "nvd" in active_sources:
-        _append_nvd_missing_flags(flags_by_source, nvd_results or {})
-    if "epss" in active_sources:
-        _append_epss_missing_flags(flags_by_source, epss_results or {})
-        _append_epss_outdated_flag(flags_by_source, sources.get("epss"))
-    if "kev" in active_sources:
-        _append_kev_unavailable_flag(flags_by_source, sources.get("kev"))
-    if locked_provider_data and provider_snapshot is not None:
-        flags_by_source.setdefault("provider_snapshot", []).append(
-            ProviderDataQualityFlag(
-                source="provider_snapshot",
-                code="snapshot_locked",
-                message="Provider snapshot replay is locked; live provider lookups are disabled.",
-                severity="info",
-            )
-        )
-    return flags_by_source
-
-
-def _append_provider_error_flag(
-    flags_by_source: dict[str, list[ProviderDataQualityFlag]],
-    *,
-    source: str,
-    diagnostics: ProviderLookupDiagnostics,
-    warnings: list[str],
-) -> None:
-    """Append provider error flag function."""
-    if not diagnostics.failures and not any("failed" in warning.lower() for warning in warnings):
-        return
-    flags_by_source.setdefault(source, []).append(
-        ProviderDataQualityFlag(
-            source=source,
-            code="provider_error",
-            message=f"{source} provider returned recoverable errors during enrichment.",
-            severity="error",
-        )
-    )
-
-
-def _append_nvd_missing_flags(
-    flags_by_source: dict[str, list[ProviderDataQualityFlag]],
-    results: dict[str, NvdData],
-) -> None:
-    """Append nvd missing flags function."""
-    for cve_id, item in results.items():
-        if has_nvd_content(item):
-            continue
-        flags_by_source.setdefault("nvd", []).append(
-            ProviderDataQualityFlag(
-                source="nvd",
-                code="nvd_missing",
-                message=f"NVD returned no provider content for {cve_id}.",
-                cve_id=cve_id,
-            )
-        )
-
-
-def _append_epss_missing_flags(
-    flags_by_source: dict[str, list[ProviderDataQualityFlag]],
-    results: dict[str, EpssData],
-) -> None:
-    """Append epss missing flags function."""
-    for cve_id, item in results.items():
-        if item.epss is not None or item.percentile is not None or item.date is not None:
-            continue
-        flags_by_source.setdefault("epss", []).append(
-            ProviderDataQualityFlag(
-                source="epss",
-                code="epss_missing",
-                message=f"FIRST EPSS returned no score for {cve_id}.",
-                cve_id=cve_id,
-            )
-        )
-
-
-def _append_epss_outdated_flag(
-    flags_by_source: dict[str, list[ProviderDataQualityFlag]],
-    source: tuple[ProviderLookupDiagnostics, list[str]] | None,
-) -> None:
-    """Append epss outdated flag function."""
-    if source is None:
-        return
-    diagnostics, _warnings = source
-    if not diagnostics.stale_cache_hits:
-        return
-    flags_by_source.setdefault("epss", []).append(
-        ProviderDataQualityFlag(
-            source="epss",
-            code="epss_outdated",
-            message=(
-                "FIRST EPSS used expired cached data for "
-                f"{diagnostics.stale_cache_hits} requested CVE(s)."
-            ),
-        )
-    )
-
-
-def _append_kev_unavailable_flag(
-    flags_by_source: dict[str, list[ProviderDataQualityFlag]],
-    source: tuple[ProviderLookupDiagnostics, list[str]] | None,
-) -> None:
-    """Append kev unavailable flag function."""
-    if source is None:
-        return
-    diagnostics, warnings = source
-    if not diagnostics.failures and not any("KEV catalog load failed" in item for item in warnings):
-        return
-    flags_by_source.setdefault("kev", []).append(
-        ProviderDataQualityFlag(
-            source="kev",
-            code="kev_unavailable",
-            message="CISA KEV catalog was unavailable; KEV membership may be incomplete.",
-            severity="error",
-        )
-    )
-
-
-def _nvd_missing_cvss_flags(results: dict[str, NvdData]) -> list[ProviderDataQualityFlag]:
-    """Nvd missing cvss flags function."""
-    flags: list[ProviderDataQualityFlag] = []
-    for cve_id, item in results.items():
-        if has_nvd_content(item) and item.cvss_base_score is None and item.cvss_version is None:
-            flags.append(
-                ProviderDataQualityFlag(
-                    source="nvd",
-                    code="nvd_cvss_missing",
-                    message=(
-                        "NVD returned provider metadata without a CVSS base score "
-                        f"or version for {cve_id}."
-                    ),
-                    cve_id=cve_id,
-                )
-            )
-    return flags
-
-
-def _merge_provider_results(
-    cve_ids: list[str],
-    snapshot_results: dict[str, _T],
-    live_results: dict[str, _T],
-    model_cls: type[_T],
-) -> dict[str, _T]:
-    """Merge provider results function."""
-    merged: dict[str, _T] = {}
-    for cve_id in cve_ids:
-        if cve_id in snapshot_results:
-            merged[cve_id] = snapshot_results[cve_id]
-        elif cve_id in live_results:
-            merged[cve_id] = live_results[cve_id]
-        else:
-            merged[cve_id] = model_cls(cve_id=cve_id)
-    return merged
-
-
-def _build_fallback_diagnostics(
-    cve_ids: list[str],
-    results: dict[str, _T],
-    model_cls: type[_T],
-) -> ProviderLookupDiagnostics:
-    """Build fallback diagnostics function."""
-    if model_cls is EpssData:
-        content_hits = sum(
-            1
-            for item in results.values()
-            if isinstance(item, EpssData)
-            and (item.epss is not None or item.percentile is not None or item.date is not None)
-        )
-    elif model_cls is KevData:
-        content_hits = sum(
-            1 for item in results.values() if isinstance(item, KevData) and item.in_kev
-        )
-    else:
-        content_hits = sum(
-            1 for item in results.values() if isinstance(item, NvdData) and has_nvd_content(item)
-        )
-    return ProviderLookupDiagnostics(
-        requested=len(cve_ids),
-        content_hits=content_hits,
-        empty_records=max(len(cve_ids) - content_hits, 0),
-    )
-
-
-def _build_nvd_fetch_diagnostics(
-    cve_ids: list[str],
-    results: dict[str, NvdData],
-) -> NvdFetchDiagnostics:
-    """Build nvd fetch diagnostics function."""
-    fallback = _build_fallback_diagnostics(cve_ids, results, NvdData)
-    return NvdFetchDiagnostics(
-        requested=fallback.requested,
-        cache_hits=fallback.cache_hits,
-        network_fetches=fallback.network_fetches,
-        failures=fallback.failures,
-        content_hits=fallback.content_hits,
-        empty_records=fallback.empty_records,
-        stale_cache_hits=fallback.stale_cache_hits,
-        degraded=fallback.degraded,
-    )
-
-
-def _safe_provider_error(exc: BaseException, *, provider: object) -> str:
-    """Safe provider error function."""
-    message = str(exc)
-    secret = getattr(provider, "api_key", None)
-    if isinstance(secret, str) and secret:
-        message = message.replace(secret, "<redacted>")
-    return message

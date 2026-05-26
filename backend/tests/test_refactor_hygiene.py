@@ -95,6 +95,8 @@ def test_core_analysis_service_is_focused_facade() -> None:
 
     assert {
         "vuln_prioritizer.services.analysis_attack",
+        "vuln_prioritizer.services.analysis_explain",
+        "vuln_prioritizer.services.analysis_findings",
         "vuln_prioritizer.services.analysis_filters",
         "vuln_prioritizer.services.analysis_inputs",
         "vuln_prioritizer.services.analysis_models",
@@ -113,6 +115,98 @@ def test_core_analysis_service_is_focused_facade() -> None:
         and len(path.read_text(encoding="utf-8").splitlines()) > 800
     }
     assert oversized == {}
+
+
+def test_analysis_pipeline_delegates_quality_and_explain_helpers() -> None:
+    pipeline_source = (ROOT / "src/vuln_prioritizer/services/analysis_pipeline.py").read_text(
+        encoding="utf-8"
+    )
+    findings_source = (ROOT / "src/vuln_prioritizer/services/analysis_findings.py").read_text(
+        encoding="utf-8"
+    )
+    quality_source = (ROOT / "src/vuln_prioritizer/services/analysis_quality.py").read_text(
+        encoding="utf-8"
+    )
+    explain_source = (ROOT / "src/vuln_prioritizer/services/analysis_explain.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "vuln_prioritizer.services.analysis_findings" in pipeline_source
+    assert "vuln_prioritizer.services.analysis_quality" in findings_source
+    assert "def build_findings" not in pipeline_source
+    assert "def build_findings" in findings_source
+    assert "def attach_provider_data_quality_flags" not in pipeline_source
+    assert "def _finding_data_quality_confidence" not in pipeline_source
+    assert "def attach_provider_data_quality_flags" in quality_source
+    assert "def _finding_data_quality_confidence" in quality_source
+    assert "vuln_prioritizer.services.analysis_explain" in pipeline_source
+    assert "Compatibility wrapper for the focused explain module." in pipeline_source
+    assert "Compatibility wrapper for saved-analysis explain results." in pipeline_source
+    assert "build_inline_input" not in pipeline_source
+    assert "def prepare_explain" in explain_source
+    assert "def prepare_saved_explain" in explain_source
+
+
+def test_enrichment_service_delegates_snapshot_quality_and_result_helpers() -> None:
+    source = (ROOT / "src/vuln_prioritizer/services/enrichment.py").read_text(encoding="utf-8")
+    snapshot_source = (ROOT / "src/vuln_prioritizer/services/enrichment_snapshot.py").read_text(
+        encoding="utf-8"
+    )
+    quality_source = (ROOT / "src/vuln_prioritizer/services/enrichment_quality.py").read_text(
+        encoding="utf-8"
+    )
+    results_source = (ROOT / "src/vuln_prioritizer/services/enrichment_results.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "vuln_prioritizer.services.enrichment_snapshot" in source
+    assert "vuln_prioritizer.services.enrichment_quality" in source
+    assert "vuln_prioritizer.services.enrichment_results" in source
+    assert "class EnrichmentService" in source
+    assert "def _provider_data_quality_flags" not in source
+    assert "def _append_provider_error_flag" not in source
+    assert "def _snapshot_defensive_contexts" not in source
+    assert "def _merge_provider_results" not in source
+    assert "def provider_enrichment_quality_flags" in quality_source
+    assert "def snapshot_defensive_contexts" in snapshot_source
+    assert "def merge_provider_results" in results_source
+    assert "def build_fallback_diagnostics" in results_source
+    assert len(source.splitlines()) <= 430
+    assert len(snapshot_source.splitlines()) <= 80
+    assert len(quality_source.splitlines()) <= 220
+    assert len(results_source.splitlines()) <= 120
+
+
+def test_prioritization_service_delegates_sorting_ranking_and_attack_helpers() -> None:
+    source = (ROOT / "src/vuln_prioritizer/services/prioritization.py").read_text(encoding="utf-8")
+    sorting_source = (ROOT / "src/vuln_prioritizer/services/prioritization_sorting.py").read_text(
+        encoding="utf-8"
+    )
+    ranking_source = (ROOT / "src/vuln_prioritizer/services/prioritization_ranking.py").read_text(
+        encoding="utf-8"
+    )
+    attack_source = (ROOT / "src/vuln_prioritizer/services/prioritization_attack.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "vuln_prioritizer.services.prioritization_sorting" in source
+    assert "vuln_prioritizer.services.prioritization_ranking" in source
+    assert "vuln_prioritizer.services.prioritization_attack" in source
+    assert "class PrioritizationService" in source
+    assert "def _finding_sort_key" not in source
+    assert "def _comparison_sort_key" not in source
+    assert "def _operational_sort_key" not in source
+    assert "def _context_rank_reasons" not in source
+    assert "def _attack_context_summary" not in source
+    assert "def sort_prioritized_findings" in sorting_source
+    assert "def sort_comparison_findings" in sorting_source
+    assert "def assign_operational_ranks" in ranking_source
+    assert "def _context_rank_reasons" in ranking_source
+    assert "def build_attack_context_summary" in attack_source
+    assert len(source.splitlines()) <= 300
+    assert len(sorting_source.splitlines()) <= 130
+    assert len(ranking_source.splitlines()) <= 240
+    assert len(attack_source.splitlines()) <= 70
 
 
 def test_service_modules_do_not_import_cli_adapter_modules() -> None:
@@ -483,6 +577,60 @@ def test_provider_update_orchestrator_uses_focused_services() -> None:
     assert len(snapshot_source.splitlines()) <= 430
 
 
+def test_attack_payload_service_delegates_normalization_helpers() -> None:
+    source = (ROOT / "app/services/attack.py").read_text(encoding="utf-8")
+    navigator_source = (ROOT / "app/services/attack_navigator.py").read_text(encoding="utf-8")
+    support_source = (ROOT / "app/services/attack_support.py").read_text(encoding="utf-8")
+
+    assert "app.services.attack_support" in source
+    assert "app.services.attack_navigator" in source
+    assert "def build_project_attack_summary_payload" in source
+    assert "def build_attack_navigator_layer_payload" in navigator_source
+    assert "def _navigator_technique_payload" in navigator_source
+    assert "class TechniqueCandidate" not in source
+    assert "def confidence_label" not in source
+    assert "def records" not in source
+    assert "class TechniqueCandidate" in support_source
+    assert "def confidence_label" in support_source
+    assert "def latest_contexts_by_finding" in support_source
+    assert "def technique_candidates" in support_source
+    assert "def records" in support_source
+    assert len(source.splitlines()) <= 240
+    assert len(navigator_source.splitlines()) <= 190
+    assert len(support_source.splitlines()) <= 260
+
+
+def test_attack_models_are_split_behind_stable_facade() -> None:
+    facade_source = (ROOT / "app/models/attack.py").read_text(encoding="utf-8")
+    common_source = (ROOT / "app/models/attack_common.py").read_text(encoding="utf-8")
+    catalog_source = (ROOT / "app/models/attack_catalog.py").read_text(encoding="utf-8")
+    stix_source = (ROOT / "app/models/attack_stix.py").read_text(encoding="utf-8")
+    context_source = (ROOT / "app/models/attack_context.py").read_text(encoding="utf-8")
+    summary_source = (ROOT / "app/models/attack_summary.py").read_text(encoding="utf-8")
+
+    assert "app.models.attack_catalog" in facade_source
+    assert "app.models.attack_stix" in facade_source
+    assert "app.models.attack_context" in facade_source
+    assert "app.models.attack_summary" in facade_source
+    assert "class AttackTacticBase" not in facade_source
+    assert "class AttackStixSnapshotBase" not in facade_source
+    assert "class FindingAttackContextBase" not in facade_source
+    assert "class ProjectAttackSummaryPublic" not in facade_source
+    assert "ATTACK_REVIEW_STATUSES" in common_source
+    assert "class AttackTacticBase" in catalog_source
+    assert "class CveAttackMappingBase" in catalog_source
+    assert "class AttackStixSnapshotBase" in stix_source
+    assert "class AttackStixTechniqueMitigation" in stix_source
+    assert "class FindingAttackContextBase" in context_source
+    assert "class ProjectAttackSummaryPublic" in summary_source
+    assert len(facade_source.splitlines()) <= 140
+    assert len(common_source.splitlines()) <= 60
+    assert len(catalog_source.splitlines()) <= 280
+    assert len(stix_source.splitlines()) <= 320
+    assert len(context_source.splitlines()) <= 150
+    assert len(summary_source.splitlines()) <= 100
+
+
 def test_workbench_import_validation_and_storage_are_split_from_route_facade() -> None:
     imports = _imported_modules("app/api/routes/imports.py")
     upload_helper_imports = _imported_modules("app/api/routes/import_uploads.py")
@@ -496,6 +644,15 @@ def test_workbench_import_validation_and_storage_are_split_from_route_facade() -
     upload_stage_source = (ROOT / "app/services/import_execution_uploads.py").read_text(
         encoding="utf-8"
     )
+    upload_prepare_source = (ROOT / "app/services/import_execution_upload_prepare.py").read_text(
+        encoding="utf-8"
+    )
+    upload_storage_source = (ROOT / "app/services/import_execution_upload_storage.py").read_text(
+        encoding="utf-8"
+    )
+    run_state_source = (ROOT / "app/services/import_execution_run_state.py").read_text(
+        encoding="utf-8"
+    )
     upload_source = (ROOT / "app/services/import_uploads.py").read_text(encoding="utf-8")
     artifact_source = (ROOT / "app/services/import_artifacts.py").read_text(encoding="utf-8")
 
@@ -507,23 +664,29 @@ def test_workbench_import_validation_and_storage_are_split_from_route_facade() -
     assert "def read_bounded_upload" not in source
     assert "def store_upload" not in source
     assert "def resolve_workbench_provider_snapshot_path" not in source
-    assert "app.services.import_uploads" in upload_stage_source
-    assert "app.services.import_artifacts" in upload_stage_source
+    assert "app.services.import_execution_upload_prepare" in upload_stage_source
+    assert "app.services.import_execution_upload_storage" in upload_stage_source
+    assert "app.services.import_execution_run_state" in upload_stage_source
+    assert "app.services.import_uploads" in upload_prepare_source
+    assert "app.services.import_uploads" in upload_storage_source
+    assert "app.services.import_artifacts" in upload_prepare_source
     assert "ALLOWED_UPLOAD_SUFFIXES = " in upload_source
     assert "def store_upload" in upload_source
     assert "def resolve_workbench_provider_snapshot_path" in artifact_source
     assert "def validate_attack_import_options" in artifact_source
     assert "app.services.import_execution_types" in execution_source
-    assert "app.services.import_execution_types" in upload_stage_source
+    assert "app.services.import_execution_types" in upload_prepare_source
+    assert "app.services.import_execution_types" in upload_storage_source
+    assert "app.services.import_execution_types" in run_state_source
     assert "app.services.import_execution_uploads" in execution_source
     assert "app.services.import_execution_parsing" in execution_source
     assert "app.services.import_execution_parse_failures" in execution_source
     assert "class PreparedImportUpload" in type_source
     assert "class ResolvedImportRun" in type_source
     assert "class StoredImportArtifacts" in type_source
-    assert "def prepare_import_upload" in upload_stage_source
-    assert "def resolve_import_run" in upload_stage_source
-    assert "def store_prepared_uploads" in upload_stage_source
+    assert "def prepare_import_upload" in upload_prepare_source
+    assert "def resolve_import_run" in run_state_source
+    assert "def store_prepared_uploads" in upload_storage_source
     assert "def parse_prepared_upload" in parsing_source
     assert "def raise_parse_failure" in parse_failure_source
     assert "def raise_sidecar_parse_failure" in parse_failure_source
@@ -543,6 +706,36 @@ def test_findings_page_uses_internal_query_object() -> None:
     assert "FindingPageQuery(" in route_source
     assert "list_project_findings_query" in route_source
     assert "FindingPageQuery(" in github_issue_source
+
+
+def test_findings_repository_delegates_aggregate_query_helpers() -> None:
+    repository_source = (ROOT / "app/repositories/findings.py").read_text(encoding="utf-8")
+    repository_imports = _imported_modules("app/repositories/findings.py")
+    summary_source = (ROOT / "app/repositories/finding_summary_query.py").read_text(
+        encoding="utf-8"
+    )
+    governance_source = (ROOT / "app/repositories/finding_governance_query.py").read_text(
+        encoding="utf-8"
+    )
+    attack_source = (ROOT / "app/repositories/finding_attack_query.py").read_text(encoding="utf-8")
+
+    assert "app.repositories.finding_summary_query" in repository_imports
+    assert "app.repositories.finding_governance_query" in repository_imports
+    assert "app.repositories.finding_attack_query" in repository_imports
+    assert "def project_finding_summary_counts" in repository_source
+    assert "def project_governance_rollups" in repository_source
+    assert "def list_project_attack_summary_inputs" in repository_source
+    assert "func.sum(_case_int" not in repository_source
+    assert "def _governance_rollup_from_row" not in repository_source
+    assert "def project_dashboard_signal_counts" in summary_source
+    assert "def project_waiver_finding_counts" in summary_source
+    assert "def _governance_rollup_from_row" in governance_source
+    assert "def top_cves_for_governance_label" in governance_source
+    assert "def list_project_attack_summary_inputs" in attack_source
+    assert len(repository_source.splitlines()) <= 430
+    assert len(summary_source.splitlines()) <= 180
+    assert len(governance_source.splitlines()) <= 220
+    assert len(attack_source.splitlines()) <= 110
 
 
 def test_findings_route_delegates_public_projection() -> None:
@@ -817,6 +1010,12 @@ def test_workbench_route_shells_delegate_interaction_state() -> None:
     assets_state_source = (
         REPO_ROOT / "frontend/src/workbench/routes/useAssetsRouteState.ts"
     ).read_text(encoding="utf-8")
+    assets_route_model_source = (
+        REPO_ROOT / "frontend/src/workbench/routes/assets-route-model.ts"
+    ).read_text(encoding="utf-8")
+    assets_filter_state_source = (
+        REPO_ROOT / "frontend/src/workbench/routes/assets-route-filter-state.ts"
+    ).read_text(encoding="utf-8")
     imports_route_source = (REPO_ROOT / "frontend/src/workbench/routes/ImportsRoute.tsx").read_text(
         encoding="utf-8"
     )
@@ -832,9 +1031,18 @@ def test_workbench_route_shells_delegate_interaction_state() -> None:
     assert "AssetsService" in assets_state_source
     assert "useWorkbenchContext" in assets_state_source
     assert "AssetsWorkbenchProps" in assets_state_source
-    assert "filterAssets" in assets_state_source
+    assert "./assets-route-model" in assets_state_source
+    assert "./assets-route-filter-state" in assets_state_source
+    assert "filterAssets" not in assets_state_source
+    assert "summarizeAssets" not in assets_state_source
+    assert "buildServiceRollups" not in assets_state_source
+    assert "filterAssets" in assets_route_model_source
+    assert "export function assetInventoryView" in assets_route_model_source
+    assert "export function useAssetFilterState" in assets_filter_state_source
     assert len(assets_route_source.splitlines()) <= 20
-    assert len(assets_state_source.splitlines()) <= 450
+    assert len(assets_state_source.splitlines()) <= 400
+    assert len(assets_route_model_source.splitlines()) <= 130
+    assert len(assets_filter_state_source.splitlines()) <= 110
     assert 'from "./ImportsRouteContainer"' in imports_route_source
     assert "ImportsService" not in imports_route_source
     assert "useMutation" not in imports_route_source
@@ -1800,6 +2008,18 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     waivers_model_source = (
         REPO_ROOT / "frontend/src/components/waivers/waivers-workbench-model.ts"
     ).read_text(encoding="utf-8")
+    waiver_form_model_source = (
+        REPO_ROOT / "frontend/src/components/waivers/waiver-form-model.ts"
+    ).read_text(encoding="utf-8")
+    waiver_lifecycle_model_source = (
+        REPO_ROOT / "frontend/src/components/waivers/waiver-lifecycle-model.ts"
+    ).read_text(encoding="utf-8")
+    waiver_scope_model_source = (
+        REPO_ROOT / "frontend/src/components/waivers/waiver-scope-model.ts"
+    ).read_text(encoding="utf-8")
+    waiver_summary_model_source = (
+        REPO_ROOT / "frontend/src/components/waivers/waiver-summary-model.ts"
+    ).read_text(encoding="utf-8")
     settings_source = (
         REPO_ROOT / "frontend/src/components/settings/SettingsWorkbench.tsx"
     ).read_text(encoding="utf-8")
@@ -1968,6 +2188,17 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert "./waivers-register-model" in waivers_register_source
     assert "matchesWaiverSearch" in waivers_register_model_source
     assert "function matchesWaiverSearch" not in waivers_register_source
+    assert "./waiver-form-model" in waivers_model_source
+    assert "./waiver-lifecycle-model" in waivers_model_source
+    assert "./waiver-scope-model" in waivers_model_source
+    assert "./waiver-summary-model" in waivers_model_source
+    assert "export function matchingFindings" not in waivers_model_source
+    assert "export function statusTone" not in waivers_model_source
+    assert "export function reviewQueue" not in waivers_model_source
+    assert "export function waiverFormFromRecord" in waiver_form_model_source
+    assert "export function matchingFindings" in waiver_scope_model_source
+    assert "export function statusTone" in waiver_lifecycle_model_source
+    assert "export function reviewQueue" in waiver_summary_model_source
     assert "SettingsContext" in settings_sections_source
     assert "VpwCommandPanel" in settings_context_source
     assert "SettingsWorkbenchOverview" in settings_sections_source
@@ -2041,7 +2272,11 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert len(waivers_register_source.splitlines()) <= 290
     assert len(waivers_register_model_source.splitlines()) <= 130
     assert len(waivers_review_source.splitlines()) <= 200
-    assert len(waivers_model_source.splitlines()) <= 500
+    assert len(waivers_model_source.splitlines()) <= 140
+    assert len(waiver_form_model_source.splitlines()) <= 80
+    assert len(waiver_lifecycle_model_source.splitlines()) <= 90
+    assert len(waiver_scope_model_source.splitlines()) <= 180
+    assert len(waiver_summary_model_source.splitlines()) <= 180
     assert len(settings_source.splitlines()) <= 120
     assert len(settings_sections_source.splitlines()) <= 40
     assert len(settings_context_source.splitlines()) <= 110
@@ -2172,6 +2407,15 @@ def test_import_execution_is_split_into_stage_services_with_guardrails() -> None
         encoding="utf-8"
     )
     upload_source = (ROOT / "app/services/import_execution_uploads.py").read_text(encoding="utf-8")
+    upload_prepare_source = (ROOT / "app/services/import_execution_upload_prepare.py").read_text(
+        encoding="utf-8"
+    )
+    upload_storage_source = (ROOT / "app/services/import_execution_upload_storage.py").read_text(
+        encoding="utf-8"
+    )
+    run_state_source = (ROOT / "app/services/import_execution_run_state.py").read_text(
+        encoding="utf-8"
+    )
     dedup_source = (ROOT / "app/services/import_execution_dedup.py").read_text(encoding="utf-8")
     persistence_source = (ROOT / "app/services/import_execution_persistence.py").read_text(
         encoding="utf-8"
@@ -2204,8 +2448,14 @@ def test_import_execution_is_split_into_stage_services_with_guardrails() -> None
     assert "def raise_analysis_failure" in failure_source
     assert "def raise_parse_failure" in parse_failure_source
     assert "def raise_sidecar_parse_failure" in parse_failure_source
-    assert "def prepare_import_upload" in upload_source
-    assert "def apply_stored_upload_summaries" in upload_source
+    assert "app.services.import_execution_upload_prepare" in upload_source
+    assert "app.services.import_execution_upload_storage" in upload_source
+    assert "app.services.import_execution_run_state" in upload_source
+    assert "def prepare_import_upload" in upload_prepare_source
+    assert "def initial_upload_summary" in upload_prepare_source
+    assert "def store_prepared_uploads" in upload_storage_source
+    assert "def apply_stored_upload_summaries" in run_state_source
+    assert "def mark_import_run_running" in run_state_source
     assert "def _dedup_key_parts" in dedup_source
     assert "def _finding_dedup_key" in dedup_source
     assert "def _dedup_key_parts" not in persistence_source
@@ -2222,7 +2472,10 @@ def test_import_execution_is_split_into_stage_services_with_guardrails() -> None
     assert len(context_source.splitlines()) <= 220
     assert len(failure_source.splitlines()) <= 140
     assert len(parse_failure_source.splitlines()) <= 240
-    assert len(upload_source.splitlines()) <= 520
+    assert len(upload_source.splitlines()) <= 40
+    assert len(upload_prepare_source.splitlines()) <= 280
+    assert len(upload_storage_source.splitlines()) <= 120
+    assert len(run_state_source.splitlines()) <= 200
     assert len(persistence_source.splitlines()) <= 320
     assert len(persistence_bulk_source.splitlines()) <= 340
     assert len(persistence_payloads_source.splitlines()) <= 320

@@ -12,6 +12,7 @@ import {
   DEMO_TOP_SERVICES,
   DEMO_WAIVERS,
 } from "../src/lib/demo-data.ts"
+import { findingWhyNow } from "../src/lib/finding-urgency-summary.ts"
 
 test("frontend demo preview mirrors the Online Shop demo workspace story", () => {
   const cves = new Set(DEMO_FINDINGS.map((finding) => finding.cve_id))
@@ -75,4 +76,16 @@ test("frontend demo ATT&CK mappings are reviewed defensive context only", () => 
   assert.doesNotMatch(rendered, /exploit/i)
   assert.doesNotMatch(rendered, /payload/i)
   assert.equal(DEMO_FINDING_ATTACK_CONTEXTS["demo-f24"], undefined)
+})
+
+test("frontend demo preview has signal-derived why-now summaries", () => {
+  for (const finding of DEMO_FINDINGS) {
+    const whyNow = findingWhyNow(finding)
+
+    assert.notEqual(whyNow, finding.recommended_action)
+    assert.match(
+      whyNow,
+      /KEV|EPSS|CVSS|internet-facing|production|accepted risk|VEX|fixed|review|remediation|open/i,
+    )
+  }
 })
