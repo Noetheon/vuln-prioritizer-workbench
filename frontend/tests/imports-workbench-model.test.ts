@@ -29,7 +29,6 @@ import {
   defaultImportWizardState,
   demoProviderSnapshotFile,
   withDemoProviderSnapshot,
-  workbenchImportFormats,
 } from "../src/lib/app-defaults.ts"
 import {
   acceptedFileInputValue,
@@ -37,39 +36,189 @@ import {
   buildParserPreview,
   fileMatchesAcceptedExtension,
   getAcceptedMimeTypes,
+  importFormatFromCapability,
   initialParserPreview,
   readinessBlocksImport,
-  SUPPORTED_IMPORT_FORMATS,
-  SUPPORTED_IMPORT_INPUT_TYPES,
   type ParserPreview,
 } from "../src/lib/import-format-metadata.ts"
+import type { ImportFormatCapabilityPublic } from "../src/api-client"
 import { buildImportUploadFormData } from "../src/workbench/import-upload-payload.ts"
 
-test("import model derives display labels and format metadata", () => {
-  const formats = [
-    {
-      label: "CVE list",
-      value: "cve-list",
-      accept: ".txt",
-      detail: "One CVE per line.",
-    },
-    {
-      label: "Trivy JSON",
-      value: "trivy-json",
-      accept: ".json",
-      detail: "Trivy output.",
-    },
-  ] as const
+const TEST_IMPORT_CAPABILITIES: ImportFormatCapabilityPublic[] = [
+  {
+    accepted_mime_types: ["text/plain", "text/csv"],
+    best_for: "Quick lists of already-known CVEs.",
+    category: "simple",
+    category_label: "Simple inputs",
+    context_support: "cve-only",
+    example_snippet: "CVE-2024-3094",
+    expected_shape: "Plain text or CSV with one CVE identifier per line.",
+    extensions: [".txt", ".csv"],
+    input_type: "cve-list",
+    label: "CVE list",
+    minimum_fields: ["One CVE identifier per line or a CVE column"],
+    notes: ["Use this for quick supplied CVE lists without asset context."],
+    optional_fields: [],
+    short_description: "Plain text or CSV with one CVE identifier per line.",
+  },
+  {
+    accepted_mime_types: ["text/csv"],
+    best_for: "Manual vulnerability backlog or occurrence lists.",
+    category: "simple",
+    category_label: "Simple inputs",
+    context_support: "asset-context-capable",
+    example_snippet: "cve_id,component_name\nCVE-2024-3094,xz",
+    expected_shape: "CSV with CVE identifiers and optional asset or component context.",
+    extensions: [".csv"],
+    input_type: "generic-occurrence-csv",
+    label: "Generic occurrence CSV",
+    minimum_fields: ["cve_id or equivalent supported CVE field"],
+    notes: ["Asset context can improve prioritization and explanations."],
+    optional_fields: ["component_name"],
+    short_description: "CSV with CVE identifiers and optional asset or component context.",
+  },
+  {
+    accepted_mime_types: ["application/json"],
+    best_for: "Container and filesystem exports from Trivy.",
+    category: "scanner",
+    category_label: "Scanner exports",
+    context_support: "component-context",
+    example_snippet: "{\"Results\":[]}",
+    expected_shape: "Trivy vulnerability report JSON.",
+    extensions: [".json"],
+    input_type: "trivy-json",
+    label: "Trivy JSON",
+    minimum_fields: ["Results[].Vulnerabilities[]"],
+    notes: ["Use the JSON report exported by Trivy."],
+    optional_fields: ["PkgName"],
+    short_description: "Trivy vulnerability export.",
+  },
+  {
+    accepted_mime_types: ["application/json"],
+    best_for: "Container and SBOM exports from Grype.",
+    category: "scanner",
+    category_label: "Scanner exports",
+    context_support: "component-context",
+    example_snippet: "{\"matches\":[]}",
+    expected_shape: "Grype vulnerability report JSON.",
+    extensions: [".json"],
+    input_type: "grype-json",
+    label: "Grype JSON",
+    minimum_fields: ["matches[] vulnerability data"],
+    notes: ["Use the JSON report exported by Grype."],
+    optional_fields: ["artifact"],
+    short_description: "Grype vulnerability export.",
+  },
+  {
+    accepted_mime_types: ["application/json"],
+    best_for: "Software inventory with vulnerability references.",
+    category: "sbom",
+    category_label: "SBOM / dependency data",
+    context_support: "component-vulnerability-context",
+    example_snippet: "{\"bomFormat\":\"CycloneDX\"}",
+    expected_shape: "CycloneDX components plus vulnerability references.",
+    extensions: [".json"],
+    input_type: "cyclonedx-json",
+    label: "CycloneDX SBOM JSON",
+    minimum_fields: ["components", "vulnerabilities"],
+    notes: ["Plain SBOM-only BOM without vulnerabilities is not sufficient."],
+    optional_fields: ["bom-ref"],
+    short_description: "CycloneDX SBOM plus vulnerabilities.",
+  },
+  {
+    accepted_mime_types: ["application/json"],
+    best_for: "SPDX package inventory with vulnerability references where supported.",
+    category: "sbom",
+    category_label: "SBOM / dependency data",
+    context_support: "component-context",
+    example_snippet: "{\"spdxVersion\":\"SPDX-2.3\"}",
+    expected_shape: "SPDX JSON package data.",
+    extensions: [".json"],
+    input_type: "spdx-json",
+    label: "SPDX SBOM JSON",
+    minimum_fields: ["packages"],
+    notes: ["Package data is parsed locally from supplied SPDX JSON."],
+    optional_fields: ["externalRefs"],
+    short_description: "SPDX JSON package data.",
+  },
+  {
+    accepted_mime_types: ["application/json"],
+    best_for: "OWASP Dependency-Check output.",
+    category: "scanner",
+    category_label: "Scanner exports",
+    context_support: "component-context",
+    example_snippet: "{\"dependencies\":[]}",
+    expected_shape: "OWASP Dependency-Check JSON report.",
+    extensions: [".json"],
+    input_type: "dependency-check-json",
+    label: "Dependency-Check JSON",
+    minimum_fields: ["dependencies[].vulnerabilities[]"],
+    notes: ["Use the JSON report exported by OWASP Dependency-Check."],
+    optional_fields: ["packages"],
+    short_description: "OWASP Dependency-Check JSON report.",
+  },
+  {
+    accepted_mime_types: ["application/json"],
+    best_for: "Pinned GitHub security or dependency alert evidence.",
+    category: "scanner",
+    category_label: "Scanner exports",
+    context_support: "component-context",
+    example_snippet: "[]",
+    expected_shape: "Pinned GitHub alert export shape.",
+    extensions: [".json"],
+    input_type: "github-alerts-json",
+    label: "GitHub alerts JSON",
+    minimum_fields: ["alert vulnerability records"],
+    notes: ["Use the pinned JSON export shape supported by the backend."],
+    optional_fields: ["dependency"],
+    short_description: "Pinned GitHub alert JSON export shape.",
+  },
+  {
+    accepted_mime_types: ["application/xml", "text/xml"],
+    best_for: "Network tool export evidence supplied as local XML.",
+    category: "network",
+    category_label: "Network scanner exports",
+    context_support: "partial-occurrence-context",
+    example_snippet: "<NessusClientData_v2 />",
+    expected_shape: "Nessus export with ReportHost / ReportItem CVE data.",
+    extensions: [".nessus", ".xml"],
+    input_type: "nessus-xml",
+    label: "Nessus XML",
+    minimum_fields: ["ReportHost", "ReportItem CVE data"],
+    notes: ["Parsed locally from supplied exports; the Workbench does not scan networks."],
+    optional_fields: ["plugin_output"],
+    short_description: "Nessus XML export parsed locally.",
+  },
+  {
+    accepted_mime_types: ["application/xml", "text/xml"],
+    best_for: "OpenVAS-style result evidence supplied as local XML.",
+    category: "network",
+    category_label: "Network scanner exports",
+    context_support: "partial-occurrence-context",
+    example_snippet: "<report />",
+    expected_shape: "OpenVAS result CVE data.",
+    extensions: [".xml"],
+    input_type: "openvas-xml",
+    label: "OpenVAS XML",
+    minimum_fields: ["result CVE data"],
+    notes: ["Parsed locally from supplied exports; the Workbench does not scan networks."],
+    optional_fields: ["host"],
+    short_description: "OpenVAS XML export parsed locally.",
+  },
+]
 
+const TEST_SUPPORTED_FORMATS = TEST_IMPORT_CAPABILITIES.map(importFormatFromCapability)
+
+test("import model derives display labels and format metadata", () => {
   assert.equal(formatDisplayType("generic-occurrence-csv"), "generic occurrence csv")
-  assert.equal(formatExpectedFields("trivy-json"), "Results[].Vulnerabilities[]")
-  assert.equal(formatExpectedFields("cyclonedx-json"), "components, vulnerabilities")
-  assert.equal(formatExpectedFields("generic-occurrence-csv"), "cve_id or equivalent supported CVE field")
-  assert.equal(formatExpectedFields("nessus-xml"), "ReportHost, ReportItem CVE data")
-  assert.equal(formatExpectedFields("openvas-xml"), "result CVE data")
-  assert.equal(formatExpectedFields("unknown"), "Supported Workbench import fields")
-  assert.equal(selectedFormat(formats, "trivy-json")?.label, "Trivy JSON")
-  assert.equal(selectedFormat(formats, "unknown"), undefined)
+  assert.equal(formatExpectedFields(TEST_SUPPORTED_FORMATS, "trivy-json"), "Results[].Vulnerabilities[]")
+  assert.equal(formatExpectedFields(TEST_SUPPORTED_FORMATS, "cyclonedx-json"), "components, vulnerabilities")
+  assert.equal(formatExpectedFields(TEST_SUPPORTED_FORMATS, "generic-occurrence-csv"), "cve_id or equivalent supported CVE field")
+  assert.equal(formatExpectedFields(TEST_SUPPORTED_FORMATS, "nessus-xml"), "ReportHost, ReportItem CVE data")
+  assert.equal(formatExpectedFields(TEST_SUPPORTED_FORMATS, "openvas-xml"), "result CVE data")
+  assert.equal(formatExpectedFields(TEST_SUPPORTED_FORMATS, "unknown"), "Supported Workbench import fields")
+  assert.equal(selectedFormat(TEST_SUPPORTED_FORMATS, "trivy-json")?.label, "Trivy JSON")
+  assert.equal(selectedFormat(TEST_SUPPORTED_FORMATS, "unknown"), undefined)
 })
 
 test("import formats preserve exact supported input keys", () => {
@@ -86,34 +235,32 @@ test("import formats preserve exact supported input keys", () => {
     "openvas-xml",
   ]
 
-  assert.deepEqual(workbenchImportFormats.map((format) => format.value), expectedInputTypes)
-  assert.deepEqual(SUPPORTED_IMPORT_INPUT_TYPES, expectedInputTypes)
   assert.deepEqual(
-    SUPPORTED_IMPORT_FORMATS.map((format) => format.inputType),
+    TEST_SUPPORTED_FORMATS.map((format) => format.inputType),
     expectedInputTypes,
   )
-  assert.equal(SUPPORTED_IMPORT_FORMATS.length, 10)
+  assert.equal(TEST_SUPPORTED_FORMATS.length, 10)
   const unsupported = ["osv-json", "ghsa-json", "sarif", "snyk-csv"]
   assert.equal(
-    SUPPORTED_IMPORT_FORMATS.some((format) =>
+    TEST_SUPPORTED_FORMATS.some((format) =>
       unsupported.includes(format.inputType),
     ),
     false,
   )
   assert.match(
-    SUPPORTED_IMPORT_FORMATS.find(
+    TEST_SUPPORTED_FORMATS.find(
       (format) => format.inputType === "cyclonedx-json",
     )?.notes.join(" ") ?? "",
     /without vulnerabilities is not sufficient/,
   )
   assert.equal(
-    SUPPORTED_IMPORT_FORMATS.find(
+    TEST_SUPPORTED_FORMATS.find(
       (format) => format.inputType === "cyclonedx-json",
     )?.contextSupport,
     "component-vulnerability-context",
   )
   assert.match(
-    SUPPORTED_IMPORT_FORMATS.find(
+    TEST_SUPPORTED_FORMATS.find(
       (format) => format.inputType === "nessus-xml",
     )?.notes.join(" ") ?? "",
     /does not scan networks/,
@@ -122,15 +269,13 @@ test("import formats preserve exact supported input keys", () => {
 
 test("import format catalog drives active upload choices and payload input types", () => {
   assert.deepEqual(
-    workbenchImportFormats.map((format) => format.accept),
-    SUPPORTED_IMPORT_FORMATS.map((format) => acceptedFileInputValue(format.inputType)),
-  )
-  assert.deepEqual(
-    workbenchImportFormats.map((format) => format.detail),
-    SUPPORTED_IMPORT_FORMATS.map((format) => format.shortDescription),
+    TEST_SUPPORTED_FORMATS.map((format) => acceptedFileInputValue(format)),
+    TEST_SUPPORTED_FORMATS.map((format) =>
+      [...format.extensions, ...format.acceptedMimeTypes].join(","),
+    ),
   )
 
-  for (const format of SUPPORTED_IMPORT_FORMATS) {
+  for (const format of TEST_SUPPORTED_FORMATS) {
     const selectedFile = {} as File
     const payload = buildImportUploadFormData({
       importWizard: {
@@ -504,6 +649,7 @@ test("import submit stays disabled until project and source file are ready", () 
     importSubmitDisabled({
       importLoading: false,
       projectListLoading: false,
+      supportedFormats: TEST_SUPPORTED_FORMATS,
       projectCount: 1,
       selectedProjectId: "project-1",
       wizard: readyWizard,
@@ -514,6 +660,7 @@ test("import submit stays disabled until project and source file are ready", () 
     importSubmitDisabled({
       importLoading: false,
       projectListLoading: false,
+      supportedFormats: TEST_SUPPORTED_FORMATS,
       projectCount: 1,
       selectedProjectId: "",
       wizard: readyWizard,
@@ -524,6 +671,7 @@ test("import submit stays disabled until project and source file are ready", () 
     importSubmitDisabled({
       importLoading: false,
       projectListLoading: false,
+      supportedFormats: TEST_SUPPORTED_FORMATS,
       projectCount: 1,
       selectedProjectId: "project-1",
       wizard: {
@@ -537,6 +685,7 @@ test("import submit stays disabled until project and source file are ready", () 
     importSubmitDisabled({
       importLoading: true,
       projectListLoading: false,
+      supportedFormats: TEST_SUPPORTED_FORMATS,
       projectCount: 1,
       selectedProjectId: "project-1",
       wizard: readyWizard,
@@ -548,6 +697,7 @@ test("import submit stays disabled until project and source file are ready", () 
 test("readiness model blocks required fields and allows optional context", () => {
   const missingChecks = buildImportReadinessChecks({
     evidenceFile: null,
+    formats: TEST_SUPPORTED_FORMATS,
     inputType: "",
     parserPreview: initialParserPreview(),
     projectId: "",
@@ -559,6 +709,7 @@ test("readiness model blocks required fields and allows optional context", () =>
   )
   const readyChecks = buildImportReadinessChecks({
     evidenceFile: { name: "findings.txt" } as File,
+    formats: TEST_SUPPORTED_FORMATS,
     inputType: "cve-list",
     parserPreview: {
       ...initialParserPreview(),
@@ -662,6 +813,7 @@ test("optional context readiness validates selected asset and VEX files shallowl
 test("readiness copy uses specific wizard states for context blockers", () => {
   const missingChecks = buildImportReadinessChecks({
     evidenceFile: null,
+    formats: TEST_SUPPORTED_FORMATS,
     inputType: "",
     parserPreview: initialParserPreview(),
     projectId: "",
@@ -671,6 +823,7 @@ test("readiness copy uses specific wizard states for context blockers", () => {
     evidenceFile: new File(["cve_id\nCVE-2024-3094"], "findings.csv", {
       type: "text/csv",
     }),
+    formats: TEST_SUPPORTED_FORMATS,
     inputType: "generic-occurrence-csv",
     parserPreview: {
       ...initialParserPreview(),
@@ -711,6 +864,7 @@ test("readiness model blocks parser preview until the file check has passed", ()
       evidenceFile: new File(["CVE-2024-3094"], "findings.txt", {
         type: "text/plain",
       }),
+      formats: TEST_SUPPORTED_FORMATS,
       inputType: "cve-list",
       parserPreview,
       projectId: "project-1",
@@ -745,14 +899,21 @@ test("readiness model blocks parser preview until the file check has passed", ()
 })
 
 test("parser preview validates supported shallow input states", async () => {
-  assert.deepEqual(await buildParserPreview(null, "cve-list"), initialParserPreview())
-  assert.deepEqual(await buildParserPreview(new File([""], "input.txt"), "unknown"), initialParserPreview())
-  assert.deepEqual(getAcceptedMimeTypes("unknown"), [])
-  assert.equal(acceptedFileInputValue("unknown"), "")
-  assert.equal(fileMatchesAcceptedExtension(null, "cve-list"), false)
-  assert.equal(fileMatchesAcceptedExtension(new File([""], "input.json"), "cve-list"), false)
+  assert.deepEqual(await buildParserPreview(TEST_SUPPORTED_FORMATS, null, "cve-list"), initialParserPreview())
+  assert.deepEqual(
+    await buildParserPreview(TEST_SUPPORTED_FORMATS, new File([""], "input.txt"), "unknown"),
+    initialParserPreview(),
+  )
+  assert.deepEqual(getAcceptedMimeTypes(TEST_SUPPORTED_FORMATS, "unknown"), [])
+  assert.equal(acceptedFileInputValue(undefined), "")
+  assert.equal(fileMatchesAcceptedExtension(TEST_SUPPORTED_FORMATS, null, "cve-list"), false)
+  assert.equal(
+    fileMatchesAcceptedExtension(TEST_SUPPORTED_FORMATS, new File([""], "input.json"), "cve-list"),
+    false,
+  )
 
   const cvePreview = await buildParserPreview(
+    TEST_SUPPORTED_FORMATS,
     new File(["CVE-2024-3094\nnot-a-cve"], "findings.txt", { type: "text/plain" }),
     "cve-list",
   )
@@ -763,6 +924,7 @@ test("parser preview validates supported shallow input states", async () => {
   assert.match(cvePreview.warnings.join(" "), /do not look like CVE identifiers/)
 
   const emptyCvePreview = await buildParserPreview(
+    TEST_SUPPORTED_FORMATS,
     new File(["not-a-cve"], "findings.csv", { type: "text/csv" }),
     "cve-list",
   )
@@ -770,6 +932,7 @@ test("parser preview validates supported shallow input states", async () => {
   assert.deepEqual(emptyCvePreview.missingRequiredFields, ["CVE identifier"])
 
   const csvPreview = await buildParserPreview(
+    TEST_SUPPORTED_FORMATS,
     new File(["CVE_ID,component\nCVE-2024-3094,xz\n"], "occurrences.csv", {
       type: "text/csv",
     }),
@@ -780,6 +943,7 @@ test("parser preview validates supported shallow input states", async () => {
   assert.deepEqual(csvPreview.requiredFieldsFound, ["CVE column"])
 
   const missingHeaderPreview = await buildParserPreview(
+    TEST_SUPPORTED_FORMATS,
     new File(["component\nxz"], "occurrences.csv", { type: "text/csv" }),
     "generic-occurrence-csv",
   )
@@ -788,6 +952,7 @@ test("parser preview validates supported shallow input states", async () => {
   assert.match(missingHeaderPreview.errors.join(" "), /cve_id/)
 
   const validJsonPreview = await buildParserPreview(
+    TEST_SUPPORTED_FORMATS,
     new File([JSON.stringify({ Results: [] })], "trivy.json", {
       type: "application/json",
     }),
@@ -797,6 +962,7 @@ test("parser preview validates supported shallow input states", async () => {
   assert.match(validJsonPreview.warnings.join(" "), /after import/)
 
   const invalidJsonPreview = await buildParserPreview(
+    TEST_SUPPORTED_FORMATS,
     new File(["{"], "trivy.json", { type: "application/json" }),
     "trivy-json",
   )
@@ -804,6 +970,7 @@ test("parser preview validates supported shallow input states", async () => {
   assert.deepEqual(invalidJsonPreview.errors, ["Invalid JSON."])
 
   const xmlPreview = await buildParserPreview(
+    TEST_SUPPORTED_FORMATS,
     new File(["<NessusClientData_v2 />"], "scan.nessus", {
       type: "application/xml",
     }),

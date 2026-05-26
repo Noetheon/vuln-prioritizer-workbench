@@ -17,6 +17,10 @@ import {
   VpwSectionHeader,
   VpwStatusBanner,
 } from "@/components/vpw"
+import {
+  type ArtifactCard,
+  artifactCardForFormat,
+} from "@/lib/report-capability-catalog"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   artifactVerificationLabel,
@@ -36,6 +40,7 @@ type DecisionProps = {
   reports: ReportPublic[]
   onCreateReport: (format: "html" | "zip") => Promise<void>
   onDownloadReport: (report: ReportPublic) => Promise<void>
+  artifactCards: readonly ArtifactCard[]
 }
 
 export function ExecutiveDecision({
@@ -46,6 +51,7 @@ export function ExecutiveDecision({
   selectedProject,
   selectedReportRun,
   selectedRunSummary,
+  artifactCards,
 }: DecisionProps) {
   const effectiveSummary = selectedRunSummary ?? projectSummary
   const effectiveReports = reports
@@ -56,6 +62,8 @@ export function ExecutiveDecision({
   const openFindings = summaryOpenFindings(effectiveSummary)
   const executiveReport = reportForFormat(effectiveReports, "html")
   const bundle = evidenceBundleReport(effectiveReports)
+  const htmlCard = artifactCardForFormat(artifactCards, "html")
+  const zipCard = artifactCardForFormat(artifactCards, "zip")
   const problem =
     totalFindings > 0
       ? `${critical + high} critical/high findings across ${totalFindings} total; ${kevHits} known-exploited KEV entries.`
@@ -137,12 +145,12 @@ export function ExecutiveDecision({
           </Button>
         ) : (
           <Button
-            disabled={!selectedReportRun}
+            disabled={!selectedReportRun || !htmlCard}
             onClick={() => void onCreateReport("html")}
             type="button"
             variant="outline"
           >
-            Generate executive HTML
+            {htmlCard?.actionLabel ?? "Generate executive HTML"}
           </Button>
         )}
         {bundle ? (
@@ -155,12 +163,12 @@ export function ExecutiveDecision({
           </Button>
         ) : (
           <Button
-            disabled={!selectedReportRun}
+            disabled={!selectedReportRun || !zipCard}
             onClick={() => void onCreateReport("zip")}
             type="button"
             variant="outline"
           >
-            Build Evidence ZIP
+            {zipCard?.actionLabel ?? "Build Evidence ZIP"}
           </Button>
         )}
       </div>

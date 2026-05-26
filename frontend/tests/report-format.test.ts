@@ -12,6 +12,14 @@ import {
   AnalysisRunStatusSchema,
   ReportCreateSchema,
 } from "../src/client/schemas.gen.ts"
+import type { ReportFormatCapabilityPublic } from "../src/api-client"
+import {
+  additionalArtifactCards,
+  artifactCardForFormat,
+  artifactCardsFromCapabilities,
+  recommendedArtifactCards,
+  requireArtifactCardForFormat,
+} from "../src/lib/report-capability-catalog.ts"
 
 test("report format labels cover every backend-supported format", () => {
   const expectedLabels: Record<ReportFormat, string> = {
@@ -30,6 +38,73 @@ test("report format labels cover every backend-supported format", () => {
   for (const format of backendFormats) {
     assert.equal(reportFormatLabel(format), expectedLabels[format])
   }
+})
+
+test("report action cards derive runtime metadata from capabilities", () => {
+  const capabilities: ReportFormatCapabilityPublic[] = [
+    {
+      action_label: "Build evidence ZIP",
+      audience: "Audit",
+      content_type: "application/zip",
+      detail: "ZIP package with manifest and hashes.",
+      filename: "evidence-bundle.zip",
+      format: "zip",
+      kind: "evidence-bundle",
+      label: "Evidence ZIP",
+      title: "Evidence ZIP Bundle",
+    },
+    {
+      action_label: "Generate Executive HTML",
+      audience: "Executive",
+      content_type: "text/html",
+      detail: "HTML report for decision review.",
+      filename: "executive-report.html",
+      format: "html",
+      kind: "executive-report",
+      label: "HTML",
+      title: "Executive HTML",
+    },
+    {
+      action_label: "Export CSV",
+      audience: "Operations",
+      content_type: "text/csv",
+      detail: "CSV export for downstream tooling.",
+      filename: "findings.csv",
+      format: "csv",
+      kind: "tabular-export",
+      label: "CSV",
+      title: "CSV Export",
+    },
+  ]
+
+  const cards = artifactCardsFromCapabilities(capabilities)
+
+  assert.equal(cards.length, 3)
+  assert.equal(cards[0]?.reportFormat, "zip")
+  assert.equal(cards[0]?.format, "Evidence ZIP")
+  assert.equal(cards[0]?.title, "Evidence ZIP Bundle")
+  assert.equal(cards[0]?.description, "ZIP package with manifest and hashes.")
+  assert.equal(cards[0]?.filename, "evidence-bundle.zip")
+  assert.equal(cards[0]?.kind, "evidence-bundle")
+  assert.equal(cards[0]?.contentType, "application/zip")
+  assert.deepEqual(
+    recommendedArtifactCards(cards).map((card) => card.reportFormat),
+    ["zip", "html"],
+  )
+  assert.deepEqual(
+    additionalArtifactCards(cards).map((card) => card.reportFormat),
+    ["csv"],
+  )
+  assert.equal(artifactCardForFormat(cards, "csv")?.title, "CSV Export")
+  assert.equal(artifactCardForFormat(cards, "sarif"), null)
+  assert.equal(
+    requireArtifactCardForFormat(cards, "html").filename,
+    "executive-report.html",
+  )
+  assert.throws(
+    () => requireArtifactCardForFormat(cards, "sarif"),
+    /Report format capability missing for sarif/,
+  )
 })
 
 test("report size labels handle byte, kilobyte, and megabyte boundaries", () => {

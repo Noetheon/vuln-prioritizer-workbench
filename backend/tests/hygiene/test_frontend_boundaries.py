@@ -312,13 +312,13 @@ def test_import_format_metadata_is_split_by_contract_surface() -> None:
     lib_root = REPO_ROOT / "frontend/src/lib"
     facade_source = (lib_root / "import-format-metadata.ts").read_text(encoding="utf-8")
     expected_slices = {
-        "import-format-catalog.ts": "export const SUPPORTED_IMPORT_FORMATS",
-        "import-format-types.ts": "export type ImportInputType",
+        "import-format-catalog.ts": "export function supportedImportFormats",
+        "import-format-types.ts": 'ImportFormatCapabilityPublic["input_type"]',
         "import-parser-preview.ts": "export async function buildParserPreview",
         "import-readiness.ts": "export function buildImportReadinessChecks",
     }
 
-    assert "SUPPORTED_IMPORT_FORMATS: readonly SupportedFormat[]" not in facade_source
+    assert "SUPPORTED_IMPORT_FORMATS" not in facade_source
     assert "export async function buildParserPreview" not in facade_source
     assert "export function buildImportReadinessChecks" not in facade_source
     for filename, symbol in expected_slices.items():

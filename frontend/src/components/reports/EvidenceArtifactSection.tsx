@@ -13,11 +13,13 @@ import {
   VpwSection,
   VpwSectionHeader,
 } from "@/components/vpw"
+import {
+  type ArtifactCard,
+  additionalArtifactCards,
+  recommendedArtifactCards,
+} from "@/lib/report-capability-catalog"
 import type { ReportFormat } from "@/lib/report-format"
 import {
-  ADDITIONAL_ARTIFACT_FORMATS,
-  RECOMMENDED_ARTIFACT_FORMATS,
-  artifactCardForFormat,
   artifactStatusLabel,
   attackNavigatorAvailable,
   reportForFormat,
@@ -34,6 +36,7 @@ type ArtifactSectionProps = {
   onDownloadReport: (report: ReportPublic) => Promise<void>
   onOpenGenerateDrawer: () => void
   onVerifyReport: (report: ReportPublic) => Promise<void>
+  artifactCards: readonly ArtifactCard[]
 }
 
 export function ArtifactSection({
@@ -42,6 +45,7 @@ export function ArtifactSection({
   onDownloadReport,
   onOpenGenerateDrawer,
   onVerifyReport,
+  artifactCards,
   reportActionsEnabled,
   reports,
   selectedReportRun,
@@ -67,15 +71,15 @@ export function ArtifactSection({
         title="Recommended artifacts"
       />
       <VpwGrid className="evidence-artifact-action-grid" columns={3}>
-        {RECOMMENDED_ARTIFACT_FORMATS.map((format) => (
+        {recommendedArtifactCards(artifactCards).map((card) => (
           <RecommendedArtifactCard
             activeReportFormat={activeReportFormat}
-            format={format}
-            key={format}
+            card={card}
+            key={card.reportFormat}
             onCreateReport={onCreateReport}
             onDownloadReport={onDownloadReport}
             onVerifyReport={onVerifyReport}
-            report={reportForFormat(reports, format)}
+            report={reportForFormat(reports, card.reportFormat)}
             reportActionsEnabled={reportActionsEnabled}
           />
         ))}
@@ -86,6 +90,7 @@ export function ArtifactSection({
           selectedRunSummary,
           selectedReportRun,
         )}
+        artifactCards={artifactCards}
         onCreateReport={onCreateReport}
         onDownloadReport={onDownloadReport}
         reportActionsEnabled={reportActionsEnabled}
@@ -97,7 +102,7 @@ export function ArtifactSection({
 
 function RecommendedArtifactCard({
   activeReportFormat,
-  format,
+  card,
   onCreateReport,
   onDownloadReport,
   onVerifyReport,
@@ -105,15 +110,15 @@ function RecommendedArtifactCard({
   reportActionsEnabled,
 }: {
   activeReportFormat: string
-  format: ReportFormat
+  card: ArtifactCard
   onCreateReport: (format: ReportFormat) => Promise<void>
   onDownloadReport: (report: ReportPublic) => Promise<void>
   onVerifyReport: (report: ReportPublic) => Promise<void>
   report: ReportPublic | null
   reportActionsEnabled: boolean
 }) {
-  const card = artifactCardForFormat(format)
   const Icon = card.icon
+  const format = card.reportFormat
   const generating = activeReportFormat === format
 
   return (
@@ -140,6 +145,7 @@ function RecommendedArtifactCard({
         />
       </div>
       <ArtifactActions
+        card={card}
         className="mt-auto"
         format={format}
         generating={generating}
@@ -155,6 +161,7 @@ function RecommendedArtifactCard({
 
 function AdditionalExports({
   activeReportFormat,
+  artifactCards,
   attackAvailable,
   onCreateReport,
   onDownloadReport,
@@ -162,6 +169,7 @@ function AdditionalExports({
   reports,
 }: {
   activeReportFormat: string
+  artifactCards: readonly ArtifactCard[]
   attackAvailable: boolean
   onCreateReport: (format: ReportFormat) => Promise<void>
   onDownloadReport: (report: ReportPublic) => Promise<void>
@@ -176,8 +184,8 @@ function AdditionalExports({
         title="Additional exports"
       />
       <div className="grid gap-2">
-        {ADDITIONAL_ARTIFACT_FORMATS.map((format) => {
-          const card = artifactCardForFormat(format)
+        {additionalArtifactCards(artifactCards).map((card) => {
+          const format = card.reportFormat
           const report = reportForFormat(reports, format)
           const disabledByContext =
             format === "attack-navigator" && !attackAvailable
@@ -206,6 +214,7 @@ function AdditionalExports({
                 status={report ? "succeeded" : "unknown"}
               />
               <ArtifactActions
+                card={card}
                 className="justify-start md:justify-end"
                 disabledByContext={disabledByContext}
                 format={format}

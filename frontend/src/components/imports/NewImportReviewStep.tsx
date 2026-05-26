@@ -28,11 +28,12 @@ export function ReviewImportStep({
   parserPreview,
   readiness,
   selectedProject,
+  supportedFormats,
 }: ImportsWorkbenchProps & {
   parserPreview: ParserPreview
   readiness: readonly ImportReadinessCheck[]
 }) {
-  const format = getImportFormat(importWizard.inputType)
+  const format = getImportFormat(supportedFormats, importWizard.inputType)
   const blockingChecks = readiness.filter(
     (check) => check.status === "missing" || check.status === "error",
   )

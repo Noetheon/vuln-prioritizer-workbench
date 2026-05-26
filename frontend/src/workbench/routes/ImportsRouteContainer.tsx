@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useLocation, useNavigate, useParams } from "@/lib/router"
-import { type FormEvent, useCallback, useEffect, useState } from "react"
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react"
 import {
   type AnalysisRunPublic,
   type AnalysisRunSummaryPublic,
@@ -20,7 +20,6 @@ import {
   type ImportUploadFormData,
   type ImportWizardState,
   withDemoProviderSnapshot,
-  workbenchImportFormats,
 } from "../../lib/app-defaults"
 import { buildImportUploadFormData } from "../import-upload-payload"
 import {
@@ -37,7 +36,10 @@ import {
   invalidateProjectScopedWorkbenchQueries,
   workbenchQueryKeys,
 } from "../workbench-query-keys"
-import { isImportInputType } from "@/lib/import-format-metadata"
+import {
+  isImportInputType,
+  supportedImportFormats,
+} from "@/lib/import-format-metadata"
 
 const TERMINAL_RUN_STATUSES = new Set([
   "cancelled",
@@ -53,6 +55,9 @@ export function ImportsRouteContainer() {
   const params = useParams<{ importsView?: string; runId?: string }>()
   const queryClient = useQueryClient()
   const {
+    capabilities,
+    capabilitiesError,
+    capabilitiesLoading,
     projectListLoading,
     projectListError,
     projects,
@@ -62,6 +67,10 @@ export function ImportsRouteContainer() {
     selectedProjectId,
     setSelectedProjectId,
   } = useWorkbenchContext()
+  const supportedFormats = useMemo(
+    () => supportedImportFormats(capabilities),
+    [capabilities],
+  )
   const [importWizard, setImportWizard] = useState<ImportWizardState>(
     defaultImportWizardState,
   )
@@ -176,11 +185,14 @@ export function ImportsRouteContainer() {
   useEffect(() => {
     if (importsView !== "new") return
     const inputType = importInputTypeFromSearch(location.searchStr)
-    if (!isImportInputType(inputType) || importWizard.inputType === inputType) {
+    if (
+      !isImportInputType(supportedFormats, inputType) ||
+      importWizard.inputType === inputType
+    ) {
       return
     }
     setImportWizard((state) => ({ ...state, inputType }))
-  }, [importWizard.inputType, importsView, location.searchStr])
+  }, [importWizard.inputType, importsView, location.searchStr, supportedFormats])
 
   useEffect(() => {
     if (
@@ -273,6 +285,13 @@ export function ImportsRouteContainer() {
     setImportRun(null)
     setImportRunSummary(null)
     setImportParseErrors([])
+    if (capabilitiesError || supportedFormats.length === 0) {
+      setImportError(
+        capabilitiesError ||
+          "Workbench capabilities unavailable. Imports are disabled until runtime metadata loads.",
+      )
+      return
+    }
     if (!importProjectId) {
       setImportError("Select or create a project before uploading.")
       return
@@ -281,7 +300,7 @@ export function ImportsRouteContainer() {
       setImportError("Choose an import file before uploading.")
       return
     }
-    if (!isImportInputType(importWizard.inputType)) {
+    if (!isImportInputType(supportedFormats, importWizard.inputType)) {
       setImportError("Select an input type before uploading.")
       return
     }
@@ -356,6 +375,8 @@ export function ImportsRouteContainer() {
       importRun={importRun}
       importRunSummary={importRunSummary}
       importWizard={importWizard}
+      capabilitiesError={capabilitiesError}
+      capabilitiesLoading={capabilitiesLoading}
       onAssetContextFileChange={(file) =>
         setImportWizard((state) => ({
           ...state,
@@ -366,7 +387,9 @@ export function ImportsRouteContainer() {
       onInputTypeChange={(value) =>
         setImportWizard((state) => ({
           ...state,
-          inputType: value as ImportFormat,
+          inputType: isImportInputType(supportedFormats, value)
+            ? (value as ImportFormat)
+            : "",
         }))
       }
       onLockedProviderDataChange={(value) =>
@@ -428,7 +451,8 @@ export function ImportsRouteContainer() {
       selectedRun={runDetailQuery.data?.run ?? null}
       selectedRunId={selectedRunId}
       selectedRunSummary={runDetailQuery.data?.summary ?? null}
-      supportedFormats={workbenchImportFormats}
+      attackSources={capabilities?.attack_sources ?? []}
+      supportedFormats={supportedFormats}
       view={importsView}
     />
   )

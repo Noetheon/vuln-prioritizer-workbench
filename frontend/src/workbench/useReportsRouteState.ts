@@ -3,13 +3,16 @@ import { useEffect, useRef, useState } from "react"
 
 import {
   type AnalysisRunPublic,
+  type ReportFormatCapabilityPublic,
   type ReportPublic,
   ReportsService,
   type ReportVerificationPublic,
 } from "../api-client"
-import type { WorkbenchReportFormat } from "../lib/app-defaults"
 import { apiErrorMessage, objectRecord } from "../lib/app-errors"
-import { reportFormatLabel } from "../lib/report-format"
+import {
+  reportFormatLabel,
+  type ReportFormat,
+} from "../lib/report-format"
 import type { WorkbenchPath } from "../lib/workbench-navigation"
 import { fetchReportDownload, startReportDownload } from "./report-download"
 import { reportActionsAvailable } from "./report-action-state.ts"
@@ -17,6 +20,8 @@ import { workbenchQueryKeys } from "./workbench-query-keys"
 
 type UseReportsRouteStateOptions = {
   currentPath: WorkbenchPath
+  reportFormatCapabilities: readonly ReportFormatCapabilityPublic[]
+  capabilitiesError: string
   selectedReportRun: AnalysisRunPublic | null
   selectedRunId: string
 }
@@ -27,6 +32,8 @@ async function downloadReportArtifact(report: ReportPublic) {
 
 export function useReportsRouteState({
   currentPath,
+  reportFormatCapabilities,
+  capabilitiesError,
   selectedReportRun,
   selectedRunId,
 }: UseReportsRouteStateOptions) {
@@ -39,9 +46,7 @@ export function useReportsRouteState({
   const [reportActionMessage, setReportActionMessage] = useState("")
   const [reportActionError, setReportActionError] = useState("")
   const reportGenerationInFlight = useRef(false)
-  const [activeReportFormat, setActiveReportFormat] = useState<
-    WorkbenchReportFormat | ""
-  >("")
+  const [activeReportFormat, setActiveReportFormat] = useState<ReportFormat | "">("")
   const reportsQuery = useQuery({
     enabled: currentPath === "/reports" && Boolean(selectedRunId),
     queryFn: ({ signal }) =>
@@ -51,7 +56,7 @@ export function useReportsRouteState({
     staleTime: 15_000,
   })
   const createReportMutation = useMutation({
-    mutationFn: (format: WorkbenchReportFormat) =>
+    mutationFn: (format: ReportFormat) =>
       ReportsService.createRunReport({
         run_id: selectedRunId,
         reportCreate: { format },
@@ -80,7 +85,7 @@ export function useReportsRouteState({
     reportActionPending,
     reportsLoading,
     selectedReportRun,
-  })
+  }) && !capabilitiesError && reportFormatCapabilities.length > 0
 
   useEffect(() => {
     if (currentPath === "/reports" && selectedRunId) {
@@ -100,8 +105,18 @@ export function useReportsRouteState({
     })
   }
 
-  async function createReport(format: WorkbenchReportFormat) {
+  async function createReport(format: ReportFormat) {
     if (reportGenerationInFlight.current) {
+      return
+    }
+    if (
+      capabilitiesError ||
+      !reportFormatCapabilities.some((capability) => capability.format === format)
+    ) {
+      setReportActionError(
+        capabilitiesError ||
+          "Workbench capabilities unavailable. Report generation is disabled until runtime metadata loads.",
+      )
       return
     }
     if (!selectedRunId) {

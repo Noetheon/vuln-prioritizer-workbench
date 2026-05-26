@@ -4,5 +4,4 @@ export {
 export type {
   ImportsWorkbenchProps,
   ImportWizardStateLike,
-  SupportedImportFormat,
 } from "./imports-workbench-model"

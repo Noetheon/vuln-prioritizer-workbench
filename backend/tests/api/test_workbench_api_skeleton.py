@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import replace
 from datetime import timedelta
@@ -55,6 +56,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "/api/v1/projects/{project_id}/dashboard",
         "/api/v1/projects/{project_id}/governance/rollups/",
         "/api/v1/projects/{project_id}/compare/cvss-only",
+        "/api/v1/workbench/capabilities",
     }
     expected_schemas = {
         "AnalysisRunPublic",
@@ -64,6 +66,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "AssetPublic",
         "AssetsPublic",
         "AssetUpdate",
+        "AttackSourceCapabilityPublic",
         "DashboardEpssBucketsPublic",
         "DashboardSignalCountsPublic",
         "FindingPublic",
@@ -72,6 +75,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "GovernanceRollupPublic",
         "GovernanceWaiverDebtEntryPublic",
         "GovernanceWaiverDebtPublic",
+        "ImportFormatCapabilityPublic",
         "ImportParseErrorPublic",
         "ProjectCreate",
         "ProjectCvssOnlyComparisonPublic",
@@ -86,12 +90,16 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "ProviderSourceStatusPublic",
         "ProviderStatusPublic",
         "ReportCreate",
+        "ReportFormatCapabilityPublic",
         "ReportPublic",
         "ReportsPublic",
+        "SidecarUploadCapabilityPublic",
+        "UploadPolicyPublic",
         "WaiverCreate",
         "WaiverPublic",
         "WaiversPublic",
         "WaiverUpdate",
+        "WorkbenchCapabilitiesPublic",
     }
     assert expected_paths.issubset(paths)
 
@@ -99,6 +107,28 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
     assert client.get("/api/v1/items/").status_code == 404
     assert expected_schemas.issubset(schemas)
     assert all("Item" not in schema_name for schema_name in schemas)
+
+
+def test_workbench_capabilities_contract_is_redacted(
+    workbench_api_env: WorkbenchApiEnv,
+) -> None:
+    response = workbench_api_env.client.get(
+        "/api/v1/workbench/capabilities",
+        headers=local_api_headers(workbench_api_env.client),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["schema_version"] == "workbench-capabilities.v1"
+    assert len(payload["import_formats"]) == 10
+    assert len(payload["report_formats"]) == 7
+    assert payload["upload_policy"]["max_upload_bytes"] > 0
+    serialized = json.dumps(payload)
+    assert "/Users/" not in serialized
+    assert "/private/" not in serialized
+    assert "SECRET" not in serialized.upper()
+    assert "TOKEN" not in serialized.upper()
+    assert "PASSWORD" not in serialized.upper()
 
 
 def test_vpw011_domain_routes_do_not_require_auth_in_local_runtime(
@@ -180,6 +210,7 @@ def test_vpw011_domain_routes_do_not_require_auth_in_local_runtime(
         ("get", f"/api/v1/projects/{project_id}/dashboard", {}),
         ("get", f"/api/v1/projects/{project_id}/governance/rollups/", {}),
         ("get", f"/api/v1/projects/{project_id}/compare/cvss-only", {}),
+        ("get", "/api/v1/workbench/capabilities", {}),
     )
 
     for method, path, kwargs in protected_calls:

@@ -1277,6 +1277,41 @@ export const AssetsPublicSchema = {
     type: 'object'
 } as const;
 
+export const AttackSourceCapabilityPublicSchema = {
+    description: 'Supported ATT&CK import source metadata.',
+    properties: {
+        detail: {
+            title: 'Detail',
+            type: 'string'
+        },
+        label: {
+            title: 'Label',
+            type: 'string'
+        },
+        requires_mapping_file: {
+            default: false,
+            title: 'Requires Mapping File',
+            type: 'boolean'
+        },
+        supports_technique_metadata_file: {
+            default: false,
+            title: 'Supports Technique Metadata File',
+            type: 'boolean'
+        },
+        value: {
+            title: 'Value',
+            type: 'string'
+        }
+    },
+    required: [
+        'value',
+        'label',
+        'detail'
+    ],
+    title: 'AttackSourceCapabilityPublic',
+    type: 'object'
+} as const;
+
 export const AuditEventPublicSchema = {
     description: 'Audit event shape exposed to administrators.',
     properties: {
@@ -3916,6 +3951,96 @@ export const HTTPValidationErrorSchema = {
     type: 'object'
 } as const;
 
+export const ImportFormatCapabilityPublicSchema = {
+    description: 'Supported import format metadata published by the Workbench runtime.',
+    properties: {
+        accepted_mime_types: {
+            items: {
+                type: 'string'
+            },
+            title: 'Accepted Mime Types',
+            type: 'array'
+        },
+        best_for: {
+            title: 'Best For',
+            type: 'string'
+        },
+        category: {
+            title: 'Category',
+            type: 'string'
+        },
+        category_label: {
+            title: 'Category Label',
+            type: 'string'
+        },
+        context_support: {
+            title: 'Context Support',
+            type: 'string'
+        },
+        example_snippet: {
+            title: 'Example Snippet',
+            type: 'string'
+        },
+        expected_shape: {
+            title: 'Expected Shape',
+            type: 'string'
+        },
+        extensions: {
+            items: {
+                type: 'string'
+            },
+            title: 'Extensions',
+            type: 'array'
+        },
+        input_type: {
+            title: 'Input Type',
+            type: 'string'
+        },
+        label: {
+            title: 'Label',
+            type: 'string'
+        },
+        minimum_fields: {
+            items: {
+                type: 'string'
+            },
+            title: 'Minimum Fields',
+            type: 'array'
+        },
+        notes: {
+            items: {
+                type: 'string'
+            },
+            title: 'Notes',
+            type: 'array'
+        },
+        optional_fields: {
+            items: {
+                type: 'string'
+            },
+            title: 'Optional Fields',
+            type: 'array'
+        },
+        short_description: {
+            title: 'Short Description',
+            type: 'string'
+        }
+    },
+    required: [
+        'input_type',
+        'label',
+        'category',
+        'category_label',
+        'best_for',
+        'expected_shape',
+        'context_support',
+        'example_snippet',
+        'short_description'
+    ],
+    title: 'ImportFormatCapabilityPublic',
+    type: 'object'
+} as const;
+
 export const ImportParseErrorPublicSchema = {
     description: 'Stable parser error item for import status and summary APIs.',
     properties: {
@@ -5054,6 +5179,61 @@ export const ReportCreateSchema = {
     type: 'object'
 } as const;
 
+export const ReportFormatCapabilityPublicSchema = {
+    description: 'Supported report artifact metadata published by the Workbench runtime.',
+    properties: {
+        action_label: {
+            title: 'Action Label',
+            type: 'string'
+        },
+        audience: {
+            title: 'Audience',
+            type: 'string'
+        },
+        content_type: {
+            title: 'Content Type',
+            type: 'string'
+        },
+        detail: {
+            title: 'Detail',
+            type: 'string'
+        },
+        filename: {
+            title: 'Filename',
+            type: 'string'
+        },
+        format: {
+            title: 'Format',
+            type: 'string'
+        },
+        kind: {
+            title: 'Kind',
+            type: 'string'
+        },
+        label: {
+            title: 'Label',
+            type: 'string'
+        },
+        title: {
+            title: 'Title',
+            type: 'string'
+        }
+    },
+    required: [
+        'format',
+        'label',
+        'title',
+        'action_label',
+        'detail',
+        'audience',
+        'kind',
+        'filename',
+        'content_type'
+    ],
+    title: 'ReportFormatCapabilityPublic',
+    type: 'object'
+} as const;
+
 export const ReportPublicSchema = {
     description: 'Public report metadata without exposing server filesystem paths.',
     properties: {
@@ -5696,6 +5876,80 @@ export const RunWorkflowUploadRefSchema = {
     type: 'object'
 } as const;
 
+export const SidecarUploadCapabilityPublicSchema = {
+    description: 'Supported optional import sidecar metadata.',
+    properties: {
+        accepted_mime_types: {
+            items: {
+                type: 'string'
+            },
+            title: 'Accepted Mime Types',
+            type: 'array'
+        },
+        description: {
+            title: 'Description',
+            type: 'string'
+        },
+        extensions: {
+            items: {
+                type: 'string'
+            },
+            title: 'Extensions',
+            type: 'array'
+        },
+        form_field: {
+            title: 'Form Field',
+            type: 'string'
+        },
+        id: {
+            title: 'Id',
+            type: 'string'
+        },
+        label: {
+            title: 'Label',
+            type: 'string'
+        },
+        required: {
+            default: false,
+            title: 'Required',
+            type: 'boolean'
+        }
+    },
+    required: [
+        'id',
+        'label',
+        'form_field',
+        'description'
+    ],
+    title: 'SidecarUploadCapabilityPublic',
+    type: 'object'
+} as const;
+
+export const UploadPolicyPublicSchema = {
+    description: 'Upload and request limits enforced by the active Workbench runtime.',
+    properties: {
+        import_request_overhead_bytes: {
+            title: 'Import Request Overhead Bytes',
+            type: 'integer'
+        },
+        max_request_body_bytes: {
+            title: 'Max Request Body Bytes',
+            type: 'integer'
+        },
+        max_upload_bytes: {
+            title: 'Max Upload Bytes',
+            type: 'integer'
+        }
+    },
+    required: [
+        'max_upload_bytes',
+        'max_request_body_bytes',
+        'import_request_overhead_bytes'
+    ],
+    title: 'UploadPolicyPublic',
+    type: 'object'
+} as const;
+
 export const ValidationErrorSchema = {
     properties: {
         ctx: {
@@ -6208,6 +6462,54 @@ export const WaiversPublicSchema = {
         'count'
     ],
     title: 'WaiversPublic',
+    type: 'object'
+} as const;
+
+export const WorkbenchCapabilitiesPublicSchema = {
+    description: 'Versioned Workbench capability contract for browser/runtime alignment.',
+    properties: {
+        attack_sources: {
+            items: {
+                $ref: '#/components/schemas/AttackSourceCapabilityPublic'
+            },
+            title: 'Attack Sources',
+            type: 'array'
+        },
+        import_formats: {
+            items: {
+                $ref: '#/components/schemas/ImportFormatCapabilityPublic'
+            },
+            title: 'Import Formats',
+            type: 'array'
+        },
+        report_formats: {
+            items: {
+                $ref: '#/components/schemas/ReportFormatCapabilityPublic'
+            },
+            title: 'Report Formats',
+            type: 'array'
+        },
+        schema_version: {
+            const: 'workbench-capabilities.v1',
+            default: 'workbench-capabilities.v1',
+            title: 'Schema Version',
+            type: 'string'
+        },
+        sidecar_uploads: {
+            items: {
+                $ref: '#/components/schemas/SidecarUploadCapabilityPublic'
+            },
+            title: 'Sidecar Uploads',
+            type: 'array'
+        },
+        upload_policy: {
+            $ref: '#/components/schemas/UploadPolicyPublic'
+        }
+    },
+    required: [
+        'upload_policy'
+    ],
+    title: 'WorkbenchCapabilitiesPublic',
     type: 'object'
 } as const;
 

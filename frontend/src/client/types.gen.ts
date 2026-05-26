@@ -618,6 +618,34 @@ export type AssetsPublic = {
 };
 
 /**
+ * AttackSourceCapabilityPublic
+ *
+ * Supported ATT&CK import source metadata.
+ */
+export type AttackSourceCapabilityPublic = {
+    /**
+     * Detail
+     */
+    detail: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Requires Mapping File
+     */
+    requires_mapping_file?: boolean;
+    /**
+     * Supports Technique Metadata File
+     */
+    supports_technique_metadata_file?: boolean;
+    /**
+     * Value
+     */
+    value: string;
+};
+
+/**
  * AuditEventPublic
  *
  * Audit event shape exposed to administrators.
@@ -2045,6 +2073,70 @@ export type HttpValidationError = {
 };
 
 /**
+ * ImportFormatCapabilityPublic
+ *
+ * Supported import format metadata published by the Workbench runtime.
+ */
+export type ImportFormatCapabilityPublic = {
+    /**
+     * Accepted Mime Types
+     */
+    accepted_mime_types?: Array<string>;
+    /**
+     * Best For
+     */
+    best_for: string;
+    /**
+     * Category
+     */
+    category: string;
+    /**
+     * Category Label
+     */
+    category_label: string;
+    /**
+     * Context Support
+     */
+    context_support: string;
+    /**
+     * Example Snippet
+     */
+    example_snippet: string;
+    /**
+     * Expected Shape
+     */
+    expected_shape: string;
+    /**
+     * Extensions
+     */
+    extensions?: Array<string>;
+    /**
+     * Input Type
+     */
+    input_type: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Minimum Fields
+     */
+    minimum_fields?: Array<string>;
+    /**
+     * Notes
+     */
+    notes?: Array<string>;
+    /**
+     * Optional Fields
+     */
+    optional_fields?: Array<string>;
+    /**
+     * Short Description
+     */
+    short_description: string;
+};
+
+/**
  * ImportParseErrorPublic
  *
  * Stable parser error item for import status and summary APIs.
@@ -2727,6 +2819,50 @@ export type ReportCreate = {
 };
 
 /**
+ * ReportFormatCapabilityPublic
+ *
+ * Supported report artifact metadata published by the Workbench runtime.
+ */
+export type ReportFormatCapabilityPublic = {
+    /**
+     * Action Label
+     */
+    action_label: string;
+    /**
+     * Audience
+     */
+    audience: string;
+    /**
+     * Content Type
+     */
+    content_type: string;
+    /**
+     * Detail
+     */
+    detail: string;
+    /**
+     * Filename
+     */
+    filename: string;
+    /**
+     * Format
+     */
+    format: string;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Title
+     */
+    title: string;
+};
+
+/**
  * ReportPublic
  *
  * Public report metadata without exposing server filesystem paths.
@@ -3088,6 +3224,62 @@ export type RunWorkflowUploadRef = {
 };
 
 /**
+ * SidecarUploadCapabilityPublic
+ *
+ * Supported optional import sidecar metadata.
+ */
+export type SidecarUploadCapabilityPublic = {
+    /**
+     * Accepted Mime Types
+     */
+    accepted_mime_types?: Array<string>;
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Extensions
+     */
+    extensions?: Array<string>;
+    /**
+     * Form Field
+     */
+    form_field: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Required
+     */
+    required?: boolean;
+};
+
+/**
+ * UploadPolicyPublic
+ *
+ * Upload and request limits enforced by the active Workbench runtime.
+ */
+export type UploadPolicyPublic = {
+    /**
+     * Import Request Overhead Bytes
+     */
+    import_request_overhead_bytes: number;
+    /**
+     * Max Request Body Bytes
+     */
+    max_request_body_bytes: number;
+    /**
+     * Max Upload Bytes
+     */
+    max_upload_bytes: number;
+};
+
+/**
  * ValidationError
  */
 export type ValidationError = {
@@ -3316,6 +3508,35 @@ export type WaiversPublic = {
      * Data
      */
     data: Array<WaiverPublic>;
+};
+
+/**
+ * WorkbenchCapabilitiesPublic
+ *
+ * Versioned Workbench capability contract for browser/runtime alignment.
+ */
+export type WorkbenchCapabilitiesPublic = {
+    /**
+     * Attack Sources
+     */
+    attack_sources?: Array<AttackSourceCapabilityPublic>;
+    /**
+     * Import Formats
+     */
+    import_formats?: Array<ImportFormatCapabilityPublic>;
+    /**
+     * Report Formats
+     */
+    report_formats?: Array<ReportFormatCapabilityPublic>;
+    /**
+     * Schema Version
+     */
+    schema_version?: 'workbench-capabilities.v1';
+    /**
+     * Sidecar Uploads
+     */
+    sidecar_uploads?: Array<SidecarUploadCapabilityPublic>;
+    upload_policy: UploadPolicyPublic;
 };
 
 /**
@@ -4564,6 +4785,22 @@ export type PostApiV1WaiversByWaiverIdExpireResponses = {
 };
 
 export type PostApiV1WaiversByWaiverIdExpireResponse = PostApiV1WaiversByWaiverIdExpireResponses[keyof PostApiV1WaiversByWaiverIdExpireResponses];
+
+export type GetApiV1WorkbenchCapabilitiesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/workbench/capabilities';
+};
+
+export type GetApiV1WorkbenchCapabilitiesResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkbenchCapabilitiesPublic;
+};
+
+export type GetApiV1WorkbenchCapabilitiesResponse = GetApiV1WorkbenchCapabilitiesResponses[keyof GetApiV1WorkbenchCapabilitiesResponses];
 
 export type DeleteApiV1WorkbenchDemoData = {
     body?: never;
