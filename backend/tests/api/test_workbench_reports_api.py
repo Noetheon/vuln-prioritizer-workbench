@@ -5,11 +5,11 @@ import hashlib
 import json
 import uuid
 import zipfile
-from dataclasses import replace
+from dataclasses import replace as dataclass_replace
 from datetime import UTC, datetime
 from io import BytesIO, StringIO
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import jsonschema
 import pytest
@@ -67,6 +67,16 @@ VPW054_SECRET_MARKERS = (
     "/tmp/",
     ".env",
 )
+
+_T = TypeVar("_T")
+
+
+def replace(instance: _T, /, **changes: Any) -> _T:
+    """Copy either a Pydantic report model or a legacy dataclass fixture."""
+    model_copy = getattr(instance, "model_copy", None)
+    if callable(model_copy):
+        return model_copy(update=changes)
+    return dataclass_replace(instance, **changes)
 
 
 def test_vpw049_openapi_exposes_report_format_contract() -> None:

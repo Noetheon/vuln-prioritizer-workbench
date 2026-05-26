@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from collections.abc import Sequence
 
 from app.services.report_formatting import format_number as _format_number
 from app.services.report_html_attack_context import (
@@ -27,7 +27,12 @@ from app.services.report_html_common import (
     _short_list,
     _unique_values,
 )
-from app.services.report_models import MarkdownReportFinding
+from app.services.report_models import (
+    BusinessServiceRiskRow,
+    MarkdownReportFinding,
+    RecommendationRow,
+    RemediationCampaign,
+)
 from app.services.report_renderer_common import _priority_label
 
 CVE_ALIASES = {
@@ -42,9 +47,9 @@ CVE_ALIASES = {
 }
 
 
-def _campaign_ranking_rationale(campaign: dict[str, Any]) -> str:
+def _campaign_ranking_rationale(campaign: RemediationCampaign) -> str:
     """Generate a stakeholder-friendly ranking rationale based on context."""
-    findings = campaign["findings"]
+    findings = campaign.findings
     has_internet = any(
         _is_actionable_finding(f)
         and (f.exposure or "").lower() in {"internet-facing", "external"}
@@ -58,9 +63,9 @@ def _campaign_ranking_rationale(campaign: dict[str, Any]) -> str:
     has_critical_asset = any(
         _is_actionable_finding(f) and (f.criticality or "").lower() == "critical" for f in findings
     )
-    has_kev = campaign["in_kev"]
-    max_epss = campaign["max_epss"]
-    max_cvss = campaign["max_cvss"]
+    has_kev = campaign.in_kev
+    max_epss = campaign.max_epss
+    max_cvss = campaign.max_cvss
 
     reasons = []
     if has_internet:
@@ -88,10 +93,10 @@ def _campaign_ranking_rationale(campaign: dict[str, Any]) -> str:
     return "Standard operational queue priority."
 
 
-def _campaign_scope_summary(campaign: dict[str, Any]) -> str:
+def _campaign_scope_summary(campaign: RemediationCampaign) -> str:
     """Campaign scope summary function."""
-    asset_count = len(campaign["assets"])
-    findings = campaign["findings"]
+    asset_count = len(campaign.assets)
+    findings = campaign.findings
     environments = _unique_values(findings, lambda finding: finding.environment)
     exposures = _unique_values(findings, lambda finding: finding.exposure)
     parts = [_pluralize(asset_count, "asset")]
@@ -103,36 +108,36 @@ def _campaign_scope_summary(campaign: dict[str, Any]) -> str:
     return "; ".join(parts)
 
 
-def _evidence_signal_summary(campaign: dict[str, Any]) -> str:
+def _evidence_signal_summary(campaign: RemediationCampaign) -> str:
     """Evidence signal summary function."""
     signals = []
-    if campaign["in_kev"]:
+    if campaign.in_kev:
         signals.append("KEV")
-    if campaign["max_epss"] is not None:
-        signals.append(f"EPSS {_format_number(campaign['max_epss'])}")
-    if campaign["max_cvss"] is not None:
-        signals.append(f"CVSS {_format_number(campaign['max_cvss'])}")
-    technique_ids = campaign.get("attack_techniques") or []
+    if campaign.max_epss is not None:
+        signals.append(f"EPSS {_format_number(campaign.max_epss)}")
+    if campaign.max_cvss is not None:
+        signals.append(f"CVSS {_format_number(campaign.max_cvss)}")
+    technique_ids = campaign.attack_techniques
     if technique_ids:
         signals.append(f"ATT&CK {_short_list(technique_ids, limit=2, noun='technique')}")
     return ", ".join(signals) if signals else "Local finding evidence"
 
 
-def _campaign_requires_emergency(campaign: dict[str, Any]) -> bool:
+def _campaign_requires_emergency(campaign: RemediationCampaign) -> bool:
     """Campaign requires emergency function."""
     return bool(
-        campaign["actionable_count"] > 0
+        campaign.actionable_count > 0
         and (
-            campaign["in_kev"]
-            or (campaign["max_cvss"] is not None and campaign["max_cvss"] >= 9.0)
-            or (campaign["max_epss"] is not None and campaign["max_epss"] >= 0.9)
+            campaign.in_kev
+            or (campaign.max_cvss is not None and campaign.max_cvss >= 9.0)
+            or (campaign.max_epss is not None and campaign.max_epss >= 0.9)
         )
     )
 
 
-def _campaign_decision_statement(campaign: dict[str, Any]) -> str:
+def _campaign_decision_statement(campaign: RemediationCampaign) -> str:
     """Campaign decision statement function."""
-    actionability = _actionability_counts_helper(campaign["findings"])
+    actionability = _actionability_counts_helper(campaign.findings)
     open_count = actionability.get("open", 0)
     accepted_count = actionability.get("accepted", 0)
     suppressed_count = actionability.get("suppressed", 0)
@@ -140,9 +145,9 @@ def _campaign_decision_statement(campaign: dict[str, Any]) -> str:
 
     statements = []
     if open_count:
-        if campaign["in_kev"]:
+        if campaign.in_kev:
             statements.append("Approve emergency patch and validation window within 24h.")
-        elif campaign["max_cvss"] is not None and campaign["max_cvss"] >= 9.0:
+        elif campaign.max_cvss is not None and campaign.max_cvss >= 9.0:
             statements.append("Approve prioritized remediation and validation window.")
         else:
             statements.append("Approve remediation window and validate clean re-import.")
@@ -155,11 +160,11 @@ def _campaign_decision_statement(campaign: dict[str, Any]) -> str:
     return " ".join(statements) if statements else "No immediate management action."
 
 
-def _first_available_owner(campaigns: list[dict[str, Any]]) -> str:
+def _first_available_owner(campaigns: Sequence[RemediationCampaign]) -> str:
     """First available owner function."""
     owners: list[str] = []
     for campaign in campaigns:
-        owners.extend(str(owner) for owner in campaign["owners"] if owner)
+        owners.extend(str(owner) for owner in campaign.owners if owner)
     return _short_list(sorted(set(owners)), limit=3, noun="owner") if owners else "Unassigned"
 
 
@@ -208,24 +213,24 @@ def _campaign_group_key(
     return (*base_key, action)
 
 
-def _priority_class_for_campaign(campaign: dict[str, Any]) -> str:
+def _priority_class_for_campaign(campaign: RemediationCampaign) -> str:
     """Priority class for campaign function."""
     if _campaign_requires_emergency(campaign):
         return "P1"
-    if campaign["actionable_count"] > 0 and (
-        campaign["in_kev"]
-        or (campaign["max_cvss"] is not None and campaign["max_cvss"] >= 7.0)
-        or (campaign["max_epss"] is not None and campaign["max_epss"] >= 0.01)
+    if campaign.actionable_count > 0 and (
+        campaign.in_kev
+        or (campaign.max_cvss is not None and campaign.max_cvss >= 7.0)
+        or (campaign.max_epss is not None and campaign.max_epss >= 0.01)
     ):
         return "P2"
-    if campaign["actionable_count"] > 0:
+    if campaign.actionable_count > 0:
         return "P3"
     return "Evidence"
 
 
-def _campaign_sort_key(campaign: dict[str, Any]) -> tuple[int, float, float, int, int, str]:
+def _campaign_sort_key(campaign: RemediationCampaign) -> tuple[int, float, float, int, int, str]:
     """Campaign sort key function."""
-    findings = campaign["findings"]
+    findings = campaign.findings
     internet_prod = any(
         _is_actionable_finding(finding)
         and (finding.exposure or "").lower() in {"internet-facing", "external"}
@@ -236,20 +241,20 @@ def _campaign_sort_key(campaign: dict[str, Any]) -> tuple[int, float, float, int
         _is_actionable_finding(finding) and (finding.criticality or "").lower() == "critical"
         for finding in findings
     )
-    governance_urgency = campaign["accepted_count"] + campaign["vex_count"]
+    governance_urgency = campaign.accepted_count + campaign.vex_count
     return (
-        0 if campaign["actionable_count"] and campaign["in_kev"] and internet_prod else 1,
-        -float(campaign["max_epss"] or 0.0),
-        -float(campaign["max_cvss"] or 0.0),
+        0 if campaign.actionable_count and campaign.in_kev and internet_prod else 1,
+        -float(campaign.max_epss or 0.0),
+        -float(campaign.max_cvss or 0.0),
         0 if critical_service else 1,
         -int(governance_urgency),
-        str(campaign["cve_id"]),
+        str(campaign.cve_id),
     )
 
 
 def _get_remediation_campaigns_helper(
-    findings: list[MarkdownReportFinding], project_name: str | None = None
-) -> list[dict[str, Any]]:
+    findings: Sequence[MarkdownReportFinding], project_name: str | None = None
+) -> list[RemediationCampaign]:
     """Get remediation campaigns helper function."""
     base_action_counts: dict[tuple[str, str, str], set[str]] = {}
     for finding in sorted(findings, key=_finding_sort_key):
@@ -264,7 +269,7 @@ def _get_remediation_campaigns_helper(
     for finding in sorted(findings, key=_finding_sort_key):
         groups.setdefault(_campaign_group_key(finding, base_action_counts), []).append(finding)
 
-    campaigns: list[dict[str, Any]] = []
+    campaigns: list[RemediationCampaign] = []
     for key, grouped_findings in groups.items():
         cve_id = key[0]
         actionable = _actionable_findings(grouped_findings)
@@ -301,60 +306,66 @@ def _get_remediation_campaigns_helper(
         )
 
         campaigns.append(
-            {
-                "rank": 0,
-                "sort_rank": min(_finding_sort_key(finding)[0] for finding in grouped_findings),
-                "cve_id": cve_id,
-                "group_key": "|".join(key),
-                "project_name": project_name,
-                "alias": alias,
-                "campaign_name": campaign_name,
-                "findings": grouped_findings,
-                "actionable_findings": actionable,
-                "assets": assets,
-                "services": services,
-                "owners": owners,
-                "environments": environments,
-                "exposures": exposures,
-                "actions": actions,
-                "slas": slas,
-                "max_cvss": max_cvss,
-                "max_epss": max_epss,
-                "in_kev": in_kev,
-                "attack_techniques": _reviewed_attack_technique_ids_for_findings(grouped_findings),
-                "attack_mappings": _reviewed_attack_mapping_rows_for_findings(grouped_findings),
-                "total_occurrences": sum(
-                    _occurrence_count(finding) for finding in grouped_findings
+            RemediationCampaign(
+                rank=0,
+                sort_rank=min(_finding_sort_key(finding)[0] for finding in grouped_findings),
+                cve_id=cve_id,
+                group_key="|".join(key),
+                project_name=project_name,
+                alias=alias,
+                campaign_name=campaign_name,
+                findings=tuple(grouped_findings),
+                actionable_findings=tuple(actionable),
+                assets=tuple(assets),
+                services=tuple(services),
+                owners=tuple(owners),
+                environments=tuple(environments),
+                exposures=tuple(exposures),
+                actions=tuple(actions),
+                slas=tuple(slas),
+                max_cvss=max_cvss,
+                max_epss=max_epss,
+                in_kev=in_kev,
+                attack_techniques=tuple(
+                    _reviewed_attack_technique_ids_for_findings(grouped_findings)
                 ),
-                "total_assets": len(assets),
-                "affected_assets": assets,
-                "business_services": services,
-                "internet_facing_exposure": internet_facing,
-                "actionable_count": len(actionable),
-                "actionable_occurrences": sum(_occurrence_count(finding) for finding in actionable),
-                "accepted_count": waived_count,
-                "waived_count": waived_count,
-                "vex_count": vex_count,
-                "fixed_count": fixed_count,
-                "open_actionable_count": len(actionable),
-            }
+                attack_mappings=tuple(_reviewed_attack_mapping_rows_for_findings(grouped_findings)),
+                total_occurrences=sum(_occurrence_count(finding) for finding in grouped_findings),
+                total_assets=len(assets),
+                affected_assets=tuple(assets),
+                business_services=tuple(services),
+                internet_facing_exposure=internet_facing,
+                actionable_count=len(actionable),
+                actionable_occurrences=sum(_occurrence_count(finding) for finding in actionable),
+                accepted_count=waived_count,
+                waived_count=waived_count,
+                vex_count=vex_count,
+                fixed_count=fixed_count,
+                open_actionable_count=len(actionable),
+            )
         )
     campaigns.sort(key=_campaign_sort_key)
-    for rank, campaign in enumerate(campaigns, start=1):
-        campaign["rank"] = rank
-        campaign["priority_label"] = _priority_class_for_campaign(campaign)
-        campaign["decision_statement"] = _campaign_decision_statement(campaign)
-        campaign["evidence_signals"] = _evidence_signal_summary(campaign)
+    campaigns = [
+        campaign.model_copy(
+            update={
+                "rank": rank,
+                "priority_label": _priority_class_for_campaign(campaign),
+                "decision_statement": _campaign_decision_statement(campaign),
+                "evidence_signals": _evidence_signal_summary(campaign),
+            }
+        )
+        for rank, campaign in enumerate(campaigns, start=1)
+    ]
     return campaigns
 
 
-def _campaigns_label(campaigns: list[dict[str, Any]], *, limit: int = 2) -> str:
+def _campaigns_label(campaigns: Sequence[RemediationCampaign], *, limit: int = 2) -> str:
     """Campaigns label function."""
-    names = [str(campaign["campaign_name"]) for campaign in campaigns]
+    names = [str(campaign.campaign_name) for campaign in campaigns]
     return _short_list(names, limit=limit, noun="campaign")
 
 
-def _campaign_evidence_label(campaigns: list[dict[str, Any]]) -> str:
+def _campaign_evidence_label(campaigns: Sequence[RemediationCampaign]) -> str:
     """Campaign evidence label function."""
     signals = []
     for campaign in campaigns[:2]:
@@ -363,9 +374,9 @@ def _campaign_evidence_label(campaigns: list[dict[str, Any]]) -> str:
 
 
 def _business_service_view_rows(
-    findings: list[MarkdownReportFinding],
-    campaigns: list[dict[str, Any]] | None = None,
-) -> list[dict[str, Any]]:
+    findings: Sequence[MarkdownReportFinding],
+    campaigns: Sequence[RemediationCampaign] | None = None,
+) -> list[BusinessServiceRiskRow]:
     """Business service view rows function."""
     services: dict[str, list[MarkdownReportFinding]] = {}
     for finding in findings:
@@ -378,12 +389,12 @@ def _business_service_view_rows(
             campaign
             for campaign in campaign_rows
             if (
-                service in campaign["services"]
-                or (not campaign["services"] and service == "Infrastructure / Shared Services")
+                service in campaign.services
+                or (not campaign.services and service == "Infrastructure / Shared Services")
             )
         ]
         open_campaigns = [
-            campaign for campaign in service_campaigns if campaign["actionable_count"] > 0
+            campaign for campaign in service_campaigns if campaign.actionable_count > 0
         ]
         emergency_campaigns = [
             campaign for campaign in service_campaigns if _campaign_requires_emergency(campaign)
@@ -401,16 +412,16 @@ def _business_service_view_rows(
             else "Monitor"
         )
         rows.append(
-            {
-                "service": service,
-                "open_actionable_count": _count_findings(
+            BusinessServiceRiskRow(
+                service=service,
+                open_actionable_count=_count_findings(
                     service_findings,
                     _is_actionable_finding,
                 ),
-                "open_actionable_campaigns": len(open_campaigns),
-                "emergency_campaigns": len(emergency_campaigns),
-                "governed_risk": governed_risk,
-                "environment": _counted_or_full_list(
+                open_actionable_campaigns=len(open_campaigns),
+                emergency_campaigns=len(emergency_campaigns),
+                governed_risk=governed_risk,
+                environment=_counted_or_full_list(
                     [
                         _normalized_context_label(environment)
                         for environment in _unique_values(
@@ -420,7 +431,7 @@ def _business_service_view_rows(
                     ],
                     noun="environment",
                 ),
-                "exposure": _counted_or_full_list(
+                exposure=_counted_or_full_list(
                     [
                         _normalized_context_label(exposure)
                         for exposure in _unique_values(
@@ -430,38 +441,38 @@ def _business_service_view_rows(
                     ],
                     noun="exposure",
                 ),
-                "owner": _counted_or_full_list(
+                owner=_counted_or_full_list(
                     _unique_values(service_findings, lambda finding: finding.owner),
                     noun="owner",
                 ),
-                "decision_needed": decision_needed,
-                "validation_evidence": "Clean re-import or retained governance evidence.",
-            }
+                decision_needed=decision_needed,
+                validation_evidence="Clean re-import or retained governance evidence.",
+            )
         )
     return rows
 
 
-def _recommendation_view_rows(campaigns: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _recommendation_view_rows(campaigns: Sequence[RemediationCampaign]) -> list[RecommendationRow]:
     """Recommendation view rows function."""
     rows = []
     for campaign in campaigns:
         rows.append(
-            {
-                "campaign_name": campaign["campaign_name"],
-                "scope": _campaign_scope_summary(campaign),
-                "action": campaign["actions"][0]
-                if campaign["actions"]
+            RecommendationRow(
+                campaign_name=campaign.campaign_name,
+                scope=_campaign_scope_summary(campaign),
+                action=campaign.actions[0]
+                if campaign.actions
                 else _campaign_decision_statement(campaign),
-                "sla": campaign["slas"][0]
-                if campaign["slas"]
+                sla=campaign.slas[0]
+                if campaign.slas
                 else (
                     "Emergency / 24h"
                     if _campaign_requires_emergency(campaign)
                     else "Standard patch cycle"
                 ),
-                "owners": campaign["owners"],
-                "evidence_basis": _evidence_signal_summary(campaign),
-            }
+                owners=campaign.owners,
+                evidence_basis=_evidence_signal_summary(campaign),
+            )
         )
     return rows
 

@@ -8,7 +8,12 @@ from typing import Any
 from app.models import Finding, FindingOccurrence, ProviderSnapshot
 from app.services.report_formatting import dict_value as _dict_value
 from app.services.report_formatting import iso_datetime as _iso_datetime
-from app.services.report_models import MarkdownProviderSnapshot, MarkdownReportFinding
+from app.services.report_models import (
+    MarkdownProviderSnapshot,
+    MarkdownReportFinding,
+    ReportOccurrence,
+    ReportVulnerability,
+)
 from app.services.report_renderer_common import (
     _boolish_signal,
     _decision_guidance_from_payload,
@@ -64,7 +69,7 @@ def _analysis_finding(finding: MarkdownReportFinding) -> dict[str, Any]:
             "label": finding.component,
             "purl": finding.component_purl,
         },
-        "vulnerability": finding.vulnerability,
+        "vulnerability": _vulnerability_export(finding.vulnerability),
         "recommendation": {
             "rationale": finding.rationale,
             "recommended_action": finding.recommended_action,
@@ -80,7 +85,10 @@ def _analysis_finding(finding: MarkdownReportFinding) -> dict[str, Any]:
         },
         "explanation": finding.explanation,
         "evidence": finding.evidence,
-        "occurrences": finding.occurrences,
+        "occurrences": [
+            occurrence.model_dump(mode="json", exclude_unset=True)
+            for occurrence in finding.occurrences
+        ],
         "first_seen_at": _iso_datetime(finding.first_seen_at) if finding.first_seen_at else None,
         "last_seen_at": _iso_datetime(finding.last_seen_at) if finding.last_seen_at else None,
         "created_at": _iso_datetime(finding.created_at) if finding.created_at else None,
@@ -131,7 +139,7 @@ def _finding_payload(
         explanation=explanation,
         data_quality=_dict_value(finding.data_quality_json),
         evidence=_dict_value(finding.evidence_json),
-        occurrences=[_occurrence_payload(occurrence) for occurrence in occurrences],
+        occurrences=tuple(_occurrence_payload(occurrence) for occurrence in occurrences),
         data_quality_confidence=_data_quality_confidence(finding),
         decision_statement=_governance_decision_statement(
             finding=finding,
@@ -140,7 +148,7 @@ def _finding_payload(
         ),
         business_impact=_decision_text(decision_guidance, "business_impact"),
         decision_sla=_decision_sla(decision_guidance),
-        data_quality_flags=_data_quality_flags(finding),
+        data_quality_flags=tuple(_data_quality_flags(finding)),
         first_seen_at=finding.first_seen_at,
         last_seen_at=finding.last_seen_at,
         created_at=finding.created_at,
@@ -240,36 +248,42 @@ def _component_label(finding: Finding) -> str | None:
     return finding.component.name
 
 
-def _vulnerability_payload(finding: Finding) -> dict[str, Any]:
+def _vulnerability_payload(finding: Finding) -> ReportVulnerability | None:
     vulnerability = finding.vulnerability
     if vulnerability is None:
+        return None
+    return ReportVulnerability(
+        id=str(vulnerability.id),
+        source_id=vulnerability.source_id,
+        title=vulnerability.title,
+        description=vulnerability.description,
+        cvss_score=vulnerability.cvss_score,
+        cvss_vector=vulnerability.cvss_vector,
+        severity=vulnerability.severity,
+        cwe=vulnerability.cwe,
+        published_at=vulnerability.published_at,
+        modified_at=vulnerability.modified_at,
+        provider=dict(vulnerability.provider_json or {}),
+    )
+
+
+def _vulnerability_export(vulnerability: ReportVulnerability | None) -> dict[str, Any]:
+    if vulnerability is None:
         return {}
-    return {
-        "id": str(vulnerability.id),
-        "source_id": vulnerability.source_id,
-        "title": vulnerability.title,
-        "description": vulnerability.description,
-        "cvss_score": vulnerability.cvss_score,
-        "cvss_vector": vulnerability.cvss_vector,
-        "severity": vulnerability.severity,
-        "cwe": vulnerability.cwe,
-        "published_at": vulnerability.published_at,
-        "modified_at": vulnerability.modified_at,
-        "provider": dict(vulnerability.provider_json or {}),
-    }
+    return vulnerability.model_dump(mode="json", exclude_unset=True)
 
 
-def _occurrence_payload(occurrence: FindingOccurrence) -> dict[str, Any]:
+def _occurrence_payload(occurrence: FindingOccurrence) -> ReportOccurrence:
     evidence = _dict_value(occurrence.evidence_json)
-    return {
-        "id": str(occurrence.id),
-        "analysis_run_id": str(occurrence.analysis_run_id),
-        "source": occurrence.source,
-        "scanner": occurrence.scanner,
-        "raw_reference": occurrence.raw_reference,
-        "fix_version": occurrence.fix_version,
-        "evidence": evidence,
-    }
+    return ReportOccurrence(
+        id=str(occurrence.id),
+        analysis_run_id=str(occurrence.analysis_run_id),
+        source=occurrence.source,
+        scanner=occurrence.scanner,
+        raw_reference=occurrence.raw_reference,
+        fix_version=occurrence.fix_version,
+        evidence=evidence,
+    )
 
 
 def _data_quality_confidence(finding: Finding) -> str | None:
@@ -367,5 +381,6 @@ __all__ = [
     "_governance_detail_clause",
     "_occurrence_payload",
     "_provider_snapshot_payload",
+    "_vulnerability_export",
     "_vulnerability_payload",
 ]

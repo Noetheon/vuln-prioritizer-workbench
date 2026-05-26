@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import replace
 from typing import Any
 
 from sqlmodel import Session, col, select
@@ -51,8 +50,11 @@ def merge_attack_context(
     }
     if context.technique_ids_json and not explanation.get("attack_techniques"):
         explanation["attack_techniques"] = list(context.technique_ids_json)
-    return replace(
-        finding, attack_mapped=context.mapped or finding.attack_mapped, explanation=explanation
+    return finding.model_copy(
+        update={
+            "attack_mapped": context.mapped or finding.attack_mapped,
+            "explanation": explanation,
+        }
     )
 
 

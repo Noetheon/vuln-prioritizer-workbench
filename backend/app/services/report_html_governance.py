@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
@@ -20,7 +21,7 @@ from app.services.report_renderer_common import _dict_list
 
 def _html_governance_rollups(
     governance_rollups: dict[str, Any],
-    findings: list[MarkdownReportFinding],
+    findings: Sequence[MarkdownReportFinding],
     generated_at: datetime | None = None,
 ) -> str:
     waiver_debt = _dict_value(governance_rollups.get("waiver_debt"))

@@ -67,7 +67,7 @@ def build_report_payload(
         input_type=run.input_type,
         filename=run.filename,
         summary=dict(run.summary_json or {}),
-        findings=report_findings,
+        findings=tuple(report_findings),
         provider_snapshot=_provider_snapshot_payload(run.provider_snapshot),
         governance_rollups=governance_rollups.model_dump(mode="json"),
         project_description=project.description,

@@ -40,7 +40,7 @@ def render_html_executive_report_helper(
     risk_posture = view_model.risk_posture
     decision_brief = view_model.decision_brief
     identity = view_model.report_identity
-    finding_count = risk_posture["total_findings"]
+    finding_count = risk_posture.total_findings
     generated_at_dt = payload.generated_at
     generated_at = _safe_html(_iso_datetime(generated_at_dt))
     snapshot = payload.provider_snapshot
@@ -56,20 +56,20 @@ def render_html_executive_report_helper(
         verdict_banner = (
             '      <div class="verdict-banner">\n'
             "        <p><strong>Decision needed:</strong> "
-            f"{_safe_html(decision_brief['decision_needed'])}</p>\n"
-            f"        <p>{_safe_html(decision_brief['executive_summary'])}</p>\n"
+            f"{_safe_html(decision_brief.decision_needed)}</p>\n"
+            f"        <p>{_safe_html(decision_brief.executive_summary)}</p>\n"
             "      </div>"
         )
 
     approval_items = "".join(
         f"            <li>{_safe_html(item)}</li>\n"
-        for item in decision_brief["management_approval_items"]
+        for item in decision_brief.management_approval_items
     )
     caution_items = "".join(
-        f"            <li>{_safe_html(item)}</li>\n" for item in decision_brief["caution_items"]
+        f"            <li>{_safe_html(item)}</li>\n" for item in decision_brief.caution_items
     )
     validation_items = "".join(
-        f"            <li>{_safe_html(item)}</li>\n" for item in decision_brief["validation_items"]
+        f"            <li>{_safe_html(item)}</li>\n" for item in decision_brief.validation_items
     )
     decision_grid = (
         '      <div class="decision-grid decision-grid--three">\n'
@@ -112,7 +112,7 @@ def render_html_executive_report_helper(
         )
         + "\n\n"
     )
-    has_attack_layer = bool(view_model.attack_context["mapped_techniques"])
+    has_attack_layer = bool(view_model.attack_context.mapped_techniques)
     evidence_package_table = _html_evidence_package_table_helper(
         has_attack_layer=has_attack_layer,
         has_governance=bool(payload.governance_rollups),
@@ -128,7 +128,7 @@ def render_html_executive_report_helper(
         "review. This report summarizes actionable remediation campaigns, governance "
         "exceptions and evidence confidence for the current analysis run."
     )
-    provider_snapshot_id = identity["provider_snapshot_id"] or "N/A"
+    provider_snapshot_id = identity.provider_snapshot_id or "N/A"
     provider_snapshot_html = _html_provider_snapshot_helper(
         snapshot,
         generated_at_dt,
@@ -136,7 +136,7 @@ def render_html_executive_report_helper(
         evidence_package_context=evidence_package_context,
     )
     appendix_note = (
-        f"{view_model.technical_appendix['note']} This Executive HTML report intentionally "
+        f"{view_model.technical_appendix.note} This Executive HTML report intentionally "
         "summarizes the decision path for stakeholder review."
     )
 
@@ -155,19 +155,19 @@ def render_html_executive_report_helper(
         '  <main class="report-shell">\n'
         "    <header>\n"
         '      <p class="eyebrow">Executive Evidence Brief</p>\n'
-        f"      <h1>{_safe_html(identity['project_name'])}</h1>\n"
+        f"      <h1>{_safe_html(identity.project_name)}</h1>\n"
         f'      <p class="lede">{_safe_html(header_lede)}</p>\n'
         '      <dl class="meta-grid">\n'
-        f"        <div><dt>Report Type</dt><dd>{_safe_html(identity['report_type'])}</dd></div>\n"
-        f"        <div><dt>Project ID</dt><dd>{_safe_html(identity['project_id'])}</dd></div>\n"
+        f"        <div><dt>Report Type</dt><dd>{_safe_html(identity.report_type)}</dd></div>\n"
+        f"        <div><dt>Project ID</dt><dd>{_safe_html(identity.project_id)}</dd></div>\n"
         "        <div><dt>Project Name</dt><dd>"
-        f"{_safe_html(identity['project_name'])}</dd></div>\n"
+        f"{_safe_html(identity.project_name)}</dd></div>\n"
         "        <div><dt>Analysis Run ID</dt><dd>"
-        f"{_safe_html(identity['analysis_run_id'])}</dd></div>\n"
+        f"{_safe_html(identity.analysis_run_id)}</dd></div>\n"
         f"        <div><dt>Generated At</dt><dd>{generated_at}</dd></div>\n"
-        f"        <div><dt>Run Status</dt><dd>{_safe_html(identity['run_status'])}</dd></div>\n"
-        f"        <div><dt>Input Type</dt><dd>{_safe_html(identity['input_type'])}</dd></div>\n"
-        f"        <div><dt>Input File</dt><dd>{_safe_html(identity['input_file'])}</dd></div>\n"
+        f"        <div><dt>Run Status</dt><dd>{_safe_html(identity.run_status)}</dd></div>\n"
+        f"        <div><dt>Input Type</dt><dd>{_safe_html(identity.input_type)}</dd></div>\n"
+        f"        <div><dt>Input File</dt><dd>{_safe_html(identity.input_file)}</dd></div>\n"
         "        <div><dt>Provider Snapshot</dt><dd>"
         f"{_safe_html(provider_snapshot_id)}</dd></div>\n"
         "      </dl>\n"
@@ -185,21 +185,21 @@ def render_html_executive_report_helper(
         '      <p class="eyebrow">Risk Posture</p>\n'
         '      <h2 id="risk-posture">Executive Risk Posture</h2>\n'
         '      <div class="metric-grid">\n'
-        f"        {_html_metric('Total Findings', risk_posture['total_findings'])}\n"
-        f"        {_html_metric('Open Actionable', risk_posture['open_actionable_findings'])}\n"
-        f"        {_html_metric('KEV Backed', risk_posture['kev_backed_findings'])}\n"
-        f"        {_html_metric('Emergency SLA Campaigns', risk_posture['emergency_sla_count'])}\n"
-        f"        {_html_metric('Accepted Risk', risk_posture['accepted_risk_findings'])}\n"
-        f"        {_html_metric('VEX Suppressed', risk_posture['vex_suppressed_findings'])}\n"
-        f"        {_html_metric('Fixed Evidence', risk_posture['fixed_evidence_findings'])}\n"
+        f"        {_html_metric('Total Findings', risk_posture.total_findings)}\n"
+        f"        {_html_metric('Open Actionable', risk_posture.open_actionable_findings)}\n"
+        f"        {_html_metric('KEV Backed', risk_posture.kev_backed_findings)}\n"
+        f"        {_html_metric('Emergency SLA Campaigns', risk_posture.emergency_sla_count)}\n"
+        f"        {_html_metric('Accepted Risk', risk_posture.accepted_risk_findings)}\n"
+        f"        {_html_metric('VEX Suppressed', risk_posture.vex_suppressed_findings)}\n"
+        f"        {_html_metric('Fixed Evidence', risk_posture.fixed_evidence_findings)}\n"
         "        "
-        f"{_html_metric('Review Due / Expiring', risk_posture['review_due_or_expiring_count'])}\n"
+        f"{_html_metric('Review Due / Expiring', risk_posture.review_due_or_expiring_count)}\n"
         "        "
-        f"{_html_metric('Internet Facing Prod', risk_posture['internet_facing_prod_count'])}\n"
-        f"        {_html_metric('Unique CVEs', risk_posture['unique_cves_count'])}\n"
+        f"{_html_metric('Internet Facing Prod', risk_posture.internet_facing_prod_count)}\n"
+        f"        {_html_metric('Unique CVEs', risk_posture.unique_cves_count)}\n"
         "        "
-        f"{_html_metric('Provider Freshness', risk_posture['provider_freshness_verdict'])}\n"
-        f"        {_html_metric('Evidence Bundle Ready', risk_posture['evidence_bundle_status'])}\n"
+        f"{_html_metric('Provider Freshness', risk_posture.provider_freshness_verdict)}\n"
+        f"        {_html_metric('Evidence Bundle Ready', risk_posture.evidence_bundle_status)}\n"
         "      </div>\n"
         f"{_html_risk_metric_definitions_helper()}\n"
         "    </section>\n"

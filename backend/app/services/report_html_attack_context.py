@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from app.services.report_formatting import safe_html as _safe_html
@@ -19,7 +20,7 @@ REVIEWED_ATTACK_SOURCES = {
 }
 
 
-def _technique_ids_for_findings(findings: list[MarkdownReportFinding]) -> list[str]:
+def _technique_ids_for_findings(findings: Sequence[MarkdownReportFinding]) -> list[str]:
     """Technique ids for findings function."""
     technique_ids: set[str] = set()
     for finding in findings:
@@ -65,7 +66,7 @@ def _is_reviewed_attack_context(finding: MarkdownReportFinding) -> bool:
 
 
 def _reviewed_attack_mapping_rows_for_findings(
-    findings: list[MarkdownReportFinding],
+    findings: Sequence[MarkdownReportFinding],
 ) -> list[dict[str, str]]:
     """Reviewed attack mapping rows for findings function."""
     rows: dict[tuple[str, str], dict[str, str]] = {}
@@ -97,13 +98,13 @@ def _reviewed_attack_mapping_rows_for_findings(
 
 
 def _reviewed_attack_technique_ids_for_findings(
-    findings: list[MarkdownReportFinding],
+    findings: Sequence[MarkdownReportFinding],
 ) -> list[str]:
     """Reviewed attack technique ids for findings function."""
     return [row["technique_id"] for row in _reviewed_attack_mapping_rows_for_findings(findings)]
 
 
-def _html_attack_context_table_helper(findings: list[MarkdownReportFinding]) -> str:
+def _html_attack_context_table_helper(findings: Sequence[MarkdownReportFinding]) -> str:
     """Html attack context table helper function."""
     reviewed_mappings = _reviewed_attack_mapping_rows_for_findings(findings)
     mapped_count = sum(1 for finding in findings if _is_reviewed_attack_context(finding))

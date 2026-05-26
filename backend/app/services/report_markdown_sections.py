@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from app.services.report_formatting import dict_value as _dict_value
@@ -16,7 +17,7 @@ from app.services.report_renderer_common import (
 
 def _markdown_governance_section(
     governance_rollups: dict[str, Any],
-    findings: list[MarkdownReportFinding],
+    findings: Sequence[MarkdownReportFinding],
 ) -> list[str]:
     services = _dict_list(governance_rollups.get("top_services_by_risk"))[:5]
     assets = _dict_list(governance_rollups.get("top_assets_by_risk"))[:5]

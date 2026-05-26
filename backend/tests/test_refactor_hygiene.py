@@ -314,6 +314,9 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
     )
     contracts_source = (ROOT / "app/services/report_contracts.py").read_text(encoding="utf-8")
     models_source = (ROOT / "app/services/report_models.py").read_text(encoding="utf-8")
+    renderer_common_source = (ROOT / "app/services/report_renderer_common.py").read_text(
+        encoding="utf-8"
+    )
     formatting_source = (ROOT / "app/services/report_formatting.py").read_text(encoding="utf-8")
     renderers_source = (ROOT / "app/services/report_renderers.py").read_text(encoding="utf-8")
     renderers_imports = _imported_modules("app/services/report_renderers.py")
@@ -384,6 +387,9 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
     html_view_model_source = (ROOT / "app/services/report_html_view_model.py").read_text(
         encoding="utf-8"
     )
+    service_payload_attack_source = (
+        ROOT / "app/services/report_service_payload_attack.py"
+    ).read_text(encoding="utf-8")
     html_document_source = (ROOT / "app/services/report_html_document.py").read_text(
         encoding="utf-8"
     )
@@ -428,7 +434,28 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
         "from app.services.report_contracts import CSV_FINDINGS_COLUMNS" in api_reports_test_source
     )
     assert "REPORT_FILENAME_EVIDENCE_BUNDLE" in contracts_source
-    assert "class MarkdownReportPayload" in models_source
+    assert "from vuln_prioritizer.model_base import StrictModel" in models_source
+    assert "class ReportPayload(StrictModel)" in models_source
+    assert "class ReportFinding(StrictModel)" in models_source
+    assert "class ReportProviderSnapshot(StrictModel)" in models_source
+    assert "class RemediationCampaign(StrictModel)" in models_source
+    assert "class ExecutiveReportViewModel(StrictModel)" in models_source
+    assert "class AnalysisResultV1(StrictModel)" in models_source
+    assert "MarkdownReportPayload: TypeAlias = ReportPayload" in models_source
+    assert "MarkdownReportFinding: TypeAlias = ReportFinding" in models_source
+    assert "MarkdownProviderSnapshot: TypeAlias = ReportProviderSnapshot" in models_source
+    campaign_model_block = models_source.split("class RemediationCampaign", maxsplit=1)[1].split(
+        "class ReportIdentity", maxsplit=1
+    )[0]
+    view_model_block = models_source.split("class ExecutiveReportViewModel", maxsplit=1)[1].split(
+        "class AnalysisResultV1", maxsplit=1
+    )[0]
+    assert "dict[str, Any]" not in campaign_model_block
+    assert "dict[str, Any]" not in view_model_block
+    assert "from dataclasses import replace" not in renderer_common_source
+    assert "from dataclasses import replace" not in service_payload_attack_source
+    assert "replace(" not in renderer_common_source
+    assert "replace(" not in service_payload_attack_source
     assert "def safe_cell" in formatting_source
     assert "def csv_safe_cell" in formatting_source
     assert len(renderers_source.splitlines()) <= 120
@@ -472,6 +499,10 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
     assert "def render_html_executive_report_helper" not in html_source
     assert "def _get_remediation_campaigns_helper" in html_campaign_model_source
     assert "def _html_remediation_campaigns_helper" in html_campaign_rendering_source
+    assert "campaign[" not in html_campaign_model_source
+    assert "campaign[" not in html_campaign_rendering_source
+    assert "campaign[" not in html_decision_source
+    assert "campaign[" not in html_view_model_source
     assert "def _html_provider_snapshot_helper" in html_provider_freshness_source
     assert "def _html_evidence_package_table_helper" in html_evidence_package_source
     assert "def _action_plan_rows_helper" in html_decision_source

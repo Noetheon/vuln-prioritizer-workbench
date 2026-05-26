@@ -5,6 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from pydantic import ValidationError
 
 from app.services import report_renderers as renderers
 from app.services.report_models import (
@@ -59,6 +60,20 @@ def _finding(**overrides: object) -> MarkdownReportFinding:
     }
     values.update(overrides)
     return MarkdownReportFinding(**values)  # type: ignore[arg-type]
+
+
+def test_report_models_reject_unknown_fields_and_do_not_share_defaults() -> None:
+    with pytest.raises(ValidationError):
+        _finding(unexpected_field="blocked")
+
+    first = _finding()
+    second = _finding()
+
+    first.explanation["local"] = "changed"
+
+    assert second.explanation == {}
+    assert first.data_quality_flags == ()
+    assert first.occurrences == ()
 
 
 def test_markdown_and_html_reports_render_empty_states_without_snapshot() -> None:
@@ -138,7 +153,7 @@ def test_report_renderer_small_helpers_cover_governance_and_fallback_branches() 
         )
         == "openssl"
     )
-    assert renderers._vulnerability_payload(SimpleNamespace(vulnerability=None)) == {}
+    assert renderers._vulnerability_payload(SimpleNamespace(vulnerability=None)) is None
     assert (
         renderers._decision_text(
             {"decision_statement": {"summary": "Patch now."}}, "decision_statement"
@@ -355,7 +370,7 @@ def test_executive_html_groups_campaigns_and_interprets_freshness() -> None:
     assert "Technical Appendix note" in headings
 
     campaigns = renderers._get_remediation_campaigns(payload.findings)
-    assert [campaign["campaign_name"] for campaign in campaigns[:2]] == [
+    assert [campaign.campaign_name for campaign in campaigns[:2]] == [
         "CVE-2021-44228 / Log4Shell",
         "CVE-2022-22965 / Spring4Shell",
     ]
@@ -390,10 +405,10 @@ def test_executive_html_groups_campaigns_and_interprets_freshness() -> None:
     assert "+3 more" not in soup.get_text(" ", strip=True)
 
     view_model = renderers.build_executive_report_view_model(payload)
-    assert view_model.risk_posture["emergency_sla_count"] == 2
-    assert view_model.evidence_package[0]["artifact"] == "manifest.json"
-    assert view_model.evidence_package[0]["status"] == "expected"
-    assert view_model.technical_appendix["note"].startswith("Detailed finding rows")
+    assert view_model.risk_posture.emergency_sla_count == 2
+    assert view_model.evidence_package[0].artifact == "manifest.json"
+    assert view_model.evidence_package[0].status == "expected"
+    assert view_model.technical_appendix.note.startswith("Detailed finding rows")
 
 
 def test_executive_view_model_separates_overlapping_actionability_states() -> None:
@@ -414,12 +429,12 @@ def test_executive_view_model_separates_overlapping_actionability_states() -> No
 
     view_model = renderers.build_executive_report_view_model(payload)
 
-    assert view_model.risk_posture["total_findings"] == 5
-    assert view_model.risk_posture["open_actionable_findings"] == 2
-    assert view_model.risk_posture["accepted_risk_findings"] == 1
-    assert view_model.risk_posture["vex_suppressed_findings"] == 1
-    assert view_model.risk_posture["fixed_evidence_findings"] == 1
-    assert view_model.governance_exceptions["under_investigation"] == 1
+    assert view_model.risk_posture.total_findings == 5
+    assert view_model.risk_posture.open_actionable_findings == 2
+    assert view_model.risk_posture.accepted_risk_findings == 1
+    assert view_model.risk_posture.vex_suppressed_findings == 1
+    assert view_model.risk_posture.fixed_evidence_findings == 1
+    assert view_model.governance_exceptions.under_investigation == 1
 
 
 def test_campaign_grouping_uses_stable_action_priority_component_key() -> None:
@@ -450,7 +465,7 @@ def test_campaign_grouping_uses_stable_action_priority_component_key() -> None:
     campaigns = renderers._get_remediation_campaigns(findings)
 
     assert len(campaigns) == 2
-    assert sorted(campaign["open_actionable_count"] for campaign in campaigns) == [1, 2]
+    assert sorted(campaign.open_actionable_count for campaign in campaigns) == [1, 2]
 
 
 def test_provider_freshness_needs_review_for_unknown_kev_version_semantics() -> None:
@@ -513,8 +528,8 @@ def test_executive_html_uses_bundle_evidence_package_context() -> None:
         evidence_package_context=evidence_context,
     )
 
-    assert view_model.risk_posture["evidence_bundle_status"] == "Ready"
-    assert view_model.evidence_package[1]["sha256"] == "a" * 64
+    assert view_model.risk_posture.evidence_bundle_status == "Ready"
+    assert view_model.evidence_package[1].sha256 == "a" * 64
     assert "1,234 bytes" in html
     assert "Hash recorded in final manifest.json" in html
     assert "Printable decision sign-off" in html
@@ -557,7 +572,7 @@ def test_attack_context_requires_reviewed_mapping_source_before_rendering_techni
     html = renderers.render_html_executive_report(payload)
     view_model = renderers.build_executive_report_view_model(payload)
 
-    assert view_model.attack_context["mapped_techniques"] == [
+    assert list(view_model.attack_context.mapped_techniques) == [
         {
             "technique_id": "T1190",
             "name": "Exploit Public-Facing Application",

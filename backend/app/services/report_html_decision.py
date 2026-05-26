@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from app.services.report_formatting import safe_html as _safe_html
 from app.services.report_html_campaign_model import (
     _campaign_evidence_label,
@@ -18,13 +16,18 @@ from app.services.report_html_common import (
     _pluralize,
     render_safe_text_with_links,
 )
-from app.services.report_models import ExecutiveReportViewModel, MarkdownReportPayload
+from app.services.report_models import (
+    ActionPlanRow,
+    ExecutiveReportViewModel,
+    MarkdownReportPayload,
+    RemediationCampaign,
+)
 
 
-def _action_plan_rows_helper(payload: MarkdownReportPayload) -> list[dict[str, str]]:
+def _action_plan_rows_helper(payload: MarkdownReportPayload) -> list[ActionPlanRow]:
     """Action plan rows helper function."""
     campaigns = _get_remediation_campaigns_helper(payload.findings)
-    open_campaigns = [campaign for campaign in campaigns if campaign["actionable_count"] > 0]
+    open_campaigns = [campaign for campaign in campaigns if campaign.actionable_count > 0]
     emergency_campaigns = [
         campaign for campaign in open_campaigns if _campaign_requires_emergency(campaign)
     ]
@@ -110,34 +113,34 @@ def _action_plan_rows_helper(payload: MarkdownReportPayload) -> list[dict[str, s
     governance_evidence = "Waiver records, VEX overlays and governance artifacts."
 
     return [
-        {
-            "time_window": "24h",
-            "action": first_action,
-            "scope": first_scope,
-            "owner": first_owner,
-            "evidence_basis": first_evidence,
-        },
-        {
-            "time_window": "72h",
-            "action": seventy_two_action,
-            "scope": seventy_two_scope,
-            "owner": seventy_two_owner,
-            "evidence_basis": seventy_two_evidence,
-        },
-        {
-            "time_window": "7d",
-            "action": seven_day_action,
-            "scope": seven_day_scope,
-            "owner": seven_day_owner,
-            "evidence_basis": seven_day_evidence,
-        },
-        {
-            "time_window": "Governance review",
-            "action": governance_action,
-            "scope": governance_scope,
-            "owner": governance_owner,
-            "evidence_basis": governance_evidence,
-        },
+        ActionPlanRow(
+            time_window="24h",
+            action=first_action,
+            scope=first_scope,
+            owner=first_owner,
+            evidence_basis=first_evidence,
+        ),
+        ActionPlanRow(
+            time_window="72h",
+            action=seventy_two_action,
+            scope=seventy_two_scope,
+            owner=seventy_two_owner,
+            evidence_basis=seventy_two_evidence,
+        ),
+        ActionPlanRow(
+            time_window="7d",
+            action=seven_day_action,
+            scope=seven_day_scope,
+            owner=seven_day_owner,
+            evidence_basis=seven_day_evidence,
+        ),
+        ActionPlanRow(
+            time_window="Governance review",
+            action=governance_action,
+            scope=governance_scope,
+            owner=governance_owner,
+            evidence_basis=governance_evidence,
+        ),
     ]
 
 
@@ -146,11 +149,11 @@ def _html_action_plan_table_helper(payload: MarkdownReportPayload) -> str:
     action_rows = _action_plan_rows_helper(payload)
     rows = [
         "<tr>"
-        f"<td><strong>{_safe_html(row['time_window'])}</strong></td>"
-        f"<td>{render_safe_text_with_links(row['action'])}</td>"
-        f"<td>{_safe_html(row['scope'])}</td>"
-        f"<td>{_safe_html(row['owner'])}</td>"
-        f"<td>{render_safe_text_with_links(row['evidence_basis'])}</td>"
+        f"<td><strong>{_safe_html(row.time_window)}</strong></td>"
+        f"<td>{render_safe_text_with_links(row.action)}</td>"
+        f"<td>{_safe_html(row.scope)}</td>"
+        f"<td>{_safe_html(row.owner)}</td>"
+        f"<td>{render_safe_text_with_links(row.evidence_basis)}</td>"
         "</tr>"
         for row in action_rows
     ]
@@ -168,17 +171,17 @@ def _html_action_plan_table_helper(payload: MarkdownReportPayload) -> str:
 
 
 def _decision_needed_statement_helper(
-    campaigns: list[dict[str, Any]],
+    campaigns: list[RemediationCampaign],
     *,
     provider_freshness: str,
     review_due_or_expiring: int,
 ) -> str:
     """Decision needed statement helper function."""
-    open_campaigns = [campaign for campaign in campaigns if campaign["actionable_count"] > 0]
+    open_campaigns = [campaign for campaign in campaigns if campaign.actionable_count > 0]
     emergency_campaigns = [
         campaign for campaign in open_campaigns if _campaign_requires_emergency(campaign)
     ]
-    owner_gap_count = sum(1 for campaign in open_campaigns if not campaign["owners"])
+    owner_gap_count = sum(1 for campaign in open_campaigns if not campaign.owners)
     parts: list[str] = []
     if emergency_campaigns:
         parts.append(
@@ -260,7 +263,7 @@ def _html_risk_metric_definitions_helper() -> str:
 def _html_decision_signoff_helper(view_model: ExecutiveReportViewModel) -> str:
     """Html decision signoff helper function."""
     identity = view_model.report_identity
-    evidence_status = view_model.risk_posture.get("evidence_bundle_status", "Expected")
+    evidence_status = view_model.risk_posture.evidence_bundle_status
     evidence_reference = (
         "manifest.json in Evidence ZIP"
         if evidence_status == "Ready"
@@ -272,7 +275,7 @@ def _html_decision_signoff_helper(view_model: ExecutiveReportViewModel) -> str:
         ("Decision date", ""),
         ("Evidence package reference", evidence_reference),
         ("Validation required", "Clean re-import and fixed evidence before closure"),
-        ("Analysis run", str(identity.get("analysis_run_id") or "N/A")),
+        ("Analysis run", identity.analysis_run_id or "N/A"),
         ("Notes", ""),
     ]
     row_html = "\n".join(

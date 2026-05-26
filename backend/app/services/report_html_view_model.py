@@ -31,9 +31,16 @@ from app.services.report_html_provider_freshness import (
     _provider_freshness_status_helper,
 )
 from app.services.report_models import (
+    AttackContextView,
+    DecisionBrief,
+    EvidenceConfidence,
     EvidencePackageContext,
     ExecutiveReportViewModel,
+    GovernanceExceptions,
     MarkdownReportPayload,
+    ReportIdentity,
+    RiskPosture,
+    TechnicalAppendix,
 )
 from app.services.report_renderer_common import _dict_list
 
@@ -79,25 +86,25 @@ def build_executive_report_view_model(
         provider_freshness=provider_freshness,
         review_due_or_expiring=review_due_or_expiring,
     )
-    open_campaigns = [campaign for campaign in campaigns if campaign["actionable_count"] > 0]
-    owner_gap_count = sum(1 for campaign in open_campaigns if not campaign["owners"])
+    open_campaigns = [campaign for campaign in campaigns if campaign.actionable_count > 0]
+    owner_gap_count = sum(1 for campaign in open_campaigns if not campaign.owners)
     evidence_bundle_status = _evidence_bundle_status_label(evidence_package_context)
     return ExecutiveReportViewModel(
-        report_identity={
-            "report_type": "Executive HTML",
-            "project_id": payload.project_id,
-            "project_name": payload.project_name,
-            "analysis_run_id": payload.run_id,
-            "generated_at": generated_at,
-            "run_status": payload.run_status,
-            "input_type": payload.input_type,
-            "input_file": payload.filename,
-            "provider_snapshot_id": snapshot.id if snapshot else None,
-        },
-        decision_brief={
-            "decision_needed": decision_needed,
-            "executive_summary": _executive_verdict_summary_helper(payload),
-            "management_approval_items": [
+        report_identity=ReportIdentity(
+            report_type="Executive HTML",
+            project_id=payload.project_id,
+            project_name=payload.project_name,
+            analysis_run_id=payload.run_id,
+            generated_at=generated_at,
+            run_status=payload.run_status,
+            input_type=payload.input_type,
+            input_file=payload.filename,
+            provider_snapshot_id=snapshot.id if snapshot else None,
+        ),
+        decision_brief=DecisionBrief(
+            decision_needed=decision_needed,
+            executive_summary=_executive_verdict_summary_helper(payload),
+            management_approval_items=(
                 f"{_pluralize(len(emergency_campaigns), 'emergency remediation campaign')}."
                 if emergency_campaigns
                 else (
@@ -106,8 +113,8 @@ def build_executive_report_view_model(
                 ),
                 "Named owners for each remediation cluster.",
                 "Validation evidence after clean re import.",
-            ],
-            "caution_items": [
+            ),
+            caution_items=(
                 f"Provider snapshot freshness is {provider_freshness.lower()} for formal sign off.",
                 (
                     f"{_pluralize(owner_gap_count, 'open campaign')} "
@@ -116,25 +123,23 @@ def build_executive_report_view_model(
                 if owner_gap_count
                 else "Open campaigns have named owners in the evidence.",
                 "Accepted risk, VEX suppressed and fixed findings remain visible as evidence.",
-            ],
-            "validation_items": [
+            ),
+            validation_items=(
                 "Clean re import after remediation.",
                 "Updated fixed evidence for closed findings.",
                 "Evidence ZIP manifest and hashes retained for audit review.",
-            ],
-        },
-        risk_posture={
-            "total_findings": len(payload.findings),
-            "open_actionable_findings": actionability.get("open", 0),
-            "kev_backed_findings": _count_findings(
-                payload.findings, lambda finding: finding.in_kev
             ),
-            "emergency_sla_count": len(emergency_campaigns),
-            "accepted_risk_findings": actionability.get("accepted", 0),
-            "vex_suppressed_findings": actionability.get("suppressed", 0),
-            "fixed_evidence_findings": actionability.get("fixed", 0),
-            "review_due_or_expiring_count": review_due_or_expiring,
-            "internet_facing_prod_count": _count_findings(
+        ),
+        risk_posture=RiskPosture(
+            total_findings=len(payload.findings),
+            open_actionable_findings=actionability.get("open", 0),
+            kev_backed_findings=_count_findings(payload.findings, lambda finding: finding.in_kev),
+            emergency_sla_count=len(emergency_campaigns),
+            accepted_risk_findings=actionability.get("accepted", 0),
+            vex_suppressed_findings=actionability.get("suppressed", 0),
+            fixed_evidence_findings=actionability.get("fixed", 0),
+            review_due_or_expiring_count=review_due_or_expiring,
+            internet_facing_prod_count=_count_findings(
                 payload.findings,
                 lambda finding: (
                     _is_actionable_finding(finding)
@@ -142,60 +147,64 @@ def build_executive_report_view_model(
                     and (finding.environment or "").lower() in {"prod", "production"}
                 ),
             ),
-            "unique_cves_count": len({finding.cve_id for finding in payload.findings}),
-            "provider_freshness_verdict": provider_freshness,
-            "evidence_bundle_status": evidence_bundle_status,
-        },
-        action_plan=_action_plan_rows_helper(payload),
-        remediation_campaigns=campaigns,
-        business_services=business_services,
-        governance_exceptions={
-            "waiver_rows": waiver_items,
-            "waivers": int(waiver_debt.get("waiver_count") or 0),
-            "expired": int(waiver_debt.get("expired_count") or 0),
-            "review_due": int(waiver_debt.get("review_due_count") or 0),
-            "expiring_soon": int(waiver_debt.get("expiring_soon_count") or 0),
-            "accepted_findings": actionability.get("accepted", 0),
-            "vex_suppressed": actionability.get("suppressed", 0),
-            "fixed_findings": actionability.get("fixed", 0),
-            "under_investigation": _count_findings(
+            unique_cves_count=len({finding.cve_id for finding in payload.findings}),
+            provider_freshness_verdict=provider_freshness,
+            evidence_bundle_status=evidence_bundle_status,
+        ),
+        action_plan=tuple(_action_plan_rows_helper(payload)),
+        remediation_campaigns=tuple(campaigns),
+        business_services=tuple(business_services),
+        governance_exceptions=GovernanceExceptions(
+            waiver_rows=tuple(waiver_items),
+            waivers=int(waiver_debt.get("waiver_count") or 0),
+            expired=int(waiver_debt.get("expired_count") or 0),
+            review_due=int(waiver_debt.get("review_due_count") or 0),
+            expiring_soon=int(waiver_debt.get("expiring_soon_count") or 0),
+            accepted_findings=actionability.get("accepted", 0),
+            vex_suppressed=actionability.get("suppressed", 0),
+            fixed_findings=actionability.get("fixed", 0),
+            under_investigation=_count_findings(
                 payload.findings,
                 _is_under_investigation_finding,
             ),
-        },
-        evidence_confidence={
-            "provider_freshness_verdict": provider_freshness,
-            "provider_rows": _provider_freshness_rows_helper(
-                snapshot,
-                generated_at,
-                evidence_package_context,
-            ),
-            "snapshot_replay_status": "Reproducible" if snapshot else "Not available",
-            "source_hashes": dict(snapshot.source_hashes) if snapshot else {},
-            "static_html_safety_status": "Controlled",
-        },
-        evidence_package=_evidence_package_rows_helper(
-            has_attack_layer=bool(reviewed_attack_rows),
-            has_governance=has_governance,
-            evidence_package_context=evidence_package_context,
         ),
-        recommendations=recommendations,
-        attack_context={
-            "mapped_techniques": reviewed_attack_rows,
-            "mapping_source": sorted({row["source"] for row in reviewed_attack_rows}),
-            "navigator_layer_status": "Included in Evidence ZIP"
+        evidence_confidence=EvidenceConfidence(
+            provider_freshness_verdict=provider_freshness,
+            provider_rows=tuple(
+                _provider_freshness_rows_helper(
+                    snapshot,
+                    generated_at,
+                    evidence_package_context,
+                )
+            ),
+            snapshot_replay_status="Reproducible" if snapshot else "Not available",
+            source_hashes=dict(snapshot.source_hashes) if snapshot else {},
+            static_html_safety_status="Controlled",
+        ),
+        evidence_package=tuple(
+            _evidence_package_rows_helper(
+                has_attack_layer=bool(reviewed_attack_rows),
+                has_governance=has_governance,
+                evidence_package_context=evidence_package_context,
+            )
+        ),
+        recommendations=tuple(recommendations),
+        attack_context=AttackContextView(
+            mapped_techniques=tuple(reviewed_attack_rows),
+            mapping_source=tuple(sorted({row["source"] for row in reviewed_attack_rows})),
+            navigator_layer_status="Included in Evidence ZIP"
             if reviewed_attack_rows
             else "Optional / not generated",
-            "unmapped_handling_note": "Unmapped CVEs remain unmapped.",
-            "no_llm_inference_note": "No LLM inferred mappings are used.",
-        },
-        technical_appendix={
-            "note": (
+            unmapped_handling_note="Unmapped CVEs remain unmapped.",
+            no_llm_inference_note="No LLM inferred mappings are used.",
+        ),
+        technical_appendix=TechnicalAppendix(
+            note=(
                 "Detailed finding rows, component versions, long remediation text, input "
                 "provenance, full rationale and per finding actions remain in the Technical "
                 "Markdown report, Analysis JSON, Findings CSV, SARIF and Evidence ZIP."
             )
-        },
+        ),
     )
 
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from app.services.report_formatting import format_number as _format_number
 from app.services.report_formatting import safe_html as _safe_html
 from app.services.report_html_campaign_model import _get_remediation_campaigns_helper
@@ -13,27 +15,29 @@ from app.services.report_html_common import (
     _actionability_summary_helper,
 )
 from app.services.report_html_narrative import _decision_statement
-from app.services.report_models import MarkdownReportFinding
+from app.services.report_models import MarkdownReportFinding, RemediationCampaign
 from app.services.report_renderer_common import _priority_label
 
 
 def _html_remediation_campaigns(
-    findings: list[MarkdownReportFinding], project_name: str | None = None
+    findings: Sequence[MarkdownReportFinding], project_name: str | None = None
 ) -> str:
     return _html_remediation_campaigns_helper(findings, project_name=project_name)
 
 
 def _html_deduplicated_recommendations(
-    findings: list[MarkdownReportFinding], project_name: str | None = None
+    findings: Sequence[MarkdownReportFinding], project_name: str | None = None
 ) -> str:
     return _html_deduplicated_recommendations_helper(findings, project_name=project_name)
 
 
-def _actionability_summary(findings: list[MarkdownReportFinding]) -> str:
+def _actionability_summary(findings: Sequence[MarkdownReportFinding]) -> str:
     return _actionability_summary_helper(findings)
 
 
-def _get_remediation_campaigns(findings: list[MarkdownReportFinding]) -> list[dict[str, object]]:
+def _get_remediation_campaigns(
+    findings: Sequence[MarkdownReportFinding],
+) -> list[RemediationCampaign]:
     return _get_remediation_campaigns_helper(findings)
 
 

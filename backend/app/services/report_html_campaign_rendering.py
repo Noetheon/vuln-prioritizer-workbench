@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Sequence
 
 from app.services.report_formatting import format_number as _format_number
 from app.services.report_formatting import safe_html as _safe_html
@@ -27,16 +27,20 @@ from app.services.report_html_common import (
     _unique_values,
     render_safe_text_with_links,
 )
-from app.services.report_models import MarkdownReportFinding, MarkdownReportPayload
+from app.services.report_models import (
+    MarkdownReportFinding,
+    MarkdownReportPayload,
+    RemediationCampaign,
+)
 
 
-def _html_evidence_signals_badges(campaign: dict[str, Any]) -> str:
+def _html_evidence_signals_badges(campaign: RemediationCampaign) -> str:
     """Html evidence signals badges function."""
     badges = []
-    if campaign["in_kev"]:
+    if campaign.in_kev:
         badges.append("<span class='badge badge-critical'>KEV</span>")
-    if campaign["max_epss"] is not None:
-        epss_val = campaign["max_epss"]
+    if campaign.max_epss is not None:
+        epss_val = campaign.max_epss
         tone = (
             "badge-critical"
             if epss_val >= 0.1
@@ -45,8 +49,8 @@ def _html_evidence_signals_badges(campaign: dict[str, Any]) -> str:
             else "badge-neutral"
         )
         badges.append(f"<span class='badge {tone}'>EPSS {_format_number(epss_val)}</span>")
-    if campaign["max_cvss"] is not None:
-        cvss_val = campaign["max_cvss"]
+    if campaign.max_cvss is not None:
+        cvss_val = campaign.max_cvss
         if cvss_val >= 9.0:
             tone = "badge-critical"
         elif cvss_val >= 7.0:
@@ -54,10 +58,10 @@ def _html_evidence_signals_badges(campaign: dict[str, Any]) -> str:
         else:
             tone = "badge-neutral"
         badges.append(f"<span class='badge {tone}'>CVSS {_format_number(cvss_val)}</span>")
-    technique_ids = campaign.get("attack_techniques") or []
+    technique_ids = campaign.attack_techniques
     for tech_id in technique_ids[:2]:
         badges.append(f"<span class='badge badge-info'>ATT&CK {tech_id}</span>")
-    if not campaign["in_kev"]:
+    if not campaign.in_kev:
         badges.append("<span class='badge badge-neutral'>No KEV</span>")
     return f'<div class="signal-row">{"".join(badges)}</div>'
 
@@ -105,7 +109,7 @@ def _executive_verdict_summary_helper(payload: MarkdownReportPayload) -> str:
     )
 
     campaigns = _get_remediation_campaigns_helper(payload.findings)
-    open_campaigns = [campaign for campaign in campaigns if campaign["actionable_count"] > 0]
+    open_campaigns = [campaign for campaign in campaigns if campaign.actionable_count > 0]
     top_campaigns = _campaigns_label(open_campaigns or campaigns, limit=5)
     focus_sentence = (
         f"Immediate focus should be {top_campaigns} before governance exceptions are signed off."
@@ -119,7 +123,7 @@ def _executive_verdict_summary_helper(payload: MarkdownReportPayload) -> str:
     )
 
 
-def _html_business_services_prose_helper(findings: list[MarkdownReportFinding]) -> str:
+def _html_business_services_prose_helper(findings: Sequence[MarkdownReportFinding]) -> str:
     """Html business services prose helper function."""
     if not findings:
         return "<p class='empty-state'>No business services at risk recorded.</p>"
@@ -217,7 +221,7 @@ def _html_business_services_prose_helper(findings: list[MarkdownReportFinding]) 
 
 
 def _html_business_impact_table_helper(
-    findings: list[MarkdownReportFinding], project_name: str | None = None
+    findings: Sequence[MarkdownReportFinding], project_name: str | None = None
 ) -> str:
     """Html business impact table helper function."""
     prose = _html_business_services_prose_helper(findings)
@@ -233,14 +237,14 @@ def _html_business_impact_table_helper(
         services.setdefault(service, []).append(finding)
     campaigns = _get_remediation_campaigns_helper(findings, project_name=project_name)
 
-    def campaigns_for_service(service_name: str) -> list[dict[str, Any]]:
+    def campaigns_for_service(service_name: str) -> list[RemediationCampaign]:
         """Campaigns for service function."""
         return [
             campaign
             for campaign in campaigns
             if (
-                service_name in campaign["services"]
-                or (not campaign["services"] and service_name == "Infrastructure / Shared Services")
+                service_name in campaign.services
+                or (not campaign.services and service_name == "Infrastructure / Shared Services")
             )
         ]
 
@@ -267,7 +271,7 @@ def _html_business_impact_table_helper(
         )
         service_campaigns = campaigns_for_service(service)
         open_campaign_count = sum(
-            1 for campaign in service_campaigns if campaign["actionable_count"] > 0
+            1 for campaign in service_campaigns if campaign.actionable_count > 0
         )
         emergency_campaign_count = sum(
             1 for campaign in service_campaigns if _campaign_requires_emergency(campaign)
@@ -346,7 +350,7 @@ def _html_business_impact_table_helper(
 
 
 def _html_remediation_campaigns_helper(
-    findings: list[MarkdownReportFinding], project_name: str | None = None
+    findings: Sequence[MarkdownReportFinding], project_name: str | None = None
 ) -> str:
     """Html remediation campaigns helper function."""
     campaigns = _get_remediation_campaigns_helper(findings, project_name=project_name)
@@ -356,29 +360,27 @@ def _html_remediation_campaigns_helper(
     rows = []
     for campaign in campaigns[:10]:
         owners = (
-            _short_list(campaign["owners"], limit=3, noun="owner")
-            if campaign["owners"]
-            else "Unassigned"
+            _short_list(campaign.owners, limit=3, noun="owner") if campaign.owners else "Unassigned"
         )
         services = (
-            _short_list(campaign["services"], limit=3, noun="service")
-            if campaign["services"]
+            _short_list(campaign.services, limit=3, noun="service")
+            if campaign.services
             else "Unknown service"
         )
-        actionability = _actionability_summary_helper(campaign["findings"])
+        actionability = _actionability_summary_helper(campaign.findings)
 
         priority_class = (
             "badge-critical"
-            if campaign["priority_label"] == "P1"
+            if campaign.priority_label == "P1"
             else "badge-high"
-            if campaign["priority_label"] in {"P2", "P3"}
+            if campaign.priority_label in {"P2", "P3"}
             else "badge-neutral"
         )
         actionability_class = (
             "badge-critical"
             if _campaign_requires_emergency(campaign)
             else "badge-high"
-            if campaign["actionable_count"] > 0
+            if campaign.actionable_count > 0
             else "badge-neutral"
         )
 
@@ -387,8 +389,8 @@ def _html_remediation_campaigns_helper(
 
         rows.append(
             "        <tr>"
-            f"<td><span class='badge {priority_class}'>{campaign['priority_label']}</span></td>"
-            f"<td><strong>{_safe_html(campaign['campaign_name'])}</strong></td>"
+            f"<td><span class='badge {priority_class}'>{campaign.priority_label}</span></td>"
+            f"<td><strong>{_safe_html(campaign.campaign_name)}</strong></td>"
             f"<td><span class='badge {actionability_class}'>"
             f"{_safe_html(actionability)}</span></td>"
             f"<td>{_safe_html(_campaign_scope_summary(campaign))}</td>"
@@ -414,7 +416,7 @@ def _html_remediation_campaigns_helper(
 
 
 def _html_deduplicated_recommendations_helper(
-    findings: list[MarkdownReportFinding], project_name: str | None = None
+    findings: Sequence[MarkdownReportFinding], project_name: str | None = None
 ) -> str:
     """Html deduplicated recommendations helper function."""
     campaigns = _get_remediation_campaigns_helper(findings, project_name=project_name)
@@ -433,8 +435,8 @@ def _html_deduplicated_recommendations_helper(
 
     items = []
     for campaign in campaigns:
-        cve_id = campaign["cve_id"]
-        alias = campaign["alias"]
+        cve_id = campaign.cve_id
+        alias = campaign.alias
 
         campaign_title = titles_map.get(
             cve_id,
@@ -446,29 +448,25 @@ def _html_deduplicated_recommendations_helper(
         )
 
         owners = (
-            _short_list(campaign["owners"], limit=3, noun="owner")
-            if campaign["owners"]
-            else "Unassigned"
+            _short_list(campaign.owners, limit=3, noun="owner") if campaign.owners else "Unassigned"
         )
         services = (
-            _short_list(campaign["services"], limit=3, noun="service")
-            if campaign["services"]
+            _short_list(campaign.services, limit=3, noun="service")
+            if campaign.services
             else "Unknown service"
         )
         action_str = (
-            campaign["actions"][0]
-            if campaign["actions"]
-            else (_campaign_decision_statement(campaign))
+            campaign.actions[0] if campaign.actions else (_campaign_decision_statement(campaign))
         )
-        if campaign["slas"]:
-            sla_str = campaign["slas"][0]
+        if campaign.slas:
+            sla_str = campaign.slas[0]
         elif _campaign_requires_emergency(campaign):
             sla_str = "Emergency / 24h"
         else:
             sla_str = "Standard patch cycle"
         prose = (
             f"Scope: {_campaign_scope_summary(campaign)}; services: {services}. "
-            f"Status: {_actionability_summary_helper(campaign['findings'])}. "
+            f"Status: {_actionability_summary_helper(campaign.findings)}. "
             f"Recommended action: {action_str}. SLA: {sla_str}. Owners: {owners}. "
             f"Evidence basis: {_evidence_signal_summary(campaign)}."
         )

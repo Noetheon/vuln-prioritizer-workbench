@@ -77,7 +77,7 @@ def evidence_package_context_from_entries(
                 note="Generated only when governance artifacts are available.",
             )
         )
-    return EvidencePackageContext(mode="bundle", artifacts=artifacts)
+    return EvidencePackageContext(mode="bundle", artifacts=tuple(artifacts))
 
 
 def _artifact_from_entry(path: str, entry: dict[str, Any]) -> EvidencePackageArtifact:

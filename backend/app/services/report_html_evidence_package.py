@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from app.services.report_formatting import safe_html as _safe_html
-from app.services.report_models import EvidencePackageContext
+from app.services.report_models import EvidencePackageContext, EvidencePackageRow
 
 
 def _html_evidence_package_table_helper(
@@ -22,7 +20,7 @@ def _html_evidence_package_table_helper(
     )
     evidence_package_rows_html = []
     for row in evidence_package_rows:
-        status = str(row["status"])
+        status = row.status
         if status == "included":
             badge_class = "badge-success"
         elif status == "expected":
@@ -30,15 +28,13 @@ def _html_evidence_package_table_helper(
         else:
             badge_class = "badge-neutral"
         included_badge = f"<span class='badge {badge_class}'>{_safe_html(status)}</span>"
-        sha256 = row.get("sha256") or "N/A"
+        sha256 = row.sha256 or "N/A"
         size_or_note = (
-            f"{int(row['size_bytes']):,} bytes"
-            if row.get("size_bytes") is not None
-            else row.get("note") or "N/A"
+            f"{int(row.size_bytes):,} bytes" if row.size_bytes is not None else row.note or "N/A"
         )
         evidence_package_rows_html.append(
-            f"<tr><td><code>{_safe_html(row['artifact'])}</code></td>"
-            f"<td>{_safe_html(row['purpose'])}</td><td>{included_badge}</td>"
+            f"<tr><td><code>{_safe_html(row.artifact)}</code></td>"
+            f"<td>{_safe_html(row.purpose)}</td><td>{included_badge}</td>"
             f"<td><code>{_safe_html(sha256)}</code></td>"
             f"<td>{_safe_html(size_or_note)}</td></tr>"
         )
@@ -63,78 +59,78 @@ def _evidence_package_rows_helper(
     has_attack_layer: bool,
     has_governance: bool,
     evidence_package_context: EvidencePackageContext | None = None,
-) -> list[dict[str, Any]]:
+) -> list[EvidencePackageRow]:
     """Evidence package rows helper function."""
     if evidence_package_context is not None and evidence_package_context.artifacts:
         return [
-            {
-                "artifact": artifact.artifact,
-                "purpose": artifact.purpose,
-                "status": artifact.status,
-                "sha256": artifact.sha256,
-                "size_bytes": artifact.size_bytes,
-                "kind": artifact.kind,
-                "note": artifact.note,
-            }
+            EvidencePackageRow(
+                artifact=artifact.artifact,
+                purpose=artifact.purpose,
+                status=artifact.status,
+                sha256=artifact.sha256,
+                size_bytes=artifact.size_bytes,
+                kind=artifact.kind,
+                note=artifact.note,
+            )
             for artifact in evidence_package_context.artifacts
         ]
     base_status = "expected"
     base_note = "Expected when Evidence ZIP is generated."
     return [
-        {
-            "artifact": "manifest.json",
-            "purpose": "Bundle manifest and artifact hash verification.",
-            "status": base_status,
-            "note": base_note,
-        },
-        {
-            "artifact": "executive.html",
-            "purpose": "Decision oriented executive brief.",
-            "status": base_status,
-            "note": base_note,
-        },
-        {
-            "artifact": "technical.md",
-            "purpose": "Detailed analyst handoff with finding rows and rationale.",
-            "status": base_status,
-            "note": base_note,
-        },
-        {
-            "artifact": "analysis.json",
-            "purpose": "Machine readable analysis export.",
-            "status": base_status,
-            "note": base_note,
-        },
-        {
-            "artifact": "findings.csv",
-            "purpose": "Spreadsheet review of findings and owner scope.",
-            "status": base_status,
-            "note": base_note,
-        },
-        {
-            "artifact": "results.sarif",
-            "purpose": "SARIF 2.1.0 integration output.",
-            "status": base_status,
-            "note": base_note,
-        },
-        {
-            "artifact": "provider-snapshot.json",
-            "purpose": "Provider snapshot replay for reproducibility.",
-            "status": base_status,
-            "note": base_note,
-        },
-        {
-            "artifact": "attack-navigator-layer.json",
-            "purpose": "Defensive ATT&CK Navigator layer for mapped findings.",
-            "status": "included" if has_attack_layer else "optional",
-            "note": "Generated only when reviewed ATT&CK mappings are available.",
-        },
-        {
-            "artifact": "governance/*.json",
-            "purpose": "Accepted risk, VEX and asset context evidence.",
-            "status": "included" if has_governance else "optional",
-            "note": "Generated only when governance artifacts are available.",
-        },
+        EvidencePackageRow(
+            artifact="manifest.json",
+            purpose="Bundle manifest and artifact hash verification.",
+            status=base_status,
+            note=base_note,
+        ),
+        EvidencePackageRow(
+            artifact="executive.html",
+            purpose="Decision oriented executive brief.",
+            status=base_status,
+            note=base_note,
+        ),
+        EvidencePackageRow(
+            artifact="technical.md",
+            purpose="Detailed analyst handoff with finding rows and rationale.",
+            status=base_status,
+            note=base_note,
+        ),
+        EvidencePackageRow(
+            artifact="analysis.json",
+            purpose="Machine readable analysis export.",
+            status=base_status,
+            note=base_note,
+        ),
+        EvidencePackageRow(
+            artifact="findings.csv",
+            purpose="Spreadsheet review of findings and owner scope.",
+            status=base_status,
+            note=base_note,
+        ),
+        EvidencePackageRow(
+            artifact="results.sarif",
+            purpose="SARIF 2.1.0 integration output.",
+            status=base_status,
+            note=base_note,
+        ),
+        EvidencePackageRow(
+            artifact="provider-snapshot.json",
+            purpose="Provider snapshot replay for reproducibility.",
+            status=base_status,
+            note=base_note,
+        ),
+        EvidencePackageRow(
+            artifact="attack-navigator-layer.json",
+            purpose="Defensive ATT&CK Navigator layer for mapped findings.",
+            status="included" if has_attack_layer else "optional",
+            note="Generated only when reviewed ATT&CK mappings are available.",
+        ),
+        EvidencePackageRow(
+            artifact="governance/*.json",
+            purpose="Accepted risk, VEX and asset context evidence.",
+            status="included" if has_governance else "optional",
+            note="Generated only when governance artifacts are available.",
+        ),
     ]
 
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import html
 import re
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import datetime
 
 from app.services.report_models import MarkdownReportFinding
@@ -124,7 +124,7 @@ def _occurrence_count(finding: MarkdownReportFinding) -> int:
 
 
 def _count_findings(
-    findings: list[MarkdownReportFinding],
+    findings: Sequence[MarkdownReportFinding],
     predicate: Callable[[MarkdownReportFinding], bool],
 ) -> int:
     """Count findings function."""
@@ -132,7 +132,7 @@ def _count_findings(
 
 
 def _unique_values(
-    findings: list[MarkdownReportFinding],
+    findings: Sequence[MarkdownReportFinding],
     value_for_finding: Callable[[MarkdownReportFinding], str | None],
 ) -> list[str]:
     """Unique values function."""
@@ -163,13 +163,13 @@ def _normalized_context_label(value: str) -> str:
     return replacements.get(normalized, normalized.replace("-", " "))
 
 
-def _joined_context(values: list[str], *, limit: int = 3, noun: str = "value") -> str:
+def _joined_context(values: Sequence[str], *, limit: int = 3, noun: str = "value") -> str:
     """Joined context function."""
     normalized = [_normalized_context_label(value) for value in values if value]
     return _short_list(sorted(set(normalized)), limit=limit, noun=noun) if normalized else "Unknown"
 
 
-def _short_list(values: list[str], *, limit: int = 3, noun: str = "item") -> str:
+def _short_list(values: Sequence[str], *, limit: int = 3, noun: str = "item") -> str:
     """Short list function."""
     if not values:
         return "N/A"
@@ -181,7 +181,7 @@ def _short_list(values: list[str], *, limit: int = 3, noun: str = "item") -> str
     return ", ".join(shown) + f", and {hidden_count} additional {noun_text}"
 
 
-def _counted_or_full_list(values: list[str], *, noun: str) -> str:
+def _counted_or_full_list(values: Sequence[str], *, noun: str) -> str:
     """Counted or full list function."""
     unique_values = sorted({value for value in values if value})
     if not unique_values:
@@ -190,7 +190,9 @@ def _counted_or_full_list(values: list[str], *, noun: str) -> str:
     return f"{len(unique_values)} {noun_text}: {', '.join(unique_values)}"
 
 
-def _actionable_findings(findings: list[MarkdownReportFinding]) -> list[MarkdownReportFinding]:
+def _actionable_findings(
+    findings: Sequence[MarkdownReportFinding],
+) -> list[MarkdownReportFinding]:
     """Actionable findings function."""
     return [finding for finding in findings if _is_actionable_finding(finding)]
 
@@ -209,7 +211,7 @@ def _finding_actionability_bucket(finding: MarkdownReportFinding) -> str:
 
 
 def _actionability_counts_helper(
-    findings: list[MarkdownReportFinding],
+    findings: Sequence[MarkdownReportFinding],
 ) -> Counter[str]:
     """Actionability counts helper function."""
     counts: Counter[str] = Counter()
@@ -218,7 +220,7 @@ def _actionability_counts_helper(
     return counts
 
 
-def _actionability_summary_helper(findings: list[MarkdownReportFinding]) -> str:
+def _actionability_summary_helper(findings: Sequence[MarkdownReportFinding]) -> str:
     """Actionability summary helper function."""
     counts = _actionability_counts_helper(findings)
     parts = []
@@ -229,7 +231,7 @@ def _actionability_summary_helper(findings: list[MarkdownReportFinding]) -> str:
     return ", ".join(parts) if parts else "No findings"
 
 
-def _severity_open_count(findings: list[MarkdownReportFinding], severity: str) -> int:
+def _severity_open_count(findings: Sequence[MarkdownReportFinding], severity: str) -> int:
     """Severity open count function."""
     return _count_findings(
         findings,
@@ -239,7 +241,7 @@ def _severity_open_count(findings: list[MarkdownReportFinding], severity: str) -
     )
 
 
-def _fixed_finding_count(findings: list[MarkdownReportFinding]) -> int:
+def _fixed_finding_count(findings: Sequence[MarkdownReportFinding]) -> int:
     """Fixed finding count function."""
     return _count_findings(
         findings,
