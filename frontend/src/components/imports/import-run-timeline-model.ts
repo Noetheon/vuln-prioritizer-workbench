@@ -7,12 +7,7 @@ export function importRunTimelineItems(
 ) {
   if (!summary) return []
 
-  const summaryJson = objectRecord(summary.summary_json ?? run?.summary_json)
-  const inputUpload = objectRecord(
-    summary.input_upload ??
-      summaryJson.input_upload ??
-      run?.summary_json?.input_upload,
-  )
+  const inputUpload = objectRecord(summary.input_upload ?? run?.input_upload)
   const items: string[] = []
 
   if (summary.started_at || run?.started_at) {
@@ -32,7 +27,7 @@ export function importRunTimelineItems(
     items.push("File uploaded")
   }
 
-  if (hasParserEvidence(summary, summaryJson)) {
+  if (hasParserEvidence(summary)) {
     items.push(
       (summary.parse_errors ?? []).length > 0
         ? "Parser diagnostics recorded"
@@ -40,17 +35,17 @@ export function importRunTimelineItems(
     )
   }
 
-  if (hasProviderEvidence(run, summary, summaryJson, inputUpload)) {
+  if (hasProviderEvidence(run, summary, inputUpload)) {
     items.push("Provider data applied")
   }
 
-  if (hasOptionalContextEvidence(summaryJson, inputUpload)) {
+  if (hasOptionalContextEvidence(summary, inputUpload)) {
     items.push("Optional context applied")
   }
 
   if (
-    numberValue(summary.created_findings, summaryJson.created_findings) +
-      numberValue(summary.updated_findings, summaryJson.updated_findings) >
+    numberValue(summary.created_findings, run?.created_findings) +
+      numberValue(summary.updated_findings, run?.updated_findings) >
     0
   ) {
     items.push("Findings created or updated")
@@ -63,10 +58,7 @@ export function importRunTimelineItems(
   return items
 }
 
-function hasParserEvidence(
-  summary: AnalysisRunSummaryPublic,
-  summaryJson: Record<string, unknown>,
-) {
+function hasParserEvidence(summary: AnalysisRunSummaryPublic) {
   const terminal =
     summary.status === "succeeded" ||
     summary.status === "completed" ||
@@ -76,48 +68,43 @@ function hasParserEvidence(
   if (!terminal) return false
   return (
     Array.isArray(summary.parse_errors) ||
-    hasNumberRecordValue(summaryJson, [
-      "created_findings",
-      "updated_findings",
-      "finding_count",
-      "findings_count",
-      "ignored_lines",
-      "occurrence_count",
-    ]) ||
     summary.created_findings !== undefined ||
     summary.updated_findings !== undefined ||
     summary.finding_count !== undefined ||
     summary.ignored_lines !== undefined ||
-    summary.occurrence_count !== undefined
+    summary.occurrence_count !== undefined ||
+    summary.rows_read !== undefined
   )
 }
 
 function hasProviderEvidence(
   run: AnalysisRunPublic | null,
   summary: AnalysisRunSummaryPublic,
-  summaryJson: Record<string, unknown>,
   inputUpload: Record<string, unknown>,
 ) {
   return Boolean(
     summary.provider_snapshot_id ||
       run?.provider_snapshot_id ||
-      stringValue(summaryJson.provider_snapshot_id) ||
-      stringValue(summaryJson.provider_snapshot_file) ||
+      summary.provider_snapshot_file ||
+      summary.provider_snapshot_hash ||
+      run?.provider_snapshot_file ||
+      run?.provider_snapshot_hash ||
       stringValue(inputUpload.provider_snapshot_file) ||
-      typeof summaryJson.locked_provider_data === "boolean" ||
+      typeof summary.locked_provider_data === "boolean" ||
+      typeof run?.locked_provider_data === "boolean" ||
       typeof inputUpload.locked_provider_data === "boolean",
   )
 }
 
 function hasOptionalContextEvidence(
-  summaryJson: Record<string, unknown>,
+  summary: AnalysisRunSummaryPublic,
   inputUpload: Record<string, unknown>,
 ) {
-  const assetContextUpload = objectRecord(summaryJson.asset_context_upload)
-  const vexUpload = objectRecord(summaryJson.vex_upload)
-  const attackSource =
-    stringValue(summaryJson.attack_source) ??
-    stringValue(inputUpload.attack_source)
+  const assetContextUpload = objectRecord(summary.asset_context_upload)
+  const vexUpload = objectRecord(summary.vex_upload)
+  const assetContext = objectRecord(summary.asset_context)
+  const vex = objectRecord(summary.vex)
+  const attackSource = summary.attack_source ?? stringValue(inputUpload.attack_source)
   return (
     hasStringRecordValue(assetContextUpload, [
       "original_filename",
@@ -137,16 +124,17 @@ function hasOptionalContextEvidence(
       "attack_mapping_file",
       "attack_technique_metadata_file",
     ]) ||
+    Object.keys(assetContext).length > 0 ||
+    Object.keys(vex).length > 0 ||
+    Boolean(summary.attack_mapping_file) ||
+    Number(summary.attack_mapped_cves ?? 0) > 0 ||
+    Number(summary.suppressed_by_vex ?? 0) > 0 ||
     Boolean(attackSource && attackSource !== "none")
   )
 }
 
 function hasStringRecordValue(record: Record<string, unknown>, keys: string[]) {
   return keys.some((key) => Boolean(stringValue(record[key])))
-}
-
-function hasNumberRecordValue(record: Record<string, unknown>, keys: string[]) {
-  return keys.some((key) => typeof record[key] === "number")
 }
 
 function numberValue(...values: unknown[]) {

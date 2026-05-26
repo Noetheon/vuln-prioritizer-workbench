@@ -26,7 +26,6 @@ import { ArtifactActions } from "./EvidenceArtifactActions"
 
 type ArtifactSectionProps = {
   activeReportFormat: string
-  isDemo: boolean
   reportActionsEnabled: boolean
   reports: ReportPublic[]
   selectedReportRun: AnalysisRunPublic | null
@@ -39,7 +38,6 @@ type ArtifactSectionProps = {
 
 export function ArtifactSection({
   activeReportFormat,
-  isDemo,
   onCreateReport,
   onDownloadReport,
   onOpenGenerateDrawer,
@@ -64,9 +62,7 @@ export function ArtifactSection({
         description={
           reportActionsEnabled
             ? "Recommended artifacts first; additional exports stay compact."
-            : isDemo
-              ? "Demo artifacts are preview-only. Connect a real completed run to enable generation."
-              : "Select a completed run to enable generation."
+            : "Select a completed run to enable generation."
         }
         title="Recommended artifacts"
       />
@@ -183,7 +179,8 @@ function AdditionalExports({
         {ADDITIONAL_ARTIFACT_FORMATS.map((format) => {
           const card = artifactCardForFormat(format)
           const report = reportForFormat(reports, format)
-          const disabledByContext = format === "attack-navigator" && !attackAvailable
+          const disabledByContext =
+            format === "attack-navigator" && !attackAvailable
           const generating = activeReportFormat === format
           return (
             <div

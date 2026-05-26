@@ -10,13 +10,13 @@ def _metric_tone(label: str, value: object | None = None) -> str:
     value_normalized = str(value or "").casefold()
 
     if "provider freshness" in normalized:
-        if value_normalized == "fresh":
-            return "success"
-        if value_normalized == "warning":
-            return "warning"
-        if value_normalized == "stale":
-            return "critical"
-        return "info"
+        return {"fresh": "success", "warning": "warning", "stale": "critical"}.get(
+            value_normalized,
+            "info",
+        )
+
+    if "bundle" in normalized:
+        return "success" if value_normalized == "ready" else "info"
 
     critical_terms = ["open actionable", "kev backed", "emergency", "internet", "critical"]
     if any(x in normalized for x in critical_terms):

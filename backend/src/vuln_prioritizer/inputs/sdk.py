@@ -1,4 +1,5 @@
-"""Static input-parser extension contracts.
+"""
+Static input-parser extension contracts.
 
 This module intentionally defines local parser contracts only. It does not discover
 entry points, import modules from user supplied paths, or load code from URLs.
@@ -30,7 +31,6 @@ class InputParserDefinition:
 
 def validate_input_parser_definition(definition: InputParserDefinition) -> None:
     """Validate a parser definition without executing the parser."""
-
     if not definition.name or definition.name.strip() != definition.name:
         raise ValueError("Input parser names must be non-empty and trimmed.")
     if definition.remote_code_loading:
@@ -46,7 +46,6 @@ def build_input_parser_registry(
     definitions: tuple[InputParserDefinition, ...],
 ) -> Mapping[str, ParserFunction]:
     """Build the static parser registry used by the loader."""
-
     registry: dict[str, ParserFunction] = {}
     for definition in definitions:
         validate_input_parser_definition(definition)

@@ -14,6 +14,7 @@ submission material.
 
 - [Current product state](current-product-state.md)
 - [Documentation map](documentation-map.md)
+- [Documentation evidence matrix](documentation-evidence-matrix.md)
 - [GitHub open source readiness](github-open-source-readiness.md)
 - [External user documentation guide](user_documentation.md)
 - [Current product architecture](architecture.md)
@@ -73,6 +74,9 @@ Workbench remains local-first and uses the import-format matrix documented in
 - Start with [documentation-map.md](documentation-map.md) when you need to know
   which page owns a claim or whether a page is current, historical, release,
   submission, evidence, or archive material.
+- Start with [documentation-evidence-matrix.md](documentation-evidence-matrix.md)
+  when you need to verify whether a claim is supported by code, tests, fixtures,
+  command output, archived evidence, or an external primary source.
 - Start with [user_documentation.md](user_documentation.md) when you need the full external-user path.
 - Start with [concept.md](concept.md) for positioning and scope.
 - Use [submission/README.md](submission/README.md) for the final Applied

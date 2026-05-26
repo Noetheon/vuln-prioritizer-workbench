@@ -1,4 +1,5 @@
-"""Public model aggregator for the Workbench backend app.
+"""
+Public model aggregator for the Workbench backend app.
 
 Keep imports from this package stable while table definitions live in focused
 modules.
@@ -28,6 +29,8 @@ from app.models.attack import (
     AttackStixTechniqueBase,
     AttackStixTechniqueMitigation,
     AttackStixTechniqueMitigationBase,
+    AttackSummaryContextRow,
+    AttackSummaryFindingRow,
     AttackTactic,
     AttackTacticBase,
     AttackTacticPublic,
@@ -191,6 +194,8 @@ __all__ = [
     "AttackTechnique",
     "AttackTechniqueBase",
     "AttackTechniquePublic",
+    "AttackSummaryContextRow",
+    "AttackSummaryFindingRow",
     "Component",
     "ComponentBase",
     "CveAttackMapping",

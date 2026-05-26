@@ -10,7 +10,6 @@ import {
   VpwTimeline,
   type VpwTimelineItem,
 } from "@/components/vpw"
-import { DEMO_REPORTS } from "@/lib/demo-data"
 import {
   evidenceBundleReport,
   verificationSummary,
@@ -18,7 +17,6 @@ import {
 
 type EvidenceLifecycleProps = {
   activeReportFormat: string
-  isDemo: boolean
   reportActionsEnabled: boolean
   reports: ReportPublic[]
   reportsLoading: boolean
@@ -30,7 +28,6 @@ type EvidenceLifecycleProps = {
 
 export function EvidenceLifecycle({
   activeReportFormat,
-  isDemo,
   reportActionsEnabled,
   reports,
   reportsLoading,
@@ -39,7 +36,7 @@ export function EvidenceLifecycle({
   verificationReport,
   verificationReportTarget,
 }: EvidenceLifecycleProps) {
-  const effectiveReports = isDemo ? DEMO_REPORTS : reports
+  const effectiveReports = reports
   const zipReport = evidenceBundleReport(effectiveReports)
   const verificationTargetsZip = Boolean(
     zipReport && verificationReportTarget?.id === zipReport.id,
@@ -59,7 +56,7 @@ export function EvidenceLifecycle({
         : "Select a completed import run before generating evidence.",
       meta: selectedReportRun ? "Done" : "Pending",
       title: "1. Run selected",
-      tone: selectedReportRun || isDemo ? "success" : "neutral",
+      tone: selectedReportRun ? "success" : "neutral",
     },
     {
       description: activeReportFormat

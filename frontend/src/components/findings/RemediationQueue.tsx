@@ -5,8 +5,6 @@ import type {
   ProjectPublic,
 } from "@/api-client"
 import type { FindingsUrlSearch } from "./findings-search-state"
-import { DEMO_FINDINGS, DEMO_PROJECT, DEMO_SUMMARY } from "@/lib/demo-data"
-import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import { apiErrorMessage } from "@/lib/app-errors"
 import { useFindingDetailQuery } from "@/workbench/useWorkbenchQueries"
 import type { QueueSort } from "./FindingsDataTable"
@@ -20,7 +18,6 @@ import {
   type FindingsDirection,
   type FindingsSort,
   isApiSort,
-  sortDisplayFindings,
 } from "./remediation-queue-model"
 
 export type RemediationQueueProps = {
@@ -94,8 +91,7 @@ export function RemediationQueue({
 }: RemediationQueueProps) {
   const ownerServiceFilter = findingFilters.ownerService
   const queryFilter = findingFilters.query
-  const [ownerServiceDraft, setOwnerServiceDraft] =
-    useState(ownerServiceFilter)
+  const [ownerServiceDraft, setOwnerServiceDraft] = useState(ownerServiceFilter)
   const [queryDraft, setQueryDraft] = useState(queryFilter)
   const [sheetFinding, setSheetFinding] = useState<FindingPublic | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -105,20 +101,11 @@ export function RemediationQueue({
   const selectedFindingId = sheetOpen ? (sheetFinding?.id ?? null) : null
   const findingDetailQuery = useFindingDetailQuery(selectedFindingId)
 
-  const isDemo =
-    DEMO_MODE_ENABLED &&
-    projects.length === 0 &&
-    !projectListLoading &&
-    !projectListError &&
-    !findingsError
-  const sourceFindings = isDemo ? DEMO_FINDINGS : findings
-  const displayFindings = isDemo
-    ? sortDisplayFindings(sourceFindings, queueSort, findingDirection)
-    : sourceFindings
-  const displaySummary = isDemo ? DEMO_SUMMARY : projectSummary
-  const displayProject = isDemo ? DEMO_PROJECT : selectedProject
-  const isLoading = !isDemo && findingsLoading
-  const hasError = !isDemo && Boolean(findingsError)
+  const displayFindings = findings
+  const displaySummary = projectSummary
+  const displayProject = selectedProject
+  const isLoading = findingsLoading
+  const hasError = Boolean(findingsError)
 
   const criticalCount =
     displaySummary?.counts_by_priority?.critical ??
@@ -131,15 +118,10 @@ export function RemediationQueue({
   const kevCount = displaySummary?.kev_hits ?? 0
   const openCount = displaySummary?.counts_by_status?.open ?? 0
 
-  const pageStart = isDemo
-    ? 1
-    : findingCount === 0
-      ? 0
-      : Math.min(findingOffset + 1, findingCount)
-  const pageEnd = isDemo
-    ? displayFindings.length
-    : Math.min(findingOffset + findings.length, findingCount)
-  const totalCount = isDemo ? displayFindings.length : findingCount
+  const pageStart =
+    findingCount === 0 ? 0 : Math.min(findingOffset + 1, findingCount)
+  const pageEnd = Math.min(findingOffset + findings.length, findingCount)
+  const totalCount = findingCount
 
   const filterCount = activeFilterCount(findingFilters, Boolean(findingAssetId))
   const signalFilterCount = advancedFilterCount(findingFilters)
@@ -247,7 +229,6 @@ export function RemediationQueue({
       filterCount={filterCount}
       hasError={hasError}
       highCount={highCount}
-      isDemo={isDemo}
       isLoading={isLoading}
       kevCount={kevCount}
       onOpenSheet={openSheet}
@@ -264,7 +245,10 @@ export function RemediationQueue({
       sheetDetail={findingDetailQuery.data?.detail ?? null}
       sheetError={
         findingDetailQuery.isError
-          ? apiErrorMessage("Finding detail unavailable", findingDetailQuery.error)
+          ? apiErrorMessage(
+              "Finding detail unavailable",
+              findingDetailQuery.error,
+            )
           : ""
       }
       sheetExplanation={findingDetailQuery.data?.explanation ?? null}

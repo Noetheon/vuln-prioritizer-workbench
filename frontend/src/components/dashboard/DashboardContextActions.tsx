@@ -11,7 +11,6 @@ type DashboardContextActionsProps = {
   demoWorkspacePending: boolean
   effectiveProviderStatus: ProviderStatusPublic | null
   freshness: ProviderFreshnessSummary
-  isDemoMode: boolean
   isManagedDemoWorkspace: boolean
   onLoadDemoWorkspace: () => void
   onRefresh: () => void
@@ -25,7 +24,6 @@ export function DashboardContextActions({
   demoWorkspacePending,
   effectiveProviderStatus,
   freshness,
-  isDemoMode,
   isManagedDemoWorkspace,
   onLoadDemoWorkspace,
   onRefresh,
@@ -33,9 +31,7 @@ export function DashboardContextActions({
   providerStatusLoading,
   selectedProjectId,
 }: DashboardContextActionsProps) {
-  const projectSearch = selectedProjectRouteSearch(
-    isDemoMode ? "" : selectedProjectId,
-  )
+  const projectSearch = selectedProjectRouteSearch(selectedProjectId)
 
   return (
     <div className="dashboard-context-actions flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -92,7 +88,7 @@ export function DashboardContextActions({
               ? "Preparing demo"
               : isManagedDemoWorkspace
                 ? "Reset demo"
-                : "Load demo"}
+                : "Load demo workspace"}
           </Button>
         ) : null}
         <Button

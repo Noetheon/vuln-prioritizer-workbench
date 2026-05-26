@@ -12,7 +12,6 @@ type DashboardContextBarProps = {
   demoWorkspaceEnabled: boolean
   demoWorkspacePending: boolean
   isManagedDemoWorkspace: boolean
-  isDemoMode: boolean
   onLoadDemoWorkspace: () => void
   onProjectChange: (projectId: string) => void
   onRefresh: () => void
@@ -30,7 +29,6 @@ export function DashboardContextBar({
   demoWorkspaceEnabled,
   demoWorkspacePending,
   isManagedDemoWorkspace,
-  isDemoMode,
   onLoadDemoWorkspace,
   onProjectChange,
   onRefresh,
@@ -44,7 +42,6 @@ export function DashboardContextBar({
       actions={
         <DashboardContextProjectPicker
           effectiveProjects={effectiveProjects}
-          isDemoMode={isDemoMode}
           onProjectChange={onProjectChange}
           projectListLoading={projectListLoading}
           selectedProjectId={selectedProjectId}
@@ -64,7 +61,6 @@ export function DashboardContextBar({
         demoWorkspacePending={demoWorkspacePending}
         effectiveProviderStatus={effectiveProviderStatus}
         freshness={freshness}
-        isDemoMode={isDemoMode}
         isManagedDemoWorkspace={isManagedDemoWorkspace}
         onLoadDemoWorkspace={onLoadDemoWorkspace}
         onRefresh={onRefresh}

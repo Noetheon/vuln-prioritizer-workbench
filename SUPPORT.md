@@ -16,6 +16,7 @@ Start with the repo docs first:
 - [README.md](README.md)
 - [docs/index.md](docs/index.md)
 - [docs/user_documentation.md](docs/user_documentation.md)
+- [docs/documentation-evidence-matrix.md](docs/documentation-evidence-matrix.md)
 - [docs/playbooks.md](docs/playbooks.md)
 - [docs/github-open-source-readiness.md](docs/github-open-source-readiness.md)
 

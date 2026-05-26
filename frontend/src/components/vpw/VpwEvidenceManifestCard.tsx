@@ -27,7 +27,6 @@ export type VpwEvidenceManifestCardProps = {
   verificationStatus: string
   checksumStatus?: string
   className?: string
-  demo?: boolean
   downloadDisabled?: boolean
   downloadLabel?: string
   files: readonly VpwManifestFile[]
@@ -37,7 +36,6 @@ export type VpwEvidenceManifestCardProps = {
 export function VpwEvidenceManifestCard({
   checksumStatus,
   className,
-  demo = false,
   downloadDisabled = false,
   downloadLabel = "Download manifest",
   files,
@@ -48,9 +46,7 @@ export function VpwEvidenceManifestCard({
   runId,
   verificationStatus,
 }: VpwEvidenceManifestCardProps) {
-  const checksumValue =
-    checksumStatus ??
-    (demo ? "Demo preview - not real checksums" : "Not available")
+  const checksumValue = checksumStatus ?? "Not available"
   const rows = [
     { label: "Project", value: project },
     { label: "Run ID", value: runId },
@@ -68,11 +64,8 @@ export function VpwEvidenceManifestCard({
       <CardContent className="flex flex-col gap-5 pb-6">
         <VpwKeyValueList columns={2} items={rows} />
         <VpwChecksum
-          demo={demo}
           value={checksumValue}
-          verified={
-            !demo && verificationStatus.toLowerCase().includes("verified")
-          }
+          verified={verificationStatus.toLowerCase().includes("verified")}
         />
         <div>
           <p className="vpw-label">Included files</p>

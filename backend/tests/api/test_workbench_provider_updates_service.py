@@ -9,7 +9,8 @@ from typing import Any
 import pytest
 
 from app.models import ProviderUpdateJobCreate
-from app.services import provider_updates as provider_updates_module
+from app.services import provider_update_locking as provider_update_locking_module
+from app.services import provider_update_snapshot as provider_update_snapshot_module
 from app.services.provider_updates import (
     PROVIDER_UPDATE_LOCK_FILE,
     PROVIDER_UPDATE_LOCK_STALE_SECONDS,
@@ -170,9 +171,9 @@ def test_provider_update_lock_rejects_stale_lock_reclaim_race(
         open_calls += 1
         raise FileExistsError("race")
 
-    monkeypatch.setattr(provider_updates_module.os, "open", fail_open)
+    monkeypatch.setattr(provider_update_locking_module.os, "open", fail_open)
     monkeypatch.setattr(
-        provider_updates_module,
+        provider_update_locking_module,
         "_provider_update_lock_is_stale",
         lambda _path: True,
     )
@@ -320,9 +321,9 @@ def test_provider_records_fetch_live_source_branches_without_network(
             assert refresh is True
             return ({cve_ids[0]: KevData(cve_id=cve_ids[0], in_kev=True)}, [])
 
-    monkeypatch.setattr(provider_updates_module, "NvdProvider", FakeNvdProvider)
-    monkeypatch.setattr(provider_updates_module, "EpssProvider", FakeEpssProvider)
-    monkeypatch.setattr(provider_updates_module, "KevProvider", FakeKevProvider)
+    monkeypatch.setattr(provider_update_snapshot_module, "NvdProvider", FakeNvdProvider)
+    monkeypatch.setattr(provider_update_snapshot_module, "EpssProvider", FakeEpssProvider)
+    monkeypatch.setattr(provider_update_snapshot_module, "KevProvider", FakeKevProvider)
 
     for source, expected_type in (
         ("nvd", NvdData),

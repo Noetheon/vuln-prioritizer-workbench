@@ -25,6 +25,7 @@ PRIVATE_PATH_PATTERN = re.compile(
 
 
 def main() -> None:
+    """Exercise the Docker quickstart API path from project creation through reports."""
     workbench_status = _get_workbench_status()
     project_id = _create_project()
     run = _import_demo(project_id)
@@ -200,6 +201,8 @@ def _request(
 
 @dataclass(frozen=True)
 class RawResponse:
+    """Raw HTTP response returned by the quickstart smoke helper."""
+
     body: bytes
     headers: object
     status: int

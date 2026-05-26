@@ -125,11 +125,11 @@ function analysisRun(): AnalysisRunPublic {
     finished_at: "2026-05-10T10:05:00Z",
     id: runId,
     input_type: "cve-list",
+    input_upload: { original_filename: "reports-input.txt" },
     project_id: mockProject.id,
     provider_snapshot_id: "demo",
     started_at: "2026-05-10T10:00:00Z",
     status: "succeeded",
-    summary_json: { input_upload: { filename: "reports-input.txt" } },
   }
 }
 

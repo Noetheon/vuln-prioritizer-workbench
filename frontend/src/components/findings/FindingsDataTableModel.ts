@@ -1,5 +1,4 @@
 import type { FindingPriority, FindingPublic } from "@/api-client"
-import { optionalText } from "@/lib/ui-copy"
 import {
   componentLabel,
   ownerLabel,
@@ -9,6 +8,7 @@ import {
 } from "./remediation-queue-model"
 
 export { formatDateTime, formatShortDate } from "../../lib/date-format.ts"
+export { findingWhyNow, findingWhyNowCompact } from "../../lib/finding-urgency-summary.ts"
 export { componentLabel, ownerLabel, serviceLabel }
 
 export function assetLabel(finding: FindingPublic) {
@@ -18,21 +18,6 @@ export function assetLabel(finding: FindingPublic) {
     finding.business_service ??
     "Unmapped asset"
   )
-}
-
-export function findingWhyNow(finding: FindingPublic) {
-  return (
-    optionalText(finding.rationale) ??
-    optionalText(finding.recommended_action) ??
-    "No priority rationale has been recorded yet."
-  )
-}
-
-export function findingWhyNowCompact(finding: FindingPublic) {
-  const why = findingWhyNow(finding)
-  const firstSentence = why.match(/^(.+?[.!?])(?:\s|$)/)?.[1] ?? why
-  if (firstSentence.length <= 110) return firstSentence
-  return `${firstSentence.slice(0, 107).trimEnd()}...`
 }
 
 export function findingActionLabel(finding: FindingPublic) {

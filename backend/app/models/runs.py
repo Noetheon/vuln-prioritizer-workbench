@@ -7,6 +7,14 @@ from typing import Any, Optional
 from sqlalchemy import JSON, Column, DateTime, Index, String, Text
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.contracts.run_workflow import (
+    RUN_WORKFLOW_SUMMARY_SCHEMA_VERSION,
+    RunWorkflowDedupSummary,
+    RunWorkflowErrorV1,
+    RunWorkflowFailure,
+    RunWorkflowJob,
+    RunWorkflowUploadRef,
+)
 from app.models.base import get_datetime_utc
 from app.models.enums import AnalysisRunStatus
 
@@ -106,6 +114,38 @@ class AnalysisRunPublic(AnalysisRunBase):
     id: uuid.UUID
     project_id: uuid.UUID
     provider_snapshot_id: uuid.UUID | None
+    workflow_schema_version: str = RUN_WORKFLOW_SUMMARY_SCHEMA_VERSION
+    workflow_error_schema_version: str | None = None
+    input_upload: RunWorkflowUploadRef | None = None
+    asset_context_upload: RunWorkflowUploadRef | None = None
+    vex_upload: RunWorkflowUploadRef | None = None
+    import_job: RunWorkflowJob | None = None
+    dedup_summary: RunWorkflowDedupSummary | None = None
+    created_findings: int = 0
+    updated_findings: int = 0
+    ignored_lines: int = 0
+    rows_read: int = 0
+    occurrence_count: int = 0
+    finding_count: int = 0
+    counts_by_priority: dict[str, int] = Field(default_factory=dict)
+    kev_hits: int = 0
+    input_sha256: str | None = None
+    locked_provider_data: bool = False
+    provider_snapshot_file: str | None = None
+    provider_snapshot_hash: str | None = None
+    provider_degraded: bool = False
+    attack_source: str | None = None
+    attack_mapped_cves: int = 0
+    attack_mapping_file: str | None = None
+    asset_context: dict[str, Any] | None = None
+    vex: dict[str, Any] | None = None
+    suppressed_by_vex: int = 0
+    warnings: list[str] = Field(default_factory=list)
+    analysis_error: RunWorkflowFailure | None = None
+    asset_context_error: RunWorkflowFailure | None = None
+    vex_error: RunWorkflowFailure | None = None
+    background_error: RunWorkflowFailure | None = None
+    workflow_error: RunWorkflowErrorV1 | None = None
 
 
 class AnalysisRunsPublic(SQLModel):
@@ -140,16 +180,37 @@ class AnalysisRunSummaryPublic(SQLModel):
     created_findings: int = 0
     updated_findings: int = 0
     ignored_lines: int = 0
+    rows_read: int = 0
     occurrence_count: int = 0
     finding_count: int = 0
     counts_by_priority: dict[str, int] = Field(default_factory=dict)
     kev_hits: int = 0
     provider_snapshot_id: uuid.UUID | None = None
     provider_degraded: bool = False
+    warnings: list[str] = Field(default_factory=list)
     parse_errors: list[ImportParseErrorPublic] = Field(default_factory=list)
-    import_job: dict[str, Any] = Field(default_factory=dict)
-    input_upload: dict[str, Any] = Field(default_factory=dict)
-    dedup_summary: dict[str, Any] = Field(default_factory=dict)
+    workflow_schema_version: str = RUN_WORKFLOW_SUMMARY_SCHEMA_VERSION
+    workflow_error_schema_version: str | None = None
+    import_job: RunWorkflowJob | None = None
+    input_upload: RunWorkflowUploadRef | None = None
+    asset_context_upload: RunWorkflowUploadRef | None = None
+    vex_upload: RunWorkflowUploadRef | None = None
+    dedup_summary: RunWorkflowDedupSummary | None = None
+    input_sha256: str | None = None
+    locked_provider_data: bool = False
+    provider_snapshot_file: str | None = None
+    provider_snapshot_hash: str | None = None
+    attack_source: str | None = None
+    attack_mapped_cves: int = 0
+    attack_mapping_file: str | None = None
+    asset_context: dict[str, Any] | None = None
+    vex: dict[str, Any] | None = None
+    suppressed_by_vex: int = 0
+    analysis_error: RunWorkflowFailure | None = None
+    asset_context_error: RunWorkflowFailure | None = None
+    vex_error: RunWorkflowFailure | None = None
+    background_error: RunWorkflowFailure | None = None
+    workflow_error: RunWorkflowErrorV1 | None = None
     analysis_decision_scope: str | None = None
     persistence_scope: str | None = None
     summary_json: dict[str, Any] = Field(default_factory=dict)

@@ -53,16 +53,14 @@ const forbiddenProductDirectionCopy = [
 
 const allowedCurrentCopy = [
   {
-    path: /^src\/lib\/demo-data(?:-[a-z-]+)?\.ts$/,
-    context: /\b(?:exploited in the wild|known[- ]exploited|active exploitation|actively exploited|exploitation (?:observed|probability|signal|risk)|chained exploitation|defensive prioritization|detection planning|remediation context|exploit public-facing application)\b/i,
-  },
-  {
     path: /^src\/components\/(?:dashboard|finding-detail|findings|providers|reports|vpw)\//,
-    context: /\b(?:known[- ]exploited|known exploited vulnerabilities|exploitation (?:probability|risk)|exploit probability|exploit-probability|exploit likelihood|exploited signals?|defensive|detection coverage review|no exploit steps|no proof of exploitation|does not prove compromise|confirmed prioritization signal)\b/i,
+    context:
+      /\b(?:known[- ]exploited|known exploited vulnerabilities|exploitation (?:probability|risk)|exploit probability|exploit-probability|exploit likelihood|exploited signals?|defensive|detection coverage review|no exploit steps|no proof of exploitation|does not prove exploitation|does not prove compromise|confirmed prioritization signal)\b/i,
   },
   {
     path: /^src\/components\/settings\//,
-    context: /\b(?:exploit probability source|known exploited vulnerabilities signal)\b/i,
+    context:
+      /\b(?:exploit probability source|known exploited vulnerabilities signal)\b/i,
   },
   {
     path: /^src\/components\/(?:assets|dashboard|finding-detail|findings|projects)\//,
@@ -75,7 +73,8 @@ const allowedCurrentCopy = [
   },
   {
     path: /^tests\/(?:accessibility|finding-ttp-context|findings-route-integration|responsive-shell|settings-local-access|ui-evidence-screenshots|ui-smoke|workbench-entry-status)\.spec\.ts$/,
-    context: /known exploited|does not prove exploitation|legacy sign out|api token management|tohavecount\(0\)|not\.tocontaintext|No exploit steps/i,
+    context:
+      /known exploited|does not prove exploitation|legacy sign out|api token management|tohavecount\(0\)|not\.tocontaintext|No exploit steps/i,
   },
 ]
 
@@ -102,7 +101,9 @@ test("active product copy does not point toward auth, scanner, exploit, or autop
 
         return forbiddenProductDirectionCopy
           .filter((term) => term.test(line))
-          .map((term) => `${relativePath}:${index + 1}: ${term}: ${line.trim()}`)
+          .map(
+            (term) => `${relativePath}:${index + 1}: ${term}: ${line.trim()}`,
+          )
       })
     },
   )
@@ -128,10 +129,14 @@ test("ATT&CK source copy stays framed as defensive review context", () => {
 
       const findings = []
       if (!attackFramingWords.test(nearby)) {
-        findings.push(`${relativePath}:${index + 1}: missing defensive/review framing`)
+        findings.push(
+          `${relativePath}:${index + 1}: missing defensive/review framing`,
+        )
       }
       if (attackExploitStepWords.test(nearby)) {
-        findings.push(`${relativePath}:${index + 1}: includes exploit-step wording`)
+        findings.push(
+          `${relativePath}:${index + 1}: includes exploit-step wording`,
+        )
       }
 
       return findings

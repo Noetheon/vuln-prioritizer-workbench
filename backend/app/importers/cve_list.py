@@ -29,6 +29,7 @@ class CveListImporter:
         *,
         filename: str | None = None,
     ) -> list[NormalizedOccurrence]:
+        """Parse method for CveListImporter."""
         return self.parse_with_metadata(payload, filename=filename).occurrences
 
     def parse_with_metadata(
@@ -37,6 +38,7 @@ class CveListImporter:
         *,
         filename: str | None = None,
     ) -> ParsedWorkbenchInput:
+        """Parse with metadata method for CveListImporter."""
         suffix = _filename_suffix(filename)
         if suffix not in {"", ".txt", ".csv"}:
             raise ImporterParseError("cve-list supports .txt and .csv inputs.")
@@ -51,6 +53,7 @@ class CveListImporter:
 
 
 def _filename_suffix(filename: str | None) -> str:
+    """Filename suffix function."""
     if not filename:
         return ""
     if "." not in filename:

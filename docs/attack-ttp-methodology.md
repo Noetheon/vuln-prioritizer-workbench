@@ -15,6 +15,12 @@ The preferred source for CVE-to-ATT&CK mapping remains CTID Mappings Explorer
 JSON. Local curated mappings are allowed only when every entry is explicitly
 reviewable.
 
+Current upstream ATT&CK version and checked-in demo fixture version are separate
+claims. MITRE lists ATT&CK v19.1 as the current public website version as of the
+2026-05-25 documentation hygiene pass. VPW's checked-in demo fixtures are still
+pinned to ATT&CK 16.1 for deterministic local evidence. Do not describe the
+16.1 fixture set as current ATT&CK coverage.
+
 For imported CTID Mappings Explorer JSON, VPW normalizes each mapping to
 `source=ctid-mappings-explorer`, `confidence=high`, and
 `review_status=reviewed` because the local artifact is an explicit CTID source
@@ -157,16 +163,17 @@ mitigation relationships, `attack_version`, domain, STIX spec version, bundle
 SHA256, object counts, and revoked/deprecated state.
 
 This catalog is reference data only. It validates that CTID or curated mapping
-technique IDs exist in a known ATT&CK version and exposes the snapshot version
-through provider status metadata. It does not create CVE-to-technique mappings
-and it does not download live ATT&CK content during CI.
+technique IDs exist in the selected pinned ATT&CK version and exposes the
+snapshot version through provider status metadata. It does not create
+CVE-to-technique mappings and it does not download live ATT&CK content during
+CI.
 
 ## Validation
 
 Use the provider and Workbench tests for local artifact checks:
 
 ```bash
-python3 -m pytest -q backend/tests/test_providers.py backend/tests/api/test_workbench_import_upload_api.py --no-cov
+python3 -m pytest -q backend/tests/test_providers.py backend/tests/api/import_contracts --no-cov
 ```
 
 The schema and loader reject missing `source`, `rationale`, `confidence`,

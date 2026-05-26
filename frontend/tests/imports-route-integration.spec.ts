@@ -458,7 +458,10 @@ test("new import failure with run id stays on review and exposes diagnostics", a
 }) => {
   const failedRun = {
     ...importRun("failed-run", "failed-import.csv", 0),
-    error_json: { message: "Parser rejected the supplied evidence." },
+    analysis_error: {
+      message: "Parser rejected the supplied evidence.",
+      stage: "analysis",
+    },
     error_message: "Parser rejected the supplied evidence.",
     status: "failed",
   } satisfies AnalysisRunPublic
@@ -810,26 +813,24 @@ function importRun(
   findingCount: number,
 ): AnalysisRunPublic {
   return {
+    created_findings: findingCount,
     filename,
+    finding_count: findingCount,
     finished_at: "2026-05-10T10:05:00Z",
     id,
+    ignored_lines: 0,
+    input_upload: {
+      original_filename: filename,
+      sha256: `sha256-${filename.replace(".txt", "")}`,
+      storage_ref: `storage://imports/${filename}`,
+    },
     input_type: "cve-list",
     project_id: mockProject.id,
     provider_snapshot_id: "demo",
+    rows_read: findingCount,
     started_at: "2026-05-10T10:00:00Z",
     status: "succeeded",
-    summary_json: {
-      created_findings: findingCount,
-      finding_count: findingCount,
-      ignored_lines: 0,
-      input_upload: {
-        filename,
-        sha256: `sha256-${filename.replace(".txt", "")}`,
-        storage_ref: `storage://imports/${filename}`,
-      },
-      rows_read: findingCount,
-      updated_findings: 0,
-    },
+    updated_findings: 0,
   }
 }
 

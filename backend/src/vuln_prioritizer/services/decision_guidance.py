@@ -76,6 +76,7 @@ class DecisionGuidanceService:
     """Build deterministic management-readable guidance from finding evidence."""
 
     def build(self, finding: PrioritizedFinding) -> FindingDecisionGuidance:
+        """Build method for DecisionGuidanceService."""
         recommendation, recommendation_reasons = _select_recommendation(finding)
         sla = _sla_for_finding(finding)
         business_impact = _business_impact(finding)
@@ -110,6 +111,7 @@ def build_decision_guidance(finding: PrioritizedFinding) -> FindingDecisionGuida
 
 
 def _select_recommendation(finding: PrioritizedFinding) -> tuple[DecisionRecommendation, list[str]]:
+    """Select recommendation function."""
     state = finding.priority_state or finding.priority_label
     if state == "Accepted" or finding.waived:
         return "waiver", ["recommendation.waiver.accepted_risk_visible"]
@@ -125,6 +127,7 @@ def _select_recommendation(finding: PrioritizedFinding) -> tuple[DecisionRecomme
 
 
 def _sla_for_finding(finding: PrioritizedFinding) -> SlaTarget:
+    """Sla for finding function."""
     state = finding.priority_state or finding.priority_label
     if finding.waived:
         return GOVERNANCE_SLA_BY_STATE["Accepted"]
@@ -136,6 +139,7 @@ def _sla_for_finding(finding: PrioritizedFinding) -> SlaTarget:
 
 
 def _business_impact(finding: PrioritizedFinding) -> BusinessImpactBlock:
+    """Business impact function."""
     drivers = _business_impact_drivers(finding)
     level: BusinessImpactLevel
     if finding.priority_state in {"Accepted", "Suppressed", "Fixed"} or (
@@ -161,6 +165,7 @@ def _business_impact(finding: PrioritizedFinding) -> BusinessImpactBlock:
 
 
 def _business_impact_drivers(finding: PrioritizedFinding) -> list[str]:
+    """Business impact drivers function."""
     drivers: list[str] = []
     if finding.in_kev:
         drivers.append("CISA KEV known-exploited listing")
@@ -194,6 +199,7 @@ def _business_impact_drivers(finding: PrioritizedFinding) -> list[str]:
 
 
 def _business_impact_text(level: str, drivers: list[str]) -> str:
+    """Business impact text function."""
     driver_limit = 8
     driver_text = "; ".join(drivers[:driver_limit])
     if len(drivers) > driver_limit:
@@ -225,6 +231,7 @@ def _business_impact_text(level: str, drivers: list[str]) -> str:
 
 
 def _visibility_statement(finding: PrioritizedFinding) -> str:
+    """Visibility statement function."""
     state = finding.priority_state or finding.priority_label
     if state == "Accepted" or finding.waived:
         return (
@@ -251,6 +258,7 @@ def _decision_statement(
     sla: SlaTarget,
     business_impact: BusinessImpactBlock,
 ) -> str:
+    """Decision statement function."""
     rank_prefix = ""
     if 0 < finding.operational_rank <= 5:
         rank_prefix = f"Top finding #{finding.operational_rank}: "
@@ -287,10 +295,12 @@ def _decision_statement(
 
 
 def _has_fixed_version_evidence(finding: PrioritizedFinding) -> bool:
+    """Has fixed version evidence function."""
     return any(component.fixed_versions for component in finding.remediation.components)
 
 
 def _needs_review(finding: PrioritizedFinding) -> bool:
+    """Needs review function."""
     return (
         finding.data_quality_confidence == "low"
         or finding.cvss_base_score is None
@@ -301,6 +311,7 @@ def _needs_review(finding: PrioritizedFinding) -> bool:
 
 
 def _asset_environments(finding: PrioritizedFinding) -> list[str]:
+    """Asset environments function."""
     if finding.provenance.asset_environments:
         return finding.provenance.asset_environments
     return sorted(
@@ -313,6 +324,7 @@ def _asset_environments(finding: PrioritizedFinding) -> list[str]:
 
 
 def _asset_business_services(finding: PrioritizedFinding) -> list[str]:
+    """Asset business services function."""
     if finding.provenance.asset_business_services:
         return finding.provenance.asset_business_services
     return sorted(
@@ -325,6 +337,7 @@ def _asset_business_services(finding: PrioritizedFinding) -> list[str]:
 
 
 def _asset_owners(finding: PrioritizedFinding) -> list[str]:
+    """Asset owners function."""
     if finding.provenance.asset_owners:
         return finding.provenance.asset_owners
     return sorted(
@@ -337,6 +350,7 @@ def _asset_owners(finding: PrioritizedFinding) -> list[str]:
 
 
 def _asset_context_unknown(finding: PrioritizedFinding) -> bool:
+    """Asset context unknown function."""
     provenance = finding.provenance
     if provenance.occurrence_count == 0 and not provenance.occurrences:
         return False
@@ -362,6 +376,7 @@ def _asset_context_unknown(finding: PrioritizedFinding) -> bool:
 
 
 def _summarize_values(values: list[str], *, limit: int = 3) -> str:
+    """Summarize values function."""
     if len(values) <= limit:
         return ", ".join(values)
     shown = ", ".join(values[:limit])
@@ -369,6 +384,7 @@ def _summarize_values(values: list[str], *, limit: int = 3) -> str:
 
 
 def _impact_reason_codes(drivers: list[str]) -> list[str]:
+    """Impact reason codes function."""
     codes: list[str] = []
     for driver in drivers:
         cleaned = (
@@ -379,6 +395,7 @@ def _impact_reason_codes(drivers: list[str]) -> list[str]:
 
 
 def _unique(values: list[str]) -> list[str]:
+    """Unique function."""
     seen: set[str] = set()
     unique_values: list[str] = []
     for value in values:

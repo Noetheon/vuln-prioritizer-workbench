@@ -348,6 +348,7 @@ def test_default_compose_services_start_only_active_backend_runtime() -> None:
     assert backend_environment["SQLALCHEMY_DATABASE_URI"] == ""
     assert backend_environment["RATE_LIMIT_ENABLED"] == "${RATE_LIMIT_ENABLED:-true}"
     assert backend_environment["MAX_UPLOAD_MB"] == "${MAX_UPLOAD_MB:-25}"
+    assert backend_environment["MAX_REQUEST_BODY_MB"] == "${MAX_REQUEST_BODY_MB:-2}"
     assert backend_environment["MAX_REPORT_MB"] == "${MAX_REPORT_MB:-50}"
     assert backend_environment["MAX_REPORTS_PER_RUN"] == "${MAX_REPORTS_PER_RUN:-20}"
     assert backend_environment["DECISION_API_MAX_FINDINGS"] == (
@@ -466,6 +467,7 @@ def test_env_example_does_not_pin_api_docs_on_for_shared_deployments() -> None:
     assert "\nTRAEFIK_APP_IP_ALLOWLIST=127.0.0.1/32\n" in env_example
     assert "\nTRAEFIK_API_IP_ALLOWLIST=127.0.0.1/32\n" in env_example
     assert "\nMAX_UPLOAD_MB=25\n" in env_example
+    assert "\nMAX_REQUEST_BODY_MB=2\n" in env_example
     assert "\nMAX_REPORT_MB=50\n" in env_example
     assert "\nMAX_REPORTS_PER_RUN=20\n" in env_example
     assert "\nDECISION_API_MAX_FINDINGS=1000\n" in env_example

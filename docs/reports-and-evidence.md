@@ -33,18 +33,24 @@ The current report surface supports:
 | ATT&CK Navigator | Defensive layer for mapped techniques when ATT&CK context exists. |
 | Evidence ZIP Bundle | Bundle containing reports, source artifacts, manifest, and SHA256 checksums. |
 
-Available formats depend on the selected run and report action state. Demo data
-is labeled as demo-only and should not be presented as production evidence.
+Available formats depend on the selected run and report action state. The local
+demo workspace is seeded through the backend and should be treated as sample
+evidence, not production evidence.
 
 ## Evidence ZIP Bundle
 
-The Evidence ZIP Bundle is the strongest audit artifact. It is expected to
-contain generated reports plus a manifest that records file names, sizes, and
-SHA256 checksums.
+The Evidence ZIP Bundle is the most complete local audit artifact. It contains
+generated reports plus a manifest that records file names, sizes, and SHA256
+checksums. Current bundle contents include `manifest.json`, `analysis.json`,
+`technical.md`, `executive.html`, `provider-snapshot.json`, `findings.csv`,
+`results.sarif`, optional `attack-navigator-layer.json`, and optional
+governance artifacts under `governance/`.
 
 Verification checks that bundle contents still match the manifest. Tampered or
 missing artifacts should fail verification instead of being treated as usable
-evidence.
+evidence. Verification is an integrity check for the generated ZIP; it is not a
+cryptographic signature, custody attestation, or proof that provider data was
+fresh at review time.
 
 ## Canonical Contract Artifacts
 
@@ -68,9 +74,9 @@ under `docs/evidence/`. The docs hygiene test enforces this boundary.
 | Location | Owner | Use | Boundary |
 | --- | --- | --- | --- |
 | `docs/evidence/` | Backend/API contract owners | Small, reviewed contract fixtures referenced by schemas or regression tests. | No screenshots, ad hoc logs, demo bundles, or historical issue proof. |
-| `archive/vpw-evidence/` | Release and roadmap maintainers | Selected public-safe historical VPW evidence, screenshots, and demo summaries. | Keep entrypoints in `archive/vpw-evidence/MANIFEST.md`; add tracked Markdown only when current docs or tests need it. |
+| `archive/vpw-evidence/` | Release and roadmap maintainers | Minimal public-safe historical VPW entrypoints, selected Markdown notes, and the retained evidence bundle. | Keep entrypoints in `archive/vpw-evidence/MANIFEST.md`; add tracked artifacts only when current docs or tests need them. |
 | CI artifacts | Release owner for the exact run | Ephemeral command output, package files, Docker logs, Playwright reports, and release-readiness bundles for a commit, tag, or PR. | Link from the PR/issue/release evidence comment; do not copy raw artifacts into `docs/evidence/`. |
-| Historical screenshots | Demo or submission owner | Locked UI proof referenced by submission and demo documentation. | Store under `archive/vpw-evidence/` or a named subdirectory; do not duplicate screenshots across docs pages. |
+| Historical screenshots | Demo or submission owner | Optional UI proof for a specific run. | Prefer CI artifacts or fresh Playwright output; do not commit screenshot sets to `archive/**` unless a maintainer explicitly accepts the repository-size cost. |
 
 New VPW-AUD evidence should normally live in the PR/issue closeout comment or
 as an external CI artifact for the exact workflow run. Do not add audit
@@ -89,9 +95,9 @@ entrypoints:
 - `archive/vpw-evidence/presentation-pack/README.md`
 - `archive/vpw-evidence/presentation-pack/evidence-index.md`
 
-The archive preserves selected screenshots, demo summaries, presentation-pack
-references, and machine-readable evidence without making the public
-`docs/evidence/` tree sprawl again.
+The archive now preserves compact demo summaries, presentation-pack references,
+selected Markdown evidence, and the retained evidence bundle without making the
+public `docs/evidence/` tree or `archive/**` sprawl again.
 
 ## Safety Boundary
 

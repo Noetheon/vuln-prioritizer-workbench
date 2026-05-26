@@ -13,7 +13,7 @@ import { QuickViewSheet } from "./RemediationQueueDialogs"
 import { RemediationQueueFilters } from "./RemediationQueueFilters"
 import { RemediationQueueStates } from "./RemediationQueueStates"
 import { findingsStatusAnnouncement } from "./RemediationQueueStatusAnnouncement"
-import { DemoBanner, RemediationQueueSummary } from "./RemediationQueueSummary"
+import { RemediationQueueSummary } from "./RemediationQueueSummary"
 import { RemediationQueueTableSection } from "./RemediationQueueTableSection"
 
 type RemediationQueueViewProps = RemediationQueueProps & {
@@ -23,7 +23,6 @@ type RemediationQueueViewProps = RemediationQueueProps & {
   filterCount: number
   hasError: boolean
   highCount: number
-  isDemo: boolean
   isLoading: boolean
   kevCount: number
   onOpenSheet: (finding: FindingPublic) => void
@@ -69,7 +68,6 @@ export function RemediationQueueView({
   findingsLoading,
   hasError,
   highCount,
-  isDemo,
   isLoading,
   kevCount,
   onClearAssetFilter,
@@ -118,7 +116,6 @@ export function RemediationQueueView({
       findingAssetId={findingAssetId}
       findingAssetKey={findingAssetKey}
       findingFilters={findingFilters}
-      isDemo={isDemo}
       onClearAssetFilter={onClearAssetFilter}
       onClearFilters={onClearFilters}
       onFilterChange={onFilterChange}
@@ -143,7 +140,6 @@ export function RemediationQueueView({
         aria-busy={isLoading}
         className="findings-remediation-layout vpw-page-stack"
       >
-        {isDemo ? <DemoBanner /> : null}
         <RemediationQueueSummary
           criticalCount={criticalCount}
           displayProject={displayProject}
@@ -167,7 +163,6 @@ export function RemediationQueueView({
           displayFindings={displayFindings}
           findingsError={findingsError}
           hasError={hasError}
-          isDemo={isDemo}
           isLoading={isLoading}
           onClearFilters={onClearFilters}
           projects={projects}
@@ -182,7 +177,6 @@ export function RemediationQueueView({
           findingPageSize={findingPageSize}
           findingSearch={stableFindingSearch}
           findingsLoading={findingsLoading}
-          isDemo={isDemo}
           onOpenSheet={onOpenSheet}
           onPageNext={onPageNext}
           onPagePrev={onPagePrev}

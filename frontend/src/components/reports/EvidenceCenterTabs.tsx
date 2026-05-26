@@ -27,8 +27,7 @@ import {
 
 type EvidenceCenterTabsProps = {
   activeReportFormat: string
-  hasDecisionContext: boolean | AnalysisRunPublic | null
-  isDemo: boolean
+  hasDecisionContext: boolean
   onCreateReport: (format: ReportFormat) => Promise<void>
   onDownloadReport: (report: ReportPublic) => Promise<void>
   onOpenGenerateDrawer: () => void
@@ -49,7 +48,6 @@ type EvidenceCenterTabsProps = {
 export function EvidenceCenterTabs({
   activeReportFormat,
   hasDecisionContext,
-  isDemo,
   onCreateReport,
   onDownloadReport,
   onOpenGenerateDrawer,
@@ -66,12 +64,14 @@ export function EvidenceCenterTabs({
   verificationReport,
   verificationReportTarget,
 }: EvidenceCenterTabsProps) {
-  const hasArtifacts = reports.length > 0 || isDemo
-  const runFailed =
-    !isDemo && selectedReportRun?.status === "failed"
+  const hasArtifacts = reports.length > 0
+  const runFailed = selectedReportRun?.status === "failed"
 
   return (
-    <Tabs className="evidence-tabs flex flex-col gap-4" defaultValue="artifacts">
+    <Tabs
+      className="evidence-tabs flex flex-col gap-4"
+      defaultValue="artifacts"
+    >
       <TabsList
         aria-label="Evidence Center sections"
         className="evidence-tabs-list flex h-auto flex-wrap justify-start gap-2 rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] p-1"
@@ -84,11 +84,9 @@ export function EvidenceCenterTabs({
       </TabsList>
 
       <TabsContent className="mt-0 flex flex-col gap-4" value="artifacts">
-        {!isDemo && !selectedReportRun ? (
+        {!selectedReportRun ? (
           <VpwEmptyState
-            action={
-              <VpwBadge tone="neutral">Select run</VpwBadge>
-            }
+            action={<VpwBadge tone="neutral">Select run</VpwBadge>}
             description="Select a completed import run to generate evidence artifacts."
             title="No import run selected"
           />
@@ -103,7 +101,6 @@ export function EvidenceCenterTabs({
         {hasArtifacts ? (
           <ReportHistory
             emptyDescription="No artifacts generated yet. Generate an executive report, technical report, or evidence bundle for this run."
-            isDemo={isDemo}
             mode="inventory"
             onDownload={onDownloadReport}
             onVerify={onVerifyReport}
@@ -119,7 +116,6 @@ export function EvidenceCenterTabs({
         ) : null}
         <ArtifactSection
           activeReportFormat={activeReportFormat}
-          isDemo={isDemo}
           onCreateReport={onCreateReport}
           onDownloadReport={onDownloadReport}
           onOpenGenerateDrawer={onOpenGenerateDrawer}
@@ -132,7 +128,6 @@ export function EvidenceCenterTabs({
         {!hasArtifacts ? (
           <ReportHistory
             emptyDescription="Generate an executive report, technical report, or evidence bundle for this run."
-            isDemo={isDemo}
             mode="inventory"
             onDownload={onDownloadReport}
             onVerify={onVerifyReport}
@@ -151,15 +146,11 @@ export function EvidenceCenterTabs({
       <TabsContent className="mt-0" value="decision">
         <VpwSection>
           <VpwSectionHeader
-            actions={
-              isDemo ? <VpwBadge tone="warning">Demo language</VpwBadge> : null
-            }
             description="Decision-ready wording derived from the selected run summary."
             title="Executive Decision"
           />
           {hasDecisionContext ? (
             <ExecutiveDecision
-              isDemo={isDemo}
               onCreateReport={onCreateReport}
               onDownloadReport={onDownloadReport}
               projectSummary={projectSummary}
@@ -180,7 +171,6 @@ export function EvidenceCenterTabs({
       <TabsContent className="mt-0 flex flex-col gap-4" value="manifest">
         <EvidenceLifecycle
           activeReportFormat={activeReportFormat}
-          isDemo={isDemo}
           reportActionsEnabled={reportActionsEnabled}
           reports={reports}
           reportsLoading={reportsLoading}
@@ -190,7 +180,6 @@ export function EvidenceCenterTabs({
           verificationReportTarget={verificationReportTarget}
         />
         <ManifestPreview
-          isDemo={isDemo}
           onDownload={onDownloadReport}
           onVerify={onVerifyReport}
           providerStatus={providerStatus}
@@ -205,7 +194,6 @@ export function EvidenceCenterTabs({
 
       <TabsContent className="mt-0" value="history">
         <ReportHistory
-          isDemo={isDemo}
           mode="history"
           onDownload={onDownloadReport}
           onVerify={onVerifyReport}
@@ -227,7 +215,6 @@ export function EvidenceCenterTabs({
             title="Data Quality"
           />
           <QualityFacts
-            isDemo={isDemo}
             providerStatus={providerStatus}
             reports={reports}
             selectedReportRun={selectedReportRun}

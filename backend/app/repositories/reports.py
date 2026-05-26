@@ -14,6 +14,7 @@ class ReportRepository:
     """Persistence helpers for generated report artifacts."""
 
     def __init__(self, session: Session) -> None:
+        """Initialize a new instance of ReportRepository."""
         self.session = session
 
     def create_report(

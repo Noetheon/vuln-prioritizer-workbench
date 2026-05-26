@@ -21,3 +21,31 @@ test("settings provider link preserves selected project context", async ({
     new RegExp(`/providers\\?projectId=${mockProject.id}`),
   )
 })
+
+test("settings links API Explorer to runtime backend docs", async ({ page }) => {
+  await routeWorkbenchShell(page, {
+    apiDocsPath: "/internal/docs",
+    projects: [mockProject],
+  })
+
+  await page.goto("/settings")
+
+  await expect(page.getByRole("link", { name: "API Explorer" })).toHaveAttribute(
+    "href",
+    "/internal/docs",
+  )
+})
+
+test("settings hides API Explorer when backend docs are disabled", async ({
+  page,
+}) => {
+  await routeWorkbenchShell(page, {
+    apiDocsEnabled: false,
+    apiDocsPath: null,
+    projects: [mockProject],
+  })
+
+  await page.goto("/settings")
+
+  await expect(page.getByRole("link", { name: "API Explorer" })).toHaveCount(0)
+})

@@ -83,7 +83,7 @@ domain `InputLoader`.
 | `generic-occurrence-csv` | `parser_matrix/generic-occurrence-csv/positive.csv` | Component, version, PURL, fix version, severity, and target evidence |
 | Scanner, SBOM, GitHub alert, Nessus, and OpenVAS formats | format-specific fixtures under `data/input_fixtures/` | Source metadata, package fields, affected paths, fix versions, raw severity, non-CVE advisory filtering, and CVE order |
 
-`backend/tests/api/test_workbench_parser_fixture_matrix.py` loads every manifest
+`backend/tests/api/import_contracts/test_import_parser_contracts.py` loads every manifest
 fixture through `build_importer_registry()` and compares normalized occurrences
 to the same projection asserted by the domain
 `backend/tests/test_input_loader_contracts.py` tests.

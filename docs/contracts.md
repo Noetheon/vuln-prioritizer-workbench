@@ -60,6 +60,31 @@ Import routes validate bounded uploads and persist the resulting analysis run in
 the Workbench database. The Workbench prioritizes already-known CVEs from
 supplied evidence; it does not scan systems.
 
+## Run Workflow Metadata
+
+Import and provider-refresh runs persist workflow metadata in the existing
+`analysis_run.summary_json` and `analysis_run.error_json` columns, but all active
+writers now pass those payloads through versioned typed contracts:
+
+- `run-workflow-summary.v1`
+- `run-workflow-error.v1`
+
+The typed API projection exposes workflow fields directly on
+`AnalysisRunPublic` and `AnalysisRunSummaryPublic` so clients do not need to
+parse raw JSON blobs. Stable fields include upload references, job status,
+created/updated/ignored counts, parser diagnostics, provider snapshot replay
+metadata, ATT&CK context, optional asset/VEX context, deduplication summaries,
+and structured workflow failures.
+
+Compatibility rules:
+
+- existing `summary_json` and `error_json` remain in API responses for raw
+  diagnostics and older records
+- new UI and integration code should consume the typed top-level fields
+- additive summary/error keys are allowed and preserved by the v1 contract
+- removals or type changes require a new workflow metadata version
+- filesystem paths and secret-like values are redacted before public projection
+
 ## Analysis JSON
 
 `analysis-result.v1.json` is the stable Workbench machine export. It includes:

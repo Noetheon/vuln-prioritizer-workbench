@@ -8,6 +8,7 @@ from datetime import timedelta
 from sqlalchemy.engine import Engine
 from sqlmodel import Session
 
+from app.contracts.run_workflow import merge_workflow_error, merge_workflow_summary
 from app.core.config import Settings
 from app.core.local_actor import configured_local_actor
 from app.models import AnalysisRun, AnalysisRunStatus
@@ -108,25 +109,25 @@ def mark_import_run_background_failed(
         run.id,
         status=AnalysisRunStatus.FAILED,
         error_message=error_message,
-        error_json={
-            "background_error": {"message": error_message, "stage": "background_import"},
-            "import_job": _job_payload(
+        error_json=merge_workflow_error(
+            background_error={"message": error_message, "stage": "background_import"},
+            import_job=_job_payload(
                 job_id=job_id,
                 status="failed",
                 status_history=failed_history,
                 execution_mode="background",
             ),
-        },
-        summary_json={
-            **run.summary_json,
-            "background_error": {"message": error_message, "stage": "background_import"},
-            "import_job": _job_payload(
+        ),
+        summary_json=merge_workflow_summary(
+            run.summary_json,
+            background_error={"message": error_message, "stage": "background_import"},
+            import_job=_job_payload(
                 job_id=job_id,
                 status="failed",
                 status_history=failed_history,
                 execution_mode="background",
             ),
-        },
+        ),
     )
     session.commit()
     return failed_run

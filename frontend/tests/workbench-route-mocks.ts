@@ -51,6 +51,8 @@ type MockFinding = {
 
 type RouteWorkbenchShellOptions = {
   demoWorkspaceEnabled?: boolean
+  apiDocsEnabled?: boolean
+  apiDocsPath?: string | null
   assets?: AssetPublic[]
   findings?: MockFinding[]
   findingsDelayMs?: number
@@ -152,6 +154,8 @@ export async function routeWorkbenchShell(
   const runSummaries = options.runSummaries ?? {}
   const findingsDelayMs = options.findingsDelayMs ?? 0
   const demoWorkspaceEnabled = options.demoWorkspaceEnabled ?? false
+  const apiDocsEnabled = options.apiDocsEnabled ?? true
+  const apiDocsPath = options.apiDocsPath ?? "/docs"
   const onFindingsRequest = options.onFindingsRequest
   const providerStatus = options.providerStatus ?? {
     status: "ok",
@@ -180,6 +184,8 @@ export async function routeWorkbenchShell(
         core_version: "demo",
         database_status: "ready",
         schema_status: "ready",
+        api_docs_enabled: apiDocsEnabled,
+        api_docs_path: apiDocsPath,
       }),
     }),
   )
@@ -794,13 +800,13 @@ function runSummaryFromRun(run: AnalysisRunPublic): AnalysisRunSummaryPublic {
     id: run.id,
     ignored_lines: 0,
     input_type: run.input_type,
+    input_upload: run.input_upload,
     parse_errors: [],
     project_id: run.project_id,
     provider_degraded: false,
     provider_snapshot_id: run.provider_snapshot_id,
     started_at: run.started_at ?? "2025-01-01T00:00:00Z",
     status: run.status ?? "pending",
-    summary_json: run.summary_json,
     updated_findings: 0,
   }
 }

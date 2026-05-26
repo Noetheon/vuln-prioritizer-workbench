@@ -1,3 +1,5 @@
+"""Check GitHub workflows for pinned remote actions and safe checkout settings."""
+
 from __future__ import annotations
 
 import re
@@ -15,6 +17,7 @@ REMOTE_ACTION_SHA_RE = re.compile(
 
 
 def main() -> int:
+    """Return non-zero when workflow actions or checkout settings are unsafe."""
     pin_failures: list[str] = []
     checkout_failures: list[str] = []
     for workflow in sorted(WORKFLOW_DIR.glob("*.y*ml")):

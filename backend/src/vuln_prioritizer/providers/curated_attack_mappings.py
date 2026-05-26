@@ -53,6 +53,8 @@ class CuratedAttackMappingValidationError(ValueError):
 
 @dataclass(frozen=True)
 class CuratedAttackMappingBundle:
+    """Data representation and logic for Curated Attack Mapping Bundle."""
+
     mappings_by_cve: dict[str, list[AttackMapping]]
     techniques_by_id: dict[str, AttackTechnique]
     metadata: dict[str, str | None]
@@ -64,6 +66,7 @@ class CuratedAttackMappingProvider:
     """Load reviewed YAML/JSON CVE-to-ATT&CK mappings from local files."""
 
     def load(self, mapping_file: Path) -> CuratedAttackMappingBundle:
+        """Load method for CuratedAttackMappingProvider."""
         raw_content = _read_mapping_bytes(mapping_file)
         payload = _decode_payload(mapping_file, raw_content)
         metadata = _require_object(payload.get("metadata"), "metadata")
@@ -163,6 +166,7 @@ class CuratedAttackMappingProvider:
 
 
 def _read_mapping_bytes(mapping_file: Path) -> bytes:
+    """Read mapping bytes function."""
     if not mapping_file.exists() or not mapping_file.is_file():
         raise FileNotFoundError(f"Curated ATT&CK mapping file not found: {mapping_file}")
     if mapping_file.suffix.lower() not in {".json", ".yaml", ".yml"}:
@@ -171,6 +175,7 @@ def _read_mapping_bytes(mapping_file: Path) -> bytes:
 
 
 def _decode_payload(mapping_file: Path, raw_content: bytes) -> dict[str, Any]:
+    """Decode payload function."""
     try:
         if mapping_file.suffix.lower() == ".json":
             payload = json.loads(raw_content.decode("utf-8"))
@@ -187,12 +192,14 @@ def _decode_payload(mapping_file: Path, raw_content: bytes) -> dict[str, Any]:
 
 
 def _require_object(value: Any, field_name: str) -> dict[str, Any]:
+    """Require object function."""
     if not isinstance(value, dict):
         raise ValueError(f"Curated ATT&CK mapping file is missing a {field_name} object.")
     return value
 
 
 def _require_array(value: Any, field_name: str) -> list[Any]:
+    """Require array function."""
     if not isinstance(value, list):
         raise ValueError(f"Curated ATT&CK mapping file is missing a {field_name} array.")
     if not value:
@@ -201,6 +208,7 @@ def _require_array(value: Any, field_name: str) -> list[Any]:
 
 
 def _validate_metadata(metadata: dict[str, Any], errors: list[str]) -> None:
+    """Validate metadata function."""
     for field_name in (
         "mapping_framework",
         "mapping_framework_version",
@@ -222,6 +230,7 @@ def _parse_mapping_object(
     location: str,
     errors: list[str],
 ) -> tuple[CveAttackMapping | None, str | None]:
+    """Parse mapping object function."""
     confidence, confidence_label = _normalize_confidence(raw_object.get("confidence"))
     cve_id = normalize_cve_id(_coalesce(raw_object, "cve_id", "capability_id"))
     technique_id = _optional_string(_coalesce(raw_object, "technique_id", "attack_object_id"))
@@ -302,6 +311,7 @@ def _parse_mapping_object(
 
 
 def _normalize_confidence(value: Any) -> tuple[float | None, str | None]:
+    """Normalize confidence function."""
     if isinstance(value, str):
         label = value.strip().lower()
         if label in CONFIDENCE_BY_LABEL:
@@ -313,6 +323,7 @@ def _normalize_confidence(value: Any) -> tuple[float | None, str | None]:
 
 
 def _confidence_label(confidence: float) -> str:
+    """Confidence label function."""
     if confidence <= LOW_CONFIDENCE_THRESHOLD:
         return "low"
     if confidence <= 0.75:
@@ -321,6 +332,7 @@ def _confidence_label(confidence: float) -> str:
 
 
 def _is_disallowed_source(source: str) -> bool:
+    """Is disallowed source function."""
     normalized = source.strip().lower().replace("-", "_").replace(" ", "_")
     return normalized in WORKBENCH_DISALLOWED_MAPPING_SOURCES or normalized.startswith(
         WORKBENCH_DISALLOWED_MAPPING_SOURCE_PREFIXES
@@ -332,6 +344,7 @@ def _normalize_metadata(
     mapping_file: Path,
     raw_content: bytes,
 ) -> dict[str, str | None]:
+    """Normalize metadata function."""
     suffix = mapping_file.suffix.lower().lstrip(".")
     return {
         "mapping_framework": _optional_string(metadata.get("mapping_framework")),
@@ -358,6 +371,7 @@ def _build_quality_report(
     confidence_labels: list[str],
     warnings: list[str],
 ) -> dict[str, Any]:
+    """Build quality report function."""
     review_status_counts = _count_values(mapping.review_status for mapping in mappings)
     confidence_counts = _count_values(confidence_labels)
     mapping_type_counts = _count_values(mapping.mapping_type for mapping in mappings)
@@ -398,6 +412,7 @@ def _build_quality_report(
 
 
 def _curated_mapping_comment(mapping: CveAttackMapping, confidence_label: str) -> str:
+    """Curated mapping comment function."""
     suffix = (
         f" Review status: {mapping.review_status}; confidence: {confidence_label}; "
         "local curated mapping."
@@ -406,6 +421,7 @@ def _curated_mapping_comment(mapping: CveAttackMapping, confidence_label: str) -
 
 
 def _tactic_short_names(tactic_ids: list[str]) -> list[str]:
+    """Tactic short names function."""
     names: list[str] = []
     for tactic_id in tactic_ids:
         name = TACTIC_ID_TO_SHORT_NAME.get(tactic_id, tactic_id)
@@ -415,6 +431,7 @@ def _tactic_short_names(tactic_ids: list[str]) -> list[str]:
 
 
 def _count_values(values: Any) -> dict[str, int]:
+    """Count values function."""
     counts: dict[str, int] = {}
     for value in values:
         counts[str(value)] = counts.get(str(value), 0) + 1
@@ -422,6 +439,7 @@ def _count_values(values: Any) -> dict[str, int]:
 
 
 def _coalesce(mapping: dict[str, Any], *keys: str) -> Any:
+    """Coalesce function."""
     for key in keys:
         value = mapping.get(key)
         if _optional_string(value) is not None:
@@ -430,6 +448,7 @@ def _coalesce(mapping: dict[str, Any], *keys: str) -> Any:
 
 
 def _optional_string(value: Any) -> str | None:
+    """Optional string function."""
     if value is None:
         return None
     normalized = str(value).strip()
@@ -437,6 +456,7 @@ def _optional_string(value: Any) -> str | None:
 
 
 def _string_list(value: Any) -> list[str]:
+    """String list function."""
     if not isinstance(value, list):
         return []
     normalized: list[str] = []
@@ -448,4 +468,5 @@ def _string_list(value: Any) -> list[str]:
 
 
 def _string_metadata(value: dict[str, str | None]) -> dict[str, str]:
+    """String metadata function."""
     return {key: item for key, item in value.items() if item is not None}

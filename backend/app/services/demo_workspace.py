@@ -80,6 +80,8 @@ _ATTACK_MAPPING_FILENAME = "local_curated_demo_mappings.yml"
 
 @dataclass(frozen=True, slots=True)
 class DemoWorkspaceSnapshot:
+    """Data representation and logic for Demo Workspace Snapshot."""
+
     project: Project | None
     latest_run: AnalysisRun | None
     reports: list[Report]
@@ -91,10 +93,12 @@ class DemoWorkspaceSnapshot:
 
     @property
     def seeded(self) -> bool:
+        """Seeded method for DemoWorkspaceSnapshot."""
         return self.project is not None and self.latest_run is not None and self.finding_count > 0
 
     @property
     def canonical(self) -> bool:
+        """Canonical method for DemoWorkspaceSnapshot."""
         if not self.seeded or self.project is None:
             return False
         return (
@@ -202,9 +206,11 @@ class ReportServiceSnapshot:
     """Small report lookup adapter kept local to the demo service."""
 
     def __init__(self, session: Session) -> None:
+        """Initialize a new instance of ReportServiceSnapshot."""
         self.session = session
 
     def latest_run_reports(self, latest_run: AnalysisRun | None) -> list[Report]:
+        """Latest run reports method for ReportServiceSnapshot."""
         if latest_run is None:
             return []
         statement = (
@@ -216,6 +222,7 @@ class ReportServiceSnapshot:
 
 
 def _report_artifacts_available(snapshot: DemoWorkspaceSnapshot, settings: Settings) -> bool:
+    """Report artifacts available function."""
     if not snapshot.reports:
         return False
     try:
@@ -227,12 +234,14 @@ def _report_artifacts_available(snapshot: DemoWorkspaceSnapshot, settings: Setti
 
 
 def _create_demo_project(session: Session) -> Project:
+    """Create demo project function."""
     project = Project(
         id=DEMO_PROJECT_ID,
         name=DEMO_PROJECT_NAME,
         description=(
-            "Deterministic local demo workspace for exploring dashboard, findings, "
-            "waivers, provider replay, reports, and evidence bundles. "
+            "Deterministic local Online Shop risk operations review for exploring "
+            "dashboard, findings, assets, waivers, provider replay, reports, "
+            "and evidence bundles. "
             f"Managed marker: {DEMO_WORKSPACE_MARKER}."
         ),
     )
@@ -247,6 +256,7 @@ async def _run_seed_imports(
     settings: Settings,
     local_actor: LocalWorkbenchActor,
 ) -> None:
+    """Run seed imports function."""
     demo_data_dir = _demo_data_dir(settings)
     await execute_project_import_upload(
         project_id=DEMO_PROJECT_ID,
@@ -273,6 +283,7 @@ async def _run_seed_imports(
 
 
 def _demo_data_dir(settings: Settings) -> Path:
+    """Demo data dir function."""
     attack_artifact_dir = settings.attack_artifact_dir_path
     candidates = []
     if attack_artifact_dir.name == "attack":
@@ -289,6 +300,7 @@ def _demo_data_dir(settings: Settings) -> Path:
 
 
 def _create_demo_waivers(session: Session, *, project_id: uuid.UUID) -> None:
+    """Create demo waivers function."""
     waiver_repo = WaiverRepository(session)
     for waiver in _demo_waivers():
         waiver_repo.create_project_waiver(project_id=project_id, waiver_in=waiver)
@@ -296,6 +308,7 @@ def _create_demo_waivers(session: Session, *, project_id: uuid.UUID) -> None:
 
 
 def _demo_waivers() -> tuple[WaiverCreate, ...]:
+    """Demo waivers function."""
     today = get_datetime_utc().date()
     return (
         WaiverCreate(
@@ -356,6 +369,7 @@ def _create_demo_reports(
     project: Project,
     run: AnalysisRun,
 ) -> None:
+    """Create demo reports function."""
     report_service = ReportService(session, settings)
     report_service.create_markdown_report(run=run, project=project)
     report_service.create_html_report(run=run, project=project)
@@ -367,6 +381,7 @@ def _create_demo_reports(
 
 
 def _upload_content(path: Path, *, content_type: str) -> ImportUploadContent:
+    """Upload content function."""
     return ImportUploadContent(
         filename=path.name,
         content_type=content_type,
@@ -375,6 +390,7 @@ def _upload_content(path: Path, *, content_type: str) -> ImportUploadContent:
 
 
 def _count_for_project(session: Session, table: str, project_id: uuid.UUID) -> int:
+    """Count for project function."""
     model_by_table: dict[str, Any] = {
         "asset": Asset,
         "finding": Finding,
@@ -387,6 +403,7 @@ def _count_for_project(session: Session, table: str, project_id: uuid.UUID) -> i
 
 
 def _waiver_status_counts(session: Session, project_id: uuid.UUID) -> dict[str, int]:
+    """Waiver status counts function."""
     waivers = session.exec(select(Waiver).where(Waiver.project_id == project_id)).all()
     counts = Counter(waiver_lifecycle_status(waiver)[0] for waiver in waivers)
     return {status: counts.get(status, 0) for status in EXPECTED_WAIVER_STATUS_COUNTS}

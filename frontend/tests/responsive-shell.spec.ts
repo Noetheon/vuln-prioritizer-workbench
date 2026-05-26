@@ -203,7 +203,8 @@ async function expectFindingsMobileCards(page: Page) {
   await expect(card).toContainText("Owner")
   await expect(card).toContainText("platform")
   await expect(card).toContainText("Status")
-  await expect(card).toContainText("Known exploited dependency")
+  await expect(card).toContainText("CISA KEV, EPSS 92%, and CVSS 10.0")
+  await expect(card).toContainText("remediation work is open")
 
   await page
     .getByRole("button", {

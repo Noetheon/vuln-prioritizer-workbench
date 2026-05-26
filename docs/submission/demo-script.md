@@ -23,7 +23,7 @@ Clarify:
 | 1 | Dashboard | Overall view, provider freshness, top risks. | "This is the operations entrypoint: what is critical, which services are affected, and whether data sources are fresh." |
 | 2 | Projects | Project context. | "Every analysis belongs to a project so findings, waivers, and evidence do not get mixed." |
 | 3 | Imports | Import wizard and run context. | "VPW processes existing evidence: CVE lists, scanner/SBOM exports, VEX, and asset context. It does not start a scan." |
-| 4 | Findings | Remediation Queue, filters, sorting, Why Now. | "The queue shows priority, score, CVSS, EPSS, KEV, status, and explainable urgency." |
+| 4 | Findings | Remediation Queue, filters, sorting, Why Now. | "The queue shows priority, score, CVSS, EPSS, KEV, status, and a signal-derived reason for acting or reviewing now." |
 | 5 | Finding Detail | Hero, Why this priority, Evidence. | "This turns a technical finding into a justified decision record." |
 | 6 | TTP Context | No-inference and mapped demo proof. | "Unmapped stays unmapped. Only reviewed mapping sources appear as defensive ATT&CK context." |
 | 7 | Waivers | Accepted risk and governance. | "Accepted risks remain visible, scoped, and verifiable; they are not deleted." |
@@ -42,7 +42,9 @@ If the live demo is stable, open the app in this order:
 7. `/waivers`
 8. `/reports`
 
-Archived fallback screens:
+Archived fallback screens are historical demo evidence. They are useful if the
+live demo is unavailable, but they do not certify the current `main` UI by
+themselves:
 
 - [Final demo flow summary](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/demo-flow-summary.md)
 - [Presentation evidence index](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/presentation-pack/evidence-index.md)
@@ -68,7 +70,7 @@ checksums, and verification. That makes the decision auditable."
 ## Fallback If Live Demo Fails
 
 1. Do not regenerate live data and do not force new screenshots.
-2. Switch to the archived flow:
+2. Switch to the historical archived flow:
    - [Demo Flow Summary](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/demo-flow-summary.md)
    - [Evidence Index](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/presentation-pack/evidence-index.md)
 3. Show the report/evidence contract artifacts:

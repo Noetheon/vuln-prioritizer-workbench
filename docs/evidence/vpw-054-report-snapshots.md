@@ -2,7 +2,8 @@
 
 VPW-054 makes the Workbench report demo artifacts part of the tested repository
 contract. The current demo set is rendered from the deterministic VPW-054
-payload in `backend/tests/api/test_workbench_reports_api.py`.
+payload in `backend/tests/utils/report_contract_fixtures.py` and verified by
+`backend/tests/api/report_contracts/test_report_snapshot_contracts.py`.
 
 ## Demo Artifacts
 
@@ -25,10 +26,10 @@ payload in `backend/tests/api/test_workbench_reports_api.py`.
 ## Artifact Hashes
 
 ```text
-bc8dc6af67958a6d5ef5c48dc487af7a9aaffa356db2a883f4294ff9b560033e  docs/examples/vpw-054-workbench-technical-report.md
-b79805f9d8721a6bff5261eafd81af2763906b7464a913aa8042cac45651d713  docs/examples/vpw-054-workbench-executive-report.html
-e4dc50f25ffcd529e8104ca387d909144ede5ccc4ae56d28393a20fa6244708b  docs/examples/vpw-054-workbench-analysis-result.v1.json
-b01b70a9f81ee81532f0d42cfc90fe241bec5aaf2b15eb435698cf73a3f00ea7  backend/tests/api/snapshots/vpw_054_executive_report.normalized.html
+4f1ac461e03c37c659cd59d3f5bc61e43f82d5781f148f07dbc178113b28d965  docs/examples/vpw-054-workbench-technical-report.md
+e9cc12f303eb2f0bac19650cdbbe930a3a437e75494ca6ee00256a404606d5a8  docs/examples/vpw-054-workbench-executive-report.html
+05b30bdc5df93e07f1b2d80ee1a775856061b610a02fb1261d6ee1f9e33419d7  docs/examples/vpw-054-workbench-analysis-result.v1.json
+41e186e6434339daee0872ed88aba52d1eb758d5015916a7466e8764c49ac0f4  backend/tests/api/snapshots/vpw_054_executive_report.normalized.html
 ```
 
 ## Update Process
@@ -42,7 +43,7 @@ Only update these artifacts when a report contract change is intentional.
 4. Run the targeted snapshot gate:
 
 ```bash
-python3 -m pytest -q backend/tests/api/test_workbench_reports_api.py --no-cov
+python3 -m pytest -q backend/tests/api/report_contracts/test_report_snapshot_contracts.py --no-cov
 ```
 
 5. Run the docs gate:

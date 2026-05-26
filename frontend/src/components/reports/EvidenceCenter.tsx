@@ -9,12 +9,8 @@ import type {
 } from "@/api-client"
 import { useState } from "react"
 import type { ReportFormat } from "@/lib/report-format"
-import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import { VpwPageStack } from "@/components/vpw"
-import {
-  ActionStatus,
-  RunContext,
-} from "./EvidenceCenterSections"
+import { ActionStatus, RunContext } from "./EvidenceCenterSections"
 import { EvidenceCenterTabs } from "./EvidenceCenterTabs"
 import { EvidenceGenerateDrawer } from "./EvidenceGenerateDrawer"
 
@@ -91,13 +87,11 @@ export function EvidenceCenter({
   ]
     .filter(Boolean)
     .join(" ")
-  const isDemo = DEMO_MODE_ENABLED && !selectedProject && !combinedError
-  const hasDecisionContext = isDemo || selectedReportRun
+  const hasDecisionContext = selectedReportRun !== null
 
   return (
     <VpwPageStack className="evidence-center">
       <RunContext
-        isDemo={isDemo}
         onOpenGenerateDrawer={() => setGenerateDrawerOpen(true)}
         onProjectChange={onProjectChange}
         onRunIdChange={onRunIdChange}
@@ -119,7 +113,6 @@ export function EvidenceCenter({
       <EvidenceCenterTabs
         activeReportFormat={activeReportFormat}
         hasDecisionContext={hasDecisionContext}
-        isDemo={isDemo}
         onCreateReport={onCreateReport}
         onDownloadReport={onDownloadReport}
         onOpenGenerateDrawer={() => setGenerateDrawerOpen(true)}

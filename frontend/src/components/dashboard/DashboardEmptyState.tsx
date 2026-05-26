@@ -6,12 +6,12 @@ import { VpwStatusBanner, VpwSurface } from "@/components/vpw"
 type DemoWorkspaceActionProps = {
   demoWorkspacePending: boolean
   onLoadDemoWorkspace: () => void
-  onResetDemoWorkspace: () => void
 }
 
 type DashboardDemoBannerProps = DemoWorkspaceActionProps & {
   demoWorkspaceEnabled: boolean
   isManagedDemoWorkspace: boolean
+  onResetDemoWorkspace: () => void
 }
 
 export function DashboardDemoBanner({
@@ -28,7 +28,9 @@ export function DashboardDemoBanner({
           <Button
             disabled={demoWorkspacePending}
             onClick={
-              isManagedDemoWorkspace ? onResetDemoWorkspace : onLoadDemoWorkspace
+              isManagedDemoWorkspace
+                ? onResetDemoWorkspace
+                : onLoadDemoWorkspace
             }
             size="sm"
             type="button"
@@ -47,13 +49,13 @@ export function DashboardDemoBanner({
           </Button>
         ) : null
       }
-      title={isManagedDemoWorkspace ? "Demo workspace" : "Demo preview"}
+      title="Demo workspace"
       tone="warning"
     >
       <p>
         {isManagedDemoWorkspace
           ? "Persisted local demo data from a fictional online shop. Reset it any time to return to the canonical walkthrough state."
-          : "Sample data from a fictional payments service. Load the demo workspace to explore real persisted routes and reports."}
+          : "Load the backend demo workspace to explore persisted routes, reports, downloads, and waivers."}
       </p>
     </VpwStatusBanner>
   )

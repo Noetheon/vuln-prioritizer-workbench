@@ -11,6 +11,7 @@ from .common import dict_items, dict_value, load_json_object
 
 
 def parse_cyclonedx_json(path: Path) -> ParsedInput:
+    """Parse cyclonedx json function."""
     document = load_json_object(path, "CycloneDX JSON")
     warnings: list[str] = []
     occurrences: list[InputOccurrence] = []
@@ -72,6 +73,7 @@ def parse_cyclonedx_json(path: Path) -> ParsedInput:
 
 
 def parse_spdx_json(path: Path) -> ParsedInput:
+    """Parse spdx json function."""
     document = load_json_object(path, "SPDX JSON")
     warnings: list[str] = []
     occurrences: list[InputOccurrence] = []
@@ -129,6 +131,7 @@ def parse_spdx_json(path: Path) -> ParsedInput:
 
 
 def _cyclonedx_rating(vulnerability: dict) -> str | None:
+    """Cyclonedx rating function."""
     ratings = dict_items(vulnerability.get("ratings"))
     if not ratings:
         return None
@@ -137,6 +140,7 @@ def _cyclonedx_rating(vulnerability: dict) -> str | None:
 
 
 def _spdx_purl(package: dict) -> str | None:
+    """Spdx purl function."""
     for reference in dict_items(package.get("externalRefs")):
         if reference.get("referenceType") == "purl":
             return reference.get("referenceLocator")

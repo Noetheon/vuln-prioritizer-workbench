@@ -14,7 +14,7 @@ from app.services.report_contracts import (
 from app.services.report_formatting import csv_safe_cell as _csv_safe_cell
 from app.services.report_formatting import format_number as _format_number
 from app.services.report_formatting import iso_datetime as _iso_datetime
-from app.services.report_models import MarkdownReportPayload
+from app.services.report_models import AnalysisResultV1, MarkdownReportPayload
 from app.services.report_projection import _analysis_finding, _analysis_provider_snapshot
 from app.services.report_renderer_common import (
     _boolish_signal,
@@ -29,11 +29,11 @@ from app.services.report_renderer_common import (
 def render_analysis_result_json(payload: MarkdownReportPayload) -> str:
     """Render the stable machine-readable analysis-result.v1 JSON export."""
     payload, _redactions = _redacted_bundle_payload(payload)
-    result = {
-        "schema": ANALYSIS_RESULT_SCHEMA,
-        "schema_version": ANALYSIS_RESULT_SCHEMA_VERSION,
-        "generated_at": _iso_datetime(payload.generated_at),
-        "project": {
+    result_model = AnalysisResultV1(
+        schema=ANALYSIS_RESULT_SCHEMA,
+        schema_version=ANALYSIS_RESULT_SCHEMA_VERSION,
+        generated_at=_iso_datetime(payload.generated_at),
+        project={
             "id": payload.project_id,
             "name": payload.project_name,
             "description": payload.project_description,
@@ -44,7 +44,7 @@ def render_analysis_result_json(payload: MarkdownReportPayload) -> str:
             if payload.project_updated_at
             else None,
         },
-        "analysis_run": {
+        analysis_run={
             "id": payload.run_id,
             "project_id": payload.project_id,
             "status": payload.run_status,
@@ -58,18 +58,21 @@ def render_analysis_result_json(payload: MarkdownReportPayload) -> str:
             "errors": payload.run_errors,
             "summary": payload.summary,
         },
-        "provider_snapshot": _analysis_provider_snapshot(payload.provider_snapshot),
-        "findings": [_analysis_finding(finding) for finding in payload.findings],
-        "explanations": {
+        provider_snapshot=_analysis_provider_snapshot(payload.provider_snapshot),
+        findings=tuple(_analysis_finding(finding) for finding in payload.findings),
+        explanations={
             finding.cve_id: finding.explanation
             for finding in payload.findings
             if finding.explanation
         },
-    }
-    if payload.governance_rollups:
-        result["governance_rollups"] = payload.governance_rollups
-    if payload.detection_coverage:
-        result["detection_coverage"] = payload.detection_coverage
+        governance_rollups=payload.governance_rollups or None,
+        detection_coverage=payload.detection_coverage or None,
+    )
+    result = result_model.model_dump(mode="json", by_alias=True)
+    if result["governance_rollups"] is None:
+        result.pop("governance_rollups")
+    if result["detection_coverage"] is None:
+        result.pop("detection_coverage")
     return json.dumps(result, indent=2, sort_keys=True) + "\n"
 
 

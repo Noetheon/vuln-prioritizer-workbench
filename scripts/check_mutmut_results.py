@@ -30,6 +30,7 @@ def _load_exit_codes(mutants_dir: Path) -> dict[str, int | None]:
 
 
 def main(argv: list[str]) -> int:
+    """Validate that all selected mutmut mutants were killed."""
     if len(argv) < 3:
         print(
             "Usage: check_mutmut_results.py <mutants-dir> <mutant-pattern> [<mutant-pattern> ...]",

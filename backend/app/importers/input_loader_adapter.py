@@ -21,6 +21,8 @@ from vuln_prioritizer.models_input import InputOccurrence, ParsedInput
 
 @dataclass(frozen=True, slots=True)
 class ParsedWorkbenchInput:
+    """Data representation and logic for Parsed Workbench Input."""
+
     parsed_input: ParsedInput
     occurrences: list[NormalizedOccurrence]
 
@@ -92,6 +94,7 @@ def _parse_input_path(
     input_type: str,
     preserve_parser_warnings: bool,
 ) -> ParsedInput:
+    """Parse input path function."""
     if preserve_parser_warnings and input_type == "cve-list":
         return parse_cve_list(path)
     if preserve_parser_warnings and input_type == "generic-occurrence-csv":
@@ -100,6 +103,7 @@ def _parse_input_path(
 
 
 def _write_payload(path: Path, payload: InputPayload, *, input_type: str) -> None:
+    """Write payload function."""
     if isinstance(payload, bytes):
         path.write_bytes(payload)
         return
@@ -110,6 +114,7 @@ def _write_payload(path: Path, payload: InputPayload, *, input_type: str) -> Non
 
 
 def _payload_suffix(*, filename: str | None, default_suffix: str) -> str:
+    """Payload suffix function."""
     if filename:
         suffix = Path(filename).suffix.lower()
         if suffix:
@@ -118,6 +123,7 @@ def _payload_suffix(*, filename: str | None, default_suffix: str) -> str:
 
 
 def _raise_invalid_cve_warnings(input_type: str, warnings: list[str]) -> None:
+    """Raise invalid cve warnings function."""
     messages = [
         warning.removeprefix("Ignored ").strip()
         for warning in warnings
@@ -131,6 +137,7 @@ def _raise_invalid_cve_warnings(input_type: str, warnings: list[str]) -> None:
 
 
 def _workbench_parse_error(input_type: str, message: str) -> str:
+    """Workbench parse error function."""
     if input_type == "cve-list" and "must contain a 'cve_id' or 'cve' column" in message:
         return "cve-list CSV input must contain a cve_id column."
     row_shape = re.fullmatch(
@@ -154,6 +161,7 @@ def _normalize_occurrence(
     input_type: str,
     prefer_asset_id_as_asset_ref: bool,
 ) -> NormalizedOccurrence:
+    """Normalize occurrence function."""
     raw_evidence = dict(occurrence.raw_evidence)
     if not raw_evidence:
         raw_evidence = _raw_evidence(occurrence, input_type=input_type)
@@ -178,12 +186,14 @@ def _asset_ref(
     *,
     prefer_asset_id_as_asset_ref: bool,
 ) -> str | None:
+    """Asset ref function."""
     if prefer_asset_id_as_asset_ref:
         return occurrence.asset_id or occurrence.target_ref
     return occurrence.target_ref
 
 
 def _raw_evidence(occurrence: InputOccurrence, *, input_type: str) -> dict[str, Any]:
+    """Raw evidence function."""
     evidence: dict[str, Any] = {
         "input_type": input_type,
         "source_format": occurrence.source_format,
@@ -206,6 +216,7 @@ def _raw_evidence(occurrence: InputOccurrence, *, input_type: str) -> dict[str, 
 
 
 def _line_number_from_record_id(value: str | None) -> int | None:
+    """Line number from record id function."""
     if not value:
         return None
     match = re.fullmatch(r"(?:line|row):(?P<line>\d+)", value)

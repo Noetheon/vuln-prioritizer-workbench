@@ -41,7 +41,6 @@ import {
   findingOwnerDetailLabel,
   findingSlaLabel,
   findingReasonRows,
-  isDemoFindingDetail,
 } from "./finding-detail-model"
 
 export type FindingDetailRouteProps = {
@@ -117,24 +116,23 @@ export function FindingDetailRoute({
 
       {!loading && !error && finding ? (
         <>
-          <FindingDetailContext
-            explanation={explanation}
-            finding={finding}
-            isDemo={isDemoFindingDetail(finding)}
-            occurrences={occurrences}
-          />
+          <FindingDetailContext explanation={explanation} finding={finding} />
 
           <div className="finding-detail-workspace-grid">
             <main className="finding-detail-workspace-main">
               <Tabs
                 className="finding-detail-tabs-shell"
                 value={tab}
-                onValueChange={(value) => onTabChange(value as FindingDetailTab)}
+                onValueChange={(value) =>
+                  onTabChange(value as FindingDetailTab)
+                }
               >
                 <div className="finding-tabs-toolbar">
                   <div className="finding-tabs-heading">
                     <span>Finding workspace</span>
-                    <strong>Decision, evidence, ATT&amp;CK / TTP, and governance</strong>
+                    <strong>
+                      Decision, evidence, ATT&amp;CK / TTP, and governance
+                    </strong>
                     <p>
                       Use these top-level sections to explain, validate, and
                       defend the recorded remediation decision.
@@ -345,12 +343,12 @@ function FindingDetailActionRail({
             label: "VEX",
             value: finding.suppressed_by_vex
               ? "Suppressed by VEX"
-              : occurrences
+              : (occurrences
                   .map((occurrence) =>
                     optionalText(String(occurrence.vex_status ?? "")),
                   )
                   .find((value) => value !== "Not supplied") ??
-                "No VEX overlay",
+                "No VEX overlay"),
           },
           ...decisionRows,
         ]}

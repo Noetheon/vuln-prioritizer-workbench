@@ -135,6 +135,7 @@ dd { margin: 4px 0 0; overflow-wrap: anywhere; }
   grid-template-columns: 1.2fr 1fr;
   gap: 12px;
 }
+.decision-grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .decision-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -143,6 +144,16 @@ dd { margin: 4px 0 0; overflow-wrap: anywhere; }
 }
 .decision-card ul { margin: 8px 0 0 18px; padding: 0; }
 .decision-card li + li { margin-top: 4px; }
+.signoff-panel { margin-top: 12px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--bg-panel); padding: 14px; }
+.signoff-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px; margin: 10px 0 0; }
+.signoff-grid div {
+  min-height: 54px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-card); padding: 10px;
+}
+.signoff-grid dd:empty::after { content: ""; display: block; min-height: 18px;
+  border-bottom: 1px solid #a3a3a3; }
 .table-wrap {
   overflow-x: auto;
   border: 1px solid var(--border);
@@ -188,6 +199,10 @@ tbody tr:last-child td { border-bottom: 0; }
 .campaign-table td:nth-child(4) {
   white-space: nowrap;
 }
+.evidence-package-table code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .recommendation-list { margin: 0; padding-left: 22px; }
 .recommendation-list li + li { margin-top: 14px; }
 .recommendation-list strong { display: block; margin-bottom: 4px; font-weight: 700; }
@@ -205,19 +220,18 @@ tbody tr:last-child td { border-bottom: 0; }
   .report-shell { width: min(100% - 20px, 1280px); padding-top: 16px; }
   header, section { padding: 16px; }
   h1 { font-size: 26px; }
-  .meta-grid, .metric-grid, .provider-grid, .decision-grid { grid-template-columns: 1fr; }
+  .meta-grid, .metric-grid, .provider-grid, .decision-grid, .signoff-grid {
+    grid-template-columns: 1fr; }
   table { min-width: 920px; }
   .compact-table { min-width: 720px; }
 }
 @media print {
   body { background: #fff; color: #000; }
   .report-shell { width: 100%; padding: 0; }
-  header, section {
-    border-color: #c8c8c8;
-    break-inside: avoid;
-    page-break-inside: avoid;
-    padding: 16px;
-  }
+  header, section { border-color: #c8c8c8; break-inside: avoid;
+    page-break-inside: avoid; padding: 16px; }
+  .signoff-panel { break-inside: avoid; page-break-inside: avoid; }
+  .signoff-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .table-wrap { overflow: visible; }
   table { min-width: 0; }
   .badge { border-color: #999; background: #fff; color: #000; }
@@ -233,27 +247,28 @@ tbody tr:last-child td { border-bottom: 0; }
       <dl class="meta-grid">
         <div><dt>Report Type</dt><dd>Executive HTML</dd></div>
         <div><dt>Project ID</dt><dd>00000000-0000-4000-8000-000000000054</dd></div>
+        <div><dt>Project Name</dt><dd>VPW-054 Demo Reports</dd></div>
         <div><dt>Analysis Run ID</dt><dd>00000000-0000-4000-8000-000000000540</dd></div>
         <div><dt>Generated At</dt><dd>2026-04-29T12:00:00Z</dd></div>
         <div><dt>Run Status</dt><dd>completed</dd></div>
         <div><dt>Input Type</dt><dd>cve-list</dd></div>
         <div><dt>Input File</dt><dd>vpw-054-known-cves.txt</dd></div>
-        <div><dt>Provider Snapshot</dt><dd>00000000-0000-4000-8000-000000000650</dd></div>
+        <div><dt>Provider Snapshot</dt><dd>00000000-0000-4000-8000-000000000654</dd></div>
       </dl>
     </header>
 
     <section aria-labelledby="decision-brief">
-      <p class="eyebrow">Executive Summary</p>
+      <p class="eyebrow">Decision Required</p>
       <h2 id="decision-brief">Decision Brief</h2>
       <div class="verdict-banner">
-        <p><strong>Decision needed:</strong> approve emergency remediation for open KEV backed production findings, assign owners for top campaigns and require clean validation evidence after re import.</p>
-        <p>This run analyzed 2 findings from vpw-054-known-cves.txt. 2 findings are open and actionable, 1 finding is KEV-backed, 0 findings are accepted risk, 0 findings are VEX suppressed and 0 fixed findings are retained as evidence. Immediate focus should be CVE-2024-3094 / XZ Utils Backdoor, CVE-2021-44228 / Log4Shell before governance exceptions are signed off.</p>
+        <p><strong>Decision needed:</strong> Approve 3 emergency remediation campaigns within 24h; confirm assigned owners for the top remediation campaigns; review 2 due or expiring governance items; treat provider freshness as warning before sign-off; require clean validation evidence after re-import.</p>
+        <p>This run analyzed 7 findings from vpw-054-known-cves.txt. 3 findings are open and actionable, 5 findings are KEV-backed, 1 finding is accepted risk, 1 finding is VEX suppressed and 2 fixed findings are retained as evidence. Immediate focus should be CVE-2021-44228 / Log4Shell, CVE-2023-34362 / MOVEit Transfer, CVE-2024-3094 / XZ Utils Backdoor before governance exceptions are signed off.</p>
       </div>
-      <div class="decision-grid">
+      <div class="decision-grid decision-grid--three">
         <div class="decision-card">
           <span class="status-label">What management should approve</span>
           <ul>
-            <li>Remediation window for open production campaigns.</li>
+            <li>3 emergency remediation campaigns.</li>
             <li>Named owners for each remediation cluster.</li>
             <li>Validation evidence after clean re import.</li>
           </ul>
@@ -261,10 +276,31 @@ tbody tr:last-child td { border-bottom: 0; }
         <div class="decision-card">
           <span class="status-label">What requires caution</span>
           <ul>
-            <li>Provider snapshot freshness is fresh for formal sign off.</li>
-            <li>Accepted and VEX suppressed findings remain visible as evidence.</li>
+            <li>Provider snapshot freshness is warning for formal sign off.</li>
+            <li>Open campaigns have named owners in the evidence.</li>
+            <li>Accepted risk, VEX suppressed and fixed findings remain visible as evidence.</li>
           </ul>
         </div>
+        <div class="decision-card">
+          <span class="status-label">What must be validated after remediation</span>
+          <ul>
+            <li>Clean re import after remediation.</li>
+            <li>Updated fixed evidence for closed findings.</li>
+            <li>Evidence ZIP manifest and hashes retained for audit review.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="signoff-panel" aria-label="Printable decision sign-off">
+        <span class="status-label">Printable decision sign-off</span>
+        <dl class="signoff-grid">
+          <div><dt>Decision owner</dt><dd>N/A</dd></div>
+          <div><dt>Approval outcome</dt><dd>N/A</dd></div>
+          <div><dt>Decision date</dt><dd>N/A</dd></div>
+          <div><dt>Evidence package reference</dt><dd>Generate Evidence ZIP to record manifest.json</dd></div>
+          <div><dt>Validation required</dt><dd>Clean re-import and fixed evidence before closure</dd></div>
+          <div><dt>Analysis run</dt><dd>00000000-0000-4000-8000-000000000540</dd></div>
+          <div><dt>Notes</dt><dd>N/A</dd></div>
+        </dl>
       </div>
     </section>
 
@@ -272,18 +308,25 @@ tbody tr:last-child td { border-bottom: 0; }
       <p class="eyebrow">Risk Posture</p>
       <h2 id="risk-posture">Executive Risk Posture</h2>
       <div class="metric-grid">
-        <div class="metric" data-tone="info"><span>Total Findings</span><strong>2</strong></div>
-        <div class="metric" data-tone="critical"><span>Open Actionable</span><strong>2</strong></div>
-        <div class="metric" data-tone="critical"><span>KEV Backed</span><strong>1</strong></div>
-        <div class="metric" data-tone="critical"><span>Emergency SLA</span><strong>2</strong></div>
-        <div class="metric" data-tone="warning"><span>Accepted Risk</span><strong>0</strong></div>
-        <div class="metric" data-tone="info"><span>VEX Suppressed</span><strong>0</strong></div>
-        <div class="metric" data-tone="success"><span>Fixed Evidence</span><strong>0</strong></div>
-        <div class="metric" data-tone="warning"><span>Review Due / Expiring</span><strong>0</strong></div>
-        <div class="metric" data-tone="critical"><span>Internet Facing Prod</span><strong>1</strong></div>
-        <div class="metric" data-tone="info"><span>Unique CVEs</span><strong>2</strong></div>
-        <div class="metric" data-tone="success"><span>Provider Freshness</span><strong>Fresh</strong></div>
-        <div class="metric" data-tone="success"><span>Evidence Bundle</span><strong>Ready</strong></div>
+        <div class="metric" data-tone="info"><span>Total Findings</span><strong>7</strong></div>
+        <div class="metric" data-tone="critical"><span>Open Actionable</span><strong>3</strong></div>
+        <div class="metric" data-tone="critical"><span>KEV Backed</span><strong>5</strong></div>
+        <div class="metric" data-tone="critical"><span>Emergency SLA Campaigns</span><strong>3</strong></div>
+        <div class="metric" data-tone="warning"><span>Accepted Risk</span><strong>1</strong></div>
+        <div class="metric" data-tone="info"><span>VEX Suppressed</span><strong>1</strong></div>
+        <div class="metric" data-tone="success"><span>Fixed Evidence</span><strong>2</strong></div>
+        <div class="metric" data-tone="warning"><span>Review Due / Expiring</span><strong>2</strong></div>
+        <div class="metric" data-tone="critical"><span>Internet Facing Prod</span><strong>3</strong></div>
+        <div class="metric" data-tone="info"><span>Unique CVEs</span><strong>6</strong></div>
+        <div class="metric" data-tone="warning"><span>Provider Freshness</span><strong>Warning</strong></div>
+        <div class="metric" data-tone="info"><span>Evidence Bundle Ready</span><strong>Expected</strong></div>
+      </div>
+      <h3>Metric Definitions</h3>
+      <div class='table-wrap'>
+        <table class='compact-table'>
+          <thead><tr><th>Metric</th><th>Definition</th></tr></thead>
+          <tbody><tr><td><strong>Open Actionable</strong></td><td>Findings that still require remediation or mitigation after accepted risk, VEX suppressed and fixed evidence states are separated.</td></tr><tr><td><strong>KEV Backed</strong></td><td>Findings with a CISA KEV catalog signal.</td></tr><tr><td><strong>Emergency SLA Campaigns</strong></td><td>Remediation campaigns with open actionable KEV, critical CVSS or critical EPSS signals.</td></tr><tr><td><strong>Fixed Evidence</strong></td><td>Findings retained as fixed-state validation evidence, not active remediation work.</td></tr><tr><td><strong>Review Due or Expiring</strong></td><td>Waiver or accepted-risk governance items due, overdue or nearing expiry.</td></tr><tr><td><strong>Internet Facing Prod</strong></td><td>Open actionable findings on production assets with internet-facing or external exposure.</td></tr><tr><td><strong>Provider Freshness</strong></td><td>Deterministic verdict from centralized NVD, EPSS and KEV freshness thresholds.</td></tr><tr><td><strong>Evidence Bundle Ready</strong></td><td>Expected evidence ZIP contents can be generated for offline audit review.</td></tr></tbody>
+        </table>
       </div>
     </section>
 
@@ -296,10 +339,10 @@ tbody tr:last-child td { border-bottom: 0; }
       <tr><th>Time Window</th><th>Action</th><th>Scope</th><th>Owner</th><th>Evidence Basis</th></tr>
     </thead>
     <tbody>
-      <tr><td><strong>24h</strong></td><td>Approve emergency remediation for open KEV backed production findings and start validation tracking.</td><td>CVE-2024-3094 / XZ Utils Backdoor, CVE-2021-44228 / Log4Shell campaigns.</td><td>platform-team, secops</td><td>EPSS 0.846, CVSS 10; KEV, EPSS 0.944, CVSS 10, ATT&amp;CK T1190</td></tr>
+      <tr><td><strong>24h</strong></td><td>Approve emergency remediation for open KEV backed production findings and start validation tracking.</td><td>CVE-2021-44228 / Log4Shell, CVE-2023-34362 / MOVEit Transfer, CVE-2024-3094 / XZ Utils Backdoor campaigns.</td><td>identity-team, platform-team, secops, and 1 additional owner</td><td>KEV, EPSS 0.944, CVSS 10, ATT&amp;CK T1190; KEV, EPSS 0.911, CVSS 9.8</td></tr>
 <tr><td><strong>72h</strong></td><td>Confirm owners, patch status and interim compensating controls for campaigns not yet closed.</td><td>All open actionable findings and any VEX under investigation.</td><td>Security owner plus service owners</td><td>Technical Markdown, findings CSV, owner rollups and validation notes.</td></tr>
 <tr><td><strong>7d</strong></td><td>Perform clean re import, close fixed evidence and preserve the evidence package for audit review.</td><td>All remediation campaigns and fixed evidence.</td><td>Security operations and platform owners</td><td>Evidence ZIP, manifest, provider snapshot and analysis JSON.</td></tr>
-<tr><td><strong>Governance review</strong></td><td>Review due waiver, expiring waiver, accepted risks and VEX suppressed findings before formal risk sign off.</td><td>No waiver debt recorded; no VEX suppressed findings.</td><td>Risk owner and security owner</td><td>Waiver records, VEX overlays and governance artifacts.</td></tr>
+<tr><td><strong>Governance review</strong></td><td>Review due waiver, expiring waiver, accepted risks and VEX suppressed findings before formal risk sign off.</td><td>1 waiver, 1 review due, 1 expiring soon, 1 accepted risk finding; 1 VEX suppressed finding.</td><td>Risk owner and security owner</td><td>Waiver records, VEX overlays and governance artifacts.</td></tr>
     </tbody>
   </table>
 </div>
@@ -314,8 +357,12 @@ tbody tr:last-child td { border-bottom: 0; }
       <tr><th>Priority</th><th>Risk Cluster</th><th>Actionability</th><th>Scope</th><th>Business Services</th><th>Owners</th><th>Evidence Signals</th><th>Decision Statement</th></tr>
     </thead>
     <tbody>
+        <tr><td><span class='badge badge-critical'>P1</span></td><td><strong>CVE-2021-44228 / Log4Shell</strong></td><td><span class='badge badge-critical'>1 open, 1 fixed</span></td><td>2 assets; production; internal, internet facing exposure</td><td>identity, operations</td><td>identity-team, secops</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-critical'>EPSS 0.944</span><span class='badge badge-critical'>CVSS 10</span><span class='badge badge-info'>ATT&CK T1190</span></div></td><td>Approve emergency patch and validation window within 24h. Keep fixed evidence visible for audit closure.</td></tr>
+        <tr><td><span class='badge badge-critical'>P1</span></td><td><strong>CVE-2023-34362 / MOVEit Transfer</strong></td><td><span class='badge badge-critical'>1 open</span></td><td>1 asset; production; external exposure</td><td>partner file transfer</td><td>soc-team</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-critical'>EPSS 0.911</span><span class='badge badge-critical'>CVSS 9.8</span></div></td><td>Approve emergency patch and validation window within 24h.</td></tr>
         <tr><td><span class='badge badge-critical'>P1</span></td><td><strong>CVE-2024-3094 / XZ Utils Backdoor</strong></td><td><span class='badge badge-critical'>1 open</span></td><td>1 asset; production; internet facing exposure</td><td>checkout</td><td>platform-team</td><td><div class="signal-row"><span class='badge badge-critical'>EPSS 0.846</span><span class='badge badge-critical'>CVSS 10</span><span class='badge badge-neutral'>No KEV</span></div></td><td>Approve prioritized remediation and validation window.</td></tr>
-        <tr><td><span class='badge badge-critical'>P2</span></td><td><strong>CVE-2021-44228 / Log4Shell</strong></td><td><span class='badge badge-critical'>1 open</span></td><td>1 asset; production; internal exposure</td><td>operations</td><td>secops</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-critical'>EPSS 0.944</span><span class='badge badge-critical'>CVSS 10</span><span class='badge badge-info'>ATT&CK T1190</span></div></td><td>Approve emergency patch and validation window within 24h.</td></tr>
+        <tr><td><span class='badge badge-neutral'>Evidence</span></td><td><strong>CVE-2024-4577 / PHP CGI</strong></td><td><span class='badge badge-neutral'>1 accepted</span></td><td>1 asset; production; internal exposure</td><td>billing</td><td>risk-owner</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-high'>EPSS 0.037</span><span class='badge badge-critical'>CVSS 9.8</span></div></td><td>Review accepted-risk exception before sign-off.</td></tr>
+        <tr><td><span class='badge badge-neutral'>Evidence</span></td><td><strong>CVE-2022-22965 / Spring4Shell</strong></td><td><span class='badge badge-neutral'>1 fixed</span></td><td>1 asset; production; internal exposure</td><td>catalog</td><td>catalog-team</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-high'>EPSS 0.024</span><span class='badge badge-critical'>CVSS 9.8</span></div></td><td>Keep fixed evidence visible for audit closure.</td></tr>
+        <tr><td><span class='badge badge-neutral'>Evidence</span></td><td><strong>CVE-2023-44487 / HTTP/2 Rapid Reset</strong></td><td><span class='badge badge-neutral'>1 suppressed</span></td><td>1 asset; production; internet facing exposure</td><td>edge ingress</td><td>edge-team</td><td><div class="signal-row"><span class='badge badge-high'>EPSS 0.018</span><span class='badge badge-high'>CVSS 7.5</span><span class='badge badge-neutral'>No KEV</span></div></td><td>Retain VEX evidence for suppressed scope.</td></tr>
     </tbody>
   </table>
 </div>
@@ -324,15 +371,20 @@ tbody tr:last-child td { border-bottom: 0; }
     <section aria-labelledby="business-services">
       <p class="eyebrow">Business Impact</p>
       <h2 id="business-services">Business Services at Risk</h2>
-      <p class='lede business-impact-lede'>Vulnerability exposure is concentrated in checkout, operations with active actionable findings. Critical internet-facing production exposure is present in: checkout. Assigned service owners who must prioritize remediation include: platform-team, secops. Management decision: Approve emergency patch windows for internet-facing production assets, review governance exceptions for internal hosts, and require clean re-import validation.</p>
+      <p class='lede business-impact-lede'>Vulnerability exposure is concentrated in identity, checkout, partner file transfer with active actionable findings. Critical internet-facing production exposure is present in: identity, checkout, partner file transfer. Active accepted risk exceptions or waiver debt are currently recorded for: billing. Assigned service owners who must prioritize remediation include: identity-team, platform-team, soc-team. Management decision: Approve emergency patch windows for internet-facing production assets, review governance exceptions for internal hosts, and require clean re-import validation.</p>
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Service</th><th>Open Actionable</th><th>Governed Risk</th><th>Environment / Exposure</th><th>Owner</th><th>Decision Needed</th></tr>
+            <tr><th>Service</th><th>Open Actionable</th><th>Governed Risk</th><th>Emergency Campaigns</th><th>Environment / Exposure</th><th>Owner</th><th>Decision Needed</th><th>Validation Evidence</th></tr>
           </thead>
           <tbody>
-            <tr><td><strong>operations</strong></td><td>1</td><td>0 accepted, 0 VEX suppressed</td><td>production / internal</td><td>secops</td><td><span class='badge badge-critical'>Emergency remediation</span></td></tr>
-            <tr><td><strong>checkout</strong></td><td>1</td><td>0 accepted, 0 VEX suppressed</td><td>production / internet facing</td><td>platform-team</td><td><span class='badge badge-high'>Remediation scheduling</span></td></tr>
+            <tr><td><strong>identity</strong></td><td>1 campaigns / 1 findings</td><td>0 accepted, 0 VEX suppressed</td><td>1</td><td>1 environment: production / 1 exposure: internet facing</td><td>1 owner: identity-team</td><td><span class='badge badge-critical'>Emergency remediation</span></td><td>Clean re-import and fixed evidence before closure</td></tr>
+            <tr><td><strong>partner file transfer</strong></td><td>1 campaigns / 1 findings</td><td>0 accepted, 0 VEX suppressed</td><td>1</td><td>1 environment: production / 1 exposure: external</td><td>1 owner: soc-team</td><td><span class='badge badge-critical'>Emergency remediation</span></td><td>Clean re-import and fixed evidence before closure</td></tr>
+            <tr><td><strong>checkout</strong></td><td>1 campaigns / 1 findings</td><td>0 accepted, 0 VEX suppressed</td><td>1</td><td>1 environment: production / 1 exposure: internet facing</td><td>1 owner: platform-team</td><td><span class='badge badge-critical'>Emergency remediation</span></td><td>Clean re-import and fixed evidence before closure</td></tr>
+            <tr><td><strong>billing</strong></td><td>0 campaigns / 0 findings</td><td>1 accepted risk</td><td>0</td><td>1 environment: production / 1 exposure: internal</td><td>1 owner: risk-owner</td><td><span class='badge badge-warning'>Governance review</span></td><td>Risk owner review record</td></tr>
+            <tr><td><strong>catalog</strong></td><td>0 campaigns / 0 findings</td><td>1 fixed evidence</td><td>0</td><td>1 environment: production / 1 exposure: internal</td><td>1 owner: catalog-team</td><td><span class='badge badge-success'>Evidence validation</span></td><td>Retain VEX or fixed evidence in bundle</td></tr>
+            <tr><td><strong>operations</strong></td><td>1 campaigns / 0 findings</td><td>1 fixed evidence</td><td>1</td><td>1 environment: production / 1 exposure: internal</td><td>1 owner: secops</td><td><span class='badge badge-critical'>Emergency remediation</span></td><td>Clean re-import and fixed evidence before closure</td></tr>
+            <tr><td><strong>edge ingress</strong></td><td>0 campaigns / 0 findings</td><td>1 VEX suppressed</td><td>0</td><td>1 environment: production / 1 exposure: internet facing</td><td>1 owner: edge-team</td><td><span class='badge badge-success'>Evidence validation</span></td><td>Retain VEX or fixed evidence in bundle</td></tr>
           </tbody>
         </table>
       </div>
@@ -342,14 +394,26 @@ tbody tr:last-child td { border-bottom: 0; }
       <p class="eyebrow">Governance</p>
       <h2 id="governance">Governance Exceptions</h2>
       <div class="metric-grid">
-        <div class="metric" data-tone="info"><span>Waivers</span><strong>0</strong></div>
+        <div class="metric" data-tone="info"><span>Waivers</span><strong>1</strong></div>
         <div class="metric" data-tone="info"><span>Expired</span><strong>0</strong></div>
-        <div class="metric" data-tone="warning"><span>Review Due</span><strong>0</strong></div>
-        <div class="metric" data-tone="warning"><span>Expiring Soon</span><strong>0</strong></div>
-        <div class="metric" data-tone="warning"><span>Accepted Findings</span><strong>0</strong></div>
-        <div class="metric" data-tone="info"><span>VEX Suppressed</span><strong>0</strong></div>
-        <div class="metric" data-tone="success"><span>Fixed Findings</span><strong>0</strong></div>
-        <div class="metric" data-tone="info"><span>Under Investigation</span><strong>0</strong></div>
+        <div class="metric" data-tone="warning"><span>Review Due</span><strong>1</strong></div>
+        <div class="metric" data-tone="warning"><span>Expiring Soon</span><strong>1</strong></div>
+        <div class="metric" data-tone="warning"><span>Accepted Findings</span><strong>1</strong></div>
+        <div class="metric" data-tone="info"><span>VEX Suppressed</span><strong>1</strong></div>
+        <div class="metric" data-tone="success"><span>Fixed Findings</span><strong>2</strong></div>
+        <div class="metric" data-tone="info"><span>Under Investigation</span><strong>1</strong></div>
+      </div>
+      <h3>Governed Evidence States</h3>
+      <div class="table-wrap">
+        <table class='compact-table'>
+          <thead><tr><th>State</th><th>Findings</th><th>Required Governance Action</th></tr></thead>
+          <tbody>
+            <tr><td>Accepted risk</td><td>1</td><td>Review owner, expiry and sign-off.</td></tr>
+            <tr><td>VEX suppressed</td><td>1</td><td>Retain VEX evidence and scope.</td></tr>
+            <tr><td>Fixed findings</td><td>2</td><td>Keep validation evidence visible.</td></tr>
+            <tr><td>Under investigation</td><td>1</td><td>Complete investigation before closure.</td></tr>
+          </tbody>
+        </table>
       </div>
       <h3>Accepted Risk and Waiver Review</h3>
       <div class="table-wrap">
@@ -358,7 +422,7 @@ tbody tr:last-child td { border-bottom: 0; }
             <tr><th>Scope</th><th>Owner</th><th>Status</th><th>Expires</th><th>Review</th><th>Matched Findings</th><th>Required Governance Action</th></tr>
           </thead>
           <tbody>
-<tr><td colspan="7" class="empty-state">No accepted-risk waiver debt is currently recorded for this run.</td></tr>
+            <tr><td>service:billing</td><td>risk-owner</td><td><span class="badge badge-warning">review due</span></td><td>2026-05-07</td><td>2026-04-29</td><td>1</td><td>Review now</td></tr>
           </tbody>
         </table>
       </div>
@@ -368,7 +432,7 @@ tbody tr:last-child td { border-bottom: 0; }
     <section aria-labelledby="evidence">
       <p class="eyebrow">Evidence</p>
       <h2 id="evidence">Evidence Confidence and Provider Freshness</h2>
-      <div class='verdict-banner'><p><strong>Evidence confidence:</strong> Provider data is fresh enough for current operational decision support.</p></div>
+      <div class='verdict-banner'><p><strong>Evidence confidence:</strong> Provider data is deterministic evidence for this run. Refresh stale or warning sources before treating the report as current external vulnerability intelligence for formal sign-off.</p></div>
       <div class='table-wrap'>
         <table>
           <thead>
@@ -377,39 +441,47 @@ tbody tr:last-child td { border-bottom: 0; }
           <tbody>
                   <tr><td><strong>Snapshot locked</strong></td><td>Yes</td><td><span class='badge badge-success'>Reproducible</span></td><td>Provider data replay is deterministic for audit and demo. Note: locked provider data guarantees reproducibility but does not automatically mean the data is fresh.</td></tr>
             <tr><td><strong>NVD last sync</strong></td><td>2026-04-28T10:15:00Z</td><td><span class='badge badge-success'>Fresh</span></td><td>Source data is 1 day old at report generation time. Suitable for current operational decision support.</td></tr>
-            <tr><td><strong>EPSS date</strong></td><td>2026-04-28</td><td><span class='badge badge-success'>Fresh</span></td><td>Source data is 1 day old at report generation time. Suitable for current operational decision support.</td></tr>
-            <tr><td><strong>KEV catalog version</strong></td><td>2026-04-28</td><td><span class='badge badge-success'>Fresh</span></td><td>Source data is 1 day old at report generation time. Suitable for current operational decision support.</td></tr>
-            <tr><td><strong>Content hash</strong></td><td><code>sha256:vpw050-snapshot</code></td><td><span class='badge badge-success'>Recorded</span></td><td>Evidence can be verified against the bundle manifest.</td></tr>
+            <tr><td><strong>EPSS date</strong></td><td>2026-04-15</td><td><span class='badge badge-warning'>Warning</span></td><td>Source data is 14 days old at report generation time. Review freshness before executive approval.</td></tr>
+            <tr><td><strong>KEV catalog version</strong></td><td>kev-catalog-v2026.04</td><td><span class='badge badge-warning'>Needs Review</span></td><td>Stored KEV value is not a clear sync timestamp; verify catalog version semantics before making a freshness claim.</td></tr>
+            <tr><td><strong>Content hash</strong></td><td><code>sha256:vpw054-snapshot</code></td><td><span class='badge badge-success'>Recorded</span></td><td>Evidence can be verified against the bundle manifest.</td></tr>
+            <tr><td><strong>Source hashes</strong></td><td>epss: sha256:vpw054-epss, kev: sha256:vpw054-kev, nvd: sha256:vpw054-nvd, provider_snapshot: sha256:vpw054-snapshot</td><td><span class='badge badge-success'>Recorded</span></td><td>Provider source hash entries are available for replay comparison.</td></tr>
             <tr><td><strong>Selected sources</strong></td><td>nvd, epss, kev</td><td><span class='badge badge-success'>Recorded</span></td><td>Vulnerability intelligence sources selected for data enrichment.</td></tr>
-            <tr><td><strong>Evidence bundle manifest</strong></td><td>manifest.json</td><td><span class='badge badge-success'>Fresh</span></td><td>Evidence package manifest is available for validation.</td></tr>
+            <tr><td><strong>Evidence bundle manifest</strong></td><td>manifest.json</td><td><span class='badge badge-info'>Expected</span></td><td>Standalone HTML shows expected bundle contents. Generate the Evidence ZIP to record final manifest hashes.</td></tr>
             <tr><td><strong>Static HTML safety</strong></td><td>No scripts, no external assets, escaped recommendation text</td><td><span class='badge badge-success'>Controlled</span></td><td>Report is suitable for local review and evidence package distribution.</td></tr>
           </tbody>
         </table>
       </div>
       <h3>Raw Provider Metadata</h3>
       <dl class="provider-grid">
-        <div><dt>Snapshot ID</dt><dd>00000000-0000-4000-8000-000000000650</dd></div>
-        <div><dt>Content Hash</dt><dd>sha256:vpw050-snapshot</dd></div>
+        <div><dt>Snapshot ID</dt><dd>00000000-0000-4000-8000-000000000654</dd></div>
+        <div><dt>Content Hash</dt><dd>sha256:vpw054-snapshot</dd></div>
         <div><dt>Locked Provider Data</dt><dd>Yes</dd></div>
         <div><dt>Selected Sources</dt><dd>nvd, epss, kev</dd></div>
-        <div><dt>Source Hash: provider_snapshot</dt><dd>sha256:vpw050-snapshot</dd></div>
+        <div><dt>Source Hash: epss</dt><dd>sha256:vpw054-epss</dd></div>
+        <div><dt>Source Hash: kev</dt><dd>sha256:vpw054-kev</dd></div>
+        <div><dt>Source Hash: nvd</dt><dd>sha256:vpw054-nvd</dd></div>
+        <div><dt>Source Hash: provider_snapshot</dt><dd>sha256:vpw054-snapshot</dd></div>
       </dl>
-            <h3>Evidence Package Contents</h3>
-      <div class='table-wrap'>
-        <table class='compact-table'>
+    </section>
+
+    <section aria-labelledby="evidence-package">
+      <p class="eyebrow">Evidence Bundle</p>
+      <h2 id="evidence-package">Evidence Package Contents</h2>
+            <div class='table-wrap'>
+        <table class='compact-table evidence-package-table'>
           <thead>
-            <tr><th>Artifact File</th><th>Purpose</th><th>Status</th></tr>
+            <tr><th>Artifact File</th><th>Purpose</th><th>Status</th><th>SHA256</th><th>Size / Note</th></tr>
           </thead>
           <tbody>
-            <tr><td><code>manifest.json</code></td><td>Bundle manifest and artifact hash verification.</td><td><span class='badge badge-success'>included</span></td></tr>
-<tr><td><code>executive.html</code></td><td>Decision oriented executive brief.</td><td><span class='badge badge-success'>included</span></td></tr>
-<tr><td><code>technical.md</code></td><td>Detailed analyst handoff with finding rows and rationale.</td><td><span class='badge badge-success'>included</span></td></tr>
-<tr><td><code>analysis.json</code></td><td>Machine readable analysis export.</td><td><span class='badge badge-success'>included</span></td></tr>
-<tr><td><code>findings.csv</code></td><td>Spreadsheet review of findings and owner scope.</td><td><span class='badge badge-success'>included</span></td></tr>
-<tr><td><code>results.sarif</code></td><td>SARIF 2.1.0 integration output.</td><td><span class='badge badge-success'>included</span></td></tr>
-<tr><td><code>provider-snapshot.json</code></td><td>Provider snapshot replay for reproducibility.</td><td><span class='badge badge-success'>included</span></td></tr>
-<tr><td><code>attack-navigator-layer.json</code></td><td>Defensive ATT&amp;CK Navigator layer for mapped findings.</td><td><span class='badge badge-success'>included</span></td></tr>
-<tr><td><code>governance/*.json</code></td><td>Accepted risk, VEX and asset context evidence.</td><td><span class='badge badge-info'>optional</span></td></tr>
+            <tr><td><code>manifest.json</code></td><td>Bundle manifest and artifact hash verification.</td><td><span class='badge badge-info'>expected</span></td><td><code>N/A</code></td><td>Expected when Evidence ZIP is generated.</td></tr>
+<tr><td><code>executive.html</code></td><td>Decision oriented executive brief.</td><td><span class='badge badge-info'>expected</span></td><td><code>N/A</code></td><td>Expected when Evidence ZIP is generated.</td></tr>
+<tr><td><code>technical.md</code></td><td>Detailed analyst handoff with finding rows and rationale.</td><td><span class='badge badge-info'>expected</span></td><td><code>N/A</code></td><td>Expected when Evidence ZIP is generated.</td></tr>
+<tr><td><code>analysis.json</code></td><td>Machine readable analysis export.</td><td><span class='badge badge-info'>expected</span></td><td><code>N/A</code></td><td>Expected when Evidence ZIP is generated.</td></tr>
+<tr><td><code>findings.csv</code></td><td>Spreadsheet review of findings and owner scope.</td><td><span class='badge badge-info'>expected</span></td><td><code>N/A</code></td><td>Expected when Evidence ZIP is generated.</td></tr>
+<tr><td><code>results.sarif</code></td><td>SARIF 2.1.0 integration output.</td><td><span class='badge badge-info'>expected</span></td><td><code>N/A</code></td><td>Expected when Evidence ZIP is generated.</td></tr>
+<tr><td><code>provider-snapshot.json</code></td><td>Provider snapshot replay for reproducibility.</td><td><span class='badge badge-info'>expected</span></td><td><code>N/A</code></td><td>Expected when Evidence ZIP is generated.</td></tr>
+<tr><td><code>attack-navigator-layer.json</code></td><td>Defensive ATT&amp;CK Navigator layer for mapped findings.</td><td><span class='badge badge-success'>included</span></td><td><code>N/A</code></td><td>Generated only when reviewed ATT&amp;CK mappings are available.</td></tr>
+<tr><td><code>governance/*.json</code></td><td>Accepted risk, VEX and asset context evidence.</td><td><span class='badge badge-success'>included</span></td><td><code>N/A</code></td><td>Generated only when governance artifacts are available.</td></tr>
           </tbody>
         </table>
       </div>
@@ -419,8 +491,12 @@ tbody tr:last-child td { border-bottom: 0; }
       <p class="eyebrow">Recommendations</p>
       <h2 id="recommendations">Decision Ready Recommendations</h2>
       <ol class="recommendation-list">
-<li><strong>CVE-2024-3094 / XZ Utils campaign</strong><span>Scope: 1 asset; production; internet facing exposure; services: checkout. Status: 1 open. Recommended action: Patch [open](javascript:alert(1)) now.. SLA: Emergency / 24h. Owners: platform-team. Evidence basis: EPSS 0.846, CVSS 10.</span></li>
-<li><strong>CVE-2021-44228 / Log4Shell remediation campaign</strong><span>Scope: 1 asset; production; internal exposure; services: operations. Status: 1 open. Recommended action: Patch via vendor upgrade.. SLA: Emergency / 24h. Owners: secops. Evidence basis: KEV, EPSS 0.944, CVSS 10, ATT&amp;CK T1190.</span></li>
+<li><strong>CVE-2021-44228 / Log4Shell remediation campaign</strong><span>Scope: 2 assets; production; internal, internet facing exposure; services: identity, operations. Status: 1 open, 1 fixed. Recommended action: Upgrade log4j-core to 2.17.2 and redeploy Identity Gateway.. SLA: Emergency / 24h. Owners: identity-team, secops. Evidence basis: KEV, EPSS 0.944, CVSS 10, ATT&amp;CK T1190.</span></li>
+<li><strong>CVE-2023-34362 / MOVEit transfer campaign</strong><span>Scope: 1 asset; production; external exposure; services: partner file transfer. Status: 1 open. Recommended action: Investigate VEX under-investigation status, validate exposure and patch if affected.. SLA: Emergency / 24h. Owners: soc-team. Evidence basis: KEV, EPSS 0.911, CVSS 9.8.</span></li>
+<li><strong>CVE-2024-3094 / XZ Utils campaign</strong><span>Scope: 1 asset; production; internet facing exposure; services: checkout. Status: 1 open. Recommended action: Upgrade xz package to the validated distro-fixed build.. SLA: Emergency / 24h. Owners: platform-team. Evidence basis: EPSS 0.846, CVSS 10.</span></li>
+<li><strong>CVE-2024-4577 / PHP CGI campaign</strong><span>Scope: 1 asset; production; internal exposure; services: billing. Status: 1 accepted. Recommended action: Review accepted risk and replace the temporary compensating control.. SLA: Emergency / 24h. Owners: risk-owner. Evidence basis: KEV, EPSS 0.037, CVSS 9.8.</span></li>
+<li><strong>CVE-2022-22965 / Spring4Shell remediation campaign</strong><span>Scope: 1 asset; production; internal exposure; services: catalog. Status: 1 fixed. Recommended action: Retain fixed evidence for Spring4Shell closure.. SLA: Emergency / 24h. Owners: catalog-team. Evidence basis: KEV, EPSS 0.024, CVSS 9.8.</span></li>
+<li><strong>CVE-2023-44487 / Edge HTTP/2 campaign</strong><span>Scope: 1 asset; production; internet facing exposure; services: edge ingress. Status: 1 suppressed. Recommended action: Retain VEX evidence and reopen if affected HTTP/2 module is enabled.. SLA: Emergency / 24h. Owners: edge-team. Evidence basis: EPSS 0.018, CVSS 7.5.</span></li>
       </ol>
     </section>
 
@@ -436,10 +512,12 @@ tbody tr:last-child td { border-bottom: 0; }
             <tr><th>Context</th><th>Status</th></tr>
           </thead>
           <tbody>
-            <tr><td><strong>Mapped findings</strong></td><td>1 reviewed mapping records available.</td></tr>
+            <tr><td><strong>Mapped findings</strong></td><td>2 reviewed mapping records available.</td></tr>
 <tr><td><strong>Common techniques</strong></td><td>T1190</td></tr>
+<tr><td><strong>Mapping source</strong></td><td>local-curated</td></tr>
 <tr><td><strong>Navigator layer</strong></td><td>Included in Evidence ZIP</td></tr>
-<tr><td><strong>Unmapped CVEs</strong></td><td>1 remain unmapped. No LLM inferred mappings are used.</td></tr>
+<tr><td><strong>Mappings needing source review</strong></td><td>0 mapping records are not shown as confirmed.</td></tr>
+<tr><td><strong>Unmapped CVEs</strong></td><td>5 remain unmapped. No LLM inferred mappings are used.</td></tr>
           </tbody>
         </table>
       </div>
@@ -447,7 +525,7 @@ tbody tr:last-child td { border-bottom: 0; }
 
     <section aria-labelledby="appendix">
       <p class="eyebrow">Appendix</p>
-      <h2 id="appendix">Technical Markdown Separation</h2>
+      <h2 id="appendix">Technical Appendix note</h2>
       <p class="footer-note">Detailed finding rows, component versions, long remediation text, input provenance, full rationale and per finding actions remain in the Technical Markdown report, Analysis JSON, Findings CSV, SARIF and Evidence ZIP. This Executive HTML report intentionally summarizes the decision path for stakeholder review.</p>
     </section>
   </main>

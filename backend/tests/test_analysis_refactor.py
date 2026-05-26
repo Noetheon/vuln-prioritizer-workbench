@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from vuln_prioritizer.models import (
+    ContextPolicyProfile,
     EnrichmentResult,
     InputOccurrence,
     ParsedInput,
@@ -17,11 +18,16 @@ from vuln_prioritizer.models import (
 )
 from vuln_prioritizer.options import PriorityFilter
 from vuln_prioritizer.services import analysis as service_analysis
-from vuln_prioritizer.services import analysis_pipeline, analysis_provider
-from vuln_prioritizer.services.analysis_pipeline import (
+from vuln_prioritizer.services import (
+    analysis_explain,
+    analysis_findings,
+    analysis_pipeline,
+    analysis_provider,
+)
+from vuln_prioritizer.services.analysis_quality import attach_provider_data_quality_flags
+from vuln_prioritizer.services.analysis_snapshot import (
     _provider_snapshot_hash,
     _provider_snapshot_metadata_path,
-    attach_provider_data_quality_flags,
 )
 
 
@@ -308,13 +314,13 @@ def test_build_findings_wraps_provider_and_defensive_context_errors(
         def enrich(self, *_args: object, **_kwargs: object) -> EnrichmentResult:
             raise ValueError("provider snapshot is malformed")
 
-    monkeypatch.setattr(analysis_pipeline, "EnrichmentService", FailingEnrichmentService)
+    monkeypatch.setattr(analysis_findings, "EnrichmentService", FailingEnrichmentService)
     with pytest.raises(service_analysis.AnalysisInputError, match="provider snapshot is malformed"):
         analysis_pipeline.build_findings(
             parsed_input.unique_cves,
             policy=PriorityPolicy(),
             parsed_input=parsed_input,
-            context_profile=analysis_pipeline.ContextPolicyProfile(),
+            context_profile=ContextPolicyProfile(),
             attack_enabled=False,
             attack_source="none",
             attack_mapping_file=None,
@@ -338,9 +344,9 @@ def test_build_findings_wraps_provider_and_defensive_context_errors(
     def fail_defensive_context(_path: Path | None) -> object:
         raise ValueError("defensive context is malformed")
 
-    monkeypatch.setattr(analysis_pipeline, "EnrichmentService", SuccessfulEnrichmentService)
+    monkeypatch.setattr(analysis_findings, "EnrichmentService", SuccessfulEnrichmentService)
     monkeypatch.setattr(
-        analysis_pipeline,
+        analysis_findings,
         "load_defensive_context_file",
         fail_defensive_context,
     )
@@ -349,7 +355,7 @@ def test_build_findings_wraps_provider_and_defensive_context_errors(
             parsed_input.unique_cves,
             policy=PriorityPolicy(),
             parsed_input=parsed_input,
-            context_profile=analysis_pipeline.ContextPolicyProfile(),
+            context_profile=ContextPolicyProfile(),
             attack_enabled=False,
             attack_source="none",
             attack_mapping_file=None,
@@ -466,7 +472,7 @@ def test_prepare_explain_honors_suppressed_visibility(
     ) -> tuple[list[PrioritizedFinding], dict[str, int], EnrichmentResult]:
         return [suppressed], {"High": 1}, EnrichmentResult()
 
-    monkeypatch.setattr(analysis_pipeline, "build_findings", suppressed_finding)
+    monkeypatch.setattr(analysis_explain, "build_findings", suppressed_finding)
 
     with pytest.raises(service_analysis.AnalysisNoFindingsError, match="No finding"):
         analysis_pipeline.prepare_explain(_explain_request(tmp_path, show_suppressed=False))

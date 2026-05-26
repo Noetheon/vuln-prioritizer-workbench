@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 
 from app import models as app_models
-from app.api.routes.findings import (
+from app.services.finding_projection import (
     _finding_attack_context_detail_public,
     _finding_occurrence_public,
 )

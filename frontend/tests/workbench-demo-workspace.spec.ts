@@ -155,7 +155,9 @@ const demoReportArtifacts = [
     filename: "technical-report.md",
     minimumBytes: 1_000,
     assertContent(bytes: Buffer) {
-      expect(bytes.toString("utf-8")).toContain("# Technical Vulnerability Report")
+      expect(bytes.toString("utf-8")).toContain(
+        "# Technical Vulnerability Report",
+      )
     },
   },
   {
@@ -164,7 +166,8 @@ const demoReportArtifacts = [
     assertContent(bytes: Buffer) {
       const content = bytes.toString("utf-8")
       expect(content).toContain("<!doctype html>")
-      expect(content).toContain("Executive Summary")
+      expect(content).toContain("Decision Brief")
+      expect(content).not.toContain("Executive Summary")
     },
   },
   {

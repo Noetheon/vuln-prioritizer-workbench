@@ -173,6 +173,7 @@ def workbench_occurrence_with_vex(
 
 
 def asset_exposure_from_evidence(evidence: Mapping[str, Any]) -> AssetExposure:
+    """Asset exposure from evidence function."""
     canonical = canonicalize_asset_exposure_value(string_evidence(evidence, "asset_exposure"))
     return {
         "internet-facing": AssetExposure.INTERNET_FACING,
@@ -182,6 +183,7 @@ def asset_exposure_from_evidence(evidence: Mapping[str, Any]) -> AssetExposure:
 
 
 def asset_environment_from_evidence(evidence: Mapping[str, Any]) -> AssetEnvironment:
+    """Asset environment from evidence function."""
     canonical = canonicalize_asset_environment_value(string_evidence(evidence, "asset_environment"))
     return {
         "prod": AssetEnvironment.PRODUCTION,
@@ -195,6 +197,7 @@ def asset_environment_from_evidence(evidence: Mapping[str, Any]) -> AssetEnviron
 
 
 def asset_criticality_from_evidence(evidence: Mapping[str, Any]) -> AssetCriticality:
+    """Asset criticality from evidence function."""
     canonical = canonicalize_asset_criticality_value(string_evidence(evidence, "asset_criticality"))
     return {
         "critical": AssetCriticality.CRITICAL,
@@ -206,6 +209,7 @@ def asset_criticality_from_evidence(evidence: Mapping[str, Any]) -> AssetCritica
 
 
 def canonicalize_asset_criticality_value(value: str | None) -> str | None:
+    """Canonicalize asset criticality value function."""
     if _is_unknown(value):
         return _UNKNOWN
     return _core_normalize_asset_criticality(
@@ -216,6 +220,7 @@ def canonicalize_asset_criticality_value(value: str | None) -> str | None:
 
 
 def canonicalize_asset_exposure_value(value: str | None) -> str | None:
+    """Canonicalize asset exposure value function."""
     if _is_unknown(value):
         return _UNKNOWN
     return _core_normalize_asset_exposure(
@@ -226,6 +231,7 @@ def canonicalize_asset_exposure_value(value: str | None) -> str | None:
 
 
 def canonicalize_asset_environment_value(value: str | None) -> str | None:
+    """Canonicalize asset environment value function."""
     if _is_unknown(value):
         return _UNKNOWN
     return _core_normalize_asset_environment(
@@ -236,11 +242,13 @@ def canonicalize_asset_environment_value(value: str | None) -> str | None:
 
 
 def string_evidence(evidence: Mapping[str, Any], key: str) -> str | None:
+    """String evidence function."""
     value = evidence.get(key)
     return str(value) if value else None
 
 
 def string_list_evidence(evidence: Mapping[str, Any], key: str) -> list[str]:
+    """String list evidence function."""
     value = evidence.get(key)
     if isinstance(value, list):
         return [item.strip() for item in value if isinstance(item, str) and item.strip()]
@@ -248,6 +256,7 @@ def string_list_evidence(evidence: Mapping[str, Any], key: str) -> list[str]:
 
 
 def int_evidence(evidence: Mapping[str, Any], key: str) -> int | None:
+    """Int evidence function."""
     value = evidence.get(key)
     if value is None or value == "":
         return None
@@ -262,10 +271,12 @@ def _canonicalize_evidence_key(
     key: str,
     canonicalizer: Callable[[str | None], str | None],
 ) -> None:
+    """Canonicalize evidence key function."""
     canonical = canonicalizer(string_evidence(evidence, key))
     if canonical is not None:
         evidence[key] = canonical
 
 
 def _is_unknown(value: str | None) -> bool:
+    """Is unknown function."""
     return value is not None and value.strip().lower().replace("_", "-") == _UNKNOWN

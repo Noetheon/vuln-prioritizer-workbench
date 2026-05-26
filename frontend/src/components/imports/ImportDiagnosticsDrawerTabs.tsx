@@ -21,7 +21,6 @@ import {
   formatDisplayType,
   jsonPreview,
   metadataRows,
-  objectRecord,
   runFileLabel,
 } from "./imports-workbench-model"
 
@@ -35,7 +34,6 @@ export function ImportDiagnosticsDrawerTabs({
   summary,
 }: ImportDiagnosticsDrawerTabsProps) {
   const parseErrors = summary.parse_errors ?? []
-  const summaryJson = objectRecord(summary.summary_json)
   const rawJson = jsonPreview({ run, summary })
   const uploadRows = metadataRows(summary.input_upload).map(([label, value]) => ({
     label,
@@ -59,7 +57,10 @@ export function ImportDiagnosticsDrawerTabs({
     },
     {
       label: "Locked replay",
-      value: stringValue(summary.input_upload, "locked_provider_data") ?? "Not recorded",
+      value:
+        booleanLabel(summary.locked_provider_data) ??
+        stringValue(summary.input_upload, "locked_provider_data") ??
+        "Not recorded",
     },
   ]
 
@@ -139,13 +140,13 @@ export function ImportDiagnosticsDrawerTabs({
           <CompactRows
             items={[
               { label: "Parser status", value: runStatusLabel(summary.status) },
-              { label: "Rows read", value: recordedValue(summaryJson.rows_read) },
+              { label: "Rows read", value: recordedValue(summary.rows_read) },
               { label: "Created findings", value: summary.created_findings ?? 0 },
               { label: "Updated findings", value: summary.updated_findings ?? 0 },
               { label: "Finding count", value: summary.finding_count ?? 0 },
               { label: "Ignored lines", value: summary.ignored_lines ?? 0 },
               { label: "Parser errors", value: parseErrors.length },
-              { label: "Warnings", value: warningCount(summaryJson) },
+              { label: "Warnings", value: warningCount(summary.warnings) },
             ]}
           />
           {parseErrors.length > 0 ? (
@@ -188,4 +189,9 @@ export function ImportDiagnosticsDrawerTabs({
       </TabsContent>
     </Tabs>
   )
+}
+
+function booleanLabel(value: boolean | null | undefined) {
+  if (typeof value !== "boolean") return null
+  return value ? "Yes" : "No"
 }

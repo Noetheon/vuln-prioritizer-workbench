@@ -21,6 +21,8 @@ import {
   assetLabel,
   componentLabel,
   findingActionLabel,
+  findingWhyNow,
+  findingWhyNowCompact,
   formatDateTime,
   formatShortDate,
   findingSlaLabel,
@@ -61,10 +63,10 @@ export function buildFindingsDataTableColumns({
       cell: (finding) => (
         <RiskBadge density="compact" level={finding.priority} />
       ),
-      className: "w-[9%]",
-      headerClassName: "w-[9%]",
+      className: "w-[8%]",
+      headerClassName: "w-[8%]",
       sort: sortable("priority", "Priority"),
-      width: "9%",
+      width: "8%",
     },
     {
       id: "score",
@@ -73,10 +75,10 @@ export function buildFindingsDataTableColumns({
       cell: (finding) => (
         <RiskScoreBadge density="compact" value={finding.risk_score} />
       ),
-      className: "w-[7%]",
-      headerClassName: "w-[7%]",
+      className: "w-[6%]",
+      headerClassName: "w-[6%]",
       sort: sortable("score", "Score"),
-      width: "7%",
+      width: "6%",
     },
     {
       id: "finding",
@@ -112,10 +114,10 @@ export function buildFindingsDataTableColumns({
           </div>
         )
       },
-      className: "w-[20%] min-w-0",
-      headerClassName: "w-[20%]",
+      className: "w-[17%] min-w-0",
+      headerClassName: "w-[17%]",
       sort: sortable("cve", "Finding"),
-      width: "20%",
+      width: "17%",
     },
     {
       id: "asset",
@@ -142,10 +144,10 @@ export function buildFindingsDataTableColumns({
           </div>
         </div>
       ),
-      className: "w-[18%] min-w-0",
-      headerClassName: "w-[18%]",
+      className: "w-[15%] min-w-0",
+      headerClassName: "w-[15%]",
       sort: sortable("component", "Asset / Service"),
-      width: "18%",
+      width: "15%",
     },
     {
       id: "owner",
@@ -156,10 +158,10 @@ export function buildFindingsDataTableColumns({
           <strong>{ownerLabel(finding)}</strong>
         </div>
       ),
-      className: "w-[11%]",
-      headerClassName: "w-[11%]",
+      className: "w-[9%]",
+      headerClassName: "w-[9%]",
       sort: sortable("owner", "Owner"),
-      width: "11%",
+      width: "9%",
     },
     {
       id: "signals",
@@ -179,10 +181,10 @@ export function buildFindingsDataTableColumns({
           {finding.suppressed_by_vex ? <SignalChip kind="vex" /> : null}
         </VpwSignalCluster>
       ),
-      className: "w-[14%]",
-      headerClassName: "w-[14%]",
+      className: "w-[13%]",
+      headerClassName: "w-[13%]",
       sort: sortable("epss", "Signals"),
-      width: "14%",
+      width: "13%",
     },
     {
       id: "status",
@@ -206,10 +208,25 @@ export function buildFindingsDataTableColumns({
           </div>
         </div>
       ),
-      className: "w-[14%]",
-      headerClassName: "w-[14%]",
+      className: "w-[12%]",
+      headerClassName: "w-[12%]",
       sort: sortable("status", "Status / SLA"),
-      width: "14%",
+      width: "12%",
+    },
+    {
+      id: "why",
+      header: "Why now",
+      cell: (finding) => {
+        const whyNow = findingWhyNow(finding)
+        return (
+          <span className="vpw-table-cell-clamp-copy" title={whyNow}>
+            {findingWhyNowCompact(finding)}
+          </span>
+        )
+      },
+      className: "w-[15%] min-w-0",
+      headerClassName: "w-[15%]",
+      width: "15%",
     },
     {
       id: "view",

@@ -110,23 +110,44 @@ The run can be saved before any findings exist. This supports creating a durable
 record as soon as an upload/import starts, then appending summary data and
 occurrences after parsing and enrichment complete.
 
-Workbench import runs expose a stable API summary at
-`GET /api/v1/runs/{run_id}/summary`. The endpoint derives these UI fields from
-`summary_json` and `error_json` without changing the stored schema:
+Workbench import runs expose stable workflow metadata through
+`run-workflow-summary.v1` and `run-workflow-error.v1`. The API still stores the
+raw metadata in `summary_json` and `error_json`, but writers validate and merge
+through the versioned contract, and public responses project typed top-level
+fields onto both run-list and run-summary responses.
+
+`GET /api/v1/runs/{run_id}/summary` derives these UI fields from the typed
+workflow contract without requiring clients to parse raw JSON:
 
 - `created_findings`
 - `updated_findings`
 - `ignored_lines`
+- `rows_read`
 - `occurrence_count`
 - `finding_count`
+- `counts_by_priority`
+- `kev_hits`
 - `parse_errors`
 - `import_job`
 - `input_upload`
+- `asset_context_upload`
+- `vex_upload`
 - `dedup_summary`
+- `locked_provider_data`
+- `provider_snapshot_file`
+- `provider_snapshot_hash`
+- `attack_source`
+- `attack_mapped_cves`
+- `attack_mapping_file`
+- `analysis_error`
 
 `parse_errors` contain `input_type`, `filename`, `message`, and `error_type`.
 They may also contain a 1-based `line`, logical `field`, and rejected `value`
 when that detail is available from the importer error.
+
+The raw JSON columns remain part of the public response for diagnostics and
+legacy records only. New Workbench client logic should use the typed workflow
+fields.
 
 ### `finding_occurrence`
 

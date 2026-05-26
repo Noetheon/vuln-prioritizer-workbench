@@ -12,6 +12,12 @@ The repository ships releases through:
 - checked-in release notes under `docs/releases/`
 - GitHub Release artifacts built from the tagged tree
 
+Release evidence must use the exact tag or commit. The repository contains
+inherited historical/template-line `0.x` tags, so `0.x` names in older roadmap
+or changelog material are not sufficient proof of current VPW behavior. Verify
+the exact tag with `git for-each-ref refs/tags` and prefer the current VPW
+package release tag `v1.1.0` for Workbench-era release evidence.
+
 The current package metadata uses `Development Status :: 4 - Beta`, meaning
 local-first self-hosted Workbench readiness, with shared domain code in the
 package, but without public-production certification. Changing that

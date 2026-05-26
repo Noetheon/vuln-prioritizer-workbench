@@ -25,8 +25,10 @@ This follow-up adds one local curated demo mapping fixture for the final demo fl
 
 ## Evidence
 
-- Screenshot: `archive/vpw-evidence/final-demo-flow/06-ttp-context-mapped-demo.png`
 - Mapping fixture: `data/attack/local_curated_demo_mappings.yml`
+- Screenshot status: the original historical screenshot was pruned from `main`
+  during the 2026-05-25 archive trim. Regenerate a fresh Playwright screenshot
+  when current UI evidence is needed.
 
 ## Safety Notes
 

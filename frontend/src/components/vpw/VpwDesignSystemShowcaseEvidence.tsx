@@ -43,7 +43,6 @@ export function VpwDesignSystemShowcaseEvidence() {
           title="Evidence Bundle"
         />
         <VpwEvidenceManifestCard
-          demo
           files={[
             { path: "reports/executive.html", label: "HTML" },
             { path: "reports/technical.md", label: "Markdown" },
@@ -52,8 +51,8 @@ export function VpwDesignSystemShowcaseEvidence() {
           generatedAt="2026-05-02 23:48"
           project="Payments Service"
           providerSources="NVD, EPSS, KEV"
-          runId="demo-run-0001"
-          verificationStatus="Demo preview"
+          runId="sample-run-0001"
+          verificationStatus="Ready for verification"
         />
       </section>
 
@@ -126,7 +125,6 @@ export function VpwDesignSystemShowcaseEvidence() {
         <VpwExecutiveDecisionSummary
           businessImpact="Public-facing service exposure raises operational risk."
           decisionStatement="Approve immediate remediation for critical KEV findings and review accepted-risk waivers weekly."
-          demo
           priority="Critical"
           problem="Known exploited vulnerabilities are present in priority services."
           recommendation="Patch exposed critical findings first, then generate evidence bundle."
@@ -160,7 +158,7 @@ export function VpwDesignSystemShowcaseEvidence() {
           />
           <VpwProgress label="Evidence readiness" tone="success" value={82} />
           <VpwProgress label="Residual risk" tone="critical" value={64} />
-          <VpwChecksum demo value="Demo preview - not a production checksum" />
+          <VpwChecksum value="sha256:sample-recorded-checksum" />
           <VpwCodeBlock
             code={`{
   "project": "Payments Service",

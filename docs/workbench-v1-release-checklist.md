@@ -16,8 +16,8 @@ candidate-specific public deployment scorecard.
 - Historical implementation baseline before the first docs closeout: `f5db33f58aa14eba23daa47b38def71b243466a3`.
 - GitHub tracker issues `#2`-`#79` are closed, and Workbench milestones `v0.5` through `v1.2` have zero open issues.
 - Implementation closeout GitHub checks for CI, CodeQL, and Docker completed successfully on `f5db33f58aa14eba23daa47b38def71b243466a3`.
-- Local closeout gates recorded for the implementation baseline: `make check` (`407 passed, 2 skipped`, 90.07% coverage), `make release-check`, `make demo-evidence-bundle-check`, and `make dependency-audit`.
-- The post-release docs closeout pass also passed `make docs-check`, `make demo-evidence-bundle-check`, `make dependency-audit`, `make docker-demo-smoke`, and `make release-check` on 2026-04-25.
+- Local closeout gates recorded for the implementation baseline: `make check` (`407 passed, 2 skipped`, 90.07% coverage), `make release-check`, historical `make demo-evidence-bundle-check`, and `make dependency-audit`.
+- The post-release docs closeout pass also passed `make docs-check`, historical `make demo-evidence-bundle-check`, `make dependency-audit`, `make docker-demo-smoke`, and `make release-check` on 2026-04-25.
 - Post-release security and CodeQL hygiene through `50c3620fba76c343c8aadd3564b926937579f01b` left `main` green for CI, CodeQL, and Docker with zero open code-scanning alerts.
 - `python3 -m pip check` is not used as release evidence in the shared user-site environment because unrelated globally installed packages conflict with each other outside this project.
 - Public package tag and GitHub Release object: `v1.1.0` published from `23199ef85fb9ac08b9bb0e301b2aadbf3377f791`.
@@ -78,11 +78,17 @@ make performance-smoke
 ## Demo Evidence Bundle
 
 - [x] Run the locked-provider Workbench demo path from `docs/workbench-offline-demo.md`.
-- [x] Generate and verify the Workbench demo evidence bundle:
+- [x] Generate and verify the Workbench demo evidence bundle with the
+  then-active historical target:
 
 ```bash
 make demo-evidence-bundle-check
 ```
+
+Current `main` no longer exposes `make demo-evidence-bundle-check`; current
+evidence bundle validation is covered by Workbench report/evidence service
+tests, `make docs-check`, `make local-workbench-check`, and the
+archive/evidence gates in `docs/documentation-evidence-matrix.md`.
 
 - [x] Import the documented fixture input with the locked provider snapshot enabled.
 - [x] Generate JSON, Markdown, HTML, CSV where supported, and Evidence ZIP artifacts.
@@ -177,7 +183,9 @@ make docker-demo-smoke
 ```
 
 - [x] Run `make workflow-check` before merge or tagging when Docker and pre-commit tooling are available.
-- [x] Run `make demo-sync-check-temp` before tagging when examples or report outputs changed.
+- [x] Historically ran `make demo-sync-check-temp` before tagging when examples
+  or report outputs changed. Current `main` should use the active docs,
+  archive-manifest, package, and report-contract checks instead.
 - [x] Confirm normal CI/TestPyPI workflows use read-only repository permissions by default and that the release workflow scopes `contents: write` only to the job that publishes GitHub Release assets.
 - [x] Confirm release workflow configuration still builds distributions, validates them, creates the GitHub Release from checked-in notes, and only publishes to PyPI when the repository gate allows it.
 - [x] Confirm the tagged release notes file exists under `docs/releases/`.
@@ -223,7 +231,7 @@ The v1.0 release must keep these boundaries visible in docs, UI copy, examples, 
 | --- | --- | --- | --- |
 | Compose quickstart | `make docker-demo-smoke`; GitHub Docker workflow green on `main` | Codex technical validation | 2026-04-25 |
 | Screenshot set | `docs/examples/media/workbench-*.png` | Codex technical validation | 2026-04-25 |
-| Evidence bundle verification | `make demo-evidence-bundle-check`; hashes recorded in Workbench and v1.1 release notes | Codex technical validation | 2026-04-25 |
+| Evidence bundle verification | Historical `make demo-evidence-bundle-check`; hashes recorded in Workbench and v1.1 release notes. Current `main` validates evidence bundles through active Workbench report/evidence tests and archive-manifest gates. | Codex technical validation | 2026-04-25 |
 | Dependency audit | `make dependency-audit`; current gate covers Python lock hygiene, `backend/requirements.lock.txt`, `backend/requirements.runtime.lock.txt`, and `frontend/package-lock.json` runtime plus dev/build-chain dependencies | Codex technical validation | 2026-04-25 |
 | Release gates | `make release-check`; GitHub CI/CodeQL/Docker green on `main` | Codex technical validation | 2026-04-25 |
 | Changelog and release notes | `CHANGELOG.md`, `docs/releases/workbench-v1.0.0.md`, `docs/releases/v1.1.0.md` | Codex technical validation | 2026-04-25 |

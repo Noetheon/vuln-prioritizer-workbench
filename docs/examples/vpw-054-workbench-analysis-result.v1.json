@@ -11,14 +11,25 @@
     "status": "completed",
     "summary": {
       "counts_by_priority": {
-        "Critical": 1,
-        "High": 1
+        "Critical": 3,
+        "High": 4
       },
-      "finding_count": 2
+      "finding_count": 7
     }
   },
   "explanations": {
     "CVE-2021-44228": {
+      "attack_context": {
+        "mapped": true,
+        "mappings": [
+          {
+            "technique_id": "T1190",
+            "technique_name": "Exploit Public-Facing Application"
+          }
+        ],
+        "review_status": "reviewed",
+        "source": "local-curated"
+      },
       "attack_techniques": [
         "T1190"
       ],
@@ -27,14 +38,152 @@
         "recommendation_label": "Patch"
       }
     },
+    "CVE-2023-34362": {
+      "vex_source_format": "openvex",
+      "vex_source_record_id": "VEX-054-MOVEIT",
+      "vex_status": "under_investigation",
+      "vex_statuses": {
+        "under_investigation": 1
+      }
+    },
+    "CVE-2023-44487": {
+      "vex_justification": "vulnerable_code_not_in_execute_path",
+      "vex_source_format": "openvex",
+      "vex_source_record_id": "VEX-054-EDGE",
+      "vex_status": "not_affected",
+      "vex_statuses": {
+        "not_affected": 1
+      }
+    },
     "CVE-2024-3094": {
+      "attack_context": {
+        "mapped": false,
+        "review_status": "unmapped",
+        "source": null
+      },
       "decision_guidance": {
         "decision_statement": "Decision Statement: patch CVE-2024-3094 on Payments API within the emergency SLA.",
         "recommendation_label": "Patch"
       }
+    },
+    "CVE-2024-4577": {
+      "waiver": {
+        "waiver_approval_ref": "CAB-054",
+        "waiver_expires_on": "2026-05-07",
+        "waiver_id": "00000000-0000-4000-8000-000000000545",
+        "waiver_owner": "risk-owner",
+        "waiver_review_on": "2026-04-29",
+        "waiver_scope": "service:billing",
+        "waiver_status": "review_due"
+      },
+      "waiver_expires_on": "2026-05-07",
+      "waiver_owner": "risk-owner",
+      "waiver_review_on": "2026-04-29",
+      "waiver_status": "review_due"
     }
   },
   "findings": [
+    {
+      "asset": {
+        "asset_key": "identity-gateway",
+        "business_service": "identity",
+        "criticality": "critical",
+        "environment": "prod",
+        "exposure": "internet-facing",
+        "label": "Identity Gateway",
+        "owner": "identity-team"
+      },
+      "attack_mapped": true,
+      "component": {
+        "label": "log4j-core 2.14.1",
+        "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
+      },
+      "created_at": "2026-04-29T11:00:00Z",
+      "cve_id": "CVE-2021-44228",
+      "cvss_base_score": 10.0,
+      "data_quality": {
+        "confidence": "medium",
+        "flags": [
+          "missing_asset_owner - Owner is not set"
+        ],
+        "raw": {
+          "confidence": "medium",
+          "flags": [
+            {
+              "code": "missing_asset_owner",
+              "message": "Owner is not set"
+            }
+          ]
+        }
+      },
+      "dedup_key": "vpw054-log4shell-identity-open",
+      "epss": 0.944,
+      "evidence": {
+        "source": "snapshot"
+      },
+      "explanation": {
+        "attack_context": {
+          "mapped": true,
+          "mappings": [
+            {
+              "technique_id": "T1190",
+              "technique_name": "Exploit Public-Facing Application"
+            }
+          ],
+          "review_status": "reviewed",
+          "source": "local-curated"
+        },
+        "attack_techniques": [
+          "T1190"
+        ],
+        "decision_guidance": {
+          "decision_statement": "Decision Statement: patch after owner validation.",
+          "recommendation_label": "Patch"
+        }
+      },
+      "first_seen_at": "2026-04-29T11:00:00Z",
+      "id": "00000000-0000-4000-8000-000000000542",
+      "in_kev": true,
+      "last_seen_at": "2026-04-29T11:30:00Z",
+      "occurrences": [
+        {
+          "analysis_run_id": "00000000-0000-4000-8000-000000000050",
+          "evidence": {
+            "line": 2
+          },
+          "id": "00000000-0000-4000-8000-000000000602",
+          "raw_reference": "CVE-2021-44228",
+          "source": "cve-list"
+        }
+      ],
+      "operational_rank": 1,
+      "priority": "Critical",
+      "priority_rank": 1,
+      "priority_raw": "critical",
+      "recommendation": {
+        "business_impact": "Operational tooling exposure requires management visibility.",
+        "decision_guidance": {
+          "decision_statement": "Decision Statement: patch after owner validation.",
+          "recommendation_label": "Patch"
+        },
+        "decision_sla": "Emergency / 24h",
+        "decision_statement": "Decision Statement: approve emergency remediation for Log4Shell on Identity Gateway and require clean re-import evidence.",
+        "rationale": "CISA KEV listing and vulnerable component evidence.",
+        "recommended_action": "Upgrade log4j-core to 2.17.2 and redeploy Identity Gateway."
+      },
+      "risk_score": 94.2,
+      "status": "open",
+      "suppressed_by_vex": false,
+      "under_investigation": false,
+      "updated_at": "2026-04-29T11:30:00Z",
+      "vulnerability": {
+        "provider": {
+          "kev": true
+        },
+        "severity": "CRITICAL"
+      },
+      "waived": false
+    },
     {
       "asset": {
         "asset_key": "payments-api",
@@ -61,19 +210,24 @@
           "flags": []
         }
       },
-      "dedup_key": "vpw050-xz",
+      "dedup_key": "vpw054-xz-payments-open",
       "epss": 0.846,
       "evidence": {
         "source": "snapshot"
       },
       "explanation": {
+        "attack_context": {
+          "mapped": false,
+          "review_status": "unmapped",
+          "source": null
+        },
         "decision_guidance": {
           "decision_statement": "Decision Statement: patch CVE-2024-3094 on Payments API within the emergency SLA.",
           "recommendation_label": "Patch"
         }
       },
       "first_seen_at": "2026-04-29T11:00:00Z",
-      "id": "00000000-0000-4000-8000-000000000501",
+      "id": "00000000-0000-4000-8000-000000000541",
       "in_kev": false,
       "last_seen_at": "2026-04-29T11:30:00Z",
       "occurrences": [
@@ -87,7 +241,7 @@
           "source": "cve-list"
         }
       ],
-      "operational_rank": 1,
+      "operational_rank": 2,
       "priority": "Critical",
       "priority_rank": 1,
       "priority_raw": "critical",
@@ -98,9 +252,9 @@
           "recommendation_label": "Patch"
         },
         "decision_sla": "Emergency / 24h",
-        "decision_statement": "Decision Statement: patch CVE-2024-3094 on Payments API within the emergency SLA.",
+        "decision_statement": "Decision Statement: approve emergency remediation for CVE-2024-3094 on the internet-facing Payments API.",
         "rationale": "Internet-facing production asset with critical score.",
-        "recommended_action": "Patch [open](javascript:alert(1)) now."
+        "recommended_action": "Upgrade xz package to the validated distro-fixed build."
       },
       "risk_score": 100.0,
       "status": "open",
@@ -110,6 +264,330 @@
       "vulnerability": {
         "provider": {
           "nvd": "locked"
+        },
+        "severity": "CRITICAL"
+      },
+      "waived": false
+    },
+    {
+      "asset": {
+        "asset_key": "file-transfer-gateway",
+        "business_service": "partner file transfer",
+        "criticality": "critical",
+        "environment": "prod",
+        "exposure": "external",
+        "label": "File Transfer Gateway",
+        "owner": "soc-team"
+      },
+      "attack_mapped": false,
+      "component": {
+        "label": "moveit-transfer 2023.0",
+        "purl": "pkg:generic/moveit-transfer@2023.0"
+      },
+      "created_at": "2026-04-29T11:00:00Z",
+      "cve_id": "CVE-2023-34362",
+      "cvss_base_score": 9.8,
+      "data_quality": {
+        "confidence": "high",
+        "flags": [],
+        "raw": {
+          "confidence": "high",
+          "flags": []
+        }
+      },
+      "dedup_key": "vpw054-moveit-investigation",
+      "epss": 0.911,
+      "evidence": {
+        "source": "snapshot"
+      },
+      "explanation": {
+        "vex_source_format": "openvex",
+        "vex_source_record_id": "VEX-054-MOVEIT",
+        "vex_status": "under_investigation",
+        "vex_statuses": {
+          "under_investigation": 1
+        }
+      },
+      "first_seen_at": "2026-04-29T11:00:00Z",
+      "id": "00000000-0000-4000-8000-000000000547",
+      "in_kev": true,
+      "last_seen_at": "2026-04-29T11:30:00Z",
+      "occurrences": [
+        {
+          "analysis_run_id": "00000000-0000-4000-8000-000000000050",
+          "evidence": {
+            "line": 1
+          },
+          "id": "00000000-0000-4000-8000-000000000601",
+          "raw_reference": "CVE-2024-3094",
+          "source": "cve-list"
+        }
+      ],
+      "operational_rank": 3,
+      "priority": "Critical",
+      "priority_rank": 2,
+      "priority_raw": "critical",
+      "recommendation": {
+        "business_impact": "Checkout traffic depends on the affected service.",
+        "decision_guidance": {},
+        "decision_sla": "Emergency / 24h",
+        "decision_statement": "Decision Statement: keep CVE-2023-34362 actionable until investigation evidence closes.",
+        "rationale": "Internet-facing production asset with critical score.",
+        "recommended_action": "Investigate VEX under-investigation status, validate exposure and patch if affected."
+      },
+      "risk_score": 88.0,
+      "status": "open",
+      "suppressed_by_vex": true,
+      "under_investigation": true,
+      "updated_at": "2026-04-29T11:30:00Z",
+      "vulnerability": {
+        "provider": {
+          "nvd": "locked"
+        },
+        "severity": "CRITICAL"
+      },
+      "waived": false
+    },
+    {
+      "asset": {
+        "asset_key": "billing-worker",
+        "business_service": "billing",
+        "criticality": "medium",
+        "environment": "prod",
+        "exposure": "internal",
+        "label": "Billing Worker",
+        "owner": "risk-owner"
+      },
+      "attack_mapped": false,
+      "component": {
+        "label": "php-cgi 8.2.18",
+        "purl": "pkg:generic/php-cgi@8.2.18"
+      },
+      "created_at": "2026-04-29T11:00:00Z",
+      "cve_id": "CVE-2024-4577",
+      "cvss_base_score": 9.8,
+      "data_quality": {
+        "confidence": "high",
+        "flags": [],
+        "raw": {
+          "confidence": "high",
+          "flags": []
+        }
+      },
+      "dedup_key": "vpw054-php-billing-accepted",
+      "epss": 0.037,
+      "evidence": {
+        "source": "snapshot"
+      },
+      "explanation": {
+        "waiver": {
+          "waiver_approval_ref": "CAB-054",
+          "waiver_expires_on": "2026-05-07",
+          "waiver_id": "00000000-0000-4000-8000-000000000545",
+          "waiver_owner": "risk-owner",
+          "waiver_review_on": "2026-04-29",
+          "waiver_scope": "service:billing",
+          "waiver_status": "review_due"
+        },
+        "waiver_expires_on": "2026-05-07",
+        "waiver_owner": "risk-owner",
+        "waiver_review_on": "2026-04-29",
+        "waiver_status": "review_due"
+      },
+      "first_seen_at": "2026-04-29T11:00:00Z",
+      "id": "00000000-0000-4000-8000-000000000544",
+      "in_kev": true,
+      "last_seen_at": "2026-04-29T11:30:00Z",
+      "occurrences": [
+        {
+          "analysis_run_id": "00000000-0000-4000-8000-000000000050",
+          "evidence": {
+            "line": 1
+          },
+          "id": "00000000-0000-4000-8000-000000000601",
+          "raw_reference": "CVE-2024-3094",
+          "source": "cve-list"
+        }
+      ],
+      "operational_rank": 4,
+      "priority": "High",
+      "priority_rank": 3,
+      "priority_raw": "high",
+      "recommendation": {
+        "business_impact": "Checkout traffic depends on the affected service.",
+        "decision_guidance": {},
+        "decision_sla": "Emergency / 24h",
+        "decision_statement": "Decision Statement: review accepted risk for CVE-2024-4577 before sign-off.",
+        "rationale": "Internet-facing production asset with critical score.",
+        "recommended_action": "Review accepted risk and replace the temporary compensating control."
+      },
+      "risk_score": 72.5,
+      "status": "accepted",
+      "suppressed_by_vex": false,
+      "under_investigation": false,
+      "updated_at": "2026-04-29T11:30:00Z",
+      "vulnerability": {
+        "provider": {
+          "nvd": "locked"
+        },
+        "severity": "CRITICAL"
+      },
+      "waived": true
+    },
+    {
+      "asset": {
+        "asset_key": "edge-proxy",
+        "business_service": "edge ingress",
+        "criticality": "high",
+        "environment": "prod",
+        "exposure": "internet-facing",
+        "label": "Edge Proxy",
+        "owner": "edge-team"
+      },
+      "attack_mapped": false,
+      "component": {
+        "label": "nginx 1.25",
+        "purl": "pkg:generic/nginx@1.25"
+      },
+      "created_at": "2026-04-29T11:00:00Z",
+      "cve_id": "CVE-2023-44487",
+      "cvss_base_score": 7.5,
+      "data_quality": {
+        "confidence": "high",
+        "flags": [],
+        "raw": {
+          "confidence": "high",
+          "flags": []
+        }
+      },
+      "dedup_key": "vpw054-http2-edge-vex",
+      "epss": 0.018,
+      "evidence": {
+        "source": "snapshot"
+      },
+      "explanation": {
+        "vex_justification": "vulnerable_code_not_in_execute_path",
+        "vex_source_format": "openvex",
+        "vex_source_record_id": "VEX-054-EDGE",
+        "vex_status": "not_affected",
+        "vex_statuses": {
+          "not_affected": 1
+        }
+      },
+      "first_seen_at": "2026-04-29T11:00:00Z",
+      "id": "00000000-0000-4000-8000-000000000546",
+      "in_kev": false,
+      "last_seen_at": "2026-04-29T11:30:00Z",
+      "occurrences": [
+        {
+          "analysis_run_id": "00000000-0000-4000-8000-000000000050",
+          "evidence": {
+            "line": 1
+          },
+          "id": "00000000-0000-4000-8000-000000000601",
+          "raw_reference": "CVE-2024-3094",
+          "source": "cve-list"
+        }
+      ],
+      "operational_rank": 5,
+      "priority": "High",
+      "priority_rank": 4,
+      "priority_raw": "high",
+      "recommendation": {
+        "business_impact": "Checkout traffic depends on the affected service.",
+        "decision_guidance": {},
+        "decision_sla": "Emergency / 24h",
+        "decision_statement": "Decision Statement: retain VEX evidence for CVE-2023-44487 edge scope.",
+        "rationale": "Internet-facing production asset with critical score.",
+        "recommended_action": "Retain VEX evidence and reopen if affected HTTP/2 module is enabled."
+      },
+      "risk_score": 41.0,
+      "status": "suppressed",
+      "suppressed_by_vex": true,
+      "under_investigation": false,
+      "updated_at": "2026-04-29T11:30:00Z",
+      "vulnerability": {
+        "provider": {
+          "nvd": "locked"
+        },
+        "severity": "CRITICAL"
+      },
+      "waived": false
+    },
+    {
+      "asset": {
+        "asset_key": "catalog-api",
+        "business_service": "catalog",
+        "criticality": "high",
+        "environment": "prod",
+        "exposure": "internal",
+        "label": "Catalog API",
+        "owner": "catalog-team"
+      },
+      "attack_mapped": false,
+      "component": {
+        "label": "spring-framework 5.3.18",
+        "purl": "pkg:maven/org.springframework/spring-core@5.3.18"
+      },
+      "created_at": "2026-04-29T11:00:00Z",
+      "cve_id": "CVE-2022-22965",
+      "cvss_base_score": 9.8,
+      "data_quality": {
+        "confidence": "medium",
+        "flags": [
+          "missing_asset_owner - Owner is not set"
+        ],
+        "raw": {
+          "confidence": "medium",
+          "flags": [
+            {
+              "code": "missing_asset_owner",
+              "message": "Owner is not set"
+            }
+          ]
+        }
+      },
+      "dedup_key": "vpw054-spring-fixed",
+      "epss": 0.024,
+      "evidence": {
+        "source": "snapshot"
+      },
+      "explanation": {},
+      "first_seen_at": "2026-04-29T11:00:00Z",
+      "id": "00000000-0000-4000-8000-000000000548",
+      "in_kev": true,
+      "last_seen_at": "2026-04-29T11:30:00Z",
+      "occurrences": [
+        {
+          "analysis_run_id": "00000000-0000-4000-8000-000000000050",
+          "evidence": {
+            "line": 2
+          },
+          "id": "00000000-0000-4000-8000-000000000602",
+          "raw_reference": "CVE-2021-44228",
+          "source": "cve-list"
+        }
+      ],
+      "operational_rank": 6,
+      "priority": "High",
+      "priority_rank": 5,
+      "priority_raw": "high",
+      "recommendation": {
+        "business_impact": "Operational tooling exposure requires management visibility.",
+        "decision_guidance": {},
+        "decision_sla": "Emergency / 24h",
+        "decision_statement": "Decision Statement: keep fixed evidence available for audit closure.",
+        "rationale": "CISA KEV listing and vulnerable component evidence.",
+        "recommended_action": "Retain fixed evidence for Spring4Shell closure."
+      },
+      "risk_score": 0.0,
+      "status": "fixed",
+      "suppressed_by_vex": false,
+      "under_investigation": false,
+      "updated_at": "2026-04-29T11:30:00Z",
+      "vulnerability": {
+        "provider": {
+          "kev": true
         },
         "severity": "CRITICAL"
       },
@@ -148,12 +626,23 @@
           ]
         }
       },
-      "dedup_key": "vpw050-log4shell",
+      "dedup_key": "vpw054-log4shell-ops-fixed",
       "epss": 0.944,
       "evidence": {
         "source": "snapshot"
       },
       "explanation": {
+        "attack_context": {
+          "mapped": true,
+          "mappings": [
+            {
+              "technique_id": "T1190",
+              "technique_name": "Exploit Public-Facing Application"
+            }
+          ],
+          "review_status": "reviewed",
+          "source": "local-curated"
+        },
         "attack_techniques": [
           "T1190"
         ],
@@ -163,7 +652,7 @@
         }
       },
       "first_seen_at": "2026-04-29T11:00:00Z",
-      "id": "00000000-0000-4000-8000-000000000502",
+      "id": "00000000-0000-4000-8000-000000000543",
       "in_kev": true,
       "last_seen_at": "2026-04-29T11:30:00Z",
       "occurrences": [
@@ -177,10 +666,10 @@
           "source": "cve-list"
         }
       ],
-      "operational_rank": 2,
-      "priority": "High",
-      "priority_rank": 2,
-      "priority_raw": "high",
+      "operational_rank": 7,
+      "priority": "Critical",
+      "priority_rank": 1,
+      "priority_raw": "critical",
       "recommendation": {
         "business_impact": "Operational tooling exposure requires management visibility.",
         "decision_guidance": {
@@ -188,12 +677,12 @@
           "recommendation_label": "Patch"
         },
         "decision_sla": "Emergency / 24h",
-        "decision_statement": "Decision Statement: patch after owner validation.",
+        "decision_statement": "Decision Statement: keep fixed evidence visible for the closed Ops API scope.",
         "rationale": "CISA KEV listing and vulnerable component evidence.",
-        "recommended_action": "Patch via vendor upgrade."
+        "recommended_action": "Retain fixed-state validation evidence for Log4Shell."
       },
       "risk_score": 94.2,
-      "status": "in_review",
+      "status": "fixed",
       "suppressed_by_vex": false,
       "under_investigation": false,
       "updated_at": "2026-04-29T11:30:00Z",
@@ -207,6 +696,514 @@
     }
   ],
   "generated_at": "2026-04-29T12:00:00Z",
+  "governance_rollups": {
+    "assets": [
+      {
+        "accepted_count": 0,
+        "attack_mapped_count": 1,
+        "critical_count": 1,
+        "dimension": "asset",
+        "expired_waiver_count": 0,
+        "finding_count": 1,
+        "fixed_count": 0,
+        "high_count": 0,
+        "highest_priority": "Critical",
+        "kev_count": 1,
+        "label": "identity-gateway",
+        "open_count": 1,
+        "priority_counts": {
+          "Critical": 1,
+          "High": 0,
+          "Low": 0,
+          "Medium": 0
+        },
+        "review_due_waiver_count": 0,
+        "risk_score_max": 94.2,
+        "risk_score_total": 94.2,
+        "status_counts": {
+          "accepted": 0,
+          "fixed": 0,
+          "in_review": 0,
+          "open": 1,
+          "remediating": 0,
+          "suppressed": 0
+        },
+        "suppressed_by_vex_count": 0,
+        "suppressed_count": 0,
+        "top_cves": [
+          "CVE-2021-44228"
+        ],
+        "under_investigation_count": 0,
+        "waived_count": 0
+      },
+      {
+        "accepted_count": 0,
+        "attack_mapped_count": 0,
+        "critical_count": 1,
+        "dimension": "asset",
+        "expired_waiver_count": 0,
+        "finding_count": 1,
+        "fixed_count": 0,
+        "high_count": 0,
+        "highest_priority": "Critical",
+        "kev_count": 0,
+        "label": "payments-api",
+        "open_count": 1,
+        "priority_counts": {
+          "Critical": 1,
+          "High": 0,
+          "Low": 0,
+          "Medium": 0
+        },
+        "review_due_waiver_count": 0,
+        "risk_score_max": 100.0,
+        "risk_score_total": 100.0,
+        "status_counts": {
+          "accepted": 0,
+          "fixed": 0,
+          "in_review": 0,
+          "open": 1,
+          "remediating": 0,
+          "suppressed": 0
+        },
+        "suppressed_by_vex_count": 0,
+        "suppressed_count": 0,
+        "top_cves": [
+          "CVE-2024-3094"
+        ],
+        "under_investigation_count": 0,
+        "waived_count": 0
+      },
+      {
+        "accepted_count": 1,
+        "attack_mapped_count": 0,
+        "critical_count": 0,
+        "dimension": "asset",
+        "expired_waiver_count": 0,
+        "finding_count": 1,
+        "fixed_count": 0,
+        "high_count": 1,
+        "highest_priority": "High",
+        "kev_count": 1,
+        "label": "billing-worker",
+        "open_count": 0,
+        "priority_counts": {
+          "Critical": 0,
+          "High": 1,
+          "Low": 0,
+          "Medium": 0
+        },
+        "review_due_waiver_count": 1,
+        "risk_score_max": 72.5,
+        "risk_score_total": 72.5,
+        "status_counts": {
+          "accepted": 1,
+          "fixed": 0,
+          "in_review": 0,
+          "open": 0,
+          "remediating": 0,
+          "suppressed": 0
+        },
+        "suppressed_by_vex_count": 0,
+        "suppressed_count": 0,
+        "top_cves": [
+          "CVE-2024-4577"
+        ],
+        "under_investigation_count": 0,
+        "waived_count": 1
+      }
+    ],
+    "environments": [
+      {
+        "accepted_count": 1,
+        "attack_mapped_count": 2,
+        "critical_count": 3,
+        "dimension": "environment",
+        "expired_waiver_count": 0,
+        "finding_count": 7,
+        "fixed_count": 2,
+        "high_count": 4,
+        "highest_priority": "Critical",
+        "kev_count": 5,
+        "label": "prod",
+        "open_count": 3,
+        "priority_counts": {
+          "Critical": 3,
+          "High": 4,
+          "Low": 0,
+          "Medium": 0
+        },
+        "review_due_waiver_count": 1,
+        "risk_score_max": 395.7,
+        "risk_score_total": 395.7,
+        "status_counts": {
+          "accepted": 1,
+          "fixed": 2,
+          "in_review": 0,
+          "open": 3,
+          "remediating": 0,
+          "suppressed": 1
+        },
+        "suppressed_by_vex_count": 1,
+        "suppressed_count": 1,
+        "top_cves": [
+          "CVE-2021-44228",
+          "CVE-2024-3094",
+          "CVE-2023-34362",
+          "CVE-2024-4577"
+        ],
+        "under_investigation_count": 1,
+        "waived_count": 1
+      }
+    ],
+    "generated_at": "2026-04-29T12:00:00Z",
+    "owners": [
+      {
+        "accepted_count": 0,
+        "attack_mapped_count": 1,
+        "critical_count": 1,
+        "dimension": "owner",
+        "expired_waiver_count": 0,
+        "finding_count": 1,
+        "fixed_count": 0,
+        "high_count": 0,
+        "highest_priority": "Critical",
+        "kev_count": 1,
+        "label": "identity-team",
+        "open_count": 1,
+        "priority_counts": {
+          "Critical": 1,
+          "High": 0,
+          "Low": 0,
+          "Medium": 0
+        },
+        "review_due_waiver_count": 0,
+        "risk_score_max": 94.2,
+        "risk_score_total": 94.2,
+        "status_counts": {
+          "accepted": 0,
+          "fixed": 0,
+          "in_review": 0,
+          "open": 1,
+          "remediating": 0,
+          "suppressed": 0
+        },
+        "suppressed_by_vex_count": 0,
+        "suppressed_count": 0,
+        "top_cves": [
+          "CVE-2021-44228"
+        ],
+        "under_investigation_count": 0,
+        "waived_count": 0
+      },
+      {
+        "accepted_count": 0,
+        "attack_mapped_count": 0,
+        "critical_count": 1,
+        "dimension": "owner",
+        "expired_waiver_count": 0,
+        "finding_count": 1,
+        "fixed_count": 0,
+        "high_count": 0,
+        "highest_priority": "Critical",
+        "kev_count": 0,
+        "label": "platform-team",
+        "open_count": 1,
+        "priority_counts": {
+          "Critical": 1,
+          "High": 0,
+          "Low": 0,
+          "Medium": 0
+        },
+        "review_due_waiver_count": 0,
+        "risk_score_max": 100.0,
+        "risk_score_total": 100.0,
+        "status_counts": {
+          "accepted": 0,
+          "fixed": 0,
+          "in_review": 0,
+          "open": 1,
+          "remediating": 0,
+          "suppressed": 0
+        },
+        "suppressed_by_vex_count": 0,
+        "suppressed_count": 0,
+        "top_cves": [
+          "CVE-2024-3094"
+        ],
+        "under_investigation_count": 0,
+        "waived_count": 0
+      },
+      {
+        "accepted_count": 1,
+        "attack_mapped_count": 0,
+        "critical_count": 0,
+        "dimension": "owner",
+        "expired_waiver_count": 0,
+        "finding_count": 1,
+        "fixed_count": 0,
+        "high_count": 1,
+        "highest_priority": "High",
+        "kev_count": 1,
+        "label": "risk-owner",
+        "open_count": 0,
+        "priority_counts": {
+          "Critical": 0,
+          "High": 1,
+          "Low": 0,
+          "Medium": 0
+        },
+        "review_due_waiver_count": 1,
+        "risk_score_max": 72.5,
+        "risk_score_total": 72.5,
+        "status_counts": {
+          "accepted": 1,
+          "fixed": 0,
+          "in_review": 0,
+          "open": 0,
+          "remediating": 0,
+          "suppressed": 0
+        },
+        "suppressed_by_vex_count": 0,
+        "suppressed_count": 0,
+        "top_cves": [
+          "CVE-2024-4577"
+        ],
+        "under_investigation_count": 0,
+        "waived_count": 1
+      }
+    ],
+    "project_id": "00000000-0000-4000-8000-000000000054",
+    "services": [
+      {
+        "accepted_count": 0,
+        "attack_mapped_count": 2,
+        "critical_count": 2,
+        "dimension": "service",
+        "expired_waiver_count": 0,
+        "finding_count": 2,
+        "fixed_count": 1,
+        "high_count": 0,
+        "highest_priority": "Critical",
+        "kev_count": 2,
+        "label": "identity",
+        "open_count": 1,
+        "priority_counts": {
+          "Critical": 2,
+          "High": 0,
+          "Low": 0,
+          "Medium": 0
+        },
+        "review_due_waiver_count": 0,
+        "risk_score_max": 94.2,
+        "risk_score_total": 94.2,
+        "status_counts": {
+          "accepted": 0,
+          "fixed": 1,
+          "in_review": 0,
+          "open": 1,
+          "remediating": 0,
+          "suppressed": 0
+        },
+        "suppressed_by_vex_count": 0,
+        "suppressed_count": 0,
+        "top_cves": [
+          "CVE-2021-44228"
+        ],
+        "under_investigation_count": 0,
+        "waived_count": 0
+      },
+      {
+        "accepted_count": 0,
+        "attack_mapped_count": 0,
+        "critical_count": 1,
+        "dimension": "service",
+        "expired_waiver_count": 0,
+        "finding_count": 1,
+        "fixed_count": 0,
+        "high_count": 0,
+        "highest_priority": "Critical",
+        "kev_count": 0,
+        "label": "checkout",
+        "open_count": 1,
+        "priority_counts": {
+          "Critical": 1,
+          "High": 0,
+          "Low": 0,
+          "Medium": 0
+        },
+        "review_due_waiver_count": 0,
+        "risk_score_max": 100.0,
+        "risk_score_total": 100.0,
+        "status_counts": {
+          "accepted": 0,
+          "fixed": 0,
+          "in_review": 0,
+          "open": 1,
+          "remediating": 0,
+          "suppressed": 0
+        },
+        "suppressed_by_vex_count": 0,
+        "suppressed_count": 0,
+        "top_cves": [
+          "CVE-2024-3094"
+        ],
+        "under_investigation_count": 0,
+        "waived_count": 0
+      },
+      {
+        "accepted_count": 1,
+        "attack_mapped_count": 0,
+        "critical_count": 0,
+        "dimension": "service",
+        "expired_waiver_count": 0,
+        "finding_count": 1,
+        "fixed_count": 0,
+        "high_count": 1,
+        "highest_priority": "High",
+        "kev_count": 1,
+        "label": "billing",
+        "open_count": 0,
+        "priority_counts": {
+          "Critical": 0,
+          "High": 1,
+          "Low": 0,
+          "Medium": 0
+        },
+        "review_due_waiver_count": 1,
+        "risk_score_max": 72.5,
+        "risk_score_total": 72.5,
+        "status_counts": {
+          "accepted": 1,
+          "fixed": 0,
+          "in_review": 0,
+          "open": 0,
+          "remediating": 0,
+          "suppressed": 0
+        },
+        "suppressed_by_vex_count": 0,
+        "suppressed_count": 0,
+        "top_cves": [
+          "CVE-2024-4577"
+        ],
+        "under_investigation_count": 0,
+        "waived_count": 1
+      }
+    ],
+    "top_assets_by_risk": [
+      {
+        "accepted_count": 0,
+        "attack_mapped_count": 0,
+        "critical_count": 1,
+        "dimension": "asset",
+        "expired_waiver_count": 0,
+        "finding_count": 1,
+        "fixed_count": 0,
+        "high_count": 0,
+        "highest_priority": "Critical",
+        "kev_count": 0,
+        "label": "payments-api",
+        "open_count": 1,
+        "priority_counts": {
+          "Critical": 1,
+          "High": 0,
+          "Low": 0,
+          "Medium": 0
+        },
+        "review_due_waiver_count": 0,
+        "risk_score_max": 100.0,
+        "risk_score_total": 100.0,
+        "status_counts": {
+          "accepted": 0,
+          "fixed": 0,
+          "in_review": 0,
+          "open": 1,
+          "remediating": 0,
+          "suppressed": 0
+        },
+        "suppressed_by_vex_count": 0,
+        "suppressed_count": 0,
+        "top_cves": [
+          "CVE-2024-3094"
+        ],
+        "under_investigation_count": 0,
+        "waived_count": 0
+      }
+    ],
+    "top_services_by_risk": [
+      {
+        "accepted_count": 0,
+        "attack_mapped_count": 2,
+        "critical_count": 2,
+        "dimension": "service",
+        "expired_waiver_count": 0,
+        "finding_count": 2,
+        "fixed_count": 1,
+        "high_count": 0,
+        "highest_priority": "Critical",
+        "kev_count": 2,
+        "label": "identity",
+        "open_count": 1,
+        "priority_counts": {
+          "Critical": 2,
+          "High": 0,
+          "Low": 0,
+          "Medium": 0
+        },
+        "review_due_waiver_count": 0,
+        "risk_score_max": 94.2,
+        "risk_score_total": 94.2,
+        "status_counts": {
+          "accepted": 0,
+          "fixed": 1,
+          "in_review": 0,
+          "open": 1,
+          "remediating": 0,
+          "suppressed": 0
+        },
+        "suppressed_by_vex_count": 0,
+        "suppressed_count": 0,
+        "top_cves": [
+          "CVE-2021-44228"
+        ],
+        "under_investigation_count": 0,
+        "waived_count": 0
+      }
+    ],
+    "waiver_debt": {
+      "accepted_finding_count": 1,
+      "active_count": 0,
+      "expired_count": 0,
+      "expired_finding_count": 0,
+      "expiring_soon_count": 1,
+      "items": [
+        {
+          "asset_key": "billing-worker",
+          "cve_id": "CVE-2024-4577",
+          "days_remaining": 8,
+          "expires_at": "2026-05-07",
+          "finding_id": "00000000-0000-4000-8000-000000000544",
+          "id": "00000000-0000-4000-8000-000000000545",
+          "matched_findings": 1,
+          "owner": "risk-owner",
+          "review_at": "2026-04-29",
+          "scope": "service:billing",
+          "service": "billing",
+          "status": "review_due"
+        }
+      ],
+      "matched_finding_count": 1,
+      "owner_counts": {
+        "risk-owner": 1
+      },
+      "review_due_count": 1,
+      "review_due_finding_count": 1,
+      "service_counts": {
+        "billing": 1
+      },
+      "waiver_count": 1
+    }
+  },
   "project": {
     "created_at": "2026-04-29T10:00:00Z",
     "description": "Committed demo artifacts for VPW-054 report snapshot coverage.",
@@ -215,14 +1212,17 @@
     "updated_at": "2026-04-29T10:30:00Z"
   },
   "provider_snapshot": {
-    "content_hash": "sha256:vpw050-snapshot",
+    "content_hash": "sha256:vpw054-snapshot",
     "created_at": "2026-04-28T10:20:00Z",
-    "epss_date": "2026-04-28",
-    "id": "00000000-0000-4000-8000-000000000650",
-    "kev_catalog_version": "2026-04-28",
+    "epss_date": "2026-04-15",
+    "id": "00000000-0000-4000-8000-000000000654",
+    "kev_catalog_version": "kev-catalog-v2026.04",
     "nvd_last_sync": "2026-04-28T10:15:00Z",
     "source_hashes": {
-      "provider_snapshot": "sha256:vpw050-snapshot"
+      "epss": "sha256:vpw054-epss",
+      "kev": "sha256:vpw054-kev",
+      "nvd": "sha256:vpw054-nvd",
+      "provider_snapshot": "sha256:vpw054-snapshot"
     },
     "source_metadata": {
       "locked_provider_data": true,

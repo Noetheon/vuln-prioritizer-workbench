@@ -86,6 +86,7 @@ class AttackStixProvider:
         source_path: Path,
         raw_content: bytes,
     ) -> tuple[dict[str, AttackTechnique], dict[str, str | None], list[str]]:
+        """Load payload method for AttackStixProvider."""
         snapshot = self.load_snapshot_payload(
             payload,
             source_path=source_path,
@@ -307,6 +308,7 @@ def _mitre_attack_external_reference(
     *,
     prefixes: tuple[str, ...] | None,
 ) -> tuple[str | None, str | None]:
+    """Mitre attack external reference function."""
     references = raw_object.get("external_references")
     if not isinstance(references, list):
         return None, None
@@ -326,6 +328,7 @@ def _mitre_attack_external_reference(
 
 
 def _kill_chain_tactics(raw_object: dict[str, Any]) -> list[str]:
+    """Kill chain tactics function."""
     phases = raw_object.get("kill_chain_phases")
     if not isinstance(phases, list):
         return []
@@ -342,6 +345,7 @@ def _kill_chain_tactics(raw_object: dict[str, Any]) -> list[str]:
 
 
 def _normalize_domain(value: str) -> str:
+    """Normalize domain function."""
     normalized = value.strip().lower()
     return normalized.removesuffix("-attack") if normalized.endswith("-attack") else normalized
 
@@ -352,6 +356,7 @@ def _collect_domains_and_spec_versions(
     domains: list[str],
     stix_spec_versions: list[str],
 ) -> None:
+    """Collect domains and spec versions function."""
     object_domains = _normalize_string_list(raw_object.get("x_mitre_domains"))
     for domain in object_domains:
         if domain not in domains:
@@ -367,6 +372,7 @@ def _collect_collection_metadata(
     *,
     attack_versions: list[str],
 ) -> None:
+    """Collect collection metadata function."""
     attack_version = _normalize_optional_string(
         raw_object.get("x_mitre_version")
         or raw_object.get("x_mitre_attack_version")
@@ -377,6 +383,7 @@ def _collect_collection_metadata(
 
 
 def _normalize_optional_string(value: object) -> str | None:
+    """Normalize optional string function."""
     if value is None:
         return None
     normalized = str(value).strip()
@@ -384,6 +391,7 @@ def _normalize_optional_string(value: object) -> str | None:
 
 
 def _normalize_string_list(value: object) -> list[str]:
+    """Normalize string list function."""
     if not isinstance(value, list):
         return []
     normalized: list[str] = []

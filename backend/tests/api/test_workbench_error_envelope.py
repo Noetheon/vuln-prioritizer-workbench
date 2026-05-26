@@ -85,6 +85,16 @@ def test_error_response_content_maps_exact_messages_to_codes() -> None:
     assert content["detail"] == "Upload exceeds configured limit."
 
 
+def test_error_response_content_maps_request_body_limit_to_stable_code() -> None:
+    content = error_response_content(
+        status_code=413,
+        detail="Request body exceeds configured limit.",
+    )
+
+    assert content["code"] == "request_body_too_large"
+    assert content["message"] == "Request body exceeds configured limit."
+
+
 @pytest.mark.parametrize(
     ("active_settings", "expected"),
     [

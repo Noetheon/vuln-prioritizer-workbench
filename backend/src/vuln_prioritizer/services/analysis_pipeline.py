@@ -2,35 +2,18 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 from pydantic import ValidationError
 
-from vuln_prioritizer.attack_sources import (
-    ATTACK_SOURCE_NONE,
-)
 from vuln_prioritizer.inputs import (
     InputLoader,
-    build_inline_input,
 )
 from vuln_prioritizer.models import (
     AnalysisContext,
-    AttackData,
-    AttackSummary,
-    ContextPolicyProfile,
-    EnrichmentResult,
-    EpssData,
-    KevData,
-    NvdData,
-    ParsedInput,
     PrioritizedFinding,
-    PriorityPolicy,
-    ProviderDataQualityFlag,
-    ProviderSnapshotReport,
 )
 from vuln_prioritizer.services.analysis_attack import (
     build_attack_summary_from_findings,
@@ -40,6 +23,7 @@ from vuln_prioritizer.services.analysis_filters import (
     build_active_filters,
     normalize_priority_filters,
 )
+from vuln_prioritizer.services.analysis_findings import build_findings
 from vuln_prioritizer.services.analysis_inputs import (
     load_analysis_context_profile,
     load_analysis_provider_snapshot,
@@ -65,16 +49,13 @@ from vuln_prioritizer.services.analysis_provider import (
     provider_degraded,
     stale_provider_sources,
 )
-from vuln_prioritizer.services.contextualization import (
-    aggregate_provenance,
+from vuln_prioritizer.services.analysis_snapshot import (
+    _provider_snapshot_hash,
+    _provider_snapshot_metadata_path,
 )
 from vuln_prioritizer.services.defensive_context import (
-    attach_defensive_contexts,
     defensive_context_hit_count,
-    load_defensive_context_file,
-    merge_defensive_contexts,
 )
-from vuln_prioritizer.services.enrichment import EnrichmentService
 from vuln_prioritizer.services.prioritization import PrioritizationService, SortField
 from vuln_prioritizer.services.waivers import (
     apply_waivers,
@@ -82,164 +63,8 @@ from vuln_prioritizer.services.waivers import (
 from vuln_prioritizer.utils import iso_utc_now
 
 
-def validate_requested_attack_mode(
-    *,
-    attack_enabled: bool,
-    attack_source: str,
-    attack_mapping_file: Path | None,
-    offline_attack_file: Path | None,
-) -> None:
-    if not attack_enabled or attack_source == ATTACK_SOURCE_NONE:
-        return
-    if attack_mapping_file is not None or offline_attack_file is not None:
-        return
-    raise AnalysisInputError(
-        "ATT&CK mode requires a mapping file for the selected Workbench ATT&CK source."
-    )
-
-
-def build_findings(
-    cve_ids: list[str],
-    *,
-    policy: PriorityPolicy,
-    parsed_input: ParsedInput,
-    context_profile: ContextPolicyProfile,
-    attack_enabled: bool,
-    attack_source: str,
-    attack_mapping_file: Path | None,
-    attack_technique_metadata_file: Path | None,
-    offline_kev_file: Path | None,
-    offline_attack_file: Path | None,
-    defensive_context_file: Path | None,
-    nvd_api_key_env: str,
-    no_cache: bool,
-    cache_dir: Path,
-    cache_ttl_hours: int,
-    provider_snapshot: ProviderSnapshotReport | None = None,
-    locked_provider_data: bool = False,
-) -> tuple[list[PrioritizedFinding], dict[str, int], EnrichmentResult]:
-    validate_requested_attack_mode(
-        attack_enabled=attack_enabled,
-        attack_source=attack_source,
-        attack_mapping_file=attack_mapping_file,
-        offline_attack_file=offline_attack_file,
-    )
-    enricher = EnrichmentService(
-        nvd_api_key_env=nvd_api_key_env,
-        use_cache=not no_cache,
-        cache_dir=cache_dir,
-        cache_ttl_hours=cache_ttl_hours,
-    )
-    try:
-        enrichment = enricher.enrich(
-            cve_ids,
-            attack_enabled=attack_enabled,
-            attack_source=attack_source,
-            offline_kev_file=offline_kev_file,
-            attack_mapping_file=attack_mapping_file,
-            attack_technique_metadata_file=attack_technique_metadata_file,
-            offline_attack_file=offline_attack_file,
-            provider_snapshot=provider_snapshot,
-            locked_provider_data=locked_provider_data,
-        )
-    except (OSError, ValidationError, ValueError) as exc:
-        raise AnalysisInputError(str(exc)) from exc
-    enrichment.parsed_input = parsed_input
-    try:
-        defensive_context_result = load_defensive_context_file(defensive_context_file)
-    except ValueError as exc:
-        raise AnalysisInputError(str(exc)) from exc
-    enrichment.defensive_contexts = merge_defensive_contexts(
-        enrichment.defensive_contexts,
-        defensive_context_result.contexts,
-    )
-    enrichment.defensive_context_sources = sorted(
-        set(enrichment.defensive_context_sources) | set(defensive_context_result.sources)
-    )
-    enrichment.defensive_context_file = (
-        str(defensive_context_file) if defensive_context_file else None
-    )
-    enrichment.warnings.extend(defensive_context_result.warnings)
-    provenance_by_cve = aggregate_provenance(parsed_input.unique_cves, parsed_input.occurrences)
-
-    prioritizer = PrioritizationService(policy=policy)
-    findings, counts = prioritizer.prioritize(
-        cve_ids,
-        nvd_data=enrichment.nvd,
-        epss_data=enrichment.epss,
-        kev_data=enrichment.kev,
-        attack_data=enrichment.attack,
-        provenance_by_cve=provenance_by_cve,
-        context_profile=context_profile,
-    )
-    findings = attach_defensive_contexts(findings, enrichment.defensive_contexts)
-    findings = attach_provider_data_quality_flags(findings, enrichment.provider_data_quality_flags)
-    return findings, counts, enrichment
-
-
-def attach_provider_data_quality_flags(
-    findings: list[PrioritizedFinding],
-    flags_by_source: dict[str, list[ProviderDataQualityFlag]],
-) -> list[PrioritizedFinding]:
-    """Copy run-level provider quality flags onto affected findings."""
-
-    if not flags_by_source:
-        return findings
-    all_flags = [flag for flags in flags_by_source.values() for flag in flags]
-    enriched: list[PrioritizedFinding] = []
-    for finding in findings:
-        finding_flags = _finding_data_quality_flags(cve_id=finding.cve_id, flags=all_flags)
-        enriched.append(
-            finding.model_copy(
-                update={
-                    "data_quality_flags": finding_flags,
-                    "data_quality_confidence": _finding_data_quality_confidence(finding_flags),
-                }
-            )
-        )
-    return enriched
-
-
-def _finding_data_quality_flags(
-    *,
-    cve_id: str,
-    flags: list[ProviderDataQualityFlag],
-) -> list[ProviderDataQualityFlag]:
-    scoped_sources = {
-        flag.source
-        for flag in flags
-        if flag.cve_id is not None
-        and flag.code in {"nvd_missing", "nvd_cvss_missing", "epss_missing"}
-    }
-    return [
-        flag
-        for flag in flags
-        if flag.cve_id == cve_id
-        or (
-            flag.cve_id is None
-            and flag.code != "provider_missing_data"
-            and not (
-                flag.code == "provider_error"
-                and flag.source in scoped_sources
-                and not any(
-                    scoped_flag.source == flag.source and scoped_flag.cve_id == cve_id
-                    for scoped_flag in flags
-                )
-            )
-        )
-    ]
-
-
-def _finding_data_quality_confidence(flags: list[ProviderDataQualityFlag]) -> str:
-    material_flags = [flag for flag in flags if flag.code != "snapshot_locked"]
-    if any(flag.severity == "error" for flag in material_flags):
-        return "low"
-    if material_flags:
-        return "medium"
-    return "high"
-
-
 def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding], AnalysisContext]:
+    """Prepare analysis function."""
     attack_enabled, resolved_attack_source, resolved_mapping_file, resolved_metadata_file = (
         resolve_attack_options(
             no_attack=request.no_attack,
@@ -431,178 +256,11 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
     return findings, context
 
 
-def _provider_snapshot_hash(path: Path | None) -> str | None:
-    if path is None:
-        return None
-    try:
-        return hashlib.sha256(path.read_bytes()).hexdigest()
-    except OSError:
-        return None
-
-
-def _provider_snapshot_metadata_path(path: Path | None, output_path: Path | None) -> str | None:
-    if path is None:
-        return None
-    if output_path is not None:
-        try:
-            return path.resolve().relative_to(output_path.parent.resolve()).as_posix()
-        except ValueError:
-            pass
-    return str(path)
-
-
 def prepare_explain(request: ExplainRequest) -> ExplainResult:
-    context_profile = load_analysis_context_profile(request.policy_profile, request.policy_file)
-    if request.locked_provider_data and request.provider_snapshot_file is None:
-        raise AnalysisInputError("Locked provider data requires a provider snapshot file.")
-    provider_snapshot = load_analysis_provider_snapshot(request.provider_snapshot_file)
-    attack_enabled, resolved_attack_source, resolved_mapping_file, resolved_metadata_file = (
-        resolve_attack_options(
-            no_attack=request.no_attack,
-            attack_source=request.attack_source,
-            attack_mapping_file=request.attack_mapping_file,
-            attack_technique_metadata_file=request.attack_technique_metadata_file,
-            offline_attack_file=request.offline_attack_file,
-        )
-    )
-    asset_records = load_asset_records(request.asset_context)
-    vex_statements = load_vex_statements(request.vex_files)
-    waiver_rules = load_analysis_waiver_rules(request.waiver_file)
-    parsed_input = build_inline_input(
-        request.cve_id,
-        target_kind=request.target_kind,
-        target_ref=request.target_ref,
-        asset_records=asset_records,
-        vex_statements=vex_statements,
-    )
-    findings, counts, enrichment = build_findings(
-        parsed_input.unique_cves,
-        policy=request.policy,
-        parsed_input=parsed_input,
-        context_profile=context_profile,
-        attack_enabled=attack_enabled,
-        attack_source=resolved_attack_source,
-        attack_mapping_file=resolved_mapping_file,
-        attack_technique_metadata_file=resolved_metadata_file,
-        offline_kev_file=request.offline_kev_file,
-        offline_attack_file=request.offline_attack_file,
-        defensive_context_file=request.defensive_context_file,
-        nvd_api_key_env=request.nvd_api_key_env,
-        no_cache=request.no_cache,
-        cache_dir=request.cache_dir,
-        cache_ttl_hours=request.cache_ttl_hours,
-        provider_snapshot=provider_snapshot,
-        locked_provider_data=request.locked_provider_data,
-    )
-    findings, waiver_warnings = apply_waivers(findings, waiver_rules)
-    findings = PrioritizationService(policy=request.policy).assign_operational_ranks(findings)
-    if not request.show_suppressed:
-        findings = [finding for finding in findings if not finding.suppressed_by_vex]
+    """Compatibility wrapper for the focused explain module."""
+    from vuln_prioritizer.services.analysis_explain import prepare_explain as _prepare_explain
 
-    if not findings:
-        raise AnalysisNoFindingsError("No finding could be generated for the requested CVE.")
-
-    finding = findings[0]
-    nvd = enrichment.nvd.get(request.cve_id, NvdData(cve_id=request.cve_id))
-    epss = enrichment.epss.get(request.cve_id, EpssData(cve_id=request.cve_id))
-    kev = enrichment.kev.get(request.cve_id, KevData(cve_id=request.cve_id, in_kev=False))
-    attack = enrichment.attack.get(request.cve_id, AttackData(cve_id=request.cve_id))
-    warnings = parsed_input.warnings + enrichment.warnings + waiver_warnings
-    comparison = PrioritizationService(policy=request.policy).build_comparison([finding])[0]
-    attack_summary = build_attack_summary_from_findings([finding])
-    generated_at = iso_utc_now()
-    provider_freshness = build_provider_freshness(
-        enrichment,
-        provider_snapshot=provider_snapshot,
-        lookup_completed_at=generated_at,
-    )
-
-    context = AnalysisContext(
-        input_path=f"inline:{request.cve_id}",
-        output_path=str(request.output) if request.output else None,
-        output_format=_enum_value(request.format),
-        generated_at=generated_at,
-        provider_snapshot_id=(
-            provider_snapshot.metadata.snapshot_id if provider_snapshot is not None else None
-        ),
-        provider_snapshot_hash=_provider_snapshot_hash(request.provider_snapshot_file),
-        provider_snapshot_file=(
-            _provider_snapshot_metadata_path(request.provider_snapshot_file, request.output)
-        ),
-        locked_provider_data=request.locked_provider_data,
-        provider_snapshot_sources=enrichment.provider_snapshot_sources,
-        defensive_context_file=enrichment.defensive_context_file,
-        defensive_context_sources=enrichment.defensive_context_sources,
-        defensive_context_hits=defensive_context_hit_count(findings),
-        attack_enabled=attack_enabled,
-        attack_source=enrichment.attack_source,
-        attack_mapping_file=enrichment.attack_mapping_file,
-        attack_technique_metadata_file=enrichment.attack_technique_metadata_file,
-        attack_source_version=enrichment.attack_source_version,
-        attack_version=enrichment.attack_version,
-        attack_domain=enrichment.attack_domain,
-        mapping_framework=enrichment.mapping_framework,
-        mapping_framework_version=enrichment.mapping_framework_version,
-        attack_mapping_file_sha256=enrichment.attack_mapping_file_sha256,
-        attack_technique_metadata_file_sha256=(enrichment.attack_technique_metadata_file_sha256),
-        attack_metadata_format=enrichment.attack_metadata_format,
-        attack_metadata_source=enrichment.attack_metadata_source,
-        attack_stix_spec_version=enrichment.attack_stix_spec_version,
-        attack_mapping_created_at=enrichment.attack_mapping_created_at,
-        attack_mapping_updated_at=enrichment.attack_mapping_updated_at,
-        attack_mapping_organization=enrichment.attack_mapping_organization,
-        attack_mapping_author=enrichment.attack_mapping_author,
-        attack_mapping_contact=enrichment.attack_mapping_contact,
-        warnings=warnings,
-        total_input=1,
-        valid_input=1,
-        occurrences_count=parsed_input.total_rows,
-        findings_count=1,
-        filtered_out_count=0,
-        nvd_hits=count_nvd_hits(enrichment),
-        nvd_diagnostics=enrichment.nvd_diagnostics,
-        epss_diagnostics=enrichment.epss_diagnostics,
-        kev_diagnostics=enrichment.kev_diagnostics,
-        provider_degraded=provider_degraded(enrichment),
-        provider_diagnostics=build_provider_diagnostics(enrichment),
-        provider_data_quality_flags=enrichment.provider_data_quality_flags,
-        provider_freshness=provider_freshness,
-        epss_hits=count_epss_hits(enrichment),
-        kev_hits=count_kev_hits(enrichment),
-        attack_hits=attack_summary.mapped_cves,
-        suppressed_by_vex=sum(1 for item in findings if item.suppressed_by_vex),
-        under_investigation_count=sum(1 for item in findings if item.under_investigation),
-        asset_match_conflict_count=parsed_input.asset_match_conflict_count,
-        vex_conflict_count=parsed_input.vex_conflict_count,
-        waived_count=sum(1 for item in findings if item.waived),
-        waiver_review_due_count=sum(1 for item in findings if item.waiver_status == "review_due"),
-        expired_waiver_count=sum(1 for item in findings if item.waiver_status == "expired"),
-        attack_summary=attack_summary,
-        policy_overrides=request.policy.override_descriptions(),
-        priority_policy=request.policy,
-        policy_profile=context_profile.name,
-        policy_file=str(request.policy_file) if request.policy_file else None,
-        waiver_file=str(request.waiver_file) if request.waiver_file else None,
-        counts_by_priority=counts,
-        source_stats=parsed_input.source_stats,
-        included_occurrence_count=parsed_input.included_occurrence_count,
-        included_unique_cves=parsed_input.included_unique_cves,
-        input_format=parsed_input.input_format,
-        data_sources=build_data_sources(enrichment),
-        cache_enabled=not request.no_cache,
-        cache_dir=str(request.cache_dir) if not request.no_cache else None,
-    )
-
-    return ExplainResult(
-        finding=finding,
-        nvd=nvd,
-        epss=epss,
-        kev=kev,
-        attack=attack,
-        comparison=comparison,
-        context=context,
-        warnings=warnings,
-    )
+    return _prepare_explain(request)
 
 
 def prepare_saved_explain(
@@ -612,81 +270,14 @@ def prepare_saved_explain(
     output: Path | None,
     format: StrEnum | str,
 ) -> ExplainResult:
-    """Build an explain result from a saved analysis or snapshot JSON artifact."""
-    try:
-        payload = json.loads(input_path.read_text(encoding="utf-8"))
-    except OSError as exc:
-        raise AnalysisInputError(f"{input_path} could not be read: {exc}") from exc
-    except json.JSONDecodeError as exc:
-        raise AnalysisInputError(f"{input_path} is not valid JSON: {exc.msg}.") from exc
-    if not isinstance(payload, dict) or not isinstance(payload.get("findings"), list):
-        raise AnalysisInputError("--analysis-json/--snapshot-json must contain a findings array.")
-
-    finding_payload = next(
-        (
-            item
-            for item in payload["findings"]
-            if isinstance(item, dict) and item.get("cve_id") == cve_id
-        ),
-        None,
+    """Compatibility wrapper for saved-analysis explain results."""
+    from vuln_prioritizer.services.analysis_explain import (
+        prepare_saved_explain as _prepare_saved_explain,
     )
-    if finding_payload is None:
-        raise AnalysisInputError(f"{input_path} does not contain a finding for {cve_id}.")
 
-    try:
-        finding = PrioritizedFinding.model_validate(finding_payload, extra="ignore")
-        raw_metadata = payload.get("metadata")
-        metadata: dict[str, Any] = (
-            cast(dict[str, Any], raw_metadata) if isinstance(raw_metadata, dict) else {}
-        )
-        context = AnalysisContext.model_validate(
-            {
-                **metadata,
-                "input_path": str(input_path),
-                "output_path": str(output) if output else None,
-                "output_format": _enum_value(format),
-                "generated_at": metadata.get("generated_at") or iso_utc_now(),
-                "findings_count": 1,
-                "schema_version": "1.0.0",
-            }
-        )
-        attack_summary = AttackSummary.model_validate(
-            payload.get("attack_summary") or {},
-            extra="ignore",
-        )
-        context = context.model_copy(update={"attack_summary": attack_summary})
-    except ValidationError as exc:
-        raise AnalysisInputError(f"{input_path} contains an invalid saved finding: {exc}") from exc
-
-    evidence = finding.provider_evidence
-    nvd = evidence.nvd if evidence is not None else NvdData(cve_id=cve_id)
-    epss = evidence.epss if evidence is not None else EpssData(cve_id=cve_id)
-    kev = evidence.kev if evidence is not None else KevData(cve_id=cve_id, in_kev=False)
-    attack = AttackData(
+    return _prepare_saved_explain(
         cve_id=cve_id,
-        mapped=finding.attack_mapped,
-        source=context.attack_source,
-        source_version=context.attack_source_version,
-        attack_version=context.attack_version,
-        domain=context.attack_domain,
-        mappings=finding.attack_mappings,
-        techniques=finding.attack_technique_details,
-        attack_relevance=finding.attack_relevance,
-        attack_rationale=finding.attack_rationale,
-        attack_techniques=finding.attack_techniques,
-        attack_tactics=finding.attack_tactics,
-        attack_note=finding.attack_note,
-    )
-    comparison = PrioritizationService(policy=context.priority_policy).build_comparison([finding])[
-        0
-    ]
-    return ExplainResult(
-        finding=finding,
-        nvd=nvd,
-        epss=epss,
-        kev=kev,
-        attack=attack,
-        comparison=comparison,
-        context=context,
-        warnings=list(context.warnings),
+        input_path=input_path,
+        output=output,
+        format=format,
     )
