@@ -14,6 +14,7 @@ class GitHubIssueExportRepository:
     """Persistence helpers for GitHub issue export idempotency."""
 
     def __init__(self, session: Session) -> None:
+        """Initialize a new instance of GitHubIssueExportRepository."""
         self.session = session
 
     def export_exists(
@@ -23,6 +24,7 @@ class GitHubIssueExportRepository:
         repository: str,
         duplicate_key: str,
     ) -> bool:
+        """Export exists method for GitHubIssueExportRepository."""
         statement = select(GitHubIssueExport.id).where(
             GitHubIssueExport.project_id == project_id,
             GitHubIssueExport.repository == repository,
@@ -66,6 +68,7 @@ class GitHubIssueExportRepository:
         issue_url: str | None,
         issue_number: int | None,
     ) -> GitHubIssueExport:
+        """Create export method for GitHubIssueExportRepository."""
         export = GitHubIssueExport(
             project_id=project_id,
             repository=repository,
@@ -86,6 +89,7 @@ class GitHubIssueExportRepository:
         issue_url: str | None,
         issue_number: int | None,
     ) -> GitHubIssueExport:
+        """Update export result method for GitHubIssueExportRepository."""
         export.issue_url = issue_url
         export.issue_number = issue_number
         self.session.add(export)

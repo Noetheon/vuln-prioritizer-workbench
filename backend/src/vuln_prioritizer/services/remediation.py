@@ -66,6 +66,7 @@ class RemediationService:
         *,
         kev: KevData | None = None,
     ) -> RemediationPlan:
+        """Derive method for RemediationService."""
         occurrences = _coerce_occurrences(evidence)
         suppressed_occurrence_count = sum(
             1
@@ -120,6 +121,7 @@ class RemediationService:
         priority_label: str,
         kev: KevData | None = None,
     ) -> tuple[RemediationPlan, str]:
+        """Build action method for RemediationService."""
         remediation = self.derive(evidence, kev=kev)
         return remediation, render_recommended_action(remediation, priority_label=priority_label)
 
@@ -153,6 +155,7 @@ def render_recommended_action(remediation: RemediationPlan, *, priority_label: s
 
 
 def _apply_kev_evidence(remediation: RemediationPlan, kev: KevData | None) -> RemediationPlan:
+    """Apply kev evidence function."""
     if kev is None or not kev.in_kev:
         return remediation
     evidence_level = remediation.evidence_level
@@ -170,12 +173,14 @@ def _apply_kev_evidence(remediation: RemediationPlan, kev: KevData | None) -> Re
 def _coerce_occurrences(
     evidence: FindingProvenance | Iterable[InputOccurrence],
 ) -> list[InputOccurrence]:
+    """Coerce occurrences function."""
     if isinstance(evidence, FindingProvenance):
         return list(evidence.occurrences)
     return list(evidence)
 
 
 def _collect_components(occurrences: list[InputOccurrence]) -> list[RemediationComponent]:
+    """Collect components function."""
     buckets: dict[_ComponentKey, RemediationComponent] = {}
     fixed_version_sets: dict[_ComponentKey, set[str]] = {}
     target_sets: dict[_ComponentKey, set[str]] = {}
@@ -233,6 +238,7 @@ def _collect_components(occurrences: list[InputOccurrence]) -> list[RemediationC
 
 
 def _build_component_seed(occurrence: InputOccurrence) -> RemediationComponent | None:
+    """Build component seed function."""
     path = _clean_text(occurrence.dependency_path) or _clean_text(occurrence.file_path)
     purl = _clean_text(occurrence.purl)
     name = _clean_text(occurrence.component_name) or _name_from_purl(purl)
@@ -263,6 +269,7 @@ def _build_component_seed(occurrence: InputOccurrence) -> RemediationComponent |
 
 
 def _resolve_single_ecosystem(components: list[RemediationComponent]) -> str | None:
+    """Resolve single ecosystem function."""
     ecosystems = {
         ecosystem
         for ecosystem in (_resolve_ecosystem(component) for component in components)
@@ -274,6 +281,7 @@ def _resolve_single_ecosystem(components: list[RemediationComponent]) -> str | N
 
 
 def _resolve_ecosystem(component: RemediationComponent) -> str | None:
+    """Resolve ecosystem function."""
     if component.purl:
         purl_type = _purl_type(component.purl)
         if purl_type:
@@ -284,6 +292,7 @@ def _resolve_ecosystem(component: RemediationComponent) -> str | None:
 
 
 def _purl_type(purl: str) -> str | None:
+    """Purl type function."""
     if not purl.startswith("pkg:"):
         return None
     remainder = purl[4:]
@@ -293,6 +302,7 @@ def _purl_type(purl: str) -> str | None:
 
 
 def _name_from_purl(purl: str | None) -> str | None:
+    """Name from purl function."""
     if not purl:
         return None
     normalized = purl.split("?", 1)[0].split("#", 1)[0]
@@ -303,17 +313,20 @@ def _name_from_purl(purl: str | None) -> str | None:
 
 
 def _occurrence_targets(occurrence: InputOccurrence) -> list[str]:
+    """Occurrence targets function."""
     if not occurrence.target_ref:
         return []
     return [f"{occurrence.target_kind}:{occurrence.target_ref}"]
 
 
 def _single_value_list(value: str | None) -> list[str]:
+    """Single value list function."""
     cleaned = _clean_text(value)
     return [] if cleaned is None else [cleaned]
 
 
 def _component_sort_key(component: RemediationComponent) -> tuple[object, ...]:
+    """Component sort key function."""
     return (
         0 if component.fixed_versions else 1,
         _natural_sort_key(component.name or component.purl or component.package_type or ""),
@@ -323,6 +336,7 @@ def _component_sort_key(component: RemediationComponent) -> tuple[object, ...]:
 
 
 def _render_upgrade_action(remediation: RemediationPlan, generic_guidance: str) -> str:
+    """Render upgrade action function."""
     component_snippets = [
         _format_component_upgrade(component) for component in remediation.components[:2]
     ]
@@ -337,6 +351,7 @@ def _render_upgrade_action(remediation: RemediationPlan, generic_guidance: str) 
 
 
 def _render_review_action(remediation: RemediationPlan, generic_guidance: str) -> str:
+    """Render review action function."""
     component_snippets = [
         _format_component_target(component) for component in remediation.components[:2]
     ]
@@ -352,6 +367,7 @@ def _render_review_action(remediation: RemediationPlan, generic_guidance: str) -
 
 
 def _format_component_upgrade(component: RemediationComponent) -> str:
+    """Format component upgrade function."""
     target = _format_component_target(component)
     fix_versions = component.fixed_versions[:3]
     version_text = ", ".join(fix_versions)
@@ -361,6 +377,7 @@ def _format_component_upgrade(component: RemediationComponent) -> str:
 
 
 def _format_component_target(component: RemediationComponent) -> str:
+    """Format component target function."""
     label = component.name or component.purl or component.package_type or "affected component"
     if component.current_version:
         label += f" {component.current_version}"
@@ -370,6 +387,7 @@ def _format_component_target(component: RemediationComponent) -> str:
 
 
 def _clean_text(value: str | None) -> str | None:
+    """Clean text function."""
     if value is None:
         return None
     cleaned = value.strip()
@@ -377,6 +395,7 @@ def _clean_text(value: str | None) -> str | None:
 
 
 def _natural_sort_key(value: str) -> tuple[object, ...]:
+    """Natural sort key function."""
     parts: list[object] = []
     for chunk in re.findall(r"\d+|\D+", value.casefold()):
         if chunk.isdigit():

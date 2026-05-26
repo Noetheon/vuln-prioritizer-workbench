@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import replace
+from collections.abc import Sequence
 from typing import Any
 
 from app.services.report_contracts import PRIORITY_LABELS
 from app.services.report_formatting import dict_value as _dict_value
-from app.services.report_models import MarkdownReportFinding, MarkdownReportPayload
+from app.services.report_models import (
+    MarkdownReportFinding,
+    MarkdownReportPayload,
+    ReportOccurrence,
+    ReportVulnerability,
+)
 from vuln_prioritizer.security_redaction import redact_value
 
 
@@ -24,96 +29,131 @@ def _redacted_bundle_payload(
 
     provider_snapshot = None
     if payload.provider_snapshot is not None:
-        provider_snapshot = replace(
-            payload.provider_snapshot,
-            id=redact(payload.provider_snapshot.id, "provider_snapshot.id"),
-            content_hash=redact(
-                payload.provider_snapshot.content_hash,
-                "provider_snapshot.content_hash",
-            ),
-            nvd_last_sync=redact(
-                payload.provider_snapshot.nvd_last_sync,
-                "provider_snapshot.nvd_last_sync",
-            ),
-            epss_date=redact(payload.provider_snapshot.epss_date, "provider_snapshot.epss_date"),
-            kev_catalog_version=redact(
-                payload.provider_snapshot.kev_catalog_version,
-                "provider_snapshot.kev_catalog_version",
-            ),
-            created_at=redact(payload.provider_snapshot.created_at, "provider_snapshot.created_at"),
-            source_hashes=redact(
-                payload.provider_snapshot.source_hashes,
-                "provider_snapshot.source_hashes",
-            ),
-            source_metadata=redact(
-                payload.provider_snapshot.source_metadata,
-                "provider_snapshot.source_metadata",
-            ),
+        provider_snapshot = payload.provider_snapshot.model_copy(
+            update={
+                "id": redact(payload.provider_snapshot.id, "provider_snapshot.id"),
+                "content_hash": redact(
+                    payload.provider_snapshot.content_hash,
+                    "provider_snapshot.content_hash",
+                ),
+                "nvd_last_sync": redact(
+                    payload.provider_snapshot.nvd_last_sync,
+                    "provider_snapshot.nvd_last_sync",
+                ),
+                "epss_date": redact(
+                    payload.provider_snapshot.epss_date,
+                    "provider_snapshot.epss_date",
+                ),
+                "kev_catalog_version": redact(
+                    payload.provider_snapshot.kev_catalog_version,
+                    "provider_snapshot.kev_catalog_version",
+                ),
+                "created_at": redact(
+                    payload.provider_snapshot.created_at,
+                    "provider_snapshot.created_at",
+                ),
+                "source_hashes": redact(
+                    payload.provider_snapshot.source_hashes,
+                    "provider_snapshot.source_hashes",
+                ),
+                "source_metadata": redact(
+                    payload.provider_snapshot.source_metadata,
+                    "provider_snapshot.source_metadata",
+                ),
+            }
         )
 
     findings: list[MarkdownReportFinding] = []
     for index, finding in enumerate(payload.findings):
         finding_path = f"findings.{index}"
+        vulnerability = None
+        if finding.vulnerability is not None:
+            vulnerability = ReportVulnerability.model_validate(
+                redact(
+                    finding.vulnerability.model_dump(mode="python", exclude_unset=True),
+                    f"{finding_path}.vulnerability",
+                )
+            )
+        occurrences = tuple(
+            ReportOccurrence.model_validate(item)
+            for item in redact(
+                [
+                    occurrence.model_dump(mode="python", exclude_unset=True)
+                    for occurrence in finding.occurrences
+                ],
+                f"{finding_path}.occurrences",
+            )
+        )
         findings.append(
-            replace(
-                finding,
-                cve_id=redact(finding.cve_id, f"{finding_path}.cve_id"),
-                priority=redact(finding.priority, f"{finding_path}.priority"),
-                status=redact(finding.status, f"{finding_path}.status"),
-                asset=redact(finding.asset, f"{finding_path}.asset"),
-                component=redact(finding.component, f"{finding_path}.component"),
-                rationale=redact(finding.rationale, f"{finding_path}.rationale"),
-                recommended_action=redact(
-                    finding.recommended_action,
-                    f"{finding_path}.recommended_action",
-                ),
-                id=redact(finding.id, f"{finding_path}.id"),
-                dedup_key=redact(finding.dedup_key, f"{finding_path}.dedup_key"),
-                asset_key=redact(finding.asset_key, f"{finding_path}.asset_key"),
-                owner=redact(finding.owner, f"{finding_path}.owner"),
-                business_service=redact(
-                    finding.business_service,
-                    f"{finding_path}.business_service",
-                ),
-                environment=redact(finding.environment, f"{finding_path}.environment"),
-                exposure=redact(finding.exposure, f"{finding_path}.exposure"),
-                criticality=redact(finding.criticality, f"{finding_path}.criticality"),
-                component_purl=redact(finding.component_purl, f"{finding_path}.component_purl"),
-                decision_statement=redact(
-                    finding.decision_statement,
-                    f"{finding_path}.decision_statement",
-                ),
-                business_impact=redact(
-                    finding.business_impact,
-                    f"{finding_path}.business_impact",
-                ),
-                decision_sla=redact(finding.decision_sla, f"{finding_path}.decision_sla"),
-                data_quality_flags=redact(
-                    finding.data_quality_flags,
-                    f"{finding_path}.data_quality_flags",
-                ),
-                vulnerability=redact(finding.vulnerability, f"{finding_path}.vulnerability"),
-                explanation=redact(finding.explanation, f"{finding_path}.explanation"),
-                data_quality=redact(finding.data_quality, f"{finding_path}.data_quality"),
-                evidence=redact(finding.evidence, f"{finding_path}.evidence"),
-                occurrences=redact(finding.occurrences, f"{finding_path}.occurrences"),
+            finding.model_copy(
+                update={
+                    "cve_id": redact(finding.cve_id, f"{finding_path}.cve_id"),
+                    "priority": redact(finding.priority, f"{finding_path}.priority"),
+                    "status": redact(finding.status, f"{finding_path}.status"),
+                    "asset": redact(finding.asset, f"{finding_path}.asset"),
+                    "component": redact(finding.component, f"{finding_path}.component"),
+                    "rationale": redact(finding.rationale, f"{finding_path}.rationale"),
+                    "recommended_action": redact(
+                        finding.recommended_action,
+                        f"{finding_path}.recommended_action",
+                    ),
+                    "id": redact(finding.id, f"{finding_path}.id"),
+                    "dedup_key": redact(finding.dedup_key, f"{finding_path}.dedup_key"),
+                    "asset_key": redact(finding.asset_key, f"{finding_path}.asset_key"),
+                    "owner": redact(finding.owner, f"{finding_path}.owner"),
+                    "business_service": redact(
+                        finding.business_service,
+                        f"{finding_path}.business_service",
+                    ),
+                    "environment": redact(finding.environment, f"{finding_path}.environment"),
+                    "exposure": redact(finding.exposure, f"{finding_path}.exposure"),
+                    "criticality": redact(finding.criticality, f"{finding_path}.criticality"),
+                    "component_purl": redact(
+                        finding.component_purl,
+                        f"{finding_path}.component_purl",
+                    ),
+                    "decision_statement": redact(
+                        finding.decision_statement,
+                        f"{finding_path}.decision_statement",
+                    ),
+                    "business_impact": redact(
+                        finding.business_impact,
+                        f"{finding_path}.business_impact",
+                    ),
+                    "decision_sla": redact(finding.decision_sla, f"{finding_path}.decision_sla"),
+                    "data_quality_flags": tuple(
+                        redact(
+                            list(finding.data_quality_flags),
+                            f"{finding_path}.data_quality_flags",
+                        )
+                    ),
+                    "vulnerability": vulnerability,
+                    "explanation": redact(finding.explanation, f"{finding_path}.explanation"),
+                    "data_quality": redact(finding.data_quality, f"{finding_path}.data_quality"),
+                    "evidence": redact(finding.evidence, f"{finding_path}.evidence"),
+                    "occurrences": occurrences,
+                }
             )
         )
 
     return (
-        replace(
-            payload,
-            project_name=redact(payload.project_name, "project.name"),
-            project_description=redact(payload.project_description, "project.description"),
-            input_type=redact(payload.input_type, "analysis_run.input_type"),
-            filename=redact(payload.filename, "analysis_run.filename"),
-            summary=redact(payload.summary, "analysis_run.summary"),
-            run_error=redact(payload.run_error, "analysis_run.error_message"),
-            run_errors=redact(payload.run_errors, "analysis_run.errors"),
-            governance_rollups=redact(payload.governance_rollups, "governance_rollups"),
-            detection_coverage=redact(payload.detection_coverage, "detection_coverage"),
-            findings=findings,
-            provider_snapshot=provider_snapshot,
+        payload.model_copy(
+            update={
+                "project_name": redact(payload.project_name, "project.name"),
+                "project_description": redact(
+                    payload.project_description,
+                    "project.description",
+                ),
+                "input_type": redact(payload.input_type, "analysis_run.input_type"),
+                "filename": redact(payload.filename, "analysis_run.filename"),
+                "summary": redact(payload.summary, "analysis_run.summary"),
+                "run_error": redact(payload.run_error, "analysis_run.error_message"),
+                "run_errors": redact(payload.run_errors, "analysis_run.errors"),
+                "governance_rollups": redact(payload.governance_rollups, "governance_rollups"),
+                "detection_coverage": redact(payload.detection_coverage, "detection_coverage"),
+                "findings": tuple(findings),
+                "provider_snapshot": provider_snapshot,
+            }
         ),
         redactions,
     )
@@ -123,7 +163,7 @@ def _redact_bundle_value(value: Any, *, path_prefix: str = "") -> tuple[Any, lis
     return redact_value(value, path_prefix=path_prefix, redact_mapping_keys=True)
 
 
-def _counts_by_priority(findings: list[MarkdownReportFinding]) -> dict[str, int]:
+def _counts_by_priority(findings: Sequence[MarkdownReportFinding]) -> dict[str, int]:
     counts = Counter(_priority_label(finding.priority) for finding in findings)
     return {priority: counts.get(priority, 0) for priority in PRIORITY_LABELS}
 
@@ -203,7 +243,7 @@ def _vex_status_counts_from_explanation(explanation: dict[str, Any]) -> Counter[
     return status_counts
 
 
-def _governance_vex_summary(findings: list[MarkdownReportFinding]) -> dict[str, Any]:
+def _governance_vex_summary(findings: Sequence[MarkdownReportFinding]) -> dict[str, Any]:
     status_counts: Counter[str] = Counter()
     for finding in findings:
         status_counts.update(_vex_status_counts_from_explanation(finding.explanation))

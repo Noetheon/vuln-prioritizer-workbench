@@ -55,14 +55,12 @@ export function buildDashboardMetricSummaries({
   acceptedRiskCount,
   effectiveSignalCounts,
   effectiveSummary,
-  isDemoMode,
   signalLoading,
   summaryLoading,
 }: {
   acceptedRiskCount: number
   effectiveSignalCounts: DashboardSignalCounts
   effectiveSummary: ProjectDecisionSummaryPublic | null
-  isDemoMode: boolean
   signalLoading: boolean
   summaryLoading: boolean
 }): DashboardMetricSummary[] {
@@ -73,7 +71,7 @@ export function buildDashboardMetricSummaries({
       label: "Critical Priority",
       tone: "critical",
       value:
-        (!isDemoMode && summaryLoading) || effectiveSummary === null
+        summaryLoading || effectiveSummary === null
           ? "—"
           : String(priorityCount(effectiveSummary, "Critical")),
     },
@@ -83,7 +81,7 @@ export function buildDashboardMetricSummaries({
       label: "KEV Exposed",
       tone: "kev",
       value:
-        (!isDemoMode && summaryLoading) || effectiveSummary === null
+        summaryLoading || effectiveSummary === null
           ? "—"
           : String(effectiveSummary?.kev_hits ?? 0),
     },
@@ -92,20 +90,16 @@ export function buildDashboardMetricSummaries({
       icon: TrendingUp,
       label: "High EPSS",
       tone: "high",
-      value:
-        !isDemoMode && signalLoading
-          ? "—"
-          : String(effectiveSignalCounts.highEpss),
+      value: signalLoading ? "—" : String(effectiveSignalCounts.highEpss),
     },
     {
       detail: "Internet-facing criticals",
       icon: Globe2,
       label: "Internet Facing",
       tone: "exposure",
-      value:
-        !isDemoMode && signalLoading
-          ? "—"
-          : String(effectiveSignalCounts.internetFacingCriticals),
+      value: signalLoading
+        ? "—"
+        : String(effectiveSignalCounts.internetFacingCriticals),
     },
     {
       detail: "Accepted-risk findings",
@@ -113,7 +107,7 @@ export function buildDashboardMetricSummaries({
       label: "Accepted Risk Due",
       tone: "accepted",
       value:
-        (!isDemoMode && summaryLoading) || effectiveSummary === null
+        summaryLoading || effectiveSummary === null
           ? "—"
           : String(acceptedRiskCount),
     },

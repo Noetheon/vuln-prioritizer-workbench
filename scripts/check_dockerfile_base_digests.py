@@ -1,3 +1,5 @@
+"""Check Docker and Compose image references for digest pins."""
+
 from __future__ import annotations
 
 import re
@@ -26,6 +28,7 @@ def _requires_digest(image: str) -> bool:
 
 
 def main() -> int:
+    """Return non-zero when a required image reference is not digest-pinned."""
     failures: list[str] = []
     for dockerfile in DOCKERFILES:
         for line_number, line in enumerate(dockerfile.read_text(encoding="utf-8").splitlines(), 1):

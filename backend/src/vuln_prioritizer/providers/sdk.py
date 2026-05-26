@@ -1,4 +1,5 @@
-"""Static provider extension contracts.
+"""
+Static provider extension contracts.
 
 The provider SDK is intentionally declarative and local-only. It documents the
 shape required by provider implementations without loading arbitrary entry
@@ -78,11 +79,11 @@ class ProviderClientAdapter:
 
     @property
     def source(self) -> str:
+        """Source method for ProviderClientAdapter."""
         return self.definition.name
 
     def enrich(self, cve_ids: Sequence[str], **kwargs: Any) -> ProviderEnrichmentResult:
         """Enrich CVEs without letting provider failures abort the caller."""
-
         requested_cves = list(cve_ids)
         completed_at = iso_utc_now()
         warnings: list[str]
@@ -137,7 +138,6 @@ class ProviderClientAdapter:
 
 def validate_provider_definition(definition: ProviderDefinition) -> None:
     """Validate provider metadata without performing provider lookups."""
-
     if not definition.name or definition.name.strip() != definition.name:
         raise ValueError("Provider names must be non-empty and trimmed.")
     if definition.cache_namespace is not None and (
@@ -159,7 +159,6 @@ def build_provider_registry(
     definitions: tuple[ProviderDefinition, ...],
 ) -> Mapping[str, ProviderDefinition]:
     """Build a static provider registry from explicit local definitions."""
-
     registry: dict[str, ProviderDefinition] = {}
     for definition in definitions:
         validate_provider_definition(definition)
@@ -175,7 +174,6 @@ def build_provider_clients(
     cache: FileCache | None = None,
 ) -> Mapping[str, ProviderEnrichmentClient]:
     """Build uniform enrichment clients from static provider definitions."""
-
     return {
         name: ProviderClientAdapter(definition=definition, cache=cache)
         for name, definition in build_provider_registry(definitions).items()
@@ -189,7 +187,6 @@ def builtin_provider_definitions(
     nvd_api_key_env: str = DEFAULT_NVD_API_KEY_ENV,
 ) -> tuple[ProviderDefinition, ...]:
     """Return explicit local definitions for the built-in provider implementations."""
-
     shared_session = session or requests.Session()
     return (
         ProviderDefinition(
@@ -232,7 +229,6 @@ def provider_cache_contract(
     cache: FileCache | None = None,
 ) -> ProviderCacheContract:
     """Return the declared cache contract for a provider definition."""
-
     ttl_seconds = definition.cache_ttl_seconds
     if ttl_seconds is None and cache is not None:
         ttl_seconds = int(cache.ttl.total_seconds())
@@ -256,7 +252,6 @@ def provider_status_from_diagnostics(
     cache: FileCache | None = None,
 ) -> ProviderStatus:
     """Build the source status DTO from normalized lookup diagnostics."""
-
     latest_cached_at = None
     if cache is not None and cache_contract.namespace:
         latest_cached_at = cache.latest_cached_at(cache_contract.namespace)
@@ -287,7 +282,6 @@ def provider_data_quality_flags(
     warnings: Sequence[str] = (),
 ) -> list[ProviderDataQualityFlag]:
     """Convert recoverable provider problems into data-quality flags."""
-
     flags: list[ProviderDataQualityFlag] = []
     if diagnostics.failures:
         flags.append(
@@ -345,7 +339,6 @@ def provider_diagnostics_from_any(
     record_count: int = 0,
 ) -> ProviderLookupDiagnostics:
     """Normalize provider-specific diagnostics into the shared DTO."""
-
     content_hits = _int_attr(value, "content_hits", record_count)
     empty_records = _int_attr(value, "empty_records", max(requested_count - content_hits, 0))
     failures = _int_attr(value, "failures", 0)
@@ -364,6 +357,7 @@ def provider_diagnostics_from_any(
 
 
 def _int_attr(value: Any, name: str, default: int) -> int:
+    """Int attr function."""
     try:
         raw = getattr(value, name)
     except AttributeError:
@@ -374,6 +368,7 @@ def _int_attr(value: Any, name: str, default: int) -> int:
 
 
 def _bool_attr(value: Any, name: str, default: bool) -> bool:
+    """Bool attr function."""
     try:
         raw = getattr(value, name)
     except AttributeError:

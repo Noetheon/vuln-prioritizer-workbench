@@ -22,6 +22,7 @@ async def build_project_import_upload_request(
     attack_mapping_file: str | None,
     attack_technique_metadata_file: str | None,
 ) -> ProjectImportUploadRequest:
+    """Build project import upload request function."""
     primary_content = await read_bounded_upload(file, settings=settings)
     remaining_bytes = settings.max_upload_bytes - len(primary_content)
     asset_context_content = await _read_optional_upload(
@@ -59,6 +60,7 @@ async def _read_optional_upload(
     settings: Settings,
     remaining_bytes: int,
 ) -> ImportUploadContent | None:
+    """Read optional upload function."""
     if upload is None or not has_optional_upload(upload.filename):
         return None
     content = await read_bounded_upload(upload, settings=settings, max_bytes=remaining_bytes)

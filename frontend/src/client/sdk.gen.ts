@@ -2,7 +2,7 @@
 
 import { buildClientParams, type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AssetCreate, AssetExposure, AssetUpdate, BodyAssetsImportProjectAssets, BodyImportsImportProjectUpload, DeleteApiV1ProjectsByProjectIdErrors, DeleteApiV1ProjectsByProjectIdResponses, DeleteApiV1WorkbenchDemoResponses, DemoWorkspaceCreate, FindingPriority, FindingStatus, GetApiV1AuditEventsErrors, GetApiV1AuditEventsResponses, GetApiV1FindingsByFindingIdErrors, GetApiV1FindingsByFindingIdExplainErrors, GetApiV1FindingsByFindingIdExplainResponses, GetApiV1FindingsByFindingIdResponses, GetApiV1ProjectsByProjectIdAssetsErrors, GetApiV1ProjectsByProjectIdAssetsResponses, GetApiV1ProjectsByProjectIdAttackSummaryErrors, GetApiV1ProjectsByProjectIdAttackSummaryResponses, GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors, GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses, GetApiV1ProjectsByProjectIdDashboardErrors, GetApiV1ProjectsByProjectIdDashboardResponses, GetApiV1ProjectsByProjectIdErrors, GetApiV1ProjectsByProjectIdFindingsErrors, GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdGovernanceRollupsErrors, GetApiV1ProjectsByProjectIdGovernanceRollupsResponses, GetApiV1ProjectsByProjectIdResponses, GetApiV1ProjectsByProjectIdRunsErrors, GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdSummaryErrors, GetApiV1ProjectsByProjectIdSummaryResponses, GetApiV1ProjectsByProjectIdWaiversErrors, GetApiV1ProjectsByProjectIdWaiversResponses, GetApiV1ProjectsResponses, GetApiV1ProvidersStatusResponses, GetApiV1ProvidersUpdateJobsResponses, GetApiV1ReportsByReportIdDownloadErrors, GetApiV1ReportsByReportIdDownloadResponses, GetApiV1RunsByRunIdErrors, GetApiV1RunsByRunIdReportsErrors, GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdResponses, GetApiV1RunsByRunIdSummaryErrors, GetApiV1RunsByRunIdSummaryResponses, GetApiV1UtilsHealthCheckResponses, GetApiV1WorkbenchDemoResponses, GetApiV1WorkbenchHealthResponses, GetApiV1WorkbenchStatusResponses, GitHubIssueExportCreate, GitHubIssuePreviewCreate, PatchApiV1AssetsByAssetIdErrors, PatchApiV1AssetsByAssetIdResponses, PatchApiV1ProjectsByProjectIdErrors, PatchApiV1ProjectsByProjectIdResponses, PatchApiV1WaiversByWaiverIdErrors, PatchApiV1WaiversByWaiverIdResponses, PostApiV1AssetsByAssetIdRecalculateErrors, PostApiV1AssetsByAssetIdRecalculateResponses, PostApiV1ProjectsByProjectIdAssetsErrors, PostApiV1ProjectsByProjectIdAssetsImportErrors, PostApiV1ProjectsByProjectIdAssetsImportResponses, PostApiV1ProjectsByProjectIdAssetsResponses, PostApiV1ProjectsByProjectIdGithubIssuesExportErrors, PostApiV1ProjectsByProjectIdGithubIssuesExportResponses, PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors, PostApiV1ProjectsByProjectIdGithubIssuesPreviewResponses, PostApiV1ProjectsByProjectIdImportsErrors, PostApiV1ProjectsByProjectIdImportsResponses, PostApiV1ProjectsByProjectIdWaiversErrors, PostApiV1ProjectsByProjectIdWaiversResponses, PostApiV1ProjectsErrors, PostApiV1ProjectsResponses, PostApiV1ProvidersUpdateJobsErrors, PostApiV1ProvidersUpdateJobsResponses, PostApiV1ReportsByReportIdVerifyErrors, PostApiV1ReportsByReportIdVerifyResponses, PostApiV1RunsByRunIdReportsErrors, PostApiV1RunsByRunIdReportsResponses, PostApiV1WaiversByWaiverIdExpireErrors, PostApiV1WaiversByWaiverIdExpireResponses, PostApiV1WorkbenchDemoErrors, PostApiV1WorkbenchDemoResponses, ProjectCreate, ProjectUpdate, ProviderUpdateJobCreate, ReportCreate, WaiverCreate, WaiverUpdate } from './types.gen';
+import type { AssetCreate, AssetExposure, AssetUpdate, BodyAssetsImportProjectAssets, BodyImportsImportProjectUpload, DeleteApiV1ProjectsByProjectIdErrors, DeleteApiV1ProjectsByProjectIdResponses, DeleteApiV1WorkbenchDemoResponses, DemoWorkspaceCreate, FindingPriority, FindingStatus, GetApiV1AuditEventsErrors, GetApiV1AuditEventsResponses, GetApiV1FindingsByFindingIdErrors, GetApiV1FindingsByFindingIdExplainErrors, GetApiV1FindingsByFindingIdExplainResponses, GetApiV1FindingsByFindingIdResponses, GetApiV1ProjectsByProjectIdAssetsErrors, GetApiV1ProjectsByProjectIdAssetsResponses, GetApiV1ProjectsByProjectIdAttackSummaryErrors, GetApiV1ProjectsByProjectIdAttackSummaryResponses, GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors, GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses, GetApiV1ProjectsByProjectIdDashboardErrors, GetApiV1ProjectsByProjectIdDashboardResponses, GetApiV1ProjectsByProjectIdErrors, GetApiV1ProjectsByProjectIdFindingsErrors, GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdGovernanceRollupsErrors, GetApiV1ProjectsByProjectIdGovernanceRollupsResponses, GetApiV1ProjectsByProjectIdResponses, GetApiV1ProjectsByProjectIdRunsErrors, GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdSummaryErrors, GetApiV1ProjectsByProjectIdSummaryResponses, GetApiV1ProjectsByProjectIdWaiversErrors, GetApiV1ProjectsByProjectIdWaiversResponses, GetApiV1ProjectsErrors, GetApiV1ProjectsResponses, GetApiV1ProvidersStatusResponses, GetApiV1ProvidersUpdateJobsResponses, GetApiV1ReportsByReportIdDownloadErrors, GetApiV1ReportsByReportIdDownloadResponses, GetApiV1RunsByRunIdErrors, GetApiV1RunsByRunIdReportsErrors, GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdResponses, GetApiV1RunsByRunIdSummaryErrors, GetApiV1RunsByRunIdSummaryResponses, GetApiV1UtilsHealthCheckResponses, GetApiV1WorkbenchDemoResponses, GetApiV1WorkbenchHealthResponses, GetApiV1WorkbenchStatusResponses, GitHubIssueExportCreate, GitHubIssuePreviewCreate, PatchApiV1AssetsByAssetIdErrors, PatchApiV1AssetsByAssetIdResponses, PatchApiV1ProjectsByProjectIdErrors, PatchApiV1ProjectsByProjectIdResponses, PatchApiV1WaiversByWaiverIdErrors, PatchApiV1WaiversByWaiverIdResponses, PostApiV1AssetsByAssetIdRecalculateErrors, PostApiV1AssetsByAssetIdRecalculateResponses, PostApiV1ProjectsByProjectIdAssetsErrors, PostApiV1ProjectsByProjectIdAssetsImportErrors, PostApiV1ProjectsByProjectIdAssetsImportResponses, PostApiV1ProjectsByProjectIdAssetsResponses, PostApiV1ProjectsByProjectIdGithubIssuesExportErrors, PostApiV1ProjectsByProjectIdGithubIssuesExportResponses, PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors, PostApiV1ProjectsByProjectIdGithubIssuesPreviewResponses, PostApiV1ProjectsByProjectIdImportsErrors, PostApiV1ProjectsByProjectIdImportsResponses, PostApiV1ProjectsByProjectIdWaiversErrors, PostApiV1ProjectsByProjectIdWaiversResponses, PostApiV1ProjectsErrors, PostApiV1ProjectsResponses, PostApiV1ProvidersUpdateJobsErrors, PostApiV1ProvidersUpdateJobsResponses, PostApiV1ReportsByReportIdVerifyErrors, PostApiV1ReportsByReportIdVerifyResponses, PostApiV1RunsByRunIdReportsErrors, PostApiV1RunsByRunIdReportsResponses, PostApiV1WaiversByWaiverIdExpireErrors, PostApiV1WaiversByWaiverIdExpireResponses, PostApiV1WorkbenchDemoErrors, PostApiV1WorkbenchDemoResponses, ProjectCreate, ProjectUpdate, ProviderUpdateJobCreate, ReportCreate, WaiverCreate, WaiverUpdate } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -68,11 +68,15 @@ export class AssetsService {
         project_id: string;
         owner?: string | null;
         service?: string | null;
+        limit?: number;
+        offset?: number;
     }, options?: Options<never, ThrowOnError>) {
         const params = buildClientParams([parameters], [{ args: [
                     { in: 'path', key: 'project_id' },
                     { in: 'query', key: 'owner' },
-                    { in: 'query', key: 'service' }
+                    { in: 'query', key: 'service' },
+                    { in: 'query', key: 'limit' },
+                    { in: 'query', key: 'offset' }
                 ] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdAssetsResponses, GetApiV1ProjectsByProjectIdAssetsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
@@ -250,11 +254,16 @@ export class ProjectsService {
      *
      * List local Workbench projects.
      */
-    public static readProjects<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
-        return (options?.client ?? client).get<GetApiV1ProjectsResponses, unknown, ThrowOnError, 'data'>({
+    public static readProjects<ThrowOnError extends boolean = true>(parameters?: {
+        limit?: number;
+        offset?: number;
+    }, options?: Options<never, ThrowOnError>) {
+        const params = buildClientParams([parameters], [{ args: [{ in: 'query', key: 'limit' }, { in: 'query', key: 'offset' }] }]);
+        return (options?.client ?? client).get<GetApiV1ProjectsResponses, GetApiV1ProjectsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
             url: '/api/v1/projects/',
-            ...options
+            ...options,
+            ...params
         });
     }
 
@@ -513,8 +522,14 @@ export class RunsService {
      */
     public static readProjectRuns<ThrowOnError extends boolean = true>(parameters: {
         project_id: string;
+        limit?: number;
+        offset?: number;
     }, options?: Options<never, ThrowOnError>) {
-        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }] }]);
+        const params = buildClientParams([parameters], [{ args: [
+                    { in: 'path', key: 'project_id' },
+                    { in: 'query', key: 'limit' },
+                    { in: 'query', key: 'offset' }
+                ] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdRunsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
             url: '/api/v1/projects/{project_id}/runs/',
@@ -566,8 +581,14 @@ export class WaiversService {
      */
     public static readProjectWaivers<ThrowOnError extends boolean = true>(parameters: {
         project_id: string;
+        limit?: number;
+        offset?: number;
     }, options?: Options<never, ThrowOnError>) {
-        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }] }]);
+        const params = buildClientParams([parameters], [{ args: [
+                    { in: 'path', key: 'project_id' },
+                    { in: 'query', key: 'limit' },
+                    { in: 'query', key: 'offset' }
+                ] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdWaiversResponses, GetApiV1ProjectsByProjectIdWaiversErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
             url: '/api/v1/projects/{project_id}/waivers/',

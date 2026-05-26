@@ -55,7 +55,8 @@ def chunk_cve_ids(cve_ids: Iterable[str], max_chars: int) -> list[list[str]]:
 
 
 def iso_utc_now() -> str:
-    """Return the current UTC timestamp in ISO-8601 format.
+    """
+    Return the current UTC timestamp in ISO-8601 format.
 
     A fixed timestamp can be injected through ``VULN_PRIORITIZER_FIXED_NOW`` to
     keep generated demo artifacts deterministic across repeated maintainer runs.

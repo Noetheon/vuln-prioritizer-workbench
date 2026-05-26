@@ -8,6 +8,7 @@ from pathlib import Path
 
 
 def read_txt(path: Path) -> list[tuple[int, str]]:
+    """Read txt function."""
     rows: list[tuple[int, str]] = []
     with path.open("r", encoding="utf-8") as handle:
         for line_number, line in enumerate(handle, start=1):
@@ -19,6 +20,7 @@ def read_txt(path: Path) -> list[tuple[int, str]]:
 
 
 def read_cve_csv(path: Path) -> list[tuple[int, str]]:
+    """Read cve csv function."""
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
         if not reader.fieldnames:
@@ -38,6 +40,7 @@ def read_cve_csv(path: Path) -> list[tuple[int, str]]:
 
 
 def first_existing_field(field_map: dict[str, str], *candidates: str) -> str | None:
+    """First existing field function."""
     for candidate in candidates:
         field = field_map.get(candidate)
         if field is not None:
@@ -46,6 +49,7 @@ def first_existing_field(field_map: dict[str, str], *candidates: str) -> str | N
 
 
 def csv_value(row: dict[str, str], field_map: dict[str, str], *candidates: str) -> str | None:
+    """Csv value function."""
     field = first_existing_field(field_map, *candidates)
     if field is None:
         return None
@@ -59,6 +63,7 @@ def normalize_asset_criticality(
     warnings: list[str],
     row_number: int,
 ) -> str | None:
+    """Normalize asset criticality function."""
     if value is None:
         return None
     normalized = value.strip().lower().replace("_", "-")
@@ -85,6 +90,7 @@ def normalize_asset_exposure(
     warnings: list[str],
     row_number: int,
 ) -> str | None:
+    """Normalize asset exposure function."""
     if value is None:
         return None
     normalized = value.strip().lower().replace("_", "-")
@@ -112,6 +118,7 @@ def normalize_asset_environment(
     warnings: list[str],
     row_number: int,
 ) -> str | None:
+    """Normalize asset environment function."""
     if value is None:
         return None
     normalized = value.strip().lower().replace("_", "-")
@@ -135,6 +142,7 @@ def normalize_asset_environment(
 
 
 def split_versions(value: object) -> list[str]:
+    """Split versions function."""
     if value is None:
         return []
     if isinstance(value, list):
@@ -152,6 +160,7 @@ def split_versions(value: object) -> list[str]:
 
 
 def first_present_string(*values: object) -> str | None:
+    """First present string function."""
     for value in values:
         if isinstance(value, str) and value.strip():
             return value.strip()
@@ -159,12 +168,14 @@ def first_present_string(*values: object) -> str | None:
 
 
 def as_string_list(value: object) -> list[str]:
+    """As string list function."""
     if not isinstance(value, list):
         return []
     return [str(item).strip() for item in value if item is not None and str(item).strip()]
 
 
 def load_json_object(path: Path, document_name: str) -> dict:
+    """Load json object function."""
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
@@ -175,16 +186,19 @@ def load_json_object(path: Path, document_name: str) -> dict:
 
 
 def dict_value(value: object) -> dict:
+    """Dict value function."""
     return value if isinstance(value, dict) else {}
 
 
 def dict_items(value: object) -> list[dict]:
+    """Dict items function."""
     if not isinstance(value, list):
         return []
     return [item for item in value if isinstance(item, dict)]
 
 
 def first_string_from_list(value: object) -> str | None:
+    """First string from list function."""
     if not isinstance(value, list):
         return None
     for item in value:

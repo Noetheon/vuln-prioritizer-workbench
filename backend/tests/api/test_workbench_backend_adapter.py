@@ -42,6 +42,8 @@ def test_workbench_backend_status_uses_versioned_api_namespace(tmp_path) -> None
     assert payload["core_package"] == "vuln_prioritizer"
     assert payload["database_status"] == "ready"
     assert payload["schema_status"] == "ready"
+    assert payload["api_docs_enabled"] is True
+    assert payload["api_docs_path"] == "/docs"
     assert set(payload) == {
         "status",
         "app",
@@ -49,6 +51,8 @@ def test_workbench_backend_status_uses_versioned_api_namespace(tmp_path) -> None
         "core_version",
         "database_status",
         "schema_status",
+        "api_docs_enabled",
+        "api_docs_path",
     }
 
 

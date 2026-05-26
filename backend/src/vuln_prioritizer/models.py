@@ -65,6 +65,8 @@ WaiverRule = _models_waivers.WaiverRule
 
 
 class PriorityLabel(StrEnum):
+    """Data representation and logic for Priority Label."""
+
     CRITICAL = "Critical"
     HIGH = "High"
     MEDIUM = "Medium"
@@ -75,6 +77,8 @@ class PriorityLabel(StrEnum):
 
 
 class PriorityPolicy(StrictModel):
+    """Data representation and logic for Priority Policy."""
+
     critical_epss_threshold: float = 0.70
     critical_cvss_threshold: float = 7.0
     high_epss_threshold: float = 0.40
@@ -84,6 +88,7 @@ class PriorityPolicy(StrictModel):
 
     @model_validator(mode="after")
     def validate_thresholds(self) -> PriorityPolicy:
+        """Validate the thresholds field."""
         for field_name in (
             "critical_epss_threshold",
             "high_epss_threshold",
@@ -115,6 +120,7 @@ class PriorityPolicy(StrictModel):
         return self
 
     def methodology_lines(self) -> list[str]:
+        """Methodology lines method for PriorityPolicy."""
         return [
             (
                 "Critical: KEV or "
@@ -133,6 +139,7 @@ class PriorityPolicy(StrictModel):
         ]
 
     def override_descriptions(self) -> list[str]:
+        """Override descriptions method for PriorityPolicy."""
         default_policy = PriorityPolicy()
         if self == default_policy:
             return []
@@ -162,6 +169,8 @@ class PriorityPolicy(StrictModel):
 
 
 class ExplanationReason(StrictModel):
+    """Data representation and logic for Explanation Reason."""
+
     code: str
     source: str
     signal: str
@@ -172,6 +181,8 @@ class ExplanationReason(StrictModel):
 
 
 class ExplanationNote(StrictModel):
+    """Data representation and logic for Explanation Note."""
+
     code: str
     source: str
     severity: str = "info"
@@ -179,6 +190,8 @@ class ExplanationNote(StrictModel):
 
 
 class PriorityExplanation(StrictModel):
+    """Data representation and logic for Priority Explanation."""
+
     cve_id: str
     priority_label: str
     priority_state: str | None = None
@@ -193,6 +206,8 @@ class PriorityExplanation(StrictModel):
 
 
 class PrioritizedFinding(StrictModel):
+    """Data representation and logic for Prioritized Finding."""
+
     cve_id: str
     description: str | None = None
     cvss_base_score: float | None = None
@@ -249,6 +264,8 @@ class PrioritizedFinding(StrictModel):
 
 
 class ComparisonFinding(StrictModel):
+    """Data representation and logic for Comparison Finding."""
+
     cve_id: str
     description: str | None = None
     cvss_base_score: float | None = None
@@ -295,6 +312,8 @@ class ComparisonFinding(StrictModel):
 
 
 class EnrichmentResult(BaseModel):
+    """Pydantic model representing Enrichment Result."""
+
     nvd: dict[str, NvdData] = Field(default_factory=dict)
     epss: dict[str, EpssData] = Field(default_factory=dict)
     kev: dict[str, KevData] = Field(default_factory=dict)
@@ -333,6 +352,8 @@ class EnrichmentResult(BaseModel):
 
 
 class AnalysisContext(BaseModel):
+    """Pydantic model representing Analysis Context."""
+
     schema_version: str = "1.0.0"
     input_path: str
     output_path: str | None = None
@@ -416,12 +437,16 @@ class AnalysisContext(BaseModel):
 
 
 class SnapshotMetadata(AnalysisContext):
+    """Data representation and logic for Snapshot Metadata."""
+
     schema_version: str = "1.1.0"
     snapshot_kind: str = "snapshot"
     config_file: str | None = None
 
 
 class ProviderSnapshotMetadata(StrictModel):
+    """Data representation and logic for Provider Snapshot Metadata."""
+
     schema_version: str = "1.2.0"
     artifact_kind: str = "provider-snapshot"
     snapshot_format: str = "provider-snapshot.v1.json"
@@ -444,12 +469,15 @@ class ProviderSnapshotMetadata(StrictModel):
     @field_validator("nvd_api_key_env")
     @classmethod
     def _validate_nvd_api_key_env(cls, value: str | None) -> str | None:
+        """Validate the nvd api key env field."""
         if value is None:
             return None
         return validate_env_var_name(value, label="NVD API key environment variable name")
 
 
 class ProviderSnapshotItem(StrictModel):
+    """Data representation and logic for Provider Snapshot Item."""
+
     cve_id: str
     nvd: NvdData | None = None
     epss: EpssData | None = None
@@ -458,12 +486,16 @@ class ProviderSnapshotItem(StrictModel):
 
 
 class ProviderSnapshotReport(StrictModel):
+    """Data representation and logic for Provider Snapshot Report."""
+
     metadata: ProviderSnapshotMetadata
     items: list[ProviderSnapshotItem] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
 
 
 class SnapshotDiffMetadata(StrictModel):
+    """Data representation and logic for Snapshot Diff Metadata."""
+
     schema_version: str = "1.1.0"
     generated_at: str
     before_path: str
@@ -472,6 +504,8 @@ class SnapshotDiffMetadata(StrictModel):
 
 
 class SnapshotDiffSummary(StrictModel):
+    """Data representation and logic for Snapshot Diff Summary."""
+
     added: int = 0
     removed: int = 0
     priority_up: int = 0
@@ -481,6 +515,8 @@ class SnapshotDiffSummary(StrictModel):
 
 
 class SnapshotDiffItem(StrictModel):
+    """Data representation and logic for Snapshot Diff Item."""
+
     cve_id: str
     category: str
     before_priority: str | None = None
@@ -497,6 +533,8 @@ class SnapshotDiffItem(StrictModel):
 
 
 class RollupMetadata(StrictModel):
+    """Data representation and logic for Rollup Metadata."""
+
     schema_version: str = "1.2.0"
     generated_at: str
     input_path: str
@@ -507,6 +545,8 @@ class RollupMetadata(StrictModel):
 
 
 class RollupCandidate(StrictModel):
+    """Data representation and logic for Rollup Candidate."""
+
     cve_id: str
     priority_label: str
     waived: bool = False
@@ -523,6 +563,8 @@ class RollupCandidate(StrictModel):
 
 
 class RollupBucket(StrictModel):
+    """Data representation and logic for Rollup Bucket."""
+
     bucket: str
     dimension: str
     remediation_rank: int = 0

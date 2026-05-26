@@ -10,6 +10,39 @@ export type ClientOptions = {
  * Public analysis run response shape.
  */
 export type AnalysisRunPublic = {
+    analysis_error?: RunWorkflowFailure | null;
+    /**
+     * Asset Context
+     */
+    asset_context?: {
+        [key: string]: unknown;
+    } | null;
+    asset_context_error?: RunWorkflowFailure | null;
+    asset_context_upload?: RunWorkflowUploadRef | null;
+    /**
+     * Attack Mapped Cves
+     */
+    attack_mapped_cves?: number;
+    /**
+     * Attack Mapping File
+     */
+    attack_mapping_file?: string | null;
+    /**
+     * Attack Source
+     */
+    attack_source?: string | null;
+    background_error?: RunWorkflowFailure | null;
+    /**
+     * Counts By Priority
+     */
+    counts_by_priority?: {
+        [key: string]: number;
+    };
+    /**
+     * Created Findings
+     */
+    created_findings?: number;
+    dedup_summary?: RunWorkflowDedupSummary | null;
     /**
      * Error Json
      */
@@ -25,6 +58,10 @@ export type AnalysisRunPublic = {
      */
     filename?: string | null;
     /**
+     * Finding Count
+     */
+    finding_count?: number;
+    /**
      * Finished At
      */
     finished_at?: string | null;
@@ -33,17 +70,55 @@ export type AnalysisRunPublic = {
      */
     id: string;
     /**
+     * Ignored Lines
+     */
+    ignored_lines?: number;
+    import_job?: RunWorkflowJob | null;
+    /**
+     * Input Sha256
+     */
+    input_sha256?: string | null;
+    /**
      * Input Type
      */
     input_type: string;
+    input_upload?: RunWorkflowUploadRef | null;
+    /**
+     * Kev Hits
+     */
+    kev_hits?: number;
+    /**
+     * Locked Provider Data
+     */
+    locked_provider_data?: boolean;
+    /**
+     * Occurrence Count
+     */
+    occurrence_count?: number;
     /**
      * Project Id
      */
     project_id: string;
     /**
+     * Provider Degraded
+     */
+    provider_degraded?: boolean;
+    /**
+     * Provider Snapshot File
+     */
+    provider_snapshot_file?: string | null;
+    /**
+     * Provider Snapshot Hash
+     */
+    provider_snapshot_hash?: string | null;
+    /**
      * Provider Snapshot Id
      */
     provider_snapshot_id: string | null;
+    /**
+     * Rows Read
+     */
+    rows_read?: number;
     /**
      * Started At
      */
@@ -55,6 +130,35 @@ export type AnalysisRunPublic = {
     summary_json?: {
         [key: string]: unknown;
     };
+    /**
+     * Suppressed By Vex
+     */
+    suppressed_by_vex?: number;
+    /**
+     * Updated Findings
+     */
+    updated_findings?: number;
+    /**
+     * Vex
+     */
+    vex?: {
+        [key: string]: unknown;
+    } | null;
+    vex_error?: RunWorkflowFailure | null;
+    vex_upload?: RunWorkflowUploadRef | null;
+    /**
+     * Warnings
+     */
+    warnings?: Array<string>;
+    workflow_error?: RunWorkflowErrorV1 | null;
+    /**
+     * Workflow Error Schema Version
+     */
+    workflow_error_schema_version?: string | null;
+    /**
+     * Workflow Schema Version
+     */
+    workflow_schema_version?: string;
 };
 
 /**
@@ -74,6 +178,28 @@ export type AnalysisRunSummaryPublic = {
      * Analysis Decision Scope
      */
     analysis_decision_scope?: string | null;
+    analysis_error?: RunWorkflowFailure | null;
+    /**
+     * Asset Context
+     */
+    asset_context?: {
+        [key: string]: unknown;
+    } | null;
+    asset_context_error?: RunWorkflowFailure | null;
+    asset_context_upload?: RunWorkflowUploadRef | null;
+    /**
+     * Attack Mapped Cves
+     */
+    attack_mapped_cves?: number;
+    /**
+     * Attack Mapping File
+     */
+    attack_mapping_file?: string | null;
+    /**
+     * Attack Source
+     */
+    attack_source?: string | null;
+    background_error?: RunWorkflowFailure | null;
     /**
      * Counts By Priority
      */
@@ -84,12 +210,7 @@ export type AnalysisRunSummaryPublic = {
      * Created Findings
      */
     created_findings?: number;
-    /**
-     * Dedup Summary
-     */
-    dedup_summary?: {
-        [key: string]: unknown;
-    };
+    dedup_summary?: RunWorkflowDedupSummary | null;
     /**
      * Error Json
      */
@@ -116,26 +237,24 @@ export type AnalysisRunSummaryPublic = {
      * Ignored Lines
      */
     ignored_lines?: number;
+    import_job?: RunWorkflowJob | null;
     /**
-     * Import Job
+     * Input Sha256
      */
-    import_job?: {
-        [key: string]: unknown;
-    };
+    input_sha256?: string | null;
     /**
      * Input Type
      */
     input_type: string;
-    /**
-     * Input Upload
-     */
-    input_upload?: {
-        [key: string]: unknown;
-    };
+    input_upload?: RunWorkflowUploadRef | null;
     /**
      * Kev Hits
      */
     kev_hits?: number;
+    /**
+     * Locked Provider Data
+     */
+    locked_provider_data?: boolean;
     /**
      * Occurrence Count
      */
@@ -157,9 +276,21 @@ export type AnalysisRunSummaryPublic = {
      */
     provider_degraded?: boolean;
     /**
+     * Provider Snapshot File
+     */
+    provider_snapshot_file?: string | null;
+    /**
+     * Provider Snapshot Hash
+     */
+    provider_snapshot_hash?: string | null;
+    /**
      * Provider Snapshot Id
      */
     provider_snapshot_id?: string | null;
+    /**
+     * Rows Read
+     */
+    rows_read?: number;
     /**
      * Started At
      */
@@ -172,9 +303,34 @@ export type AnalysisRunSummaryPublic = {
         [key: string]: unknown;
     };
     /**
+     * Suppressed By Vex
+     */
+    suppressed_by_vex?: number;
+    /**
      * Updated Findings
      */
     updated_findings?: number;
+    /**
+     * Vex
+     */
+    vex?: {
+        [key: string]: unknown;
+    } | null;
+    vex_error?: RunWorkflowFailure | null;
+    vex_upload?: RunWorkflowUploadRef | null;
+    /**
+     * Warnings
+     */
+    warnings?: Array<string>;
+    workflow_error?: RunWorkflowErrorV1 | null;
+    /**
+     * Workflow Error Schema Version
+     */
+    workflow_error_schema_version?: string | null;
+    /**
+     * Workflow Schema Version
+     */
+    workflow_schema_version?: string;
 };
 
 /**
@@ -2671,6 +2827,267 @@ export type ReportsPublic = {
 };
 
 /**
+ * RunWorkflowDedupDecision
+ *
+ * One sampled import deduplication decision.
+ */
+export type RunWorkflowDedupDecision = {
+    /**
+     * Action
+     */
+    action: string;
+    /**
+     * Asset Ref
+     */
+    asset_ref?: string | null;
+    /**
+     * Component Identity
+     */
+    component_identity?: string | null;
+    /**
+     * Cve
+     */
+    cve?: string | null;
+    /**
+     * Dedup Key
+     */
+    dedup_key?: string | null;
+    /**
+     * Finding Id
+     */
+    finding_id?: string | null;
+    /**
+     * Source Id
+     */
+    source_id?: string | null;
+    [key: string]: unknown;
+};
+
+/**
+ * RunWorkflowDedupSummary
+ *
+ * Import deduplication summary for a Workbench run.
+ */
+export type RunWorkflowDedupSummary = {
+    /**
+     * Created Findings
+     */
+    created_findings?: number;
+    /**
+     * Decision Count
+     */
+    decision_count?: number;
+    /**
+     * Decision Sample Limit
+     */
+    decision_sample_limit?: number | null;
+    /**
+     * Decisions
+     */
+    decisions?: Array<RunWorkflowDedupDecision>;
+    /**
+     * Key Version
+     */
+    key_version?: string | null;
+    /**
+     * Omitted Decisions
+     */
+    omitted_decisions?: number;
+    /**
+     * Reused Findings
+     */
+    reused_findings?: number;
+    /**
+     * Updated Findings
+     */
+    updated_findings?: number;
+    [key: string]: unknown;
+};
+
+/**
+ * RunWorkflowErrorV1
+ *
+ * Typed v1 contract for Workbench run error metadata.
+ */
+export type RunWorkflowErrorV1 = {
+    analysis_error?: RunWorkflowFailure | null;
+    asset_context_error?: RunWorkflowFailure | null;
+    background_error?: RunWorkflowFailure | null;
+    /**
+     * Created Findings
+     */
+    created_findings?: number;
+    /**
+     * Ignored Lines
+     */
+    ignored_lines?: number;
+    import_job?: RunWorkflowJob | null;
+    /**
+     * Parse Errors
+     */
+    parse_errors?: Array<RunWorkflowParseError>;
+    /**
+     * Schema Version
+     */
+    schema_version?: 'run-workflow-error.v1';
+    /**
+     * Updated Findings
+     */
+    updated_findings?: number;
+    vex_error?: RunWorkflowFailure | null;
+    [key: string]: unknown;
+};
+
+/**
+ * RunWorkflowFailure
+ *
+ * Structured workflow failure metadata.
+ */
+export type RunWorkflowFailure = {
+    /**
+     * Error Type
+     */
+    error_type?: string | null;
+    /**
+     * Filename
+     */
+    filename?: string | null;
+    /**
+     * Message
+     */
+    message: string;
+    /**
+     * Stage
+     */
+    stage: string;
+    [key: string]: unknown;
+};
+
+/**
+ * RunWorkflowJob
+ *
+ * Stable job metadata exposed on run summaries.
+ */
+export type RunWorkflowJob = {
+    /**
+     * Execution Mode
+     */
+    execution_mode?: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Status History
+     */
+    status_history?: Array<RunWorkflowJobStatusEntry>;
+    /**
+     * Updated At
+     */
+    updated_at?: string | null;
+    [key: string]: unknown;
+};
+
+/**
+ * RunWorkflowJobStatusEntry
+ *
+ * One recorded status transition for an import or provider job.
+ */
+export type RunWorkflowJobStatusEntry = {
+    /**
+     * Created At
+     */
+    created_at?: string | null;
+    /**
+     * Status
+     */
+    status: string;
+    [key: string]: unknown;
+};
+
+/**
+ * RunWorkflowParseError
+ *
+ * Stable parser diagnostic item.
+ */
+export type RunWorkflowParseError = {
+    /**
+     * Error Type
+     */
+    error_type: string;
+    /**
+     * Field
+     */
+    field?: string | null;
+    /**
+     * Filename
+     */
+    filename?: string | null;
+    /**
+     * Input Type
+     */
+    input_type: string;
+    /**
+     * Line
+     */
+    line?: number | null;
+    /**
+     * Message
+     */
+    message: string;
+    /**
+     * Value
+     */
+    value?: string | null;
+    [key: string]: unknown;
+};
+
+/**
+ * RunWorkflowUploadRef
+ *
+ * Managed upload metadata without server-local filesystem paths.
+ */
+export type RunWorkflowUploadRef = {
+    /**
+     * Content Type
+     */
+    content_type?: string | null;
+    /**
+     * Input Type
+     */
+    input_type?: string | null;
+    /**
+     * Original Filename
+     */
+    original_filename?: string | null;
+    /**
+     * Path
+     */
+    path?: string | null;
+    /**
+     * Sha256
+     */
+    sha256?: string | null;
+    /**
+     * Size Bytes
+     */
+    size_bytes?: number | null;
+    /**
+     * Storage Ref
+     */
+    storage_ref?: string | null;
+    /**
+     * Stored Filename
+     */
+    stored_filename?: string | null;
+    [key: string]: unknown;
+};
+
+/**
  * ValidationError
  */
 export type ValidationError = {
@@ -2920,6 +3337,14 @@ export type WorkbenchHealth = {
  */
 export type WorkbenchStatus = {
     /**
+     * Api Docs Enabled
+     */
+    api_docs_enabled: boolean;
+    /**
+     * Api Docs Path
+     */
+    api_docs_path?: string | null;
+    /**
      * App
      */
     app: string;
@@ -3106,9 +3531,27 @@ export type GetApiV1FindingsByFindingIdExplainResponse = GetApiV1FindingsByFindi
 export type GetApiV1ProjectsData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
     url: '/api/v1/projects/';
 };
+
+export type GetApiV1ProjectsErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1ProjectsError = GetApiV1ProjectsErrors[keyof GetApiV1ProjectsErrors];
 
 export type GetApiV1ProjectsResponses = {
     /**
@@ -3251,6 +3694,14 @@ export type GetApiV1ProjectsByProjectIdAssetsData = {
          * Service
          */
         service?: string | null;
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
     };
     url: '/api/v1/projects/{project_id}/assets/';
 };
@@ -3669,7 +4120,16 @@ export type GetApiV1ProjectsByProjectIdRunsData = {
          */
         project_id: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
     url: '/api/v1/projects/{project_id}/runs/';
 };
 
@@ -3729,7 +4189,16 @@ export type GetApiV1ProjectsByProjectIdWaiversData = {
          */
         project_id: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
     url: '/api/v1/projects/{project_id}/waivers/';
 };
 

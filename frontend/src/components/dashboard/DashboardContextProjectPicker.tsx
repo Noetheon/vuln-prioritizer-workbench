@@ -6,11 +6,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { DEMO_PROJECT_ID } from "@/lib/demo-data"
 
 type DashboardContextProjectPickerProps = {
   effectiveProjects: readonly ProjectPublic[]
-  isDemoMode: boolean
   onProjectChange: (projectId: string) => void
   projectListLoading: boolean
   selectedProjectId: string
@@ -18,18 +16,17 @@ type DashboardContextProjectPickerProps = {
 
 export function DashboardContextProjectPicker({
   effectiveProjects,
-  isDemoMode,
   onProjectChange,
   projectListLoading,
   selectedProjectId,
 }: DashboardContextProjectPickerProps) {
   return (
     <Select
-      disabled={isDemoMode || projectListLoading || effectiveProjects.length === 0}
+      disabled={projectListLoading || effectiveProjects.length === 0}
       onValueChange={(value) => {
         if (value !== "none") onProjectChange(value)
       }}
-      value={isDemoMode ? DEMO_PROJECT_ID : selectedProjectId || "none"}
+      value={selectedProjectId || "none"}
     >
       <SelectTrigger
         aria-label="Dashboard project"

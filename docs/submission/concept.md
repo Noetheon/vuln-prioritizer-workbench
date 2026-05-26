@@ -78,7 +78,9 @@ interface. Reviewers can move from project context through imports, findings,
 Finding Detail, TTP Context, Waivers, and Evidence Center to understand why a
 finding was prioritized and where the statement's boundaries are.
 
-The archived demo evidence shows this flow without offensive instructions:
+The archived demo evidence shows this historical flow without offensive
+instructions. It is fallback support material; current product claims should be
+checked against active docs, tests, and the documentation evidence matrix.
 
 - [Final Demo Flow](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/demo-flow-summary.md)
 - [Presentation Evidence Index](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/presentation-pack/evidence-index.md)

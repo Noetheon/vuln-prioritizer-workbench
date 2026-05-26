@@ -37,6 +37,7 @@ def verify_evidence_bundle(
     EvidenceBundleVerificationSummary,
     list[EvidenceBundleVerificationItem],
 ]:
+    """Verify evidence bundle function."""
     try:
         with zipfile.ZipFile(bundle_path, "r") as archive:
             member_infos = [info for info in archive.infolist() if not info.is_dir()]
@@ -278,6 +279,7 @@ def verify_evidence_bundle(
 def _archive_limit_errors(
     member_infos: list[zipfile.ZipInfo],
 ) -> list[EvidenceBundleVerificationItem]:
+    """Archive limit errors function."""
     errors: list[EvidenceBundleVerificationItem] = []
     if len(member_infos) > MAX_EVIDENCE_BUNDLE_MEMBERS:
         errors.append(
@@ -322,6 +324,7 @@ def _read_limited_member(
     *,
     max_bytes: int,
 ) -> bytes:
+    """Read limited member function."""
     content = bytearray()
     with archive.open(path, "r") as handle:
         for chunk in iter(lambda: handle.read(_HASH_CHUNK_BYTES), b""):
@@ -332,6 +335,7 @@ def _read_limited_member(
 
 
 def _hash_limited_member(archive: zipfile.ZipFile, path: str) -> tuple[int, str]:
+    """Hash limited member function."""
     digest = hashlib.sha256()
     consumed = 0
     with archive.open(path, "r") as handle:
@@ -346,6 +350,7 @@ def _hash_limited_member(archive: zipfile.ZipFile, path: str) -> tuple[int, str]
 def validate_evidence_manifest_structure(
     manifest: EvidenceBundleManifest,
 ) -> list[EvidenceBundleVerificationItem]:
+    """Validate evidence manifest structure function."""
     errors: list[EvidenceBundleVerificationItem] = []
     seen_paths: set[str] = set()
     for entry in manifest.files:
@@ -372,6 +377,7 @@ def validate_evidence_manifest_structure(
 
 
 def format_evidence_manifest_validation_error(exc: ValidationError) -> str:
+    """Format evidence manifest validation error function."""
     if not exc.errors():
         return "Manifest failed validation."
     first_error = exc.errors()[0]
@@ -386,6 +392,7 @@ def describe_evidence_bundle_mismatch(
     actual_size: int,
     actual_sha256: str,
 ) -> str:
+    """Describe evidence bundle mismatch function."""
     mismatches: list[str] = []
     if actual_size != expected.size_bytes:
         mismatches.append(f"size {actual_size} != manifest {expected.size_bytes}")

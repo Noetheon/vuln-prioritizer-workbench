@@ -7,6 +7,12 @@ confidence rubric, and mapping review checklist live in
 [`docs/attack-ttp-methodology.md`](attack-ttp-methodology.md). Workbench report
 surfaces follow the same safety contract.
 
+Version note: MITRE lists ATT&CK v19.1 as the current public website version as
+of the 2026-05-25 documentation hygiene pass. The checked-in Workbench demo
+fixtures referenced by current examples are pinned to ATT&CK 16.1 for
+deterministic local evidence. That pin is not a claim that the demo fixture set
+is current ATT&CK coverage.
+
 ## Source Contract
 
 Workbench ATT&CK context prefers CTID Mappings Explorer JSON as the canonical

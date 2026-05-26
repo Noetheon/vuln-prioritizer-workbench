@@ -3,6 +3,11 @@
 This sheet maps the submission's key claims to existing documents and evidence
 files. It does not duplicate screenshots.
 
+Archive links in this sheet are historical submission or demo evidence. They
+must not be treated as current release certification unless the same claim is
+also supported by active code, tests, command output, or an official source in
+the [documentation evidence matrix](../documentation-evidence-matrix.md).
+
 ## Claim-to-Evidence-Matrix
 
 | Claim | Evidence |
@@ -17,25 +22,22 @@ files. It does not duplicate screenshots.
 | Unmapped CVEs remain unmapped; no inference is made. | [ATT&CK/TTP Methodology](../attack-ttp-methodology.md), [Demo Readiness](../demo-readiness.md) |
 | Evidence Center creates reports and an evidence bundle with manifest/checksums. | [Reports and Evidence](../reports-and-evidence.md), [Demo Flow Summary](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/demo-flow-summary.md) |
 | The demo flow is Project -> Import -> Findings -> Finding Detail -> TTP Context -> Waivers -> Evidence Center -> Evidence Bundle. | [Demo Readiness](../demo-readiness.md), [Final Demo Flow](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/demo-flow-summary.md) |
-| The design system and final UI flow are documented. | [Presentation Evidence Index](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/presentation-pack/evidence-index.md), [Design-System Proof Folder](https://github.com/Noetheon/vuln-prioritizer-workbench/tree/main/archive/vpw-evidence/vpw-design-system-foundation) |
+| The historical final UI flow is documented. | [Presentation Evidence Index](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/presentation-pack/evidence-index.md), [Demo Flow Summary](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/demo-flow-summary.md) |
 | CI cost optimization is documented. | [CI Cost Optimization](../ci-cost-optimization.md) |
 
 ## Final Demo Flow Evidence
 
-- [Dashboard](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/01-dashboard-final.png)
-- [Projects](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/02-projects-final.png)
-- [Imports](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/03-imports-final.png)
-- [Findings](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/04-findings-final.png)
-- [Finding Detail](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/05-finding-detail-final.png)
-- [TTP Context no-inference](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/06-ttp-context-final.png)
-- [TTP Context mapped demo](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/06-ttp-context-mapped-demo.png)
-- [Waivers](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/07-waivers-final.png)
-- [Evidence Center](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/08-evidence-center-final.png)
-- [Report or Bundle generated](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/09-report-or-bundle-generated-final.png)
+The historical screenshot files were pruned from `main`. The retained summary
+documents describe the reviewed flow and point reviewers to regenerate current
+screenshots when needed.
+
 - [Demo Flow Summary](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/demo-flow-summary.md)
 - [ATT&CK Demo Mapping Summary](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/attack-demo-mapping-summary.md)
 
 ## Presentation Pack
+
+The presentation pack is historical support material for the submission/demo
+story. Use current docs and checks for current product claims.
 
 - [Presentation Pack README](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/presentation-pack/README.md)
 - [Presentation Evidence Index](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/presentation-pack/evidence-index.md)
@@ -43,13 +45,8 @@ files. It does not duplicate screenshots.
 
 ## Design-System Proof
 
-- [Design-System Folder](https://github.com/Noetheon/vuln-prioritizer-workbench/tree/main/archive/vpw-evidence/vpw-design-system-foundation)
-- [Dashboard VPW proof](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/vpw-design-system-foundation/vpw-design-system-foundation-dashboard.png)
-- [Findings VPW proof](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/vpw-design-system-foundation/vpw-design-system-foundation-findings.png)
-- [Finding Detail VPW proof](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/vpw-design-system-foundation/vpw-design-system-foundation-finding-detail.png)
-- [Evidence Center VPW proof](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/vpw-design-system-foundation/vpw-design-system-foundation-evidence-center.png)
-- [Complete desktop set](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/vpw-design-system-foundation/vpw-design-system-complete-set-desktop.png)
-- [Complete mobile set](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/vpw-design-system-foundation/vpw-design-system-complete-set-mobile.png)
+The historical visual proof assets were pruned from `main`. Current UI claims
+should use current frontend tests, fresh screenshots, or active design docs.
 
 ## Contract Artifacts
 

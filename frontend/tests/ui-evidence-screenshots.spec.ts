@@ -176,13 +176,11 @@ const evidenceRun = {
   finished_at: timestamp,
   id: runId,
   input_type: "cve_list",
+  input_upload: { original_filename: "vpw-evidence-fixture.txt" },
   project_id: mockProject.id,
   provider_snapshot_id: "demo",
   started_at: "2026-05-10T09:55:00Z",
   status: "succeeded",
-  summary_json: {
-    input_upload: { filename: "vpw-evidence-fixture.txt" },
-  },
 }
 
 const evidenceRunSummary = {
@@ -194,6 +192,7 @@ const evidenceRunSummary = {
   finished_at: timestamp,
   id: runId,
   input_type: "cve_list",
+  input_upload: { original_filename: "vpw-evidence-fixture.txt" },
   kev_hits: 2,
   occurrence_count: 3,
   parse_errors: [],
@@ -203,10 +202,6 @@ const evidenceRunSummary = {
   provider_snapshot_id: "demo",
   started_at: "2026-05-10T09:55:00Z",
   status: "succeeded",
-  summary_json: {
-    evidence_bundle: "ready",
-    input_upload: { filename: "vpw-evidence-fixture.txt" },
-  },
   updated_findings: 0,
 }
 

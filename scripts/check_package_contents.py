@@ -1,3 +1,5 @@
+"""Validate backend source distribution and wheel package boundaries."""
+
 from __future__ import annotations
 
 import json
@@ -144,6 +146,7 @@ def _tracked_alembic_migration_suffixes() -> tuple[str, ...]:
 
 
 def main() -> None:
+    """Validate the built wheel and source distribution in the dist directory."""
     dist_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("dist")
     wheel = _single(dist_dir, "*.whl")
     sdist = _single(dist_dir, "*.tar.gz")

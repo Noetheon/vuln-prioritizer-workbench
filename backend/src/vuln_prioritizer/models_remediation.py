@@ -8,6 +8,8 @@ from vuln_prioritizer.model_base import StrictModel
 
 
 class RemediationComponent(StrictModel):
+    """Data representation and logic for Remediation Component."""
+
     name: str | None = None
     current_version: str | None = None
     fixed_versions: list[str] = Field(default_factory=list)
@@ -22,6 +24,8 @@ class RemediationComponent(StrictModel):
 
 
 class RemediationPlan(StrictModel):
+    """Data representation and logic for Remediation Plan."""
+
     strategy: str = "generic-priority-guidance"
     ecosystem: str | None = None
     components: list[RemediationComponent] = Field(default_factory=list)

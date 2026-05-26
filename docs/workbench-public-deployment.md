@@ -26,6 +26,7 @@ BACKEND_CORS_ORIGINS=https://workbench.example.com
 ALLOWED_HOSTS=workbench.example.com,api.workbench.example.com
 API_DOCS_ENABLED=false
 DECISION_API_MAX_FINDINGS=1000
+MAX_REQUEST_BODY_MB=2
 TRAEFIK_APP_ENABLED=true
 TRAEFIK_APP_IP_ALLOWLIST=<operator-or-private-network-cidr>
 TRAEFIK_API_IP_ALLOWLIST=<automation-source-cidr>
@@ -73,6 +74,7 @@ the `workbench-app-ipallowlist` Traefik middleware. The default source range is
 - Backend upload requests are bounded by
   `TRAEFIK_MAX_REQUEST_BODY_BYTES`, which should match or stay slightly above
   `MAX_UPLOAD_MB`.
+- Non-upload JSON API write requests are bounded by `MAX_REQUEST_BODY_MB`.
 - Generated reports are bounded by `MAX_REPORT_MB` per artifact and
   `MAX_REPORTS_PER_RUN` retained artifacts per analysis run.
 - Keep the Traefik dashboard disabled. If enabled for maintenance, set a narrow
@@ -204,6 +206,7 @@ Retention windows are configured through:
 
 ```bash
 AUDIT_RETENTION_DAYS=365
+MAX_REQUEST_BODY_MB=2
 MAX_REPORT_MB=50
 MAX_REPORTS_PER_RUN=20
 ```

@@ -2,6 +2,10 @@
 
 VPW-076 closes the duplicated release-hardening roadmap item for v1.0 release notes, changelog evidence, demo evidence bundle verification, screenshots, and an exam-ready story. It does not add product scope. It collects and verifies the already shipped Workbench v1.0/v1.1 release artifacts into one strict-DoD evidence package.
 
+Status: historical issue-level evidence. The commands and paths below describe
+the then-active release-story closeout and must not be reused as current release
+or deployment proof without fresh validation.
+
 ## Release Artifact Map
 
 | Requirement | Evidence |
@@ -9,7 +13,7 @@ VPW-076 closes the duplicated release-hardening roadmap item for v1.0 release no
 | Changelog | `CHANGELOG.md` documents the Workbench-capable `1.1.0` package line and preserves `1.0.0` as the stable OSS release line. |
 | Release notes | `docs/releases/workbench-v1.0.0.md` explicitly documents Features, Non-Goals, Known Limitations, demo evidence, and bundle verification expectations. `docs/releases/v1.1.0.md` documents the package tag that carries the current Workbench tree. |
 | Release checklist | `docs/workbench-v1-release-checklist.md` records the v1.0 milestone checklist, gate expectations, screenshot set, residual risks, and sign-off table. |
-| Demo evidence bundle | `make demo-evidence-bundle-check` generates and verifies `build/v1.0-demo-evidence-bundle.zip`; the PR-visible verify output is committed as `docs/evidence/vpw-076-demo-evidence-bundle-verification.json`. |
+| Demo evidence bundle | Historical target `make demo-evidence-bundle-check` generated and verified `build/v1.0-demo-evidence-bundle.zip`; the durable verification output now lives at `archive/vpw-evidence/vpw-076-demo-evidence-bundle-verification.json`. |
 | Screenshots | `docs/examples/media/workbench-dashboard.png`, `docs/examples/media/workbench-findings.png`, `docs/examples/media/workbench-finding-detail-ttp.png`, `docs/examples/media/workbench-reports-evidence.png`, plus VPW-075 evidence screenshots. |
 | Roadmap v1.1/v1.2 | `docs/roadmap.md` records the implemented `v1.1.0` release surface and current Workbench app direction through the integration slices. |
 | Backup plan | See "Demo Backup Plan" below. |
@@ -61,7 +65,10 @@ Current artifact hashes:
 | `build/v1.0-demo-evidence-bundle.zip` | `f478f0334964defba2cf815c4f09037a99743a80528f7a41db0e05b5a21fbce5` |
 | `build/v1.0-demo-evidence-bundle-verification.json` | `da6791865a2c70116d9d00c2ebf21d4a9a7fdfeb6de8ad8c52d7060614b7a854` |
 
-The same verification output is committed in `docs/evidence/vpw-076-demo-evidence-bundle-verification.json` so the issue and PR retain durable evidence even though `build/` remains ignored.
+The same verification output is archived in
+`archive/vpw-evidence/vpw-076-demo-evidence-bundle-verification.json` so the
+issue and PR retain durable historical evidence even though `build/` remains
+ignored.
 
 ## 15-Minute Demo Story
 
@@ -118,9 +125,10 @@ If Docker, browser automation, or local ports are unavailable during the review:
 VPW-076 is verified by this PR when:
 
 - this evidence file is committed and linked from MkDocs,
-- `docs/evidence/vpw-076-demo-evidence-bundle-verification.json` preserves the verification output in the PR,
+- `archive/vpw-evidence/vpw-076-demo-evidence-bundle-verification.json`
+  preserves the verification output in the archive,
 - `CHANGELOG.md` records the added release-story evidence,
 - `docs/releases/workbench-v1.0.0.md` explicitly lists Features, Non-Goals, and Known Limitations,
 - `docs/workbench-v1-release-checklist.md` links the VPW-076 closeout evidence,
-- `make demo-evidence-bundle-check` passes with `summary.ok=true`,
+- historical `make demo-evidence-bundle-check` passed with `summary.ok=true`,
 - `make docs-check` passes.

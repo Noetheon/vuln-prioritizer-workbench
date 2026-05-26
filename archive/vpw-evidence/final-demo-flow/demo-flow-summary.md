@@ -4,6 +4,10 @@ Date: 2026-05-03
 
 Base URL: `http://127.0.0.1:5175`
 
+Status: historical local demo evidence. This file records what was visible in a
+specific local Workbench run; it is not current release certification and does
+not replace active tests or fresh provider checks.
+
 ## Workflow Proof
 
 - Active project used for the final proof: `VPW Governance Project moouh3af`.
@@ -28,26 +32,9 @@ This is truthful product behavior, not a completed mapped TTP proof.
 - Final Evidence Center state showed Evidence ZIP, manifest, and checksum text.
 - No backend source, generated API client, or API contract files were edited for this proof.
 
-## Final Screenshots
+## Screenshot Retention
 
-- `01-dashboard-final.png`
-- `02-projects-final.png`
-- `03-imports-final.png`
-- `04-findings-final.png`
-- `05-finding-detail-final.png`
-- `06-ttp-context-final.png`
-- `07-waivers-final.png`
-- `08-evidence-center-final.png`
-- `09-report-or-bundle-generated-final.png`
-
-## Previous Screenshots Retained
-
-- `01-dashboard.png`
-- `02-projects.png`
-- `03-imports.png`
-- `04-findings.png`
-- `05-finding-detail.png`
-- `06-ttp-context.png`
-- `07-waivers.png`
-- `08-evidence-center.png`
-- `09-report-generated.png`
+The original final-flow screenshots were pruned from `main` during the
+2026-05-25 archive trim. This summary remains as a compact historical record of
+the reviewed route sequence. Current UI proof should come from fresh Playwright
+screenshots, current docs media, or CI artifacts for the run being evaluated.

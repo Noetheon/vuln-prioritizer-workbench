@@ -36,6 +36,7 @@ class NormalizedOccurrence:
     raw_evidence: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        """Post init   method for NormalizedOccurrence."""
         if not isinstance(self.cve, str):
             raise ImporterValidationError("Occurrence cve must be a string")
         if not isinstance(self.source, str):

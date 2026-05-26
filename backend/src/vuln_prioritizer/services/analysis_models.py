@@ -32,11 +32,14 @@ class AnalysisNoFindingsError(RuntimeError):
 
 
 def _enum_value(value: StrEnum | str) -> str:
+    """Enum value function."""
     return value.value if isinstance(value, StrEnum) else value
 
 
 @dataclass(frozen=True)
 class AnalysisRequest:
+    """Data representation and logic for Analysis Request."""
+
     input_specs: list[InputSpec]
     parsed_input: ParsedInput | None
     output: Path | None
@@ -77,6 +80,8 @@ class AnalysisRequest:
 
 @dataclass(frozen=True)
 class ExplainRequest:
+    """Data representation and logic for Explain Request."""
+
     cve_id: str
     output: Path | None
     format: StrEnum | str
@@ -107,6 +112,8 @@ class ExplainRequest:
 
 @dataclass(frozen=True)
 class ExplainResult:
+    """Data representation and logic for Explain Result."""
+
     finding: PrioritizedFinding
     nvd: NvdData
     epss: EpssData
@@ -126,6 +133,7 @@ def build_priority_policy(
     medium_epss_threshold: float,
     medium_cvss_threshold: float,
 ) -> PriorityPolicy:
+    """Build priority policy function."""
     try:
         return PriorityPolicy(
             critical_epss_threshold=critical_epss_threshold,

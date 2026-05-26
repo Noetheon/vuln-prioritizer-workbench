@@ -15,6 +15,7 @@ from utils.workbench_env import WorkbenchApiEnv, local_api_headers
 
 from app.models.base import get_datetime_utc
 from app.services.demo_workspace import _demo_data_dir
+from vuln_prioritizer.providers.curated_attack_mappings import CuratedAttackMappingProvider
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEMO_PROJECT_NAME = "Online Shop Demo Workspace"
@@ -64,6 +65,22 @@ def test_demo_workspace_fixture_root_follows_attack_artifact_parent(
     )
 
     assert _demo_data_dir(active_settings) == mounted_data
+
+
+def test_demo_attack_mapping_fixture_stays_reviewed_defensive_context_only() -> None:
+    mapping_path = PROJECT_ROOT / "data" / "attack" / "local_curated_demo_mappings.yml"
+    text = mapping_path.read_text(encoding="utf-8").lower()
+
+    for forbidden in ("exploit", "exploitation", "payload", "proof-of-concept", "poc"):
+        assert forbidden not in text
+
+    bundle = CuratedAttackMappingProvider().load(mapping_path)
+    mappings = [mapping for group in bundle.mappings_by_cve.values() for mapping in group]
+
+    assert mappings
+    assert {mapping.mapping_type for mapping in mappings} == {"detection_context"}
+    assert {mapping.review_status for mapping in mappings} == {"reviewed"}
+    assert all(mapping.source == "local-curated" for mapping in mappings)
 
 
 def test_demo_workspace_can_be_seeded_reset_and_removed(
@@ -516,7 +533,7 @@ def _assert_demo_report_downloads(
             assert "# Technical Vulnerability Report" in download.text
         elif filename == "executive-report.html":
             assert "<!doctype html>" in download.text
-            assert "Executive Summary" in download.text
+            assert "Executive Summary" not in download.text
             assert "Decision Brief" in download.text
             assert "Top Remediation Campaigns" in download.text
             assert "CVE-2021-44228 / Log4Shell" in download.text

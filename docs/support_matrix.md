@@ -18,6 +18,8 @@ SQLite state commands are no longer supported product paths.
 
 Workbench imports require an explicit `input_type`. The UI exposes the same
 concrete values accepted by `POST /api/v1/projects/{project_id}/imports`.
+The domain enum still contains an internal `auto` helper for legacy parsing
+boundaries, but Workbench uploads must use one of the explicit values below.
 
 | `input_type` | Workbench import | Normalized provenance currently preserved | Notes |
 | --- | --- | --- | --- |
@@ -36,7 +38,7 @@ concrete values accepted by `POST /api/v1/projects/{project_id}/imports`.
 
 | Feature | Workbench status | Notes |
 | --- | --- | --- |
-| Provider enrichment | active | NVD, FIRST EPSS, and CISA KEV remain the transparent base signals. |
+| Provider enrichment | active | NVD CVE API 2.0, FIRST EPSS `/data/v1/epss`, and CISA KEV remain the transparent base signals. |
 | Provider snapshot replay | active | Imports can use an explicit provider snapshot file with locked provider data for deterministic demos and reviews. |
 | ATT&CK enrichment | active | `ctid-json` and reviewed local curated mappings are supported. LLM-generated CVE-to-ATT&CK mappings are not allowed. |
 | Asset context | active | CSV asset context maps findings to owner, service, environment, exposure, and criticality. |
@@ -64,3 +66,6 @@ concrete values accepted by `POST /api/v1/projects/{project_id}/imports`.
   artifacts after a completed run.
 - Keep input files local and explicit. The Workbench prioritizes already-known
   CVEs from supplied evidence; it does not scan systems.
+- This matrix was rechecked against backend and frontend format definitions on
+  2026-05-25. Re-run the docs hygiene tests when adding or removing an import
+  type or report format.

@@ -22,6 +22,8 @@ PRIVATE_PATH_MARKERS = ("/Users/", "/private/", "/tmp/", "/var/folders/", "C:\\"
 
 @dataclass(frozen=True)
 class BinaryEvidence:
+    """Tracked binary archive evidence with its manifest metadata."""
+
     path: str
     kind: str
     size_bytes: int
@@ -29,6 +31,7 @@ class BinaryEvidence:
 
 
 def main() -> int:
+    """Validate or regenerate the archive binary evidence manifest."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--update",
@@ -64,6 +67,8 @@ def _tracked_binary_evidence() -> list[BinaryEvidence]:
     entries: list[BinaryEvidence] = []
     for rel_path in sorted(line for line in result.stdout.splitlines() if line):
         path = ROOT / rel_path
+        if not path.exists():
+            continue
         suffix = path.suffix.lower()
         if suffix not in BINARY_SUFFIXES:
             continue
@@ -178,8 +183,6 @@ def _write_manifest(evidence: list[BinaryEvidence]) -> None:
 def _default_purpose(path: str) -> str:
     if "/final-demo-flow/" in path:
         return "Historical final demo flow screenshot."
-    if "/vpw-design-system-foundation/" in path:
-        return "Historical design-system evidence screenshot."
     if path.endswith(".zip"):
         return "Historical evidence bundle artifact retained for verification context."
     return "Historical issue-level Workbench evidence screenshot."

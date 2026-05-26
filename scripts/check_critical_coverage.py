@@ -17,6 +17,7 @@ CRITICAL_MODULES = (
 
 
 def main(argv: list[str]) -> int:
+    """Validate configured critical modules against the coverage JSON report."""
     coverage_path = Path(argv[1]) if len(argv) > 1 else Path("build/coverage-current.json")
     try:
         payload = json.loads(coverage_path.read_text(encoding="utf-8"))

@@ -91,14 +91,12 @@ export function timelineTime(item: string, summary: ImportRunSummary) {
 }
 
 export function numberFromSummary(summary: ImportRunSummary, key: string) {
-  const value = objectRecord(summary.summary_json)[key]
+  const value = objectRecord(summary)[key]
   return typeof value === "number" ? value : "Not recorded"
 }
 
 export function candidateFindings(summary: ImportRunSummary) {
-  const summaryJsonFindingCount = objectRecord(summary.summary_json).finding_count
   if (typeof summary.finding_count === "number") return summary.finding_count
-  if (typeof summaryJsonFindingCount === "number") return summaryJsonFindingCount
   return (summary.created_findings ?? 0) + (summary.updated_findings ?? 0)
 }
 

@@ -8,20 +8,27 @@ import {
   reportSizeLabel,
   type ReportFormat,
 } from "../src/lib/report-format.ts"
+import {
+  AnalysisRunStatusSchema,
+  ReportCreateSchema,
+} from "../src/client/schemas.gen.ts"
 
-test("report format labels cover every supported format", () => {
+test("report format labels cover every backend-supported format", () => {
   const expectedLabels: Record<ReportFormat, string> = {
-    "attack-navigator": "ATT&CK Navigator",
-    csv: "CSV",
+    markdown: "MARKDOWN",
     html: "HTML",
     json: "JSON",
-    markdown: "MARKDOWN",
-    sarif: "SARIF",
+    csv: "CSV",
     zip: "Evidence ZIP",
+    "attack-navigator": "ATT&CK Navigator",
+    sarif: "SARIF",
   }
+  const backendFormats = [...ReportCreateSchema.properties.format.enum]
 
-  for (const [format, label] of Object.entries(expectedLabels)) {
-    assert.equal(reportFormatLabel(format), label)
+  assert.deepEqual(backendFormats, Object.keys(expectedLabels))
+
+  for (const format of backendFormats) {
+    assert.equal(reportFormatLabel(format), expectedLabels[format])
   }
 })
 
@@ -41,19 +48,18 @@ test("report date labels hide missing and invalid timestamps", () => {
   assert.notEqual(formatReportDateTime("2026-05-15T10:00:00Z"), "Not recorded")
 })
 
-test("reportable run statuses are limited to completed states", () => {
-  for (const status of ["succeeded", "completed", "completed_with_errors"]) {
-    assert.equal(isReportableRunStatus(status), true)
+test("reportable run statuses are limited to backend completed states", () => {
+  const reportableStatuses = new Set([
+    "succeeded",
+    "completed",
+    "completed_with_errors",
+  ])
+
+  for (const status of AnalysisRunStatusSchema.enum) {
+    assert.equal(isReportableRunStatus(status), reportableStatuses.has(status))
   }
-  for (const status of [
-    null,
-    undefined,
-    "",
-    "pending",
-    "running",
-    "failed",
-    "cancelled",
-  ]) {
-    assert.equal(isReportableRunStatus(status), false)
-  }
+
+  assert.equal(isReportableRunStatus(null), false)
+  assert.equal(isReportableRunStatus(undefined), false)
+  assert.equal(isReportableRunStatus(""), false)
 })

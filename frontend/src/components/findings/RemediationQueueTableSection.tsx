@@ -25,7 +25,6 @@ type RemediationQueueTableSectionProps = {
   findingPageSize: number
   findingSearch: FindingsUrlSearch
   findingsLoading: boolean
-  isDemo: boolean
   onOpenSheet: (finding: FindingPublic) => void
   onPageNext: () => void
   onPagePrev: () => void
@@ -46,7 +45,6 @@ export function RemediationQueueTableSection({
   findingPageSize,
   findingSearch,
   findingsLoading,
-  isDemo,
   onOpenSheet,
   onPageNext,
   onPagePrev,
@@ -63,29 +61,27 @@ export function RemediationQueueTableSection({
     <div className="flex flex-col gap-3">
       <VpwTableCard
         actions={
-          !isDemo ? (
-            <div className="findings-rows-control">
-              <span>Rows</span>
-              <Select
-                onValueChange={(v) => onPageSizeChange(Number(v))}
-                value={String(findingPageSize)}
+          <div className="findings-rows-control">
+            <span>Rows</span>
+            <Select
+              onValueChange={(v) => onPageSizeChange(Number(v))}
+              value={String(findingPageSize)}
+            >
+              <SelectTrigger
+                aria-label="Rows"
+                className="findings-filter-control h-9 w-full text-sm"
               >
-                <SelectTrigger
-                  aria-label="Rows"
-                  className="findings-filter-control h-9 w-full text-sm"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {pageSizeOptions.map((s) => (
-                    <SelectItem key={s} value={String(s)}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {pageSizeOptions.map((s) => (
+                  <SelectItem key={s} value={String(s)}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         }
         aria-label="Findings remediation queue"
         className="findings-queue-panel"
@@ -105,53 +101,46 @@ export function RemediationQueueTableSection({
         />
       </VpwTableCard>
 
-      {!isDemo ? (
-        <div className="findings-pagination">
-          <div className="findings-pagination__status">
-            <span aria-live="polite">
-              Showing{" "}
-              <strong className="font-semibold text-foreground">
-                {pageStart}–{pageEnd}
-              </strong>{" "}
-              of{" "}
-              <strong className="font-semibold text-foreground">
-                {totalCount}
-              </strong>
-            </span>
-          </div>
-          <div className="findings-pagination__actions">
-            <Button
-              className="findings-pagination__button"
-              disabled={findingsLoading || findingOffset === 0}
-              onClick={onPagePrev}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              <ChevronLeft aria-hidden="true" className="mr-1" size={13} />
-              Previous
-            </Button>
-            <Button
-              className="findings-pagination__button"
-              disabled={
-                findingsLoading ||
-                findingOffset + findingPageSize >= findingCount
-              }
-              onClick={onPageNext}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              Next
-              <ChevronRight aria-hidden="true" className="ml-1" size={13} />
-            </Button>
-          </div>
+      <div className="findings-pagination">
+        <div className="findings-pagination__status">
+          <span aria-live="polite">
+            Showing{" "}
+            <strong className="font-semibold text-foreground">
+              {pageStart}–{pageEnd}
+            </strong>{" "}
+            of{" "}
+            <strong className="font-semibold text-foreground">
+              {totalCount}
+            </strong>
+          </span>
         </div>
-      ) : (
-        <p className="text-xs text-center text-muted-foreground">
-          Demo preview - {displayFindings.length} sample findings shown
-        </p>
-      )}
+        <div className="findings-pagination__actions">
+          <Button
+            className="findings-pagination__button"
+            disabled={findingsLoading || findingOffset === 0}
+            onClick={onPagePrev}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <ChevronLeft aria-hidden="true" className="mr-1" size={13} />
+            Previous
+          </Button>
+          <Button
+            className="findings-pagination__button"
+            disabled={
+              findingsLoading || findingOffset + findingPageSize >= findingCount
+            }
+            onClick={onPageNext}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            Next
+            <ChevronRight aria-hidden="true" className="ml-1" size={13} />
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

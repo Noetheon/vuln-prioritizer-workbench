@@ -42,11 +42,10 @@ export function OverviewTab({
   summary: ImportRunSummary
 }) {
   const inputUpload = objectRecord(summary.input_upload)
-  const summaryJson = objectRecord(summary.summary_json)
-  const assetContextUpload = objectRecord(summaryJson.asset_context_upload)
-  const vexUpload = objectRecord(summaryJson.vex_upload)
+  const assetContextUpload = objectRecord(summary.asset_context_upload)
+  const vexUpload = objectRecord(summary.vex_upload)
   const lockedProviderData =
-    booleanFromRecord(summaryJson, "locked_provider_data") ??
+    booleanLabel(summary.locked_provider_data) ??
     booleanFromRecord(inputUpload, "locked_provider_data") ??
     "Not recorded"
   const timelineItems = importRunTimelineItems(run, summary)
@@ -97,14 +96,14 @@ export function OverviewTab({
             {
               label: "ATT&CK context",
               value:
-                stringFromRecord(summaryJson, "attack_source") ??
+                summary.attack_source ??
                 stringFromRecord(inputUpload, "attack_source") ??
                 "None",
             },
             {
               label: "Provider data",
               value:
-                stringFromRecord(summaryJson, "provider_snapshot_file") ??
+                summary.provider_snapshot_file ??
                 stringFromRecord(inputUpload, "provider_snapshot_file") ??
                 "Current provider data",
             },
@@ -199,4 +198,9 @@ export function OverviewTab({
       ) : null}
     </div>
   )
+}
+
+function booleanLabel(value: boolean | null | undefined) {
+  if (typeof value !== "boolean") return null
+  return value ? "Yes" : "No"
 }

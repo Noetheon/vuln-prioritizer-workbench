@@ -43,6 +43,31 @@ from this package, such as input normalization, provider clients, scoring,
 SARIF contract helpers, and redaction. Workbench-specific report rendering and
 evidence bundle verification belong in `backend/app/services`.
 
+Backend modules should keep HTTP, orchestration, projection, and persistence
+separate. Findings and asset routes are thin HTTP boundaries over repository
+queries plus service/domain projection helpers. Provider update jobs use focused
+input, locking, snapshot, and error modules behind a small orchestrator. Domain
+analysis keeps request orchestration in `analysis_pipeline`, finding construction
+in `analysis_findings`, explain builders in `analysis_explain`, provider
+data-quality projection in `analysis_quality`, and provider snapshot metadata
+helpers in `analysis_snapshot`, with compatibility facades kept for stable
+internal imports. Domain enrichment keeps provider orchestration in
+`enrichment`, while snapshot replay helpers, provider data-quality flags, and
+result/diagnostic merging live in focused enrichment helper modules. Domain
+prioritization keeps finding assembly in `prioritization`, with ATT&CK context
+projection, operational rank/reason logic, and sort keys in dedicated helper
+modules. Finding persistence keeps mutation and lookup methods in `findings`,
+while page filters, summary counts, governance rollups, and ATT&CK summary
+projections live in focused query helper modules. ATT&CK dashboard summary
+assembly and Navigator layer export are separate services behind stable service
+exports. ATT&CK models keep the `app.models.attack` facade stable while catalog,
+STIX snapshot, finding-context, and summary projection models live in dedicated
+modules. Import execution keeps its public stage facade stable while upload
+validation, run/job state transitions, and upload storage live in focused stage
+modules. The executive HTML report stack is split into view-model assembly,
+campaign modeling/rendering, provider freshness, evidence-package,
+governance/decision, and document composition modules.
+
 The old Workbench runtime packages, runtime database package, provider
 scheduler, and `web`/`db` CLI entrypoints have been removed. The active
 repository no longer ships a second FastAPI Workbench stack. `backend/app` must
@@ -59,7 +84,7 @@ components:
 | --- | --- | --- |
 | Dashboard | `components/dashboard/RiskOperationsDashboard.tsx` | Subcomponents own the context bar, metric strip, charts, queue, and detail rail. Recharts is lazy-loaded through `DashboardSignalOverview`. |
 | Projects | `components/projects/ProjectsWorkbench.tsx` | Project CRUD UI; data and handlers are still supplied by `WorkbenchShell`. |
-| Imports | `components/imports/ImportsWorkbench.tsx` | Import wizard, run selection, parse errors, and run detail UI; API timing remains in `WorkbenchShell`. |
+| Imports | `workbench/routes/ImportsRouteContainer.tsx` + `components/imports/ImportsWorkbench.tsx` | Import wizard, route canonicalization, upload mutation, run selection, parse errors, and run detail UI. |
 | Findings | `components/findings/RemediationQueue.tsx` | Uses `useFindingsRouteState` for filters/sort/pagination and `FindingsDataTable` for the table surface. |
 | Finding Detail | `components/finding-detail/FindingDetailRoute.tsx` | Context summary, priority explanation, evidence, governance, occurrences, TTP Context, and history are extracted from `WorkbenchShell`. |
 | Waivers | `components/waivers/WaiversWorkbench.tsx` | VPW-based waiver register and governance workflow; handlers remain shell-owned. |
@@ -78,8 +103,8 @@ composition root. It intentionally owns cross-route concerns:
 
 - selected project state and project list refresh
 - provider status and Workbench status
-- dashboard, findings, finding detail, import, report, project, waiver, and
-  settings API effects that are still shared or navigation-sensitive
+- dashboard, findings, finding detail, report, project, waiver, and settings API
+  effects that are still shared or navigation-sensitive
 - route-level lazy component boundaries
 - status strip and app shell props
 
@@ -87,12 +112,34 @@ Recent refactors moved large route rendering surfaces out of the shell without
 moving high-risk global state. Future state extraction should stay route-by-route
 and preserve API timing plus selected project behavior.
 
+`useWorkbenchQueries` owns query hook wiring, cache keys, and TanStack Query
+integration. Pure paging, fan-out, and API projection helpers belong in
+`workbench-query-model` so route containers can reuse deterministic model logic
+without growing the shell or duplicating query behavior.
+
+Assets route state keeps API mutations, selected project behavior, and drawer
+state in `useAssetsRouteState`. Filter state and pure inventory projections live
+in route-local helper modules so the route hook stays focused without promoting
+asset-specific data into global Workbench context.
+
+Waivers route model helpers keep `waivers-workbench-model` as the stable route
+facade. Scope matching, lifecycle/evidence labels, form readiness, and summary
+rollups live in focused pure modules so drawer, register, and review views can
+share behavior without reintroducing route-container state.
+
 ## VPW Design System Role
 
 The VPW design system lives under `frontend/src/components/vpw`. It provides
 shared surfaces, panels, badges, tables, filter bars, metric strips, skeletons,
 status banners, key-value lists, timeline, toolbar, evidence cards, and
 selection cards.
+
+`WorkbenchComponents.tsx` is a compatibility facade. New shared Workbench
+component work should target the focused modules behind it: badge adapters,
+surface/table adapters, detail/drawer components, or feedback/status wrappers.
+Reusable compact table-copy behavior belongs in VPW component CSS, such as
+`vpw-table-cell-clamp-copy`, while route CSS should keep only domain-specific
+layout and presentation leftovers.
 
 The design system is a frontend implementation layer. It does not define API
 contracts, scoring semantics, evidence manifests, or report schemas. Public VPW
@@ -121,7 +168,7 @@ The following are intentionally not backend or API contracts:
 - lazy-loading and bundle boundaries
 - VPW component composition inside routes
 - Dashboard chart chunking and Recharts placement
-- demo-only frontend data used when no project exists
+- Dashboard demo workspace controls that call the backend seed/reset endpoint
 
 Backend/API contracts are the generated OpenAPI surface, persisted models,
 report/evidence artifacts, schemas, and tested response behavior.

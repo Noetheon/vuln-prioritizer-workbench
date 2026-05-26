@@ -28,6 +28,7 @@ def resolve_attack_options(
     attack_technique_metadata_file: Path | None,
     offline_attack_file: Path | None,
 ) -> tuple[bool, str, Path | None, Path | None]:
+    """Resolve attack options function."""
     attack_source_value = _enum_value(attack_source)
     if no_attack:
         return False, ATTACK_SOURCE_NONE, None, None
@@ -58,6 +59,7 @@ def resolve_attack_options(
 
 
 def build_attack_summary_from_findings(findings: list[PrioritizedFinding]) -> AttackSummary:
+    """Build attack summary from findings function."""
     attack_items: list[AttackData] = []
     for finding in findings:
         mapping_types: list[str] = []

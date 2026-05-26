@@ -1,4 +1,5 @@
-"""Small local SARIF 2.1.0 validation helpers.
+"""
+Small local SARIF 2.1.0 validation helpers.
 
 The project does not need the full SARIF schema at runtime, but CI/CD integrations
 should still catch malformed files before upload to GitHub Code Scanning.

@@ -33,6 +33,7 @@ class AttackEnrichmentService:
         attack_version: str | None,
         domain: str | None,
     ) -> dict[str, AttackData]:
+        """Enrich ctid method for AttackEnrichmentService."""
         results: dict[str, AttackData] = {}
 
         for cve_id in cve_ids:
@@ -83,6 +84,7 @@ class AttackEnrichmentService:
         *,
         attack_data: dict[str, AttackData],
     ) -> dict[str, AttackData]:
+        """Enrich local csv method for AttackEnrichmentService."""
         results: dict[str, AttackData] = {}
         for cve_id in cve_ids:
             current = attack_data.get(cve_id, AttackData(cve_id=cve_id))
@@ -114,6 +116,7 @@ class AttackEnrichmentService:
         return results
 
     def summarize(self, attack_items: list[AttackData]) -> AttackSummary:
+        """Summarize method for AttackEnrichmentService."""
         mapping_type_distribution: Counter[str] = Counter()
         technique_distribution: Counter[str] = Counter()
         tactic_distribution: Counter[str] = Counter()
@@ -140,6 +143,7 @@ class AttackEnrichmentService:
         *,
         layer_name: str = "vuln-prioritizer ATT&CK coverage",
     ) -> dict:
+        """Build navigator layer method for AttackEnrichmentService."""
         technique_distribution = self.summarize(attack_items).technique_distribution
         techniques = [
             {
@@ -179,6 +183,7 @@ def _build_techniques(
     mappings: list[AttackMapping],
     techniques_by_id: dict[str, AttackTechnique],
 ) -> list[AttackTechnique]:
+    """Build techniques function."""
     technique_ids = _unique(mapping.attack_object_id for mapping in mappings)
     techniques: list[AttackTechnique] = []
 
@@ -214,6 +219,7 @@ def _find_missing_metadata_ids(
     mappings: list[AttackMapping],
     techniques_by_id: dict[str, AttackTechnique],
 ) -> list[str]:
+    """Find missing metadata ids function."""
     missing: list[str] = []
     for technique_id in _unique(mapping.attack_object_id for mapping in mappings):
         if technique_id in techniques_by_id or technique_id in missing:
@@ -228,6 +234,7 @@ def _determine_attack_relevance(
     mapped: bool,
     missing_metadata_ids: list[str],
 ) -> tuple[str, str]:
+    """Determine attack relevance function."""
     if not mapped:
         return "Unmapped", "No CTID ATT&CK mapping is available for this CVE."
 
@@ -273,6 +280,7 @@ def _build_attack_note(
     mappings: list[AttackMapping],
     missing_metadata_ids: list[str],
 ) -> str | None:
+    """Build attack note function."""
     comments = _unique(mapping.comments for mapping in mappings if mapping.comments is not None)
     metadata_note = _format_missing_metadata_note(missing_metadata_ids)
     if comments:
@@ -292,6 +300,7 @@ def _build_attack_note(
 
 
 def _collect_attack_tactics(techniques: list[AttackTechnique]) -> list[str]:
+    """Collect attack tactics function."""
     tactics: list[str] = []
     for technique in techniques:
         for tactic in technique.tactics:
@@ -301,6 +310,7 @@ def _collect_attack_tactics(techniques: list[AttackTechnique]) -> list[str]:
 
 
 def _normalize_tactic_name(value: str) -> str:
+    """Normalize tactic name function."""
     return value.strip().lower().replace(" ", "-")
 
 
@@ -309,6 +319,7 @@ def _append_missing_metadata_note(
     rationale: str,
     missing_metadata_ids: list[str],
 ) -> tuple[str, str]:
+    """Append missing metadata note function."""
     note = _format_missing_metadata_note(missing_metadata_ids)
     if note is None:
         return relevance, rationale
@@ -316,6 +327,7 @@ def _append_missing_metadata_note(
 
 
 def _format_missing_metadata_note(missing_metadata_ids: list[str]) -> str | None:
+    """Format missing metadata note function."""
     if not missing_metadata_ids:
         return None
     return (
@@ -326,12 +338,14 @@ def _format_missing_metadata_note(missing_metadata_ids: list[str]) -> str | None
 
 
 def _append_note(base_note: str | None, extra_note: str | None) -> str | None:
+    """Append note function."""
     if base_note and extra_note:
         return f"{base_note.rstrip('.')} {extra_note}"
     return base_note or extra_note
 
 
 def _unique(values: Iterable[str | None]) -> list[str]:
+    """Unique function."""
     normalized: list[str] = []
     for value in values:
         if value is None or value in normalized:

@@ -46,17 +46,21 @@ def read_project_assets(
     local_actor: LocalActor,
     owner: str | None = Query(default=None, max_length=200),
     service: str | None = Query(default=None, max_length=200),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
 ) -> AssetsPublic:
     """List assets for a visible project."""
     require_project(session, project_id)
-    assets = AssetRepository(session).list_project_assets(
+    assets, count = AssetRepository(session).list_project_assets_page(
         project_id,
         owner=owner,
         service=service,
+        limit=limit,
+        offset=offset,
     )
     return AssetsPublic(
         data=[_asset_public(asset) for asset in assets],
-        count=len(assets),
+        count=count,
     )
 
 

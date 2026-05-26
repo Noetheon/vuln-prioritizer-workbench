@@ -7,6 +7,14 @@ import {
   filterAssets,
   hasActiveAssetFilters,
 } from "../src/components/assets/asset-filter-model.ts"
+import {
+  activeProjectLabel,
+  assetActionLoading,
+  assetFiltersFromState,
+  assetInventoryView,
+  nextSelectedAssetId,
+  projectSelectDisabled,
+} from "../src/workbench/routes/assets-route-model.ts"
 
 test("asset register filters match searchable identity fields", () => {
   const assets = [
@@ -80,6 +88,43 @@ test("asset register filter activity detects every non-default filter", () => {
   )
   assert.equal(
     hasActiveAssetFilters({ ...defaultAssetFilters, query: " checkout " }),
+    true,
+  )
+})
+
+test("assets route model derives inventory and shell state", () => {
+  const assets = [
+    asset({ id: "asset-a", finding_count: 2, name: "checkout" }),
+    asset({ id: "asset-b", finding_count: 0, name: "catalog" }),
+  ]
+  const filters = assetFiltersFromState({
+    ...defaultAssetFilters,
+    findings: "linked",
+    owner: "",
+    query: "",
+    service: "",
+  })
+  const view = assetInventoryView(assets, filters)
+
+  assert.deepEqual(
+    view.assets.map((entry) => entry.id),
+    ["asset-a"],
+  )
+  assert.equal(view.assetRecordsTotal, 2)
+  assert.equal(view.hasAssetFilters, true)
+  assert.equal(nextSelectedAssetId(view.assets, "asset-missing"), "asset-a")
+  assert.equal(nextSelectedAssetId(view.assets, "asset-a"), "asset-a")
+  assert.equal(activeProjectLabel({ name: "Online Shop" }, false), "Online Shop")
+  assert.equal(activeProjectLabel(null, true), "Loading")
+  assert.equal(projectSelectDisabled(false, []), true)
+  assert.equal(projectSelectDisabled(false, [{ id: "project-1" } as never]), false)
+  assert.equal(
+    assetActionLoading({
+      createPending: false,
+      importPending: true,
+      recalculatePending: false,
+      updatePending: false,
+    }),
     true,
   )
 })

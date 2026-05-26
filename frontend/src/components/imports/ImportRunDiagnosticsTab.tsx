@@ -19,7 +19,6 @@ import {
   warningCount,
 } from "./ImportDiagnosticsDrawerParts"
 import {
-  arrayFromRecord,
   candidateFindings,
   numberFromSummary,
   RunDetailRows,
@@ -36,9 +35,8 @@ export function DiagnosticsTab({
   summary: ImportRunSummary
 }) {
   const parseErrors = summary.parse_errors ?? []
-  const summaryJson = objectRecord(summary.summary_json)
   const inputUpload = objectRecord(summary.input_upload)
-  const warnings = arrayFromRecord(summaryJson, "warnings")
+  const warnings = summary.warnings ?? []
   const rawJson = jsonPreview({ run, summary })
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
@@ -53,7 +51,7 @@ export function DiagnosticsTab({
             { label: "Findings updated", value: summary.updated_findings ?? 0 },
             { label: "Ignored lines", value: summary.ignored_lines ?? 0 },
             { label: "Parser errors", value: parseErrors.length },
-            { label: "Warnings", value: warningCount(summaryJson) },
+            { label: "Warnings", value: warningCount(warnings) },
           ]}
         />
         <div className="flex flex-col gap-3">
@@ -113,7 +111,7 @@ export function DiagnosticsTab({
               {
                 label: "Provider data",
                 value:
-                  stringFromRecord(summaryJson, "provider_snapshot_file") ??
+                  summary.provider_snapshot_file ??
                   stringFromRecord(inputUpload, "provider_snapshot_file") ??
                   "Current provider data",
               },

@@ -18,6 +18,7 @@ def resolve_workbench_provider_snapshot_path(
     *,
     settings: Settings,
 ) -> Path | None:
+    """Resolve workbench provider snapshot path function."""
     value = provider_snapshot_file.strip() if provider_snapshot_file else ""
     if not value:
         return None
@@ -42,6 +43,7 @@ def resolve_workbench_attack_artifact_path(
     *,
     settings: Settings,
 ) -> Path | None:
+    """Resolve workbench attack artifact path function."""
     filename = value.strip() if value else ""
     if not filename:
         return None
@@ -67,6 +69,7 @@ def validate_attack_import_options(
     attack_mapping_path: Path | None,
     attack_metadata_path: Path | None,
 ) -> AttackSource:
+    """Validate attack import options function."""
     raw_source = attack_source.strip() if attack_source else "none"
     try:
         normalized_source = AttackSource(raw_source)

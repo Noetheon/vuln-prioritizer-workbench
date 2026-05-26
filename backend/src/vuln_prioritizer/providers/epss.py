@@ -27,6 +27,7 @@ class EpssProvider:
         max_retries: int = HTTP_MAX_RETRIES,
         cache: FileCache | None = None,
     ) -> None:
+        """Initialize a new instance of EpssProvider."""
         self.session = session or requests.Session()
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
@@ -117,6 +118,7 @@ class EpssProvider:
         return results, warnings
 
     def _load_from_cache(self, cve_id: str, *, allow_expired: bool = False) -> EpssData | None:
+        """Load from cache method for EpssProvider."""
         if self.cache is None:
             return None
         cached_payload = self.cache.get_json("epss", cve_id, allow_expired=allow_expired)
@@ -125,11 +127,13 @@ class EpssProvider:
         return EpssData.model_validate(cached_payload)
 
     def _store_in_cache(self, data: EpssData) -> None:
+        """Store in cache method for EpssProvider."""
         if self.cache is None:
             return
         self.cache.set_json("epss", data.cve_id, data.model_dump())
 
     def _request_chunk(self, cve_ids: list[str]) -> dict:
+        """Request chunk method for EpssProvider."""
         params = {"cve": ",".join(cve_ids)}
 
         attempt = 0
@@ -161,4 +165,5 @@ class EpssProvider:
 
 
 def has_epss_content(item: EpssData) -> bool:
+    """Has epss content function."""
     return item.epss is not None or item.percentile is not None or item.date is not None

@@ -74,3 +74,7 @@ Include, when possible:
   deployment runbook, release evidence ledger, and final release scorecard. Do
   not claim public deployment certification from local quickstart or
   package-release evidence alone.
+- Documentation or release text that mentions security posture should follow
+  the evidence routing in `docs/documentation-evidence-matrix.md`, especially
+  when the claim depends on live provider behavior, public deployment topology,
+  or archived issue evidence.

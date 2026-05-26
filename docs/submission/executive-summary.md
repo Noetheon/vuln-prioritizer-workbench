@@ -19,7 +19,7 @@ service, with which evidence, and with which decision?"
 | Asset Context | Which service, owner, or exposure is affected? | Asset context, environment, criticality, and service rollups. |
 | Business Impact | Why is this relevant to operations? | Service, owner, exposure, and governance view. |
 | Measure | What is the next step? | Remediation, review, waiver, VEX context, or additional data collection. |
-| Priority | Why now? | Human-readable priority rationale instead of a black-box score. |
+| Priority | Why now? | Human-readable signal summary from KEV, EPSS, CVSS, asset context, and governance state instead of a black-box score. |
 | Evidence | How do we support the decision? | Reports, CSV/JSON/SARIF, evidence ZIP bundle, manifest, and checksums. |
 | CISO Decision | What can be decided? | Accept, escalate, prioritize, delegate, or request more information. |
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from app.services.report_formatting import dict_value as _dict_value
@@ -14,7 +15,7 @@ from app.services.report_renderer_common import (
 )
 
 
-def _asset_context_rows(findings: list[MarkdownReportFinding]) -> list[dict[str, Any]]:
+def _asset_context_rows(findings: Sequence[MarkdownReportFinding]) -> list[dict[str, Any]]:
     grouped: dict[str, list[MarkdownReportFinding]] = {}
     for finding in findings:
         label = finding.asset_key or finding.asset or "Unassigned"

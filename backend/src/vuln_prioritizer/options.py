@@ -6,6 +6,8 @@ from enum import StrEnum
 
 
 class OutputFormat(StrEnum):
+    """Data representation and logic for Output Format."""
+
     markdown = "markdown"
     json = "json"
     sarif = "sarif"
@@ -13,6 +15,8 @@ class OutputFormat(StrEnum):
 
 
 class PriorityFilter(StrEnum):
+    """Data representation and logic for Priority Filter."""
+
     critical = "critical"
     high = "high"
     medium = "medium"
@@ -20,6 +24,8 @@ class PriorityFilter(StrEnum):
 
 
 class SortBy(StrEnum):
+    """Data representation and logic for Sort By."""
+
     priority = "priority"
     operational = "operational"
     epss = "epss"
@@ -28,6 +34,8 @@ class SortBy(StrEnum):
 
 
 class AttackSource(StrEnum):
+    """Data representation and logic for Attack Source."""
+
     none = "none"
     local_csv = "local-csv"
     local_curated = "local-curated"
@@ -35,6 +43,8 @@ class AttackSource(StrEnum):
 
 
 class InputFormat(StrEnum):
+    """Data representation and logic for Input Format."""
+
     auto = "auto"
     cve_list = "cve-list"
     generic_occurrence_csv = "generic-occurrence-csv"

@@ -19,10 +19,12 @@ from vuln_prioritizer.providers.nvd import has_nvd_content
 
 
 def count_nvd_hits(enrichment: EnrichmentResult) -> int:
+    """Count nvd hits function."""
     return sum(1 for item in enrichment.nvd.values() if has_nvd_content(item))
 
 
 def count_epss_hits(enrichment: EnrichmentResult) -> int:
+    """Count epss hits function."""
     return sum(
         1
         for item in enrichment.epss.values()
@@ -31,10 +33,12 @@ def count_epss_hits(enrichment: EnrichmentResult) -> int:
 
 
 def count_kev_hits(enrichment: EnrichmentResult) -> int:
+    """Count kev hits function."""
     return sum(1 for item in enrichment.kev.values() if item.in_kev)
 
 
 def build_data_sources(enrichment: EnrichmentResult) -> list[str]:
+    """Build data sources function."""
     sources = list(DATA_SOURCES)
     if enrichment.provider_snapshot_sources:
         sources.append(
@@ -58,6 +62,7 @@ def build_data_sources(enrichment: EnrichmentResult) -> list[str]:
 def build_provider_diagnostics(
     enrichment: EnrichmentResult,
 ) -> dict[str, ProviderLookupDiagnostics]:
+    """Build provider diagnostics function."""
     return {
         "nvd": enrichment.nvd_diagnostics,
         "epss": enrichment.epss_diagnostics,
@@ -66,6 +71,7 @@ def build_provider_diagnostics(
 
 
 def provider_degraded(enrichment: EnrichmentResult) -> bool:
+    """Provider degraded function."""
     return any(
         diagnostics.degraded or diagnostics.failures > 0
         for diagnostics in (
@@ -82,6 +88,7 @@ def build_provider_freshness(
     provider_snapshot: ProviderSnapshotReport | None = None,
     lookup_completed_at: str | None = None,
 ) -> dict[str, str | int | float | bool | None]:
+    """Build provider freshness function."""
     nvd_last_modified = sorted(
         item.last_modified for item in enrichment.nvd.values() if item.last_modified
     )
@@ -133,6 +140,7 @@ def stale_provider_sources(
     snapshot_sources: Sequence[str] | None = None,
     now: datetime | None = None,
 ) -> list[str]:
+    """Stale provider sources function."""
     if max_age_hours is None:
         return []
     active_now = now or datetime.now(UTC)
@@ -174,6 +182,7 @@ def _provider_source_freshness_at(
     cache_timestamp: str | None,
     lookup_completed_at: str | None,
 ) -> str | None:
+    """Provider source freshness at function."""
     if diagnostics.cache_hits or diagnostics.stale_cache_hits:
         return cache_timestamp
     if diagnostics.network_fetches or diagnostics.content_hits or diagnostics.empty_records:
@@ -182,6 +191,7 @@ def _provider_source_freshness_at(
 
 
 def _provider_lookup_used(diagnostics: ProviderLookupDiagnostics) -> bool:
+    """Provider lookup used function."""
     return bool(
         diagnostics.cache_hits
         or diagnostics.stale_cache_hits
@@ -191,6 +201,7 @@ def _provider_lookup_used(diagnostics: ProviderLookupDiagnostics) -> bool:
 
 
 def _parse_provider_timestamp(value: object) -> datetime | None:
+    """Parse provider timestamp function."""
     if value is None:
         return None
     raw = str(value).strip()

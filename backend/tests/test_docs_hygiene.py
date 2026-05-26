@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -14,7 +15,13 @@ ARCHIVE_ROOT = REPO_ROOT / "archive"
 REPORTS_AND_EVIDENCE_FILE = REPO_ROOT / "docs" / "reports-and-evidence.md"
 CURRENT_PRODUCT_STATE_FILE = REPO_ROOT / "docs" / "current-product-state.md"
 DOCUMENTATION_MAP_FILE = REPO_ROOT / "docs" / "documentation-map.md"
+DOCUMENTATION_EVIDENCE_MATRIX_FILE = REPO_ROOT / "docs" / "documentation-evidence-matrix.md"
+SUPPORT_MATRIX_FILE = REPO_ROOT / "docs" / "support_matrix.md"
 PYPROJECT_FILE = REPO_ROOT / "backend" / "pyproject.toml"
+INPUT_OPTIONS_FILE = REPO_ROOT / "backend" / "src" / "vuln_prioritizer" / "options.py"
+REPORT_MODELS_FILE = REPO_ROOT / "backend" / "app" / "models" / "reports.py"
+FRONTEND_IMPORT_TYPES_FILE = REPO_ROOT / "frontend" / "src" / "lib" / "import-format-types.ts"
+FRONTEND_CLIENT_SCHEMAS_FILE = REPO_ROOT / "frontend" / "src" / "client" / "schemas.gen.ts"
 GITHUB_READINESS_FILE = REPO_ROOT / "docs" / "github-open-source-readiness.md"
 RELEASE_OPERATIONS_FILE = REPO_ROOT / "docs" / "release_operations.md"
 COMMUNITY_SETUP_FILE = REPO_ROOT / "docs" / "community_repository_setup.md"
@@ -118,6 +125,67 @@ def _issue_template_labels() -> set[str]:
         if isinstance(raw_labels, str):
             labels.update(label.strip() for label in raw_labels.split(",") if label.strip())
     return labels
+
+
+def _backend_input_format_values() -> set[str]:
+    source = INPUT_OPTIONS_FILE.read_text(encoding="utf-8")
+    body = source.split("class InputFormat", maxsplit=1)[1].split(
+        "PRIORITY_LABELS",
+        maxsplit=1,
+    )[0]
+    values = set(re.findall(r'^\s+\w+\s*=\s*"([^"]+)"', body, flags=re.MULTILINE))
+    values.discard("auto")
+    return values
+
+
+def _frontend_import_format_values() -> set[str]:
+    source = FRONTEND_IMPORT_TYPES_FILE.read_text(encoding="utf-8")
+    body = source.split("export type ImportInputType", maxsplit=1)[1].split(
+        "export type ProviderDataMode",
+        maxsplit=1,
+    )[0]
+    return set(re.findall(r'\|\s+"([^"]+)"', body))
+
+
+def _support_matrix_input_values() -> set[str]:
+    support_matrix = SUPPORT_MATRIX_FILE.read_text(encoding="utf-8")
+    section = support_matrix.split("## Input-Format Matrix", maxsplit=1)[1].split(
+        "## Context Overlays",
+        maxsplit=1,
+    )[0]
+    return set(re.findall(r"^\| `([^`]+)` \| yes \|", section, flags=re.MULTILINE))
+
+
+def _backend_report_format_values() -> set[str]:
+    source = REPORT_MODELS_FILE.read_text(encoding="utf-8")
+    match = re.search(r"format: Literal\[(.*?)\]", source, flags=re.DOTALL)
+    assert match is not None
+    return set(re.findall(r'"([^"]+)"', match.group(1)))
+
+
+def _frontend_report_format_values() -> set[str]:
+    source = FRONTEND_CLIENT_SCHEMAS_FILE.read_text(encoding="utf-8")
+    body = (
+        source.split("export const ReportCreateSchema", maxsplit=1)[1]
+        .split(
+            "format: {",
+            maxsplit=1,
+        )[1]
+        .split(
+            "title: 'Format'",
+            maxsplit=1,
+        )[0]
+    )
+    return set(re.findall(r"'([^']+)'", body))
+
+
+def _support_matrix_report_format_values() -> set[str]:
+    support_matrix = SUPPORT_MATRIX_FILE.read_text(encoding="utf-8")
+    section = support_matrix.split("## Report Outputs", maxsplit=1)[1].split(
+        "## Operational Notes",
+        maxsplit=1,
+    )[0]
+    return set(re.findall(r"^\| [^|]+ \| `([^`]+)` \|", section, flags=re.MULTILINE))
 
 
 def test_mkdocs_nav_includes_all_public_markdown_pages() -> None:
@@ -389,6 +457,58 @@ def test_documentation_map_defines_current_and_historical_boundaries() -> None:
     assert "Historical Reference" in documentation_map
     assert "Must not be used as current completion evidence" in documentation_map
     assert "Package maturity" in documentation_map
+
+
+def test_support_matrix_tracks_active_import_and_report_formats() -> None:
+    backend_inputs = _backend_input_format_values()
+    frontend_inputs = _frontend_import_format_values()
+    documented_inputs = _support_matrix_input_values()
+
+    assert backend_inputs == frontend_inputs
+    assert documented_inputs == backend_inputs
+
+    backend_reports = _backend_report_format_values()
+    frontend_reports = _frontend_report_format_values()
+    documented_reports = _support_matrix_report_format_values()
+
+    assert backend_reports == frontend_reports
+    assert documented_reports == backend_reports
+
+
+def test_documentation_evidence_matrix_records_current_hygiene_baseline() -> None:
+    current_state = CURRENT_PRODUCT_STATE_FILE.read_text(encoding="utf-8")
+    evidence_matrix = DOCUMENTATION_EVIDENCE_MATRIX_FILE.read_text(encoding="utf-8")
+    support_matrix = SUPPORT_MATRIX_FILE.read_text(encoding="utf-8")
+    user_documentation = USER_DOCUMENTATION_FILE.read_text(encoding="utf-8")
+    reports_and_evidence = REPORTS_AND_EVIDENCE_FILE.read_text(encoding="utf-8")
+    normalized_support_matrix = " ".join(support_matrix.split())
+    normalized_user_documentation = " ".join(user_documentation.split())
+    normalized_reports_and_evidence = " ".join(reports_and_evidence.split())
+
+    for text in (current_state, evidence_matrix):
+        assert "2026-05-25" in text
+        assert "Public + Root" in text
+        assert "documentation hygiene" in text.lower()
+
+    assert "MkDocs navigation covers 83 public pages" in evidence_matrix
+    assert "Supported Workbench import types" in evidence_matrix
+    assert "Supported Workbench report formats" in evidence_matrix
+    assert "NVD CVE API 2.0 uses `cveIds`" in evidence_matrix
+    assert "FIRST EPSS exposes `/data/v1/epss`" in evidence_matrix
+    assert "official `cisagov/kev-data` mirror" in evidence_matrix
+    assert "MITRE lists ATT&CK v19.1 as current" in evidence_matrix
+    assert "not as live-provider uptime proof" in current_state
+
+    for source_claim in (
+        "NVD CVE API 2.0",
+        "FIRST EPSS `/data/v1/epss`",
+        "CISA KEV",
+    ):
+        assert source_claim in normalized_support_matrix
+        assert source_claim in normalized_user_documentation
+
+    assert "cryptographic signature" in normalized_reports_and_evidence
+    assert "proof that provider data was fresh" in normalized_reports_and_evidence
 
 
 def test_current_docs_do_not_reframe_workbench_as_cli_or_release_gate() -> None:

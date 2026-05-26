@@ -98,6 +98,7 @@ NON_NAV_STALE_WORDING_PATHS = (ROOT / ".github" / "pull_request_template.md",)
 
 
 def main() -> int:
+    """Run release-evidence hygiene checks and print a compact status line."""
     failures: list[str] = []
     failures.extend(_check_python_audit_input())
     failures.extend(_check_package_metadata_maturity())

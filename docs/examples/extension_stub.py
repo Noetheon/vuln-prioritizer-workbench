@@ -1,4 +1,5 @@
-"""Static parser/provider extension example for contributor documentation.
+"""
+Static parser/provider extension example for contributor documentation.
 
 This module is intentionally a docs example and test fixture. It is not imported
 by the runtime and does not perform plugin discovery.
@@ -18,7 +19,6 @@ from vuln_prioritizer.providers.sdk import ProviderDefinition
 
 def parse_acme_scan(path: Path) -> ParsedInput:
     """Parse a tiny reviewed JSON fixture into the Workbench ParsedInput contract."""
-
     payload = json.loads(path.read_text(encoding="utf-8"))
     records = payload.get("findings", [])
     occurrences: list[InputOccurrence] = []
@@ -72,6 +72,7 @@ class AcmeContextProvider:
         cve_ids: list[str],
         **_kwargs: Any,
     ) -> tuple[Mapping[str, Any], list[str]]:
+        """Return deterministic local context records for requested CVEs."""
         self.last_diagnostics = type(
             "Diagnostics",
             (),

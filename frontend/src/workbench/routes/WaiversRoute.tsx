@@ -13,10 +13,7 @@ import {
   waiverScopeLabel,
 } from "../../lib/waiver-view"
 import { useWorkbenchContext } from "../WorkbenchContext"
-import {
-  waiverDebtRows,
-  waiverDebtSummaryRows,
-} from "../route-utils"
+import { waiverDebtRows, waiverDebtSummaryRows } from "../route-utils"
 import {
   useProjectGovernanceRollupsQuery,
   useProjectSummaryQuery,
@@ -34,19 +31,20 @@ function WaiversRouteContent() {
     selectedProjectId,
     setSelectedProjectId,
   } = useWorkbenchContext()
-  const projectSummaryQuery = useProjectSummaryQuery(selectedProjectId)
+  const queryProjectId = selectedProjectId
+  const projectSummaryQuery = useProjectSummaryQuery(queryProjectId)
   const projectGovernanceRollupsQuery =
-    useProjectGovernanceRollupsQuery(selectedProjectId)
+    useProjectGovernanceRollupsQuery(queryProjectId)
   const findingsQuery = useFindingsQuery(
     {
       limit: 500,
       offset: 0,
-      project_id: selectedProjectId,
+      project_id: queryProjectId,
       sort: "operational",
     },
-    Boolean(selectedProjectId),
+    Boolean(queryProjectId),
   )
-  const waiversQuery = useWaiversQuery(selectedProjectId, true)
+  const waiversQuery = useWaiversQuery(queryProjectId, Boolean(queryProjectId))
   const [waiverActionError, setWaiverActionError] = useState("")
   const [waiverActionMessage, setWaiverActionMessage] = useState("")
   const [waiverForm, setWaiverForm] =
@@ -186,7 +184,6 @@ function WaiversRouteContent() {
       setWaiverActionError("Select a risk acceptance before updating it.")
       return
     }
-
     try {
       const waiver = await updateWaiverMutation.mutateAsync({
         waiverId: selectedWaiverId,
@@ -222,11 +219,13 @@ function WaiversRouteContent() {
   }
 
   const governanceRollups = projectGovernanceRollupsQuery.data ?? null
+  const effectiveFindings = findingsQuery.data?.data ?? []
+  const effectiveSummary = projectSummaryQuery.data ?? null
 
   return (
     <section className="w-full">
       <WaiversWorkbench
-        findings={findingsQuery.data?.data ?? []}
+        findings={effectiveFindings}
         findingsError={
           findingsQuery.isError
             ? apiErrorMessage("Findings unavailable", findingsQuery.error)
@@ -249,7 +248,7 @@ function WaiversRouteContent() {
         openWaiverDrawer={openWaiverDrawer}
         closeWaiverDrawer={closeWaiverDrawer}
         projectListLoading={projectListLoading}
-        projectSummary={projectSummaryQuery.data ?? null}
+        projectSummary={effectiveSummary}
         projects={projects}
         selectedWaiver={selectedWaiver}
         selectedWaiverId={selectedWaiverId}

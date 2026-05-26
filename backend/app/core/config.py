@@ -60,6 +60,7 @@ class Settings:
     DEMO_PROVIDER_SNAPSHOT_ENABLED: bool = False
     DEMO_WORKSPACE_ENABLED: bool = False
     MAX_UPLOAD_MB: int = 25
+    MAX_REQUEST_BODY_MB: int = 2
     MAX_REPORT_MB: int = 50
     MAX_REPORTS_PER_RUN: int = 20
     RATE_LIMIT_ENABLED: bool = True
@@ -144,6 +145,11 @@ class Settings:
         return self.MAX_UPLOAD_MB * 1024 * 1024
 
     @property
+    def max_request_body_bytes(self) -> int:
+        """Return the configured non-upload API request body limit in bytes."""
+        return self.MAX_REQUEST_BODY_MB * 1024 * 1024
+
+    @property
     def max_report_bytes(self) -> int:
         """Return the configured generated-report artifact limit in bytes."""
         return self.MAX_REPORT_MB * 1024 * 1024
@@ -214,6 +220,7 @@ def load_settings() -> Settings:
         ),
         DEMO_WORKSPACE_ENABLED=_bool_from_env("DEMO_WORKSPACE_ENABLED", False),
         MAX_UPLOAD_MB=_positive_int_from_env("MAX_UPLOAD_MB", 25),
+        MAX_REQUEST_BODY_MB=_positive_int_from_env("MAX_REQUEST_BODY_MB", 2),
         MAX_REPORT_MB=_positive_int_from_env("MAX_REPORT_MB", 50),
         MAX_REPORTS_PER_RUN=_positive_int_from_env("MAX_REPORTS_PER_RUN", 20),
         RATE_LIMIT_ENABLED=_bool_from_env("RATE_LIMIT_ENABLED", True),

@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from app.models import (
     AnalysisRun,
@@ -19,6 +19,7 @@ from vuln_prioritizer.security_redaction import redact_value
 
 
 def _redacted_json_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Redacted json payload function."""
     redacted, _paths = redact_value(payload)
     return redacted if isinstance(redacted, dict) else {}
 
@@ -27,6 +28,7 @@ class RunRepository:
     """Analysis run, occurrence, and provider snapshot persistence helpers."""
 
     def __init__(self, session: Session) -> None:
+        """Initialize a new instance of RunRepository."""
         self.session = session
 
     def create_provider_snapshot(
@@ -203,14 +205,39 @@ class RunRepository:
             self.session.flush()
         return occurrence
 
-    def list_analysis_runs(self, project_id: uuid.UUID) -> list[AnalysisRun]:
-        """Return runs for a project newest first."""
+    def list_analysis_runs(
+        self,
+        project_id: uuid.UUID,
+        *,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> list[AnalysisRun]:
+        """Return a bounded run page for a project newest first."""
         statement = (
             select(AnalysisRun)
             .where(AnalysisRun.project_id == project_id)
             .order_by(col(AnalysisRun.started_at).desc())
+            .offset(offset)
         )
+        if limit is not None:
+            statement = statement.limit(limit)
         return list(self.session.exec(statement).all())
+
+    def list_analysis_runs_page(
+        self,
+        project_id: uuid.UUID,
+        *,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> tuple[list[AnalysisRun], int]:
+        """Return a bounded run page and total count for a project."""
+        count_statement = (
+            select(func.count())
+            .select_from(AnalysisRun)
+            .where(AnalysisRun.project_id == project_id)
+        )
+        count = int(self.session.exec(count_statement).one())
+        return self.list_analysis_runs(project_id, limit=limit, offset=offset), count
 
     def get_latest_analysis_run(self, project_id: uuid.UUID) -> AnalysisRun | None:
         """Return the newest analysis run for a project."""

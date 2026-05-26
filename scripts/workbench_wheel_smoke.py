@@ -1,3 +1,5 @@
+"""Smoke-test the installed Workbench wheel package."""
+
 from __future__ import annotations
 
 import json
@@ -12,6 +14,7 @@ from sqlalchemy import create_engine, inspect, text
 
 
 def main() -> None:
+    """Install-time smoke for Alembic migrations and app creation from the wheel."""
     output_path = (
         Path(sys.argv[1]) if len(sys.argv) > 1 else Path("build/workbench-wheel-smoke.json")
     )

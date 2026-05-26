@@ -9,9 +9,11 @@ from app.services.attack import (
     ATTACK_NAVIGATOR_FILTERS,
     build_attack_navigator_layer_payload,
     build_project_attack_summary_payload,
+    build_project_attack_summary_payload_from_rows,
 )
 from app.services.dashboard import (
     build_project_dashboard_payload,
+    build_project_dashboard_payload_from_repositories,
     dashboard_signal_counts,
 )
 from app.services.decisions import (
@@ -28,7 +30,10 @@ from app.services.github_issues import (
     github_export_token,
     github_repository_path,
 )
-from app.services.governance import build_project_governance_rollups_payload
+from app.services.governance import (
+    build_project_governance_rollups_payload,
+    build_project_governance_rollups_payload_from_repositories,
+)
 from app.services.reports import (
     MarkdownProviderSnapshot,
     MarkdownReportFinding,
@@ -60,11 +65,14 @@ __all__ = [
     "ATTACK_NAVIGATOR_FILTERS",
     "build_attack_navigator_layer_payload",
     "build_project_attack_summary_payload",
+    "build_project_attack_summary_payload_from_rows",
     "build_cvss_only_comparison_payload",
     "build_project_dashboard_payload",
+    "build_project_dashboard_payload_from_repositories",
     "build_finding_explanation_payload",
     "build_github_issue_preview_items",
     "build_project_governance_rollups_payload",
+    "build_project_governance_rollups_payload_from_repositories",
     "build_project_summary_payload",
     "build_project_summary_payload_from_counts",
     "dashboard_signal_counts",

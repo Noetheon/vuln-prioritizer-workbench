@@ -22,7 +22,8 @@ SessionDep = Annotated[Session, Depends(get_db)]
 
 
 def get_local_actor(request: Request) -> LocalWorkbenchActor:
-    """Return the local single-user Workbench principal.
+    """
+    Return the local single-user Workbench principal.
 
     The current product scope is a local/self-hosted single-user Workbench, so
     API routes should not require login, RBAC, token scopes, or session

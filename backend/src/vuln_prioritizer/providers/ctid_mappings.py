@@ -26,6 +26,7 @@ class CtidMappingsProvider:
         self,
         offline_file: Path,
     ) -> tuple[dict[str, list[AttackMapping]], dict[str, str | None], list[str]]:
+        """Load method for CtidMappingsProvider."""
         if not offline_file.exists() or not offline_file.is_file():
             raise FileNotFoundError(f"ATT&CK mapping file not found: {offline_file}")
         if offline_file.suffix.lower() != ".json":
@@ -198,6 +199,7 @@ class CtidMappingsProvider:
 def _find_ctid_mapping_conflicts(
     mappings_by_cve: dict[str, list[AttackMapping]],
 ) -> list[dict[str, object]]:
+    """Find ctid mapping conflicts function."""
     conflicts: list[dict[str, object]] = []
     for cve_id, mappings in sorted(mappings_by_cve.items()):
         contexts_by_technique: dict[str, set[tuple[str, str]]] = {}
@@ -232,6 +234,7 @@ def _find_local_ctid_conflicts(
     ctid_mappings_by_cve: dict[str, list[AttackMapping]],
     local_mappings_by_cve: dict[str, list[AttackMapping]],
 ) -> list[dict[str, object]]:
+    """Find local ctid conflicts function."""
     conflicts: list[dict[str, object]] = []
     for cve_id in sorted(set(ctid_mappings_by_cve).intersection(local_mappings_by_cve)):
         ctid_mappings = ctid_mappings_by_cve[cve_id]
@@ -259,10 +262,12 @@ def _find_local_ctid_conflicts(
 
 
 def _mapping_type_set(mappings: list[AttackMapping]) -> set[str]:
+    """Mapping type set function."""
     return {mapping.mapping_type or "unknown" for mapping in mappings}
 
 
 def _normalize_optional_string(value: object) -> str | None:
+    """Normalize optional string function."""
     if value is None:
         return None
     normalized = str(value).strip()
@@ -270,6 +275,7 @@ def _normalize_optional_string(value: object) -> str | None:
 
 
 def _normalize_references(value: object) -> list[str]:
+    """Normalize references function."""
     if not isinstance(value, list):
         return []
 

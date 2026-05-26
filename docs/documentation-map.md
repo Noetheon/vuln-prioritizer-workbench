@@ -29,6 +29,7 @@ current tests, current contracts, or current local validation evidence.
 | Category | Pages | Owner | Rules |
 | --- | --- | --- | --- |
 | Current product truth | `current-product-state.md`, `architecture.md`, `documentation-map.md` | Maintainers | Must describe the active Workbench-first runtime only. |
+| Evidence-backed claim routing | `documentation-evidence-matrix.md` | Maintainers | Must map major claims to code, tests, schemas, commands, archive artifacts, or external primary sources before wording is strengthened. |
 | User and operator docs | `user_documentation.md`, `use_cases.md`, `playbooks.md`, `playbooks/**` | Product/docs owner | Must favor external-user paths and mark repo-checkout-only commands. |
 | Methodology | `methodology.md`, `scoring-methodology.md`, `attack-ttp-methodology.md`, `workbench-attack-methodology.md`, `benchmarking.md` | Domain owner | Must keep scoring, ATT&CK, VEX, and asset-context semantics transparent. |
 | Contracts | `contracts.md`, `support_matrix.md`, `asset-context-csv.md`, importer docs, examples, schemas | API/report owners | Must change with tests and generated/example artifacts when contracts change. |
@@ -97,11 +98,13 @@ classification.
 1. Decide the page category before writing.
 2. Link to [Current Product State](current-product-state.md) if the page might
    otherwise be confused with historical material.
-3. Put current behavior, stable contracts, and historical context in separate
+3. Check the [Documentation Evidence Matrix](documentation-evidence-matrix.md)
+   for the evidence source that owns the claim.
+4. Put current behavior, stable contracts, and historical context in separate
    sections.
-4. If a page links to `archive/**`, describe whether the link is historical
+5. If a page links to `archive/**`, describe whether the link is historical
    proof, demo evidence, or current release evidence.
-5. Run:
+6. Run:
 
 ```bash
 python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov

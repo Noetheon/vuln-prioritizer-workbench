@@ -81,6 +81,7 @@ class ReportService:
     """Generate and persist report artifacts for Workbench analysis runs."""
 
     def __init__(self, session: Session, settings: Settings) -> None:
+        """Initialize a new instance of ReportService."""
         self.session = session
         self.settings = settings
 

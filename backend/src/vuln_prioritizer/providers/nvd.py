@@ -30,6 +30,8 @@ DEFAULT_NVD_MAX_CONCURRENCY: Final = 4
 
 @dataclass(slots=True, frozen=True)
 class NvdFetchDiagnostics:
+    """Data representation and logic for Nvd Fetch Diagnostics."""
+
     requested: int = 0
     cache_hits: int = 0
     network_fetches: int = 0
@@ -53,6 +55,7 @@ class NvdProvider:
         cache: FileCache | None = None,
         session_factory: type[requests.Session] | None = None,
     ) -> None:
+        """Initialize a new instance of NvdProvider."""
         self.session = session
         self.session_factory = session_factory or requests.Session
         self._shared_session_lock = Lock()
@@ -70,6 +73,7 @@ class NvdProvider:
         session: requests.Session | None = None,
         cache: FileCache | None = None,
     ) -> NvdProvider:
+        """From env method for NvdProvider."""
         validate_env_var_name(api_key_env, label="NVD API key environment variable name")
         api_key = os.getenv(api_key_env)
         return cls(
@@ -163,6 +167,7 @@ class NvdProvider:
         return results, warnings
 
     def _load_from_cache(self, cve_id: str, *, allow_expired: bool = False) -> NvdData | None:
+        """Load from cache method for NvdProvider."""
         if self.cache is None:
             return None
         cached_payload = self.cache.get_json("nvd", cve_id, allow_expired=allow_expired)
@@ -171,17 +176,20 @@ class NvdProvider:
         return NvdData.model_validate(cached_payload)
 
     def _store_in_cache(self, data: NvdData) -> None:
+        """Store in cache method for NvdProvider."""
         if self.cache is None:
             return
         self.cache.set_json("nvd", data.cve_id, data.model_dump())
 
     def _fetch_and_cache_cve(self, cve_id: str) -> NvdData:
+        """Fetch and cache cve method for NvdProvider."""
         payload = self._request_cve(cve_id)
         data = self.parse_payload(cve_id, payload)
         self._store_in_cache(data)
         return data
 
     def _request_cve(self, cve_id: str) -> dict:
+        """Request cve method for NvdProvider."""
         headers = {"apiKey": self.api_key} if self.api_key else {}
         params = {"cveIds": cve_id}
 
@@ -211,9 +219,11 @@ class NvdProvider:
         raise RuntimeError("NVD request failed without a response")
 
     def _safe_error_message(self, exc: BaseException) -> str:
+        """Safe error message method for NvdProvider."""
         return _sanitize_error_message(str(exc), secrets=(self.api_key,))
 
     def _session_get(self, *, params: dict[str, str], headers: dict[str, str]) -> requests.Response:
+        """Session get method for NvdProvider."""
         if self.session is not None:
             with self._shared_session_lock:
                 return self.session.get(
@@ -283,6 +293,7 @@ class NvdProvider:
 
 
 def _pick_description(descriptions: list[dict]) -> str | None:
+    """Pick description function."""
     for description in descriptions:
         if description.get("lang") == "en" and description.get("value"):
             return description["value"]
@@ -293,6 +304,7 @@ def _pick_description(descriptions: list[dict]) -> str | None:
 
 
 def _extract_cvss(metrics: dict) -> tuple[float | None, str | None, str | None, str | None]:
+    """Extract cvss function."""
     versions = {
         "cvssMetricV40": "4.0",
         "cvssMetricV31": "3.1",
@@ -320,6 +332,7 @@ def _extract_cvss(metrics: dict) -> tuple[float | None, str | None, str | None, 
 
 
 def _ordered_metric_entries(entries: Sequence[dict]) -> list[dict]:
+    """Ordered metric entries function."""
     primary: list[dict] = []
     secondary: list[dict] = []
     for entry in entries:
@@ -332,6 +345,7 @@ def _ordered_metric_entries(entries: Sequence[dict]) -> list[dict]:
 
 
 def _retry_delay(response: requests.Response | None, attempt: int) -> float:
+    """Retry delay function."""
     headers = {} if response is None else getattr(response, "headers", {}) or {}
     retry_after = headers.get("Retry-After")
     if retry_after:
@@ -343,10 +357,12 @@ def _retry_delay(response: requests.Response | None, attempt: int) -> float:
 
 
 def _sanitize_error_message(message: str, *, secrets: Sequence[str | None]) -> str:
+    """Sanitize error message function."""
     return redact_text(message, extra_secrets=secrets)
 
 
 def has_nvd_content(item: NvdData) -> bool:
+    """Has nvd content function."""
     return any(
         [
             item.description is not None,

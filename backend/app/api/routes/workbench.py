@@ -60,6 +60,8 @@ def workbench_status(
         core_version=__version__,
         database_status=database,
         schema_status=schema,
+        api_docs_enabled=active_settings.api_docs_enabled,
+        api_docs_path="/docs" if active_settings.api_docs_enabled else None,
     )
 
 

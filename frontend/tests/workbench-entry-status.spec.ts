@@ -141,7 +141,9 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     page.getByRole("heading", { level: 1, name: "Data Sources" }),
   ).toBeVisible()
   await expect(page.getByText("Provider freshness").first()).toBeVisible()
-  await expect(page.getByText("Replay behavior for reports").first()).toBeVisible()
+  await expect(
+    page.getByText("Replay behavior for reports").first(),
+  ).toBeVisible()
   await expect(page.getByText("Data source inventory").first()).toBeVisible()
   await expect(
     page.getByRole("table", { name: "Data source inventory" }),
@@ -155,7 +157,9 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
 
   await page.getByRole("tab", { name: "Snapshot" }).click()
   await expect(page.getByText("Snapshot audit summary").first()).toBeVisible()
-  await expect(page.getByText("Recorded snapshot details").first()).toBeVisible()
+  await expect(
+    page.getByText("Recorded snapshot details").first(),
+  ).toBeVisible()
   await expect(page.getByText("Snapshot ID").first()).toBeVisible()
   await expect(
     page
@@ -270,13 +274,19 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   ).toBeVisible()
   await expect(page.getByText("Create Project").first()).toBeVisible()
   await page.getByRole("button", { name: "Create project" }).first().click()
-  await page.getByRole("dialog", { name: "Create project" }).getByRole("button", { name: "Create project" }).click()
+  await page
+    .getByRole("dialog", { name: "Create project" })
+    .getByRole("button", { name: "Create project" })
+    .click()
   await expect(page.getByText("Project name is required.")).toBeVisible()
   await page.getByLabel("Project name").fill(uiProjectName)
   await page
     .getByLabel("Description")
     .fill("Created through the Projects page E2E workflow")
-  await page.getByRole("dialog", { name: "Create project" }).getByRole("button", { name: "Create project" }).click()
+  await page
+    .getByRole("dialog", { name: "Create project" })
+    .getByRole("button", { name: "Create project" })
+    .click()
   await expect(
     page.getByText(`Project ${uiProjectName} created.`),
   ).toBeVisible()
@@ -284,8 +294,12 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(projectsTable).toContainText(uiProjectName)
 
   // Open settings drawer for the created project
-  await page.getByRole("button", { name: `Settings for ${uiProjectName}` }).click()
-  await expect(page.getByRole("dialog").getByRole("heading", { name: uiProjectName })).toBeVisible()
+  await page
+    .getByRole("button", { name: `Settings for ${uiProjectName}` })
+    .click()
+  await expect(
+    page.getByRole("dialog").getByRole("heading", { name: uiProjectName }),
+  ).toBeVisible()
 
   // Navigate to Configuration tab
   await page.getByRole("tab", { name: "Configuration" }).click()
@@ -301,7 +315,9 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(projectsTable).toContainText(editedUiProjectName)
 
   // Open settings drawer again for the edited project to delete it
-  await page.getByRole("button", { name: `Settings for ${editedUiProjectName}` }).click()
+  await page
+    .getByRole("button", { name: `Settings for ${editedUiProjectName}` })
+    .click()
   await page.getByRole("tab", { name: "Configuration" }).click()
   await page.getByLabel(/Confirm deletion for this project/).check()
   await page.getByRole("button", { name: "Delete project" }).click()
@@ -309,7 +325,6 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     page.getByText(`Project ${editedUiProjectName} deleted.`),
   ).toBeVisible()
   await expect(projectsTable.getByText(editedUiProjectName)).toHaveCount(0)
-
 
   await navigation.getByRole("link", { name: "Imports" }).click()
   await expect(page).toHaveURL(/\/imports(?:\?.*)?$/)
@@ -321,7 +336,9 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page.getByLabel("Evidence file")).toHaveCount(0)
   await page.getByRole("link", { name: /New import/ }).click()
   await expect(page).toHaveURL(/\/imports\/new(?:\?.*)?$/)
-  await expect(page.getByRole("heading", { name: "Choose source" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Choose source" }),
+  ).toBeVisible()
   await selectRadixOptionByLabel(page, page, "Import project", project.name)
   await page.getByRole("button", { name: /Generic occurrence CSV/ }).click()
   await page.getByRole("button", { name: "Continue" }).click()
@@ -353,7 +370,9 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     name: "import-wizard-openvex.json",
   })
   await page.getByRole("button", { name: "Continue" }).click()
-  await expect(page.getByRole("heading", { name: "Review import" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Review import" }),
+  ).toBeVisible()
   await expect(page.getByRole("button", { name: "Start import" })).toBeVisible({
     timeout: 15_000,
   })
@@ -362,7 +381,9 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     timeout: 15_000,
   })
   await expect(page).toHaveURL(/\/imports\/runs\/[0-9a-f-]{36}(?:\?.*)?$/)
-  await expect(page.getByRole("link", { name: "Review findings" }).first()).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: "Review findings" }).first(),
+  ).toBeVisible()
   await page.waitForTimeout(1000)
   const importWizardFindingsResponse = await page.request.get(
     `${backendBaseUrl}/api/v1/projects/${project.id}/findings/?sort=cve`,
@@ -503,7 +524,9 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     name: "Edit build-host-1",
   })
   await expect(importedAssetDrawer).toBeVisible()
-  await importedAssetDrawer.getByLabel("Edit owner").fill("team-platform-updated")
+  await importedAssetDrawer
+    .getByLabel("Edit owner")
+    .fill("team-platform-updated")
   await importedAssetDrawer
     .getByLabel("Edit business service")
     .fill("payments-runtime")
@@ -556,7 +579,9 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   })
   await expect(assetFindings).toContainText("CVE-2024-3094")
   await expect(assetFindings).not.toContainText("CVE-2024-4577")
-  await linkedFindingsDrawer.getByRole("link", { name: "Open findings" }).click()
+  await linkedFindingsDrawer
+    .getByRole("link", { name: "Open findings" })
+    .click()
   await expect(page).toHaveURL(/\/findings\?.*assetId=/)
   await expect(
     page.getByRole("button", { name: "Clear asset filter" }),
@@ -606,7 +631,9 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await navigation.getByRole("link", { name: "Imports" }).click()
   await expect(page).toHaveURL(/\/imports(?:\?.*)?$/)
   await page.getByRole("link", { name: /New import/ }).click()
-  await expect(page.getByRole("heading", { name: "Choose source" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Choose source" }),
+  ).toBeVisible()
   await selectRadixOptionByLabel(page, page, "Import project", project.name)
   await page.getByRole("button", { name: /Generic occurrence CSV/ }).click()
   await page.getByRole("button", { name: "Continue" }).click()
@@ -620,7 +647,9 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await page.getByRole("button", { name: "Continue" }).click()
   await expect(page.getByRole("heading", { name: "Add context" })).toBeVisible()
   await page.getByRole("button", { name: "Continue" }).click()
-  await expect(page.getByRole("heading", { name: "Review import" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Review import" }),
+  ).toBeVisible()
   await expect(page.getByRole("button", { name: "Start import" })).toBeVisible({
     timeout: 15_000,
   })
@@ -629,11 +658,13 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     timeout: 15_000,
   })
   await expect(page).toHaveURL(/\/imports\/new(?:\?.*)?$/)
-  await expect(
-    page.getByRole("alert").getByText("Import failed"),
-  ).toBeVisible()
-  await expect(page.getByRole("button", { name: "Retry import" })).toHaveCount(0)
-  await expect(page.getByRole("button", { name: "Start import" })).toHaveCount(0)
+  await expect(page.getByRole("alert").getByText("Import failed")).toBeVisible()
+  await expect(page.getByRole("button", { name: "Retry import" })).toHaveCount(
+    0,
+  )
+  await expect(page.getByRole("button", { name: "Start import" })).toHaveCount(
+    0,
+  )
   await expect(page.getByRole("button", { name: "Back to file" })).toBeVisible()
   await page.getByRole("button", { name: "Open diagnostics" }).click()
   const failedImportDiagnostics = page.getByRole("dialog", {
@@ -642,13 +673,13 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(
     failedImportDiagnostics.getByText("Failure cause").first(),
   ).toBeVisible()
-  await expect(failedImportDiagnostics.getByText("not-a-cve").first()).toBeVisible()
+  await expect(
+    failedImportDiagnostics.getByText("not-a-cve").first(),
+  ).toBeVisible()
   await page.keyboard.press("Escape")
   await page.getByRole("link", { name: "Open run detail" }).click()
   await expect(page).toHaveURL(/\/imports\/runs\/[0-9a-f-]{36}(?:\?.*)?$/)
-  await expect(
-    page.getByRole("heading", { name: /Import run/ }),
-  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: /Import run/ })).toBeVisible()
   const importRuns = page
     .getByRole("table", { name: "Recent import runs" })
     .first()

@@ -14,14 +14,12 @@ import type {
 import { Button } from "@/components/ui/button"
 import {
   VpwCommandPanel,
-  VpwDemoBanner,
   MetricStrip,
   type MetricStripMetric,
   VpwSection,
   VpwToolbar,
   VpwToolbarGroup,
 } from "@/components/vpw"
-import { DEMO_PROJECT, DEMO_RUNS } from "@/lib/demo-data"
 import { formatReportDateTime } from "@/lib/report-format"
 import { runStatusLabel } from "@/lib/risk-format"
 import {
@@ -47,11 +45,9 @@ type RunContextProps = {
   providerStatus: ProviderStatusPublic | null
   runsLoading: boolean
   reportActionsEnabled: boolean
-  isDemo: boolean
 }
 
 export function RunContext({
-  isDemo,
   onOpenGenerateDrawer,
   providerStatus,
   reportActionsEnabled,
@@ -59,30 +55,23 @@ export function RunContext({
   selectedProject,
   selectedReportRun,
 }: RunContextProps) {
-  const run = isDemo ? DEMO_RUNS[0] : selectedReportRun
+  const run = selectedReportRun
   const readiness = evidenceReadinessLabel({
-    isDemo,
     reportActionsEnabled,
     selectedReportRun,
   })
-  const runStatus = isDemo
-    ? "Succeeded"
-    : selectedReportRun
-      ? runStatusLabel(selectedReportRun.status)
-      : runsLoading
-        ? "Loading"
-        : "No run selected"
+  const runStatus = selectedReportRun
+    ? runStatusLabel(selectedReportRun.status)
+    : runsLoading
+      ? "Loading"
+      : "No run selected"
   const runDetail = run
     ? `${runStatus.toLowerCase()} · ${formatReportDateTime(run.finished_at)}`
     : "Select a completed import run"
-  const projectName = isDemo
-    ? DEMO_PROJECT.name
-    : (selectedProject?.name ?? "None selected")
-  const snapshotLabel = isDemo
-    ? "demo · locked"
-    : providerSnapshotLabel(selectedReportRun, providerStatus)
+  const projectName = selectedProject?.name ?? "None selected"
+  const snapshotLabel = providerSnapshotLabel(selectedReportRun, providerStatus)
   const readinessTone = evidenceReadinessTone(readiness)
-  const runTone = runsLoading ? "neutral" : runMetricTone(run, isDemo)
+  const runTone = runsLoading ? "neutral" : runMetricTone(run)
   const metrics: MetricStripMetric[] = [
     {
       description: "Artifact ownership scope",
@@ -116,13 +105,6 @@ export function RunContext({
 
   return (
     <VpwSection>
-      {isDemo ? (
-        <VpwDemoBanner>
-          <strong>Demo preview.</strong> Sample evidence data is visible only
-          because no real project is selected. Connect a project and completed
-          run to generate production evidence.
-        </VpwDemoBanner>
-      ) : null}
       <VpwCommandPanel
         actions={
           <VpwToolbar label="Evidence actions" variant="plain">

@@ -43,9 +43,14 @@ Precision Light Analyst usage rules:
   action buttons for write surfaces such as decision capture, waiver review,
   report generation, and provider verification.
 - Route-level KPI/status summaries should use the canonical `MetricStrip`
-  adapter from `WorkbenchComponents.tsx`. Direct `VpwMetricStrip` and
-  `VpwCompactMetric` composition is reserved for VPW primitives and showcase
-  evidence, so route wrappers cannot silently drift into a second KPI system.
+  adapter exported through `WorkbenchComponents.tsx`. Direct `VpwMetricStrip`
+  and `VpwCompactMetric` composition is reserved for VPW primitives and
+  showcase evidence, so route wrappers cannot silently drift into a second KPI
+  system.
+- Keep `WorkbenchComponents.tsx` as a facade. Add shared Workbench surface
+  behavior to `WorkbenchSurface.tsx`, drawer/detail behavior to
+  `WorkbenchDetail.tsx`, semantic badge adapters to `WorkbenchBadges.tsx`, and
+  status/empty-state wrappers to `WorkbenchFeedback.tsx`.
 - Keep severity and provider state visible through component tone props and
   state copy. Color alone is not enough.
 - Preserve demo/sample labeling whenever showcase or seeded evidence could be
@@ -65,7 +70,6 @@ Installed VPW product components:
 - `VpwBadge`
 - `VpwBreadcrumbs`
 - `VpwDataTable`
-- `VpwDemoBanner`
 - `VpwEmptyState`
 - `VpwStatusBanner`
 - `VpwToolbar` / `VpwToolbarGroup`

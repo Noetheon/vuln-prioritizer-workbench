@@ -150,6 +150,7 @@ Public docs:
 
 - [Current product state](docs/current-product-state.md)
 - [Documentation map](docs/documentation-map.md)
+- [Documentation evidence matrix](docs/documentation-evidence-matrix.md)
 - [GitHub Open Source Readiness](docs/github-open-source-readiness.md)
 - [Documentation home](docs/index.md)
 - [User Documentation Guide](docs/user_documentation.md)
@@ -237,6 +238,12 @@ The current repository state includes the active `backend/app` Workbench
 runtime, React frontend, retained domain package, VPW design system,
 evidence/reporting surfaces, public docs, CI cost controls, and Workbench
 package validation.
+
+Evidence hygiene is tracked in the
+[Documentation Evidence Matrix](docs/documentation-evidence-matrix.md). Use it
+when deciding whether a claim is current product truth, a stable contract,
+historical evidence, or an external provider fact that needs fresh primary-source
+verification.
 
 The Python package metadata uses `Development Status :: 4 - Beta` for the
 current artifact: the self-hosted Workbench is release-gated for local-first

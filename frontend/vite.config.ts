@@ -24,13 +24,10 @@ export default defineConfig(({ mode }) => {
   const devProxyTarget =
     normalizedApiUrl(env.VITE_DEV_PROXY_TARGET) || "http://127.0.0.1:8000"
   const bundledApiUrl = isProductionBuild ? "" : configuredApiUrl
-  const demoMode =
-    !isProductionBuild && env.VITE_DEMO_MODE?.trim().toLowerCase() === "true"
 
   return {
     define: {
       __VPW_API_URL__: JSON.stringify(bundledApiUrl),
-      __VPW_DEMO_MODE__: JSON.stringify(demoMode),
     },
     resolve: {
       alias: {

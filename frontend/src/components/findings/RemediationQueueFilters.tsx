@@ -23,7 +23,6 @@ type RemediationQueueFiltersProps = {
   findingAssetId: string | null
   findingAssetKey: string | null
   findingFilters: FindingFilters
-  isDemo: boolean
   onClearAssetFilter: () => void
   onClearFilters: () => void
   onFilterChange: <K extends keyof FindingFilters>(
@@ -51,7 +50,6 @@ export function RemediationQueueFilters({
   findingAssetId,
   findingAssetKey,
   findingFilters,
-  isDemo,
   onClearAssetFilter,
   onClearFilters,
   onFilterChange,
@@ -143,20 +141,15 @@ export function RemediationQueueFilters({
   )
 
   return (
-    <section
-      aria-label="Findings filters"
-      className="findings-filter-card"
-    >
+    <section aria-label="Findings filters" className="findings-filter-card">
       <div className="findings-filter-card__inner">
         <div className="findings-filter-grid">
-          {!isDemo ? (
-            <RemediationQueueProjectSelect
-              onProjectChange={onProjectChange}
-              projectListLoading={projectListLoading}
-              projects={projects}
-              selectedProjectId={selectedProjectId}
-            />
-          ) : null}
+          <RemediationQueueProjectSelect
+            onProjectChange={onProjectChange}
+            projectListLoading={projectListLoading}
+            projects={projects}
+            selectedProjectId={selectedProjectId}
+          />
 
           {findingAssetId ? (
             <div className="findings-filter-asset">
@@ -179,9 +172,7 @@ export function RemediationQueueFilters({
             className="findings-filter-field findings-filter-field--search"
             htmlFor={queueSearchId}
           >
-            <span className="vpw-label findings-filter-label">
-              Search
-            </span>
+            <span className="vpw-label findings-filter-label">Search</span>
             <VpwSearchInput
               id={queueSearchId}
               onChange={(e) => setQueryDraft(e.target.value)}

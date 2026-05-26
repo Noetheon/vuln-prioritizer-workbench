@@ -34,6 +34,8 @@ class ProjectImportUploadRequest:
 
 @dataclass(frozen=True, slots=True)
 class PreparedSidecarUpload:
+    """Data representation and logic for Prepared Sidecar Upload."""
+
     payload: ImportUploadContent | None
     original_filename: str | None
     stored_filename: str | None
@@ -45,6 +47,8 @@ class PreparedSidecarUpload:
 
 @dataclass(frozen=True, slots=True)
 class PreparedImportUpload:
+    """Data representation and logic for Prepared Import Upload."""
+
     input_type: str
     file: ImportUploadContent
     original_filename: str
@@ -63,6 +67,8 @@ class PreparedImportUpload:
 
 @dataclass(frozen=True, slots=True)
 class ResolvedImportRun:
+    """Data representation and logic for Resolved Import Run."""
+
     run: AnalysisRun
     job_id: str
     job_history: list[dict[str, str]]
@@ -71,6 +77,8 @@ class ResolvedImportRun:
 
 @dataclass(frozen=True, slots=True)
 class StoredImportArtifacts:
+    """Data representation and logic for Stored Import Artifacts."""
+
     upload_path: Path
     asset_context_path: Path | None
     vex_path: Path | None

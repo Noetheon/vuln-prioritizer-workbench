@@ -4,33 +4,48 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from app.services.report_html_helpers import (
+from app.services.report_html_provider_freshness import (
     _html_provider_snapshot_helper,
     _provider_freshness_rows_helper,
     _provider_freshness_status_helper,
 )
-from app.services.report_models import MarkdownProviderSnapshot
+from app.services.report_models import EvidencePackageContext, MarkdownProviderSnapshot
 
 
 def _html_provider_snapshot(
     snapshot: MarkdownProviderSnapshot | None,
     generated_at: datetime | None = None,
+    evidence_package_context: EvidencePackageContext | None = None,
 ) -> str:
-    return _html_provider_snapshot_helper(snapshot, generated_at)
+    return _html_provider_snapshot_helper(
+        snapshot,
+        generated_at,
+        evidence_package_context=evidence_package_context,
+    )
 
 
 def _provider_freshness_status(
     snapshot: MarkdownProviderSnapshot | None,
     generated_at: datetime | None = None,
+    evidence_package_context: EvidencePackageContext | None = None,
 ) -> str:
-    return _provider_freshness_status_helper(snapshot, generated_at)
+    return _provider_freshness_status_helper(
+        snapshot,
+        generated_at,
+        evidence_package_context,
+    )
 
 
 def _provider_freshness_rows(
     snapshot: MarkdownProviderSnapshot | None,
     generated_at: datetime | None = None,
+    evidence_package_context: EvidencePackageContext | None = None,
 ) -> list[dict[str, str]]:
-    return _provider_freshness_rows_helper(snapshot, generated_at)
+    return _provider_freshness_rows_helper(
+        snapshot,
+        generated_at,
+        evidence_package_context,
+    )
 
 
 __all__ = [

@@ -12,6 +12,7 @@ nav:
   - Current Product State:
       - Current Product State: current-product-state.md
       - Documentation Map: documentation-map.md
+      - Documentation Evidence Matrix: documentation-evidence-matrix.md
       - Product Architecture: architecture.md
       - Workbench Information Architecture: workbench-information-architecture.md
       - Workbench UI System: workbench-ui-system.md

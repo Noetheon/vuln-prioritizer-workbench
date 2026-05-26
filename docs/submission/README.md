@@ -37,10 +37,16 @@ Technical finding -> threat signal -> asset context -> business impact
 - [ATT&CK/TTP Methodology](../attack-ttp-methodology.md)
 - [Reports and Evidence](../reports-and-evidence.md)
 - [Demo Readiness](../demo-readiness.md)
+- [Documentation Evidence Matrix](../documentation-evidence-matrix.md)
 - [CI Cost Optimization](../ci-cost-optimization.md)
 - [Security Policy](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/SECURITY.md)
 
 ## Key Evidence Entrypoints
+
+These links are historical submission and demo evidence. They are useful as
+fallback proof of a reviewed flow, but current product truth must come from the
+active documentation, code, tests, and validation commands listed in the
+documentation evidence matrix.
 
 - [Final Demo Flow](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/demo-flow-summary.md)
 - [Curated ATT&CK Demo Mapping](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/attack-demo-mapping-summary.md)

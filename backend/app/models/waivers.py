@@ -10,9 +10,12 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.base import get_datetime_utc
 
+WAIVER_REASON_MAX_LENGTH = 4096
+
 
 class WaiverScopeBase(SQLModel):
-    """Shared waiver scope fields.
+    """
+    Shared waiver scope fields.
 
     Multiple scope fields are interpreted as an intersection. A CVE+asset waiver,
     for example, only matches findings with both that CVE and that asset.
@@ -29,7 +32,11 @@ class WaiverBase(WaiverScopeBase):
     """Shared persisted waiver fields."""
 
     owner: str = Field(min_length=1, max_length=200)
-    reason: str = Field(min_length=1, sa_column=Column(Text, nullable=False))
+    reason: str = Field(
+        min_length=1,
+        max_length=WAIVER_REASON_MAX_LENGTH,
+        sa_column=Column(Text, nullable=False),
+    )
     expires_at: date = Field(sa_column=Column(Date, nullable=False))
     review_at: date | None = Field(default=None, sa_column=Column(Date, nullable=True))
     approval_ref: str | None = Field(default=None, max_length=300)
@@ -85,7 +92,7 @@ class WaiverCreate(WaiverScopeBase):
     """Create payload for a project waiver."""
 
     owner: str | None = Field(default=None, max_length=200)
-    reason: str | None = Field(default=None)
+    reason: str | None = Field(default=None, max_length=WAIVER_REASON_MAX_LENGTH)
     expires_at: date | None = None
     review_at: date | None = None
     approval_ref: str | None = Field(default=None, max_length=300)
@@ -119,7 +126,8 @@ class WaiverCreate(WaiverScopeBase):
 
 
 class WaiverUpdate(WaiverCreate):
-    """Update payload for a waiver.
+    """
+    Update payload for a waiver.
 
     Updates replace the waiver scope and governance fields so clients can move a
     waiver from one scope to another with one request.

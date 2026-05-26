@@ -3,23 +3,26 @@
 Historical evidence was moved from `docs/evidence/` into this archive during the
 repo hygiene cleanup.
 
+This manifest is a historical inventory. It does not certify current Workbench
+behavior, current provider state, or public deployment readiness. Use
+`docs/documentation-evidence-matrix.md` and current validation output before
+using archived artifacts as support for active documentation.
+
 ## Directory Inventory
 
-- `final-demo-flow/`: final demo screenshots and summary notes.
-- `presentation-pack/`: presentation evidence index and proof-set pointers.
-- `vpw-design-system-foundation/`: design-system screenshot and showcase set.
-- Root-level `vpw-*.md`: selected issue-level evidence notes that are still
-  referenced by active docs or tests.
-- Root-level `vpw-*.png`: issue-level browser evidence.
-- Root-level `vpw-*.json`, `vpw-*.csv`, and `vpw-*.zip`: machine-readable
-  validation and bundle artifacts.
+- `final-demo-flow/`: compact historical demo notes and ATT&CK mapping summary.
+- `presentation-pack/`: compact presentation evidence index.
+- Root-level `vpw-*.md`: selected issue-level evidence notes still referenced by
+  active docs.
+- `vpw-051-evidence-bundle.zip`: the retained historical evidence bundle needed
+  by `docs/evidence/vpw-052-positive-verification.json`.
 - `BINARY-MANIFEST.json`: hash-pinned inventory of tracked binary evidence,
   including purpose labels and ZIP-safety validation.
 
 ## Ownership Rules
 
-- Keep durable historical screenshots and product evidence in this archive
-  instead of `docs/evidence/`.
+- Do not add durable historical screenshots or broad visual proof sets unless a
+  maintainer explicitly asks for them and accepts the repository-size cost.
 - Keep VPW-AUD scorecards and other audit-remediation Markdown out of the
   repository unless a maintainer explicitly asks for a durable artifact.
 - Keep `docs/evidence/` limited to contract fixtures that are referenced by
@@ -44,3 +47,8 @@ repo hygiene cleanup.
   deleted during the 2026-05-08 documentation hygiene cleanup. Retained
   Markdown files are either archive entrypoints, active demo/presentation
   summaries, or evidence notes still referenced by current docs/tests.
+- The 2026-05-25 archive trim removed historical screenshots, design-system
+  proof images, duplicate machine-readable exports, and the superseded
+  Workbench masterplan from `main`. Current product truth now comes from active
+  docs, tests, generated fixtures, and live validation output rather than large
+  archived visual proof sets.

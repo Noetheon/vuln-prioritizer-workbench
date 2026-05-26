@@ -118,6 +118,8 @@ export function safeDiagnosticsCode({
       coreVersion: status?.core_version ?? "unavailable",
       databaseStatus: status?.database_status ?? "unavailable",
       schemaStatus: status?.schema_status ?? "unavailable",
+      apiDocsEnabled: status?.api_docs_enabled ?? false,
+      apiDocsPath: status?.api_docs_path ?? null,
       providerStatus: providerStatus?.status ?? "unavailable",
       providerSnapshotMode: providerStatus?.snapshot_mode ?? "unavailable",
       providerSourceCount: providerStatus?.sources?.length ?? 0,

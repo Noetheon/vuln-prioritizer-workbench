@@ -1175,6 +1175,17 @@
     line-height: 1rem;
   }
 
+  .vpw-table-cell-clamp-copy {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    color: var(--vpw-text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
   .vpw-table-mobile-card__value .vpw-table-actions {
     display: flex;
     flex-wrap: wrap;

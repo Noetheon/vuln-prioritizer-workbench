@@ -6,17 +6,7 @@ import {
   runActivityTrendData,
   topServicesByRiskChartData,
 } from "@/lib/chart-data"
-import {
-  DEMO_FINDINGS,
-  DEMO_PROJECT,
-  DEMO_PROVIDER_STATUS,
-  DEMO_RUNS,
-  DEMO_SIGNAL_COUNTS,
-  DEMO_SUMMARY,
-  DEMO_TOP_SERVICES,
-} from "@/lib/demo-data"
 import { formatProviderFreshness } from "@/lib/provider-format"
-import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import { ErrorState } from "../states"
 import {
   DashboardDemoBanner,
@@ -85,104 +75,78 @@ export function RiskOperationsDashboard({
     selectedRunRange: "10",
   })
 
-  const isDemoMode =
-    DEMO_MODE_ENABLED &&
-    !projectListLoading &&
-    projects.length === 0 &&
-    !dashboardError
-
-  const effectiveProjects = isDemoMode ? [DEMO_PROJECT] : projects
-  const effectiveSelectedProject = isDemoMode ? DEMO_PROJECT : selectedProject
-  const effectiveSummary = isDemoMode ? DEMO_SUMMARY : projectSummary
-  const effectiveSignalCounts = isDemoMode ? DEMO_SIGNAL_COUNTS : signalCounts
-  const effectiveFindings = isDemoMode ? DEMO_FINDINGS : findings
-  const effectiveRuns = isDemoMode ? DEMO_RUNS : projectRuns
-  const effectiveTopServices = isDemoMode ? DEMO_TOP_SERVICES : topServiceRows
-  const effectiveProviderStatus = isDemoMode
-    ? DEMO_PROVIDER_STATUS
-    : providerStatus
-
   const isLoading =
-    !isDemoMode &&
-    (projectListLoading ||
-      summaryLoading ||
-      signalLoading ||
-      providerStatusLoading ||
-      runsLoading ||
-      governanceLoading)
+    projectListLoading ||
+    summaryLoading ||
+    signalLoading ||
+    providerStatusLoading ||
+    runsLoading ||
+    governanceLoading
 
-  const hasProjects = effectiveProjects.length > 0
-  const hasProviderStatus = effectiveSelectedProject !== null && hasProjects
-  const staleProvider = providerNeedsRefresh(
-    hasProviderStatus,
-    effectiveProviderStatus,
-  )
+  const hasProjects = projects.length > 0
+  const hasProviderStatus = selectedProject !== null && hasProjects
+  const staleProvider = providerNeedsRefresh(hasProviderStatus, providerStatus)
 
-  const freshness = formatProviderFreshness(effectiveProviderStatus)
+  const freshness = formatProviderFreshness(providerStatus)
 
-  const priorityItems = findingsByPriorityChartData(effectiveSummary)
-  const serviceItems = topServicesByRiskChartData(effectiveTopServices)
+  const priorityItems = findingsByPriorityChartData(projectSummary)
+  const serviceItems = topServicesByRiskChartData(topServiceRows)
   const trendItems = useMemo(
     () =>
       runActivityTrendData(
-        effectiveRuns,
-        filters.selectedRunRange === "all"
-          ? effectiveRuns.length
-          : Number.parseInt(filters.selectedRunRange, 10),
+        projectRuns,
+        Number.parseInt(filters.selectedRunRange, 10),
       ),
-    [effectiveRuns, filters.selectedRunRange],
+    [projectRuns, filters.selectedRunRange],
   )
 
   const epssItems = useMemo(() => {
-    if (!isDemoMode && epssBuckets.length > 0) return epssBuckets
-    return epssBucketChartData(effectiveSignalCounts.epssBuckets)
-  }, [isDemoMode, epssBuckets, effectiveSignalCounts.epssBuckets])
+    if (epssBuckets.length > 0) return epssBuckets
+    return epssBucketChartData(signalCounts.epssBuckets)
+  }, [epssBuckets, signalCounts.epssBuckets])
 
   const queueFindings = useMemo(
-    () => rankedDashboardQueueFindings(effectiveFindings, filters.queueSearch),
-    [effectiveFindings, filters.queueSearch],
+    () => rankedDashboardQueueFindings(findings, filters.queueSearch),
+    [findings, filters.queueSearch],
   )
 
-  const latestRun = effectiveRuns[0] ?? null
-  const acceptedRiskCount = effectiveSummary?.counts_by_status?.accepted ?? 0
+  const latestRun = projectRuns[0] ?? null
+  const acceptedRiskCount = projectSummary?.counts_by_status?.accepted ?? 0
   const summaryMetrics = useMemo(
     () =>
       buildDashboardMetricSummaries({
         acceptedRiskCount,
-        effectiveSignalCounts,
-        effectiveSummary,
-        isDemoMode,
+        effectiveSignalCounts: signalCounts,
+        effectiveSummary: projectSummary,
         signalLoading,
         summaryLoading,
       }),
     [
       acceptedRiskCount,
-      effectiveSignalCounts,
-      effectiveSummary,
-      isDemoMode,
+      signalCounts,
+      projectSummary,
       signalLoading,
       summaryLoading,
     ],
   )
 
   const showEmptyState =
-    !isDemoMode &&
     !isLoading &&
     !hasProviderStatus &&
     !projectListLoading &&
-    !effectiveSummary &&
+    !projectSummary &&
     !dashboardError &&
     !signalError &&
     !providerStatusError
 
-  const latestRunFactsRows = latestRunFacts(effectiveRuns)
-  const dataQualityWarnings = effectiveProviderStatus?.warnings ?? []
-  const dataQualityError = effectiveProviderStatus?.last_error ?? null
+  const latestRunFactsRows = latestRunFacts(projectRuns)
+  const dataQualityWarnings = providerStatus?.warnings ?? []
+  const dataQualityError = providerStatus?.last_error ?? null
   const topServiceLabel = serviceItems[0]?.label ?? null
   const signalTakeaways = buildDashboardSignalTakeaways({
     acceptedRiskCount,
-    effectiveSignalCounts,
-    effectiveSummary,
+    effectiveSignalCounts: signalCounts,
+    effectiveSummary: projectSummary,
     topServiceLabel,
   })
 
@@ -191,12 +155,11 @@ export function RiskOperationsDashboard({
       <DashboardContextBar
         demoWorkspaceEnabled={demoWorkspaceEnabled}
         demoWorkspacePending={demoWorkspacePending}
-        effectiveProjects={effectiveProjects}
-        effectiveProviderStatus={effectiveProviderStatus}
-        effectiveSelectedProject={effectiveSelectedProject}
+        effectiveProjects={projects}
+        effectiveProviderStatus={providerStatus}
+        effectiveSelectedProject={selectedProject}
         freshness={freshness}
         isManagedDemoWorkspace={isManagedDemoWorkspace}
-        isDemoMode={isDemoMode}
         onLoadDemoWorkspace={onLoadDemoWorkspace}
         onProjectChange={onProjectChange}
         onRefresh={onRefresh}
@@ -206,7 +169,7 @@ export function RiskOperationsDashboard({
         selectedProjectId={selectedProjectId}
       />
 
-      {isDemoMode || isManagedDemoWorkspace ? (
+      {isManagedDemoWorkspace ? (
         <DashboardDemoBanner
           demoWorkspaceEnabled={demoWorkspaceEnabled}
           demoWorkspacePending={demoWorkspacePending}
@@ -242,7 +205,6 @@ export function RiskOperationsDashboard({
           demoWorkspaceEnabled={demoWorkspaceEnabled}
           demoWorkspacePending={demoWorkspacePending}
           onLoadDemoWorkspace={onLoadDemoWorkspace}
-          onResetDemoWorkspace={onResetDemoWorkspace}
         />
       ) : (
         <>
@@ -261,7 +223,7 @@ export function RiskOperationsDashboard({
             }
             queueFindings={queueFindings}
             queueSearch={filters.queueSearch}
-            selectedProjectId={isDemoMode ? "" : selectedProjectId}
+            selectedProjectId={selectedProjectId}
           />
           <Suspense fallback={<DashboardSignalOverviewFallback />}>
             <DashboardSignalOverview
@@ -276,7 +238,7 @@ export function RiskOperationsDashboard({
               }
               priorityItems={priorityItems}
               runsLoading={runsLoading}
-              selectedProjectId={isDemoMode ? "" : selectedProjectId}
+              selectedProjectId={selectedProjectId}
               selectedRunRange={filters.selectedRunRange}
               serviceItems={serviceItems}
               summaryLoading={summaryLoading}
@@ -305,14 +267,14 @@ export function RiskOperationsDashboard({
             <DashboardDetailRail
               dataQualityError={dataQualityError}
               dataQualityWarnings={dataQualityWarnings}
-              effectiveProviderStatus={effectiveProviderStatus}
-              effectiveRuns={effectiveRuns}
-              effectiveSummary={effectiveSummary}
+              effectiveProviderStatus={providerStatus}
+              effectiveRuns={projectRuns}
+              effectiveSummary={projectSummary}
               freshness={freshness}
               latestRun={latestRun}
               latestRunFactsRows={latestRunFactsRows}
               providerStatusLoading={providerStatusLoading}
-              selectedProjectId={isDemoMode ? "" : selectedProjectId}
+              selectedProjectId={selectedProjectId}
               staleProvider={staleProvider}
             />
           ) : null}

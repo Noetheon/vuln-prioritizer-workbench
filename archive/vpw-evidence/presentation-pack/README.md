@@ -1,6 +1,8 @@
 # Presentation Evidence Pack
 
-This folder is an index for the final Vuln Prioritizer Workbench evidence set. It does not duplicate large screenshots; it points to the archived proof files already committed under `archive/vpw-evidence/final-demo-flow/` and `archive/vpw-evidence/vpw-design-system-foundation/`.
+This folder is a compact index for the historical Vuln Prioritizer Workbench
+presentation story. Large screenshots and design-system proof images were
+pruned from `main` during the 2026-05-25 archive trim.
 
 ## What Was Built
 
@@ -38,32 +40,26 @@ The authoritative flow notes are in `../final-demo-flow/demo-flow-summary.md`.
 
 ## Primary Evidence
 
-Use `evidence-index.md` for the full list of primary screenshots and summaries. The main proof set is:
+Use `evidence-index.md` for the retained summary set. The retained proof set is:
 
-- `../final-demo-flow/*-final.png`
-- `../final-demo-flow/06-ttp-context-mapped-demo.png`
 - `../final-demo-flow/demo-flow-summary.md`
 - `../final-demo-flow/attack-demo-mapping-summary.md`
 
 ## Design-System Proof
 
-VPW route integration screenshots and the complete component set are under:
-
-- `../vpw-design-system-foundation/`
+The historical design-system proof images were pruned from `main`. Use current
+frontend tests, fresh screenshots, or active design docs for current UI claims.
 
 ## Evidence Bundle, Manifest And Checksum Proof
 
-The final Evidence Center proof shows an Evidence ZIP bundle generated through the existing UI action, then verified with manifest and checksum state visible:
+The final Evidence Center proof is retained as summary text in:
 
-- `../final-demo-flow/09-report-or-bundle-generated-final.png`
 - `../final-demo-flow/demo-flow-summary.md`
 
 ## ATT&CK Demo Mapping Proof
 
 The default final TTP screenshot truthfully shows the defensive no-inference state for a finding without approved ATT&CK mapping. A separate curated defensive demo mapping proof shows how a reviewed local mapping appears:
 
-- `../final-demo-flow/06-ttp-context-final.png`
-- `../final-demo-flow/06-ttp-context-mapped-demo.png`
 - `../final-demo-flow/attack-demo-mapping-summary.md`
 
 The curated mapping is defensive only. It supports prioritization, exposure review, detection planning, and remediation context. It does not prove exploitation and contains no exploit steps, payloads, proof-of-concept guidance, active probing, or offensive procedure instructions.

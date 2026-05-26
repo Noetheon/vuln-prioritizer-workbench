@@ -1,110 +1,42 @@
 import { useQuery } from "@tanstack/react-query"
 
 import {
-  type AnalysisRunPublic,
-  type AnalysisRunSummaryPublic,
   type AssetPublic,
-  type DashboardSignalCountsPublic,
   AssetsService,
-  type FindingDetailPublic,
   type FindingExplanationPublic,
   type FindingPublic,
   FindingsService,
   type FindingsReadProjectFindingsData,
-  type ProjectDecisionSummaryPublic,
   type ProjectPublic,
   ProjectsService,
   RunsService,
   WaiversService,
 } from "../api-client"
-import {
-  demoFindingDetailForId,
-  demoFindingExplanationForDetail,
-} from "../components/finding-detail/finding-detail-model"
 import { matchesAsset } from "../components/assets/asset-model"
-import type { DashboardSignalCounts } from "../components/dashboard/dashboard-model"
 import { apiErrorMessage } from "../lib/app-errors"
-import { DEMO_MODE_ENABLED } from "../lib/runtime-config"
+import {
+  ASSET_FINDINGS_PAGE_LIMIT,
+  RUN_DETAIL_POLL_STATUSES,
+  type FindingDetailQueryData,
+  type ProjectSummariesQueryData,
+  type RunDetailQueryData,
+  readAllPages,
+  readProjectSummariesWithLimit,
+} from "./workbench-query-model"
 import { workbenchQueryKeys } from "./workbench-query-keys"
 
-export type RunDetailQueryData = {
-  run: AnalysisRunPublic
-  summary: AnalysisRunSummaryPublic
-}
-
-export type FindingDetailQueryData = {
-  detail: FindingDetailPublic
-  explanation: FindingExplanationPublic | null
-  explanationWarning: string
-}
-
-export type ProjectSummariesQueryData = {
-  failedProjectIds: string[]
-  summaries: Record<string, ProjectDecisionSummaryPublic>
-}
-
-const RUN_DETAIL_POLL_STATUSES = new Set(["pending", "running"])
-const PROJECT_SUMMARY_CONCURRENCY = 4
-
-export const emptyDashboardSignalCounts: DashboardSignalCounts = {
-  highEpss: 0,
-  internetFacingCriticals: 0,
-  epssBuckets: {
-    low: 0,
-    medium: 0,
-    high: 0,
-    critical: 0,
-  },
-}
-
-function emptyFindingPage() {
-  return { count: 0, data: [] as FindingPublic[] }
-}
-
-const ASSET_FINDINGS_PAGE_LIMIT = 500
-
-async function readProjectSummariesWithLimit(
-  projectIds: readonly string[],
-  signal: AbortSignal,
-): Promise<ProjectSummariesQueryData> {
-  const summaries: Record<string, ProjectDecisionSummaryPublic> = {}
-  const failedProjectIds: string[] = []
-  let nextIndex = 0
-
-  async function readNextProject() {
-    while (nextIndex < projectIds.length) {
-      if (signal.aborted) {
-        throw new DOMException("Project summary query aborted", "AbortError")
-      }
-      const index = nextIndex
-      nextIndex += 1
-      const projectId = projectIds[index]
-      try {
-        summaries[projectId] = await ProjectsService.readProjectSummary(
-          { project_id: projectId },
-          { signal },
-        )
-      } catch (caught) {
-        if (signal.aborted) {
-          throw caught
-        }
-        failedProjectIds.push(projectId)
-      }
-    }
-  }
-
-  await Promise.all(
-    Array.from(
-      { length: Math.min(PROJECT_SUMMARY_CONCURRENCY, projectIds.length) },
-      readNextProject,
-    ),
-  )
-  return { failedProjectIds, summaries }
-}
+export {
+  dashboardSignalCountsFromApi,
+  emptyDashboardSignalCounts,
+  emptyFindingQueryPage,
+} from "./workbench-query-model"
 
 export function useProjectsQuery() {
   return useQuery({
-    queryFn: ({ signal }) => ProjectsService.readProjects({ signal }),
+    queryFn: ({ signal }) =>
+      readAllPages((pagination) =>
+        ProjectsService.readProjects(pagination, { signal }),
+      ),
     queryKey: workbenchQueryKeys.projects(),
     retry: false,
     staleTime: 15_000,
@@ -115,7 +47,12 @@ export function useProjectSummariesQuery(projects: readonly ProjectPublic[]) {
   const projectIds = projects.map((project) => project.id)
   return useQuery<ProjectSummariesQueryData>({
     enabled: projectIds.length > 0,
-    queryFn: ({ signal }) => readProjectSummariesWithLimit(projectIds, signal),
+    queryFn: ({ signal }) =>
+      readProjectSummariesWithLimit(
+        projectIds,
+        signal,
+        ProjectsService.readProjectSummary,
+      ),
     queryKey: workbenchQueryKeys.projectSummaries(projectIds),
     retry: false,
     staleTime: 15_000,
@@ -137,7 +74,10 @@ export function useProjectDashboardQuery(projectId: string, enabled: boolean) {
   return useQuery({
     enabled: enabled && Boolean(projectId),
     queryFn: ({ signal }) =>
-      ProjectsService.readProjectDashboard({ project_id: projectId }, { signal }),
+      ProjectsService.readProjectDashboard(
+        { project_id: projectId },
+        { signal },
+      ),
     queryKey: workbenchQueryKeys.projectDashboard(projectId),
     retry: false,
     staleTime: 10_000,
@@ -162,10 +102,13 @@ export function useProjectGovernanceRollupsQuery(projectId: string) {
   return useQuery({
     enabled: Boolean(projectId),
     queryFn: ({ signal }) =>
-      ProjectsService.readProjectGovernanceRollups({
-        project_id: projectId,
-        limit: 5,
-      }, { signal }),
+      ProjectsService.readProjectGovernanceRollups(
+        {
+          project_id: projectId,
+          limit: 5,
+        },
+        { signal },
+      ),
     queryKey: workbenchQueryKeys.projectGovernanceRollups(projectId),
     retry: false,
     staleTime: 15_000,
@@ -176,24 +119,34 @@ export function useProjectRunsQuery(projectId: string, enabled: boolean) {
   return useQuery({
     enabled: enabled && Boolean(projectId),
     queryFn: ({ signal }) =>
-      RunsService.readProjectRuns({ project_id: projectId }, { signal }),
+      readAllPages((pagination) =>
+        RunsService.readProjectRuns(
+          {
+            project_id: projectId,
+            ...pagination,
+          },
+          { signal },
+        ),
+      ),
     queryKey: workbenchQueryKeys.projectRuns(projectId),
     retry: false,
     staleTime: 15_000,
   })
 }
 
-export function useProjectAssetsQuery({
-  projectId,
-}: {
-  projectId: string
-}) {
+export function useProjectAssetsQuery({ projectId }: { projectId: string }) {
   return useQuery({
     enabled: Boolean(projectId),
     queryFn: ({ signal }) =>
-      AssetsService.readProjectAssets({
-        project_id: projectId,
-      }, { signal }),
+      readAllPages((pagination) =>
+        AssetsService.readProjectAssets(
+          {
+            project_id: projectId,
+            ...pagination,
+          },
+          { signal },
+        ),
+      ),
     queryKey: workbenchQueryKeys.assets(projectId),
     retry: false,
     staleTime: 10_000,
@@ -218,13 +171,16 @@ export function useAssetFindingsQuery({
       let total = 0
       let received = 0
       do {
-        const page = await FindingsService.readProjectFindings({
-          asset_id: asset.id,
-          limit: ASSET_FINDINGS_PAGE_LIMIT,
-          offset,
-          project_id: projectId,
-          sort: "operational",
-        }, { signal })
+        const page = await FindingsService.readProjectFindings(
+          {
+            asset_id: asset.id,
+            limit: ASSET_FINDINGS_PAGE_LIMIT,
+            offset,
+            project_id: projectId,
+            sort: "operational",
+          },
+          { signal },
+        )
         findings.push(
           ...page.data.filter((finding) => matchesAsset(finding, asset)),
         )
@@ -264,7 +220,15 @@ export function useWaiversQuery(projectId: string, enabled: boolean) {
   return useQuery({
     enabled: enabled && Boolean(projectId),
     queryFn: ({ signal }) =>
-      WaiversService.readProjectWaivers({ project_id: projectId }, { signal }),
+      readAllPages((pagination) =>
+        WaiversService.readProjectWaivers(
+          {
+            project_id: projectId,
+            ...pagination,
+          },
+          { signal },
+        ),
+      ),
     queryKey: workbenchQueryKeys.waivers(projectId),
     retry: false,
     staleTime: 15_000,
@@ -277,7 +241,8 @@ export function useFindingsQuery(
 ) {
   return useQuery({
     enabled,
-    queryFn: ({ signal }) => FindingsService.readProjectFindings(params, { signal }),
+    queryFn: ({ signal }) =>
+      FindingsService.readProjectFindings(params, { signal }),
     queryKey: workbenchQueryKeys.findings(params),
     retry: false,
     staleTime: 10_000,
@@ -291,26 +256,21 @@ export function useFindingDetailQuery(findingId: string | null) {
       if (!findingId) {
         throw new Error("findingId is required")
       }
-      const demoDetail = DEMO_MODE_ENABLED && findingId.startsWith("demo-")
-        ? demoFindingDetailForId(findingId)
-        : null
-      if (demoDetail) {
-        return {
-          detail: demoDetail,
-          explanation: demoFindingExplanationForDetail(demoDetail),
-          explanationWarning: "",
-        }
-      }
-
-      const detail = await FindingsService.readFinding({
-        finding_id: findingId,
-      }, { signal })
+      const detail = await FindingsService.readFinding(
+        {
+          finding_id: findingId,
+        },
+        { signal },
+      )
       let explanation: FindingExplanationPublic | null = null
       let explanationWarning = ""
       try {
-        explanation = await FindingsService.explainFinding({
-          finding_id: findingId,
-        }, { signal })
+        explanation = await FindingsService.explainFinding(
+          {
+            finding_id: findingId,
+          },
+          { signal },
+        )
       } catch (caught) {
         if (signal.aborted) {
           throw caught
@@ -326,24 +286,4 @@ export function useFindingDetailQuery(findingId: string | null) {
     retry: false,
     staleTime: 10_000,
   })
-}
-
-export function dashboardSignalCountsFromApi(
-  signalCounts: DashboardSignalCountsPublic | null | undefined,
-): DashboardSignalCounts {
-  const buckets = signalCounts?.epss_buckets
-  return {
-    highEpss: signalCounts?.high_epss ?? 0,
-    internetFacingCriticals: signalCounts?.internet_facing_criticals ?? 0,
-    epssBuckets: {
-      low: buckets?.low ?? 0,
-      medium: buckets?.medium ?? 0,
-      high: buckets?.high ?? 0,
-      critical: buckets?.critical ?? 0,
-    },
-  }
-}
-
-export function emptyFindingQueryPage(enabled: boolean) {
-  return enabled ? undefined : emptyFindingPage()
 }

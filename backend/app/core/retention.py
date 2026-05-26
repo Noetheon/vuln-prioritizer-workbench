@@ -57,6 +57,7 @@ def run_retention_cleanup(
 
 
 def _audit_events_before(session: Session, cutoff: datetime) -> int:
+    """Audit events before function."""
     statement = (
         select(func.count()).select_from(AuditEvent).where(col(AuditEvent.created_at) < cutoff)
     )
@@ -64,6 +65,7 @@ def _audit_events_before(session: Session, cutoff: datetime) -> int:
 
 
 def main() -> None:
+    """Main function."""
     parser = argparse.ArgumentParser(description="Clean up retained Workbench operational data.")
     parser.add_argument("--dry-run", action="store_true", help="Report cleanup counts only.")
     args = parser.parse_args()

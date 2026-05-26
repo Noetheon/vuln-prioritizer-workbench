@@ -10,6 +10,8 @@ from vuln_prioritizer.model_base import StrictModel
 
 
 class NvdData(StrictModel):
+    """Data representation and logic for Nvd Data."""
+
     cve_id: str
     description: str | None = None
     cvss_base_score: float | None = None
@@ -25,6 +27,8 @@ class NvdData(StrictModel):
 
 
 class EpssData(StrictModel):
+    """Data representation and logic for Epss Data."""
+
     cve_id: str
     epss: float | None = None
     percentile: float | None = None
@@ -32,6 +36,8 @@ class EpssData(StrictModel):
 
 
 class KevData(StrictModel):
+    """Data representation and logic for Kev Data."""
+
     cve_id: str
     in_kev: bool = False
     vendor_project: str | None = None
@@ -46,6 +52,8 @@ class KevData(StrictModel):
 
 
 class DefensiveContext(StrictModel):
+    """Data representation and logic for Defensive Context."""
+
     cve_id: str
     source: str
     source_id: str | None = None
@@ -65,6 +73,8 @@ class DefensiveContext(StrictModel):
 
 
 class ProviderEvidence(StrictModel):
+    """Data representation and logic for Provider Evidence."""
+
     nvd: NvdData
     epss: EpssData
     kev: KevData
@@ -72,6 +82,8 @@ class ProviderEvidence(StrictModel):
 
 
 class ProviderLookupDiagnostics(StrictModel):
+    """Data representation and logic for Provider Lookup Diagnostics."""
+
     requested: int = 0
     cache_hits: int = 0
     network_fetches: int = 0
@@ -83,6 +95,8 @@ class ProviderLookupDiagnostics(StrictModel):
 
 
 class ProviderDataQualityFlag(StrictModel):
+    """Data representation and logic for Provider Data Quality Flag."""
+
     source: str
     code: str
     message: str
@@ -91,6 +105,8 @@ class ProviderDataQualityFlag(StrictModel):
 
 
 class ProviderCacheContract(StrictModel):
+    """Data representation and logic for Provider Cache Contract."""
+
     source: str
     cache_enabled: bool = False
     namespace: str | None = None
@@ -100,6 +116,8 @@ class ProviderCacheContract(StrictModel):
 
 
 class ProviderStatus(StrictModel):
+    """Data representation and logic for Provider Status."""
+
     source: str
     last_sync: str | None = None
     requested: int = 0
@@ -118,6 +136,8 @@ class ProviderStatus(StrictModel):
 
 
 class ProviderSnapshot(StrictModel):
+    """Data representation and logic for Provider Snapshot."""
+
     source: str
     generated_at: str
     requested_cves: int = 0
@@ -127,6 +147,8 @@ class ProviderSnapshot(StrictModel):
 
 
 class ProviderEnrichmentResult(StrictModel):
+    """Data representation and logic for Provider Enrichment Result."""
+
     source: str
     records: dict[str, Any] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)

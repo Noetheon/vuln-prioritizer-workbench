@@ -87,8 +87,9 @@ export function FindingTtpContextTab({
           title="Reviewed defensive context only"
           tone="info"
         >
-          Not proof of compromise. Does not override base priority. Use this
-          mapping for remediation planning and coverage review only.
+          This context does not prove exploitation or compromise. Does not
+          override base priority. Use this mapping for remediation planning and
+          coverage review only.
         </VpwStatusBanner>
         {attackEmpty ? (
           <section

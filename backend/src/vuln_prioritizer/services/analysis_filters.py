@@ -16,6 +16,7 @@ PRIORITY_LABELS = {
 
 
 def normalize_priority_filters(priority_filters: Sequence[StrEnum | str] | None) -> set[str]:
+    """Normalize priority filters function."""
     if not priority_filters:
         return set()
     return {PRIORITY_LABELS[_enum_value(item)] for item in priority_filters}
@@ -30,6 +31,7 @@ def build_active_filters(
     show_suppressed: bool = False,
     hide_waived: bool = False,
 ) -> list[str]:
+    """Build active filters function."""
     active_filters: list[str] = []
 
     if priority_filters:

@@ -62,6 +62,7 @@ _GENERIC_OCCURRENCE_FIELDS = {
 
 
 def parse_cve_list(path: Path) -> ParsedInput:
+    """Parse cve list function."""
     suffix = path.suffix.lower()
     if suffix not in {".txt", ".csv"}:
         raise ValueError("Unsupported input format. Use .txt or .csv files.")
@@ -101,6 +102,7 @@ def parse_cve_list(path: Path) -> ParsedInput:
 
 
 def _read_cve_txt(path: Path) -> list[tuple[int, str, None, None, None]]:
+    """Read cve txt function."""
     rows: list[tuple[int, str, None, None, None]] = []
     with path.open("r", encoding="utf-8") as handle:
         for line_number, line in enumerate(handle, start=1):
@@ -112,6 +114,7 @@ def _read_cve_txt(path: Path) -> list[tuple[int, str, None, None, None]]:
 
 
 def _read_cve_csv(path: Path) -> list[tuple[int, str, str | None, str | None, str | None]]:
+    """Read cve csv function."""
     field_map, csv_rows = _read_csv_records(path, document_name="CSV input")
     cve_field = first_existing_field(field_map, "cve_id", "cve")
     if cve_field is None:
@@ -135,6 +138,7 @@ def _read_cve_csv(path: Path) -> list[tuple[int, str, str | None, str | None, st
 
 
 def parse_generic_occurrence_csv(path: Path) -> ParsedInput:
+    """Parse generic occurrence csv function."""
     if path.suffix.lower() != ".csv":
         raise ValueError("generic-occurrence-csv input must be a .csv file.")
 
@@ -238,6 +242,7 @@ def _read_csv_records(
     *,
     document_name: str,
 ) -> tuple[dict[str, str], list[tuple[int, dict[str, str]]]]:
+    """Read csv records function."""
     text = path.read_text(encoding="utf-8")
     try:
         dialect = csv.Sniffer().sniff(_csv_sample(text), delimiters=_CSV_DELIMITERS)
@@ -279,6 +284,7 @@ def _generic_raw_evidence(
     line_number: int,
     unknown_fields: tuple[str, ...],
 ) -> dict[str, object]:
+    """Generic raw evidence function."""
     return {
         "input_type": "generic-occurrence-csv",
         "line_number": line_number,
@@ -308,6 +314,7 @@ def _generic_raw_evidence(
 
 
 def _csv_optional(row: dict[str, str], field_map: dict[str, str], *fields: str) -> str | None:
+    """Csv optional function."""
     for field in fields:
         value = csv_value(row, field_map, field)
         if value:
@@ -316,10 +323,12 @@ def _csv_optional(row: dict[str, str], field_map: dict[str, str], *fields: str) 
 
 
 def _unknown_column_values(row: dict[str, str], fields: tuple[str, ...]) -> dict[str, str]:
+    """Unknown column values function."""
     return {field: value for field in fields if (value := (row.get(field) or "").strip())}
 
 
 def _csv_sample(text: str) -> str:
+    """Csv sample function."""
     sample = "\n".join(
         line
         for line in text.splitlines()
@@ -329,12 +338,14 @@ def _csv_sample(text: str) -> str:
 
 
 def _ignored_csv_record(record: list[str]) -> bool:
+    """Ignored csv record function."""
     if not record or all(not value.strip() for value in record):
         return True
     return record[0].strip().startswith(_COMMENT_PREFIX)
 
 
 def _csv_row(header: list[str], record: list[str]) -> dict[str, str]:
+    """Csv row function."""
     row = {field: "" for field in header}
     for index, value in enumerate(record):
         row[header[index]] = value

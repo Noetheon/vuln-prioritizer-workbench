@@ -11,7 +11,6 @@ import {
   formatDateTime,
   formatDisplayType,
   type ImportsWorkbenchProps,
-  objectRecord,
   runFileLabel,
 } from "./imports-workbench-model"
 import { ImportRunActions } from "./ImportsWorkbenchHistoryActions"
@@ -37,18 +36,19 @@ export function buildImportHistoryColumns({
           (selectedRunSummary.updated_findings ?? 0)
       return `${count} finding(s)`
     }
-    const summary = objectRecord(run.summary_json)
-    const count = summary.finding_count
+    const count = run.finding_count
     return typeof count === "number" ? `${count} finding(s)` : "Open for counts"
   }
 
-  function runNumber(run: AnalysisRunPublic, key: string) {
+  function runNumber(
+    run: AnalysisRunPublic,
+    key: "created_findings" | "updated_findings" | "ignored_lines",
+  ) {
     if (selectedRunId === run.id && selectedRunSummary) {
-      const value = objectRecord(selectedRunSummary)[key]
+      const value = selectedRunSummary[key]
       return typeof value === "number" ? value : 0
     }
-    const summary = objectRecord(run.summary_json)
-    const value = summary[key]
+    const value = run[key]
     return typeof value === "number" ? value : 0
   }
 

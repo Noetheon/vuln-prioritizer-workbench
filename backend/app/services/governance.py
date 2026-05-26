@@ -16,6 +16,7 @@ from app.models import (
     Waiver,
 )
 from app.models.base import get_datetime_utc
+from app.repositories.findings import FindingRepository
 from app.repositories.waivers import (
     WaiverRepository,
     waiver_lifecycle_status,
@@ -73,6 +74,53 @@ def build_project_governance_rollups_payload(
         waiver_debt=_waiver_debt_summary(
             findings=findings,
             waivers=list(waivers or []),
+            waiver_repository=waiver_repository,
+            limit=bounded_limit,
+        ),
+    )
+
+
+def build_project_governance_rollups_payload_from_repositories(
+    *,
+    project_id: uuid.UUID,
+    finding_repository: FindingRepository,
+    waiver_repository: WaiverRepository,
+    limit: int = 5,
+) -> ProjectGovernanceRollupsPublic:
+    """Build governance rollups from bounded SQL-backed repository queries."""
+    bounded_limit = max(1, min(limit, 50))
+    owner_rollups = finding_repository.project_governance_rollups(
+        project_id,
+        dimension="owner",
+        limit=bounded_limit,
+    )
+    service_rollups = finding_repository.project_governance_rollups(
+        project_id,
+        dimension="service",
+        limit=bounded_limit,
+    )
+    asset_rollups = finding_repository.project_governance_rollups(
+        project_id,
+        dimension="asset",
+        limit=bounded_limit,
+    )
+    environment_rollups = finding_repository.project_governance_rollups(
+        project_id,
+        dimension="environment",
+        limit=bounded_limit,
+    )
+    return ProjectGovernanceRollupsPublic(
+        project_id=project_id,
+        generated_at=get_datetime_utc(),
+        owners=owner_rollups,
+        services=service_rollups,
+        assets=asset_rollups,
+        environments=environment_rollups,
+        top_services_by_risk=service_rollups[:bounded_limit],
+        top_assets_by_risk=asset_rollups[:bounded_limit],
+        waiver_debt=_waiver_debt_summary_from_repositories(
+            project_id=project_id,
+            finding_repository=finding_repository,
             waiver_repository=waiver_repository,
             limit=bounded_limit,
         ),
@@ -224,6 +272,62 @@ def _waiver_debt_summary(
         owner_counts=dict(sorted(owner_counts.items())),
         service_counts=dict(sorted(service_counts.items())),
         items=items[:limit],
+    )
+
+
+def _waiver_debt_summary_from_repositories(
+    *,
+    project_id: uuid.UUID,
+    finding_repository: FindingRepository,
+    waiver_repository: WaiverRepository,
+    limit: int,
+) -> GovernanceWaiverDebtPublic:
+    lifecycle = waiver_repository.project_waiver_lifecycle_summary(project_id)
+    finding_counts = finding_repository.project_waiver_finding_counts(project_id)
+    item_waivers = waiver_repository.list_project_waiver_debt_items(
+        project_id,
+        limit=limit,
+    )
+    items: list[GovernanceWaiverDebtEntryPublic] = []
+    for waiver in item_waivers:
+        status, days_remaining = waiver_lifecycle_status(waiver)
+        matched_findings = waiver_repository.matching_finding_count(waiver)
+        items.append(
+            GovernanceWaiverDebtEntryPublic(
+                id=waiver.id,
+                owner=waiver.owner,
+                scope=waiver_scope_label(waiver),
+                status=status,
+                days_remaining=days_remaining,
+                expires_at=waiver.expires_at,
+                review_at=waiver.review_at,
+                matched_findings=matched_findings,
+                cve_id=waiver.cve_id,
+                service=waiver.service,
+                asset_key=waiver.asset_key,
+                finding_id=waiver.finding_id,
+                reason=waiver.reason,
+                approval_ref=waiver.approval_ref,
+                ticket_url=waiver.ticket_url,
+            )
+        )
+    all_waivers = waiver_repository.list_project_waivers(project_id)
+    matched_finding_count = sum(
+        waiver_repository.matching_finding_count(waiver) for waiver in all_waivers
+    )
+    return GovernanceWaiverDebtPublic(
+        waiver_count=int(lifecycle["waiver_count"]),
+        active_count=int(lifecycle["active_count"]),
+        review_due_count=int(lifecycle["review_due_count"]),
+        expired_count=int(lifecycle["expired_count"]),
+        expiring_soon_count=int(lifecycle["expiring_soon_count"]),
+        matched_finding_count=matched_finding_count,
+        accepted_finding_count=finding_counts["accepted_finding_count"],
+        expired_finding_count=finding_counts["expired_finding_count"],
+        review_due_finding_count=finding_counts["review_due_finding_count"],
+        owner_counts=dict(lifecycle["owner_counts"]),
+        service_counts=dict(lifecycle["service_counts"]),
+        items=items,
     )
 
 

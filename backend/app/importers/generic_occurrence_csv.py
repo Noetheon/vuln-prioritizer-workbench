@@ -29,6 +29,7 @@ class GenericOccurrenceCsvImporter:
         *,
         filename: str | None = None,
     ) -> list[NormalizedOccurrence]:
+        """Parse method for GenericOccurrenceCsvImporter."""
         return self.parse_with_metadata(payload, filename=filename).occurrences
 
     def parse_with_metadata(
@@ -37,6 +38,7 @@ class GenericOccurrenceCsvImporter:
         *,
         filename: str | None = None,
     ) -> ParsedWorkbenchInput:
+        """Parse with metadata method for GenericOccurrenceCsvImporter."""
         if _filename_suffix(filename) not in {"", ".csv"}:
             raise ImporterParseError("generic-occurrence-csv supports .csv inputs.")
         return parse_payload_with_input_loader_result(
@@ -50,6 +52,7 @@ class GenericOccurrenceCsvImporter:
 
 
 def _filename_suffix(filename: str | None) -> str:
+    """Filename suffix function."""
     if not filename or "." not in filename:
         return ""
     return "." + filename.rsplit(".", 1)[1].strip().lower()

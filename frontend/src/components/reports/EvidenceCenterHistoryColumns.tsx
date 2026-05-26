@@ -17,7 +17,6 @@ import {
 } from "./EvidenceCenterHistoryCells"
 
 type ReportHistoryColumnOptions = {
-  isDemo: boolean
   mode: "inventory" | "history"
   onDownload: (report: ReportPublic) => void
   onVerify: (report: ReportPublic) => void
@@ -33,7 +32,6 @@ type ReportVerificationFlags = {
 }
 
 export function buildReportHistoryColumns({
-  isDemo,
   mode,
   onDownload,
   onVerify,
@@ -70,9 +68,7 @@ export function buildReportHistoryColumns({
         width: "12%",
       },
       {
-        cell: (report) => (
-          <ReportArtifactCell isDemo={isDemo} report={report} />
-        ),
+        cell: (report) => <ReportArtifactCell report={report} />,
         className: "min-w-52",
         header: "Artifact",
         id: "artifact",
@@ -90,11 +86,7 @@ export function buildReportHistoryColumns({
       },
       {
         cell: (report) => (
-          <ReportStatusCell
-            isDemo={isDemo}
-            report={report}
-            {...verificationFlags(report)}
-          />
+          <ReportStatusCell report={report} {...verificationFlags(report)} />
         ),
         header: "Status",
         id: "status",
@@ -117,7 +109,6 @@ export function buildReportHistoryColumns({
         width: "8%",
       },
       actionColumn({
-        isDemo,
         onDownload,
         onVerify,
         verificationLoading,
@@ -128,7 +119,7 @@ export function buildReportHistoryColumns({
 
   return [
     {
-      cell: (report) => <ReportArtifactCell isDemo={isDemo} report={report} />,
+      cell: (report) => <ReportArtifactCell report={report} />,
       className: "min-w-52",
       header: "Artifact",
       id: "artifact",
@@ -146,11 +137,7 @@ export function buildReportHistoryColumns({
     },
     {
       cell: (report) => (
-        <ReportStatusCell
-          isDemo={isDemo}
-          report={report}
-          {...verificationFlags(report)}
-        />
+        <ReportStatusCell report={report} {...verificationFlags(report)} />
       ),
       header: "Status",
       id: "status",
@@ -194,7 +181,6 @@ export function buildReportHistoryColumns({
       width: "14%",
     },
     actionColumn({
-      isDemo,
       onDownload,
       onVerify,
       verificationLoading,
@@ -227,13 +213,11 @@ function reportVerificationFlags({
 }
 
 function actionColumn({
-  isDemo,
   onDownload,
   onVerify,
   verificationLoading,
   verificationReportTarget,
 }: {
-  isDemo: boolean
   onDownload: (report: ReportPublic) => void
   onVerify: (report: ReportPublic) => void
   verificationLoading: boolean
@@ -242,7 +226,6 @@ function actionColumn({
   return {
     cell: (report) => (
       <ReportHistoryActionsCell
-        isDemo={isDemo}
         onDownload={onDownload}
         onVerify={onVerify}
         report={report}

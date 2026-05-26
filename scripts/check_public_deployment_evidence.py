@@ -17,6 +17,7 @@ LEDGER = ROOT / "docs" / "public-production-release-evidence-ledger.md"
 
 
 def main() -> int:
+    """Validate public deployment evidence and Compose routing contracts."""
     failures: list[str] = []
     compose = _yaml(COMPOSE)
     traefik = _yaml(TRAEFIK_COMPOSE)

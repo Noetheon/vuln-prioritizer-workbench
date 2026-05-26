@@ -85,6 +85,7 @@ class ProviderConfig:
     max_retries: int = HTTP_MAX_RETRIES
 
     def __post_init__(self) -> None:
+        """Post init   method for ProviderConfig."""
         validate_env_var_name(
             self.nvd_api_key_env,
             label="NVD API key environment variable name",

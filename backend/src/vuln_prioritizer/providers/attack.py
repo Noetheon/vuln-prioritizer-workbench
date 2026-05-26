@@ -28,6 +28,7 @@ class AttackProvider:
     """Load ATT&CK context from supported local sources."""
 
     def __init__(self) -> None:
+        """Initialize a new instance of AttackProvider."""
         self.ctid_provider = CtidMappingsProvider()
         self.curated_provider = CuratedAttackMappingProvider()
         self.metadata_provider = AttackMetadataProvider()
@@ -43,6 +44,7 @@ class AttackProvider:
         technique_metadata_file: Path | None = None,
         offline_file: Path | None = None,
     ) -> tuple[dict[str, AttackData], dict[str, str | None], list[str]]:
+        """Fetch many method for AttackProvider."""
         if not enabled:
             return {}, _build_metadata(source=ATTACK_SOURCE_NONE), []
 
@@ -123,6 +125,7 @@ class AttackProvider:
         mapping_file: Path,
         technique_metadata_file: Path | None,
     ) -> tuple[dict[str, AttackData], dict[str, str | None], list[str]]:
+        """Load ctid json method for AttackProvider."""
         mappings_by_cve, mapping_metadata, mapping_warnings = self.ctid_provider.load(mapping_file)
         techniques_by_id: dict[str, AttackTechnique] = {}
         metadata_warnings: list[str] = []
@@ -176,6 +179,7 @@ class AttackProvider:
         *,
         mapping_file: Path,
     ) -> tuple[dict[str, AttackData], dict[str, str | None], list[str]]:
+        """Load local curated method for AttackProvider."""
         bundle = self.curated_provider.load(mapping_file)
         results = self.enrichment_service.enrich_ctid(
             cve_ids,
@@ -212,6 +216,7 @@ class AttackProvider:
         cve_ids: list[str],
         offline_file: Path,
     ) -> tuple[dict[str, AttackData], list[str]]:
+        """Load local csv method for AttackProvider."""
         if not offline_file.exists() or not offline_file.is_file():
             return {}, [f"ATT&CK mapping file not found: {offline_file}"]
 
@@ -269,6 +274,7 @@ class AttackProvider:
 
 
 def _split_multi_value(raw_value: str) -> list[str]:
+    """Split multi value function."""
     normalized_values: list[str] = []
     for part in SEPARATOR_RE.split(raw_value):
         value = part.strip()
@@ -299,6 +305,7 @@ def _build_metadata(
     mapping_author: str | None = None,
     mapping_contact: str | None = None,
 ) -> dict[str, str | None]:
+    """Build metadata function."""
     return {
         "source": source,
         "mapping_file": str(mapping_file) if mapping_file is not None else None,

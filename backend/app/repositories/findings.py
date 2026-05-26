@@ -10,18 +10,48 @@ from sqlmodel import Session, col, func, select
 
 from app.models import (
     Asset,
+    AttackSummaryContextRow,
+    AttackSummaryFindingRow,
     Component,
     Finding,
     FindingAttackContext,
     FindingPriority,
     FindingStatus,
+    GovernanceRollupPublic,
     Vulnerability,
 )
 from app.models.base import get_datetime_utc
+from app.repositories.finding_attack_query import (
+    list_project_attack_contexts as _list_project_attack_contexts,
+)
+from app.repositories.finding_attack_query import (
+    list_project_attack_summary_inputs as _list_project_attack_summary_inputs,
+)
+from app.repositories.finding_governance_query import (
+    project_governance_rollups as _project_governance_rollups,
+)
+from app.repositories.finding_governance_query import (
+    top_cves_for_governance_label as _top_cves_for_governance_label,
+)
 from app.repositories.finding_page_query import (
     FindingPageQuery,
     finding_page_filters,
     finding_page_order_by,
+)
+from app.repositories.finding_summary_query import (
+    count_project_findings as _count_project_findings,
+)
+from app.repositories.finding_summary_query import (
+    count_project_findings_where as _count_project_findings_where,
+)
+from app.repositories.finding_summary_query import (
+    project_dashboard_signal_counts as _project_dashboard_signal_counts,
+)
+from app.repositories.finding_summary_query import (
+    project_finding_summary_counts as _project_finding_summary_counts,
+)
+from app.repositories.finding_summary_query import (
+    project_waiver_finding_counts as _project_waiver_finding_counts,
 )
 
 
@@ -29,6 +59,7 @@ class FindingRepository:
     """Finding, component, and vulnerability persistence helpers."""
 
     def __init__(self, session: Session) -> None:
+        """Initialize a new instance of FindingRepository."""
         self.session = session
 
     def upsert_component(
@@ -242,73 +273,63 @@ class FindingRepository:
 
     def count_project_findings(self, project_id: uuid.UUID) -> int:
         """Return the project finding count without materializing finding rows."""
-        statement = (
-            select(func.count()).select_from(Finding).where(Finding.project_id == project_id)
-        )
-        return int(self.session.exec(statement).one())
+        return _count_project_findings(self.session, project_id)
 
     def project_finding_summary_counts(self, project_id: uuid.UUID) -> dict[str, Any]:
         """Return dashboard summary counts with bounded aggregate queries."""
-        open_statuses = [
-            FindingStatus.OPEN,
-            FindingStatus.IN_REVIEW,
-            FindingStatus.REMEDIATING,
-        ]
-        priority_counts = {
-            str(priority): int(count)
-            for priority, count in self.session.exec(
-                select(Finding.priority, func.count())
-                .where(Finding.project_id == project_id)
-                .group_by(Finding.priority)
-            ).all()
-        }
-        status_counts = {
-            str(status): int(count)
-            for status, count in self.session.exec(
-                select(Finding.status, func.count())
-                .where(Finding.project_id == project_id)
-                .group_by(Finding.status)
-            ).all()
-        }
-        return {
-            "finding_count": self.count_project_findings(project_id),
-            "open_finding_count": self._count_project_findings_where(
-                project_id,
-                col(Finding.status).in_(open_statuses),
-            ),
-            "counts_by_priority": priority_counts,
-            "counts_by_status": status_counts,
-            "kev_hits": self._count_project_findings_where(
-                project_id,
-                col(Finding.in_kev).is_(True),
-            ),
-            "epss_hits": self._count_project_findings_where(
-                project_id,
-                col(Finding.epss).is_not(None),
-            ),
-            "cvss_known_count": self._count_project_findings_where(
-                project_id,
-                col(Finding.cvss_base_score).is_not(None),
-            ),
-        }
+        return _project_finding_summary_counts(self.session, project_id)
 
     def _count_project_findings_where(self, project_id: uuid.UUID, *criteria: Any) -> int:
-        statement = (
-            select(func.count())
-            .select_from(Finding)
-            .where(Finding.project_id == project_id, *criteria)
+        """Count project findings matching additional SQL criteria."""
+        return _count_project_findings_where(self.session, project_id, *criteria)
+
+    def project_dashboard_signal_counts(self, project_id: uuid.UUID) -> dict[str, Any]:
+        """Return dashboard signal counts without materializing project findings."""
+        return _project_dashboard_signal_counts(self.session, project_id)
+
+    def project_governance_rollups(
+        self,
+        project_id: uuid.UUID,
+        *,
+        dimension: str,
+        limit: int,
+    ) -> list[GovernanceRollupPublic]:
+        """Return SQL-backed governance rollups for one project dimension."""
+        return _project_governance_rollups(
+            self.session,
+            project_id,
+            dimension=dimension,
+            limit=limit,
         )
-        return int(self.session.exec(statement).one())
+
+    def project_waiver_finding_counts(self, project_id: uuid.UUID) -> dict[str, int]:
+        """Return accepted-risk finding counts for governance debt."""
+        return _project_waiver_finding_counts(self.session, project_id)
+
+    def _top_cves_for_governance_label(
+        self,
+        project_id: uuid.UUID,
+        *,
+        dimension: str,
+        label: str,
+    ) -> list[str]:
+        return _top_cves_for_governance_label(
+            self.session,
+            project_id,
+            dimension=dimension,
+            label=label,
+        )
 
     def list_project_attack_contexts(self, project_id: uuid.UUID) -> list[FindingAttackContext]:
         """Return ATT&CK contexts for findings in one project, newest rows first."""
-        statement = (
-            select(FindingAttackContext)
-            .join(Finding, col(FindingAttackContext.finding_id) == col(Finding.id))
-            .where(Finding.project_id == project_id)
-            .order_by(col(FindingAttackContext.created_at).desc())
-        )
-        return list(self.session.exec(statement).all())
+        return _list_project_attack_contexts(self.session, project_id)
+
+    def list_project_attack_summary_inputs(
+        self,
+        project_id: uuid.UUID,
+    ) -> tuple[list[AttackSummaryFindingRow], list[AttackSummaryContextRow]]:
+        """Return lightweight rows needed for the ATT&CK dashboard summary."""
+        return _list_project_attack_summary_inputs(self.session, project_id)
 
     def list_project_findings_page(
         self,

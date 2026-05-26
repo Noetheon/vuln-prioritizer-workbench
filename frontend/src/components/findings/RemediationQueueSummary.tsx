@@ -8,17 +8,7 @@ import {
   MetricStrip,
   type MetricStripMetric,
   VpwSection,
-  VpwDemoBanner,
 } from "@/components/vpw"
-
-export function DemoBanner() {
-  return (
-    <VpwDemoBanner>
-      <strong className="font-semibold">Demo preview</strong> - showing sample
-      findings. Connect a real project to see live data.
-    </VpwDemoBanner>
-  )
-}
 
 type RemediationQueueSummaryProps = {
   criticalCount: number

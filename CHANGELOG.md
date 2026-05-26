@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/).
 
+## Release And Tag Boundary
+
+This changelog records the VPW product release line and milestone history. The
+repository also contains inherited historical/template-line `0.x` git tags from
+earlier repository history, including tags whose commit dates predate the VPW
+Workbench project. Do not use those old `0.x` tags as evidence for current
+Workbench behavior. Use `v1.1.0` as the current VPW package release tag and use
+the [documentation evidence matrix](docs/documentation-evidence-matrix.md) plus
+exact git tag output when release wording needs to be verified.
+
 ## [Unreleased]
 
 ### Added

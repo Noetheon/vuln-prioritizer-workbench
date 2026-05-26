@@ -7,6 +7,7 @@ from typing import NoReturn
 
 from sqlmodel import Session
 
+from app.contracts.run_workflow import merge_workflow_error, merge_workflow_summary
 from app.core.local_actor import LocalWorkbenchActor
 from app.models import AnalysisRun, AnalysisRunStatus
 from app.repositories import RunRepository
@@ -35,6 +36,7 @@ def raise_analysis_failure(
     exc: Exception,
     execution_mode: str = "request",
 ) -> NoReturn:
+    """Raise analysis failure function."""
     analysis_error_message = _sanitize_parser_error_message(str(exc))
     analysis_error = {
         "message": analysis_error_message,
@@ -46,32 +48,32 @@ def raise_analysis_failure(
         run.id,
         status=AnalysisRunStatus.FAILED,
         error_message=analysis_error_message,
-        error_json={
-            "analysis_error": analysis_error,
-            "created_findings": 0,
-            "updated_findings": 0,
-            "ignored_lines": ignored_lines,
-            "import_job": _job_payload(
+        error_json=merge_workflow_error(
+            analysis_error=analysis_error,
+            created_findings=0,
+            updated_findings=0,
+            ignored_lines=ignored_lines,
+            import_job=_job_payload(
                 job_id=job_id,
                 status="failed",
                 status_history=failed_history,
                 execution_mode=execution_mode,
             ),
-        },
-        summary_json={
-            **run.summary_json,
-            "import_job": _job_payload(
+        ),
+        summary_json=merge_workflow_summary(
+            run.summary_json,
+            import_job=_job_payload(
                 job_id=job_id,
                 status="failed",
                 status_history=failed_history,
                 execution_mode=execution_mode,
             ),
-            "analysis_error": analysis_error,
-            "parse_errors": [],
-            "created_findings": 0,
-            "updated_findings": 0,
-            "ignored_lines": ignored_lines,
-        },
+            analysis_error=analysis_error,
+            parse_errors=[],
+            created_findings=0,
+            updated_findings=0,
+            ignored_lines=ignored_lines,
+        ),
     )
     _record_import_audit(
         session,

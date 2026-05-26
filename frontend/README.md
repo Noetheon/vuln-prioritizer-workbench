@@ -36,3 +36,9 @@ present in a developer checkout; it is not tracked or used by CI.
 
 The generated OpenAPI client uses browser-native `FormData`; it does not require
 the npm `form-data` package.
+
+Documentation that describes frontend routes, generated-client ownership, or
+browser report behavior should be checked against
+[`docs/documentation-evidence-matrix.md`](../docs/documentation-evidence-matrix.md)
+and the current `frontend/src/**` implementation before historical archive
+notes are reused as current product proof.

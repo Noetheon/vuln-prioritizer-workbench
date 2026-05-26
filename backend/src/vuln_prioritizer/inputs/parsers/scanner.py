@@ -20,6 +20,7 @@ from .common import (
 
 
 def parse_trivy_json(path: Path) -> ParsedInput:
+    """Parse trivy json function."""
     document = load_json_object(path, "Trivy JSON")
     warnings: list[str] = []
     occurrences: list[InputOccurrence] = []
@@ -65,6 +66,7 @@ def parse_trivy_json(path: Path) -> ParsedInput:
 
 
 def _trivy_cve_candidates(vulnerability: dict) -> list[str | None]:
+    """Trivy cve candidates function."""
     candidates: list[str | None] = []
     for field_name in ("VulnerabilityID", "CVE", "CVEID", "CVEs", "CVEIDs", "Aliases"):
         value = vulnerability.get(field_name)
@@ -77,10 +79,12 @@ def _trivy_cve_candidates(vulnerability: dict) -> list[str | None]:
 
 
 def _warn_non_cve_trivy_id(source_id: str | None, warnings: list[str]) -> None:
+    """Warn non cve trivy id function."""
     warnings.append(f"Ignored non-CVE Trivy vulnerability identifier: {source_id!r}")
 
 
 def _trivy_fix_versions(vulnerability: dict) -> list[str]:
+    """Trivy fix versions function."""
     for field_name in ("FixedVersion", "FixedVersions"):
         versions = split_versions(vulnerability.get(field_name))
         if versions:
@@ -89,6 +93,7 @@ def _trivy_fix_versions(vulnerability: dict) -> list[str]:
 
 
 def parse_grype_json(path: Path) -> ParsedInput:
+    """Parse grype json function."""
     document = load_json_object(path, "Grype JSON")
     warnings: list[str] = []
     occurrences: list[InputOccurrence] = []
@@ -145,6 +150,7 @@ def parse_grype_json(path: Path) -> ParsedInput:
 
 
 def _grype_match_items(value: object, *, warnings: list[str]) -> tuple[int, list[tuple[int, dict]]]:
+    """Grype match items function."""
     if value is None:
         warnings.append("Grype JSON does not contain a matches array.")
         return 0, []
@@ -164,6 +170,7 @@ def _grype_match_items(value: object, *, warnings: list[str]) -> tuple[int, list
 
 
 def _grype_cve_candidates(vulnerability: dict) -> list[str | None]:
+    """Grype cve candidates function."""
     candidates: list[str | None] = []
     for field_name in ("id", "cve", "cve_id", "CVE", "CVEs", "aliases", "relatedVulnerabilities"):
         value = vulnerability.get(field_name)
@@ -176,6 +183,7 @@ def _grype_cve_candidates(vulnerability: dict) -> list[str | None]:
 
 
 def _grype_related_id(value: object) -> str | None:
+    """Grype related id function."""
     if isinstance(value, str):
         return value
     if isinstance(value, dict):
@@ -186,10 +194,12 @@ def _grype_related_id(value: object) -> str | None:
 
 
 def _warn_non_cve_grype_id(source_id: str | None, warnings: list[str]) -> None:
+    """Warn non cve grype id function."""
     warnings.append(f"Ignored non-CVE Grype vulnerability identifier: {source_id!r}")
 
 
 def _grype_fix_versions(match: dict, vulnerability: dict) -> list[str]:
+    """Grype fix versions function."""
     for fix_container in (dict_value(match.get("fix")), dict_value(vulnerability.get("fix"))):
         for field_name in ("versions", "version"):
             versions = split_versions(fix_container.get(field_name))
@@ -199,6 +209,7 @@ def _grype_fix_versions(match: dict, vulnerability: dict) -> list[str]:
 
 
 def parse_dependency_check_json(path: Path) -> ParsedInput:
+    """Parse dependency check json function."""
     document = load_json_object(path, "Dependency-Check JSON")
     warnings: list[str] = []
     occurrences: list[InputOccurrence] = []
@@ -238,6 +249,7 @@ def parse_dependency_check_json(path: Path) -> ParsedInput:
 
 
 def parse_github_alerts_json(path: Path) -> ParsedInput:
+    """Parse github alerts json function."""
     document = json.loads(path.read_text(encoding="utf-8"))
     raw_alerts: list[object]
     if isinstance(document, list):

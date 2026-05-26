@@ -1,13 +1,13 @@
+import type { AnalysisRunStatus, ReportCreate } from "../client/types.gen.ts"
 import { formatDateTime } from "./date-format.ts"
 
-export type ReportFormat =
-  | "markdown"
-  | "html"
-  | "json"
-  | "csv"
-  | "zip"
-  | "attack-navigator"
-  | "sarif"
+export type ReportFormat = NonNullable<ReportCreate["format"]>
+
+const reportableRunStatuses = new Set<AnalysisRunStatus>([
+  "succeeded",
+  "completed",
+  "completed_with_errors",
+])
 
 export function reportFormatLabel(format: string): string {
   if (format === "zip") return "Evidence ZIP"
@@ -29,9 +29,5 @@ export function formatReportDateTime(value: string | null | undefined): string {
 export function isReportableRunStatus(
   status: string | null | undefined,
 ): boolean {
-  return (
-    status === "succeeded" ||
-    status === "completed" ||
-    status === "completed_with_errors"
-  )
+  return reportableRunStatuses.has(status as AnalysisRunStatus)
 }

@@ -9,7 +9,7 @@ from sqlmodel import Session
 from utils.workbench_env import WorkbenchApiEnv, local_api_headers
 
 from app.models.base import get_datetime_utc
-from app.services import provider_updates as provider_updates_module
+from app.services import provider_update_snapshot as provider_update_snapshot_module
 from app.services.provider_status import provider_status_payload
 from app.services.provider_updates import (
     PROVIDER_UPDATE_LOCK_FILE,
@@ -530,7 +530,7 @@ def test_workbench_provider_update_live_failure_preserves_previous_snapshot(
         PROVIDER_SNAPSHOT_DIR=str(snapshot_dir),
         PROVIDER_CACHE_DIR=str(cache_dir),
     )
-    monkeypatch.setattr(provider_updates_module, "KevProvider", FailingKevProvider)
+    monkeypatch.setattr(provider_update_snapshot_module, "KevProvider", FailingKevProvider)
     try:
         snapshot_dir.mkdir()
         baseline_path = snapshot_dir / "baseline-provider-snapshot.json"

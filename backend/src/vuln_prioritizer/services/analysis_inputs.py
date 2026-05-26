@@ -28,6 +28,7 @@ from vuln_prioritizer.services.waivers import (
 def load_asset_records(
     asset_context: Path | None,
 ) -> AssetContextCatalog:
+    """Load asset records function."""
     try:
         return load_asset_context_file(asset_context)
     except ValueError as exc:
@@ -35,6 +36,7 @@ def load_asset_records(
 
 
 def load_vex_statements(vex_files: list[Path]) -> list[VexStatement]:
+    """Load vex statements function."""
     try:
         return load_vex_files(vex_files)
     except ValueError as exc:
@@ -42,6 +44,7 @@ def load_vex_statements(vex_files: list[Path]) -> list[VexStatement]:
 
 
 def load_analysis_waiver_rules(waiver_file: Path | None) -> list[WaiverRule]:
+    """Load analysis waiver rules function."""
     try:
         return load_waiver_rules(waiver_file)
     except ValueError as exc:
@@ -52,6 +55,7 @@ def load_analysis_context_profile(
     policy_profile: str,
     policy_file: Path | None,
 ) -> ContextPolicyProfile:
+    """Load analysis context profile function."""
     try:
         return load_context_profile(policy_profile, policy_file)
     except ValueError as exc:
@@ -59,6 +63,7 @@ def load_analysis_context_profile(
 
 
 def load_analysis_provider_snapshot(path: Path | None) -> ProviderSnapshotReport | None:
+    """Load analysis provider snapshot function."""
     if path is None:
         return None
     try:

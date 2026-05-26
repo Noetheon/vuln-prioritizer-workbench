@@ -56,6 +56,7 @@ class OfflineInputLoaderImporter:
         *,
         filename: str | None = None,
     ) -> list[NormalizedOccurrence]:
+        """Parse method for OfflineInputLoaderImporter."""
         return self.parse_with_metadata(payload, filename=filename).occurrences
 
     def parse_with_metadata(
@@ -64,6 +65,7 @@ class OfflineInputLoaderImporter:
         *,
         filename: str | None = None,
     ) -> ParsedWorkbenchInput:
+        """Parse with metadata method for OfflineInputLoaderImporter."""
         if self.input_type not in DEFAULT_IMPORT_INPUT_TYPES:
             raise ImporterValidationError(f"Unsupported input type: {self.input_type!r}")
         return parse_payload_with_input_loader_result(

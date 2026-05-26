@@ -28,7 +28,7 @@ hosted SaaS product.
 | Frontend integration wrapper | `frontend/src/api-client.ts` | Handwritten wrapper over generated client code. Normal app code should use this boundary. |
 | Domain core | `backend/src/vuln_prioritizer` | Parsers, providers, scoring, SARIF contracts, and neutral vulnerability logic shared with Workbench services. Typer command modules, CLI entrypoints, and legacy report facades have been removed from the active package. |
 | Docs site | `mkdocs.yml` and `docs/**` | Public docs, contracts, examples, release notes, submission material, and historical references. |
-| Historical evidence | `archive/**` | Historical screenshots, issue proof, demo flow evidence, presentation material, and archived validation notes. |
+| Historical evidence | `archive/**` | Minimal historical issue proof, demo-flow summaries, presentation pointers, and archived validation notes. |
 
 ## Current User Surfaces
 
@@ -45,6 +45,7 @@ hosted SaaS product.
 | Full user path | [User Documentation Guide](user_documentation.md) |
 | Product architecture | [Product Architecture](architecture.md) |
 | Documentation ownership and classification | [Documentation Map](documentation-map.md) |
+| Claim-to-evidence routing | [Documentation Evidence Matrix](documentation-evidence-matrix.md) |
 | Stable API and report behavior | [Contracts](contracts.md) |
 | Supported inputs and outputs | [Support Matrix](support_matrix.md) |
 | Scoring rules | [Scoring Methodology](scoring-methodology.md) |
@@ -58,10 +59,24 @@ hosted SaaS product.
 ## Current Release And Evidence Posture
 
 The repository has strong local and CI-oriented gates, including backend
-format/lint/type/test coverage, docs hygiene, frontend lint/build/unit coverage,
+format/lint/docstrings/type/test coverage, docs hygiene, frontend lint/build/unit coverage,
 generated-client drift checks, Playwright browser tests, Docker smokes, package
 checks, local/private deployment guardrail checks, archive binary evidence
 manifest checks, and candidate-specific release automation.
+
+Use the [Documentation Evidence Matrix](documentation-evidence-matrix.md) before
+strengthening a claim. It records which code, tests, fixtures, commands,
+archive artifacts, or external primary sources own the major documentation
+claims. A passing docs build is necessary, but it is not sufficient proof that a
+provider, release, deployment, or archived-evidence statement is current.
+
+The last full documentation hygiene pass recorded in this checkout is
+2026-05-25. It covered the Public + Root documentation scope, verified MkDocs
+navigation coverage, checked import and report format claims against code, and
+rechecked provider/version wording against NVD, FIRST EPSS, CISA KEV, the
+official KEV mirror, and MITRE ATT&CK primary sources. Treat that as a
+documentation baseline, not as live-provider uptime proof or public deployment
+certification.
 
 The current package maturity classifier is `Development Status :: 4 - Beta`.
 That means the self-hosted Workbench is release-gated for local-first
@@ -75,11 +90,16 @@ for the exact deployment candidate, including proxy/TLS topology, strict CORS
 and cookie behavior, security headers, backup/restore, schema readiness,
 retention, auditability, rate limits, and dependency/container posture.
 
-Historical evidence in `archive/**` is useful context and demo proof. It is not
-current release certification unless a current release or evidence page
-explicitly links it as such and explains the scope. Tracked binary evidence under
-`archive/vpw-evidence/**` is hash-pinned in
+Historical evidence in `archive/**` is compact context and selected demo proof.
+It is not current release certification unless a current release or evidence
+page explicitly links it as such and explains the scope. Tracked binary evidence
+under `archive/vpw-evidence/**` is hash-pinned in
 `archive/vpw-evidence/BINARY-MANIFEST.json`.
+
+The current VPW package release tag is `v1.1.0`. Older `0.x` tags in this
+repository include inherited historical/template-line tags and must not be used
+as proof for current VPW Workbench claims unless a page explicitly scopes the
+reference to that historical line.
 
 ## Compatibility And Historical Material
 

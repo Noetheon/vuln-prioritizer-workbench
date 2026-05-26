@@ -43,6 +43,7 @@ class FindingPageQuery:
 
 
 def finding_page_filters(query: FindingPageQuery) -> list[Any]:
+    """Finding page filters function."""
     return [
         Finding.project_id == query.project_id,
         *_finding_state_filters(query),
@@ -54,6 +55,7 @@ def finding_page_filters(query: FindingPageQuery) -> list[Any]:
 
 
 def _finding_state_filters(query: FindingPageQuery) -> list[Any]:
+    """Finding state filters function."""
     filters: list[Any] = []
     if query.priority is not None:
         filters.append(Finding.priority == FindingPriority(query.priority))
@@ -65,6 +67,7 @@ def _finding_state_filters(query: FindingPageQuery) -> list[Any]:
 
 
 def _finding_asset_text_filters(query: FindingPageQuery) -> list[Any]:
+    """Finding asset text filters function."""
     filters: list[Any] = []
     if query.owner and query.owner.strip():
         filters.append(col(Asset.owner).ilike(f"%{query.owner.strip()}%"))
@@ -82,6 +85,7 @@ def _finding_asset_text_filters(query: FindingPageQuery) -> list[Any]:
 
 
 def _finding_global_search_filters(query: FindingPageQuery) -> list[Any]:
+    """Finding global search filters function."""
     filters: list[Any] = []
     if not query.query or not query.query.strip():
         return filters
@@ -107,6 +111,7 @@ def _finding_global_search_filters(query: FindingPageQuery) -> list[Any]:
 
 
 def _finding_asset_filters(query: FindingPageQuery) -> list[Any]:
+    """Finding asset filters function."""
     filters: list[Any] = []
     if query.asset_id is not None:
         filters.append(Finding.asset_id == query.asset_id)
@@ -116,6 +121,7 @@ def _finding_asset_filters(query: FindingPageQuery) -> list[Any]:
 
 
 def _finding_score_filters(query: FindingPageQuery) -> list[Any]:
+    """Finding score filters function."""
     filters: list[Any] = []
     if query.epss_min is not None:
         filters.append(col(Finding.epss) >= query.epss_min)
@@ -129,6 +135,7 @@ def _finding_score_filters(query: FindingPageQuery) -> list[Any]:
 
 
 def finding_page_order_by(query: FindingPageQuery) -> list[Any]:
+    """Finding page order by function."""
     order_fields = _finding_page_order_fields()
     if query.sort not in order_fields:
         raise ValueError(f"Unsupported findings sort field: {query.sort}.")
@@ -145,6 +152,7 @@ def finding_page_order_by(query: FindingPageQuery) -> list[Any]:
 
 
 def _finding_page_order_fields() -> dict[str, tuple[Any, ...]]:
+    """Finding page order fields function."""
     return {
         "operational": (col(Finding.operational_rank), col(Finding.priority_rank)),
         "priority": (col(Finding.priority_rank), col(Finding.cve_id)),

@@ -825,19 +825,23 @@ test("workspace context and summary surfaces use shared VPW shell primitives", (
   assert.match(vpwStyles, /container-type: inline-size/)
   assert.match(vpwStyles, /aspect-ratio: var\(--vpw-compact-metric-ratio/)
   assert.match(vpwStyles, /\.vpw-compact-metric\[data-tone="neutral"\]/)
-  assert.doesNotMatch(
-    vpwStyles,
-    /--vpw-compact-metric-rail:\s*transparent/,
-  )
+  assert.doesNotMatch(vpwStyles, /--vpw-compact-metric-rail:\s*transparent/)
   assert.match(vpwStyles, /@container \(min-width: 20rem\)/)
   assert.match(vpwStyles, /max-width: var\(--vpw-metric-strip-max\)/)
-  assert.doesNotMatch(readProjectFile("src/components/vpw/index.ts"), /VpwMetricCard/)
+  assert.doesNotMatch(
+    readProjectFile("src/components/vpw/index.ts"),
+    /VpwMetricCard/,
+  )
   assert.doesNotMatch(vpwStyles, /\.vpw-metric-card/)
   assert.doesNotMatch(vpwStyles, /\.vpw-fact/)
   assert.doesNotMatch(vpwStyles, /"label description"/)
 
   for (const path of commandPanelContractFiles) {
-    assert.match(readProjectFile(path), /VpwCommandPanel/, `${path}: command shell`)
+    assert.match(
+      readProjectFile(path),
+      /VpwCommandPanel/,
+      `${path}: command shell`,
+    )
   }
 
   for (const path of [

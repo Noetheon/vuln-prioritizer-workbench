@@ -8,6 +8,8 @@ from vuln_prioritizer.model_base import StrictModel
 
 
 class WaiverRule(StrictModel):
+    """Data representation and logic for Waiver Rule."""
+
     id: str | None = None
     cve_id: str
     owner: str
@@ -22,6 +24,8 @@ class WaiverRule(StrictModel):
 
 
 class WaiverHealthSummary(StrictModel):
+    """Data representation and logic for Waiver Health Summary."""
+
     total_rules: int = 0
     active_count: int = 0
     review_due_count: int = 0

@@ -65,8 +65,8 @@ export function recordedValue(value: unknown) {
   return "Not recorded"
 }
 
-export function warningCount(summaryJson: Record<string, unknown>) {
-  const warnings = summaryJson.warnings
+export function warningCount(value: unknown) {
+  const warnings = Array.isArray(value) ? value : objectRecord(value).warnings
   if (Array.isArray(warnings)) return warnings.length
   return typeof warnings === "number" ? warnings : "Not recorded"
 }

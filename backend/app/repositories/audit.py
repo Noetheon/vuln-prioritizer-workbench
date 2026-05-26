@@ -13,6 +13,7 @@ class AuditEventRepository:
     """Persistence helpers for append-only audit events."""
 
     def __init__(self, session: Session) -> None:
+        """Initialize a new instance of AuditEventRepository."""
         self.session = session
 
     def create_audit_event(

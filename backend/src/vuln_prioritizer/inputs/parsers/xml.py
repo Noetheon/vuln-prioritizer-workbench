@@ -10,6 +10,7 @@ from .. import _xml_support
 
 
 def parse_nessus_xml(path: Path) -> ParsedInput:
+    """Parse nessus xml function."""
     root = _xml_support.load_xml_root(path)
     warnings: list[str] = []
     occurrences: list[InputOccurrence] = []
@@ -66,6 +67,7 @@ def parse_nessus_xml(path: Path) -> ParsedInput:
 
 
 def parse_openvas_xml(path: Path) -> ParsedInput:
+    """Parse openvas xml function."""
     root = _xml_support.load_xml_root(path)
     warnings: list[str] = []
     occurrences: list[InputOccurrence] = []

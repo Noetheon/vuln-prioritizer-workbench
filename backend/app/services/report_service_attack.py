@@ -15,6 +15,7 @@ def run_attack_contexts(
     session: Session,
     run: AnalysisRun,
 ) -> list[FindingAttackContext]:
+    """Run attack contexts function."""
     statement = (
         select(FindingAttackContext)
         .where(FindingAttackContext.analysis_run_id == run.id)
@@ -33,6 +34,7 @@ def attack_navigator_layer(
     filter_value: str,
     include_empty: bool,
 ) -> dict[str, Any] | None:
+    """Attack navigator layer function."""
     layer = build_attack_navigator_layer_payload(
         project_id=project.id,
         project_name=project.name,

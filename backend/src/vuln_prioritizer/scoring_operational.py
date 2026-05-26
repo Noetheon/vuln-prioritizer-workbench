@@ -72,12 +72,14 @@ def build_operational_score(
 
 
 def clamp_operational_score(score: int) -> int:
+    """Clamp operational score function."""
     return max(OPERATIONAL_SCORE_MIN, min(OPERATIONAL_SCORE_MAX, score))
 
 
 def _terminal_vex_operational_score(
     priority_state: PriorityLabel,
 ) -> tuple[int, list[str]] | None:
+    """Terminal vex operational score function."""
     if priority_state == PriorityLabel.FIXED:
         return OPERATIONAL_SCORE_MIN, ["fixed VEX state clamps operational score to 0"]
     if priority_state == PriorityLabel.SUPPRESSED:
@@ -86,6 +88,7 @@ def _terminal_vex_operational_score(
 
 
 def _base_priority_adjustment(priority_state: PriorityLabel) -> tuple[int, list[str]]:
+    """Base priority adjustment function."""
     base_score = OPERATIONAL_BASE_SCORES.get(
         priority_state,
         OPERATIONAL_BASE_SCORES[PriorityLabel.LOW],
@@ -97,6 +100,7 @@ def _signal_score_adjustments(
     finding: PrioritizedFinding,
     policy: PriorityPolicy,
 ) -> list[tuple[int, str]]:
+    """Signal score adjustments function."""
     adjustments: list[tuple[int, str]] = []
     if finding.in_kev:
         adjustments.append((15, "CISA KEV-listed: +15"))
@@ -111,6 +115,7 @@ def _epss_score_adjustment(
     finding: PrioritizedFinding,
     policy: PriorityPolicy,
 ) -> tuple[int, str] | None:
+    """Epss score adjustment function."""
     if (
         finding.epss is not None
         and finding.epss >= policy.critical_epss_threshold
@@ -129,6 +134,7 @@ def _cvss_score_adjustment(
     finding: PrioritizedFinding,
     policy: PriorityPolicy,
 ) -> tuple[int, str] | None:
+    """Cvss score adjustment function."""
     if (
         finding.cvss_base_score is not None
         and finding.cvss_base_score >= policy.high_cvss_threshold
@@ -143,6 +149,7 @@ def _cvss_score_adjustment(
 
 
 def _asset_context_adjustments(finding: PrioritizedFinding) -> tuple[int, list[str]]:
+    """Asset context adjustments function."""
     score = 0
     reasons: list[str] = []
     if _is_internet_facing(finding.provenance):
@@ -164,6 +171,7 @@ def _asset_context_adjustments(finding: PrioritizedFinding) -> tuple[int, list[s
 
 
 def _asset_criticality_points(finding: PrioritizedFinding) -> int:
+    """Asset criticality points function."""
     return {
         "critical": 7,
         "high": 4,
@@ -172,6 +180,7 @@ def _asset_criticality_points(finding: PrioritizedFinding) -> int:
 
 
 def _routing_context_reasons(finding: PrioritizedFinding) -> list[str]:
+    """Routing context reasons function."""
     reasons = [
         f"business service {service} routing context: +0"
         for service in _asset_business_services(finding)[:3]
@@ -183,6 +192,7 @@ def _routing_context_reasons(finding: PrioritizedFinding) -> list[str]:
 
 
 def _occurrence_adjustment(finding: PrioritizedFinding) -> tuple[int, str | None]:
+    """Occurrence adjustment function."""
     extra_occurrences = max(finding.provenance.active_occurrence_count - 1, 0)
     if not extra_occurrences:
         return 0, None
@@ -197,6 +207,7 @@ def _accepted_risk_adjustment(
     finding: PrioritizedFinding,
     priority_state: PriorityLabel,
 ) -> tuple[int, str | None]:
+    """Accepted risk adjustment function."""
     if priority_state != PriorityLabel.ACCEPTED:
         return 0, None
     if finding.waiver_status == "review_due":
@@ -205,6 +216,7 @@ def _accepted_risk_adjustment(
 
 
 def _is_internet_facing(provenance: FindingProvenance) -> bool:
+    """Is internet facing function."""
     highest_exposure = provenance.highest_asset_exposure
     if highest_exposure and highest_exposure.lower() == "internet-facing":
         return True
@@ -215,6 +227,7 @@ def _is_internet_facing(provenance: FindingProvenance) -> bool:
 
 
 def _is_production(provenance: FindingProvenance) -> bool:
+    """Is production function."""
     if any(
         environment.lower() in {"prod", "production"}
         for environment in provenance.asset_environments
@@ -228,6 +241,7 @@ def _is_production(provenance: FindingProvenance) -> bool:
 
 
 def _asset_business_services(finding: PrioritizedFinding) -> list[str]:
+    """Asset business services function."""
     if finding.provenance.asset_business_services:
         return finding.provenance.asset_business_services
     return sorted(
@@ -240,6 +254,7 @@ def _asset_business_services(finding: PrioritizedFinding) -> list[str]:
 
 
 def _asset_owners(finding: PrioritizedFinding) -> list[str]:
+    """Asset owners function."""
     if finding.provenance.asset_owners:
         return finding.provenance.asset_owners
     return sorted(
@@ -252,6 +267,7 @@ def _asset_owners(finding: PrioritizedFinding) -> list[str]:
 
 
 def _asset_context_unknown(finding: PrioritizedFinding) -> bool:
+    """Asset context unknown function."""
     provenance = finding.provenance
     if provenance.occurrence_count == 0 and not provenance.occurrences:
         return False

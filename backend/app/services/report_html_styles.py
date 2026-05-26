@@ -133,6 +133,7 @@ dd { margin: 4px 0 0; overflow-wrap: anywhere; }
   grid-template-columns: 1.2fr 1fr;
   gap: 12px;
 }
+.decision-grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .decision-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -141,6 +142,16 @@ dd { margin: 4px 0 0; overflow-wrap: anywhere; }
 }
 .decision-card ul { margin: 8px 0 0 18px; padding: 0; }
 .decision-card li + li { margin-top: 4px; }
+.signoff-panel { margin-top: 12px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--bg-panel); padding: 14px; }
+.signoff-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px; margin: 10px 0 0; }
+.signoff-grid div {
+  min-height: 54px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-card); padding: 10px;
+}
+.signoff-grid dd:empty::after { content: ""; display: block; min-height: 18px;
+  border-bottom: 1px solid #a3a3a3; }
 .table-wrap {
   overflow-x: auto;
   border: 1px solid var(--border);
@@ -186,6 +197,10 @@ tbody tr:last-child td { border-bottom: 0; }
 .campaign-table td:nth-child(4) {
   white-space: nowrap;
 }
+.evidence-package-table code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .recommendation-list { margin: 0; padding-left: 22px; }
 .recommendation-list li + li { margin-top: 14px; }
 .recommendation-list strong { display: block; margin-bottom: 4px; font-weight: 700; }
@@ -203,19 +218,18 @@ tbody tr:last-child td { border-bottom: 0; }
   .report-shell { width: min(100% - 20px, 1280px); padding-top: 16px; }
   header, section { padding: 16px; }
   h1 { font-size: 26px; }
-  .meta-grid, .metric-grid, .provider-grid, .decision-grid { grid-template-columns: 1fr; }
+  .meta-grid, .metric-grid, .provider-grid, .decision-grid, .signoff-grid {
+    grid-template-columns: 1fr; }
   table { min-width: 920px; }
   .compact-table { min-width: 720px; }
 }
 @media print {
   body { background: #fff; color: #000; }
   .report-shell { width: 100%; padding: 0; }
-  header, section {
-    border-color: #c8c8c8;
-    break-inside: avoid;
-    page-break-inside: avoid;
-    padding: 16px;
-  }
+  header, section { border-color: #c8c8c8; break-inside: avoid;
+    page-break-inside: avoid; padding: 16px; }
+  .signoff-panel { break-inside: avoid; page-break-inside: avoid; }
+  .signoff-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .table-wrap { overflow: visible; }
   table { min-width: 0; }
   .badge { border-color: #999; background: #fff; color: #000; }

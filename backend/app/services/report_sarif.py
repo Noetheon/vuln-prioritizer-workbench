@@ -144,7 +144,12 @@ def _sarif_rule(
 
 def _sarif_references(finding: MarkdownReportFinding) -> list[str]:
     candidates = [f"https://nvd.nist.gov/vuln/detail/{finding.cve_id}"]
-    candidates.extend(_http_references_from_mapping(finding.vulnerability))
+    vulnerability = (
+        finding.vulnerability.model_dump(mode="json", exclude_unset=True)
+        if finding.vulnerability is not None
+        else {}
+    )
+    candidates.extend(_http_references_from_mapping(vulnerability))
     candidates.extend(_http_references_from_mapping(finding.evidence))
     candidates.extend(_http_references_from_mapping(finding.explanation))
     return _dedupe_http_urls(candidates)
@@ -179,14 +184,14 @@ def _sarif_location_uri(finding: MarkdownReportFinding) -> str:
     affected_paths: list[str] = []
     target_refs: list[str] = []
     for occurrence in finding.occurrences:
-        evidence = _dict_value(occurrence.get("evidence"))
+        evidence = occurrence.evidence
         for key in ("path", "file", "artifact_uri"):
-            value = evidence.get(key) or occurrence.get(key)
+            value = evidence.get(key) or getattr(occurrence, key)
             if isinstance(value, str) and value.strip():
                 affected_paths.append(_sarif_safe_uri(value))
         target_identity = sarif_target_identity(
-            evidence.get("target_kind") or occurrence.get("target_kind"),
-            evidence.get("target_ref") or occurrence.get("target_ref"),
+            evidence.get("target_kind") or occurrence.target_kind,
+            evidence.get("target_ref") or occurrence.target_ref,
         )
         if target_identity:
             target_refs.append(_sarif_safe_uri(target_identity))
@@ -220,8 +225,8 @@ def _sarif_logical_location(finding: MarkdownReportFinding) -> str:
 def _sarif_components(finding: MarkdownReportFinding) -> list[str]:
     occurrence_purls: list[str] = []
     for occurrence in finding.occurrences:
-        evidence = _dict_value(occurrence.get("evidence"))
-        purl = evidence.get("purl") or occurrence.get("purl")
+        evidence = occurrence.evidence
+        purl = evidence.get("purl") or occurrence.purl
         if isinstance(purl, str) and purl.strip():
             occurrence_purls.append(purl)
     return sarif_component_identities(

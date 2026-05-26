@@ -7,14 +7,12 @@ import { VpwBadge } from "./VpwBadge"
 export type VpwChecksumProps = {
   value: string
   className?: string
-  demo?: boolean
   label?: string
   verified?: boolean
 }
 
 export function VpwChecksum({
   className,
-  demo = false,
   label = "SHA256",
   value,
   verified = false,
@@ -32,9 +30,9 @@ export function VpwChecksum({
           {value}
         </p>
       </div>
-      <VpwBadge tone={demo ? "warning" : verified ? "success" : "neutral"}>
+      <VpwBadge tone={verified ? "success" : "neutral"}>
         <ShieldCheck aria-hidden="true" className="h-3 w-3" />
-        {demo ? "Demo" : verified ? "Verified" : "Recorded"}
+        {verified ? "Verified" : "Recorded"}
       </VpwBadge>
     </div>
   )
