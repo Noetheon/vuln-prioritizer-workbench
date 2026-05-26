@@ -40,6 +40,7 @@ import {
   initialParserPreview,
   readinessBlocksImport,
   SUPPORTED_IMPORT_FORMATS,
+  SUPPORTED_IMPORT_INPUT_TYPES,
   type ParserPreview,
 } from "../src/lib/import-format-metadata.ts"
 import { buildImportUploadFormData } from "../src/workbench/import-upload-payload.ts"
@@ -72,20 +73,24 @@ test("import model derives display labels and format metadata", () => {
 })
 
 test("import formats preserve exact supported input keys", () => {
+  const expectedInputTypes = [
+    "cve-list",
+    "generic-occurrence-csv",
+    "trivy-json",
+    "grype-json",
+    "cyclonedx-json",
+    "spdx-json",
+    "dependency-check-json",
+    "github-alerts-json",
+    "nessus-xml",
+    "openvas-xml",
+  ]
+
+  assert.deepEqual(workbenchImportFormats.map((format) => format.value), expectedInputTypes)
+  assert.deepEqual(SUPPORTED_IMPORT_INPUT_TYPES, expectedInputTypes)
   assert.deepEqual(
-    workbenchImportFormats.map((format) => format.value),
-    [
-      "cve-list",
-      "generic-occurrence-csv",
-      "trivy-json",
-      "grype-json",
-      "cyclonedx-json",
-      "spdx-json",
-      "dependency-check-json",
-      "github-alerts-json",
-      "nessus-xml",
-      "openvas-xml",
-    ],
+    SUPPORTED_IMPORT_FORMATS.map((format) => format.inputType),
+    expectedInputTypes,
   )
   assert.equal(SUPPORTED_IMPORT_FORMATS.length, 10)
   const unsupported = ["osv-json", "ghsa-json", "sarif", "snyk-csv"]
@@ -113,6 +118,33 @@ test("import formats preserve exact supported input keys", () => {
     )?.notes.join(" ") ?? "",
     /does not scan networks/,
   )
+})
+
+test("import format catalog drives active upload choices and payload input types", () => {
+  assert.deepEqual(
+    workbenchImportFormats.map((format) => format.accept),
+    SUPPORTED_IMPORT_FORMATS.map((format) => acceptedFileInputValue(format.inputType)),
+  )
+  assert.deepEqual(
+    workbenchImportFormats.map((format) => format.detail),
+    SUPPORTED_IMPORT_FORMATS.map((format) => format.shortDescription),
+  )
+
+  for (const format of SUPPORTED_IMPORT_FORMATS) {
+    const selectedFile = {} as File
+    const payload = buildImportUploadFormData({
+      importWizard: {
+        ...defaultImportWizardState,
+        inputType: format.inputType,
+      },
+      selectedAssetContextFile: null,
+      selectedFile,
+      selectedVexFile: null,
+    })
+
+    assert.equal(payload.file, selectedFile)
+    assert.equal(payload.input_type, format.inputType)
+  }
 })
 
 test("import model derives upload progress and safe file labels", () => {

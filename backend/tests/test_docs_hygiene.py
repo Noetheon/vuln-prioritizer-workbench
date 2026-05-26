@@ -21,7 +21,7 @@ PYPROJECT_FILE = REPO_ROOT / "backend" / "pyproject.toml"
 INPUT_OPTIONS_FILE = REPO_ROOT / "backend" / "src" / "vuln_prioritizer" / "options.py"
 REPORT_MODELS_FILE = REPO_ROOT / "backend" / "app" / "models" / "reports.py"
 FRONTEND_IMPORT_TYPES_FILE = REPO_ROOT / "frontend" / "src" / "lib" / "import-format-types.ts"
-FRONTEND_REPORT_FORMAT_FILE = REPO_ROOT / "frontend" / "src" / "lib" / "report-format.ts"
+FRONTEND_CLIENT_SCHEMAS_FILE = REPO_ROOT / "frontend" / "src" / "client" / "schemas.gen.ts"
 GITHUB_READINESS_FILE = REPO_ROOT / "docs" / "github-open-source-readiness.md"
 RELEASE_OPERATIONS_FILE = REPO_ROOT / "docs" / "release_operations.md"
 COMMUNITY_SETUP_FILE = REPO_ROOT / "docs" / "community_repository_setup.md"
@@ -164,12 +164,19 @@ def _backend_report_format_values() -> set[str]:
 
 
 def _frontend_report_format_values() -> set[str]:
-    source = FRONTEND_REPORT_FORMAT_FILE.read_text(encoding="utf-8")
-    body = source.split("export type ReportFormat", maxsplit=1)[1].split(
-        "export function reportFormatLabel",
-        maxsplit=1,
-    )[0]
-    return set(re.findall(r'\|\s+"([^"]+)"', body))
+    source = FRONTEND_CLIENT_SCHEMAS_FILE.read_text(encoding="utf-8")
+    body = (
+        source.split("export const ReportCreateSchema", maxsplit=1)[1]
+        .split(
+            "format: {",
+            maxsplit=1,
+        )[1]
+        .split(
+            "title: 'Format'",
+            maxsplit=1,
+        )[0]
+    )
+    return set(re.findall(r"'([^']+)'", body))
 
 
 def _support_matrix_report_format_values() -> set[str]:

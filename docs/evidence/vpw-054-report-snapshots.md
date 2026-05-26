@@ -2,7 +2,8 @@
 
 VPW-054 makes the Workbench report demo artifacts part of the tested repository
 contract. The current demo set is rendered from the deterministic VPW-054
-payload in `backend/tests/api/test_workbench_reports_api.py`.
+payload in `backend/tests/utils/report_contract_fixtures.py` and verified by
+`backend/tests/api/report_contracts/test_report_snapshot_contracts.py`.
 
 ## Demo Artifacts
 
@@ -42,7 +43,7 @@ Only update these artifacts when a report contract change is intentional.
 4. Run the targeted snapshot gate:
 
 ```bash
-python3 -m pytest -q backend/tests/api/test_workbench_reports_api.py --no-cov
+python3 -m pytest -q backend/tests/api/report_contracts/test_report_snapshot_contracts.py --no-cov
 ```
 
 5. Run the docs gate:

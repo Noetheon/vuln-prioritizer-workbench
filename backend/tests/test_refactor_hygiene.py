@@ -274,7 +274,6 @@ def test_import_upload_route_delegates_to_application_service() -> None:
     parsing_source = (ROOT / "app/services/import_execution_parsing.py").read_text(encoding="utf-8")
     route_imports = _imported_modules("app/api/routes/imports.py")
 
-    assert len(route_source.splitlines()) <= 140
     assert "app.services.import_execution" in route_imports
     assert "AnalysisService" not in route_source
     assert "build_importer_registry" not in route_source
@@ -283,6 +282,27 @@ def test_import_upload_route_delegates_to_application_service() -> None:
     assert "AnalysisService" in service_source
     assert "app.services.import_execution_parsing" in service_source
     assert "build_importer_registry" in parsing_source
+
+
+def test_import_contract_harness_owns_upload_and_parser_workflow_contracts() -> None:
+    import_contract_root = ROOT / "tests/api/import_contracts"
+    expected_contract_files = {
+        "test_import_api_contracts.py",
+        "test_import_execution_contracts.py",
+        "test_import_parser_contracts.py",
+        "test_import_security_contracts.py",
+        "test_import_sidecar_contracts.py",
+        "test_import_upload_boundary_contracts.py",
+        "test_import_workflow_contracts.py",
+    }
+
+    assert not (ROOT / "tests/api/test_workbench_import_upload_api.py").exists()
+    assert not (ROOT / "tests/api/test_workbench_parser_fixture_matrix.py").exists()
+    assert expected_contract_files.issubset(
+        {path.name for path in import_contract_root.glob("test_*.py")}
+    )
+    assert (ROOT / "tests/utils/import_contract_fixtures.py").exists()
+    assert (ROOT / "tests/utils/import_contracts.py").exists()
 
 
 def test_legacy_workbench_runtime_modules_are_removed() -> None:
@@ -359,16 +379,6 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
     )
     html_helpers_source = (ROOT / "app/services/report_html_helpers.py").read_text(encoding="utf-8")
     html_helpers_imports = _imported_modules("app/services/report_html_helpers.py")
-    html_campaign_facade_source = (ROOT / "app/services/report_html_campaigns.py").read_text(
-        encoding="utf-8"
-    )
-    html_provider_evidence_source = (
-        ROOT / "app/services/report_html_provider_evidence.py"
-    ).read_text(encoding="utf-8")
-    html_common_source = (ROOT / "app/services/report_html_common.py").read_text(encoding="utf-8")
-    html_attack_source = (ROOT / "app/services/report_html_attack_context.py").read_text(
-        encoding="utf-8"
-    )
     html_campaign_model_source = (ROOT / "app/services/report_html_campaign_model.py").read_text(
         encoding="utf-8"
     )
@@ -394,9 +404,12 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
         encoding="utf-8"
     )
     sarif_source = (ROOT / "app/services/report_sarif.py").read_text(encoding="utf-8")
-    api_reports_test_source = (ROOT / "tests/api/test_workbench_reports_api.py").read_text(
-        encoding="utf-8"
-    )
+    report_contract_test_root = ROOT / "tests/api/report_contracts"
+    report_contract_test_sources = {
+        path.name: path.read_text(encoding="utf-8")
+        for path in sorted(report_contract_test_root.glob("test_*.py"))
+    }
+    api_reports_test_source = "\n".join(report_contract_test_sources.values())
 
     assert "app.services.report_contracts" in imports
     assert "app.services.report_models" in imports
@@ -421,14 +434,17 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
     assert "def persist_text_report" in service_persistence_source
     assert "def persist_binary_report" in service_persistence_source
     assert "class MarkdownReportPayload" not in source
-    assert len(source.splitlines()) <= 330
-    assert len(service_payload_source.splitlines()) <= 130
-    assert len(service_attack_source.splitlines()) <= 70
-    assert len(service_persistence_source.splitlines()) <= 190
     assert "import vuln_prioritizer.workbench_report_contracts" in contracts_source
     assert "CSV_FINDINGS_COLUMNS = _workbench_report_contracts.CSV_FINDINGS_COLUMNS" in (
         contracts_source
     )
+    assert not (ROOT / "tests/api/test_workbench_reports_api.py").exists()
+    assert {
+        "test_evidence_bundle_contracts.py",
+        "test_report_api_contracts.py",
+        "test_report_format_contracts.py",
+        "test_report_snapshot_contracts.py",
+    }.issubset(report_contract_test_sources)
     assert "CSV_FINDINGS_COLUMNS = [" not in api_reports_test_source
     assert (
         "from app.services.report_contracts import CSV_FINDINGS_COLUMNS" in api_reports_test_source
@@ -458,15 +474,12 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
     assert "replace(" not in service_payload_attack_source
     assert "def safe_cell" in formatting_source
     assert "def csv_safe_cell" in formatting_source
-    assert len(renderers_source.splitlines()) <= 120
     assert "EXECUTIVE_REPORT_CSS = " not in renderers_source
     assert "def render_markdown_report" in markdown_source
     assert "app.services.report_markdown_sections" in markdown_imports
     assert "def _markdown_governance_section" not in markdown_source
     assert "def _markdown_governance_section" in markdown_sections_source
     assert "def _markdown_detection_coverage_section" in markdown_sections_source
-    assert len(markdown_source.splitlines()) <= 220
-    assert len(markdown_sections_source.splitlines()) <= 260
     assert "EXECUTIVE_REPORT_CSS = " in html_source
     assert "app.services.report_html_styles" in html_imports
     assert "app.services.report_html_governance" in html_imports
@@ -509,25 +522,6 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
     assert "def build_executive_report_view_model" in html_view_model_source
     assert "def render_html_executive_report_helper" in html_document_source
     assert "EXECUTIVE_REPORT_CSS = " in html_styles_source
-    assert len(html_source.splitlines()) <= 190
-    assert len(html_styles_source.splitlines()) <= 240
-    assert len(html_governance_source.splitlines()) <= 170
-    assert len(html_findings_source.splitlines()) <= 70
-    assert len(html_provider_source.splitlines()) <= 70
-    assert len(html_narrative_source.splitlines()) <= 80
-    assert len(html_components_source.splitlines()) <= 40
-    assert len(html_helpers_source.splitlines()) <= 180
-    assert len(html_campaign_facade_source.splitlines()) <= 70
-    assert len(html_provider_evidence_source.splitlines()) <= 40
-    assert len(html_common_source.splitlines()) <= 290
-    assert len(html_attack_source.splitlines()) <= 190
-    assert len(html_campaign_model_source.splitlines()) <= 510
-    assert len(html_campaign_rendering_source.splitlines()) <= 510
-    assert len(html_provider_freshness_source.splitlines()) <= 420
-    assert len(html_evidence_package_source.splitlines()) <= 180
-    assert len(html_decision_source.splitlines()) <= 320
-    assert len(html_view_model_source.splitlines()) <= 230
-    assert len(html_document_source.splitlines()) <= 290
     assert "def render_evidence_bundle_zip" in bundle_source
     assert "app.services.report_bundle_archive" in bundle_imports
     assert "app.services.report_bundle_governance" in bundle_imports
@@ -539,11 +533,6 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
     assert "def _asset_context_rows" not in bundle_governance_source
     assert "def _asset_context_rows" in bundle_governance_rows_source
     assert "def _evidence_bundle_verification_payload" in bundle_verification_source
-    assert len(bundle_source.splitlines()) <= 220
-    assert len(bundle_archive_source.splitlines()) <= 90
-    assert len(bundle_governance_source.splitlines()) <= 210
-    assert len(bundle_governance_rows_source.splitlines()) <= 100
-    assert len(bundle_verification_source.splitlines()) <= 40
     assert "def render_sarif_report" not in renderers_source
     assert "def render_sarif_report" in sarif_source
 

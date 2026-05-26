@@ -155,7 +155,7 @@ When adding or changing parser or prioritization fixture coverage:
 5. Run:
 
 ```bash
-python3 -m pytest -q backend/tests/api/test_workbench_parser_fixture_matrix.py backend/tests/test_input_loader_contracts.py --no-cov
+python3 -m pytest -q backend/tests/api/import_contracts/test_import_parser_contracts.py backend/tests/test_input_loader_contracts.py --no-cov
 make check
 ```
 

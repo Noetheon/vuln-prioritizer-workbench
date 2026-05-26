@@ -173,7 +173,7 @@ CI.
 Use the provider and Workbench tests for local artifact checks:
 
 ```bash
-python3 -m pytest -q backend/tests/test_providers.py backend/tests/api/test_workbench_import_upload_api.py --no-cov
+python3 -m pytest -q backend/tests/test_providers.py backend/tests/api/import_contracts --no-cov
 ```
 
 The schema and loader reject missing `source`, `rationale`, `confidence`,

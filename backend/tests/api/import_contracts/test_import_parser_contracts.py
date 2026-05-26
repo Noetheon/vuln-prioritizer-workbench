@@ -12,7 +12,7 @@ from app.importers.offline_loader import DEFAULT_IMPORT_INPUT_TYPES
 from vuln_prioritizer.inputs.loader import InputLoader
 from vuln_prioritizer.options import InputFormat
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+PROJECT_ROOT = Path(__file__).resolve().parents[4]
 MATRIX_DIR = PROJECT_ROOT / "data" / "input_fixtures" / "parser_matrix"
 INPUT_CONTRACTS = load_input_fixture_contracts()["inputs"]
 CONTRACT_FIELDS = (

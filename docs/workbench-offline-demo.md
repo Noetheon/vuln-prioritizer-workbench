@@ -16,7 +16,7 @@ It uses the checked-in locked provider snapshot and local fixture inputs for the
 ```bash
 make install
 make provider-snapshot-validate
-python3 -m pytest -q backend/tests/api/test_workbench_local_runtime_smoke.py backend/tests/api/test_workbench_import_upload_api.py backend/tests/api/test_workbench_reports_api.py --no-cov
+python3 -m pytest -q backend/tests/api/test_workbench_local_runtime_smoke.py backend/tests/api/import_contracts backend/tests/api/report_contracts --no-cov
 make docker-demo-smoke
 make dependency-audit
 docker compose -f compose.yml -f compose.override.yml up --build backend frontend
@@ -68,8 +68,8 @@ If `pip-audit`, npm, or advisory data is unavailable, record that as a release-c
 | Check | Evidence to capture |
 | --- | --- |
 | Security headers | `tests/api/test_workbench_local_runtime_smoke.py` and an optional `curl -I http://127.0.0.1:8000/api/v1/utils/health-check/` capture showing `nosniff`, `DENY`, and CSP. |
-| Upload filename/path validation | `tests/api/test_workbench_import_upload_api.py` covers active `/api/v1` upload size, suffix, MIME, path, and provider snapshot validation. |
-| Report/evidence downloads | `tests/api/test_workbench_reports_api.py`; browser evidence should show report links and Evidence ZIP verification. |
+| Upload filename/path validation | `tests/api/import_contracts/` covers active `/api/v1` upload size, suffix, MIME, path, and provider snapshot validation. |
+| Report/evidence downloads | `tests/api/report_contracts/`; browser evidence should show report links and Evidence ZIP verification. |
 | 10k findings API smoke | `make performance-smoke` runs the active Workbench import and pagination smoke with 10,000 findings. |
 | Docker demo smoke | `make docker-demo-smoke` output showing `/api/v1/utils/health-check/` succeeds, the Compose Postgres Alembic/schema/repository smoke passes, and the local import/provider smoke tears down cleanly. |
 | Dependency audit | `make dependency-audit` result for the backend Python lock and frontend runtime plus dev/build-chain dependencies, or a documented exception when audit tooling or advisory data is unavailable. |
@@ -89,7 +89,7 @@ and must not depend on reviewer API keys or live provider availability.
 
    ```bash
    make provider-snapshot-validate
-   python3 -m pytest -q backend/tests/api/test_workbench_import_upload_api.py backend/tests/api/test_workbench_reports_api.py --no-cov
+   python3 -m pytest -q backend/tests/api/import_contracts backend/tests/api/report_contracts --no-cov
    ```
 
 3. Review the snapshot diff before committing. Expected changes are provider
