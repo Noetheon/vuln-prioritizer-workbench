@@ -132,15 +132,7 @@ export function failedRunCause(
       run?.workflow_error?.background_error,
     )
   if (typedMessage) return typedMessage
-  const errorJson = objectRecord(summary?.error_json ?? run?.error_json)
-  const analysisError = objectRecord(errorJson.analysis_error)
-  return (
-    stringValue(errorJson.message) ??
-    stringValue(errorJson.error) ??
-    stringValue(errorJson.last_error) ??
-    stringValue(analysisError.message) ??
-    "No failure detail available."
-  )
+  return "No failure detail available."
 }
 
 function failureMessage(

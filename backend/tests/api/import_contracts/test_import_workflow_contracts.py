@@ -40,7 +40,7 @@ def test_decision_api_endpoints_expose_explain_summary_and_cvss_comparison(
     )
     assert import_response.status_code == 200
     run_payload = import_response.json()
-    assert not Path(run_payload["summary_json"]["input_upload"]["path"]).is_absolute()
+    assert not Path(run_payload["input_upload"]["path"]).is_absolute()
 
     findings_response = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -147,11 +147,9 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     )
     assert first.status_code == 200, first.text
     first_payload = first.json()
-    assert first_payload["summary_json"]["dedup_summary"]["created_findings"] == 2
-    assert first_payload["summary_json"]["dedup_summary"]["reused_findings"] == 0
-    assert {
-        item["action"] for item in first_payload["summary_json"]["dedup_summary"]["decisions"]
-    } == {"created"}
+    assert first_payload["dedup_summary"]["created_findings"] == 2
+    assert first_payload["dedup_summary"]["reused_findings"] == 0
+    assert {item["action"] for item in first_payload["dedup_summary"]["decisions"]} == {"created"}
 
     first_findings, first_occurrence_count = _finding_state(workbench_api_env, project_id)
     first_decisions = _decision_state(first_findings)
@@ -167,11 +165,11 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     )
     assert second.status_code == 200, second.text
     second_payload = second.json()
-    dedup_summary = second_payload["summary_json"]["dedup_summary"]
-    assert second_payload["summary_json"]["occurrence_count"] == 2
-    assert second_payload["summary_json"]["finding_count"] == 2
-    assert second_payload["summary_json"]["created_findings"] == 0
-    assert second_payload["summary_json"]["updated_findings"] == 2
+    dedup_summary = second_payload["dedup_summary"]
+    assert second_payload["occurrence_count"] == 2
+    assert second_payload["finding_count"] == 2
+    assert second_payload["created_findings"] == 0
+    assert second_payload["updated_findings"] == 2
     assert dedup_summary["created_findings"] == 0
     assert dedup_summary["updated_findings"] == 2
     assert dedup_summary["reused_findings"] == 2
@@ -230,10 +228,7 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     assert summary_payload["finding_count"] == 2
     assert summary_payload["dedup_summary"]["reused_findings"] == 2
     assert {item["action"] for item in summary_payload["dedup_summary"]["decisions"]} == {"reused"}
-    assert (
-        summary_payload["counts_by_priority"]
-        == second_payload["summary_json"]["counts_by_priority"]
-    )
+    assert summary_payload["counts_by_priority"] == second_payload["counts_by_priority"]
 
 
 def test_generic_import_persists_multi_fix_versions(
@@ -260,7 +255,7 @@ def test_generic_import_persists_multi_fix_versions(
 
     assert response.status_code == 200, response.text
     payload = response.json()
-    assert payload["summary_json"]["occurrence_count"] == 1
+    assert payload["occurrence_count"] == 1
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
         headers=headers,
@@ -302,11 +297,11 @@ def test_same_batch_duplicate_bulk_import_reuses_finding_and_appends_occurrences
 
     assert response.status_code == 200, response.text
     payload = response.json()
-    dedup_summary = payload["summary_json"]["dedup_summary"]
-    assert payload["summary_json"]["occurrence_count"] == 1000
-    assert payload["summary_json"]["finding_count"] == 1
-    assert payload["summary_json"]["created_findings"] == 1
-    assert payload["summary_json"]["updated_findings"] == 999
+    dedup_summary = payload["dedup_summary"]
+    assert payload["occurrence_count"] == 1000
+    assert payload["finding_count"] == 1
+    assert payload["created_findings"] == 1
+    assert payload["updated_findings"] == 999
     assert dedup_summary["created_findings"] == 1
     assert dedup_summary["updated_findings"] == 999
     assert dedup_summary["reused_findings"] == 999
@@ -355,8 +350,13 @@ def test_same_cve_on_different_assets_creates_distinct_findings(
 
     assert response.status_code == 200, response.text
     payload = response.json()
-    assert payload["summary_json"]["finding_count"] == 2
-    assert payload["summary_json"]["analysis_semantics"] == {
+    assert payload["finding_count"] == 2
+    metadata = workbench_api_env.client.get(
+        f"/api/v1/runs/{payload['id']}/workflow-metadata",
+        headers=headers,
+    )
+    assert metadata.status_code == 200
+    assert metadata.json()["summary"]["analysis_semantics"] == {
         "analysis_decision_scope": "cve_baseline_with_occurrence_overlays",
         "persistence_scope": "asset_component_occurrence",
         "occurrence_overlay_fields": [
@@ -371,10 +371,11 @@ def test_same_cve_on_different_assets_creates_distinct_findings(
         "finding_count": 2,
         "same_cve_can_create_distinct_asset_findings": True,
     }
-    assert payload["summary_json"]["dedup_summary"]["created_findings"] == 2
-    assert {
-        item["asset_ref"] for item in payload["summary_json"]["dedup_summary"]["decisions"]
-    } == {"build-host-1", "build-host-2"}
+    assert payload["dedup_summary"]["created_findings"] == 2
+    assert {item["asset_ref"] for item in payload["dedup_summary"]["decisions"]} == {
+        "build-host-1",
+        "build-host-2",
+    }
 
     findings, occurrence_count = _finding_state(workbench_api_env, project_id)
     assert len(findings) == 2

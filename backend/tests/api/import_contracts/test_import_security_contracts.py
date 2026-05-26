@@ -248,19 +248,29 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
     assert run.status_code == 200
     payload = run.json()
     assert payload["status"] == "failed"
-    assert [item["status"] for item in payload["error_json"]["import_job"]["status_history"]] == [
+    assert [item["status"] for item in payload["import_job"]["status_history"]] == [
         "pending",
         "running",
         "failed",
     ]
-    assert payload["error_json"]["parse_errors"] == detail["parse_errors"]
-    assert payload["summary_json"]["parse_errors"] == detail["parse_errors"]
-    _assert_no_sensitive_path_leak(payload["error_json"]["parse_errors"], tmp_path, upload_dir)
-    _assert_no_sensitive_path_leak(payload["summary_json"]["parse_errors"], tmp_path, upload_dir)
-    assert payload["summary_json"]["input_upload"]["sha256"] == expected_sha256
-    upload_ref = payload["summary_json"]["input_upload"]["path"]
+    assert payload["workflow_error"]["parse_errors"] == detail["parse_errors"]
+    _assert_no_sensitive_path_leak(payload["workflow_error"]["parse_errors"], tmp_path, upload_dir)
+    assert payload["input_upload"]["sha256"] == expected_sha256
+    upload_ref = payload["input_upload"]["path"]
     assert not Path(upload_ref).is_absolute()
     assert (upload_dir / upload_ref).read_bytes() == content
+
+    metadata = workbench_api_env.client.get(
+        f"/api/v1/runs/{detail['analysis_run_id']}/workflow-metadata",
+        headers=headers,
+    )
+    assert metadata.status_code == 200
+    metadata_payload = metadata.json()
+    assert metadata_payload["status"] == "failed"
+    assert metadata_payload["summary"]["parse_errors"] == detail["parse_errors"]
+    assert metadata_payload["error"]["parse_errors"] == detail["parse_errors"]
+    assert metadata_payload["summary"]["input_upload"]["sha256"] == expected_sha256
+    _assert_no_sensitive_path_leak(metadata_payload, tmp_path, upload_dir)
 
     summary = workbench_api_env.client.get(
         f"/api/v1/runs/{detail['analysis_run_id']}/summary",
@@ -320,11 +330,9 @@ def test_xml_parse_errors_redact_local_upload_paths(
     assert run.status_code == 200
     run_payload = run.json()
     assert run_payload["status"] == "failed"
-    assert run_payload["error_json"]["parse_errors"] == detail["parse_errors"]
-    assert run_payload["summary_json"]["parse_errors"] == detail["parse_errors"]
-    _assert_no_sensitive_path_leak(run_payload["error_json"]["parse_errors"], tmp_path, upload_dir)
+    assert run_payload["workflow_error"]["parse_errors"] == detail["parse_errors"]
     _assert_no_sensitive_path_leak(
-        run_payload["summary_json"]["parse_errors"], tmp_path, upload_dir
+        run_payload["workflow_error"]["parse_errors"], tmp_path, upload_dir
     )
 
 

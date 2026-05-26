@@ -184,7 +184,7 @@ def test_non_local_synchronous_import_audit_uses_local_actor(
     assert response.status_code == 200, response.text
     payload = response.json()
     run_id = uuid.UUID(payload["id"])
-    assert payload["summary_json"]["import_job"]["execution_mode"] == "request"
+    assert payload["import_job"]["execution_mode"] == "request"
 
     with Session(workbench_api_env.engine) as session:
         run = session.get(app_models.AnalysisRun, run_id)
@@ -242,19 +242,20 @@ def test_analysis_failure_persists_failed_run_without_partial_findings(
     assert run.status_code == 200
     run_payload = run.json()
     assert run_payload["status"] == "failed"
-    assert run_payload["summary_json"]["analysis_error"]["stage"] == "enrich_score_explain"
+    assert run_payload["analysis_error"]["stage"] == "enrich_score_explain"
+    assert run_payload["workflow_error"]["analysis_error"]["stage"] == "enrich_score_explain"
     _assert_no_sensitive_path_leak(
-        run_payload["summary_json"]["analysis_error"],
+        run_payload["analysis_error"],
         tmp_path,
         upload_dir,
     )
     _assert_no_sensitive_path_leak(
-        run_payload["error_json"]["analysis_error"],
+        run_payload["workflow_error"]["analysis_error"],
         tmp_path,
         upload_dir,
     )
-    assert run_payload["summary_json"]["created_findings"] == 0
-    assert run_payload["summary_json"]["updated_findings"] == 0
+    assert run_payload["created_findings"] == 0
+    assert run_payload["updated_findings"] == 0
 
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",

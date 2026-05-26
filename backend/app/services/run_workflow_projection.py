@@ -13,6 +13,7 @@ from app.models import (
     AnalysisRun,
     AnalysisRunPublic,
     AnalysisRunSummaryPublic,
+    AnalysisRunWorkflowMetadataPublic,
     ImportParseErrorPublic,
 )
 from vuln_prioritizer.security_redaction import redact_value
@@ -97,6 +98,25 @@ def analysis_run_summary_public(run: AnalysisRun) -> AnalysisRunSummaryPublic:
         summary_json=summary_json,
         error_json=error_json,
         **public_fields,
+    )
+
+
+def analysis_run_workflow_metadata_public(run: AnalysisRun) -> AnalysisRunWorkflowMetadataPublic:
+    """Return the explicit diagnostics view for one run workflow payload."""
+    raw_summary = _dict_value(redact_public_payload(run.summary_json or {}))
+    raw_error = _dict_value(redact_public_payload(run.error_json or {}))
+    summary = workflow_summary_from_legacy(raw_summary)
+    error = workflow_error_from_legacy(raw_error) if raw_error else None
+    return AnalysisRunWorkflowMetadataPublic(
+        id=run.id,
+        project_id=run.project_id,
+        status=run.status,
+        workflow_schema_version=summary.schema_version,
+        workflow_error_schema_version=error.schema_version if error is not None else None,
+        summary=summary,
+        error=error,
+        raw_summary=raw_summary,
+        raw_error=raw_error,
     )
 
 

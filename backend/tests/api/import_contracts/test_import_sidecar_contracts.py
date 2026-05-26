@@ -54,7 +54,7 @@ def test_workbench_import_uses_demo_snapshot_without_network_or_keys(
 
     assert response.status_code == 200, response.text
     payload = response.json()
-    summary = payload["summary_json"]
+    summary = payload
     assert payload["status"] == "succeeded"
     assert summary["locked_provider_data"] is True
     assert summary["provider_snapshot_file"] == "demo_provider_snapshot.json"
@@ -92,8 +92,8 @@ def test_attack_import_exposes_workbench_finding_ttp_context(
 
     assert response.status_code == 200, response.text
     run_payload = response.json()
-    assert run_payload["summary_json"]["attack_mapped_cves"] == 1
-    assert run_payload["summary_json"]["attack_source"] == "local-curated"
+    assert run_payload["attack_mapped_cves"] == 1
+    assert run_payload["attack_source"] == "local-curated"
 
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -221,14 +221,14 @@ def test_import_upload_applies_asset_context_sidecar_to_workbench_findings(
 
     assert response.status_code == 200, response.text
     payload = response.json()
-    sidecar_upload = payload["summary_json"]["asset_context_upload"]
+    sidecar_upload = payload["asset_context_upload"]
     assert sidecar_upload["sha256"] == expected_sidecar_sha256
     assert sidecar_upload["stored_filename"] == "asset-context.csv"
     assert not Path(sidecar_upload["path"]).is_absolute()
     assert (upload_dir / sidecar_upload["path"]).read_bytes() == asset_context_csv
-    assert payload["summary_json"]["asset_context"]["loaded_rows"] == 1
-    assert payload["summary_json"]["asset_context"]["matched_occurrences"] == 1
-    assert payload["summary_json"]["dedup_summary"]["decisions"][0]["asset_ref"] == "asset-web-1"
+    assert payload["asset_context"]["loaded_rows"] == 1
+    assert payload["asset_context"]["matched_occurrences"] == 1
+    assert payload["dedup_summary"]["decisions"][0]["asset_ref"] == "asset-web-1"
 
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -352,15 +352,20 @@ def test_import_upload_applies_openvex_sidecar_to_workbench_findings(
 
     assert response.status_code == 200, response.text
     payload = response.json()
-    vex_upload = payload["summary_json"]["vex_upload"]
+    vex_upload = payload["vex_upload"]
     assert vex_upload["sha256"] == expected_vex_sha256
     assert vex_upload["stored_filename"] == "openvex.json"
     assert not Path(vex_upload["path"]).is_absolute()
     assert (upload_dir / vex_upload["path"]).read_bytes() == vex_bytes
-    assert payload["summary_json"]["vex"]["statement_count"] == 4
-    assert payload["summary_json"]["vex"]["matched_occurrences"] == 1
-    assert payload["summary_json"]["suppressed_by_vex"] == 1
-    assert payload["summary_json"]["vex_conflict_count"] == 0
+    assert payload["vex"]["statement_count"] == 4
+    assert payload["vex"]["matched_occurrences"] == 1
+    assert payload["suppressed_by_vex"] == 1
+    metadata = workbench_api_env.client.get(
+        f"/api/v1/runs/{payload['id']}/workflow-metadata",
+        headers=headers,
+    )
+    assert metadata.status_code == 200
+    assert metadata.json()["summary"]["vex_conflict_count"] == 0
 
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -423,13 +428,13 @@ def test_import_upload_applies_cyclonedx_vex_sidecar_to_workbench_findings(
 
     assert response.status_code == 200, response.text
     payload = response.json()
-    vex_upload = payload["summary_json"]["vex_upload"]
+    vex_upload = payload["vex_upload"]
     assert vex_upload["input_type"] == "vex-json"
     assert vex_upload["stored_filename"] == "cyclonedx-vex.json"
     assert not Path(vex_upload["path"]).is_absolute()
-    assert payload["summary_json"]["vex"]["statement_count"] == 3
-    assert payload["summary_json"]["vex"]["matched_occurrences"] == 2
-    assert payload["summary_json"]["suppressed_by_vex"] == 2
+    assert payload["vex"]["statement_count"] == 3
+    assert payload["vex"]["matched_occurrences"] == 2
+    assert payload["suppressed_by_vex"] == 2
 
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -497,11 +502,25 @@ def test_import_upload_rejects_invalid_vex_sidecar_with_clear_error(
     assert run.status_code == 200
     run_payload = run.json()
     assert run_payload["status"] == "failed"
-    assert run_payload["summary_json"]["vex_error"]["stage"] == "vex_parse"
-    _assert_no_sensitive_path_leak(run_payload["error_json"]["vex_error"], tmp_path, upload_dir)
-    _assert_no_sensitive_path_leak(run_payload["summary_json"]["vex_error"], tmp_path, upload_dir)
-    assert run_payload["summary_json"]["created_findings"] == 0
-    assert run_payload["summary_json"]["updated_findings"] == 0
+    assert run_payload["vex_error"]["stage"] == "vex_parse"
+    assert run_payload["workflow_error"]["vex_error"]["stage"] == "vex_parse"
+    _assert_no_sensitive_path_leak(run_payload["workflow_error"]["vex_error"], tmp_path, upload_dir)
+    _assert_no_sensitive_path_leak(run_payload["vex_error"], tmp_path, upload_dir)
+    assert run_payload["created_findings"] == 0
+    assert run_payload["updated_findings"] == 0
+
+    metadata = workbench_api_env.client.get(
+        f"/api/v1/runs/{detail['analysis_run_id']}/workflow-metadata",
+        headers=headers,
+    )
+    assert metadata.status_code == 200
+    metadata_payload = metadata.json()
+    assert metadata_payload["status"] == "failed"
+    assert metadata_payload["summary"]["vex_error"]["stage"] == "vex_parse"
+    assert metadata_payload["error"]["vex_error"]["stage"] == "vex_parse"
+    assert metadata_payload["summary"]["created_findings"] == 0
+    assert metadata_payload["summary"]["updated_findings"] == 0
+    _assert_no_sensitive_path_leak(metadata_payload, tmp_path, upload_dir)
 
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -554,19 +573,20 @@ def test_import_upload_rejects_invalid_asset_context_sidecar_with_clear_error(
     assert run.status_code == 200
     run_payload = run.json()
     assert run_payload["status"] == "failed"
-    assert run_payload["summary_json"]["asset_context_error"]["stage"] == ("asset_context_parse")
+    assert run_payload["asset_context_error"]["stage"] == "asset_context_parse"
+    assert run_payload["workflow_error"]["asset_context_error"]["stage"] == "asset_context_parse"
     _assert_no_sensitive_path_leak(
-        run_payload["error_json"]["asset_context_error"],
+        run_payload["workflow_error"]["asset_context_error"],
         tmp_path,
         upload_dir,
     )
     _assert_no_sensitive_path_leak(
-        run_payload["summary_json"]["asset_context_error"],
+        run_payload["asset_context_error"],
         tmp_path,
         upload_dir,
     )
-    assert run_payload["summary_json"]["created_findings"] == 0
-    assert run_payload["summary_json"]["updated_findings"] == 0
+    assert run_payload["created_findings"] == 0
+    assert run_payload["updated_findings"] == 0
 
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",

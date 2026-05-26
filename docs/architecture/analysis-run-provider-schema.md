@@ -116,6 +116,19 @@ raw metadata in `summary_json` and `error_json`, but writers validate and merge
 through the versioned contract, and public responses project typed top-level
 fields onto both run-list and run-summary responses.
 
+Normal run responses still include `summary_json` and `error_json` as
+deprecated compatibility fields. Product UI and integrations should use the
+typed fields below. Diagnostics that need the redacted raw payload should call
+`GET /api/v1/runs/{run_id}/workflow-metadata`, which returns:
+
+- run identity and status
+- `workflow_schema_version`
+- `workflow_error_schema_version`
+- typed `summary` (`run-workflow-summary.v1`)
+- typed `error` (`run-workflow-error.v1`, or `null`)
+- redacted `raw_summary`
+- redacted `raw_error`
+
 `GET /api/v1/runs/{run_id}/summary` derives these UI fields from the typed
 workflow contract without requiring clients to parse raw JSON:
 
@@ -145,9 +158,10 @@ workflow contract without requiring clients to parse raw JSON:
 They may also contain a 1-based `line`, logical `field`, and rejected `value`
 when that detail is available from the importer error.
 
-The raw JSON columns remain part of the public response for diagnostics and
-legacy records only. New Workbench client logic should use the typed workflow
-fields.
+The raw JSON columns remain in normal public responses only as deprecated
+compatibility fields for legacy records. New Workbench client logic should use
+the typed workflow fields, and diagnostics should use
+`/api/v1/runs/{run_id}/workflow-metadata`.
 
 ### `finding_occurrence`
 

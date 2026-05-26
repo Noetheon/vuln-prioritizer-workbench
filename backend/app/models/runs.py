@@ -13,6 +13,7 @@ from app.contracts.run_workflow import (
     RunWorkflowErrorV1,
     RunWorkflowFailure,
     RunWorkflowJob,
+    RunWorkflowSummaryV1,
     RunWorkflowUploadRef,
 )
 from app.models.base import get_datetime_utc
@@ -111,6 +112,14 @@ class AnalysisRun(AnalysisRunBase, table=True):
 class AnalysisRunPublic(AnalysisRunBase):
     """Public analysis run response shape."""
 
+    error_json: dict[str, Any] = Field(
+        default_factory=dict,
+        schema_extra={"deprecated": True},
+    )
+    summary_json: dict[str, Any] = Field(
+        default_factory=dict,
+        schema_extra={"deprecated": True},
+    )
     id: uuid.UUID
     project_id: uuid.UUID
     provider_snapshot_id: uuid.UUID | None
@@ -213,8 +222,28 @@ class AnalysisRunSummaryPublic(SQLModel):
     workflow_error: RunWorkflowErrorV1 | None = None
     analysis_decision_scope: str | None = None
     persistence_scope: str | None = None
-    summary_json: dict[str, Any] = Field(default_factory=dict)
-    error_json: dict[str, Any] = Field(default_factory=dict)
+    summary_json: dict[str, Any] = Field(
+        default_factory=dict,
+        schema_extra={"deprecated": True},
+    )
+    error_json: dict[str, Any] = Field(
+        default_factory=dict,
+        schema_extra={"deprecated": True},
+    )
+
+
+class AnalysisRunWorkflowMetadataPublic(SQLModel):
+    """Explicit diagnostics view over redacted run workflow metadata."""
+
+    id: uuid.UUID
+    project_id: uuid.UUID
+    status: AnalysisRunStatus
+    workflow_schema_version: str = RUN_WORKFLOW_SUMMARY_SCHEMA_VERSION
+    workflow_error_schema_version: str | None = None
+    summary: RunWorkflowSummaryV1
+    error: RunWorkflowErrorV1 | None = None
+    raw_summary: dict[str, Any] = Field(default_factory=dict)
+    raw_error: dict[str, Any] = Field(default_factory=dict)
 
 
 class FindingOccurrenceBase(SQLModel):

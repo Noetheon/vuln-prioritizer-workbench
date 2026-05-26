@@ -44,6 +44,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "/api/v1/projects/{project_id}/runs/",
         "/api/v1/runs/{run_id}",
         "/api/v1/runs/{run_id}/summary",
+        "/api/v1/runs/{run_id}/workflow-metadata",
         "/api/v1/runs/{run_id}/reports",
         "/api/v1/reports/{report_id}/download",
         "/api/v1/projects/{project_id}/findings/",
@@ -61,6 +62,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
     expected_schemas = {
         "AnalysisRunPublic",
         "AnalysisRunSummaryPublic",
+        "AnalysisRunWorkflowMetadataPublic",
         "AnalysisRunsPublic",
         "AssetCreate",
         "AssetPublic",
@@ -107,6 +109,10 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
     assert client.get("/api/v1/items/").status_code == 404
     assert expected_schemas.issubset(schemas)
     assert all("Item" not in schema_name for schema_name in schemas)
+    for schema_name in ("AnalysisRunPublic", "AnalysisRunSummaryPublic"):
+        properties = payload["components"]["schemas"][schema_name]["properties"]
+        assert properties["summary_json"]["deprecated"] is True
+        assert properties["error_json"]["deprecated"] is True
 
 
 def test_workbench_capabilities_contract_is_redacted(
@@ -170,6 +176,7 @@ def test_vpw011_domain_routes_do_not_require_auth_in_local_runtime(
         ("get", "/api/v1/providers/status", {}),
         ("get", f"/api/v1/runs/{run_id}", {}),
         ("get", f"/api/v1/runs/{run_id}/summary", {}),
+        ("get", f"/api/v1/runs/{run_id}/workflow-metadata", {}),
         ("get", f"/api/v1/runs/{run_id}/reports", {}),
         ("post", f"/api/v1/runs/{run_id}/reports", {"json": {"format": "markdown"}}),
         ("get", f"/api/v1/reports/{run_id}/download", {}),
@@ -356,7 +363,11 @@ def test_vpw011_run_list_and_get_use_repository_seeded_graph(
     detail = get_response.json()
     assert detail["id"] == str(seeded["run_id"])
     assert detail["provider_snapshot_id"] == str(seeded["provider_snapshot_id"])
+    assert detail["workflow_schema_version"] == "run-workflow-summary.v1"
+    assert detail["workflow_error_schema_version"] is None
+    assert detail["created_findings"] == 0
     assert detail["summary_json"] == {"parsed": 2, "findings": 2}
+    assert detail["error_json"] == {}
 
     summary_response = workbench_api_env.client.get(
         f"/api/v1/runs/{seeded['run_id']}/summary",
@@ -370,7 +381,100 @@ def test_vpw011_run_list_and_get_use_repository_seeded_graph(
     assert summary["created_findings"] == 0
     assert summary["updated_findings"] == 0
     assert summary["parse_errors"] == []
+    assert summary["workflow_schema_version"] == "run-workflow-summary.v1"
+    assert summary["workflow_error_schema_version"] is None
     assert summary["summary_json"] == {"parsed": 2, "findings": 2}
+    assert summary["error_json"] == {}
+
+    metadata_response = workbench_api_env.client.get(
+        f"/api/v1/runs/{seeded['run_id']}/workflow-metadata",
+        headers=headers,
+    )
+    assert metadata_response.status_code == 200
+    metadata = metadata_response.json()
+    assert metadata["id"] == str(seeded["run_id"])
+    assert metadata["project_id"] == project["id"]
+    assert metadata["status"] == "completed"
+    assert metadata["workflow_schema_version"] == "run-workflow-summary.v1"
+    assert metadata["workflow_error_schema_version"] is None
+    assert metadata["summary"]["schema_version"] == "run-workflow-summary.v1"
+    assert metadata["error"] is None
+    assert metadata["raw_summary"] == {"parsed": 2, "findings": 2}
+    assert metadata["raw_error"] == {}
+
+
+def test_run_workflow_metadata_endpoint_redacts_raw_diagnostics(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Any,
+) -> None:
+    headers = local_api_headers(workbench_api_env.client)
+    project = create_project_via_api(workbench_api_env.client, headers)
+    seeded = seed_analysis_run(
+        workbench_api_env.engine,
+        workbench_api_env.app_models,
+        workbench_api_env.repositories,
+        project_id=uuid.UUID(project["id"]),
+    )
+    private_upload = tmp_path / "private-upload.csv"
+    private_log = tmp_path / "private-error.log"
+    with Session(workbench_api_env.engine) as session:
+        run = session.get(workbench_api_env.app_models.AnalysisRun, seeded["run_id"])
+        assert run is not None
+        run.summary_json = {
+            "created_findings": 0,
+            "updated_findings": 0,
+            "input_upload": {
+                "input_type": "cve-list",
+                "path": str(private_upload),
+                "sha256": "abc123",
+            },
+            "token": "Bearer summary-secret-token",
+        }
+        run.error_json = {
+            "analysis_error": {
+                "stage": "import",
+                "message": f"failed at {private_log}",
+                "error_type": "RuntimeError",
+            },
+            "authorization": "Bearer error-secret-token",
+        }
+        session.add(run)
+        session.commit()
+
+    response = workbench_api_env.client.get(
+        f"/api/v1/runs/{seeded['run_id']}/workflow-metadata",
+        headers=headers,
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    serialized = json.dumps(payload)
+    assert str(tmp_path) not in serialized
+    assert "summary-secret-token" not in serialized
+    assert "error-secret-token" not in serialized
+    assert payload["workflow_schema_version"] == "run-workflow-summary.v1"
+    assert payload["workflow_error_schema_version"] == "run-workflow-error.v1"
+    assert payload["summary"]["input_upload"]["path"] == "[REDACTED]"
+    assert payload["summary"]["token"] == "[REDACTED]"
+    assert payload["error"]["schema_version"] == "run-workflow-error.v1"
+    assert payload["error"]["analysis_error"]["message"] == "[REDACTED]"
+    assert payload["raw_summary"]["input_upload"]["path"] == "[REDACTED]"
+    assert payload["raw_error"]["authorization"] == "[REDACTED]"
+
+
+def test_run_workflow_metadata_endpoint_returns_404_for_unknown_run(
+    workbench_api_env: WorkbenchApiEnv,
+) -> None:
+    headers = local_api_headers(workbench_api_env.client)
+    missing_run_id = uuid.UUID("00000000-0000-4000-8000-000000000404")
+
+    response = workbench_api_env.client.get(
+        f"/api/v1/runs/{missing_run_id}/workflow-metadata",
+        headers=headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Analysis run not found"
 
 
 def test_vpw011_finding_list_and_get_support_pagination(
@@ -1218,7 +1322,8 @@ def test_vpw202_project_dashboard_aggregate_replaces_dashboard_query_fanout(
         "Low": 0,
     }
     assert payload["runs"]["count"] == 1
-    assert payload["runs"]["data"][0]["summary_json"] == {"parsed": 1, "findings": 1}
+    assert payload["runs"]["data"][0]["workflow_schema_version"] == "run-workflow-summary.v1"
+    assert payload["runs"]["data"][0]["created_findings"] == 0
     assert payload["findings"]["remediation_queue"]["count"] == 3
     assert [item["cve_id"] for item in payload["findings"]["remediation_queue"]["data"]] == [
         DEMO_CVE_LOG4SHELL,
@@ -1257,6 +1362,7 @@ def test_vpw011_missing_and_secondary_project_resources_use_local_runtime_errors
         ("patch", f"/api/v1/assets/{missing_id}", {"json": {"name": "Missing Asset"}}),
         ("get", f"/api/v1/runs/{missing_id}", {}),
         ("get", f"/api/v1/runs/{missing_id}/summary", {}),
+        ("get", f"/api/v1/runs/{missing_id}/workflow-metadata", {}),
         ("get", f"/api/v1/runs/{missing_id}/reports", {}),
         ("post", f"/api/v1/runs/{missing_id}/reports", {"json": {"format": "markdown"}}),
         ("get", f"/api/v1/reports/{missing_id}/download", {}),
@@ -1279,6 +1385,7 @@ def test_vpw011_missing_and_secondary_project_resources_use_local_runtime_errors
         ),
         ("get", f"/api/v1/runs/{secondary_project['run_id']}", {}),
         ("get", f"/api/v1/runs/{secondary_project['run_id']}/summary", {}),
+        ("get", f"/api/v1/runs/{secondary_project['run_id']}/workflow-metadata", {}),
         ("get", f"/api/v1/runs/{secondary_project['run_id']}/reports", {}),
         (
             "post",
