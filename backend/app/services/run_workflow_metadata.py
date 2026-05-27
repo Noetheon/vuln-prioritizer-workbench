@@ -51,6 +51,12 @@ def workflow_summary_payload(run: AnalysisRun) -> dict[str, Any]:
     return workflow_summary(run).to_legacy_json()
 
 
+def workflow_summary_payload_or_empty(run: AnalysisRun) -> dict[str, Any]:
+    """Return validated summary metadata only when the run has a summary payload."""
+    raw_summary = raw_workflow_summary_payload(run)
+    return workflow_summary_from_legacy(raw_summary).to_legacy_json() if raw_summary else {}
+
+
 def workflow_error_payload(run: AnalysisRun) -> dict[str, Any]:
     """Return validated error metadata as the internal legacy-compatible mapping."""
     return workflow_error(run).to_legacy_json()

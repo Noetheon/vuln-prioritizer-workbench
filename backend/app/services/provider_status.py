@@ -18,7 +18,7 @@ from app.models import (
 from app.models.base import get_datetime_utc
 from app.services.run_workflow_metadata import (
     workflow_error_payload_or_empty,
-    workflow_summary_payload,
+    workflow_summary_payload_or_empty,
 )
 from vuln_prioritizer.security_redaction import redact_value
 
@@ -105,7 +105,7 @@ def _provider_update_job(
 ) -> ProviderUpdateJobPublic | None:
     if run is None:
         return None
-    metadata = workflow_summary_payload(run) or workflow_error_payload_or_empty(run)
+    metadata = workflow_summary_payload_or_empty(run) or workflow_error_payload_or_empty(run)
     public_metadata = _provider_public_metadata(metadata, production_safe=production_safe)
     return ProviderUpdateJobPublic(
         id=str(run.id),
