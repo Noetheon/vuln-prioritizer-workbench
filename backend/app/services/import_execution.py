@@ -8,7 +8,6 @@ from typing import Any, Literal
 
 from sqlmodel import Session
 
-from app.contracts.run_workflow import merge_workflow_summary
 from app.core.config import Settings
 from app.core.local_actor import LocalWorkbenchActor
 from app.importers import ImporterParseError, ImporterValidationError
@@ -55,6 +54,7 @@ from app.services.import_execution_uploads import (
 from app.services.import_execution_uploads import (
     store_prepared_uploads as _store_prepared_uploads,
 )
+from app.services.run_workflow_metadata import merge_summary_payload, workflow_summary_payload
 
 __all__ = [
     "ImportUploadContent",
@@ -271,8 +271,8 @@ async def execute_project_import_upload(
     finished_run = run_repo.finish_analysis_run(
         run.id,
         status=AnalysisRunStatus.SUCCEEDED,
-        summary_json=merge_workflow_summary(
-            run.summary_json,
+        summary_json=merge_summary_payload(
+            workflow_summary_payload(run),
             import_job=_job_payload(
                 job_id=resolved_run.job_id,
                 status="succeeded",

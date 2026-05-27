@@ -7,7 +7,6 @@ from datetime import datetime
 
 from sqlmodel import Session, col, select
 
-from app.contracts.run_workflow import workflow_summary_from_legacy
 from app.models import AnalysisRun, AnalysisRunStatus, Finding, FindingOccurrence, Project
 from app.models.base import get_datetime_utc
 from app.repositories import WaiverRepository
@@ -17,6 +16,10 @@ from app.services.report_projection import _finding_payload, _provider_snapshot_
 from app.services.report_service_payload_attack import (
     merge_attack_context,
     run_attack_contexts_by_finding,
+)
+from app.services.run_workflow_metadata import (
+    workflow_error_payload_or_empty,
+    workflow_summary,
 )
 
 REPORT_SUPPORTED_RUN_STATUSES = {
@@ -59,7 +62,7 @@ def build_report_payload(
         waivers=waiver_repository.list_project_waivers(project.id),
         waiver_repository=waiver_repository,
     )
-    workflow_summary = workflow_summary_from_legacy(run.summary_json)
+    summary = workflow_summary(run)
     payload = MarkdownReportPayload(
         generated_at=generated_at,
         project_id=str(project.id),
@@ -68,7 +71,7 @@ def build_report_payload(
         run_status=str(run.status),
         input_type=run.input_type,
         filename=run.filename,
-        summary=workflow_summary.to_legacy_json(),
+        summary=summary.to_legacy_json(),
         findings=tuple(report_findings),
         provider_snapshot=_provider_snapshot_payload(run.provider_snapshot),
         governance_rollups=governance_rollups.model_dump(mode="json"),
@@ -78,9 +81,9 @@ def build_report_payload(
         run_started_at=run.started_at,
         run_finished_at=run.finished_at,
         run_error=run.error_message,
-        run_errors=dict(run.error_json or {}),
-        input_file_hash=workflow_summary.input_sha256
-        or (workflow_summary.input_upload.sha256 if workflow_summary.input_upload else None),
+        run_errors=workflow_error_payload_or_empty(run),
+        input_file_hash=summary.input_sha256
+        or (summary.input_upload.sha256 if summary.input_upload else None),
     )
 
     return payload, findings, generated_at
