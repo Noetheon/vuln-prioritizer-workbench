@@ -14,7 +14,7 @@ import {
   TrivyGlyph,
 } from "./NewImportSourceGlyphIcons"
 
-const importSourceColorVars: Record<ImportInputType, string> = {
+const importSourceColorVars: Partial<Record<ImportInputType, string>> = {
   "cve-list": "var(--vpw-source-cve)",
   "generic-occurrence-csv": "var(--vpw-source-csv)",
   "trivy-json": "var(--vpw-source-trivy)",
@@ -45,7 +45,8 @@ export function ImportSourceMark({
       )}
       style={
         {
-          "--import-source-color": importSourceColorVars[inputType],
+          "--import-source-color":
+            importSourceColorVars[inputType] ?? "var(--vpw-blue)",
         } as CSSProperties
       }
     >

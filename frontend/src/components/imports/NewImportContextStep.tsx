@@ -111,6 +111,7 @@ export function AddContextStep(
         </summary>
         <div className="border-t border-[var(--vpw-border-default)] p-3 sm:p-4">
           <ProviderAttackOptions
+            attackSources={props.attackSources}
             importWizard={props.importWizard}
             onAttackMappingFileChange={props.onAttackMappingFileChange}
             onAttackSourceChange={props.onAttackSourceChange}

@@ -23,6 +23,7 @@ export const workbenchQueryKeys = {
   assetsRoot: (projectId: string) =>
     [...workbenchQueryKeys.all, "assets", projectId] as const,
   providerStatus: () => [...workbenchQueryKeys.all, "provider-status"] as const,
+  capabilities: () => [...workbenchQueryKeys.all, "capabilities"] as const,
   demoWorkspace: () => [...workbenchQueryKeys.all, "demo-workspace"] as const,
   projectDashboard: (projectId: string) =>
     [...workbenchQueryKeys.all, "project-dashboard", projectId] as const,

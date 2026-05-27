@@ -65,7 +65,11 @@ export function SettingsWorkbench(props: SettingsWorkbenchProps) {
         </TabsContent>
 
         <TabsContent className="mt-5" value="runtime">
-          <SettingsRuntimeProviders providerStatus={props.providerStatus} />
+          <SettingsRuntimeProviders
+            capabilitiesError={props.capabilitiesError}
+            providerStatus={props.providerStatus}
+            uploadPolicy={props.uploadPolicy}
+          />
         </TabsContent>
 
         <TabsContent className="mt-5" value="diagnostics">

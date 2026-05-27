@@ -1,11 +1,3 @@
-import {
-  FileArchive,
-  FileJson,
-  FileText,
-  GitBranch,
-  Table2,
-  type LucideIcon,
-} from "lucide-react"
 import type {
   AnalysisRunPublic,
   AnalysisRunSummaryPublic,
@@ -13,125 +5,20 @@ import type {
   ProviderStatusPublic,
   ReportPublic,
   ReportVerificationPublic,
-} from "@/api-client"
+} from "../../api-client"
+import type { ArtifactCard } from "../../lib/report-capability-catalog.ts"
 import type {
   VpwBadgeTone,
   VpwCompactTone,
   VpwStatusBannerTone,
-} from "@/components/vpw"
-import { objectRecord } from "@/lib/app-errors"
+} from "../vpw"
+import { objectRecord } from "../../lib/app-errors.ts"
 import {
   formatReportDateTime,
   reportFormatLabel,
   type ReportFormat,
-} from "@/lib/report-format"
-import { runStatusTone } from "@/lib/risk-format"
-
-export type ArtifactCard = {
-  actionLabel: string
-  audience: string
-  description: string
-  format: string
-  icon: LucideIcon
-  reportFormat: ReportFormat
-  title: string
-}
-
-export const ARTIFACT_CARDS: ArtifactCard[] = [
-  {
-    actionLabel: "Generate executive HTML",
-    audience: "CISO",
-    description: "Best for CISO and stakeholder review.",
-    format: "HTML",
-    icon: FileText,
-    reportFormat: "html",
-    title: "Executive HTML Report",
-  },
-  {
-    actionLabel: "Generate Markdown",
-    audience: "Engineering",
-    description: "Best for analyst handoff and PR or ticket notes.",
-    format: "Markdown",
-    icon: FileText,
-    reportFormat: "markdown",
-    title: "Technical Markdown Report",
-  },
-  {
-    actionLabel: "Export analysis JSON",
-    audience: "Automation",
-    description:
-      "Machine-readable findings and analysis data for downstream systems.",
-    format: "JSON",
-    icon: FileJson,
-    reportFormat: "json",
-    title: "JSON Findings Export",
-  },
-  {
-    actionLabel: "Export CSV findings",
-    audience: "Audit",
-    description:
-      "Spreadsheet-friendly findings table for triage and stakeholder review.",
-    format: "CSV",
-    icon: Table2,
-    reportFormat: "csv",
-    title: "CSV Findings Export",
-  },
-  {
-    actionLabel: "Export Navigator",
-    audience: "Security engineering",
-    description: "Defensive ATT&CK Navigator layer when mapped context exists.",
-    format: "Navigator JSON",
-    icon: GitBranch,
-    reportFormat: "attack-navigator",
-    title: "ATT&CK Navigator Layer",
-  },
-  {
-    actionLabel: "Export SARIF",
-    audience: "CI",
-    description:
-      "SARIF 2.1.0 results for GitHub code scanning and CI evidence workflows.",
-    format: "SARIF",
-    icon: FileJson,
-    reportFormat: "sarif",
-    title: "SARIF Export",
-  },
-  {
-    actionLabel: "Build evidence ZIP",
-    audience: "Audit",
-    description:
-      "Best for audit package, manifest, hashes, and provider snapshot.",
-    format: "Evidence ZIP",
-    icon: FileArchive,
-    reportFormat: "zip",
-    title: "Evidence ZIP Bundle",
-  },
-]
-
-export const RECOMMENDED_ARTIFACT_FORMATS: readonly ReportFormat[] = [
-  "zip",
-  "html",
-  "markdown",
-]
-
-export const ADDITIONAL_ARTIFACT_FORMATS: readonly ReportFormat[] = [
-  "csv",
-  "json",
-  "sarif",
-  "attack-navigator",
-]
-
-export const ALL_ARTIFACT_FORMATS: readonly ReportFormat[] = [
-  ...RECOMMENDED_ARTIFACT_FORMATS,
-  ...ADDITIONAL_ARTIFACT_FORMATS,
-]
-
-export function artifactCardForFormat(format: ReportFormat) {
-  const card = ARTIFACT_CARDS.find((item) => item.reportFormat === format)
-  if (!card) {
-    throw new Error(`Unknown report format ${format}`)
-  }
-  return card
-}
+} from "../../lib/report-format.ts"
+import { runStatusTone } from "../../lib/risk-format.ts"
 
 export function reportForFormat(
   reports: readonly ReportPublic[],
@@ -163,17 +50,13 @@ export function generatedArtifactsDetail(reports: readonly ReportPublic[]) {
 }
 
 export function generatedActionLabel(
-  format: ReportFormat,
+  card: ArtifactCard | null,
   existingReport: ReportPublic | null,
 ) {
   if (existingReport) {
-    return format === "zip" ? "Rebuild evidence ZIP" : "Regenerate"
+    return card?.reportFormat === "zip" ? "Rebuild evidence ZIP" : "Regenerate"
   }
-  if (format === "zip") return "Build evidence ZIP"
-  if (format === "html") return "Generate executive HTML"
-  if (format === "json") return "Export analysis JSON"
-  if (format === "csv") return "Export CSV findings"
-  return artifactCardForFormat(format).actionLabel
+  return card?.actionLabel ?? "Generate"
 }
 
 export function artifactStatusLabel(report: ReportPublic | null) {

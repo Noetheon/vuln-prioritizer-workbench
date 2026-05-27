@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Literal
 
 from sqlmodel import Field, SQLModel
 
@@ -28,6 +29,80 @@ class WorkbenchHealth(SQLModel):
     """Minimal local health response."""
 
     status: str
+
+
+class ImportFormatCapabilityPublic(SQLModel):
+    """Supported import format metadata published by the Workbench runtime."""
+
+    input_type: str
+    label: str
+    category: str
+    category_label: str
+    extensions: list[str] = Field(default_factory=list)
+    accepted_mime_types: list[str] = Field(default_factory=list)
+    best_for: str
+    expected_shape: str
+    minimum_fields: list[str] = Field(default_factory=list)
+    optional_fields: list[str] = Field(default_factory=list)
+    context_support: str
+    example_snippet: str
+    notes: list[str] = Field(default_factory=list)
+    short_description: str
+
+
+class SidecarUploadCapabilityPublic(SQLModel):
+    """Supported optional import sidecar metadata."""
+
+    id: str
+    label: str
+    form_field: str
+    extensions: list[str] = Field(default_factory=list)
+    accepted_mime_types: list[str] = Field(default_factory=list)
+    required: bool = False
+    description: str
+
+
+class AttackSourceCapabilityPublic(SQLModel):
+    """Supported ATT&CK import source metadata."""
+
+    value: str
+    label: str
+    detail: str
+    requires_mapping_file: bool = False
+    supports_technique_metadata_file: bool = False
+
+
+class ReportFormatCapabilityPublic(SQLModel):
+    """Supported report artifact metadata published by the Workbench runtime."""
+
+    format: str
+    label: str
+    title: str
+    action_label: str
+    detail: str
+    audience: str
+    kind: str
+    filename: str
+    content_type: str
+
+
+class UploadPolicyPublic(SQLModel):
+    """Upload and request limits enforced by the active Workbench runtime."""
+
+    max_upload_bytes: int
+    max_request_body_bytes: int
+    import_request_overhead_bytes: int
+
+
+class WorkbenchCapabilitiesPublic(SQLModel):
+    """Versioned Workbench capability contract for browser/runtime alignment."""
+
+    schema_version: Literal["workbench-capabilities.v1"] = "workbench-capabilities.v1"
+    import_formats: list[ImportFormatCapabilityPublic] = Field(default_factory=list)
+    report_formats: list[ReportFormatCapabilityPublic] = Field(default_factory=list)
+    upload_policy: UploadPolicyPublic
+    sidecar_uploads: list[SidecarUploadCapabilityPublic] = Field(default_factory=list)
+    attack_sources: list[AttackSourceCapabilityPublic] = Field(default_factory=list)
 
 
 class DemoWorkspaceCreate(SQLModel):

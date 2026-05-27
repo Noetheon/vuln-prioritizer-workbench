@@ -207,6 +207,38 @@ def test_workbench_provider_status_surfaces_failed_provider_update(
     )
 
 
+def test_workbench_provider_status_uses_error_metadata_when_summary_is_empty(
+    workbench_api_env: WorkbenchApiEnv,
+) -> None:
+    headers = local_api_headers(workbench_api_env.client)
+    with Session(workbench_api_env.engine) as session:
+        repository = workbench_api_env.repositories.RunRepository(session)
+        project = workbench_api_env.repositories.ProjectRepository(session).create_project(
+            workbench_api_env.app_models.ProjectCreate(name="Provider Error Metadata Project")
+        )
+        repository.create_analysis_run(
+            project_id=project.id,
+            input_type="provider_update",
+            status=workbench_api_env.app_models.AnalysisRunStatus.FAILED,
+            summary_json={},
+            error_json={
+                "detail": "legacy provider update failure",
+                "execution_mode": "background",
+                "requested_sources": ["kev"],
+            },
+        )
+        session.commit()
+
+    response = workbench_api_env.client.get("/api/v1/providers/status", headers=headers)
+
+    assert response.status_code == 200
+    latest_update_job = response.json()["latest_update_job"]
+    assert latest_update_job["status"] == "failed"
+    assert latest_update_job["execution_mode"] == "background"
+    assert latest_update_job["requested_sources"] == ["kev"]
+    assert latest_update_job["error_message"] == "legacy provider update failure"
+
+
 def test_workbench_provider_status_redacts_production_paths_and_cache_details(
     workbench_api_env: WorkbenchApiEnv,
     tmp_path: Path,

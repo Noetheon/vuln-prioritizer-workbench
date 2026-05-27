@@ -11,14 +11,24 @@ from sqlmodel import Field, SQLModel
 
 from app.models.base import get_datetime_utc
 
+ReportFormat = Literal["markdown", "html", "json", "csv", "zip", "attack-navigator", "sarif"]
+REPORT_FORMAT_VALUES: tuple[ReportFormat, ...] = (
+    "markdown",
+    "html",
+    "json",
+    "csv",
+    "zip",
+    "attack-navigator",
+    "sarif",
+)
+ReportAttackFilter = Literal["all", "critical-high", "kev", "no-coverage"]
+
 
 class ReportCreate(SQLModel):
     """Request payload for creating a run report."""
 
-    format: Literal["markdown", "html", "json", "csv", "zip", "attack-navigator", "sarif"] = (
-        "markdown"
-    )
-    attack_filter: Literal["all", "critical-high", "kev", "no-coverage"] = "all"
+    format: ReportFormat = "markdown"
+    attack_filter: ReportAttackFilter = "all"
 
 
 class ReportBase(SQLModel):

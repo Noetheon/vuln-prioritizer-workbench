@@ -78,9 +78,13 @@ and structured workflow failures.
 
 Compatibility rules:
 
-- existing `summary_json` and `error_json` remain in API responses for raw
-  diagnostics and older records
-- new UI and integration code should consume the typed top-level fields
+- existing `summary_json` and `error_json` remain internal persistence fields;
+  normal run responses do not expose them
+- UI and integration code must consume the typed top-level fields instead of
+  parsing raw JSON blobs
+- raw diagnostics are exposed through
+  `GET /api/v1/runs/{run_id}/workflow-metadata`, which returns typed
+  `summary` / `error` contracts plus redacted `raw_summary` / `raw_error`
 - additive summary/error keys are allowed and preserved by the v1 contract
 - removals or type changes require a new workflow metadata version
 - filesystem paths and secret-like values are redacted before public projection

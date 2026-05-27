@@ -1,6 +1,7 @@
 import type {
   AnalysisRunPublic,
   AnalysisRunSummaryPublic,
+  AttackSourceCapabilityPublic,
   ImportParseErrorPublic,
   ProjectPublic,
   ProviderStatusPublic,
@@ -11,6 +12,7 @@ import {
   fileSizeLabel as importFileSizeLabel,
   getImportFormat,
   type ImportInputType,
+  type SupportedFormat,
 } from "../../lib/import-format-metadata.ts"
 import type { FormEventHandler } from "react"
 import { objectRecord, stringValue } from "./imports-workbench-records.ts"
@@ -18,13 +20,6 @@ import { objectRecord, stringValue } from "./imports-workbench-records.ts"
 export { formatDateTime } from "../../lib/date-format.ts"
 export { importRunTimelineItems } from "./import-run-timeline-model.ts"
 export { objectRecord, stringValue } from "./imports-workbench-records.ts"
-
-export type SupportedImportFormat = {
-  label: string
-  value: ImportInputType
-  accept: string
-  detail: string
-}
 
 export type ImportWizardStateLike = {
   attackMappingFile?: string
@@ -47,6 +42,8 @@ export type ImportsWorkbenchProps = {
   importRun: AnalysisRunPublic | null
   importRunSummary: AnalysisRunSummaryPublic | null
   importWizard: ImportWizardStateLike
+  capabilitiesError: string
+  capabilitiesLoading: boolean
   onAssetContextFileChange: (file: File | null) => void
   onFileChange: (file: File | null) => void
   onInputTypeChange: (value: string) => void
@@ -75,7 +72,8 @@ export type ImportsWorkbenchProps = {
   selectedRun: AnalysisRunPublic | null
   selectedRunId: string
   selectedRunSummary: AnalysisRunSummaryPublic | null
-  supportedFormats: readonly SupportedImportFormat[]
+  attackSources: readonly AttackSourceCapabilityPublic[]
+  supportedFormats: readonly SupportedFormat[]
 }
 
 export function runFileLabel(run: {
@@ -134,15 +132,7 @@ export function failedRunCause(
       run?.workflow_error?.background_error,
     )
   if (typedMessage) return typedMessage
-  const errorJson = objectRecord(summary?.error_json ?? run?.error_json)
-  const analysisError = objectRecord(errorJson.analysis_error)
-  return (
-    stringValue(errorJson.message) ??
-    stringValue(errorJson.error) ??
-    stringValue(errorJson.last_error) ??
-    stringValue(analysisError.message) ??
-    "No failure detail available."
-  )
+  return "No failure detail available."
 }
 
 function failureMessage(
@@ -161,8 +151,11 @@ export function runTone(status: AnalysisRunPublic["status"]): VpwBadgeTone {
   return "neutral"
 }
 
-export function formatExpectedFields(value: string) {
-  const metadata = getImportFormat(value)
+export function formatExpectedFields(
+  formats: readonly SupportedFormat[],
+  value: string,
+) {
+  const metadata = getImportFormat(formats, value)
   if (metadata) return metadata.minimumFields.join(", ")
   return "Supported Workbench import fields"
 }
@@ -176,10 +169,10 @@ export function fileSizeLabel(file: File | null | undefined) {
 }
 
 export function selectedFormat(
-  formats: readonly SupportedImportFormat[],
+  formats: readonly SupportedFormat[],
   inputType: string,
 ) {
-  return formats.find((format) => format.value === inputType)
+  return formats.find((format) => format.inputType === inputType)
 }
 
 export function optionalContextLabels(wizard: ImportWizardStateLike) {
@@ -211,12 +204,14 @@ export function uploadProgress(wizard: ImportWizardStateLike) {
 export function importSubmitDisabled({
   importLoading,
   projectListLoading,
+  supportedFormats,
   projectCount,
   selectedProjectId,
   wizard,
 }: {
   importLoading: boolean
   projectListLoading: boolean
+  supportedFormats: readonly SupportedFormat[]
   projectCount: number
   selectedProjectId: string
   wizard: ImportWizardStateLike
@@ -228,6 +223,6 @@ export function importSubmitDisabled({
     !selectedProjectId ||
     !wizard.inputType ||
     !wizard.file ||
-    !fileMatchesAcceptedExtension(wizard.file, wizard.inputType)
+    !fileMatchesAcceptedExtension(supportedFormats, wizard.file, wizard.inputType)
   )
 }

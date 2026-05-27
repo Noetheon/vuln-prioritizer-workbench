@@ -14,10 +14,12 @@ import {
 import type {
   ProjectPublic,
   ProviderStatusPublic,
+  WorkbenchCapabilitiesPublic,
   WorkbenchStatus,
 } from "../api-client"
 import { apiErrorMessage } from "../lib/app-errors"
 import {
+  useWorkbenchCapabilitiesQuery,
   useWorkbenchProviderStatusQuery,
   useWorkbenchStatusQuery,
   workbenchProviderStatusQueryKey,
@@ -62,6 +64,9 @@ function persistSelectedProjectId(projectId: string) {
 }
 
 export type WorkbenchContextValue = {
+  capabilities: WorkbenchCapabilitiesPublic | null
+  capabilitiesError: string
+  capabilitiesLoading: boolean
   projectListError: string
   projectListLoading: boolean
   projects: ProjectPublic[]
@@ -87,6 +92,7 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const capabilitiesQuery = useWorkbenchCapabilitiesQuery()
   const providerStatusQuery = useWorkbenchProviderStatusQuery()
   const statusQuery = useWorkbenchStatusQuery()
   const projectsQuery = useProjectsQuery()
@@ -184,6 +190,12 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<WorkbenchContextValue>(
     () => ({
+      capabilities: capabilitiesQuery.data ?? null,
+      capabilitiesError: capabilitiesQuery.isError
+        ? apiErrorMessage("Workbench capabilities unavailable", capabilitiesQuery.error)
+        : "",
+      capabilitiesLoading:
+        capabilitiesQuery.isLoading || capabilitiesQuery.isFetching,
       projectListError: projectsQuery.isError
         ? apiErrorMessage("Projects unavailable", projectsQuery.error)
         : "",
@@ -205,6 +217,11 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
       statusError: statusQuery.isError ? "Data services unavailable" : "",
     }),
     [
+      capabilitiesQuery.data,
+      capabilitiesQuery.error,
+      capabilitiesQuery.isError,
+      capabilitiesQuery.isFetching,
+      capabilitiesQuery.isLoading,
       projects,
       providerStatusQuery.data,
       providerStatusQuery.error,

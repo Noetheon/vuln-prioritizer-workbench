@@ -107,9 +107,9 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
     assert payload["asset_count"] == 21
     assert payload["waiver_count"] == 4
     assert payload["report_count"] == 7
-    assert payload["latest_run"]["summary_json"]["finding_count"] == 24
-    assert payload["latest_run"]["summary_json"]["occurrence_count"] == 24
-    assert payload["latest_run"]["summary_json"]["attack_mapped_cves"] == 6
+    assert payload["latest_run"]["workflow_schema_version"] == "run-workflow-summary.v1"
+    assert "summary_json" not in payload["latest_run"]
+    assert "error_json" not in payload["latest_run"]
     assert {report["filename"] for report in payload["reports"]} >= {
         "technical-report.md",
         "executive-report.html",

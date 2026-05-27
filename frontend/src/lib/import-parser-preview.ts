@@ -2,7 +2,10 @@ import {
   fileMatchesAcceptedExtension,
   isImportInputType,
 } from "./import-format-catalog.ts"
-import type { ParserPreview } from "./import-format-types.ts"
+import type {
+  ParserPreview,
+  SupportedFormat,
+} from "./import-format-types.ts"
 
 export function initialParserPreview(): ParserPreview {
   return {
@@ -13,10 +16,11 @@ export function initialParserPreview(): ParserPreview {
 }
 
 export async function buildParserPreview(
+  formats: readonly SupportedFormat[],
   file: File | null,
   inputType: string | null | undefined,
 ): Promise<ParserPreview> {
-  if (!file || !isImportInputType(inputType)) {
+  if (!file || !isImportInputType(formats, inputType)) {
     return initialParserPreview()
   }
 
@@ -29,7 +33,7 @@ export async function buildParserPreview(
     errors: [],
   }
 
-  if (!fileMatchesAcceptedExtension(file, inputType)) {
+  if (!fileMatchesAcceptedExtension(formats, file, inputType)) {
     return {
       ...base,
       state: "error",

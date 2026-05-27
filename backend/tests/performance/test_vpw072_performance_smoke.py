@@ -90,7 +90,14 @@ def test_vpw072_workbench_import_10k_occurrences_performance_smoke(
     peak_rss_mib = _max_rss_mib()
     total_seconds = time.perf_counter() - test_start
 
-    summary = dict(import_payload.get("summary_json") or {})
+    summary = {
+        "occurrence_count": import_payload.get("occurrence_count"),
+        "finding_count": import_payload.get("finding_count"),
+        "created_findings": import_payload.get("created_findings"),
+        "updated_findings": import_payload.get("updated_findings"),
+        "dedup_summary": import_payload.get("dedup_summary") or {},
+        "locked_provider_data": import_payload.get("locked_provider_data"),
+    }
     first_items = list(first_page_payload.get("data") or [])
     repeat_items = list(repeat_page_payload.get("data") or [])
     metrics = {

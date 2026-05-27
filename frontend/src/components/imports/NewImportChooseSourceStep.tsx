@@ -8,31 +8,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { VpwSectionHeader } from "@/components/vpw"
-import {
-  FORMAT_CATEGORY_LABELS,
-  SUPPORTED_IMPORT_FORMATS,
-  type SupportedFormatCategory,
-} from "@/lib/import-format-metadata"
+import { VpwSectionHeader, VpwStatusBanner } from "@/components/vpw"
+import { supportedImportCategories } from "@/lib/import-format-metadata"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import type { ImportsWorkbenchProps } from "./imports-workbench-model"
 import { FormatOptionCard } from "./NewImportSourceOption"
 
-const categoryOrder: SupportedFormatCategory[] = [
-  "simple",
-  "scanner",
-  "sbom",
-  "network",
-]
-
 export function ChooseSourceStep({
+  capabilitiesError,
+  capabilitiesLoading,
   importWizard,
   onInputTypeChange,
   onProjectChange,
   projectListLoading,
   projects,
   selectedProjectId,
+  supportedFormats,
 }: ImportsWorkbenchProps) {
+  const categories = supportedImportCategories(supportedFormats)
   const projectDisabledReason = projectListLoading
     ? "Projects are loading."
     : projects.length === 0
@@ -87,14 +80,24 @@ export function ChooseSourceStep({
           </p>
         ) : null}
       </div>
+      {capabilitiesError ? (
+        <VpwStatusBanner title="Runtime capabilities unavailable" tone="critical">
+          Import formats could not be loaded. Import actions are disabled.
+        </VpwStatusBanner>
+      ) : null}
+      {!capabilitiesError && capabilitiesLoading ? (
+        <VpwStatusBanner title="Loading runtime capabilities">
+          Loading import formats from the Workbench backend.
+        </VpwStatusBanner>
+      ) : null}
       <div className="grid gap-5">
-        {categoryOrder.map((category) => (
+        {categories.map(({ category, label }) => (
           <div className="grid gap-3" key={category}>
             <h3 className="text-sm font-semibold text-[var(--vpw-text-primary)]">
-              {FORMAT_CATEGORY_LABELS[category]}
+              {label}
             </h3>
             <div className="grid gap-3 md:grid-cols-2">
-              {SUPPORTED_IMPORT_FORMATS.filter(
+              {supportedFormats.filter(
                 (format) => format.category === category,
               ).map((format) => (
                 <FormatOptionCard

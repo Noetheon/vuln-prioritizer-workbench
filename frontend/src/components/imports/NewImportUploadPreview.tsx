@@ -1,8 +1,8 @@
 import { VpwStatusBanner } from "@/components/vpw"
 import {
   getImportFormat,
-  type ImportInputType,
   type ParserPreview,
+  type SupportedFormat,
 } from "@/lib/import-format-metadata"
 import { cn } from "@/lib/utils"
 
@@ -30,8 +30,10 @@ export function AcceptedTypeChips({
 
 export function ParserPreviewPanel({
   parserPreview,
+  supportedFormats,
 }: {
   parserPreview: ParserPreview
+  supportedFormats: readonly SupportedFormat[]
 }) {
   if (parserPreview.state === "not-started") {
     return (
@@ -62,7 +64,7 @@ export function ParserPreviewPanel({
     {
       label: "File type match",
       value: parserPreview.detectedInputType
-        ? `${getImportFormat(parserPreview.detectedInputType)?.label ?? "Selected format"}`
+        ? `${getImportFormat(supportedFormats, parserPreview.detectedInputType)?.label ?? "Selected format"}`
         : "Matches selected format",
     },
     {
@@ -134,29 +136,10 @@ export function ParserPreviewPanel({
   )
 }
 
-export function uploadRequirementCopy(inputType: ImportInputType) {
-  switch (inputType) {
-    case "cve-list":
-      return "One CVE identifier per line or a supported CVE column."
-    case "generic-occurrence-csv":
-      return "Rows must include a CVE identifier; asset and component columns are optional."
-    case "trivy-json":
-      return "Use a Trivy vulnerability report export."
-    case "grype-json":
-      return "Use a Grype vulnerability report export."
-    case "dependency-check-json":
-      return "Use an OWASP Dependency-Check report export."
-    case "github-alerts-json":
-      return "Use the pinned GitHub alert export shape."
-    case "cyclonedx-json":
-      return "Include components plus vulnerability references."
-    case "spdx-json":
-      return "Use package inventory data with vulnerability references where supported."
-    case "nessus-xml":
-      return "Use Nessus ReportHost and ReportItem evidence."
-    case "openvas-xml":
-      return "Use OpenVAS result evidence with CVE data."
-  }
+export function uploadRequirementCopy(format: SupportedFormat) {
+  return format.minimumFields.length > 0
+    ? format.minimumFields.join("; ")
+    : format.expectedShape
 }
 
 function requiredFieldsPreviewLabel(parserPreview: ParserPreview) {

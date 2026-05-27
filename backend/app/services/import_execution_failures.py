@@ -7,7 +7,6 @@ from typing import NoReturn
 
 from sqlmodel import Session
 
-from app.contracts.run_workflow import merge_workflow_error, merge_workflow_summary
 from app.core.local_actor import LocalWorkbenchActor
 from app.models import AnalysisRun, AnalysisRunStatus
 from app.repositories import RunRepository
@@ -19,6 +18,11 @@ from app.services.import_execution_summary import (
 )
 from app.services.import_uploads import (
     sanitize_parser_error_message as _sanitize_parser_error_message,
+)
+from app.services.run_workflow_metadata import (
+    merge_error_payload,
+    merge_summary_payload,
+    workflow_summary_payload,
 )
 
 
@@ -48,7 +52,7 @@ def raise_analysis_failure(
         run.id,
         status=AnalysisRunStatus.FAILED,
         error_message=analysis_error_message,
-        error_json=merge_workflow_error(
+        error_json=merge_error_payload(
             analysis_error=analysis_error,
             created_findings=0,
             updated_findings=0,
@@ -60,8 +64,8 @@ def raise_analysis_failure(
                 execution_mode=execution_mode,
             ),
         ),
-        summary_json=merge_workflow_summary(
-            run.summary_json,
+        summary_json=merge_summary_payload(
+            workflow_summary_payload(run),
             import_job=_job_payload(
                 job_id=job_id,
                 status="failed",

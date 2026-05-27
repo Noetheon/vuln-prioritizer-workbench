@@ -5,7 +5,6 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from app.contracts.run_workflow import merge_workflow_summary
 from app.models import AnalysisRun, AnalysisRunStatus
 from app.repositories import RunRepository
 from app.services.import_errors import ImportServiceError
@@ -18,6 +17,12 @@ from app.services.import_execution_types import (
 from app.services.import_execution_upload_prepare import initial_upload_summary
 from app.services.import_uploads import (
     upload_summary_with_path as _upload_summary_with_path,
+)
+from app.services.run_workflow_metadata import (
+    merge_summary_payload,
+    update_workflow_summary,
+    workflow_import_job_payload,
+    workflow_summary_payload,
 )
 
 
@@ -71,8 +76,10 @@ def apply_stored_upload_summaries(
     execution_mode: str,
 ) -> None:
     """Attach storage refs for persisted upload artifacts to the run summary."""
-    run.summary_json = merge_workflow_summary(
-        run.summary_json,
+    summary = workflow_summary_payload(run)
+    input_upload = summary.get("input_upload")
+    update_workflow_summary(
+        run,
         import_job=_job_payload(
             job_id=resolved_run.job_id,
             status="pending",
@@ -80,16 +87,16 @@ def apply_stored_upload_summaries(
             execution_mode=execution_mode,
         ),
         input_upload={
-            **run.summary_json["input_upload"],
+            **(input_upload if isinstance(input_upload, dict) else {}),
             "path": artifacts.upload_ref,
             "storage_ref": artifacts.upload_ref,
         },
         asset_context_upload=_upload_summary_with_path(
-            run.summary_json.get("asset_context_upload"),
+            summary.get("asset_context_upload"),
             path=artifacts.asset_context_ref,
         ),
         vex_upload=_upload_summary_with_path(
-            run.summary_json.get("vex_upload"),
+            summary.get("vex_upload"),
             path=artifacts.vex_ref,
         ),
     )
@@ -105,8 +112,8 @@ def mark_import_run_running(
     """Mark a pending import run as actively running."""
     run.status = AnalysisRunStatus.RUNNING
     running_history = _append_job_status(job_history, "running")
-    run.summary_json = merge_workflow_summary(
-        run.summary_json,
+    update_workflow_summary(
+        run,
         import_job=_job_payload(
             job_id=job_id,
             status="running",
@@ -134,7 +141,7 @@ def _initial_run_summary(
     execution_mode: str,
 ) -> dict[str, Any]:
     upload_summary = initial_upload_summary(prepared)
-    return merge_workflow_summary(
+    return merge_summary_payload(
         None,
         import_job=_job_payload(
             job_id=job_id,
@@ -152,7 +159,7 @@ def _initial_run_summary(
 def _extract_existing_job_state(run: AnalysisRun) -> tuple[str, list[dict[str, str]]]:
     job_id = str(uuid.uuid4())
     job_history = [_job_status_entry("pending")]
-    existing_job = run.summary_json.get("import_job")
+    existing_job = workflow_import_job_payload(run)
     if not isinstance(existing_job, dict):
         return job_id, job_history
 

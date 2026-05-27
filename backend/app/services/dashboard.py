@@ -6,10 +6,8 @@ import uuid
 from collections.abc import Sequence
 from typing import Any
 
-from app.contracts.run_workflow import workflow_public_fields
 from app.models import (
     AnalysisRun,
-    AnalysisRunPublic,
     AnalysisRunsPublic,
     AssetExposure,
     DashboardEpssBucketsPublic,
@@ -34,6 +32,7 @@ from app.services.governance import (
     build_project_governance_rollups_payload,
     build_project_governance_rollups_payload_from_repositories,
 )
+from app.services.run_workflow_projection import analysis_run_public
 from vuln_prioritizer.security_redaction import redact_value
 
 
@@ -196,21 +195,6 @@ def finding_public(finding: Finding) -> FindingPublic:
     )
 
 
-def analysis_run_public(run: AnalysisRun) -> AnalysisRunPublic:
-    """Return a redacted analysis-run DTO for dashboard aggregate payloads."""
-    summary_json = _redacted_json_payload(run.summary_json or {})
-    error_json = _redacted_json_payload(run.error_json or {})
-    public = AnalysisRunPublic.model_validate(run)
-    return public.model_copy(
-        update={
-            "summary_json": summary_json,
-            "error_json": error_json,
-            "error_message": _redacted_value(run.error_message),
-            **workflow_public_fields(summary_json, error_json),
-        }
-    )
-
-
 def _epss_in_range(
     finding: Finding,
     *,
@@ -225,8 +209,3 @@ def _epss_in_range(
 def _redacted_json_payload(payload: dict[str, Any]) -> dict[str, Any]:
     redacted, _paths = redact_value(payload)
     return redacted if isinstance(redacted, dict) else {}
-
-
-def _redacted_value(value: Any) -> Any:
-    redacted, _paths = redact_value(value)
-    return redacted

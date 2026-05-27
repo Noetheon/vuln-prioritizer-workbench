@@ -9,7 +9,7 @@ import {
   VpwSelectionCard,
 } from "@/components/vpw"
 import {
-  SUPPORTED_IMPORT_FORMATS,
+  supportedImportCategories,
   type SupportedFormat,
 } from "@/lib/import-format-metadata"
 import { importFormatUrlSearch } from "@/workbench/import-route-search"
@@ -26,15 +26,20 @@ import {
 
 export function SupportedFormatsRoute({
   selectedProjectId,
+  supportedFormats,
 }: ImportsWorkbenchProps) {
   const [query, setQuery] = useState("")
   const [category, setCategory] = useState<CategoryFilter>("all")
   const [selectedInputType, setSelectedInputType] = useState(
-    SUPPORTED_IMPORT_FORMATS[0].inputType,
+    supportedFormats[0]?.inputType ?? "",
   )
   const filteredFormats = useMemo(
-    () => filterSupportedFormats(query, category),
-    [category, query],
+    () => filterSupportedFormats(supportedFormats, query, category),
+    [category, query, supportedFormats],
+  )
+  const categories = useMemo(
+    () => supportedImportCategories(supportedFormats),
+    [supportedFormats],
   )
   const selectedFormat =
     filteredFormats.find((format) => format.inputType === selectedInputType) ??
@@ -70,17 +75,25 @@ export function SupportedFormatsRoute({
             Back to imports
           </Link>
         </Button>
-        <Button asChild>
-          <Link search={newImportSearch} to="/imports/new">
+        {selectedFormat ? (
+          <Button asChild>
+            <Link search={newImportSearch} to="/imports/new">
+              <Upload aria-hidden="true" data-icon="inline-start" />
+              New import
+            </Link>
+          </Button>
+        ) : (
+          <Button disabled>
             <Upload aria-hidden="true" data-icon="inline-start" />
             New import
-          </Link>
-        </Button>
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <VpwPanel className="flex min-w-0 flex-col gap-4">
           <SupportedFormatsFilters
+            categories={categories}
             category={category}
             onCategoryChange={setCategory}
             onQueryChange={setQuery}
