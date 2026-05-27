@@ -1,5 +1,6 @@
 import type {
   ProviderStatusPublic,
+  UploadPolicyPublic,
   WorkbenchStatus,
 } from "@/api-client"
 import type { VpwBadgeTone } from "@/components/vpw"
@@ -11,6 +12,8 @@ export type SettingsWorkbenchProps = {
   providerStatus: ProviderStatusPublic | null
   providerStatusError: string
   providerStatusLoading: boolean
+  uploadPolicy: UploadPolicyPublic | null
+  capabilitiesError: string
   selectedProjectId: string
   status: WorkbenchStatus | null
   statusError: string
@@ -132,6 +135,8 @@ export function safeDiagnosticsCode({
 
 export function providerConfigRows(
   providerStatus: ProviderStatusPublic | null,
+  uploadPolicy: UploadPolicyPublic | null,
+  capabilitiesError = "",
 ): ProviderConfigRow[] {
   const nvd = sourceAvailability(providerStatus, "nvd")
   const epss = sourceAvailability(providerStatus, "epss")
@@ -177,10 +182,26 @@ export function providerConfigRows(
     {
       id: "upload-size",
       setting: "Max upload size",
-      value: "Not exposed",
-      detail:
-        "The current settings API does not publish upload limit metadata.",
-      tone: "neutral",
+      value: uploadPolicy
+        ? formatByteLimit(uploadPolicy.max_upload_bytes)
+        : "Unavailable",
+      detail: capabilitiesError || "Maximum accepted aggregate import upload size.",
+      tone: uploadPolicy ? "info" : "warning",
+    },
+    {
+      id: "request-body-size",
+      setting: "Max request body size",
+      value: uploadPolicy
+        ? formatByteLimit(uploadPolicy.max_request_body_bytes)
+        : "Unavailable",
+      detail: capabilitiesError || "Maximum accepted non-upload API request body size.",
+      tone: uploadPolicy ? "info" : "warning",
     },
   ]
+}
+
+export function formatByteLimit(value: number) {
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`
 }

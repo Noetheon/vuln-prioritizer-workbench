@@ -32,15 +32,40 @@ from utils.workbench_env import (
     local_api_headers,
 )
 
+from app.core.config import Settings
 from app.main import app
+from app.models.reports import REPORT_FORMAT_VALUES
 from app.services import (
     MarkdownReportFinding,
     MarkdownReportPayload,
     render_html_executive_report,
     render_sarif_report,
 )
-from app.services.report_contracts import CSV_FINDINGS_COLUMNS
+from app.services.report_contracts import (
+    CSV_FINDINGS_COLUMNS,
+    REPORT_CONTENT_TYPE_CSV,
+    REPORT_CONTENT_TYPE_HTML,
+    REPORT_CONTENT_TYPE_JSON,
+    REPORT_CONTENT_TYPE_MARKDOWN,
+    REPORT_CONTENT_TYPE_SARIF,
+    REPORT_CONTENT_TYPE_ZIP,
+    REPORT_FILENAME_ANALYSIS_JSON,
+    REPORT_FILENAME_ATTACK_NAVIGATOR,
+    REPORT_FILENAME_EVIDENCE_BUNDLE,
+    REPORT_FILENAME_EXECUTIVE_HTML,
+    REPORT_FILENAME_FINDINGS_CSV,
+    REPORT_FILENAME_SARIF_RESULTS,
+    REPORT_FILENAME_TECHNICAL_MARKDOWN,
+    REPORT_KIND_ANALYSIS_JSON,
+    REPORT_KIND_ATTACK_NAVIGATOR,
+    REPORT_KIND_EVIDENCE_BUNDLE,
+    REPORT_KIND_EXECUTIVE_HTML,
+    REPORT_KIND_FINDINGS_CSV,
+    REPORT_KIND_SARIF_RESULTS,
+    REPORT_KIND_TECHNICAL_MARKDOWN,
+)
 from app.services.report_sarif_validation import validate_sarif_payload
+from app.services.workbench_capabilities import build_workbench_capabilities
 from vuln_prioritizer.sarif_contract import (
     SARIF_FINGERPRINT_KEY,
     SARIF_WORKBENCH_FINGERPRINT_KEY,
@@ -81,6 +106,51 @@ def test_vpw049_openapi_exposes_report_format_contract() -> None:
         "kev",
         "no-coverage",
     ]
+
+
+def test_workbench_report_capabilities_match_report_create_and_artifact_contracts() -> None:
+    expected_contracts = {
+        "markdown": (
+            REPORT_KIND_TECHNICAL_MARKDOWN,
+            REPORT_FILENAME_TECHNICAL_MARKDOWN,
+            REPORT_CONTENT_TYPE_MARKDOWN,
+        ),
+        "html": (
+            REPORT_KIND_EXECUTIVE_HTML,
+            REPORT_FILENAME_EXECUTIVE_HTML,
+            REPORT_CONTENT_TYPE_HTML,
+        ),
+        "json": (
+            REPORT_KIND_ANALYSIS_JSON,
+            REPORT_FILENAME_ANALYSIS_JSON,
+            REPORT_CONTENT_TYPE_JSON,
+        ),
+        "csv": (REPORT_KIND_FINDINGS_CSV, REPORT_FILENAME_FINDINGS_CSV, REPORT_CONTENT_TYPE_CSV),
+        "zip": (
+            REPORT_KIND_EVIDENCE_BUNDLE,
+            REPORT_FILENAME_EVIDENCE_BUNDLE,
+            REPORT_CONTENT_TYPE_ZIP,
+        ),
+        "attack-navigator": (
+            REPORT_KIND_ATTACK_NAVIGATOR,
+            REPORT_FILENAME_ATTACK_NAVIGATOR,
+            REPORT_CONTENT_TYPE_JSON,
+        ),
+        "sarif": (
+            REPORT_KIND_SARIF_RESULTS,
+            REPORT_FILENAME_SARIF_RESULTS,
+            REPORT_CONTENT_TYPE_SARIF,
+        ),
+    }
+    capabilities = build_workbench_capabilities(Settings())
+
+    assert [capability.format for capability in capabilities.report_formats] == list(
+        REPORT_FORMAT_VALUES
+    )
+    assert {
+        capability.format: (capability.kind, capability.filename, capability.content_type)
+        for capability in capabilities.report_formats
+    } == expected_contracts
 
 
 def test_vpw048_markdown_report_create_downloads_for_completed_run(

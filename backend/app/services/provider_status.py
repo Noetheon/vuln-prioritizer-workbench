@@ -16,6 +16,10 @@ from app.models import (
     ProviderUpdateJobPublic,
 )
 from app.models.base import get_datetime_utc
+from app.services.run_workflow_metadata import (
+    workflow_error_payload_or_empty,
+    workflow_summary_payload_or_empty,
+)
 from vuln_prioritizer.security_redaction import redact_value
 
 PROVIDER_SOURCES = ("nvd", "epss", "kev")
@@ -101,7 +105,7 @@ def _provider_update_job(
 ) -> ProviderUpdateJobPublic | None:
     if run is None:
         return None
-    metadata = _dict_value(run.summary_json) or _dict_value(run.error_json)
+    metadata = workflow_summary_payload_or_empty(run) or workflow_error_payload_or_empty(run)
     public_metadata = _provider_public_metadata(metadata, production_safe=production_safe)
     return ProviderUpdateJobPublic(
         id=str(run.id),
@@ -290,7 +294,7 @@ def _failed_update_error(run: AnalysisRun | None) -> str | None:
         return None
     if run.error_message:
         return run.error_message
-    error_json = _dict_value(run.error_json)
+    error_json = workflow_error_payload_or_empty(run)
     for key in ("detail", "message", "error", "last_error"):
         value = _string_or_none(error_json.get(key))
         if value is not None:

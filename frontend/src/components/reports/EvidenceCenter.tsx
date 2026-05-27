@@ -4,12 +4,14 @@ import type {
   ProjectDecisionSummaryPublic,
   ProjectPublic,
   ProviderStatusPublic,
+  ReportFormatCapabilityPublic,
   ReportPublic,
   ReportVerificationPublic,
 } from "@/api-client"
 import { useState } from "react"
 import type { ReportFormat } from "@/lib/report-format"
 import { VpwPageStack } from "@/components/vpw"
+import { artifactCardsFromCapabilities } from "@/lib/report-capability-catalog"
 import { ActionStatus, RunContext } from "./EvidenceCenterSections"
 import { EvidenceCenterTabs } from "./EvidenceCenterTabs"
 import { EvidenceGenerateDrawer } from "./EvidenceGenerateDrawer"
@@ -38,6 +40,9 @@ export type EvidenceCenterProps = {
   verificationReportTarget: ReportPublic | null
   verificationLoading: boolean
   reportActionsEnabled: boolean
+  reportFormatCapabilities: readonly ReportFormatCapabilityPublic[]
+  capabilitiesError: string
+  capabilitiesLoading: boolean
   activeReportFormat: string
   reportActionError: string
   reportActionMessage: string
@@ -48,6 +53,8 @@ export type EvidenceCenterProps = {
 
 export function EvidenceCenter({
   activeReportFormat,
+  capabilitiesError,
+  capabilitiesLoading,
   onCreateReport,
   onDownloadReport,
   onProjectChange,
@@ -62,6 +69,7 @@ export function EvidenceCenter({
   reportActionError,
   reportActionMessage,
   reportActionsEnabled,
+  reportFormatCapabilities,
   reports,
   reportsError,
   reportsLoading,
@@ -78,7 +86,14 @@ export function EvidenceCenter({
   verificationReportTarget,
 }: EvidenceCenterProps) {
   const [generateDrawerOpen, setGenerateDrawerOpen] = useState(false)
+  const artifactCards = artifactCardsFromCapabilities(reportFormatCapabilities)
+  const capabilitiesEmpty =
+    !capabilitiesLoading && !capabilitiesError && artifactCards.length === 0
   const combinedError = [
+    capabilitiesError,
+    capabilitiesEmpty
+      ? "Workbench capabilities unavailable. Report generation is disabled until runtime metadata loads."
+      : "",
     projectListError,
     runsError,
     runDetailError,
@@ -88,6 +103,11 @@ export function EvidenceCenter({
     .filter(Boolean)
     .join(" ")
   const hasDecisionContext = selectedReportRun !== null
+  const runtimeReportActionsEnabled =
+    reportActionsEnabled &&
+    !capabilitiesLoading &&
+    !capabilitiesError &&
+    artifactCards.length > 0
 
   return (
     <VpwPageStack className="evidence-center">
@@ -99,7 +119,7 @@ export function EvidenceCenter({
         projectRuns={projectRuns}
         projects={projects}
         projectListLoading={projectListLoading}
-        reportActionsEnabled={reportActionsEnabled}
+        reportActionsEnabled={runtimeReportActionsEnabled}
         runsLoading={runsLoading}
         selectedProject={selectedProject}
         selectedProjectId={selectedProjectId}
@@ -112,6 +132,7 @@ export function EvidenceCenter({
 
       <EvidenceCenterTabs
         activeReportFormat={activeReportFormat}
+        artifactCards={artifactCards}
         hasDecisionContext={hasDecisionContext}
         onCreateReport={onCreateReport}
         onDownloadReport={onDownloadReport}
@@ -119,7 +140,7 @@ export function EvidenceCenter({
         onVerifyReport={onVerifyReport}
         projectSummary={projectSummary}
         providerStatus={providerStatus}
-        reportActionsEnabled={reportActionsEnabled}
+        reportActionsEnabled={runtimeReportActionsEnabled}
         reports={reports}
         reportsLoading={reportsLoading}
         selectedProject={selectedProject}
@@ -131,12 +152,13 @@ export function EvidenceCenter({
       />
       <EvidenceGenerateDrawer
         activeReportFormat={activeReportFormat}
+        artifactCards={artifactCards}
         onCreateReport={onCreateReport}
         onOpenChange={setGenerateDrawerOpen}
         open={generateDrawerOpen}
         project={selectedProject}
         providerStatus={providerStatus}
-        reportActionsEnabled={reportActionsEnabled}
+        reportActionsEnabled={runtimeReportActionsEnabled}
         reports={reports}
         selectedReportRun={selectedReportRun}
         selectedRunSummary={selectedRunSummary}

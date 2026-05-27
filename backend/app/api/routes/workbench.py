@@ -15,6 +15,7 @@ from app.models import (
     DemoWorkspaceCreate,
     DemoWorkspacePublic,
     DemoWorkspaceStatusPublic,
+    WorkbenchCapabilitiesPublic,
     WorkbenchHealth,
     WorkbenchStatus,
 )
@@ -29,6 +30,7 @@ from app.services.demo_workspace import (
 from app.services.import_errors import ImportServiceError
 from app.services.report_artifacts import build_report_public
 from app.services.report_models import ReportGenerationError
+from app.services.workbench_capabilities import build_workbench_capabilities
 from vuln_prioritizer import __version__
 
 router = APIRouter(prefix="/workbench", tags=["workbench"])
@@ -63,6 +65,16 @@ def workbench_status(
         api_docs_enabled=active_settings.api_docs_enabled,
         api_docs_path="/docs" if active_settings.api_docs_enabled else None,
     )
+
+
+@router.get("/capabilities", response_model=WorkbenchCapabilitiesPublic)
+def workbench_capabilities(
+    request: Request,
+    local_actor: LocalActor,
+) -> WorkbenchCapabilitiesPublic:
+    """Return the versioned Workbench runtime capability contract."""
+    _ = local_actor
+    return build_workbench_capabilities(_request_settings(request))
 
 
 @router.get("/demo", response_model=DemoWorkspaceStatusPublic)

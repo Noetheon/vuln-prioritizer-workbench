@@ -10,6 +10,7 @@ import type {
   WaiverCreate,
   WaiverPublic,
   WaiverUpdate,
+  WorkbenchCapabilitiesPublic,
 } from "../src/api-client"
 
 type MockProject = {
@@ -51,6 +52,8 @@ type MockFinding = {
 
 type RouteWorkbenchShellOptions = {
   demoWorkspaceEnabled?: boolean
+  capabilities?: WorkbenchCapabilitiesPublic
+  capabilitiesError?: boolean
   apiDocsEnabled?: boolean
   apiDocsPath?: string | null
   assets?: AssetPublic[]
@@ -65,6 +68,158 @@ type RouteWorkbenchShellOptions = {
   runSummaries?: Record<string, AnalysisRunSummaryPublic>
   runs?: AnalysisRunPublic[]
   waivers?: WaiverPublic[]
+}
+
+export const mockWorkbenchCapabilities: WorkbenchCapabilitiesPublic = {
+  schema_version: "workbench-capabilities.v1",
+  import_formats: [
+    importCapability("cve-list", "CVE list", "simple", "Simple inputs", [".txt", ".csv"]),
+    importCapability("generic-occurrence-csv", "Generic occurrence CSV", "simple", "Simple inputs", [".csv"]),
+    importCapability("trivy-json", "Trivy JSON", "scanner", "Scanner exports", [".json"]),
+    importCapability("grype-json", "Grype JSON", "scanner", "Scanner exports", [".json"]),
+    importCapability(
+      "cyclonedx-json",
+      "CycloneDX SBOM JSON",
+      "sbom",
+      "SBOM / dependency data",
+      [".json"],
+      {
+        contextSupport: "component-vulnerability-context",
+        notes: ["plain SBOM-only BOM without vulnerabilities is not sufficient"],
+      },
+    ),
+    importCapability("spdx-json", "SPDX SBOM JSON", "sbom", "SBOM / dependency data", [".json"]),
+    importCapability("dependency-check-json", "Dependency-Check JSON", "scanner", "Scanner exports", [".json"]),
+    importCapability("github-alerts-json", "GitHub alerts JSON", "scanner", "Scanner exports", [".json"]),
+    importCapability(
+      "nessus-xml",
+      "Nessus XML",
+      "network",
+      "Network scanner exports",
+      [".nessus", ".xml"],
+      {
+        notes: ["Parsed locally from supplied exports; Workbench does not scan networks."],
+      },
+    ),
+    importCapability(
+      "openvas-xml",
+      "OpenVAS XML",
+      "network",
+      "Network scanner exports",
+      [".xml"],
+      {
+        notes: ["Parsed locally from supplied exports; Workbench does not scan networks."],
+      },
+    ),
+  ],
+  report_formats: [
+    reportCapability("markdown", "Markdown", "Technical Markdown Report", "Generate Markdown", "technical-report.md", "technical-markdown", "text/markdown; charset=utf-8"),
+    reportCapability("html", "HTML", "Executive HTML Report", "Generate executive HTML", "executive-report.html", "executive-html", "text/html; charset=utf-8"),
+    reportCapability("json", "JSON", "JSON Findings Export", "Export analysis JSON", "analysis-result.json", "analysis-json", "application/json"),
+    reportCapability("csv", "CSV", "CSV Findings Export", "Export CSV findings", "findings.csv", "findings-csv", "text/csv; charset=utf-8"),
+    reportCapability("zip", "Evidence ZIP", "Evidence ZIP Bundle", "Build evidence ZIP", "evidence-bundle.zip", "evidence-bundle", "application/zip"),
+    reportCapability("attack-navigator", "ATT&CK Navigator", "ATT&CK Navigator Layer", "Export Navigator", "attack-navigator-layer.json", "attack-navigator", "application/json"),
+    reportCapability("sarif", "SARIF", "SARIF Export", "Export SARIF", "results.sarif", "sarif-results", "application/sarif+json"),
+  ],
+  upload_policy: {
+    import_request_overhead_bytes: 65536,
+    max_request_body_bytes: 2 * 1024 * 1024,
+    max_upload_bytes: 25 * 1024 * 1024,
+  },
+  sidecar_uploads: [
+    {
+      accepted_mime_types: ["text/csv"],
+      description: "Optional CSV overlay with asset context.",
+      extensions: [".csv"],
+      form_field: "asset_context_file",
+      id: "asset-context",
+      label: "Asset context CSV",
+    },
+    {
+      accepted_mime_types: ["application/json"],
+      description: "Optional VEX/OpenVEX statements.",
+      extensions: [".json"],
+      form_field: "vex_file",
+      id: "vex",
+      label: "VEX JSON",
+    },
+  ],
+  attack_sources: [
+    {
+      detail: "Do not enrich this import with ATT&CK mappings.",
+      label: "No ATT&CK mapping",
+      value: "none",
+    },
+    {
+      detail: "Use a reviewed CTID JSON mapping file.",
+      label: "CTID JSON",
+      requires_mapping_file: true,
+      supports_technique_metadata_file: true,
+      value: "ctid-json",
+    },
+    {
+      detail: "Use a reviewed local curated mapping file.",
+      label: "Local curated",
+      requires_mapping_file: true,
+      supports_technique_metadata_file: true,
+      value: "local-curated",
+    },
+  ],
+}
+
+function importCapability(
+  inputType: string,
+  label: string,
+  category: string,
+  categoryLabel: string,
+  extensions: string[],
+  options: {
+    contextSupport?: string
+    notes?: string[]
+  } = {},
+): NonNullable<WorkbenchCapabilitiesPublic["import_formats"]>[number] {
+  return {
+    accepted_mime_types: extensions.includes(".json")
+      ? ["application/json"]
+      : extensions.includes(".xml") || extensions.includes(".nessus")
+        ? ["application/xml", "text/xml"]
+        : ["text/plain", "text/csv"],
+    best_for: `${label} evidence.`,
+    category,
+    category_label: categoryLabel,
+    context_support: options.contextSupport ?? "component-context",
+    example_snippet: label,
+    expected_shape: `${label} runtime evidence.`,
+    extensions,
+    input_type: inputType,
+    label,
+    minimum_fields: [inputType === "cve-list" ? "CVE identifier" : "vulnerability records"],
+    notes: options.notes ?? [],
+    optional_fields: [],
+    short_description: `${label} import evidence.`,
+  }
+}
+
+function reportCapability(
+  format: string,
+  label: string,
+  title: string,
+  actionLabel: string,
+  filename: string,
+  kind: string,
+  contentType: string,
+): NonNullable<WorkbenchCapabilitiesPublic["report_formats"]>[number] {
+  return {
+    action_label: actionLabel,
+    audience: "Workbench",
+    content_type: contentType,
+    detail: `${title} artifact.`,
+    filename,
+    format,
+    kind,
+    label,
+    title,
+  }
 }
 
 export const mockProject: MockProject = {
@@ -154,6 +309,8 @@ export async function routeWorkbenchShell(
   const runSummaries = options.runSummaries ?? {}
   const findingsDelayMs = options.findingsDelayMs ?? 0
   const demoWorkspaceEnabled = options.demoWorkspaceEnabled ?? false
+  const capabilities = options.capabilities ?? mockWorkbenchCapabilities
+  const capabilitiesError = options.capabilitiesError ?? false
   const apiDocsEnabled = options.apiDocsEnabled ?? true
   const apiDocsPath = options.apiDocsPath ?? "/docs"
   const onFindingsRequest = options.onFindingsRequest
@@ -189,6 +346,19 @@ export async function routeWorkbenchShell(
       }),
     }),
   )
+  await page.route("**/api/v1/workbench/capabilities", (route) => {
+    if (capabilitiesError) {
+      return route.fulfill({
+        contentType: "application/json",
+        status: 503,
+        body: JSON.stringify({ detail: "Capabilities unavailable" }),
+      })
+    }
+    return route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(capabilities),
+    })
+  })
   await page.route("**/api/v1/workbench/demo", (route) =>
     route.fulfill({
       contentType: "application/json",

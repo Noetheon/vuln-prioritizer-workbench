@@ -17,6 +17,7 @@ from utils.workbench_env import (
     create_project_via_api,
     local_api_headers,
 )
+from utils.workbench_workflow_contracts import workflow_metadata
 
 from app import models as app_models
 
@@ -45,51 +46,44 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert payload["filename"] == "Team_Scan__prod_.txt"
     assert payload["status"] == "succeeded"
     assert payload["workflow_schema_version"] == "run-workflow-summary.v1"
-    assert payload["summary_json"]["schema_version"] == "run-workflow-summary.v1"
+    assert payload["input_sha256"] == expected_sha256
+    assert payload["occurrence_count"] == 2
+    assert payload["finding_count"] == 2
+    assert payload["created_findings"] == 2
+    assert payload["updated_findings"] == 0
+    assert payload["ignored_lines"] == 0
     assert payload["input_upload"]["sha256"] == expected_sha256
     assert payload["input_upload"]["storage_ref"] == (
         f"{project['id']}/{payload['id']}/Team_Scan__prod_.txt"
     )
     assert payload["import_job"]["status"] == "succeeded"
     assert payload["dedup_summary"]["created_findings"] == 2
-    assert payload["summary_json"]["input_sha256"] == expected_sha256
-    assert payload["summary_json"]["occurrence_count"] == 2
-    assert payload["summary_json"]["finding_count"] == 2
-    assert payload["summary_json"]["dedup_summary"]["created_findings"] == 2
-    assert payload["summary_json"]["dedup_summary"]["reused_findings"] == 0
+    assert payload["dedup_summary"]["reused_findings"] == 0
     assert payload["provider_snapshot_id"]
-    assert payload["summary_json"]["provider_snapshot_id"] == payload["provider_snapshot_id"]
-    assert payload["summary_json"]["analysis_service"]["pipeline"] == (
-        "parse-persist-enrich-score-explain"
-    )
-    assert payload["summary_json"]["counts_by_priority"] == {
+    assert payload["counts_by_priority"] == {
         "Critical": 2,
         "High": 0,
         "Medium": 0,
         "Low": 0,
     }
-    assert payload["summary_json"]["kev_hits"] >= 1
-    assert payload["summary_json"]["created_findings"] == 2
-    assert payload["summary_json"]["updated_findings"] == 0
-    assert payload["summary_json"]["ignored_lines"] == 0
-    assert payload["summary_json"]["input_upload"]["sha256"] == expected_sha256
-    assert payload["summary_json"]["input_upload"]["original_filename"] == "Team Scan (prod).txt"
-    assert payload["summary_json"]["input_upload"]["stored_filename"] == "Team_Scan__prod_.txt"
-    stored_ref = payload["summary_json"]["input_upload"]["path"]
+    assert payload["kev_hits"] >= 1
+    assert payload["input_upload"]["sha256"] == expected_sha256
+    assert payload["input_upload"]["original_filename"] == "Team Scan (prod).txt"
+    assert payload["input_upload"]["stored_filename"] == "Team_Scan__prod_.txt"
+    stored_ref = payload["input_upload"]["path"]
     assert stored_ref == f"{project['id']}/{payload['id']}/Team_Scan__prod_.txt"
-    assert payload["summary_json"]["input_upload"]["storage_ref"] == stored_ref
+    assert payload["input_upload"]["storage_ref"] == stored_ref
     assert not Path(stored_ref).is_absolute()
     stored_path = upload_dir / stored_ref
     assert stored_path == upload_dir / project["id"] / payload["id"] / "Team_Scan__prod_.txt"
     assert stored_path.read_bytes() == content
-    assert payload["summary_json"]["import_job"]["status"] == "succeeded"
-    assert payload["summary_json"]["import_job"]["execution_mode"] == "request"
-    assert [item["status"] for item in payload["summary_json"]["import_job"]["status_history"]] == [
+    assert payload["import_job"]["status"] == "succeeded"
+    assert payload["import_job"]["execution_mode"] == "request"
+    assert [item["status"] for item in payload["import_job"]["status_history"]] == [
         "pending",
         "running",
         "succeeded",
     ]
-    assert payload["summary_json"]["parse_errors"] == []
 
     runs = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/runs/",
@@ -143,13 +137,21 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert summary_payload["occurrence_count"] == 2
     assert summary_payload["finding_count"] == 2
     assert summary_payload["provider_snapshot_id"] == payload["provider_snapshot_id"]
-    assert summary_payload["counts_by_priority"] == payload["summary_json"]["counts_by_priority"]
-    assert summary_payload["kev_hits"] == payload["summary_json"]["kev_hits"]
+    assert summary_payload["counts_by_priority"] == payload["counts_by_priority"]
+    assert summary_payload["kev_hits"] == payload["kev_hits"]
     assert summary_payload["parse_errors"] == []
     assert summary_payload["workflow_schema_version"] == "run-workflow-summary.v1"
     assert summary_payload["input_upload"]["sha256"] == expected_sha256
     assert summary_payload["import_job"]["status"] == "succeeded"
     assert summary_payload["dedup_summary"]["reused_findings"] == 0
+
+    metadata_payload = workflow_metadata(workbench_api_env, payload["id"], headers=headers)
+    assert metadata_payload["summary"]["schema_version"] == "run-workflow-summary.v1"
+    assert metadata_payload["summary"]["provider_snapshot_id"] == payload["provider_snapshot_id"]
+    assert metadata_payload["summary"]["analysis_service"]["pipeline"] == (
+        "parse-persist-enrich-score-explain"
+    )
+    assert metadata_payload["error"] is None
 
 
 @pytest.mark.parametrize(

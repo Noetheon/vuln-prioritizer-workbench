@@ -1,4 +1,4 @@
-import type { ProviderStatusPublic } from "@/api-client"
+import type { ProviderStatusPublic, UploadPolicyPublic } from "@/api-client"
 import { VpwSection } from "@/components/vpw"
 import { SettingsDiagnosticsPanel } from "./SettingsDiagnosticsPanel"
 import { SettingsRuntimeProviderPanel } from "./SettingsRuntimeProviderPanel"
@@ -13,13 +13,21 @@ type SettingsDiagnosticsProps = Pick<
 >
 
 export function SettingsRuntimeProviders({
+  capabilitiesError,
   providerStatus,
+  uploadPolicy,
 }: {
+  capabilitiesError: string
   providerStatus: ProviderStatusPublic | null
+  uploadPolicy: UploadPolicyPublic | null
 }) {
   return (
     <VpwSection aria-label="Runtime and providers">
-      <SettingsRuntimeProviderPanel providerStatus={providerStatus} />
+      <SettingsRuntimeProviderPanel
+        capabilitiesError={capabilitiesError}
+        providerStatus={providerStatus}
+        uploadPolicy={uploadPolicy}
+      />
     </VpwSection>
   )
 }

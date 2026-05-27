@@ -7,7 +7,6 @@ from typing import Any, NoReturn
 
 from sqlmodel import Session
 
-from app.contracts.run_workflow import merge_workflow_error, merge_workflow_summary
 from app.core.local_actor import LocalWorkbenchActor
 from app.models import AnalysisRun, AnalysisRunStatus
 from app.repositories import RunRepository
@@ -20,6 +19,11 @@ from app.services.import_execution_summary import (
 )
 from app.services.import_uploads import (
     sanitize_parser_error_message as _sanitize_parser_error_message,
+)
+from app.services.run_workflow_metadata import (
+    merge_error_payload,
+    merge_summary_payload,
+    workflow_summary_payload,
 )
 
 
@@ -143,7 +147,7 @@ def _finish_failed_parse_run(
         run.id,
         status=AnalysisRunStatus.FAILED,
         error_message=_sanitize_parser_error_message(str(exc)),
-        error_json=merge_workflow_error(
+        error_json=merge_error_payload(
             parse_errors=parse_errors,
             created_findings=0,
             updated_findings=0,
@@ -155,8 +159,8 @@ def _finish_failed_parse_run(
                 execution_mode=execution_mode,
             ),
         ),
-        summary_json=merge_workflow_summary(
-            run.summary_json,
+        summary_json=merge_summary_payload(
+            workflow_summary_payload(run),
             import_job=_job_payload(
                 job_id=job_id,
                 status="failed",
@@ -204,7 +208,7 @@ def _finish_failed_sidecar_run(
         run.id,
         status=AnalysisRunStatus.FAILED,
         error_message=str(sidecar_error["message"]),
-        error_json=merge_workflow_error(
+        error_json=merge_error_payload(
             **{error_key: sidecar_error},
             created_findings=0,
             updated_findings=0,
@@ -216,8 +220,8 @@ def _finish_failed_sidecar_run(
                 execution_mode=execution_mode,
             ),
         ),
-        summary_json=merge_workflow_summary(
-            run.summary_json,
+        summary_json=merge_summary_payload(
+            workflow_summary_payload(run),
             import_job=_job_payload(
                 job_id=job_id,
                 status="failed",

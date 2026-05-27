@@ -55,12 +55,19 @@ export function NewImportRoute(props: NewImportRouteProps) {
   const stepContentRef = useRef<HTMLDivElement | null>(null)
   const initialStepRenderRef = useRef(true)
   const format = selectedFormat(props.supportedFormats, props.importWizard.inputType)
-  const metadataFormat = getImportFormat(props.importWizard.inputType)
+  const metadataFormat = getImportFormat(
+    props.supportedFormats,
+    props.importWizard.inputType,
+  )
   const projectSearch = selectedProjectRouteSearch(props.selectedProjectId)
   const importFailed = Boolean(props.importError)
+  const capabilitiesUnavailable =
+    Boolean(props.capabilitiesError) ||
+    (!props.capabilitiesLoading && props.supportedFormats.length === 0)
   const readiness = useMemo(() => {
     const baseChecks = buildImportReadinessChecks({
       evidenceFile: props.importWizard.file,
+      formats: props.supportedFormats,
       inputType: props.importWizard.inputType,
       parserPreview,
       projectId: props.selectedProjectId,
@@ -87,17 +94,21 @@ export function NewImportRoute(props: NewImportRouteProps) {
     props.importWizard.vexFile,
     props.providerStatus?.status,
     props.selectedProjectId,
+    props.supportedFormats,
   ])
-  const canStartImport = !readinessBlocksImport(readiness)
-  const continueDisabledReason = disabledReasonForStep({
-    canStartImport,
-    importLoading: props.importLoading,
-    parserPreview,
-    selectedProjectId: props.selectedProjectId,
-    step,
-    inputType: props.importWizard.inputType,
-    evidenceFile: props.importWizard.file,
-  })
+  const canStartImport = !capabilitiesUnavailable && !readinessBlocksImport(readiness)
+  const continueDisabledReason = capabilitiesUnavailable
+    ? props.capabilitiesError ||
+      "Runtime capabilities are required before imports can start."
+    : disabledReasonForStep({
+        canStartImport,
+        importLoading: props.importLoading,
+        parserPreview,
+        selectedProjectId: props.selectedProjectId,
+        step,
+        inputType: props.importWizard.inputType,
+        evidenceFile: props.importWizard.file,
+      })
 
   useEffect(() => {
     let cancelled = false
@@ -107,6 +118,7 @@ export function NewImportRoute(props: NewImportRouteProps) {
         : initialParserPreview(),
     )
     void buildParserPreview(
+      props.supportedFormats,
       props.importWizard.file,
       props.importWizard.inputType,
     ).then((preview) => {
@@ -115,7 +127,7 @@ export function NewImportRoute(props: NewImportRouteProps) {
     return () => {
       cancelled = true
     }
-  }, [props.importWizard.file, props.importWizard.inputType])
+  }, [props.importWizard.file, props.importWizard.inputType, props.supportedFormats])
 
   useEffect(() => {
     if (step < 1) return

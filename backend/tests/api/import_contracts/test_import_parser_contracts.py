@@ -9,6 +9,7 @@ from _input_fixture_contracts import load_input_fixture_contracts
 from app.importers import ImporterParseError, build_importer_registry
 from app.importers.contracts import NormalizedOccurrence
 from app.importers.offline_loader import DEFAULT_IMPORT_INPUT_TYPES
+from app.services.workbench_capabilities import IMPORT_FORMAT_CAPABILITIES
 from vuln_prioritizer.inputs.loader import InputLoader
 from vuln_prioritizer.options import InputFormat
 
@@ -142,6 +143,15 @@ def test_workbench_importer_registry_matches_core_inputloader_formats() -> None:
 
     assert set(DEFAULT_IMPORT_INPUT_TYPES) == supported_cli_upload_formats
     assert set(build_importer_registry().list_input_types()) == supported_cli_upload_formats
+
+
+def test_workbench_capabilities_match_active_importer_registry() -> None:
+    capability_input_types = {capability.input_type for capability in IMPORT_FORMAT_CAPABILITIES}
+
+    assert capability_input_types == set(build_importer_registry().list_input_types())
+    assert tuple(capability.input_type for capability in IMPORT_FORMAT_CAPABILITIES) == tuple(
+        DEFAULT_IMPORT_INPUT_TYPES
+    )
 
 
 @pytest.mark.parametrize(

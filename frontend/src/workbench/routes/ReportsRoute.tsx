@@ -25,6 +25,9 @@ function ReportsRouteContent() {
   const location = useLocation()
   const navigate = useNavigate()
   const {
+    capabilities,
+    capabilitiesError,
+    capabilitiesLoading,
     projectListLoading,
     projectListError,
     projects,
@@ -42,7 +45,9 @@ function ReportsRouteContent() {
   const selectedReportRun =
     projectRuns.find((run) => run.id === selectedRunId) ?? null
   const reportsState = useReportsRouteState({
+    capabilitiesError,
     currentPath: "/reports",
+    reportFormatCapabilities: capabilities?.report_formats ?? [],
     selectedReportRun,
     selectedRunId,
   })
@@ -95,6 +100,8 @@ function ReportsRouteContent() {
   return (
     <EvidenceCenter
       activeReportFormat={reportsState.activeReportFormat}
+      capabilitiesError={capabilitiesError}
+      capabilitiesLoading={capabilitiesLoading}
       onCreateReport={reportsState.createReport}
       onDownloadReport={reportsState.downloadReport}
       onProjectChange={handleProjectChange}
@@ -109,6 +116,7 @@ function ReportsRouteContent() {
       reportActionError={reportsState.reportActionError}
       reportActionMessage={reportsState.reportActionMessage}
       reportActionsEnabled={reportsState.reportActionsEnabled}
+      reportFormatCapabilities={capabilities?.report_formats ?? []}
       reports={reportsState.reports}
       reportsError={reportsState.reportsError}
       reportsLoading={reportsState.reportsLoading}

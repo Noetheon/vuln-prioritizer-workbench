@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import type {
   AnalysisRunPublic,
   AnalysisRunSummaryPublic,
@@ -17,11 +17,13 @@ import {
   VpwPanel,
   VpwSectionHeader,
 } from "@/components/vpw"
+import {
+  type ArtifactCard,
+  artifactCardForFormat,
+} from "@/lib/report-capability-catalog"
 import type { ReportFormat } from "@/lib/report-format"
 import { runStatusLabel } from "@/lib/risk-format"
 import {
-  ALL_ARTIFACT_FORMATS,
-  artifactCardForFormat,
   attackNavigatorAvailable,
   generatedActionLabel,
   providerSnapshotShortId,
@@ -41,6 +43,7 @@ type EvidenceGenerateDrawerProps = {
   reports: ReportPublic[]
   selectedReportRun: AnalysisRunPublic | null
   selectedRunSummary: AnalysisRunSummaryPublic | null
+  artifactCards: readonly ArtifactCard[]
 }
 
 export function EvidenceGenerateDrawer({
@@ -54,6 +57,7 @@ export function EvidenceGenerateDrawer({
   reports,
   selectedReportRun,
   selectedRunSummary,
+  artifactCards,
 }: EvidenceGenerateDrawerProps) {
   const attackAvailable = attackNavigatorAvailable(
     selectedRunSummary,
@@ -61,21 +65,33 @@ export function EvidenceGenerateDrawer({
   )
   const firstAvailableFormat = useMemo(
     () =>
-      ALL_ARTIFACT_FORMATS.find(
-        (format) => format !== "attack-navigator" || attackAvailable,
-      ) ?? "zip",
-    [attackAvailable],
+      artifactCards.find(
+        (card) => card.reportFormat !== "attack-navigator" || attackAvailable,
+      )?.reportFormat ?? "",
+    [artifactCards, attackAvailable],
   )
   const [selectedFormat, setSelectedFormat] =
-    useState<ReportFormat>(firstAvailableFormat)
-  const selectedReport = reportForFormat(reports, selectedFormat)
+    useState<ReportFormat | "">(firstAvailableFormat)
+  const selectedCard = selectedFormat
+    ? artifactCardForFormat(artifactCards, selectedFormat)
+    : null
+  const selectedReport = selectedFormat
+    ? reportForFormat(reports, selectedFormat)
+    : null
   const canGenerate =
     reportActionsEnabled &&
     !activeReportFormat &&
+    Boolean(selectedFormat) &&
     (selectedFormat !== "attack-navigator" || attackAvailable)
 
+  useEffect(() => {
+    if (!selectedFormat || !artifactCardForFormat(artifactCards, selectedFormat)) {
+      setSelectedFormat(firstAvailableFormat)
+    }
+  }, [artifactCards, firstAvailableFormat, selectedFormat])
+
   async function submitSelection() {
-    if (!canGenerate) return
+    if (!canGenerate || !selectedFormat) return
     await onCreateReport(selectedFormat)
     onOpenChange(false)
   }
@@ -101,7 +117,7 @@ export function EvidenceGenerateDrawer({
           >
             {activeReportFormat === selectedFormat
               ? "Generating"
-              : generatedActionLabel(selectedFormat, selectedReport)}
+              : generatedActionLabel(selectedCard, selectedReport)}
           </Button>
         </div>
       }
@@ -153,8 +169,8 @@ export function EvidenceGenerateDrawer({
             title="Choose artifact type"
           />
           <VpwGrid columns={1}>
-            {ALL_ARTIFACT_FORMATS.map((format) => {
-              const card = artifactCardForFormat(format)
+            {artifactCards.map((card) => {
+              const format = card.reportFormat
               const existing = reportForFormat(reports, format)
               const unavailable =
                 format === "attack-navigator" && !attackAvailable

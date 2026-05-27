@@ -67,8 +67,8 @@ def test_cve_list_import_flows_to_summary_findings_and_core_reports(
     assert import_payload["input_type"] == "cve-list"
     assert import_payload["status"] == "succeeded"
     assert summary["input_upload"]["sha256"] == sha256_bytes(content)
-    assert import_payload["summary_json"]["locked_provider_data"] is True
-    assert import_payload["summary_json"]["provider_snapshot_file"] == "demo_provider_snapshot.json"
+    assert import_payload["locked_provider_data"] is True
+    assert import_payload["provider_snapshot_file"] == "demo_provider_snapshot.json"
     assert summary["provider_snapshot_id"] == import_payload["provider_snapshot_id"]
     assert summary["provider_snapshot_id"]
     assert summary["finding_count"] > 0
@@ -154,7 +154,7 @@ def test_asset_context_import_flows_to_finding_context_and_csv_html_reports(
         context=context,
     )
     assert summary["input_type"] == "generic-occurrence-csv"
-    assert import_payload["summary_json"]["asset_context"]["matched_occurrences"] == 1
+    assert import_payload["asset_context"]["matched_occurrences"] == 1
     assert detail["asset_key"] == "asset-web-1"
     assert detail["owner"] == "team-platform"
     assert detail["business_service"] == "payments"
@@ -222,8 +222,8 @@ def test_openvex_import_flows_to_fixed_status_and_json_markdown_reports(
         findings=findings,
         context=context,
     )
-    assert import_payload["summary_json"]["vex"]["matched_occurrences"] == 1
-    assert import_payload["summary_json"]["suppressed_by_vex"] == 1
+    assert import_payload["vex"]["matched_occurrences"] == 1
+    assert import_payload["suppressed_by_vex"] == 1
     assert detail["status"] == "fixed"
     assert detail["suppressed_by_vex"] is True
     assert detail["explanation_json"]["provenance"]["vex_statuses"] == {"fixed": 1}
@@ -280,7 +280,7 @@ def test_attack_import_flows_to_navigator_and_evidence_bundle(
         context=context,
     )
     assert summary["input_type"] == "trivy-json"
-    assert import_payload["summary_json"]["attack_mapped_cves"] == 1
+    assert import_payload["attack_mapped_cves"] == 1
     assert summary["input_upload"]["sha256"] == sha256_bytes(trivy_bytes)
     assert mapped["attack_context"]["mapped"] is True
     assert mapped["attack_context"]["source"] == "local-curated"

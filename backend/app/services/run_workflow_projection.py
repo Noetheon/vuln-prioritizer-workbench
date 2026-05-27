@@ -4,40 +4,46 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.contracts.run_workflow import (
-    workflow_error_from_legacy,
-    workflow_public_fields,
-    workflow_summary_from_legacy,
-)
 from app.models import (
     AnalysisRun,
     AnalysisRunPublic,
     AnalysisRunSummaryPublic,
+    AnalysisRunWorkflowMetadataPublic,
     ImportParseErrorPublic,
 )
-from vuln_prioritizer.security_redaction import redact_value
+from app.services.run_workflow_metadata import (
+    public_workflow_fields,
+    redact_public_payload,
+    redacted_workflow_error_or_none,
+    redacted_workflow_error_payload,
+    redacted_workflow_summary,
+    redacted_workflow_summary_payload,
+    workflow_error,
+    workflow_summary,
+)
 
 
 def analysis_run_public(run: AnalysisRun) -> AnalysisRunPublic:
     """Return a public analysis-run response with typed workflow metadata."""
-    summary_json = _dict_value(redact_public_payload(run.summary_json or {}))
-    error_json = _dict_value(redact_public_payload(run.error_json or {}))
-    public = AnalysisRunPublic.model_validate(run)
-    return public.model_copy(
-        update={
-            "summary_json": summary_json,
-            "error_json": error_json,
-            "error_message": redact_public_payload(run.error_message),
-            **workflow_public_fields(summary_json, error_json),
-        }
+    return AnalysisRunPublic(
+        id=run.id,
+        project_id=run.project_id,
+        provider_snapshot_id=run.provider_snapshot_id,
+        input_type=run.input_type,
+        filename=run.filename,
+        status=run.status,
+        started_at=run.started_at,
+        finished_at=run.finished_at,
+        error_message=redact_public_payload(run.error_message),
+        **public_workflow_fields(run),
     )
 
 
 def analysis_run_summary_public(run: AnalysisRun) -> AnalysisRunSummaryPublic:
     """Return the typed run-summary response for one visible analysis run."""
-    summary_json = _dict_value(redact_public_payload(run.summary_json or {}))
-    error_json = _dict_value(redact_public_payload(run.error_json or {}))
-    public_fields = workflow_public_fields(summary_json, error_json)
+    summary = workflow_summary(run)
+    error = workflow_error(run)
+    public_fields = public_workflow_fields(run)
     provider_degraded = bool(public_fields.pop("provider_degraded", False))
     for key in (
         "created_findings",
@@ -51,13 +57,12 @@ def analysis_run_summary_public(run: AnalysisRun) -> AnalysisRunSummaryPublic:
         "warnings",
     ):
         public_fields.pop(key, None)
-    workflow_summary = workflow_summary_from_legacy(summary_json)
-    workflow_error = workflow_error_from_legacy(error_json)
+    summary_json = summary.to_legacy_json()
     dedup_summary = _dict_value(summary_json.get("dedup_summary"))
     parse_errors = (
-        workflow_summary.parse_errors
-        or workflow_error.parse_errors
-        or _parse_errors(summary_json, error_json)
+        summary.parse_errors
+        or error.parse_errors
+        or _parse_errors(summary_json, error.to_legacy_json())
     )
     return AnalysisRunSummaryPublic(
         id=run.id,
@@ -94,9 +99,26 @@ def analysis_run_summary_public(run: AnalysisRun) -> AnalysisRunSummaryPublic:
         ],
         analysis_decision_scope=_str_value(summary_json.get("analysis_decision_scope")),
         persistence_scope=_str_value(summary_json.get("persistence_scope")),
-        summary_json=summary_json,
-        error_json=error_json,
         **public_fields,
+    )
+
+
+def analysis_run_workflow_metadata_public(run: AnalysisRun) -> AnalysisRunWorkflowMetadataPublic:
+    """Return the explicit diagnostics view for one run workflow payload."""
+    raw_summary = redacted_workflow_summary_payload(run)
+    raw_error = redacted_workflow_error_payload(run)
+    summary = redacted_workflow_summary(run)
+    error = redacted_workflow_error_or_none(run)
+    return AnalysisRunWorkflowMetadataPublic(
+        id=run.id,
+        project_id=run.project_id,
+        status=run.status,
+        workflow_schema_version=summary.schema_version,
+        workflow_error_schema_version=error.schema_version if error is not None else None,
+        summary=summary,
+        error=error,
+        raw_summary=raw_summary,
+        raw_error=raw_error,
     )
 
 
@@ -139,9 +161,3 @@ def _int_value(value: Any) -> int:
     if isinstance(value, str) and value.isdecimal():
         return int(value)
     return 0
-
-
-def redact_public_payload(value: Any) -> Any:
-    """Redact secrets and local paths from public workflow payload values."""
-    redacted, _paths = redact_value(value)
-    return redacted

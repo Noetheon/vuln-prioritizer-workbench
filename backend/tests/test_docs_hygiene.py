@@ -9,6 +9,9 @@ from typing import Any
 import yaml
 from paths import REPO_ROOT
 
+from app.models.reports import REPORT_FORMAT_VALUES
+from app.services.workbench_capabilities import IMPORT_FORMAT_CAPABILITIES
+
 MKDOCS_FILE = REPO_ROOT / "mkdocs.yml"
 README_FILE = REPO_ROOT / "README.md"
 ARCHIVE_ROOT = REPO_ROOT / "archive"
@@ -128,23 +131,13 @@ def _issue_template_labels() -> set[str]:
 
 
 def _backend_input_format_values() -> set[str]:
-    source = INPUT_OPTIONS_FILE.read_text(encoding="utf-8")
-    body = source.split("class InputFormat", maxsplit=1)[1].split(
-        "PRIORITY_LABELS",
-        maxsplit=1,
-    )[0]
-    values = set(re.findall(r'^\s+\w+\s*=\s*"([^"]+)"', body, flags=re.MULTILINE))
-    values.discard("auto")
-    return values
+    return {capability.input_type for capability in IMPORT_FORMAT_CAPABILITIES}
 
 
-def _frontend_import_format_values() -> set[str]:
+def _frontend_import_format_contract_uses_capability_types() -> None:
     source = FRONTEND_IMPORT_TYPES_FILE.read_text(encoding="utf-8")
-    body = source.split("export type ImportInputType", maxsplit=1)[1].split(
-        "export type ProviderDataMode",
-        maxsplit=1,
-    )[0]
-    return set(re.findall(r'\|\s+"([^"]+)"', body))
+    assert 'ImportFormatCapabilityPublic["input_type"]' in source
+    assert 'export type ImportInputType = "cve-list"' not in source
 
 
 def _support_matrix_input_values() -> set[str]:
@@ -157,10 +150,7 @@ def _support_matrix_input_values() -> set[str]:
 
 
 def _backend_report_format_values() -> set[str]:
-    source = REPORT_MODELS_FILE.read_text(encoding="utf-8")
-    match = re.search(r"format: Literal\[(.*?)\]", source, flags=re.DOTALL)
-    assert match is not None
-    return set(re.findall(r'"([^"]+)"', match.group(1)))
+    return set(REPORT_FORMAT_VALUES)
 
 
 def _frontend_report_format_values() -> set[str]:
@@ -461,10 +451,9 @@ def test_documentation_map_defines_current_and_historical_boundaries() -> None:
 
 def test_support_matrix_tracks_active_import_and_report_formats() -> None:
     backend_inputs = _backend_input_format_values()
-    frontend_inputs = _frontend_import_format_values()
     documented_inputs = _support_matrix_input_values()
 
-    assert backend_inputs == frontend_inputs
+    _frontend_import_format_contract_uses_capability_types()
     assert documented_inputs == backend_inputs
 
     backend_reports = _backend_report_format_values()

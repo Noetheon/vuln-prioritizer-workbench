@@ -1,46 +1,27 @@
-export type ImportInputType =
-  | "cve-list"
-  | "generic-occurrence-csv"
-  | "trivy-json"
-  | "grype-json"
-  | "cyclonedx-json"
-  | "spdx-json"
-  | "dependency-check-json"
-  | "github-alerts-json"
-  | "nessus-xml"
-  | "openvas-xml"
+import type { ImportFormatCapabilityPublic } from "../api-client"
 
-export type ProviderDataMode = "current" | "demo-snapshot" | "custom-snapshot"
-
-export type SupportedFormatCategory =
-  | "simple"
-  | "scanner"
-  | "sbom"
-  | "network"
-
-export type ContextSupport =
-  | "cve-only"
-  | "partial-occurrence-context"
-  | "component-context"
-  | "component-vulnerability-context"
-  | "asset-context-capable"
+export type ImportInputType = ImportFormatCapabilityPublic["input_type"]
+export type SupportedFormatCategory = ImportFormatCapabilityPublic["category"]
+export type ContextSupport = ImportFormatCapabilityPublic["context_support"]
 
 export type SupportedFormat = {
-  inputType: ImportInputType
-  label: string
-  category: SupportedFormatCategory
-  categoryLabel: string
-  extensions: string[]
   acceptedMimeTypes: string[]
-  bestFor: string
-  expectedShape: string
-  minimumFields: string[]
-  optionalFields: string[]
+  bestFor: ImportFormatCapabilityPublic["best_for"]
+  category: SupportedFormatCategory
+  categoryLabel: ImportFormatCapabilityPublic["category_label"]
   contextSupport: ContextSupport
-  exampleSnippet: string
+  exampleSnippet: ImportFormatCapabilityPublic["example_snippet"]
+  expectedShape: ImportFormatCapabilityPublic["expected_shape"]
+  extensions: string[]
+  inputType: ImportInputType
+  label: ImportFormatCapabilityPublic["label"]
+  minimumFields: string[]
   notes: string[]
-  shortDescription: string
+  optionalFields: string[]
+  shortDescription: ImportFormatCapabilityPublic["short_description"]
 }
+
+export type ProviderDataMode = "current" | "demo-snapshot" | "custom-snapshot"
 
 export type ImportDraft = {
   projectId: string | null

@@ -21,6 +21,11 @@ from app.domain.import_asset_context import (
 )
 from app.services import import_uploads as upload_helpers
 from app.services.import_errors import ImportServiceError
+from app.services.workbench_capabilities import (
+    SIDE_CAR_UPLOAD_CAPABILITIES,
+    allowed_upload_mime_hints,
+    allowed_upload_suffixes,
+)
 
 
 def test_import_asset_context_adapter_reuses_core_alias_canonicalization() -> None:
@@ -209,6 +214,14 @@ def test_import_upload_helper_edge_validations_and_safe_names(
         upload_helpers.reject_unsafe_upload_filename("bad\x00name.txt")
     with pytest.raises(ImportServiceError, match="input_type is required"):
         upload_helpers.normalize_input_type("   ")
+
+
+def test_upload_validation_constants_are_derived_from_capabilities() -> None:
+    assert upload_helpers.ALLOWED_UPLOAD_SUFFIXES == allowed_upload_suffixes()
+    assert upload_helpers.ALLOWED_UPLOAD_MIME_HINTS == allowed_upload_mime_hints()
+    assert upload_helpers.SIDE_CAR_UPLOADS_BY_ID == {
+        capability.id: capability for capability in SIDE_CAR_UPLOAD_CAPABILITIES
+    }
 
 
 def test_import_upload_store_rejects_escape_and_cleans_failed_write(

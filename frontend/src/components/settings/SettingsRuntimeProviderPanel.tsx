@@ -1,4 +1,4 @@
-import type { ProviderStatusPublic } from "@/api-client"
+import type { ProviderStatusPublic, UploadPolicyPublic } from "@/api-client"
 import {
   VpwBadge,
   VpwDataTable,
@@ -55,11 +55,19 @@ const runtimeProviderColumns: readonly VpwDataTableColumn<RuntimeProviderRow>[] 
   ]
 
 export function SettingsRuntimeProviderPanel({
+  capabilitiesError,
   providerStatus,
+  uploadPolicy,
 }: {
+  capabilitiesError: string
   providerStatus: ProviderStatusPublic | null
+  uploadPolicy: UploadPolicyPublic | null
 }) {
-  const rows = providerConfigRows(providerStatus).map(toRuntimeProviderRow)
+  const rows = providerConfigRows(
+    providerStatus,
+    uploadPolicy,
+    capabilitiesError,
+  ).map(toRuntimeProviderRow)
 
   return (
     <VpwTableCard
@@ -113,6 +121,8 @@ function providerNote(id: string) {
     case "cache-age":
       return "Freshness window"
     case "upload-size":
+      return "Server limit"
+    case "request-body-size":
       return "Server limit"
     default:
       return "Reported by backend"

@@ -6,6 +6,7 @@ import { workbenchQueryKeys } from "./workbench-query-keys"
 export const workbenchProviderStatusQueryKey = workbenchQueryKeys.providerStatus()
 export const workbenchStatusQueryKey = workbenchQueryKeys.status()
 export const workbenchDemoWorkspaceQueryKey = workbenchQueryKeys.demoWorkspace()
+export const workbenchCapabilitiesQueryKey = workbenchQueryKeys.capabilities()
 
 export function useWorkbenchProviderStatusQuery() {
   return useQuery({
@@ -20,6 +21,15 @@ export function useWorkbenchStatusQuery() {
   return useQuery({
     queryFn: ({ signal }) => WorkbenchService.workbenchStatus({ signal }),
     queryKey: workbenchStatusQueryKey,
+    retry: false,
+    staleTime: 30_000,
+  })
+}
+
+export function useWorkbenchCapabilitiesQuery() {
+  return useQuery({
+    queryFn: ({ signal }) => WorkbenchService.workbenchCapabilities({ signal }),
+    queryKey: workbenchCapabilitiesQueryKey,
     retry: false,
     staleTime: 30_000,
   })

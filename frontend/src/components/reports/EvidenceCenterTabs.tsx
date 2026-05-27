@@ -15,6 +15,7 @@ import {
   VpwStatusBanner,
 } from "@/components/vpw"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { ArtifactCard } from "@/lib/report-capability-catalog"
 import type { ReportFormat } from "@/lib/report-format"
 import {
   ArtifactSection,
@@ -27,6 +28,7 @@ import {
 
 type EvidenceCenterTabsProps = {
   activeReportFormat: string
+  artifactCards: readonly ArtifactCard[]
   hasDecisionContext: boolean
   onCreateReport: (format: ReportFormat) => Promise<void>
   onDownloadReport: (report: ReportPublic) => Promise<void>
@@ -47,6 +49,7 @@ type EvidenceCenterTabsProps = {
 
 export function EvidenceCenterTabs({
   activeReportFormat,
+  artifactCards,
   hasDecisionContext,
   onCreateReport,
   onDownloadReport,
@@ -116,6 +119,7 @@ export function EvidenceCenterTabs({
         ) : null}
         <ArtifactSection
           activeReportFormat={activeReportFormat}
+          artifactCards={artifactCards}
           onCreateReport={onCreateReport}
           onDownloadReport={onDownloadReport}
           onOpenGenerateDrawer={onOpenGenerateDrawer}
@@ -153,6 +157,7 @@ export function EvidenceCenterTabs({
             <ExecutiveDecision
               onCreateReport={onCreateReport}
               onDownloadReport={onDownloadReport}
+              artifactCards={artifactCards}
               projectSummary={projectSummary}
               reports={reports}
               selectedProject={selectedProject}

@@ -11,31 +11,15 @@ from typing import Any, Protocol
 from app.core.config import Settings
 from app.importers import UnsupportedInputTypeError, build_importer_registry
 from app.services.import_errors import ImportServiceError
+from app.services.workbench_capabilities import (
+    SIDE_CAR_UPLOAD_CAPABILITIES,
+    allowed_upload_mime_hints,
+    allowed_upload_suffixes,
+)
 
-ALLOWED_UPLOAD_SUFFIXES = {
-    "cve-list": {".txt", ".csv"},
-    "generic-occurrence-csv": {".csv"},
-    "trivy-json": {".json"},
-    "grype-json": {".json"},
-    "cyclonedx-json": {".json"},
-    "spdx-json": {".json"},
-    "dependency-check-json": {".json"},
-    "github-alerts-json": {".json"},
-    "nessus-xml": {".nessus", ".xml"},
-    "openvas-xml": {".xml"},
-}
-ALLOWED_UPLOAD_MIME_HINTS = {
-    "cve-list": {"text/plain", "text/csv", "application/vnd.ms-excel"},
-    "generic-occurrence-csv": {"text/csv", "text/plain", "application/vnd.ms-excel"},
-    "trivy-json": {"application/json", "text/json"},
-    "grype-json": {"application/json", "text/json"},
-    "cyclonedx-json": {"application/json", "text/json"},
-    "spdx-json": {"application/json", "text/json"},
-    "dependency-check-json": {"application/json", "text/json"},
-    "github-alerts-json": {"application/json", "text/json"},
-    "nessus-xml": {"application/xml", "text/xml"},
-    "openvas-xml": {"application/xml", "text/xml"},
-}
+ALLOWED_UPLOAD_SUFFIXES = allowed_upload_suffixes()
+ALLOWED_UPLOAD_MIME_HINTS = allowed_upload_mime_hints()
+SIDE_CAR_UPLOADS_BY_ID = {item.id: item for item in SIDE_CAR_UPLOAD_CAPABILITIES}
 
 
 class ReadableUpload(Protocol):
@@ -91,30 +75,24 @@ def has_optional_upload(filename: str | None) -> bool:
 
 def validate_asset_context_upload(filename: str, content_type: str | None) -> None:
     """Validate asset context upload function."""
-    if Path(filename).suffix.lower() != ".csv":
-        raise ImportServiceError(status_code=422, detail="Asset context file must be a CSV.")
-    normalized = (content_type or "").split(";", maxsplit=1)[0].strip().lower()
-    if normalized in {"", "application/octet-stream"}:
-        return
-    if normalized not in {"text/csv", "text/plain", "application/vnd.ms-excel"}:
-        raise ImportServiceError(
-            status_code=422,
-            detail="Asset context content type must be text/csv.",
-        )
+    _validate_sidecar_upload(
+        "asset-context",
+        filename,
+        content_type,
+        extension_detail="Asset context file must be a CSV.",
+        mime_detail="Asset context content type must be text/csv.",
+    )
 
 
 def validate_vex_upload(filename: str, content_type: str | None) -> None:
     """Validate vex upload function."""
-    if Path(filename).suffix.lower() != ".json":
-        raise ImportServiceError(status_code=422, detail="VEX file must be a JSON document.")
-    normalized = (content_type or "").split(";", maxsplit=1)[0].strip().lower()
-    if normalized in {"", "application/octet-stream"}:
-        return
-    if normalized not in {"application/json", "text/json"}:
-        raise ImportServiceError(
-            status_code=422,
-            detail="VEX content type must be application/json.",
-        )
+    _validate_sidecar_upload(
+        "vex",
+        filename,
+        content_type,
+        extension_detail="VEX file must be a JSON document.",
+        mime_detail="VEX content type must be application/json.",
+    )
 
 
 def sanitize_context_filename(filename: str, *, reserved_filename: str) -> str:
@@ -293,6 +271,24 @@ def normalize_input_type(input_type: str) -> str:
     if not normalized:
         raise ImportServiceError(status_code=422, detail="input_type is required.")
     return normalized
+
+
+def _validate_sidecar_upload(
+    capability_id: str,
+    filename: str,
+    content_type: str | None,
+    *,
+    extension_detail: str,
+    mime_detail: str,
+) -> None:
+    capability = SIDE_CAR_UPLOADS_BY_ID[capability_id]
+    if Path(filename).suffix.lower() not in set(capability.extensions):
+        raise ImportServiceError(status_code=422, detail=extension_detail)
+    normalized = (content_type or "").split(";", maxsplit=1)[0].strip().lower()
+    if normalized in {"", "application/octet-stream"}:
+        return
+    if normalized not in set(capability.accepted_mime_types):
+        raise ImportServiceError(status_code=422, detail=mime_detail)
 
 
 def _is_ignored_text_line(line: str) -> bool:

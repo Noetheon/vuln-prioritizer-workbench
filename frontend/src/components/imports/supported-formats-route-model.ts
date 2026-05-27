@@ -1,17 +1,18 @@
-import {
-  SUPPORTED_IMPORT_FORMATS,
-  type SupportedFormatCategory,
+import type {
+  SupportedFormat,
+  SupportedFormatCategory,
 } from "@/lib/import-format-metadata"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 
 export type CategoryFilter = "all" | SupportedFormatCategory
 
 export function filterSupportedFormats(
+  formats: readonly SupportedFormat[],
   query: string,
   category: CategoryFilter,
 ) {
   const normalizedQuery = query.trim().toLowerCase()
-  return SUPPORTED_IMPORT_FORMATS.filter((format) => {
+  return formats.filter((format) => {
     if (category !== "all" && format.category !== category) return false
     if (!normalizedQuery) return true
     return [

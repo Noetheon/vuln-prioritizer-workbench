@@ -22,7 +22,7 @@ import {
 } from "@/components/vpw"
 import { formatProviderFreshness } from "@/lib/provider-format"
 import { runStatusLabel } from "@/lib/risk-format"
-import { SUPPORTED_IMPORT_FORMATS } from "@/lib/import-format-metadata"
+import { supportedImportCategories } from "@/lib/import-format-metadata"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import { RecentImports } from "./ImportsWorkbenchHistory"
 import {
@@ -43,6 +43,16 @@ export function ImportsHomeRoute(props: ImportsHomeRouteProps) {
   const providerSummary = formatProviderFreshness(props.providerStatus)
   const lastRun = props.projectRuns[0] ?? null
   const projectSearch = selectedProjectRouteSearch(props.selectedProjectId)
+  const formatCategories = supportedImportCategories(props.supportedFormats)
+  const capabilitiesUnavailable =
+    Boolean(props.capabilitiesError) ||
+    (!props.capabilitiesLoading && props.supportedFormats.length === 0)
+  const categoryIcons = {
+    network: Network,
+    sbom: FileJson,
+    scanner: ScanLine,
+    simple: FileText,
+  } as const
   const metrics: MetricStripMetric[] = [
     {
       description: props.selectedProject
@@ -86,12 +96,19 @@ export function ImportsHomeRoute(props: ImportsHomeRouteProps) {
                   Supported formats
                 </Link>
               </Button>
-              <Button asChild>
-                <Link search={projectSearch} to="/imports/new">
+              {capabilitiesUnavailable ? (
+                <Button disabled>
                   <Plus aria-hidden="true" data-icon="inline-start" />
                   New import
-                </Link>
-              </Button>
+                </Button>
+              ) : (
+                <Button asChild>
+                  <Link search={projectSearch} to="/imports/new">
+                    <Plus aria-hidden="true" data-icon="inline-start" />
+                    New import
+                  </Link>
+                </Button>
+              )}
             </div>
           }
           description="Load scanner, SBOM, CVE, and network evidence into the selected workbench project."
@@ -148,32 +165,17 @@ export function ImportsHomeRoute(props: ImportsHomeRouteProps) {
         </VpwPanel>
         <VpwPanel className="flex flex-col gap-4">
           <VpwSectionHeader
-            description={`${SUPPORTED_IMPORT_FORMATS.length} supported input types grouped by evidence source.`}
+            description={`${props.supportedFormats.length} supported input types grouped by evidence source.`}
             title="Supported formats"
           />
           <div className="grid gap-2 text-sm text-[var(--vpw-text-secondary)]">
-            {[
-              {
-                description: "CVE lists, CSV files",
-                icon: FileText,
-                label: "Simple inputs",
-              },
-              {
-                description: "Trivy, Grype, Dependency-Check, GitHub alerts",
-                icon: ScanLine,
-                label: "Scanner exports",
-              },
-              {
-                description: "CycloneDX, SPDX",
-                icon: FileJson,
-                label: "SBOM / dependency data",
-              },
-              {
-                description: "Nessus XML, OpenVAS XML",
-                icon: Network,
-                label: "Network scanner exports",
-              },
-            ].map(({ description, icon: Icon, label }) => (
+            {formatCategories.map(({ category, label }) => {
+              const Icon =
+                categoryIcons[category as keyof typeof categoryIcons] ?? FileText
+              const formatCount = props.supportedFormats.filter(
+                (format) => format.category === category,
+              ).length
+              return (
               <div
                 className="flex items-start gap-3 border-b border-[var(--vpw-border-subtle)] py-2 last:border-b-0"
                 key={label}
@@ -186,10 +188,13 @@ export function ImportsHomeRoute(props: ImportsHomeRouteProps) {
                   <span className="block font-semibold text-[var(--vpw-text-primary)]">
                     {label}
                   </span>
-                  <span className="block text-xs leading-5">{description}</span>
+                  <span className="block text-xs leading-5">
+                    {formatCount} supported format{formatCount === 1 ? "" : "s"}
+                  </span>
                 </span>
               </div>
-            ))}
+              )
+            })}
           </div>
           <Button asChild size="sm" variant="outline">
             <Link search={projectSearch} to="/imports/formats">

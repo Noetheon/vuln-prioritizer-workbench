@@ -121,7 +121,8 @@ def _html_waiver_debt_row(item: dict[str, Any], generated_at: datetime | None = 
                 status_badge = '<span class="badge badge-warning">review due</span>'
                 required_action = "Review now"
         except ValueError:
-            pass
+            # Malformed review dates fall back to the status-based action below.
+            required_action = "Accepted risk active"
 
     matched_findings = int(item.get("matched_findings") or 0)
     expires_at = item.get("expires_at")

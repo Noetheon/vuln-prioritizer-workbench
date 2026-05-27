@@ -8,7 +8,6 @@ from datetime import timedelta
 from sqlalchemy.engine import Engine
 from sqlmodel import Session
 
-from app.contracts.run_workflow import merge_workflow_error, merge_workflow_summary
 from app.core.config import Settings
 from app.core.local_actor import configured_local_actor
 from app.models import AnalysisRun, AnalysisRunStatus
@@ -20,6 +19,12 @@ from app.services.import_execution import (
     execute_project_import_upload,
 )
 from app.services.import_execution_summary import _job_payload, _job_status_entry
+from app.services.run_workflow_metadata import (
+    merge_error_payload,
+    merge_summary_payload,
+    workflow_import_job_payload,
+    workflow_summary_payload,
+)
 
 _TERMINAL_IMPORT_STATUSES = {
     AnalysisRunStatus.SUCCEEDED,
@@ -98,7 +103,7 @@ def mark_import_run_background_failed(
 
     job_id = str(uuid.uuid4())
     job_history = [_job_status_entry("pending")]
-    existing_job = run.summary_json.get("import_job")
+    existing_job = workflow_import_job_payload(run)
     if isinstance(existing_job, dict):
         job_id = str(existing_job.get("id") or job_id)
         raw_history = existing_job.get("status_history")
@@ -109,7 +114,7 @@ def mark_import_run_background_failed(
         run.id,
         status=AnalysisRunStatus.FAILED,
         error_message=error_message,
-        error_json=merge_workflow_error(
+        error_json=merge_error_payload(
             background_error={"message": error_message, "stage": "background_import"},
             import_job=_job_payload(
                 job_id=job_id,
@@ -118,8 +123,8 @@ def mark_import_run_background_failed(
                 execution_mode="background",
             ),
         ),
-        summary_json=merge_workflow_summary(
-            run.summary_json,
+        summary_json=merge_summary_payload(
+            workflow_summary_payload(run),
             background_error={"message": error_message, "stage": "background_import"},
             import_job=_job_payload(
                 job_id=job_id,
@@ -143,5 +148,5 @@ def _append_job_status(
 
 
 def _is_background_import_run(run: AnalysisRun) -> bool:
-    job = run.summary_json.get("import_job")
+    job = workflow_import_job_payload(run)
     return isinstance(job, dict) and job.get("execution_mode") == "background"

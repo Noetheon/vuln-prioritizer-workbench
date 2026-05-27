@@ -40,6 +40,18 @@ export function ImportsWorkbench(props: ImportsWorkbenchProps) {
           {props.projectListError}
         </VpwStatusBanner>
       ) : null}
+      {props.capabilitiesError ? (
+        <VpwStatusBanner title="Runtime capabilities unavailable" tone="critical">
+          {props.capabilitiesError}
+        </VpwStatusBanner>
+      ) : null}
+      {!props.capabilitiesError &&
+      !props.capabilitiesLoading &&
+      props.supportedFormats.length === 0 ? (
+        <VpwStatusBanner title="Runtime capabilities unavailable" tone="critical">
+          Import actions are disabled until runtime capability metadata is available.
+        </VpwStatusBanner>
+      ) : null}
       {!hasProject && !props.projectListLoading && !props.projectListError ? (
         <VpwStatusBanner title="Project required" tone="warning">
           Create or select a project before uploading import files.

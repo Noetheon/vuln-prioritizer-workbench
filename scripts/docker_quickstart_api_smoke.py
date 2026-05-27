@@ -29,6 +29,7 @@ def main() -> None:
     workbench_status = _get_workbench_status()
     project_id = _create_project()
     run = _import_demo(project_id)
+    summary = _get_run_summary(str(run["id"]))
     findings = _get_findings(project_id)
     reports = _create_reports(str(run["id"]))
     for report_format, report in reports.items():
@@ -36,9 +37,10 @@ def main() -> None:
     provider_job = _trigger_provider_update()
     provider_status = _get_provider_status()
 
-    summary = run.get("summary_json") or {}
     if run.get("status") not in {"succeeded", "completed"}:
         raise RuntimeError(f"Demo import did not complete: {run.get('status')!r}")
+    if summary.get("status") not in {"succeeded", "completed"}:
+        raise RuntimeError(f"Demo import summary did not complete: {summary.get('status')!r}")
     if not findings:
         raise RuntimeError("Demo import returned no findings.")
     if workbench_status.get("database_status") != "ready":
@@ -109,11 +111,21 @@ def _import_demo(project_id: str) -> dict[str, object]:
             "file": SAMPLE_CVES,
         },
     )
-    return _request(
+    response = _request(
         f"{BASE_URL}/projects/{project_id}/imports",
         data=body,
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
     )
+    _assert_no_private_paths(response)
+    _assert_no_raw_workflow_fields(response)
+    return response
+
+
+def _get_run_summary(run_id: str) -> dict[str, object]:
+    response = _request(f"{BASE_URL}/runs/{run_id}/summary")
+    _assert_no_private_paths(response)
+    _assert_no_raw_workflow_fields(response)
+    return response
 
 
 def _get_findings(project_id: str) -> list[dict[str, object]]:
@@ -281,6 +293,12 @@ def _assert_no_private_paths(payload: object) -> None:
     serialized = json.dumps(payload, sort_keys=True) if not isinstance(payload, str) else payload
     if PRIVATE_PATH_PATTERN.search(serialized):
         raise RuntimeError(f"Response leaked a private path: {serialized[:500]}")
+
+
+def _assert_no_raw_workflow_fields(payload: dict[str, object]) -> None:
+    raw_fields = {"summary_json", "error_json"} & payload.keys()
+    if raw_fields:
+        raise RuntimeError(f"Normal API response exposed raw workflow fields: {sorted(raw_fields)}")
 
 
 if __name__ == "__main__":

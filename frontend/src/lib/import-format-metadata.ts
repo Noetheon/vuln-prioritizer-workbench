@@ -2,13 +2,13 @@ export {
   acceptedFileInputValue,
   fileMatchesAcceptedExtension,
   fileSizeLabel,
-  FORMAT_CATEGORY_LABELS,
   getAcceptedExtensions,
   getAcceptedMimeTypes,
   getImportFormat,
+  importFormatFromCapability,
   isImportInputType,
-  SUPPORTED_IMPORT_FORMATS,
-  SUPPORTED_IMPORT_INPUT_TYPES,
+  supportedImportCategories,
+  supportedImportFormats,
 } from "./import-format-catalog.ts"
 export type {
   ContextSupport,

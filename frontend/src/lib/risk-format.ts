@@ -44,11 +44,13 @@ export function formatKev(value: boolean | null | undefined) {
   return value ? "Yes" : "No"
 }
 
-export function runStatusLabel(status: AnalysisRunPublic["status"]) {
+export function runStatusLabel(status: AnalysisRunPublic["status"] | null | undefined) {
   return status ? status.replaceAll("_", " ") : "pending"
 }
 
-export function runStatusTone(status: AnalysisRunPublic["status"]): RunStatusTone {
+export function runStatusTone(
+  status: AnalysisRunPublic["status"] | null | undefined,
+): RunStatusTone {
   if (status === "succeeded" || status === "completed") {
     return "succeeded"
   }

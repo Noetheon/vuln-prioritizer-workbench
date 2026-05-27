@@ -11,6 +11,8 @@ function SettingsRouteContent() {
   const location = useLocation()
   const navigate = useNavigate()
   const {
+    capabilities,
+    capabilitiesError,
     providerStatus,
     providerStatusError,
     providerStatusLoading,
@@ -46,6 +48,7 @@ function SettingsRouteContent() {
     <section className="w-full">
       <SettingsRouteContainer
         activeSettingsTab={activeSettingsTab}
+        capabilitiesError={capabilitiesError}
         onSettingsTabChange={updateSettingsTab}
         providerStatus={providerStatus}
         providerStatusError={providerStatusError}
@@ -53,6 +56,7 @@ function SettingsRouteContent() {
         selectedProjectId={selectedProjectId}
         status={status}
         statusError={statusError}
+        uploadPolicy={capabilities?.upload_policy ?? null}
       />
     </section>
   )

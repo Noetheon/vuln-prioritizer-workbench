@@ -1,9 +1,11 @@
 import type { ReportPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
+import type { ArtifactCard } from "@/lib/report-capability-catalog"
 import type { ReportFormat } from "@/lib/report-format"
 import { generatedActionLabel } from "./evidence-center-model"
 
 export function ArtifactActions({
+  card,
   className,
   disabledByContext = false,
   format,
@@ -15,6 +17,7 @@ export function ArtifactActions({
   report,
   reportActionsEnabled,
 }: {
+  card: ArtifactCard | null
   className?: string
   disabledByContext?: boolean
   format: ReportFormat
@@ -36,7 +39,7 @@ export function ArtifactActions({
         type="button"
         variant={generateVariant}
       >
-        {generating ? "Generating" : generatedActionLabel(format, report)}
+        {generating ? "Generating" : generatedActionLabel(card, report)}
       </Button>
       {report ? (
         <Button

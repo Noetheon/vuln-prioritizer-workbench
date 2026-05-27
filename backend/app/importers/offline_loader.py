@@ -16,32 +16,14 @@ from app.importers.input_loader_adapter import (
     ParsedWorkbenchInput,
     parse_payload_with_input_loader_result,
 )
+from app.services.workbench_capabilities import (
+    default_import_suffix_by_input_type,
+    supported_import_input_types,
+)
 from vuln_prioritizer.options import InputFormat
 
-DEFAULT_IMPORT_INPUT_TYPES = (
-    InputFormat.cve_list.value,
-    InputFormat.generic_occurrence_csv.value,
-    InputFormat.trivy_json.value,
-    InputFormat.grype_json.value,
-    InputFormat.cyclonedx_json.value,
-    InputFormat.spdx_json.value,
-    InputFormat.dependency_check_json.value,
-    InputFormat.github_alerts_json.value,
-    InputFormat.nessus_xml.value,
-    InputFormat.openvas_xml.value,
-)
-_DEFAULT_SUFFIX_BY_INPUT_TYPE = {
-    InputFormat.cve_list.value: ".txt",
-    InputFormat.generic_occurrence_csv.value: ".csv",
-    InputFormat.trivy_json.value: ".json",
-    InputFormat.grype_json.value: ".json",
-    InputFormat.cyclonedx_json.value: ".json",
-    InputFormat.spdx_json.value: ".json",
-    InputFormat.dependency_check_json.value: ".json",
-    InputFormat.github_alerts_json.value: ".json",
-    InputFormat.nessus_xml.value: ".nessus",
-    InputFormat.openvas_xml.value: ".xml",
-}
+DEFAULT_IMPORT_INPUT_TYPES = supported_import_input_types()
+_DEFAULT_SUFFIX_BY_INPUT_TYPE = default_import_suffix_by_input_type()
 
 
 @dataclass(frozen=True, slots=True)

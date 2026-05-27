@@ -8,10 +8,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { FORMAT_CATEGORY_LABELS } from "@/lib/import-format-metadata"
 import type { CategoryFilter } from "./supported-formats-route-model"
 
 type SupportedFormatsFiltersProps = {
+  categories: readonly { category: string; label: string }[]
   category: CategoryFilter
   onCategoryChange: (category: CategoryFilter) => void
   onQueryChange: (query: string) => void
@@ -19,6 +19,7 @@ type SupportedFormatsFiltersProps = {
 }
 
 export function SupportedFormatsFilters({
+  categories,
   category,
   onCategoryChange,
   onQueryChange,
@@ -58,7 +59,7 @@ export function SupportedFormatsFilters({
           <SelectContent>
             <SelectGroup>
               <SelectItem value="all">All formats</SelectItem>
-              {Object.entries(FORMAT_CATEGORY_LABELS).map(([value, label]) => (
+              {categories.map(({ category: value, label }) => (
                 <SelectItem key={value} value={value}>
                   {label}
                 </SelectItem>

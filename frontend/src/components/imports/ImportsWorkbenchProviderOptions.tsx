@@ -12,13 +12,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { VpwField } from "@/components/vpw"
-import {
-  attackImportSourceOptions,
-  demoProviderSnapshotFile,
-} from "@/lib/app-defaults"
+import { demoProviderSnapshotFile } from "@/lib/app-defaults"
 import type { ImportsWorkbenchProps } from "./imports-workbench-model"
 
 export function ProviderAttackOptions({
+  attackSources,
   importWizard,
   onAttackMappingFileChange,
   onAttackSourceChange,
@@ -29,6 +27,7 @@ export function ProviderAttackOptions({
 }: Pick<
   ImportsWorkbenchProps,
   | "importWizard"
+  | "attackSources"
   | "onAttackMappingFileChange"
   | "onAttackSourceChange"
   | "onAttackTechniqueMetadataFileChange"
@@ -36,11 +35,12 @@ export function ProviderAttackOptions({
   | "onProviderSnapshotFileChange"
   | "onUseDemoProviderSnapshot"
 >) {
-  const attackSourceDisabled = importWizard.attackSource === "none"
-  const attackSourceDisabledReason = "Select an ATT&CK source to enable this field."
-  const selectedAttackSourceDetail = attackImportSourceOptions.find(
+  const selectedAttackSource = attackSources.find(
     (option) => option.value === importWizard.attackSource,
-  )?.detail
+  )
+  const attackSourceDisabled = !selectedAttackSource?.requires_mapping_file
+  const attackSourceDisabledReason = "Select an ATT&CK source to enable this field."
+  const selectedAttackSourceDetail = selectedAttackSource?.detail
 
   return (
     <div className="grid gap-4">
@@ -121,6 +121,7 @@ export function ProviderAttackOptions({
             label="ATT&CK source"
           >
             <Select
+              disabled={attackSources.length === 0}
               name="attackSource"
               onValueChange={onAttackSourceChange}
               value={importWizard.attackSource}
@@ -130,7 +131,7 @@ export function ProviderAttackOptions({
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  {attackImportSourceOptions.map((option) => (
+                  {attackSources.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>

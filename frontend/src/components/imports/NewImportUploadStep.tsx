@@ -3,7 +3,7 @@ import {
   VpwSectionHeader,
 } from "@/components/vpw"
 import {
-  getImportFormat,
+  acceptedFileInputValue,
   type ParserPreview,
 } from "@/lib/import-format-metadata"
 import { FileUploadField } from "./ImportsWorkbenchFileUploadField"
@@ -19,13 +19,14 @@ export function UploadFileStep({
   importWizard,
   onFileChange,
   parserPreview,
+  supportedFormats,
 }: Pick<ImportsWorkbenchProps, "importWizard" | "onFileChange"> & {
   format: ImportsWorkbenchProps["supportedFormats"][number] | undefined
   parserPreview: ParserPreview
+  supportedFormats: ImportsWorkbenchProps["supportedFormats"]
 }) {
-  const metadataFormat = getImportFormat(importWizard.inputType)
-  const uploadRequirement = metadataFormat
-    ? uploadRequirementCopy(metadataFormat.inputType)
+  const uploadRequirement = format
+    ? uploadRequirementCopy(format)
     : "Attach the main evidence file."
 
   return (
@@ -41,13 +42,13 @@ export function UploadFileStep({
           </p>
           <p className="mt-1 text-sm text-[var(--vpw-text-secondary)]">
             <span className="font-medium text-[var(--vpw-text-primary)]">
-              {format?.label ?? "Input type not selected"}
-            </span>
-            {metadataFormat ? ` - ${uploadRequirement}` : ""}
+            {format?.label ?? "Input type not selected"}
+          </span>
+            {format ? ` - ${uploadRequirement}` : ""}
           </p>
         </div>
         <FileUploadField
-          accept={format?.accept}
+          accept={acceptedFileInputValue(format)}
           description={undefined}
           file={importWizard.file}
           fieldClassName="[&_[data-slot=field-label]]:sr-only"
@@ -60,8 +61,8 @@ export function UploadFileStep({
           showAcceptedText={false}
           showSelectedFileDescription={false}
         />
-        {!importWizard.file && metadataFormat?.extensions.length ? (
-          <AcceptedTypeChips extensions={metadataFormat.extensions} />
+        {!importWizard.file && format?.extensions.length ? (
+          <AcceptedTypeChips extensions={format.extensions} />
         ) : null}
       </div>
       <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-3">
@@ -80,7 +81,10 @@ export function UploadFileStep({
             </VpwBadge>
           ) : null}
         </div>
-        <ParserPreviewPanel parserPreview={parserPreview} />
+        <ParserPreviewPanel
+          parserPreview={parserPreview}
+          supportedFormats={supportedFormats}
+        />
       </div>
     </section>
   )

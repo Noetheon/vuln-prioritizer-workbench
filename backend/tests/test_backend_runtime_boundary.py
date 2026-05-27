@@ -189,7 +189,8 @@ def test_workbench_runtime_names_are_not_active_service_aliases() -> None:
     normalized_public_deployment = " ".join(public_deployment.split())
     assert "template_settings" not in normalized_public_deployment
     assert "WORKBENCH_LEGACY_STORAGE_FALLBACK" not in normalized_public_deployment
-    assert "WorkbenchReportFormat" in frontend_defaults
+    assert "ReportFormatCapabilityPublic" not in frontend_defaults
+    assert "WorkbenchReportFormat" not in frontend_defaults
     assert "TemplateReportFormat" not in frontend_defaults
 
     active_runtime_docs = [

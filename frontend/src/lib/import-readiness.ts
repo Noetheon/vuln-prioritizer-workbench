@@ -6,24 +6,30 @@ import {
 import type {
   ImportReadinessCheck,
   ParserPreview,
+  SupportedFormat,
 } from "./import-format-types.ts"
 
 export function buildImportReadinessChecks({
   evidenceFile,
+  formats,
   inputType,
   parserPreview,
   projectId,
   providerAvailable,
 }: {
   evidenceFile: File | null
+  formats: readonly SupportedFormat[]
   inputType: string | null | undefined
   parserPreview: ParserPreview
   projectId: string
   providerAvailable: boolean
 }): ImportReadinessCheck[] {
-  const hasInputType = isImportInputType(inputType)
+  const hasInputType = isImportInputType(formats, inputType)
   const hasFile = Boolean(evidenceFile)
-  const fileTypeOk = hasFile && hasInputType && fileMatchesAcceptedExtension(evidenceFile, inputType)
+  const fileTypeOk =
+    hasFile &&
+    hasInputType &&
+    fileMatchesAcceptedExtension(formats, evidenceFile, inputType)
   const parserPending =
     parserPreview.state === "not-started" || parserPreview.state === "checking"
   const parserBlocking = parserPreview.state === "error"
@@ -40,7 +46,9 @@ export function buildImportReadinessChecks({
       id: "input-type",
       label: "Input type selected",
       status: hasInputType ? "passed" : "missing",
-      message: hasInputType ? getImportFormat(inputType)?.label : "Select an input type.",
+      message: hasInputType
+        ? getImportFormat(formats, inputType)?.label
+        : "Select an input type.",
       targetStep: 1,
     },
     {
