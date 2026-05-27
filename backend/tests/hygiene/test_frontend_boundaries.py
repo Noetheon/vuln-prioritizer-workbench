@@ -227,25 +227,22 @@ def test_workbench_route_shells_delegate_interaction_state() -> None:
 
 
 def test_run_workflow_components_use_typed_contract_fields() -> None:
-    src_root = REPO_ROOT / "frontend/src"
-    error_json_allowlist = {
-        "frontend/src/components/imports/imports-workbench-model.ts",
-    }
-    summary_json_offenders: list[str] = []
-    error_json_offenders: list[str] = []
+    roots = (REPO_ROOT / "frontend/src", REPO_ROOT / "frontend/tests")
+    banned_fields = ("summary_json", "error_json", "raw_summary", "raw_error")
+    offenders: dict[str, list[str]] = {field: [] for field in banned_fields}
 
-    for path in sorted(src_root.rglob("*")):
-        if path.suffix not in {".ts", ".tsx"} or "src/client" in path.as_posix():
-            continue
-        source = path.read_text(encoding="utf-8")
-        relative = path.relative_to(REPO_ROOT).as_posix()
-        if "summary_json" in source:
-            summary_json_offenders.append(relative)
-        if "error_json" in source and relative not in error_json_allowlist:
-            error_json_offenders.append(relative)
+    for root in roots:
+        paths = sorted(root.rglob("*"))
+        for path in paths:
+            if path.suffix not in {".ts", ".tsx"} or "src/client" in path.as_posix():
+                continue
+            source = path.read_text(encoding="utf-8")
+            relative = path.relative_to(REPO_ROOT).as_posix()
+            for field in banned_fields:
+                if field in source:
+                    offenders[field].append(relative)
 
-    assert summary_json_offenders == []
-    assert error_json_offenders == []
+    assert offenders == {field: [] for field in banned_fields}
 
 
 def test_workbench_reports_route_state_is_split_from_shell() -> None:

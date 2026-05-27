@@ -20,6 +20,7 @@ from utils.workbench_env import (
     create_project_via_api,
     local_api_headers,
 )
+from utils.workbench_workflow_contracts import workflow_metadata
 
 from app import models as app_models
 
@@ -260,12 +261,11 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
     assert not Path(upload_ref).is_absolute()
     assert (upload_dir / upload_ref).read_bytes() == content
 
-    metadata = workbench_api_env.client.get(
-        f"/api/v1/runs/{detail['analysis_run_id']}/workflow-metadata",
+    metadata_payload = workflow_metadata(
+        workbench_api_env,
+        detail["analysis_run_id"],
         headers=headers,
     )
-    assert metadata.status_code == 200
-    metadata_payload = metadata.json()
     assert metadata_payload["status"] == "failed"
     assert metadata_payload["summary"]["parse_errors"] == detail["parse_errors"]
     assert metadata_payload["error"]["parse_errors"] == detail["parse_errors"]

@@ -8,9 +8,16 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
+from app.contracts.run_workflow import RunWorkflowErrorV1, RunWorkflowSummaryV1
+from app.services.run_workflow_metadata import (
+    workflow_error_or_none,
+    workflow_summary,
+)
 from utils.import_contracts import assert_no_sensitive_path_leak, configure_upload_dir
 from utils.workbench_contracts import _configure_report_dir
 from utils.workbench_env import WorkbenchApiEnv, create_project_via_api, local_api_headers
+
+RAW_WORKFLOW_FIELDS = {"summary_json", "error_json"}
 
 
 @dataclass(frozen=True)
@@ -62,7 +69,10 @@ def post_import(
         files=files,
     )
     assert response.status_code == expected_status, response.text
-    return response.json()
+    payload = response.json()
+    if expected_status < 400:
+        assert_no_raw_workflow_fields(payload)
+    return payload
 
 
 def run_summary(
@@ -75,7 +85,34 @@ def run_summary(
         headers=context.headers,
     )
     assert response.status_code == 200, response.text
+    payload = response.json()
+    assert_no_raw_workflow_fields(payload)
+    return payload
+
+
+def workflow_metadata(
+    workbench_api_env: WorkbenchApiEnv,
+    run_id: str,
+    *,
+    context: WorkflowContext | None = None,
+    headers: dict[str, str] | None = None,
+    expected_status: int = 200,
+) -> dict[str, Any]:
+    active_headers = headers if headers is not None else (context.headers if context else {})
+    response = workbench_api_env.client.get(
+        f"/api/v1/runs/{run_id}/workflow-metadata",
+        headers=active_headers,
+    )
+    assert response.status_code == expected_status, response.text
     return response.json()
+
+
+def persisted_workflow_summary(run: Any) -> RunWorkflowSummaryV1:
+    return workflow_summary(run)
+
+
+def persisted_workflow_error(run: Any) -> RunWorkflowErrorV1 | None:
+    return workflow_error_or_none(run)
 
 
 def project_findings(
@@ -257,6 +294,24 @@ def assert_no_workflow_path_leak(
         context.report_dir,
         *extra_paths,
     )
+
+
+def assert_no_raw_workflow_fields(payload: Any) -> None:
+    offenders: list[str] = []
+
+    def _walk(value: Any, path: str) -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                item_path = f"{path}.{key}" if path else str(key)
+                if key in RAW_WORKFLOW_FIELDS:
+                    offenders.append(item_path)
+                _walk(item, item_path)
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                _walk(item, f"{path}[{index}]")
+
+    _walk(payload, "")
+    assert offenders == []
 
 
 def finding_items(findings_payload: dict[str, Any]) -> list[dict[str, Any]]:

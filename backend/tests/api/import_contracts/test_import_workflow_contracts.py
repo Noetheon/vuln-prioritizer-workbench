@@ -19,6 +19,7 @@ from utils.workbench_env import (
     create_project_via_api,
     local_api_headers,
 )
+from utils.workbench_workflow_contracts import workflow_metadata
 
 from app import models as app_models
 
@@ -351,12 +352,8 @@ def test_same_cve_on_different_assets_creates_distinct_findings(
     assert response.status_code == 200, response.text
     payload = response.json()
     assert payload["finding_count"] == 2
-    metadata = workbench_api_env.client.get(
-        f"/api/v1/runs/{payload['id']}/workflow-metadata",
-        headers=headers,
-    )
-    assert metadata.status_code == 200
-    assert metadata.json()["summary"]["analysis_semantics"] == {
+    metadata_payload = workflow_metadata(workbench_api_env, payload["id"], headers=headers)
+    assert metadata_payload["summary"]["analysis_semantics"] == {
         "analysis_decision_scope": "cve_baseline_with_occurrence_overlays",
         "persistence_scope": "asset_component_occurrence",
         "occurrence_overlay_fields": [

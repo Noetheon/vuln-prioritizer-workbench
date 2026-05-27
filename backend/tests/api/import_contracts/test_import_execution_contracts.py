@@ -19,6 +19,7 @@ from utils.workbench_env import (
     create_project_via_api,
     local_api_headers,
 )
+from utils.workbench_workflow_contracts import persisted_workflow_summary
 
 from app import models as app_models
 from app.core.local_actor import configured_local_actor
@@ -62,15 +63,16 @@ def test_import_upload_service_can_defer_and_resume_background_execution(
                 execution_mode="background",
             )
         )
-        deferred_summary = deferred_run.summary_json
+        deferred_summary = persisted_workflow_summary(deferred_run)
 
         assert deferred_run.status == app_models.AnalysisRunStatus.PENDING
-        assert deferred_summary["import_job"]["status"] == "pending"
-        assert deferred_summary["import_job"]["execution_mode"] == "background"
-        assert [item["status"] for item in deferred_summary["import_job"]["status_history"]] == [
-            "pending"
-        ]
-        stored_ref = deferred_summary["input_upload"]["storage_ref"]
+        assert deferred_summary.import_job is not None
+        assert deferred_summary.input_upload is not None
+        assert deferred_summary.import_job.status == "pending"
+        assert deferred_summary.import_job.execution_mode == "background"
+        assert [item.status for item in deferred_summary.import_job.status_history] == ["pending"]
+        stored_ref = deferred_summary.input_upload.storage_ref
+        assert stored_ref is not None
         assert (upload_dir / stored_ref).read_bytes() == b"CVE-2024-3094\n"
 
         resumed_run = asyncio.run(
@@ -87,11 +89,15 @@ def test_import_upload_service_can_defer_and_resume_background_execution(
 
         assert resumed_run.id == deferred_run.id
         assert resumed_run.status == app_models.AnalysisRunStatus.SUCCEEDED
-        assert resumed_run.summary_json["import_job"]["execution_mode"] == "background"
-        assert [
-            item["status"] for item in resumed_run.summary_json["import_job"]["status_history"]
-        ] == ["pending", "running", "succeeded"]
-        assert resumed_run.summary_json["created_findings"] == 1
+        resumed_summary = persisted_workflow_summary(resumed_run)
+        assert resumed_summary.import_job is not None
+        assert resumed_summary.import_job.execution_mode == "background"
+        assert [item.status for item in resumed_summary.import_job.status_history] == [
+            "pending",
+            "running",
+            "succeeded",
+        ]
+        assert resumed_summary.created_findings == 1
 
 
 def test_background_import_reconciliation_fails_stale_deferred_runs(
@@ -143,8 +149,11 @@ def test_background_import_reconciliation_fails_stale_deferred_runs(
         assert run is not None
         assert run.status == app_models.AnalysisRunStatus.FAILED
         assert run.finished_at is not None
-        assert run.summary_json["import_job"]["status"] == "failed"
-        assert run.summary_json["background_error"]["stage"] == "background_import"
+        summary = persisted_workflow_summary(run)
+        assert summary.import_job is not None
+        assert summary.background_error is not None
+        assert summary.import_job.status == "failed"
+        assert summary.background_error.stage == "background_import"
 
 
 def test_non_local_synchronous_import_audit_uses_local_actor(

@@ -17,6 +17,7 @@ from utils.workbench_env import (
     create_project_via_api,
     local_api_headers,
 )
+from utils.workbench_workflow_contracts import workflow_metadata
 
 from app import models as app_models
 
@@ -144,12 +145,7 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert summary_payload["import_job"]["status"] == "succeeded"
     assert summary_payload["dedup_summary"]["reused_findings"] == 0
 
-    metadata = workbench_api_env.client.get(
-        f"/api/v1/runs/{payload['id']}/workflow-metadata",
-        headers=headers,
-    )
-    assert metadata.status_code == 200
-    metadata_payload = metadata.json()
+    metadata_payload = workflow_metadata(workbench_api_env, payload["id"], headers=headers)
     assert metadata_payload["summary"]["schema_version"] == "run-workflow-summary.v1"
     assert metadata_payload["summary"]["provider_snapshot_id"] == payload["provider_snapshot_id"]
     assert metadata_payload["summary"]["analysis_service"]["pipeline"] == (

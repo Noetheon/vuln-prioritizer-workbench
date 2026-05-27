@@ -24,6 +24,7 @@ from utils.workbench_env import (
     create_project_via_api,
     local_api_headers,
 )
+from utils.workbench_workflow_contracts import workflow_metadata
 
 from app import models as app_models
 
@@ -360,12 +361,8 @@ def test_import_upload_applies_openvex_sidecar_to_workbench_findings(
     assert payload["vex"]["statement_count"] == 4
     assert payload["vex"]["matched_occurrences"] == 1
     assert payload["suppressed_by_vex"] == 1
-    metadata = workbench_api_env.client.get(
-        f"/api/v1/runs/{payload['id']}/workflow-metadata",
-        headers=headers,
-    )
-    assert metadata.status_code == 200
-    assert metadata.json()["summary"]["vex_conflict_count"] == 0
+    metadata_payload = workflow_metadata(workbench_api_env, payload["id"], headers=headers)
+    assert metadata_payload["summary"]["vex_conflict_count"] == 0
 
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -509,12 +506,11 @@ def test_import_upload_rejects_invalid_vex_sidecar_with_clear_error(
     assert run_payload["created_findings"] == 0
     assert run_payload["updated_findings"] == 0
 
-    metadata = workbench_api_env.client.get(
-        f"/api/v1/runs/{detail['analysis_run_id']}/workflow-metadata",
+    metadata_payload = workflow_metadata(
+        workbench_api_env,
+        detail["analysis_run_id"],
         headers=headers,
     )
-    assert metadata.status_code == 200
-    metadata_payload = metadata.json()
     assert metadata_payload["status"] == "failed"
     assert metadata_payload["summary"]["vex_error"]["stage"] == "vex_parse"
     assert metadata_payload["error"]["vex_error"]["stage"] == "vex_parse"

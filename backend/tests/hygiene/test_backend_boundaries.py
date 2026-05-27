@@ -669,6 +669,24 @@ def test_run_workflow_raw_metadata_access_stays_behind_service_boundary() -> Non
     assert offenders == []
 
 
+def test_run_workflow_contract_suites_do_not_read_raw_db_metadata() -> None:
+    suite_roots = (
+        ROOT / "tests/api/import_contracts",
+        ROOT / "tests/api/report_contracts",
+        ROOT / "tests/api/workflow_contracts",
+    )
+    offenders: list[str] = []
+    for suite_root in suite_roots:
+        for path in sorted(suite_root.rglob("*.py")):
+            relative = str(path.relative_to(ROOT))
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Attribute) and node.attr in {"summary_json", "error_json"}:
+                    offenders.append(f"{relative}:{node.lineno}:{node.attr}")
+
+    assert offenders == []
+
+
 def test_findings_page_uses_internal_query_object() -> None:
     repository_source = (ROOT / "app/repositories/findings.py").read_text(encoding="utf-8")
     query_source = (ROOT / "app/repositories/finding_page_query.py").read_text(encoding="utf-8")
