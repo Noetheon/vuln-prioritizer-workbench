@@ -44,21 +44,13 @@ export type AnalysisRunPublic = {
     created_findings?: number;
     dedup_summary?: RunWorkflowDedupSummary | null;
     /**
-     * Error Json
-     *
-     * @deprecated
-     */
-    error_json?: {
-        [key: string]: unknown;
-    };
-    /**
      * Error Message
      */
     error_message?: string | null;
     /**
      * Filename
      */
-    filename?: string | null;
+    filename: string | null;
     /**
      * Finding Count
      */
@@ -66,7 +58,7 @@ export type AnalysisRunPublic = {
     /**
      * Finished At
      */
-    finished_at?: string | null;
+    finished_at: string | null;
     /**
      * Id
      */
@@ -124,16 +116,8 @@ export type AnalysisRunPublic = {
     /**
      * Started At
      */
-    started_at?: string;
-    status?: AnalysisRunStatus;
-    /**
-     * Summary Json
-     *
-     * @deprecated
-     */
-    summary_json?: {
-        [key: string]: unknown;
-    };
+    started_at: string;
+    status: AnalysisRunStatus;
     /**
      * Suppressed By Vex
      */
@@ -216,14 +200,6 @@ export type AnalysisRunSummaryPublic = {
     created_findings?: number;
     dedup_summary?: RunWorkflowDedupSummary | null;
     /**
-     * Error Json
-     *
-     * @deprecated
-     */
-    error_json?: {
-        [key: string]: unknown;
-    };
-    /**
      * Filename
      */
     filename: string | null;
@@ -302,14 +278,6 @@ export type AnalysisRunSummaryPublic = {
      */
     started_at: string;
     status: AnalysisRunStatus;
-    /**
-     * Summary Json
-     *
-     * @deprecated
-     */
-    summary_json?: {
-        [key: string]: unknown;
-    };
     /**
      * Suppressed By Vex
      */

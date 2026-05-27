@@ -111,8 +111,8 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
     assert all("Item" not in schema_name for schema_name in schemas)
     for schema_name in ("AnalysisRunPublic", "AnalysisRunSummaryPublic"):
         properties = payload["components"]["schemas"][schema_name]["properties"]
-        assert properties["summary_json"]["deprecated"] is True
-        assert properties["error_json"]["deprecated"] is True
+        assert "summary_json" not in properties
+        assert "error_json" not in properties
 
 
 def test_workbench_capabilities_contract_is_redacted(
@@ -366,8 +366,8 @@ def test_vpw011_run_list_and_get_use_repository_seeded_graph(
     assert detail["workflow_schema_version"] == "run-workflow-summary.v1"
     assert detail["workflow_error_schema_version"] is None
     assert detail["created_findings"] == 0
-    assert detail["summary_json"] == {"parsed": 2, "findings": 2}
-    assert detail["error_json"] == {}
+    assert "summary_json" not in detail
+    assert "error_json" not in detail
 
     summary_response = workbench_api_env.client.get(
         f"/api/v1/runs/{seeded['run_id']}/summary",
@@ -383,8 +383,8 @@ def test_vpw011_run_list_and_get_use_repository_seeded_graph(
     assert summary["parse_errors"] == []
     assert summary["workflow_schema_version"] == "run-workflow-summary.v1"
     assert summary["workflow_error_schema_version"] is None
-    assert summary["summary_json"] == {"parsed": 2, "findings": 2}
-    assert summary["error_json"] == {}
+    assert "summary_json" not in summary
+    assert "error_json" not in summary
 
     metadata_response = workbench_api_env.client.get(
         f"/api/v1/runs/{seeded['run_id']}/workflow-metadata",

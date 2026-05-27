@@ -50,8 +50,8 @@ Expected values:
 - `failed`: run did not produce usable output
 - `cancelled`: run was intentionally stopped before completion
 
-Error states are modeled on the run through `error_message` and `error_json`.
-`finished_at` should be populated for terminal states.
+Error states are modeled on the run through `error_message` plus internal
+workflow error metadata. `finished_at` should be populated for terminal states.
 
 ## Tables
 
@@ -116,9 +116,9 @@ raw metadata in `summary_json` and `error_json`, but writers validate and merge
 through the versioned contract, and public responses project typed top-level
 fields onto both run-list and run-summary responses.
 
-Normal run responses still include `summary_json` and `error_json` as
-deprecated compatibility fields. Product UI and integrations should use the
-typed fields below. Diagnostics that need the redacted raw payload should call
+Normal run responses do not expose `summary_json` or `error_json`. Product UI
+and integrations should use the typed fields below. Diagnostics that need the
+redacted raw payload should call
 `GET /api/v1/runs/{run_id}/workflow-metadata`, which returns:
 
 - run identity and status

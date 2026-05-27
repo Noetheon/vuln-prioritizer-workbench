@@ -347,7 +347,7 @@ test("import model selects readable failure causes", () => {
     "Run level error",
   )
   assert.equal(
-    failedRunCause(null, { error_json: { message: "Deprecated raw message" } } as never),
+    failedRunCause(null, { raw_error: { message: "Diagnostics-only raw message" } } as never),
     "No failure detail available.",
   )
   assert.equal(

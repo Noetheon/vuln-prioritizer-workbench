@@ -104,12 +104,6 @@ export const AnalysisRunPublicSchema = {
                 }
             ]
         },
-        error_json: {
-            additionalProperties: true,
-            deprecated: true,
-            title: 'Error Json',
-            type: 'object'
-        },
         error_message: {
             anyOf: [
                 {
@@ -124,7 +118,6 @@ export const AnalysisRunPublicSchema = {
         filename: {
             anyOf: [
                 {
-                    maxLength: 500,
                     type: 'string'
                 },
                 {
@@ -182,8 +175,6 @@ export const AnalysisRunPublicSchema = {
             title: 'Input Sha256'
         },
         input_type: {
-            maxLength: 80,
-            minLength: 1,
             title: 'Input Type',
             type: 'string'
         },
@@ -267,14 +258,7 @@ export const AnalysisRunPublicSchema = {
             type: 'string'
         },
         status: {
-            $ref: '#/components/schemas/AnalysisRunStatus',
-            default: 'pending'
-        },
-        summary_json: {
-            additionalProperties: true,
-            deprecated: true,
-            title: 'Summary Json',
-            type: 'object'
+            $ref: '#/components/schemas/AnalysisRunStatus'
         },
         suppressed_by_vex: {
             default: 0,
@@ -354,6 +338,10 @@ export const AnalysisRunPublicSchema = {
     },
     required: [
         'input_type',
+        'filename',
+        'status',
+        'started_at',
+        'finished_at',
         'id',
         'project_id',
         'provider_snapshot_id'
@@ -491,12 +479,6 @@ export const AnalysisRunSummaryPublicSchema = {
                     type: 'null'
                 }
             ]
-        },
-        error_json: {
-            additionalProperties: true,
-            deprecated: true,
-            title: 'Error Json',
-            type: 'object'
         },
         filename: {
             anyOf: [
@@ -660,12 +642,6 @@ export const AnalysisRunSummaryPublicSchema = {
         },
         status: {
             $ref: '#/components/schemas/AnalysisRunStatus'
-        },
-        summary_json: {
-            additionalProperties: true,
-            deprecated: true,
-            title: 'Summary Json',
-            type: 'object'
         },
         suppressed_by_vex: {
             default: 0,

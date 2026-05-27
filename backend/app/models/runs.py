@@ -109,17 +109,15 @@ class AnalysisRun(AnalysisRunBase, table=True):
     )
 
 
-class AnalysisRunPublic(AnalysisRunBase):
+class AnalysisRunPublic(SQLModel):
     """Public analysis run response shape."""
 
-    error_json: dict[str, Any] = Field(
-        default_factory=dict,
-        schema_extra={"deprecated": True},
-    )
-    summary_json: dict[str, Any] = Field(
-        default_factory=dict,
-        schema_extra={"deprecated": True},
-    )
+    input_type: str
+    filename: str | None
+    status: AnalysisRunStatus
+    started_at: datetime
+    finished_at: datetime | None
+    error_message: str | None = None
     id: uuid.UUID
     project_id: uuid.UUID
     provider_snapshot_id: uuid.UUID | None
@@ -222,14 +220,6 @@ class AnalysisRunSummaryPublic(SQLModel):
     workflow_error: RunWorkflowErrorV1 | None = None
     analysis_decision_scope: str | None = None
     persistence_scope: str | None = None
-    summary_json: dict[str, Any] = Field(
-        default_factory=dict,
-        schema_extra={"deprecated": True},
-    )
-    error_json: dict[str, Any] = Field(
-        default_factory=dict,
-        schema_extra={"deprecated": True},
-    )
 
 
 class AnalysisRunWorkflowMetadataPublic(SQLModel):

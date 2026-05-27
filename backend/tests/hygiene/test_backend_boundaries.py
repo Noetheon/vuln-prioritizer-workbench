@@ -603,6 +603,7 @@ def test_workbench_import_validation_and_storage_are_split_from_route_facade() -
 
 def test_run_workflow_metadata_uses_versioned_contract_projection() -> None:
     contract_source = (ROOT / "app/contracts/run_workflow.py").read_text(encoding="utf-8")
+    metadata_source = (ROOT / "app/services/run_workflow_metadata.py").read_text(encoding="utf-8")
     projection_source = (ROOT / "app/services/run_workflow_projection.py").read_text(
         encoding="utf-8"
     )
@@ -625,12 +626,18 @@ def test_run_workflow_metadata_uses_versioned_contract_projection() -> None:
     assert "app.contracts.run_workflow" in model_source
     assert "app.services.run_workflow_projection" in run_route_imports
     assert "app.services.run_workflow_projection" in import_route_imports
-    assert "workflow_public_fields(summary_json, error_json)" in projection_source
-    assert "AnalysisRunPublic.model_validate(run)" in projection_source
+    assert "def public_workflow_fields" in metadata_source
+    assert "workflow_public_fields(summary, error)" in metadata_source
+    assert "public_workflow_fields(run)" in projection_source
+    assert "AnalysisRunPublic(" in projection_source
     assert "AnalysisRunSummaryPublic(" in projection_source
     for path in writer_paths:
         source = (ROOT / path).read_text(encoding="utf-8")
-        assert "merge_workflow_summary" in source, path
+        assert (
+            "merge_summary_payload" in source
+            or "update_workflow_summary" in source
+            or "set_workflow_summary" in source
+        ), path
     for path in (
         "app/services/import_execution_failures.py",
         "app/services/import_execution_parse_failures.py",
@@ -638,7 +645,28 @@ def test_run_workflow_metadata_uses_versioned_contract_projection() -> None:
         "app/services/provider_updates.py",
     ):
         source = (ROOT / path).read_text(encoding="utf-8")
-        assert "merge_workflow_error" in source, path
+        assert "merge_error_payload" in source or "set_workflow_error" in source, path
+
+
+def test_run_workflow_raw_metadata_access_stays_behind_service_boundary() -> None:
+    allowed = {
+        "app/models/runs.py",
+        "app/repositories/runs.py",
+        "app/services/run_workflow_metadata.py",
+    }
+    offenders: list[str] = []
+    for path in sorted((ROOT / "app").rglob("*.py")):
+        relative = str(path.relative_to(ROOT))
+        if relative.startswith("app/alembic/") or relative in allowed:
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Attribute) and node.attr in {"summary_json", "error_json"}:
+                if isinstance(node.value, ast.Name) and node.value.id == "analysis_result":
+                    continue
+                offenders.append(f"{relative}:{node.lineno}:{node.attr}")
+
+    assert offenders == []
 
 
 def test_findings_page_uses_internal_query_object() -> None:
