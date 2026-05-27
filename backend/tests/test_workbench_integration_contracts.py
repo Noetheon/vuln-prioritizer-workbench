@@ -139,8 +139,12 @@ def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
     assert 'export POSTGRES_PASSWORD="$(DOCKER_DEMO_POSTGRES_PASSWORD)"' in docker_smoke_block
     assert "login/access-token" not in script
     assert "Authorization" not in script
+    assert 'run.get("summary_json")' not in script
+    assert 'run.get("error_json")' not in script
+    assert "_assert_no_raw_workflow_fields" in script
     assert "locked_provider_data" in script
     assert "demo_provider_snapshot.json" in script
+    assert "/summary" in script
     assert "providers/update-jobs" in script
 
 
