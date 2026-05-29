@@ -279,7 +279,7 @@ the PR is marked ready for review.
 Branch protection should treat these release-adjacent contexts as required for
 release or runtime PRs:
 
-- `CI / check (3.12)` for the local-equivalent Python workflow gate.
+- `CI / check (3.13)` for the local-equivalent Python workflow gate.
 - `CI / frontend` for frontend/API/runtime representative browser evidence.
 - `Docker / compose-smoke` for runtime and Compose evidence.
 - CodeQL where repository security policy requires it.

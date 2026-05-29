@@ -234,14 +234,18 @@ def test_container_image_digest_policy_covers_compose_service_images() -> None:
     assert "@sha256:" in traefik_compose["services"]["traefik"]["image"]
 
 
-def test_runtime_containers_avoid_unpinned_upgrade_drift() -> None:
+def test_runtime_containers_keep_upgrade_and_package_surface_guards() -> None:
     backend_dockerfile = _read_repo_text("backend/Dockerfile")
     frontend_dockerfile = _read_repo_text("frontend/Dockerfile")
 
     assert "python -m pip install --upgrade pip" not in backend_dockerfile
     assert "python -m pip install --require-hashes" in backend_dockerfile
-    assert "apk upgrade" not in frontend_dockerfile
-    assert "apk del --no-network curl libcurl" in frontend_dockerfile
+    assert "DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends" in (
+        backend_dockerfile
+    )
+    assert "python -m pip uninstall -y pip setuptools wheel" in backend_dockerfile
+    assert "apk upgrade --no-cache" in frontend_dockerfile
+    assert "apk del --no-network curl libcurl nginx-module-image-filter" in frontend_dockerfile
     assert "npm ci --workspaces=false" in frontend_dockerfile
 
 

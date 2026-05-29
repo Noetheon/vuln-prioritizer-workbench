@@ -67,7 +67,7 @@ dependency-audit input is `backend/requirements.lock.txt`, exported from
 `uv.lock` with exact pins and hashes for runtime plus maintainer dependencies.
 The backend Docker install input is the separate
 `backend/requirements.runtime.lock.txt`, exported from the same `uv.lock` for
-Python 3.12 without dev extras. Keep all three committed together when Python
+Python 3.13 without dev extras. Keep all three committed together when Python
 dependency metadata changes. The backend Docker image installs the local backend
 package from `backend/pyproject.toml` with `--no-deps` after installing the
 runtime lock, so runtime containers do not carry test, docs, or maintainer
@@ -86,7 +86,7 @@ uv export --format requirements.txt --all-packages --all-extras \
   --python 3.11 --output-file backend/requirements.lock.txt --no-progress
 uv export --format requirements.txt --package vuln-prioritizer --no-dev \
   --no-emit-project --no-emit-workspace --locked \
-  --python 3.12 --output-file backend/requirements.runtime.lock.txt --no-progress
+  --python 3.13 --output-file backend/requirements.runtime.lock.txt --no-progress
 ```
 
 The drift and lock checks are enforced by:

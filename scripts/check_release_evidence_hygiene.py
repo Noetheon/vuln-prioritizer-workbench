@@ -266,7 +266,7 @@ def _check_python_runtime_lock(
     for expected_fragment in (
         "--package vuln-prioritizer",
         "--no-dev",
-        "--python 3.12",
+        "--python 3.13",
         "backend/requirements.runtime.lock.txt",
     ):
         if expected_fragment not in runtime_lock_text:

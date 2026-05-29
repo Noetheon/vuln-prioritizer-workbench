@@ -32,7 +32,7 @@ def test_dependency_audit_requirements_include_dev_gate_tools() -> None:
     assert "--hash=sha256:" in audit_lock
     assert {"mkdocs", "pip-audit", "pytest-cov"}.issubset(pinned_package_names)
     assert "backend/requirements.runtime.lock.txt" in runtime_lock
-    assert "--python 3.12" in runtime_lock
+    assert "--python 3.13" in runtime_lock
     assert "--no-dev" in runtime_lock
     assert "--hash=sha256:" in runtime_lock
     assert {"fastapi", "psycopg", "uvicorn"}.issubset(runtime_pinned_package_names)
