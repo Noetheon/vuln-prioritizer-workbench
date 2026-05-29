@@ -700,7 +700,13 @@ def test_backend_package_boundary_matches_pytest_coverage_boundary() -> None:
         pytest_options = config["tool"]["pytest"]["ini_options"]
         addopts = set(pytest_options["addopts"].split())
         assert {"--cov=app", "--cov=vuln_prioritizer"}.issubset(addopts)
+        assert not any(option.startswith("--cov-fail-under") for option in addopts)
         assert set(pytest_options["pythonpath"]) == expected_pythonpath
+
+    makefile = _read_repo_text("Makefile")
+    assert "$(PYTHON) -m coverage json -o build/coverage-current.json" in makefile
+    assert "$(MAKE) critical-coverage-check" in makefile
+    assert "$(PYTHON) scripts/check_critical_coverage.py build/coverage-current.json" in makefile
 
 
 def test_active_status_contract_has_no_migration_or_legacy_fields() -> None:

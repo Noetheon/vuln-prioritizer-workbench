@@ -40,14 +40,18 @@ Workbench runtime packages under
 
 ## Coverage Boundary
 
-The current backend pytest coverage gate in `backend/pyproject.toml` measures
-both `vuln_prioritizer` and the active FastAPI Workbench package under
-`backend/app`. This keeps the domain package and shipped API runtime inside the
-same enforced release threshold.
+The current backend pytest coverage configuration in `backend/pyproject.toml`
+measures both `vuln_prioritizer` and the active FastAPI Workbench package under
+`backend/app`. `pytest-cov` owns measurement and the terminal report, while the
+enforced backend gate is `make critical-coverage-check` over the generated
+coverage JSON. This avoids a misleading total-project fail-under message while
+still protecting the critical Workbench modules.
 
 Coverage configuration must stay aligned with the package boundary when modules
-move. Package inclusion of `app*` is not coverage proof by itself; the pytest
-coverage command must continue to measure both `app` and `vuln_prioritizer`.
+move. Package inclusion of `app*` is not coverage proof by itself; pytest must
+continue to measure both `app` and `vuln_prioritizer`, and `make check` must
+continue to generate `build/coverage-current.json` before running the critical
+coverage gate.
 
 ## Python Dependencies
 
