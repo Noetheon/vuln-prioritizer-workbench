@@ -74,6 +74,13 @@ runtime lock, so runtime containers do not carry test, docs, or maintainer
 tooling. `backend/requirements.lock.txt` remains the audited candidate
 dependency set for release evidence.
 
+GitHub workflows use Python 3.13 for single-version release, audit,
+maintenance, provider-live, frontend, and CodeQL jobs so workflow evidence stays
+aligned with the current Docker runtime. The CI Python matrix remains the
+compatibility gate for every supported package version: 3.11, 3.12, and 3.13.
+`make python-lock-check` enforces both the runtime lock export version and this
+workflow Python policy.
+
 Regenerate or refresh the audit input by reconciling the union of
 `project.dependencies` and `project.optional-dependencies.dev` from
 `backend/pyproject.toml` into `backend/requirements.txt`, preserving bounded
