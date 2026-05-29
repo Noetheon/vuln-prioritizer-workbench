@@ -248,7 +248,7 @@ dependency-audit: python-lock-check docker-base-image-check
 		echo "Install pip-audit first: python3 -m pip install pip-audit" >&2; \
 		exit 1; \
 	}
-	$(PYTHON) -m pip_audit --requirement $(PYTHON_AUDIT_LOCK)
+	$(PYTHON) -m pip_audit --requirement $(PYTHON_AUDIT_LOCK) --require-hashes --disable-pip
 	$(MAKE) frontend-audit
 
 clean-local:

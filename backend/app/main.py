@@ -79,6 +79,7 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
     app.router.on_startup.append(
         lambda: _reconcile_stale_import_runs_on_startup(active_engine, selected_settings)
     )
+    app.router.on_shutdown.append(lambda: active_engine.dispose())
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=list(selected_settings.ALLOWED_HOSTS),

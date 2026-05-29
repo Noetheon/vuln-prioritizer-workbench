@@ -31,9 +31,8 @@ def test_workbench_backend_status_uses_versioned_api_namespace(tmp_path) -> None
     )
     SQLModel.metadata.create_all(selected_app.state.workbench_engine)
     _stamp_alembic_head(selected_app.state.workbench_engine)
-    client = TestClient(selected_app)
-
-    response = client.get("/api/v1/workbench/status")
+    with TestClient(selected_app) as client:
+        response = client.get("/api/v1/workbench/status")
 
     assert response.status_code == 200
     payload = response.json()
@@ -58,8 +57,10 @@ def test_workbench_backend_status_uses_versioned_api_namespace(tmp_path) -> None
 
 def test_workbench_backend_openapi_uses_stable_operation_ids() -> None:
     client = TestClient(app)
-
-    response = client.get("/api/v1/openapi.json")
+    try:
+        response = client.get("/api/v1/openapi.json")
+    finally:
+        client.close()
 
     assert response.status_code == 200
     payload = response.json()
@@ -80,8 +81,10 @@ def test_workbench_backend_openapi_uses_stable_operation_ids() -> None:
 
 def test_workbench_backend_openapi_documents_error_envelope() -> None:
     client = TestClient(app)
-
-    response = client.get("/api/v1/openapi.json")
+    try:
+        response = client.get("/api/v1/openapi.json")
+    finally:
+        client.close()
 
     assert response.status_code == 200
     payload = response.json()
@@ -106,9 +109,8 @@ def test_workbench_backend_openapi_omits_oauth_security_for_local_runtime(tmp_pa
             SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'custom-openapi.db'}",
         )
     )
-    client = TestClient(selected_app)
-
-    response = client.get("/api/custom/openapi.json")
+    with TestClient(selected_app) as client:
+        response = client.get("/api/custom/openapi.json")
 
     assert response.status_code == 200
     security_schemes = response.json()["components"].get("securitySchemes", {})
@@ -135,11 +137,13 @@ def test_workbench_api_routes_require_local_actor_unless_allowlisted() -> None:
 
 def test_workbench_backend_rejects_invalid_host_header() -> None:
     client = TestClient(app)
-
-    response = client.get(
-        "/api/v1/workbench/health",
-        headers={"host": "evil.example"},
-    )
+    try:
+        response = client.get(
+            "/api/v1/workbench/health",
+            headers={"host": "evil.example"},
+        )
+    finally:
+        client.close()
 
     assert response.status_code == 400
     assert response.text == "Invalid host header"
@@ -148,19 +152,23 @@ def test_workbench_backend_rejects_invalid_host_header() -> None:
 @pytest.mark.parametrize("host", ["testserver", "localhost", "127.0.0.1"])
 def test_workbench_backend_allows_local_and_testclient_hosts(host: str) -> None:
     client = TestClient(app)
-
-    response = client.get(
-        "/api/v1/workbench/health",
-        headers={"host": host},
-    )
+    try:
+        response = client.get(
+            "/api/v1/workbench/health",
+            headers={"host": host},
+        )
+    finally:
+        client.close()
 
     assert response.status_code == 200
 
 
 def test_workbench_backend_health_check_matches_utility_route() -> None:
     client = TestClient(app)
-
-    response = client.get("/api/v1/utils/health-check/")
+    try:
+        response = client.get("/api/v1/utils/health-check/")
+    finally:
+        client.close()
 
     assert response.status_code == 200
     assert response.json() is True
@@ -168,8 +176,10 @@ def test_workbench_backend_health_check_matches_utility_route() -> None:
 
 def test_workbench_backend_http_errors_include_stable_envelope() -> None:
     client = TestClient(app)
-
-    response = client.get("/api/v1/items/")
+    try:
+        response = client.get("/api/v1/items/")
+    finally:
+        client.close()
 
     assert response.status_code == 404
     payload = response.json()
@@ -186,9 +196,8 @@ def test_workbench_backend_validation_errors_include_redacted_envelope() -> None
     def _debug_item(item_id: int) -> dict[str, int]:
         return {"item_id": item_id}
 
-    client = TestClient(selected_app)
-
-    response = client.get("/debug/not-a-number")
+    with TestClient(selected_app) as client:
+        response = client.get("/debug/not-a-number")
 
     assert response.status_code == 422
     payload = response.json()
@@ -201,14 +210,16 @@ def test_workbench_backend_validation_errors_include_redacted_envelope() -> None
 
 def test_workbench_backend_allows_configured_frontend_cors_origin() -> None:
     client = TestClient(app)
-
-    response = client.options(
-        "/api/v1/workbench/status",
-        headers={
-            "origin": "http://localhost:5173",
-            "access-control-request-method": "GET",
-        },
-    )
+    try:
+        response = client.options(
+            "/api/v1/workbench/status",
+            headers={
+                "origin": "http://localhost:5173",
+                "access-control-request-method": "GET",
+            },
+        )
+    finally:
+        client.close()
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
@@ -221,12 +232,12 @@ def test_workbench_backend_can_be_configured_without_legacy_state_aliases() -> N
         ENVIRONMENT="local",
     )
     selected_app = create_app(selected_settings)
-    client = TestClient(selected_app)
 
     assert selected_app.state.workbench_settings == selected_settings
     assert not hasattr(selected_app.state, "template_settings")
-    assert client.get("/api/health").status_code == 404
-    assert client.get("/api/v1/workbench/health").json()["status"] == "ok"
+    with TestClient(selected_app) as client:
+        assert client.get("/api/health").status_code == 404
+        assert client.get("/api/v1/workbench/health").json()["status"] == "ok"
 
 
 def test_workbench_backend_create_app_uses_isolated_settings_db_and_local_principal(
@@ -243,17 +254,16 @@ def test_workbench_backend_create_app_uses_isolated_settings_db_and_local_princi
     selected_app = create_app(selected_settings)
     SQLModel.metadata.create_all(selected_app.state.workbench_engine)
     _stamp_alembic_head(selected_app.state.workbench_engine)
-    client = TestClient(selected_app)
-
-    global_login = client.post(
-        "/api/v1/login/access-token",
-        data={"username": settings.LOCAL_WORKBENCH_USER_EMAIL, "password": "unused"},
-    )
-    project = client.post(
-        "/api/v1/projects/",
-        json={"name": "Selected Settings Project", "description": None},
-    )
-    status = client.get("/api/v1/workbench/status")
+    with TestClient(selected_app) as client:
+        global_login = client.post(
+            "/api/v1/login/access-token",
+            data={"username": settings.LOCAL_WORKBENCH_USER_EMAIL, "password": "unused"},
+        )
+        project = client.post(
+            "/api/v1/projects/",
+            json={"name": "Selected Settings Project", "description": None},
+        )
+        status = client.get("/api/v1/workbench/status")
 
     assert global_login.status_code == 404
     assert project.status_code == 200, project.text
@@ -544,26 +554,29 @@ def test_workbench_backend_hides_docs_and_openapi_outside_local_by_default() -> 
         )
     )
     client = TestClient(selected_app)
-
-    assert client.get("/docs", headers={"host": "workbench.example.com"}).status_code == 404
-    assert (
-        client.get(
-            "/api/v1/openapi.json",
+    try:
+        assert client.get("/docs", headers={"host": "workbench.example.com"}).status_code == 404
+        assert (
+            client.get(
+                "/api/v1/openapi.json",
+                headers={"host": "workbench.example.com"},
+            ).status_code
+            == 404
+        )
+        assert (
+            client.get(
+                "/api/v1/workbench/health",
+                headers={"host": "workbench.example.com"},
+            ).status_code
+            == 200
+        )
+        status = client.get(
+            "/api/v1/workbench/status",
             headers={"host": "workbench.example.com"},
-        ).status_code
-        == 404
-    )
-    assert (
-        client.get(
-            "/api/v1/workbench/health",
-            headers={"host": "workbench.example.com"},
-        ).status_code
-        == 200
-    )
-    status = client.get(
-        "/api/v1/workbench/status",
-        headers={"host": "workbench.example.com"},
-    )
+        )
+    finally:
+        client.close()
+        selected_app.state.workbench_engine.dispose()
     assert status.status_code != 401
 
 
@@ -578,9 +591,12 @@ def test_workbench_backend_non_local_startup_rejects_stale_schema(tmp_path) -> N
         )
     )
 
-    with pytest.raises(RuntimeError, match="missing alembic_version|missing model tables"):
-        with TestClient(selected_app):
-            pass
+    try:
+        with pytest.raises(RuntimeError, match="missing alembic_version|missing model tables"):
+            with TestClient(selected_app):
+                pass
+    finally:
+        selected_app.state.workbench_engine.dispose()
 
 
 def test_workbench_backend_local_startup_reconciles_stale_import_runs(
@@ -618,6 +634,29 @@ def test_workbench_backend_local_startup_tolerates_first_run_missing_schema(
         assert client.get("/api/v1/utils/health-check/").status_code == 200
 
 
+def test_workbench_backend_disposes_engine_on_shutdown(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    selected_app = create_app(
+        Settings(SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'dispose-on-shutdown.db'}")
+    )
+    dispose_calls = 0
+    original_dispose = selected_app.state.workbench_engine.dispose
+
+    def record_dispose() -> None:
+        nonlocal dispose_calls
+        dispose_calls += 1
+        original_dispose()
+
+    monkeypatch.setattr(selected_app.state.workbench_engine, "dispose", record_dispose)
+
+    with TestClient(selected_app) as client:
+        assert client.get("/api/v1/utils/health-check/").status_code == 200
+
+    assert dispose_calls == 1
+
+
 def test_workbench_backend_can_explicitly_expose_openapi_for_client_generation() -> None:
     selected_app = create_app(
         Settings(
@@ -630,11 +669,14 @@ def test_workbench_backend_can_explicitly_expose_openapi_for_client_generation()
         )
     )
     client = TestClient(selected_app)
-
-    response = client.get(
-        "/api/v1/openapi.json",
-        headers={"host": "workbench.example.com"},
-    )
+    try:
+        response = client.get(
+            "/api/v1/openapi.json",
+            headers={"host": "workbench.example.com"},
+        )
+    finally:
+        client.close()
+        selected_app.state.workbench_engine.dispose()
 
     assert response.status_code == 200
     assert response.json()["info"]["title"] == "Vuln Prioritizer Workbench"

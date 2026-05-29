@@ -26,8 +26,11 @@ from app.models.base import get_datetime_utc
 
 def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
     client = TestClient(app)
-
-    response = client.get("/api/v1/openapi.json")
+    try:
+        response = client.get("/api/v1/openapi.json")
+        missing_items = client.get("/api/v1/items/")
+    finally:
+        client.close()
 
     assert response.status_code == 200
     payload = response.json()
@@ -106,7 +109,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
     assert expected_paths.issubset(paths)
 
     assert all("/items" not in path for path in paths)
-    assert client.get("/api/v1/items/").status_code == 404
+    assert missing_items.status_code == 404
     assert expected_schemas.issubset(schemas)
     assert all("Item" not in schema_name for schema_name in schemas)
     for schema_name in ("AnalysisRunPublic", "AnalysisRunSummaryPublic"):

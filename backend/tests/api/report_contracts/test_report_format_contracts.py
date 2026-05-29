@@ -73,7 +73,11 @@ from vuln_prioritizer.sarif_contract import (
 
 
 def test_vpw049_openapi_exposes_report_format_contract() -> None:
-    response = TestClient(app).get("/api/v1/openapi.json")
+    client = TestClient(app)
+    try:
+        response = client.get("/api/v1/openapi.json")
+    finally:
+        client.close()
 
     assert response.status_code == 200
     payload = response.json()

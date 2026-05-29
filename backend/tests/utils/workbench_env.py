@@ -178,13 +178,15 @@ def create_workbench_api_env() -> tuple[WorkbenchApiEnv, Callable[[], None]]:
             yield session
 
     app.dependency_overrides[deps.get_db] = override_get_db
+    client = TestClient(app)
 
     def cleanup() -> None:
+        client.close()
         app.dependency_overrides.clear()
         app.state.workbench_settings = previous_settings
         engine.dispose()
 
-    return WorkbenchApiEnv(TestClient(app), engine, app_models, repositories), cleanup
+    return WorkbenchApiEnv(client, engine, app_models, repositories), cleanup
 
 
 def stamp_test_alembic_head(engine: Engine) -> None:
