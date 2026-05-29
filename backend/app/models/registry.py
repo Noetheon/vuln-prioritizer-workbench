@@ -9,6 +9,7 @@ TABLE_MODEL_MODULES = (
     "app.models.findings",
     "app.models.runs",
     "app.models.reports",
+    "app.models.workflows",
     "app.models.audit",
     "app.models.runtime",
     "app.models.github_issues",

@@ -7,6 +7,8 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict
 from sqlmodel import Field, SQLModel
 
+from app.models.workflows import WorkflowRunPublic
+
 
 class ProviderSourceStatusPublic(SQLModel):
     """Status for one provider source within the latest stored snapshot."""
@@ -65,6 +67,7 @@ class ProviderUpdateJobPublic(BaseModel):
     finished_at: str | None = None
     error_message: str | None = None
     metadata_: dict[str, Any] = Field(default_factory=dict, alias="metadata")
+    workflow: WorkflowRunPublic | None = None
 
 
 class ProviderUpdateJobsPublic(BaseModel):

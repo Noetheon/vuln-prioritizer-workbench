@@ -18,6 +18,7 @@ from app.contracts.run_workflow import (
 )
 from app.models.base import get_datetime_utc
 from app.models.enums import AnalysisRunStatus
+from app.models.workflows import WorkflowRunPublic
 
 
 class ProviderSnapshotBase(SQLModel):
@@ -153,6 +154,7 @@ class AnalysisRunPublic(SQLModel):
     vex_error: RunWorkflowFailure | None = None
     background_error: RunWorkflowFailure | None = None
     workflow_error: RunWorkflowErrorV1 | None = None
+    workflow: WorkflowRunPublic | None = None
 
 
 class AnalysisRunsPublic(SQLModel):
@@ -220,6 +222,7 @@ class AnalysisRunSummaryPublic(SQLModel):
     workflow_error: RunWorkflowErrorV1 | None = None
     analysis_decision_scope: str | None = None
     persistence_scope: str | None = None
+    workflow: WorkflowRunPublic | None = None
 
 
 class AnalysisRunWorkflowMetadataPublic(SQLModel):

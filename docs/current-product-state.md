@@ -23,6 +23,7 @@ hosted SaaS product.
 | Layer | Current source of truth | Notes |
 | --- | --- | --- |
 | Backend runtime | `backend/app` | Active FastAPI app, `/api/v1` routes, SQLModel models, repositories, services, and Alembic migrations. |
+| Worker runtime | `backend/app/workers` | Separate database-backed worker process for queued durable imports, provider refreshes, retries, cancellation, and report generation. |
 | Frontend runtime | `frontend` | React, Vite, TypeScript, TanStack Query, local route adapter, Playwright tests, and Workbench UI. |
 | Generated client | `frontend/src/client/**` | Generated from backend OpenAPI. Do not edit generated files manually. |
 | Frontend integration wrapper | `frontend/src/api-client.ts` | Handwritten wrapper over generated client code. Normal app code should use this boundary. |
@@ -34,9 +35,12 @@ hosted SaaS product.
 
 - Workbench UI: Dashboard, Projects, Imports, Findings, Finding Detail, TTP
   Context, Waivers, Assets, Providers, Reports, Evidence Center, and Settings.
-- API: versioned FastAPI routes under `/api/v1`.
+- API: versioned FastAPI routes under `/api/v1`, including durable workflow
+  status/events, cancel/retry, queued report jobs, and WebSocket streaming for
+  imports, provider refreshes, and report generation.
 - Docker Compose: local self-hosted Workbench quickstart and production-like
-  smoke topology.
+  smoke topology with a backend, frontend, database, and durable workflow
+  worker.
 
 ## Canonical Docs
 

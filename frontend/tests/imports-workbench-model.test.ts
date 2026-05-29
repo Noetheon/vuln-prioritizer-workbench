@@ -585,6 +585,7 @@ test("import upload payload omits empty optional file-name fields", () => {
 
   assert.deepEqual(payload, {
     attack_source: "none",
+    execution_mode: "worker",
     file: importFile,
     input_type: "cve-list",
     locked_provider_data: false,

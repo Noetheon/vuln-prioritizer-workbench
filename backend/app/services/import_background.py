@@ -10,9 +10,9 @@ from sqlmodel import Session
 
 from app.core.config import Settings
 from app.core.local_actor import configured_local_actor
-from app.models import AnalysisRun, AnalysisRunStatus
+from app.models import AnalysisRun, AnalysisRunStatus, WorkflowRunKind, WorkflowRunStatus
 from app.models.base import get_datetime_utc
-from app.repositories import RunRepository
+from app.repositories import RunRepository, WorkflowRepository
 from app.services.import_errors import ImportServiceError
 from app.services.import_execution import (
     ProjectImportUploadRequest,
@@ -134,6 +134,20 @@ def mark_import_run_background_failed(
             ),
         ),
     )
+    workflow_repository = WorkflowRepository(session)
+    workflow = workflow_repository.get_latest_analysis_workflow(
+        analysis_run_id=run.id,
+        kind=WorkflowRunKind.IMPORT,
+    )
+    if workflow is not None and workflow.status != WorkflowRunStatus.FAILED:
+        workflow_repository.finish_workflow(
+            workflow.id,
+            status=WorkflowRunStatus.FAILED,
+            stage="background_import",
+            message=error_message,
+            error_message=error_message,
+            error_json={"stage": "background_import"},
+        )
     session.commit()
     return failed_run
 

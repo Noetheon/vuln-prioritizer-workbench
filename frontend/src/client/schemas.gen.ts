@@ -309,6 +309,16 @@ export const AnalysisRunPublicSchema = {
             title: 'Warnings',
             type: 'array'
         },
+        workflow: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/WorkflowRunPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         workflow_error: {
             anyOf: [
                 {
@@ -691,6 +701,16 @@ export const AnalysisRunSummaryPublicSchema = {
             },
             title: 'Warnings',
             type: 'array'
+        },
+        workflow: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/WorkflowRunPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         },
         workflow_error: {
             anyOf: [
@@ -1508,6 +1528,11 @@ export const Body_imports_import_project_uploadSchema = {
                 }
             ],
             title: 'Attack Technique Metadata File'
+        },
+        execution_mode: {
+            default: 'request',
+            title: 'Execution Mode',
+            type: 'string'
         },
         file: {
             contentMediaType: 'application/octet-stream',
@@ -5160,6 +5185,16 @@ export const ProviderUpdateJobPublicSchema = {
         status: {
             title: 'Status',
             type: 'string'
+        },
+        workflow: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/WorkflowRunPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         }
     },
     required: [
@@ -5341,6 +5376,16 @@ export const ReportPublicSchema = {
         size_bytes: {
             title: 'Size Bytes',
             type: 'integer'
+        },
+        workflow: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/WorkflowRunPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         }
     },
     required: [
@@ -7003,5 +7048,413 @@ export const WorkbenchStatusSchema = {
         'api_docs_enabled'
     ],
     title: 'WorkbenchStatus',
+    type: 'object'
+} as const;
+
+export const WorkflowEventPublicSchema = {
+    description: 'Public workflow event DTO without raw filesystem or secret-bearing fields.',
+    properties: {
+        artifact_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Artifact Id'
+        },
+        artifact_kind: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Artifact Kind'
+        },
+        created_at: {
+            format: 'date-time',
+            title: 'Created At',
+            type: 'string'
+        },
+        details: {
+            additionalProperties: true,
+            title: 'Details',
+            type: 'object'
+        },
+        event_type: {
+            $ref: '#/components/schemas/WorkflowEventType'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Message'
+        },
+        progress_current: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Progress Current'
+        },
+        progress_total: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Progress Total'
+        },
+        sequence: {
+            title: 'Sequence',
+            type: 'integer'
+        },
+        stage: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Stage'
+        },
+        status: {
+            $ref: '#/components/schemas/WorkflowRunStatus'
+        },
+        workflow_run_id: {
+            format: 'uuid',
+            title: 'Workflow Run Id',
+            type: 'string'
+        }
+    },
+    required: [
+        'id',
+        'workflow_run_id',
+        'sequence',
+        'event_type',
+        'status',
+        'created_at'
+    ],
+    title: 'WorkflowEventPublic',
+    type: 'object'
+} as const;
+
+export const WorkflowEventTypeSchema = {
+    description: 'Durable workflow event categories.',
+    enum: [
+        'created',
+        'started',
+        'stage',
+        'progress',
+        'artifact',
+        'succeeded',
+        'failed',
+        'cancelled',
+        'retry'
+    ],
+    title: 'WorkflowEventType',
+    type: 'string'
+} as const;
+
+export const WorkflowEventsPublicSchema = {
+    description: 'Collection response for workflow events.',
+    properties: {
+        count: {
+            title: 'Count',
+            type: 'integer'
+        },
+        data: {
+            items: {
+                $ref: '#/components/schemas/WorkflowEventPublic'
+            },
+            title: 'Data',
+            type: 'array'
+        }
+    },
+    required: [
+        'data',
+        'count'
+    ],
+    title: 'WorkflowEventsPublic',
+    type: 'object'
+} as const;
+
+export const WorkflowRunKindSchema = {
+    description: 'Durable workflow families owned by the Workbench core.',
+    enum: [
+        'import',
+        'provider_update',
+        'report_generation'
+    ],
+    title: 'WorkflowRunKind',
+    type: 'string'
+} as const;
+
+export const WorkflowRunPublicSchema = {
+    description: 'Public workflow state DTO used by imports, providers, and reports.',
+    properties: {
+        analysis_run_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Analysis Run Id'
+        },
+        cancellation_requested: {
+            default: false,
+            title: 'Cancellation Requested',
+            type: 'boolean'
+        },
+        created_at: {
+            format: 'date-time',
+            title: 'Created At',
+            type: 'string'
+        },
+        current_stage: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Current Stage'
+        },
+        details: {
+            additionalProperties: true,
+            title: 'Details',
+            type: 'object'
+        },
+        error_details: {
+            additionalProperties: true,
+            title: 'Error Details',
+            type: 'object'
+        },
+        error_message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Error Message'
+        },
+        execution_mode: {
+            title: 'Execution Mode',
+            type: 'string'
+        },
+        finished_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Finished At'
+        },
+        handler: {
+            title: 'Handler',
+            type: 'string'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        kind: {
+            $ref: '#/components/schemas/WorkflowRunKind'
+        },
+        latest_event: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/WorkflowEventPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        max_retries: {
+            default: 0,
+            title: 'Max Retries',
+            type: 'integer'
+        },
+        next_retry_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Next Retry At'
+        },
+        parent_workflow_run_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parent Workflow Run Id'
+        },
+        progress_current: {
+            default: 0,
+            title: 'Progress Current',
+            type: 'integer'
+        },
+        progress_total: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Progress Total'
+        },
+        project_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Project Id'
+        },
+        report_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Report Id'
+        },
+        retry_count: {
+            default: 0,
+            title: 'Retry Count',
+            type: 'integer'
+        },
+        started_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Started At'
+        },
+        status: {
+            $ref: '#/components/schemas/WorkflowRunStatus'
+        },
+        title: {
+            title: 'Title',
+            type: 'string'
+        },
+        updated_at: {
+            format: 'date-time',
+            title: 'Updated At',
+            type: 'string'
+        }
+    },
+    required: [
+        'id',
+        'kind',
+        'status',
+        'title',
+        'handler',
+        'execution_mode',
+        'created_at',
+        'updated_at'
+    ],
+    title: 'WorkflowRunPublic',
+    type: 'object'
+} as const;
+
+export const WorkflowRunStatusSchema = {
+    description: 'Durable workflow lifecycle state.',
+    enum: [
+        'pending',
+        'running',
+        'succeeded',
+        'completed_with_errors',
+        'failed',
+        'cancelled'
+    ],
+    title: 'WorkflowRunStatus',
+    type: 'string'
+} as const;
+
+export const WorkflowRunsPublicSchema = {
+    description: 'Collection response for workflow runs.',
+    properties: {
+        count: {
+            title: 'Count',
+            type: 'integer'
+        },
+        data: {
+            items: {
+                $ref: '#/components/schemas/WorkflowRunPublic'
+            },
+            title: 'Data',
+            type: 'array'
+        }
+    },
+    required: [
+        'data',
+        'count'
+    ],
+    title: 'WorkflowRunsPublic',
     type: 'object'
 } as const;

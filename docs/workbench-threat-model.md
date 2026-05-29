@@ -14,8 +14,11 @@ The current local-first Workbench threat model covers:
 - import of existing CVE lists and selected scanner export files
 - provider enrichment from NVD, FIRST EPSS, CISA KEV, local caches, and locked provider snapshots
 - optional ATT&CK context from local CTID Mappings Explorer JSON and local technique metadata
-- database-backed single-node Workbench state through SQLite in local developer
-  runs or PostgreSQL in the Compose quickstart
+- database-backed single-node Workbench state and durable workflow queue through
+  SQLite in local developer runs or PostgreSQL in the Compose quickstart
+- separate local worker-process execution for queued imports, provider
+  refreshes, automatic retries, cooperative cancellation, and queued report
+  generation
 - local single-user browser/API access for active `/api/v1` routes, without
   login, RBAC, session cookies, API tokens, or CSRF headers
 - local-first GitHub issue preview/export
@@ -27,7 +30,8 @@ The current local-first Workbench threat model does not cover:
 - exploitation, payload generation, exploit verification, public PoC workflows,
   exploit-instruction handling, or offensive attack-chain guidance
 - internet-exposed multi-tenant hosting
-- SSO, organization-wide ticket sync policy, background workers, or managed database operations
+- SSO, organization-wide ticket sync policy, multi-node worker fleets, or
+  managed database operations
 - heuristic, fuzzy, or LLM-generated CVE-to-ATT&CK mapping
 
 ## Assets
@@ -40,6 +44,7 @@ The current local-first Workbench threat model does not cover:
 | ATT&CK mapping data | Integrity, source provenance | `ctid-json` is canonical for Workbench ATT&CK mappings. Technique metadata may enrich labels but must not create mappings. |
 | Asset context, VEX, and waivers | Integrity, auditability | These records influence explanation, applicability, or suppression and need explicit rationale. |
 | Workbench database | Integrity, local confidentiality, availability | Local developer runs may use SQLite; the Compose quickstart uses PostgreSQL for the active `backend/app` schema. Credentials, volumes, backups, network exposure, and retention are operator responsibilities. |
+| Durable workflow queue | Integrity, availability, auditability | Queued imports, provider refreshes, and report generation are persisted in the Workbench database with leases, retries, cancellation state, and append-only events. |
 | Upload, report, and evidence directories | Confidentiality, integrity, availability | Generated artifacts may include source metadata and should be treated as security-sensitive. |
 | Configuration and secrets | Confidentiality | Environment values such as NVD keys, provider credentials, and deployment secrets must not be displayed in full or written into reports. Secret-bearing settings should store names, state, or hashes rather than values whenever possible. |
 | Provider endpoint configuration | Integrity, least privilege | Built-in NVD, FIRST EPSS, and CISA KEV live endpoints are fixed HTTPS public-source constants. Runtime configuration may choose cache, snapshot, or offline-file inputs but must not accept unsafe live provider URL overrides. |
@@ -105,6 +110,7 @@ Primary boundaries:
 | Duplicate or repeated GitHub issue creation | Alert fatigue, duplicate remediation work, or noisy external audit trails | Generate deterministic duplicate keys, persist completed GitHub issue duplicate keys locally, skip duplicates on repeated exports, and remove failed empty reservations so retries are not blocked by incomplete local rows. |
 | GitHub issue export token misuse or over-privileged credentials | Unauthorized issue creation or broader external account compromise | Read tokens only at request time from explicit environment variables such as `GITHUB_TOKEN`, use narrowly scoped external tokens, do not store token values in the Workbench database, and include only counts and non-secret metadata in audit events. |
 | Oversized reports or evidence bundles | Disk exhaustion, slow UI, failed downloads | Enforce upload and generated-report size limits, retain only a bounded number of report artifacts per analysis run, keep generated artifacts in configured report directories, and surface generation errors. |
+| Stuck or duplicate workflow execution | Delayed imports/reports, duplicate side effects, or confusing operator state | Persist queue state in `workflow_run`, claim work with leases, refresh worker heartbeats, release expired leases, keep handler retries bounded, and make workflow events append-only for auditability. External effects must remain idempotent or tied to persisted workflow/run records. |
 | Supply-chain or dependency compromise | Compromised runtime or generated artifacts | Prefer pinned release installs, local checks, virtual environments, and reproducible docs/build commands. Do not load remote code through ATT&CK metadata or provider data. |
 | Internet-exposed Workbench deployment | Unauthorized access to imports, reports, and local state | Treat the current Workbench as local-first. Compose app and direct API routing are opt-in and default to localhost-only Traefik IP allowlists; widening those ranges is a reviewed operator decision for private or edge-guarded access, not an authentication model. The VPW-AUD-999 scorecard closed on 2026-05-08, but public or shared exposure still needs fresh candidate-specific deployment evidence. Local single-user access does not certify internet-facing authentication, authorization, TLS, or shared-operation posture. |
 
@@ -112,9 +118,10 @@ Primary boundaries:
 
 - The operator runs the Workbench on a trusted workstation, local VM, CI runner, or private single-node host.
 - The default developer database can be SQLite. The Compose quickstart uses a
-  private single-node PostgreSQL service; clustered deployments, background
-  workers, and multi-tenant state separation are not part of the current
-  local-first scope.
+  private single-node PostgreSQL service plus one durable workflow worker;
+  clustered deployments, multi-node worker fleets, and multi-tenant state
+  separation are not part of the current local-first scope. Request execution
+  and worker execution both record durable workflow state in the local database.
 - The Workbench is not exposed directly to the public internet.
 - Project access is simplified for the local single-user browser workflow.
   Multi-user project membership and project-admin RBAC are outside the current
@@ -204,8 +211,8 @@ The current local-first Workbench is readiness-aligned when:
 - GitHub issue export stays operator-triggered, defaults to dry-run, uses an
   explicit `token_env` name, and persists duplicate keys for idempotency without
   storing token values
-- operator docs state that internet exposure, multi-tenancy, SSO, background
-  workers, and organization-wide ticket sync policy are out of v1.2 scope
+- operator docs state that internet exposure, multi-tenancy, SSO, multi-node
+  worker fleets, and organization-wide ticket sync policy are out of v1.2 scope
 
 ## Control Evidence for v1.2
 

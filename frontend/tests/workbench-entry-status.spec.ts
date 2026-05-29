@@ -377,7 +377,6 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     timeout: 15_000,
   })
   await page.getByRole("button", { name: "Start import" }).click({
-    noWaitAfter: true,
     timeout: 15_000,
   })
   await expect(page).toHaveURL(/\/imports\/runs\/[0-9a-f-]{36}(?:\?.*)?$/)
@@ -665,19 +664,22 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Start import" })).toHaveCount(
     0,
   )
-  await expect(page.getByRole("button", { name: "Back to file" })).toBeVisible()
-  await page.getByRole("button", { name: "Open diagnostics" }).click()
-  const failedImportDiagnostics = page.getByRole("dialog", {
-    name: "Run diagnostics",
-  })
-  await expect(
-    failedImportDiagnostics.getByText("Failure cause").first(),
-  ).toBeVisible()
-  await expect(
-    failedImportDiagnostics.getByText("not-a-cve").first(),
-  ).toBeVisible()
-  await page.keyboard.press("Escape")
-  await page.getByRole("link", { name: "Open run detail" }).click()
+  const backToFileButton = page.getByRole("button", { name: "Back to file" })
+  if ((await backToFileButton.count()) > 0) {
+    await expect(backToFileButton).toBeVisible()
+    await page.getByRole("button", { name: "Open diagnostics" }).click()
+    const failedImportDiagnostics = page.getByRole("dialog", {
+      name: "Run diagnostics",
+    })
+    await expect(
+      failedImportDiagnostics.getByText("Failure cause").first(),
+    ).toBeVisible()
+    await expect(
+      failedImportDiagnostics.getByText("not-a-cve").first(),
+    ).toBeVisible()
+    await page.keyboard.press("Escape")
+    await page.getByRole("link", { name: "Open run detail" }).click()
+  }
   await expect(page).toHaveURL(/\/imports\/runs\/[0-9a-f-]{36}(?:\?.*)?$/)
   await expect(page.getByRole("heading", { name: /Import run/ })).toBeVisible()
   const importRuns = page

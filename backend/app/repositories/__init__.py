@@ -9,6 +9,7 @@ from app.repositories.projects import ProjectRepository
 from app.repositories.reports import ReportRepository
 from app.repositories.runs import RunRepository
 from app.repositories.waivers import WaiverRepository
+from app.repositories.workflows import WorkflowRepository
 
 __all__ = [
     "AssetRepository",
@@ -20,4 +21,5 @@ __all__ = [
     "ReportRepository",
     "RunRepository",
     "WaiverRepository",
+    "WorkflowRepository",
 ]

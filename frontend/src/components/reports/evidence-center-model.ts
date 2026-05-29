@@ -19,6 +19,7 @@ import {
   type ReportFormat,
 } from "../../lib/report-format.ts"
 import { runStatusTone } from "../../lib/risk-format.ts"
+import { workflowNeedsPolling, workflowStageLabel } from "../../workbench/workflow-model.ts"
 
 export function reportForFormat(
   reports: readonly ReportPublic[],
@@ -46,6 +47,9 @@ export function newestReport(reports: readonly ReportPublic[]) {
 export function generatedArtifactsDetail(reports: readonly ReportPublic[]) {
   const latest = newestReport(reports)
   if (!latest) return "Generate the first artifact for this run"
+  if (workflowNeedsPolling(latest.workflow)) {
+    return `Latest workflow ${workflowStageLabel(latest.workflow)}`
+  }
   return `Latest generated ${formatReportDateTime(latest.created_at)}`
 }
 

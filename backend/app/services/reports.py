@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import uuid
+from collections.abc import Callable
 
 from sqlmodel import Session
 
 from app.core.config import Settings
-from app.models import AnalysisRun, Project, Report
+from app.models import AnalysisRun, Project, Report, WorkflowRun, WorkflowRunKind, WorkflowRunStatus
+from app.repositories import WorkflowRepository
 from app.services.report_contracts import (
     EVIDENCE_BUNDLE_MANIFEST_SCHEMA_VERSION,
     REPORT_CONTENT_TYPE_CSV,
@@ -87,6 +90,16 @@ class ReportService:
 
     def create_markdown_report(self, *, run: AnalysisRun, project: Project) -> Report:
         """Generate a Markdown technical report and persist its metadata."""
+        return self._create_report_with_workflow(
+            run=run,
+            project=project,
+            report_format="markdown",
+            report_kind=REPORT_KIND_TECHNICAL_MARKDOWN,
+            create_report=lambda: self._create_markdown_report(run=run, project=project),
+        )
+
+    def _create_markdown_report(self, *, run: AnalysisRun, project: Project) -> Report:
+        """Generate a Markdown technical report without workflow bookkeeping."""
         payload, findings, generated_at = build_report_payload(
             self.session,
             run=run,
@@ -110,6 +123,16 @@ class ReportService:
 
     def create_html_report(self, *, run: AnalysisRun, project: Project) -> Report:
         """Generate an HTML executive report and persist its metadata."""
+        return self._create_report_with_workflow(
+            run=run,
+            project=project,
+            report_format="html",
+            report_kind=REPORT_KIND_EXECUTIVE_HTML,
+            create_report=lambda: self._create_html_report(run=run, project=project),
+        )
+
+    def _create_html_report(self, *, run: AnalysisRun, project: Project) -> Report:
+        """Generate an HTML executive report without workflow bookkeeping."""
         payload, findings, generated_at = build_report_payload(
             self.session,
             run=run,
@@ -133,6 +156,16 @@ class ReportService:
 
     def create_analysis_json_export(self, *, run: AnalysisRun, project: Project) -> Report:
         """Generate a stable analysis-result.v1 JSON export and persist its metadata."""
+        return self._create_report_with_workflow(
+            run=run,
+            project=project,
+            report_format="json",
+            report_kind=REPORT_KIND_ANALYSIS_JSON,
+            create_report=lambda: self._create_analysis_json_export(run=run, project=project),
+        )
+
+    def _create_analysis_json_export(self, *, run: AnalysisRun, project: Project) -> Report:
+        """Generate an analysis-result.v1 JSON export without workflow bookkeeping."""
         payload, findings, generated_at = build_report_payload(
             self.session,
             run=run,
@@ -156,6 +189,16 @@ class ReportService:
 
     def create_findings_csv_export(self, *, run: AnalysisRun, project: Project) -> Report:
         """Generate a stable findings CSV export and persist its metadata."""
+        return self._create_report_with_workflow(
+            run=run,
+            project=project,
+            report_format="csv",
+            report_kind=REPORT_KIND_FINDINGS_CSV,
+            create_report=lambda: self._create_findings_csv_export(run=run, project=project),
+        )
+
+    def _create_findings_csv_export(self, *, run: AnalysisRun, project: Project) -> Report:
+        """Generate a findings CSV export without workflow bookkeeping."""
         payload, findings, generated_at = build_report_payload(
             self.session,
             run=run,
@@ -185,6 +228,27 @@ class ReportService:
         filter_value: str = "all",
     ) -> Report:
         """Generate an ATT&CK Navigator layer JSON report artifact."""
+        return self._create_report_with_workflow(
+            run=run,
+            project=project,
+            report_format="attack-navigator",
+            report_kind=REPORT_KIND_ATTACK_NAVIGATOR,
+            attack_filter=filter_value,
+            create_report=lambda: self._create_attack_navigator_layer(
+                run=run,
+                project=project,
+                filter_value=filter_value,
+            ),
+        )
+
+    def _create_attack_navigator_layer(
+        self,
+        *,
+        run: AnalysisRun,
+        project: Project,
+        filter_value: str = "all",
+    ) -> Report:
+        """Generate an ATT&CK Navigator layer without workflow bookkeeping."""
         _payload, findings, generated_at = build_report_payload(
             self.session,
             run=run,
@@ -224,6 +288,16 @@ class ReportService:
 
     def create_sarif_report(self, *, run: AnalysisRun, project: Project) -> Report:
         """Generate a SARIF 2.1.0 results report and persist its metadata."""
+        return self._create_report_with_workflow(
+            run=run,
+            project=project,
+            report_format="sarif",
+            report_kind=REPORT_KIND_SARIF_RESULTS,
+            create_report=lambda: self._create_sarif_report(run=run, project=project),
+        )
+
+    def _create_sarif_report(self, *, run: AnalysisRun, project: Project) -> Report:
+        """Generate a SARIF report without workflow bookkeeping."""
         payload, findings, generated_at = build_report_payload(
             self.session,
             run=run,
@@ -255,6 +329,89 @@ class ReportService:
 
     def create_evidence_bundle(self, *, run: AnalysisRun, project: Project) -> Report:
         """Generate a verifiable evidence ZIP bundle and persist its metadata."""
+        return self._create_report_with_workflow(
+            run=run,
+            project=project,
+            report_format="zip",
+            report_kind=REPORT_KIND_EVIDENCE_BUNDLE,
+            create_report=lambda: self._create_evidence_bundle(run=run, project=project),
+        )
+
+    def enqueue_report_generation(
+        self,
+        *,
+        run: AnalysisRun,
+        project: Project,
+        report_format: str,
+        attack_filter: str = "all",
+        max_retries: int = 2,
+    ) -> WorkflowRun:
+        """Create a queued durable workflow for report generation."""
+        if run.status not in REPORT_SUPPORTED_RUN_STATUSES:
+            raise ReportGenerationError(
+                f"Analysis run must be completed before reporting; current status is {run.status}."
+            )
+        report_kind, _create_report = self._report_generation_target(
+            run=run,
+            project=project,
+            report_format=report_format,
+            attack_filter=attack_filter,
+        )
+        metadata: dict[str, object] = {
+            "report_format": report_format,
+            "report_kind": report_kind,
+            "analysis_run_id": str(run.id),
+            "attack_filter": attack_filter,
+        }
+        return WorkflowRepository(self.session).create_workflow_run(
+            kind=WorkflowRunKind.REPORT_GENERATION,
+            title=f"Generate {report_format} report",
+            handler="app.services.reports.ReportService.create_report_for_workflow",
+            project_id=project.id,
+            analysis_run_id=run.id,
+            status=WorkflowRunStatus.PENDING,
+            execution_mode="worker",
+            current_stage="queued",
+            progress_current=0,
+            progress_total=3,
+            metadata_json=metadata,
+            payload_json={
+                "run_id": str(run.id),
+                "format": report_format,
+                "attack_filter": attack_filter,
+            },
+            max_retries=max_retries,
+        )
+
+    def create_report_for_workflow(
+        self,
+        *,
+        run: AnalysisRun,
+        project: Project,
+        workflow_id: uuid.UUID,
+        report_format: str,
+        attack_filter: str = "all",
+    ) -> Report:
+        """Generate a report using an existing queued workflow."""
+        report_kind, create_report = self._report_generation_target(
+            run=run,
+            project=project,
+            report_format=report_format,
+            attack_filter=attack_filter,
+        )
+        return self._create_report_with_workflow(
+            run=run,
+            project=project,
+            report_format=report_format,
+            report_kind=report_kind,
+            create_report=create_report,
+            attack_filter=attack_filter if report_format == "attack-navigator" else None,
+            workflow_id=workflow_id,
+            execution_mode="worker",
+        )
+
+    def _create_evidence_bundle(self, *, run: AnalysisRun, project: Project) -> Report:
+        """Generate an evidence ZIP bundle without workflow bookkeeping."""
         payload, findings, generated_at = build_report_payload(
             self.session,
             run=run,
@@ -290,4 +447,137 @@ class ReportService:
                 "manifest": manifest,
                 "manifest_schema_version": EVIDENCE_BUNDLE_MANIFEST_SCHEMA_VERSION,
             },
+        )
+
+    def _create_report_with_workflow(
+        self,
+        *,
+        run: AnalysisRun,
+        project: Project,
+        report_format: str,
+        report_kind: str,
+        create_report: Callable[[], Report],
+        attack_filter: str | None = None,
+        workflow_id: uuid.UUID | None = None,
+        execution_mode: str = "request",
+    ) -> Report:
+        """Persist durable workflow state around one report generation."""
+        workflow_repo = WorkflowRepository(self.session)
+        metadata: dict[str, object] = {
+            "report_format": report_format,
+            "report_kind": report_kind,
+            "analysis_run_id": str(run.id),
+        }
+        if attack_filter is not None:
+            metadata["attack_filter"] = attack_filter
+        if workflow_id is None:
+            workflow = workflow_repo.create_workflow_run(
+                kind=WorkflowRunKind.REPORT_GENERATION,
+                title=f"Generate {report_format} report",
+                handler="app.services.reports.ReportService",
+                project_id=project.id,
+                analysis_run_id=run.id,
+                status=WorkflowRunStatus.PENDING,
+                execution_mode=execution_mode,
+                current_stage="queued",
+                progress_current=0,
+                progress_total=3,
+                metadata_json=metadata,
+            )
+        else:
+            workflow = workflow_repo.require_workflow(workflow_id)
+        workflow = workflow_repo.start_workflow(
+            workflow.id,
+            stage="render",
+            message=f"Rendering {report_format} report.",
+            progress_current=1,
+            progress_total=3,
+        )
+        try:
+            report = create_report()
+        except Exception as exc:
+            workflow_repo.finish_workflow(
+                workflow.id,
+                status=WorkflowRunStatus.FAILED,
+                stage="failed",
+                message=str(exc),
+                progress_current=1,
+                progress_total=3,
+                error_message=str(exc),
+                error_json={"report_error": str(exc), "format": report_format},
+            )
+            raise
+        workflow_repo.record_stage(
+            workflow.id,
+            stage="persist",
+            message=f"Persisted {report_format} report metadata.",
+            progress_current=2,
+            progress_total=3,
+            metadata_json={"report_id": str(report.id)},
+        )
+        workflow_repo.attach_artifact(
+            workflow.id,
+            artifact_kind="report",
+            artifact_id=str(report.id),
+            report_id=report.id,
+            metadata_json={
+                "format": report.format,
+                "kind": report.kind,
+                "filename": report.filename,
+            },
+        )
+        workflow_repo.finish_workflow(
+            workflow.id,
+            status=WorkflowRunStatus.SUCCEEDED,
+            stage="succeeded",
+            message=f"{report_format} report generated.",
+            progress_current=3,
+            progress_total=3,
+        )
+        return report
+
+    def _report_generation_target(
+        self,
+        *,
+        run: AnalysisRun,
+        project: Project,
+        report_format: str,
+        attack_filter: str = "all",
+    ) -> tuple[str, Callable[[], Report]]:
+        if report_format == "html":
+            return REPORT_KIND_EXECUTIVE_HTML, lambda: self._create_html_report(
+                run=run,
+                project=project,
+            )
+        if report_format == "json":
+            return REPORT_KIND_ANALYSIS_JSON, lambda: self._create_analysis_json_export(
+                run=run,
+                project=project,
+            )
+        if report_format == "csv":
+            return REPORT_KIND_FINDINGS_CSV, lambda: self._create_findings_csv_export(
+                run=run,
+                project=project,
+            )
+        if report_format == "attack-navigator":
+            return REPORT_KIND_ATTACK_NAVIGATOR, lambda: self._create_attack_navigator_layer(
+                run=run,
+                project=project,
+                filter_value=attack_filter,
+            )
+        if report_format == "sarif":
+            return REPORT_KIND_SARIF_RESULTS, lambda: self._create_sarif_report(
+                run=run,
+                project=project,
+            )
+        if report_format == "zip":
+            return REPORT_KIND_EVIDENCE_BUNDLE, lambda: self._create_evidence_bundle(
+                run=run,
+                project=project,
+            )
+        if report_format != "markdown":
+            raise ReportGenerationError(f"Unsupported report format: {report_format}")
+        return REPORT_KIND_TECHNICAL_MARKDOWN, lambda: self._create_markdown_report(
+            run=run,
+            project=project,
         )

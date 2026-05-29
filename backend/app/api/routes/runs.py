@@ -13,6 +13,7 @@ from app.models import (
     AnalysisRunsPublic,
     AnalysisRunSummaryPublic,
     AnalysisRunWorkflowMetadataPublic,
+    WorkflowRunKind,
 )
 from app.repositories import RunRepository
 from app.services.run_workflow_projection import (
@@ -20,6 +21,7 @@ from app.services.run_workflow_projection import (
     analysis_run_summary_public,
     analysis_run_workflow_metadata_public,
 )
+from app.services.workflows import latest_analysis_workflow_public
 
 router = APIRouter(tags=["runs"])
 
@@ -50,7 +52,17 @@ def read_project_runs(
         offset=offset,
     )
     return AnalysisRunsPublic(
-        data=[analysis_run_public(run) for run in runs],
+        data=[
+            analysis_run_public(
+                run,
+                workflow=latest_analysis_workflow_public(
+                    session,
+                    analysis_run_id=run.id,
+                    kind=WorkflowRunKind.IMPORT,
+                ),
+            )
+            for run in runs
+        ],
         count=count,
     )
 
@@ -66,7 +78,14 @@ def read_run(
     if run is None:
         raise HTTPException(status_code=404, detail="Analysis run not found")
     require_project(session, run.project_id)
-    return analysis_run_public(run)
+    return analysis_run_public(
+        run,
+        workflow=latest_analysis_workflow_public(
+            session,
+            analysis_run_id=run.id,
+            kind=WorkflowRunKind.IMPORT,
+        ),
+    )
 
 
 @router.get("/runs/{run_id}/summary", response_model=AnalysisRunSummaryPublic)
@@ -80,7 +99,14 @@ def read_run_summary(
     if run is None:
         raise HTTPException(status_code=404, detail="Analysis run not found")
     require_project(session, run.project_id)
-    return analysis_run_summary_public(run)
+    return analysis_run_summary_public(
+        run,
+        workflow=latest_analysis_workflow_public(
+            session,
+            analysis_run_id=run.id,
+            kind=WorkflowRunKind.IMPORT,
+        ),
+    )
 
 
 @router.get(

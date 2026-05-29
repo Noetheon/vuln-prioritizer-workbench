@@ -160,6 +160,19 @@ from app.models.workbench import (
     WorkbenchHealth,
     WorkbenchStatus,
 )
+from app.models.workflows import (
+    WorkflowEvent,
+    WorkflowEventBase,
+    WorkflowEventPublic,
+    WorkflowEventsPublic,
+    WorkflowEventType,
+    WorkflowRun,
+    WorkflowRunBase,
+    WorkflowRunKind,
+    WorkflowRunPublic,
+    WorkflowRunsPublic,
+    WorkflowRunStatus,
+)
 
 __all__ = [
     "AnalysisRun",
@@ -284,6 +297,17 @@ __all__ = [
     "WaiverPublic",
     "WaiversPublic",
     "WaiverUpdate",
+    "WorkflowEvent",
+    "WorkflowEventBase",
+    "WorkflowEventPublic",
+    "WorkflowEventsPublic",
+    "WorkflowEventType",
+    "WorkflowRun",
+    "WorkflowRunBase",
+    "WorkflowRunKind",
+    "WorkflowRunPublic",
+    "WorkflowRunsPublic",
+    "WorkflowRunStatus",
     "WorkbenchCapabilitiesPublic",
     "WorkbenchHealth",
     "WorkbenchStatus",

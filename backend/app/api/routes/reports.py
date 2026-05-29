@@ -17,8 +17,9 @@ from app.models import (
     ReportPublic,
     ReportsPublic,
     ReportVerificationPublic,
+    WorkflowRunPublic,
 )
-from app.repositories import ReportRepository, RunRepository
+from app.repositories import ReportRepository, RunRepository, WorkflowRepository
 from app.services import (
     ReportGenerationError,
     ReportService,
@@ -32,8 +33,46 @@ from app.services.report_artifacts import (
     build_report_public,
     validated_report_path,
 )
+from app.services.workflows import latest_report_workflow_public, workflow_run_public
 
 router = APIRouter(tags=["reports"])
+
+
+@router.post("/runs/{run_id}/report-jobs", response_model=WorkflowRunPublic)
+def queue_run_report(
+    run_id: uuid.UUID,
+    payload: ReportCreate,
+    request: Request,
+    session: SessionDep,
+    local_actor: LocalActor,
+) -> WorkflowRunPublic:
+    """Queue a report artifact generation workflow for a completed visible run."""
+    run = RunRepository(session).get_analysis_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Analysis run not found")
+    project = require_project(session, run.project_id)
+    try:
+        workflow = ReportService(session, workbench_settings(request)).enqueue_report_generation(
+            run=run,
+            project=project,
+            report_format=payload.format,
+            attack_filter=payload.attack_filter,
+        )
+    except ReportGenerationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    record_audit_event(
+        session,
+        action="report.job.create",
+        resource_type="analysis_run",
+        resource_id=run.id,
+        actor=local_actor,
+        project_id=run.project_id,
+        detail={"format": payload.format, "run_id": str(run.id)},
+    )
+    session.commit()
+    session.refresh(workflow)
+    repository = WorkflowRepository(session)
+    return workflow_run_public(workflow, latest_event=repository.latest_event(workflow.id))
 
 
 @router.post("/runs/{run_id}/reports", response_model=ReportPublic)
@@ -70,7 +109,6 @@ def create_run_report(
         else:
             report = report_service.create_markdown_report(run=run, project=project)
     except ReportGenerationError as exc:
-        session.rollback()
         record_audit_event(
             session,
             action="report.create",
@@ -98,7 +136,11 @@ def create_run_report(
     )
     session.commit()
     session.refresh(report)
-    return _report_public(report, request)
+    return _report_public(
+        report,
+        request,
+        workflow=latest_report_workflow_public(session, report_id=report.id),
+    )
 
 
 @router.get("/runs/{run_id}/reports", response_model=ReportsPublic)
@@ -115,7 +157,14 @@ def read_run_reports(
     require_project(session, run.project_id)
     reports = ReportRepository(session).list_run_reports(run.id)
     return ReportsPublic(
-        data=[_report_public(report, request) for report in reports],
+        data=[
+            _report_public(
+                report,
+                request,
+                workflow=latest_report_workflow_public(session, report_id=report.id),
+            )
+            for report in reports
+        ],
         count=len(reports),
     )
 
@@ -208,8 +257,13 @@ def verify_report(
     return ReportVerificationPublic(**result)
 
 
-def _report_public(report: Report, request: Request) -> ReportPublic:
-    return build_report_public(report, workbench_settings(request))
+def _report_public(
+    report: Report,
+    request: Request,
+    *,
+    workflow: WorkflowRunPublic | None = None,
+) -> ReportPublic:
+    return build_report_public(report, workbench_settings(request), workflow=workflow)
 
 
 def _report_artifact_path(report: Report, request: Request) -> Path:

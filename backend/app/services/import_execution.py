@@ -11,8 +11,8 @@ from sqlmodel import Session
 from app.core.config import Settings
 from app.core.local_actor import LocalWorkbenchActor
 from app.importers import ImporterParseError, ImporterValidationError
-from app.models import AnalysisRun, AnalysisRunStatus
-from app.repositories import RunRepository
+from app.models import AnalysisRun, AnalysisRunStatus, WorkflowRunKind, WorkflowRunStatus
+from app.repositories import RunRepository, WorkflowRepository
 from app.services.analysis import AnalysisService, WorkbenchAnalysisError
 from app.services.import_execution_context import (
     _apply_workbench_asset_context,
@@ -86,11 +86,12 @@ async def execute_project_import_upload(
     upload: ProjectImportUploadRequest,
     defer_execution: bool = False,
     existing_run_id: uuid.UUID | None = None,
-    execution_mode: Literal["request", "background"] = "request",
+    execution_mode: Literal["request", "background", "worker"] = "request",
 ) -> AnalysisRun:
     """Securely upload, normalize, and persist one Workbench import file."""
     prepared = _prepare_import_upload(upload, settings=settings)
     run_repo = RunRepository(session)
+    workflow_repo = WorkflowRepository(session)
     resolved_run = _resolve_import_run(
         run_repo=run_repo,
         project_id=project_id,
@@ -99,6 +100,21 @@ async def execute_project_import_upload(
         execution_mode=execution_mode,
     )
     run = resolved_run.run
+    workflow = workflow_repo.ensure_analysis_workflow(
+        kind=WorkflowRunKind.IMPORT,
+        analysis_run_id=run.id,
+        project_id=project_id,
+        title=f"Import {prepared.input_type}",
+        handler="app.services.import_execution.execute_project_import_upload",
+        status=_workflow_status_for_run(run.status),
+        execution_mode=execution_mode,
+        current_stage="queued",
+        metadata_json={
+            "input_type": prepared.input_type,
+            "filename": prepared.stored_filename,
+            "locked_provider_data": prepared.locked_provider_data,
+        },
+    )
     if resolved_run.already_finished:
         return run
 
@@ -107,6 +123,18 @@ async def execute_project_import_upload(
         project_id=project_id,
         run_id=run.id,
         prepared=prepared,
+    )
+    workflow_repo.record_stage(
+        workflow.id,
+        stage="store_uploads",
+        message="Managed upload artifacts stored.",
+        progress_current=1,
+        progress_total=6,
+        metadata_json={
+            "input_ref": artifacts.upload_ref,
+            "asset_context_ref": artifacts.asset_context_ref,
+            "vex_ref": artifacts.vex_ref,
+        },
     )
     _apply_stored_upload_summaries(
         run,
@@ -119,6 +147,13 @@ async def execute_project_import_upload(
         session.refresh(run)
         return run
 
+    workflow_repo.start_workflow(
+        workflow.id,
+        stage="parse_upload",
+        message="Parsing primary import upload.",
+        progress_current=2,
+        progress_total=6,
+    )
     job_history = _mark_import_run_running(
         run,
         job_id=resolved_run.job_id,
@@ -142,7 +177,25 @@ async def execute_project_import_upload(
     try:
         parsed_upload = _parse_prepared_upload(prepared)
         occurrences = parsed_upload.occurrences
+        workflow_repo.record_stage(
+            workflow.id,
+            stage="parse_upload",
+            message="Primary import upload parsed.",
+            progress_current=3,
+            progress_total=6,
+            metadata_json={"occurrence_count": len(occurrences)},
+        )
     except (ImporterParseError, ImporterValidationError) as exc:
+        workflow_repo.finish_workflow(
+            workflow.id,
+            status=WorkflowRunStatus.FAILED,
+            stage="parse_upload",
+            message="Import parsing failed.",
+            progress_current=2,
+            progress_total=6,
+            error_message=str(exc),
+            error_json={"stage": "parse_upload", "error_type": exc.__class__.__name__},
+        )
         _raise_parse_failure(
             session=failure_context.session,
             run_repo=failure_context.run_repo,
@@ -161,11 +214,28 @@ async def execute_project_import_upload(
     asset_context_summary: dict[str, Any] | None = None
     if artifacts.asset_context_path is not None:
         try:
+            workflow_repo.record_stage(
+                workflow.id,
+                stage="asset_context_parse",
+                message="Applying asset context sidecar.",
+                progress_current=3,
+                progress_total=6,
+            )
             occurrences, asset_context_summary = _apply_workbench_asset_context(
                 occurrences,
                 asset_context_path=artifacts.asset_context_path,
             )
         except ValueError as exc:
+            workflow_repo.finish_workflow(
+                workflow.id,
+                status=WorkflowRunStatus.FAILED,
+                stage="asset_context_parse",
+                message="Asset context parsing failed.",
+                progress_current=3,
+                progress_total=6,
+                error_message=str(exc),
+                error_json={"stage": "asset_context_parse", "error_type": exc.__class__.__name__},
+            )
             _raise_sidecar_parse_failure(
                 session=failure_context.session,
                 run_repo=failure_context.run_repo,
@@ -187,11 +257,28 @@ async def execute_project_import_upload(
     vex_summary: dict[str, Any] | None = None
     if artifacts.vex_path is not None:
         try:
+            workflow_repo.record_stage(
+                workflow.id,
+                stage="vex_parse",
+                message="Applying VEX sidecar.",
+                progress_current=3,
+                progress_total=6,
+            )
             occurrences, vex_summary = _apply_workbench_vex(
                 occurrences,
                 vex_path=artifacts.vex_path,
             )
         except ValueError as exc:
+            workflow_repo.finish_workflow(
+                workflow.id,
+                status=WorkflowRunStatus.FAILED,
+                stage="vex_parse",
+                message="VEX parsing failed.",
+                progress_current=3,
+                progress_total=6,
+                error_message=str(exc),
+                error_json={"stage": "vex_parse", "error_type": exc.__class__.__name__},
+            )
             _raise_sidecar_parse_failure(
                 session=failure_context.session,
                 run_repo=failure_context.run_repo,
@@ -211,6 +298,14 @@ async def execute_project_import_upload(
             )
 
     try:
+        workflow_repo.record_stage(
+            workflow.id,
+            stage="enrich_score_explain",
+            message="Running provider enrichment, scoring, and explanation.",
+            progress_current=4,
+            progress_total=6,
+            metadata_json={"occurrence_count": len(occurrences)},
+        )
         parsed_input = _parsed_input_from_workbench_occurrences(
             occurrences,
             input_path=artifacts.upload_path,
@@ -232,6 +327,16 @@ async def execute_project_import_upload(
             parsed_input=parsed_input,
         )
     except ValueError as exc:
+        workflow_repo.finish_workflow(
+            workflow.id,
+            status=WorkflowRunStatus.FAILED,
+            stage="enrich_score_explain",
+            message="Import analysis failed.",
+            progress_current=4,
+            progress_total=6,
+            error_message=str(exc),
+            error_json={"stage": "enrich_score_explain", "error_type": exc.__class__.__name__},
+        )
         _raise_analysis_failure(
             session=failure_context.session,
             run_repo=failure_context.run_repo,
@@ -246,6 +351,16 @@ async def execute_project_import_upload(
             execution_mode=failure_context.execution_mode,
         )
     except WorkbenchAnalysisError as exc:
+        workflow_repo.finish_workflow(
+            workflow.id,
+            status=WorkflowRunStatus.FAILED,
+            stage="enrich_score_explain",
+            message="Import analysis failed.",
+            progress_current=4,
+            progress_total=6,
+            error_message=str(exc),
+            error_json={"stage": "enrich_score_explain", "error_type": exc.__class__.__name__},
+        )
         _raise_analysis_failure(
             session=failure_context.session,
             run_repo=failure_context.run_repo,
@@ -260,6 +375,14 @@ async def execute_project_import_upload(
             execution_mode=failure_context.execution_mode,
         )
 
+    workflow_repo.record_stage(
+        workflow.id,
+        stage="persist_findings",
+        message="Persisting normalized findings and occurrences.",
+        progress_current=5,
+        progress_total=6,
+        metadata_json={"occurrence_count": len(occurrences)},
+    )
     persist_summary = _persist_workbench_occurrences(
         session=session,
         project_id=project_id,
@@ -288,6 +411,20 @@ async def execute_project_import_upload(
             parse_errors=[],
         ),
     )
+    workflow_repo.finish_workflow(
+        workflow.id,
+        status=WorkflowRunStatus.SUCCEEDED,
+        stage="succeeded",
+        message="Import workflow succeeded.",
+        progress_current=6,
+        progress_total=6,
+        metadata_json={
+            "finding_count": persist_summary.get("finding_count"),
+            "occurrence_count": persist_summary.get("occurrence_count"),
+            "created_findings": persist_summary.get("created_findings"),
+            "updated_findings": persist_summary.get("updated_findings"),
+        },
+    )
     _record_import_audit(
         session,
         local_actor=local_actor,
@@ -299,3 +436,18 @@ async def execute_project_import_upload(
     )
     session.commit()
     return finished_run
+
+
+def _workflow_status_for_run(status: AnalysisRunStatus | str) -> WorkflowRunStatus:
+    normalized = AnalysisRunStatus(status)
+    if normalized == AnalysisRunStatus.FAILED:
+        return WorkflowRunStatus.FAILED
+    if normalized == AnalysisRunStatus.CANCELLED:
+        return WorkflowRunStatus.CANCELLED
+    if normalized == AnalysisRunStatus.COMPLETED_WITH_ERRORS:
+        return WorkflowRunStatus.COMPLETED_WITH_ERRORS
+    if normalized in {AnalysisRunStatus.SUCCEEDED, AnalysisRunStatus.COMPLETED}:
+        return WorkflowRunStatus.SUCCEEDED
+    if normalized == AnalysisRunStatus.RUNNING:
+        return WorkflowRunStatus.RUNNING
+    return WorkflowRunStatus.PENDING

@@ -14,6 +14,7 @@ from app.models import (
     ProviderSourceStatusPublic,
     ProviderStatusPublic,
     ProviderUpdateJobPublic,
+    WorkflowRunPublic,
 )
 from app.models.base import get_datetime_utc
 from app.services.run_workflow_metadata import (
@@ -31,9 +32,14 @@ def provider_update_job_public(
     run: AnalysisRun | None,
     *,
     active_settings: Settings,
+    workflow: WorkflowRunPublic | None = None,
 ) -> ProviderUpdateJobPublic | None:
     """Return public provider update job metadata for the current environment."""
-    return _provider_update_job(run, production_safe=_production_safe(active_settings))
+    return _provider_update_job(
+        run,
+        production_safe=_production_safe(active_settings),
+        workflow=workflow,
+    )
 
 
 def provider_status_payload(
@@ -41,6 +47,7 @@ def provider_status_payload(
     *,
     latest_update_run: AnalysisRun | None,
     active_settings: Settings,
+    latest_update_workflow: WorkflowRunPublic | None = None,
 ) -> ProviderStatusPublic:
     """Build the provider status response from persisted snapshot and job state."""
     metadata = _snapshot_metadata(snapshot)
@@ -69,6 +76,7 @@ def provider_status_payload(
         latest_update_job=_provider_update_job(
             latest_update_run,
             production_safe=production_safe,
+            workflow=latest_update_workflow,
         ),
         cache_dir=(
             None
@@ -102,6 +110,7 @@ def _provider_update_job(
     run: AnalysisRun | None,
     *,
     production_safe: bool = False,
+    workflow: WorkflowRunPublic | None = None,
 ) -> ProviderUpdateJobPublic | None:
     if run is None:
         return None
@@ -118,6 +127,7 @@ def _provider_update_job(
         finished_at=_iso_datetime(run.finished_at),
         error_message=_public_text(_failed_update_error(run)),
         metadata_=public_metadata,
+        workflow=workflow,
     )
 
 

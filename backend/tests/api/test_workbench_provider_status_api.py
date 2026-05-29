@@ -15,6 +15,7 @@ from app.services.provider_updates import (
     PROVIDER_UPDATE_LOCK_FILE,
     reconcile_stale_provider_update_runs,
 )
+from app.workers.workflow_worker import run_worker_once
 from vuln_prioritizer.models import (
     KevData,
     ProviderSnapshotItem,
@@ -525,9 +526,27 @@ def test_workbench_provider_update_job_can_run_in_background(
             )
 
         assert run is not None
-        assert run.status == workbench_api_env.app_models.AnalysisRunStatus.COMPLETED
+        assert run.status == workbench_api_env.app_models.AnalysisRunStatus.PENDING
         assert run.summary_json["execution_mode"] == "background"
-        assert run.summary_json["snapshot_created"] is True
+
+        result = run_worker_once(
+            engine=workbench_api_env.engine,
+            settings=workbench_api_env.client.app.state.workbench_settings,
+            worker_id="provider-background-test-worker",
+            retry_delay_seconds=0,
+        )
+        assert result.claimed == 1
+        assert result.completed == 1
+
+        with Session(workbench_api_env.engine) as session:
+            completed_run = session.get(
+                workbench_api_env.app_models.AnalysisRun,
+                uuid.UUID(queued_job["id"]),
+            )
+        assert completed_run is not None
+        assert completed_run.status == workbench_api_env.app_models.AnalysisRunStatus.COMPLETED
+        assert completed_run.summary_json["execution_mode"] == "background"
+        assert completed_run.summary_json["snapshot_created"] is True
     finally:
         workbench_api_env.client.app.state.workbench_settings = active_settings
 

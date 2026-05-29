@@ -10,6 +10,7 @@ from sqlalchemy import JSON, Column, DateTime, Index, Integer, String
 from sqlmodel import Field, SQLModel
 
 from app.models.base import get_datetime_utc
+from app.models.workflows import WorkflowRunPublic
 
 ReportFormat = Literal["markdown", "html", "json", "csv", "zip", "attack-navigator", "sarif"]
 REPORT_FORMAT_VALUES: tuple[ReportFormat, ...] = (
@@ -83,6 +84,7 @@ class ReportPublic(ReportBase):
     analysis_run_id: uuid.UUID
     created_at: datetime
     download_url: str
+    workflow: WorkflowRunPublic | None = None
 
 
 class ReportsPublic(SQLModel):

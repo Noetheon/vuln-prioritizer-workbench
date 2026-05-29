@@ -138,6 +138,7 @@ export type AnalysisRunPublic = {
      * Warnings
      */
     warnings?: Array<string>;
+    workflow?: WorkflowRunPublic | null;
     workflow_error?: RunWorkflowErrorV1 | null;
     /**
      * Workflow Error Schema Version
@@ -298,6 +299,7 @@ export type AnalysisRunSummaryPublic = {
      * Warnings
      */
     warnings?: Array<string>;
+    workflow?: WorkflowRunPublic | null;
     workflow_error?: RunWorkflowErrorV1 | null;
     /**
      * Workflow Error Schema Version
@@ -748,6 +750,10 @@ export type BodyImportsImportProjectUpload = {
      * Attack Technique Metadata File
      */
     attack_technique_metadata_file?: string | null;
+    /**
+     * Execution Mode
+     */
+    execution_mode?: string;
     /**
      * File
      */
@@ -2799,6 +2805,7 @@ export type ProviderUpdateJobPublic = {
      * Status
      */
     status: string;
+    workflow?: WorkflowRunPublic | null;
 };
 
 /**
@@ -2933,6 +2940,7 @@ export type ReportPublic = {
      * Size Bytes
      */
     size_bytes: number;
+    workflow?: WorkflowRunPublic | null;
 };
 
 /**
@@ -3772,6 +3780,218 @@ export type WorkbenchStatus = {
      * Status
      */
     status: string;
+};
+
+/**
+ * WorkflowEventPublic
+ *
+ * Public workflow event DTO without raw filesystem or secret-bearing fields.
+ */
+export type WorkflowEventPublic = {
+    /**
+     * Artifact Id
+     */
+    artifact_id?: string | null;
+    /**
+     * Artifact Kind
+     */
+    artifact_kind?: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Details
+     */
+    details?: {
+        [key: string]: unknown;
+    };
+    event_type: WorkflowEventType;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Message
+     */
+    message?: string | null;
+    /**
+     * Progress Current
+     */
+    progress_current?: number | null;
+    /**
+     * Progress Total
+     */
+    progress_total?: number | null;
+    /**
+     * Sequence
+     */
+    sequence: number;
+    /**
+     * Stage
+     */
+    stage?: string | null;
+    status: WorkflowRunStatus;
+    /**
+     * Workflow Run Id
+     */
+    workflow_run_id: string;
+};
+
+/**
+ * WorkflowEventType
+ *
+ * Durable workflow event categories.
+ */
+export type WorkflowEventType = 'created' | 'started' | 'stage' | 'progress' | 'artifact' | 'succeeded' | 'failed' | 'cancelled' | 'retry';
+
+/**
+ * WorkflowEventsPublic
+ *
+ * Collection response for workflow events.
+ */
+export type WorkflowEventsPublic = {
+    /**
+     * Count
+     */
+    count: number;
+    /**
+     * Data
+     */
+    data: Array<WorkflowEventPublic>;
+};
+
+/**
+ * WorkflowRunKind
+ *
+ * Durable workflow families owned by the Workbench core.
+ */
+export type WorkflowRunKind = 'import' | 'provider_update' | 'report_generation';
+
+/**
+ * WorkflowRunPublic
+ *
+ * Public workflow state DTO used by imports, providers, and reports.
+ */
+export type WorkflowRunPublic = {
+    /**
+     * Analysis Run Id
+     */
+    analysis_run_id?: string | null;
+    /**
+     * Cancellation Requested
+     */
+    cancellation_requested?: boolean;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Current Stage
+     */
+    current_stage?: string | null;
+    /**
+     * Details
+     */
+    details?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Error Details
+     */
+    error_details?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Error Message
+     */
+    error_message?: string | null;
+    /**
+     * Execution Mode
+     */
+    execution_mode: string;
+    /**
+     * Finished At
+     */
+    finished_at?: string | null;
+    /**
+     * Handler
+     */
+    handler: string;
+    /**
+     * Id
+     */
+    id: string;
+    kind: WorkflowRunKind;
+    latest_event?: WorkflowEventPublic | null;
+    /**
+     * Max Retries
+     */
+    max_retries?: number;
+    /**
+     * Next Retry At
+     */
+    next_retry_at?: string | null;
+    /**
+     * Parent Workflow Run Id
+     */
+    parent_workflow_run_id?: string | null;
+    /**
+     * Progress Current
+     */
+    progress_current?: number;
+    /**
+     * Progress Total
+     */
+    progress_total?: number | null;
+    /**
+     * Project Id
+     */
+    project_id?: string | null;
+    /**
+     * Report Id
+     */
+    report_id?: string | null;
+    /**
+     * Retry Count
+     */
+    retry_count?: number;
+    /**
+     * Started At
+     */
+    started_at?: string | null;
+    status: WorkflowRunStatus;
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+};
+
+/**
+ * WorkflowRunStatus
+ *
+ * Durable workflow lifecycle state.
+ */
+export type WorkflowRunStatus = 'pending' | 'running' | 'succeeded' | 'completed_with_errors' | 'failed' | 'cancelled';
+
+/**
+ * WorkflowRunsPublic
+ *
+ * Collection response for workflow runs.
+ */
+export type WorkflowRunsPublic = {
+    /**
+     * Count
+     */
+    count: number;
+    /**
+     * Data
+     */
+    data: Array<WorkflowRunPublic>;
 };
 
 export type PatchApiV1AssetsByAssetIdData = {
@@ -4654,6 +4874,45 @@ export type PostApiV1ProjectsByProjectIdWaiversResponses = {
 
 export type PostApiV1ProjectsByProjectIdWaiversResponse = PostApiV1ProjectsByProjectIdWaiversResponses[keyof PostApiV1ProjectsByProjectIdWaiversResponses];
 
+export type GetApiV1ProjectsByProjectIdWorkflowsData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
+    url: '/api/v1/projects/{project_id}/workflows';
+};
+
+export type GetApiV1ProjectsByProjectIdWorkflowsErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1ProjectsByProjectIdWorkflowsError = GetApiV1ProjectsByProjectIdWorkflowsErrors[keyof GetApiV1ProjectsByProjectIdWorkflowsErrors];
+
+export type GetApiV1ProjectsByProjectIdWorkflowsResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkflowRunsPublic;
+};
+
+export type GetApiV1ProjectsByProjectIdWorkflowsResponse = GetApiV1ProjectsByProjectIdWorkflowsResponses[keyof GetApiV1ProjectsByProjectIdWorkflowsResponses];
+
 export type GetApiV1ProvidersStatusData = {
     body?: never;
     path?: never;
@@ -4800,6 +5059,36 @@ export type GetApiV1RunsByRunIdResponses = {
 };
 
 export type GetApiV1RunsByRunIdResponse = GetApiV1RunsByRunIdResponses[keyof GetApiV1RunsByRunIdResponses];
+
+export type PostApiV1RunsByRunIdReportJobsData = {
+    body: ReportCreate;
+    path: {
+        /**
+         * Run Id
+         */
+        run_id: string;
+    };
+    query?: never;
+    url: '/api/v1/runs/{run_id}/report-jobs';
+};
+
+export type PostApiV1RunsByRunIdReportJobsErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type PostApiV1RunsByRunIdReportJobsError = PostApiV1RunsByRunIdReportJobsErrors[keyof PostApiV1RunsByRunIdReportJobsErrors];
+
+export type PostApiV1RunsByRunIdReportJobsResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkflowRunPublic;
+};
+
+export type PostApiV1RunsByRunIdReportJobsResponse = PostApiV1RunsByRunIdReportJobsResponses[keyof PostApiV1RunsByRunIdReportJobsResponses];
 
 export type GetApiV1RunsByRunIdReportsData = {
     body?: never;
@@ -5103,3 +5392,132 @@ export type GetApiV1WorkbenchStatusResponses = {
 };
 
 export type GetApiV1WorkbenchStatusResponse = GetApiV1WorkbenchStatusResponses[keyof GetApiV1WorkbenchStatusResponses];
+
+export type GetApiV1WorkflowsByWorkflowIdData = {
+    body?: never;
+    path: {
+        /**
+         * Workflow Id
+         */
+        workflow_id: string;
+    };
+    query?: never;
+    url: '/api/v1/workflows/{workflow_id}';
+};
+
+export type GetApiV1WorkflowsByWorkflowIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1WorkflowsByWorkflowIdError = GetApiV1WorkflowsByWorkflowIdErrors[keyof GetApiV1WorkflowsByWorkflowIdErrors];
+
+export type GetApiV1WorkflowsByWorkflowIdResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkflowRunPublic;
+};
+
+export type GetApiV1WorkflowsByWorkflowIdResponse = GetApiV1WorkflowsByWorkflowIdResponses[keyof GetApiV1WorkflowsByWorkflowIdResponses];
+
+export type PostApiV1WorkflowsByWorkflowIdCancelData = {
+    body?: never;
+    path: {
+        /**
+         * Workflow Id
+         */
+        workflow_id: string;
+    };
+    query?: never;
+    url: '/api/v1/workflows/{workflow_id}/cancel';
+};
+
+export type PostApiV1WorkflowsByWorkflowIdCancelErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type PostApiV1WorkflowsByWorkflowIdCancelError = PostApiV1WorkflowsByWorkflowIdCancelErrors[keyof PostApiV1WorkflowsByWorkflowIdCancelErrors];
+
+export type PostApiV1WorkflowsByWorkflowIdCancelResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkflowRunPublic;
+};
+
+export type PostApiV1WorkflowsByWorkflowIdCancelResponse = PostApiV1WorkflowsByWorkflowIdCancelResponses[keyof PostApiV1WorkflowsByWorkflowIdCancelResponses];
+
+export type GetApiV1WorkflowsByWorkflowIdEventsData = {
+    body?: never;
+    path: {
+        /**
+         * Workflow Id
+         */
+        workflow_id: string;
+    };
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
+    url: '/api/v1/workflows/{workflow_id}/events';
+};
+
+export type GetApiV1WorkflowsByWorkflowIdEventsErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1WorkflowsByWorkflowIdEventsError = GetApiV1WorkflowsByWorkflowIdEventsErrors[keyof GetApiV1WorkflowsByWorkflowIdEventsErrors];
+
+export type GetApiV1WorkflowsByWorkflowIdEventsResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkflowEventsPublic;
+};
+
+export type GetApiV1WorkflowsByWorkflowIdEventsResponse = GetApiV1WorkflowsByWorkflowIdEventsResponses[keyof GetApiV1WorkflowsByWorkflowIdEventsResponses];
+
+export type PostApiV1WorkflowsByWorkflowIdRetryData = {
+    body?: never;
+    path: {
+        /**
+         * Workflow Id
+         */
+        workflow_id: string;
+    };
+    query?: never;
+    url: '/api/v1/workflows/{workflow_id}/retry';
+};
+
+export type PostApiV1WorkflowsByWorkflowIdRetryErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type PostApiV1WorkflowsByWorkflowIdRetryError = PostApiV1WorkflowsByWorkflowIdRetryErrors[keyof PostApiV1WorkflowsByWorkflowIdRetryErrors];
+
+export type PostApiV1WorkflowsByWorkflowIdRetryResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkflowRunPublic;
+};
+
+export type PostApiV1WorkflowsByWorkflowIdRetryResponse = PostApiV1WorkflowsByWorkflowIdRetryResponses[keyof PostApiV1WorkflowsByWorkflowIdRetryResponses];

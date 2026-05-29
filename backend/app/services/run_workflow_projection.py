@@ -10,6 +10,7 @@ from app.models import (
     AnalysisRunSummaryPublic,
     AnalysisRunWorkflowMetadataPublic,
     ImportParseErrorPublic,
+    WorkflowRunPublic,
 )
 from app.services.run_workflow_metadata import (
     public_workflow_fields,
@@ -23,7 +24,11 @@ from app.services.run_workflow_metadata import (
 )
 
 
-def analysis_run_public(run: AnalysisRun) -> AnalysisRunPublic:
+def analysis_run_public(
+    run: AnalysisRun,
+    *,
+    workflow: WorkflowRunPublic | None = None,
+) -> AnalysisRunPublic:
     """Return a public analysis-run response with typed workflow metadata."""
     return AnalysisRunPublic(
         id=run.id,
@@ -35,11 +40,16 @@ def analysis_run_public(run: AnalysisRun) -> AnalysisRunPublic:
         started_at=run.started_at,
         finished_at=run.finished_at,
         error_message=redact_public_payload(run.error_message),
+        workflow=workflow,
         **public_workflow_fields(run),
     )
 
 
-def analysis_run_summary_public(run: AnalysisRun) -> AnalysisRunSummaryPublic:
+def analysis_run_summary_public(
+    run: AnalysisRun,
+    *,
+    workflow: WorkflowRunPublic | None = None,
+) -> AnalysisRunSummaryPublic:
     """Return the typed run-summary response for one visible analysis run."""
     summary = workflow_summary(run)
     error = workflow_error(run)
@@ -99,6 +109,7 @@ def analysis_run_summary_public(run: AnalysisRun) -> AnalysisRunSummaryPublic:
         ],
         analysis_decision_scope=_str_value(summary_json.get("analysis_decision_scope")),
         persistence_scope=_str_value(summary_json.get("persistence_scope")),
+        workflow=workflow,
         **public_fields,
     )
 

@@ -108,6 +108,8 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
     assert payload["waiver_count"] == 4
     assert payload["report_count"] == 7
     assert payload["latest_run"]["workflow_schema_version"] == "run-workflow-summary.v1"
+    assert payload["latest_run"]["workflow"]["kind"] == "import"
+    assert payload["latest_run"]["workflow"]["status"] == "succeeded"
     assert "summary_json" not in payload["latest_run"]
     assert "error_json" not in payload["latest_run"]
     assert {report["filename"] for report in payload["reports"]} >= {
@@ -119,6 +121,8 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
         "results.sarif",
         "evidence-bundle.zip",
     }
+    assert all(report["workflow"]["kind"] == "report_generation" for report in payload["reports"])
+    assert all(report["workflow"]["status"] == "succeeded" for report in payload["reports"])
 
     projects_response = workbench_api_env.client.get("/api/v1/projects/", headers=headers)
     findings_response = workbench_api_env.client.get(
@@ -177,6 +181,10 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
     assert waiver_debt["accepted_finding_count"] == 4
     assert reports_response.status_code == 200
     assert reports_response.json()["count"] == 7
+    assert all(
+        report["workflow"]["latest_event"]["event_type"] == "succeeded"
+        for report in reports_response.json()["data"]
+    )
     assert dashboard_response.status_code == 200
     assert attack_response.status_code == 200
     _assert_demo_totals_are_coherent(

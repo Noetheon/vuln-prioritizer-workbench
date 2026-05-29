@@ -20,6 +20,7 @@ import {
   objectRecord,
   runFileLabel,
 } from "./imports-workbench-model"
+import { workflowSummaryLabel } from "@/workbench/workflow-model"
 import { CopyableValue } from "./ImportDiagnosticsDrawerParts"
 import {
   booleanFromRecord,
@@ -57,6 +58,10 @@ export function OverviewTab({
           items={[
             { label: "Project", value: projectName ?? summary.project_id },
             { label: "Input type", value: formatDisplayType(summary.input_type) },
+            {
+              label: "Workflow",
+              value: workflowSummaryLabel(summary.workflow ?? run.workflow),
+            },
             { label: "Original file", value: runFileLabel(summary) },
             {
               label: "Provider snapshot",

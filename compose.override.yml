@@ -28,6 +28,28 @@ services:
         - path: ./backend/pyproject.toml
           action: rebuild
 
+  worker:
+    restart: "no"
+    environment:
+      DEMO_PROVIDER_SNAPSHOT_ENABLED: "true"
+      DEMO_WORKSPACE_ENABLED: "true"
+    command:
+      - python
+      - -m
+      - app.workers.workflow_worker
+      - --poll-interval
+      - "1"
+    develop:
+      watch:
+        - path: ./backend/app
+          action: sync
+          target: /app/backend/app
+        - path: ./backend/src
+          action: sync
+          target: /app/backend/src
+        - path: ./backend/pyproject.toml
+          action: rebuild
+
   frontend:
     restart: "no"
     ports:

@@ -14,6 +14,8 @@ the active local product surface:
 
 - `backend/app/`: FastAPI application, API routes, SQL models, services,
   repositories, and Alembic migrations.
+- `backend/app/workers/`: DB-backed durable workflow worker runtime for queued
+  imports, provider refreshes, and report generation.
 - `frontend/`: React, Vite, TypeScript, TanStack Query, a local route adapter,
   and the generated API client consumed by the browser app.
 - `frontend/src/client/**`: generated OpenAPI client. Generated files are not
@@ -64,9 +66,16 @@ exports. ATT&CK models keep the `app.models.attack` facade stable while catalog,
 STIX snapshot, finding-context, and summary projection models live in dedicated
 modules. Import execution keeps its public stage facade stable while upload
 validation, run/job state transitions, and upload storage live in focused stage
-modules. The executive HTML report stack is split into view-model assembly,
-campaign modeling/rendering, provider freshness, evidence-package,
-governance/decision, and document composition modules.
+modules. Durable workflow state lives in `workflow_run` and `workflow_event`;
+imports, provider refreshes, and report generation now publish status, stage,
+progress, errors, and artifact references through `WorkflowRepository` and the
+public workflow projections. The productive worker layer uses those same tables
+as a database-backed queue: API routes enqueue work, `app.workers.workflow_worker`
+claims due rows with leases, executes the matching handler, writes heartbeat and
+retry state, and cooperatively honors cancellation requests. The executive HTML
+report stack is split into view-model assembly, campaign modeling/rendering,
+provider freshness, evidence-package, governance/decision, and document
+composition modules.
 
 The old Workbench runtime packages, runtime database package, provider
 scheduler, and `web`/`db` CLI entrypoints have been removed. The active
@@ -155,6 +164,11 @@ Provider and status state is intentionally shared:
 - Reports and Evidence Center use provider/run readiness for report generation.
 - Settings shows local runtime, provider, and Workbench status.
 - AppShell uses health/status context for top-level status indicators.
+- Durable workflows are embedded on runs, provider update jobs, and reports so
+  UI polling and status display use the same backend execution model.
+- Workflow events can be consumed through route polling or the workflow
+  WebSocket stream; the frontend prefers streaming and falls back to polling
+  when WebSocket connectivity is unavailable.
 
 Keeping this state in `WorkbenchShell` avoids duplicate provider requests and
 keeps refresh behavior consistent across routes.

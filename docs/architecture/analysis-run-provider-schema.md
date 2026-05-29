@@ -107,14 +107,117 @@ Constraints and indexes:
 - index on `(project_id, status)`
 
 The run can be saved before any findings exist. This supports creating a durable
-record as soon as an upload/import starts, then appending summary data and
-occurrences after parsing and enrichment complete.
+record as soon as an upload/import starts, then appending compatibility summary
+data and occurrences after parsing and enrichment complete.
+
+Current execution state is no longer inferred from `summary_json` or
+`error_json`. It is owned by the durable workflow tables described below and is
+embedded as `workflow` on run-list and run-summary responses.
+
+### `workflow_run`
+
+A workflow run records current execution state for imports, provider refreshes,
+and report generation.
+
+Minimum fields:
+
+- `id`
+- `kind`
+- `status`
+- `title`
+- `handler`
+- `execution_mode`
+- `project_id`
+- `analysis_run_id`
+- `report_id`
+- `parent_workflow_run_id`
+- `current_stage`
+- `progress_current`
+- `progress_total`
+- `retry_count`
+- `max_retries`
+- `cancellation_requested`
+- `queue_name`
+- `priority`
+- `payload_json`
+- `locked_by`
+- `locked_at`
+- `lease_expires_at`
+- `last_heartbeat_at`
+- `attempt_started_at`
+- `error_message`
+- `error_details_json`
+- `metadata_json`
+- `created_at`
+- `updated_at`
+- `started_at`
+- `finished_at`
+- `next_retry_at`
+
+Constraints and indexes:
+
+- nullable foreign key from `project_id` to `project.id`
+- nullable foreign key from `analysis_run_id` to `analysis_run.id`
+- nullable foreign key from `report_id` to `report.id`
+- nullable self-reference from `parent_workflow_run_id` to `workflow_run.id`
+- index on `(project_id, created_at)`
+- index on `(analysis_run_id, kind)`
+- index on `status`
+- index on `idempotency_key`
+- index on `(queue_name, status, next_retry_at, priority, created_at)` for the
+  DB-backed worker queue
+
+### `workflow_event`
+
+A workflow event is an append-only timeline entry for one workflow run.
+
+Minimum fields:
+
+- `id`
+- `workflow_run_id`
+- `sequence`
+- `event_type`
+- `status`
+- `stage`
+- `message`
+- `progress_current`
+- `progress_total`
+- `artifact_kind`
+- `artifact_id`
+- `metadata_json`
+- `created_at`
+
+Constraints and indexes:
+
+- foreign key from `workflow_run_id` to `workflow_run.id`
+- unique event sequence per workflow run
+- index on `(workflow_run_id, created_at)`
+
+Public workflow projections expose redacted `details` and `error_details`
+instead of raw JSON column names. The API routes
+`GET /api/v1/projects/{project_id}/workflows`,
+`GET /api/v1/workflows/{workflow_id}`, and
+`GET /api/v1/workflows/{workflow_id}/events` expose the same workflow model used
+by embedded run, provider-update, and report responses. Mutating workflow
+control routes are `POST /api/v1/workflows/{workflow_id}/cancel` for cooperative
+cancel and `POST /api/v1/workflows/{workflow_id}/retry` for manual retries from
+failed or cancelled workflows. `WS /api/v1/workflows/{workflow_id}/stream`
+streams snapshots and events; clients should fall back to the polling routes
+when WebSocket connectivity is unavailable.
+
+The queued workflow runner stores handler payload in `payload_json`, claims
+pending work by queue name, keeps `locked_by` and lease timestamps while a job is
+running, refreshes `last_heartbeat_at`, and uses `next_retry_at` plus
+`retry_count` / `max_retries` for automatic retry scheduling. The default worker
+process is `python -m app.workers.workflow_worker`; it uses the Workbench
+database as the queue rather than Redis, Celery, or another broker.
 
 Workbench import runs expose stable workflow metadata through
-`run-workflow-summary.v1` and `run-workflow-error.v1`. The API still stores the
-raw metadata in `summary_json` and `error_json`, but writers validate and merge
-through the versioned contract, and public responses project typed top-level
-fields onto both run-list and run-summary responses.
+`run-workflow-summary.v1` and `run-workflow-error.v1` for legacy summary/error
+compatibility. The API still stores the raw compatibility metadata in
+`summary_json` and `error_json`, but writers validate and merge through the
+versioned contract, and public responses project typed top-level fields onto
+both run-list and run-summary responses.
 
 Normal run responses do not expose `summary_json` or `error_json`. Product UI
 and integrations should use the typed fields below. Diagnostics that need the
@@ -158,10 +261,10 @@ workflow contract without requiring clients to parse raw JSON:
 They may also contain a 1-based `line`, logical `field`, and rejected `value`
 when that detail is available from the importer error.
 
-The raw JSON columns remain in normal public responses only as deprecated
-compatibility fields for legacy records. New Workbench client logic should use
-the typed workflow fields, and diagnostics should use
-`/api/v1/runs/{run_id}/workflow-metadata`.
+The raw JSON columns are internal compatibility fields. New Workbench client
+logic should use embedded `workflow` for current execution state, typed top-level
+run fields for compatibility summary facts, and
+`/api/v1/runs/{run_id}/workflow-metadata` only for diagnostics.
 
 ### `finding_occurrence`
 

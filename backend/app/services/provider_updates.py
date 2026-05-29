@@ -9,9 +9,15 @@ from sqlalchemy.engine import Engine
 from sqlmodel import Session
 
 from app.core.config import Settings
-from app.models import AnalysisRun, AnalysisRunStatus, ProviderUpdateJobCreate
+from app.models import (
+    AnalysisRun,
+    AnalysisRunStatus,
+    ProviderUpdateJobCreate,
+    WorkflowRunKind,
+    WorkflowRunStatus,
+)
 from app.models.base import get_datetime_utc
-from app.repositories import RunRepository
+from app.repositories import RunRepository, WorkflowRepository
 from app.services.provider_update_constants import (
     PROVIDER_UPDATE_INPUT_TYPE,
     PROVIDER_UPDATE_LOCK_FILE,
@@ -147,6 +153,7 @@ def resume_provider_update_job(
     settings: Settings,
     payload: ProviderUpdateJobCreate,
     run_id: uuid.UUID,
+    execution_mode: str = "background",
 ) -> AnalysisRun | None:
     """Execute a pending provider update job in the current session."""
     repository = RunRepository(session)
@@ -163,7 +170,7 @@ def resume_provider_update_job(
         requested_sources=selected_sources,
         requested_cves=len(cve_ids),
         cache_only=payload.cache_only,
-        execution_mode="background",
+        execution_mode=execution_mode,
         mode="workbench-provider-update",
     )
     session.add(run)
@@ -176,7 +183,7 @@ def resume_provider_update_job(
         selected_sources=selected_sources,
         cve_ids=cve_ids,
         cache_only=payload.cache_only,
-        execution_mode="background",
+        execution_mode=execution_mode,
         fail_conflicts=True,
     )
 
@@ -244,8 +251,38 @@ def _execute_provider_update_run(
     execution_mode: str,
     fail_conflicts: bool,
 ) -> AnalysisRun:
+    workflow_repository = WorkflowRepository(session)
+    workflow = workflow_repository.ensure_analysis_workflow(
+        kind=WorkflowRunKind.PROVIDER_UPDATE,
+        analysis_run_id=run.id,
+        project_id=run.project_id,
+        title="Provider snapshot refresh",
+        handler="app.services.provider_updates._execute_provider_update_run",
+        status=WorkflowRunStatus.RUNNING,
+        execution_mode=execution_mode,
+        current_stage="refresh_snapshot",
+        metadata_json={
+            "requested_sources": selected_sources,
+            "requested_cves": len(cve_ids),
+            "cache_only": cache_only,
+        },
+    )
+    workflow_repository.start_workflow(
+        workflow.id,
+        stage="refresh_snapshot",
+        message="Refreshing provider snapshot.",
+        progress_current=1,
+        progress_total=3,
+    )
     try:
         with _provider_update_lock(settings.provider_snapshot_dir_path):
+            workflow_repository.record_stage(
+                workflow.id,
+                stage="provider_lock_acquired",
+                message="Provider snapshot lock acquired.",
+                progress_current=1,
+                progress_total=3,
+            )
             if _other_running_update(repository, run.id) is not None:
                 raise ProviderUpdateConflict(
                     "Provider update already running; retry after the active job finishes."
@@ -259,6 +296,16 @@ def _execute_provider_update_run(
             )
     except ProviderUpdateConflict as exc:
         if fail_conflicts:
+            workflow_repository.finish_workflow(
+                workflow.id,
+                status=WorkflowRunStatus.FAILED,
+                stage="conflict",
+                message=str(exc),
+                progress_current=1,
+                progress_total=3,
+                error_message=str(exc),
+                error_json={"stage": "conflict", "error_type": exc.__class__.__name__},
+            )
             return _mark_provider_update_run_failed(
                 session=session,
                 run=run,
@@ -271,6 +318,16 @@ def _execute_provider_update_run(
             )
         raise
     except Exception as exc:
+        workflow_repository.finish_workflow(
+            workflow.id,
+            status=WorkflowRunStatus.FAILED,
+            stage="refresh_snapshot",
+            message=str(exc),
+            progress_current=1,
+            progress_total=3,
+            error_message=str(exc),
+            error_json={"stage": "refresh_snapshot", "error_type": exc.__class__.__name__},
+        )
         return _mark_provider_update_run_failed(
             session=session,
             run=run,
@@ -294,6 +351,24 @@ def _execute_provider_update_run(
     run.status = AnalysisRunStatus.COMPLETED
     run.finished_at = get_datetime_utc()
     set_workflow_summary(run, _redacted_payload(metadata))
+    workflow_repository.attach_artifact(
+        workflow.id,
+        artifact_kind="provider_snapshot",
+        artifact_id=str(snapshot.id),
+        metadata_json={
+            "selected_sources": selected_sources,
+            "requested_cves": len(cve_ids),
+        },
+    )
+    workflow_repository.finish_workflow(
+        workflow.id,
+        status=WorkflowRunStatus.SUCCEEDED,
+        stage="succeeded",
+        message="Provider snapshot refresh succeeded.",
+        progress_current=3,
+        progress_total=3,
+        metadata_json={"provider_snapshot_id": str(snapshot.id)},
+    )
     session.add(run)
     session.flush()
     return run
@@ -318,7 +393,7 @@ def _create_provider_update_run(
     execution_mode: str,
 ) -> AnalysisRun:
     project = _provider_update_project(session)
-    return repository.create_analysis_run(
+    run = repository.create_analysis_run(
         project_id=project.id,
         input_type=PROVIDER_UPDATE_INPUT_TYPE,
         status=status,
@@ -331,6 +406,37 @@ def _create_provider_update_run(
             mode="workbench-provider-update",
         ),
     )
+    queued = status == AnalysisRunStatus.PENDING
+    WorkflowRepository(session).ensure_analysis_workflow(
+        kind=WorkflowRunKind.PROVIDER_UPDATE,
+        analysis_run_id=run.id,
+        project_id=project.id,
+        title="Provider snapshot refresh",
+        handler=(
+            "app.services.provider_updates.resume_provider_update_job"
+            if queued
+            else "app.services.provider_updates._execute_provider_update_run"
+        ),
+        status=_workflow_status_for_run(status),
+        execution_mode="worker" if queued else execution_mode,
+        current_stage="queued" if status == AnalysisRunStatus.PENDING else "created",
+        metadata_json={
+            "requested_sources": selected_sources,
+            "requested_cves": len(cve_ids),
+            "cache_only": cache_only,
+        },
+        payload_json={
+            "run_id": str(run.id),
+            "sources": selected_sources,
+            "cve_ids": cve_ids,
+            "cache_only": cache_only,
+        }
+        if queued
+        else None,
+        max_retries=2 if queued else 0,
+        queue_name="default" if queued else None,
+    )
+    return run
 
 
 def _mark_provider_update_run_failed(
@@ -357,9 +463,38 @@ def _mark_provider_update_run_failed(
     run.error_message = error_message
     set_workflow_error(run, None, **_redacted_payload({"detail": error_message}))
     set_workflow_summary(run, _redacted_payload(failed_metadata))
+    workflow_repository = WorkflowRepository(session)
+    workflow = workflow_repository.get_latest_analysis_workflow(
+        analysis_run_id=run.id,
+        kind=WorkflowRunKind.PROVIDER_UPDATE,
+    )
+    if workflow is not None and workflow.status != WorkflowRunStatus.FAILED:
+        workflow_repository.finish_workflow(
+            workflow.id,
+            status=WorkflowRunStatus.FAILED,
+            stage="failed",
+            message=error_message,
+            error_message=error_message,
+            error_json={"stage": "provider_update", "detail": detail},
+        )
     session.add(run)
     session.flush()
     return run
+
+
+def _workflow_status_for_run(status: AnalysisRunStatus | str) -> WorkflowRunStatus:
+    normalized = AnalysisRunStatus(status)
+    if normalized == AnalysisRunStatus.RUNNING:
+        return WorkflowRunStatus.RUNNING
+    if normalized == AnalysisRunStatus.FAILED:
+        return WorkflowRunStatus.FAILED
+    if normalized == AnalysisRunStatus.CANCELLED:
+        return WorkflowRunStatus.CANCELLED
+    if normalized in {AnalysisRunStatus.SUCCEEDED, AnalysisRunStatus.COMPLETED}:
+        return WorkflowRunStatus.SUCCEEDED
+    if normalized == AnalysisRunStatus.COMPLETED_WITH_ERRORS:
+        return WorkflowRunStatus.COMPLETED_WITH_ERRORS
+    return WorkflowRunStatus.PENDING
 
 
 __all__ = [
