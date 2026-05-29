@@ -129,6 +129,9 @@ jobs:
               frontend/*|backend/app/*|backend/src/*)
                 run_frontend=true
                 ;;
+              .nvmrc|.npmrc|package.json)
+                run_frontend=true
+                ;;
               backend/pyproject.toml|pyproject.toml|Makefile)
                 run_frontend=true
                 ;;

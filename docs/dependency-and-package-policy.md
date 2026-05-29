@@ -135,6 +135,9 @@ consistently. The explicit flag is required because npm prefix commands do not
 reliably inherit the root `.npmrc`. Do not add a workspace-local
 `frontend/.npmrc`; npm ignores workspace config for workspace script execution
 and emits warning noise instead of improving enforcement.
+Docker frontend builds must use the same explicit engine-strict install and
+build flags so container evidence cannot silently diverge from CI/local npm
+policy.
 
 The frontend audit intentionally covers both runtime and dev/build-chain
 dependencies from the committed lockfile. Do not exclude dev dependencies from

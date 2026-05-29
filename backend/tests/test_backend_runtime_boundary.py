@@ -246,7 +246,8 @@ def test_runtime_containers_keep_upgrade_and_package_surface_guards() -> None:
     assert "python -m pip uninstall -y pip setuptools wheel" in backend_dockerfile
     assert "apk upgrade --no-cache" in frontend_dockerfile
     assert "apk del --no-network curl libcurl nginx-module-image-filter" in frontend_dockerfile
-    assert "npm ci --workspaces=false" in frontend_dockerfile
+    assert "npm ci --workspaces=false --engine-strict=true" in frontend_dockerfile
+    assert "npm --workspaces=false --engine-strict=true run build" in frontend_dockerfile
 
 
 def test_node_package_manifests_pin_ci_runtime_family() -> None:
@@ -662,6 +663,16 @@ def test_ci_frontend_gate_runs_coverage_and_full_playwright_suite() -> None:
         not in workflow
     )
     assert "npm --prefix frontend --workspaces=false --engine-strict=true run test" in workflow
+    assert "frontend/*|backend/app/*|backend/src/*" in workflow
+    assert ".nvmrc|.npmrc|package.json" in workflow
+
+
+def test_ci_docker_gate_runs_for_frontend_toolchain_policy_changes() -> None:
+    workflow = _read_repo_text(".github/workflows/docker.yml")
+
+    assert ".nvmrc|.npmrc|package.json|frontend/package.json|frontend/package-lock.json" in workflow
+    assert "make docker-demo-smoke" in workflow
+    assert "make docker-production-smoke" in workflow
 
 
 def test_legacy_cli_entrypoint_is_removed() -> None:
