@@ -645,6 +645,11 @@ def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:
     assert "release-check api-client-drift-check archive-evidence-check" in release_readiness
     assert "--profile legacy-postgres" not in docker_demo_smoke
     assert "workbench-postgres" not in docker_demo_smoke
+    assert "$(COMPOSE) up -d --build backend frontend worker" in docker_demo_smoke
+    assert (
+        "$(PRODUCTION_SMOKE_COMPOSE) up -d --build backend frontend worker"
+        in docker_production_smoke
+    )
     assert "$(COMPOSE) exec -T backend python -m app.core.schema_smoke" in docker_demo_smoke
     assert (
         "$(PRODUCTION_SMOKE_COMPOSE) exec -T backend python -m app.core.schema_smoke"
@@ -662,7 +667,9 @@ def test_ci_frontend_gate_runs_coverage_and_full_playwright_suite() -> None:
         "npm --prefix frontend --workspaces=false --engine-strict=true run test -- tests/"
         not in workflow
     )
-    assert "npm --prefix frontend --workspaces=false --engine-strict=true run test" in workflow
+    assert (
+        "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test"
+    ) in workflow
     assert "frontend/*|backend/app/*|backend/src/*" in workflow
     assert ".nvmrc|.npmrc|package.json" in workflow
 

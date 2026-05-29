@@ -5,7 +5,7 @@ import {
   localApiHeaders,
   openWorkbench,
 } from "./workbench-runtime-helpers"
-import { validCveList } from "./workbench-e2e-helpers"
+import { validCveList, waitForRunSucceeded } from "./workbench-e2e-helpers"
 
 test("critical Workbench evidence flow works across browser engines", async ({
   page,
@@ -49,8 +49,12 @@ test("critical Workbench evidence flow works across browser engines", async ({
     },
   )
   expect(importResponse.ok()).toBeTruthy()
-  const run = (await importResponse.json()) as { id: string; status: string }
-  expect(["completed", "succeeded"]).toContain(run.status)
+  const queuedRun = (await importResponse.json()) as { id: string; status: string }
+  expect(["pending", "running", "succeeded", "completed"]).toContain(queuedRun.status)
+  const run = await waitForRunSucceeded(page, queuedRun.id, {
+    apiBaseUrl: backendBaseUrl,
+    headers,
+  })
 
   await page.goto(`/reports?projectId=${project.id}&runId=${run.id}`)
   await expect(

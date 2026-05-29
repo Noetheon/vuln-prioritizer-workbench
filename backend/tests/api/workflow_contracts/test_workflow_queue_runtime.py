@@ -18,7 +18,6 @@ from utils.workbench_workflow_contracts import (
 
 from app.models import AnalysisRun, AnalysisRunStatus, WorkflowRunKind, WorkflowRunStatus
 from app.repositories import WorkflowRepository
-from app.services.run_workflow_metadata import workflow_import_job_payload
 from app.workers import workflow_handlers, workflow_worker
 from app.workers.workflow_worker import run_worker_once
 
@@ -103,13 +102,11 @@ def test_worker_executes_queued_import_provider_and_report_jobs(
                 "sources": ["kev"],
                 "cve_ids": ["CVE-2024-3094"],
                 "cache_only": True,
-                "execution_mode": "background",
             },
         )
         assert provider_response.status_code == 200, provider_response.text
         provider_job = provider_response.json()
         assert provider_job["status"] == "pending"
-        assert provider_job["execution_mode"] == "background"
         assert provider_job["workflow"]["kind"] == "provider_update"
         assert provider_job["workflow"]["execution_mode"] == "worker"
 
@@ -123,7 +120,7 @@ def test_worker_executes_queued_import_provider_and_report_jobs(
         assert status_response.status_code == 200, status_response.text
         latest_update = status_response.json()["latest_update_job"]
         assert latest_update["id"] == provider_job["id"]
-        assert latest_update["status"] == "completed"
+        assert latest_update["status"] == "succeeded"
         assert latest_update["workflow"]["status"] == "succeeded"
     finally:
         workbench_api_env.client.app.state.workbench_settings = active_settings
@@ -240,14 +237,6 @@ def test_cancel_retry_and_websocket_stream_routes_are_public_contracts(
             input_type="cve-list",
             filename="queued-cves.txt",
             status=AnalysisRunStatus.PENDING,
-            summary_json={
-                "import_job": {
-                    "id": "queued-job",
-                    "status": "pending",
-                    "execution_mode": "worker",
-                    "status_history": [{"status": "pending"}],
-                }
-            },
         )
         session.add(linked_run)
         session.flush()
@@ -276,9 +265,6 @@ def test_cancel_retry_and_websocket_stream_routes_are_public_contracts(
         assert cancelled_run is not None
         assert cancelled_run.status == AnalysisRunStatus.CANCELLED
         assert cancelled_run.error_message == "Cancellation requested by user."
-        import_job = workflow_import_job_payload(cancelled_run)
-        assert import_job is not None
-        assert import_job["status"] == "cancelled"
 
     retry_response = workbench_api_env.client.post(
         f"/api/v1/workflows/{workflow_id}/retry",
@@ -313,14 +299,6 @@ def test_worker_cancellation_loop_and_cli_runtime_paths(
             input_type="cve-list",
             filename="cancellable-cves.txt",
             status=AnalysisRunStatus.RUNNING,
-            summary_json={
-                "import_job": {
-                    "id": "running-job",
-                    "status": "running",
-                    "execution_mode": "worker",
-                    "status_history": [{"status": "running"}],
-                }
-            },
         )
         session.add(run)
         session.flush()
@@ -361,9 +339,6 @@ def test_worker_cancellation_loop_and_cli_runtime_paths(
         cancelled_run = session.get(AnalysisRun, run_id)
         assert cancelled_run is not None
         assert cancelled_run.status == AnalysisRunStatus.CANCELLED
-        import_job = workflow_import_job_payload(cancelled_run)
-        assert import_job is not None
-        assert import_job["status"] == "cancelled"
 
     with Session(workbench_api_env.engine) as session:
         skipped_workflow = WorkflowRepository(session).create_workflow_run(
@@ -646,7 +621,6 @@ def test_workflow_handler_validation_edges(
         input_type="cve-list",
         filename="known-cves.txt",
         status=AnalysisRunStatus.PENDING,
-        summary_json={},
     )
     with pytest.raises(workflow_handlers.WorkflowHandlerError, match="no stored input upload"):
         workflow_handlers._stored_import_upload_request(settings, run=run, payload={})

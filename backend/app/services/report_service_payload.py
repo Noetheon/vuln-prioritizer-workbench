@@ -7,9 +7,17 @@ from datetime import datetime
 
 from sqlmodel import Session, col, select
 
-from app.models import AnalysisRun, AnalysisRunStatus, Finding, FindingOccurrence, Project
+from app.models import (
+    AnalysisRun,
+    AnalysisRunStatus,
+    Finding,
+    FindingOccurrence,
+    Project,
+    WorkflowRunKind,
+)
 from app.models.base import get_datetime_utc
 from app.repositories import WaiverRepository
+from app.repositories.workflows import WorkflowRepository
 from app.services.governance import build_project_governance_rollups_payload
 from app.services.report_models import MarkdownReportPayload, ReportGenerationError
 from app.services.report_projection import _finding_payload, _provider_snapshot_payload
@@ -17,10 +25,7 @@ from app.services.report_service_payload_attack import (
     merge_attack_context,
     run_attack_contexts_by_finding,
 )
-from app.services.run_workflow_metadata import (
-    workflow_error_payload_or_empty,
-    workflow_summary,
-)
+from app.services.run_workflow_metadata import workflow_error_payload_or_empty, workflow_summary
 
 REPORT_SUPPORTED_RUN_STATUSES = {
     AnalysisRunStatus.COMPLETED,
@@ -62,7 +67,13 @@ def build_report_payload(
         waivers=waiver_repository.list_project_waivers(project.id),
         waiver_repository=waiver_repository,
     )
-    summary = workflow_summary(run)
+    workflow = WorkflowRepository(session).get_latest_analysis_workflow(
+        analysis_run_id=run.id,
+        kind=WorkflowRunKind.IMPORT,
+    )
+    result_payload = dict(workflow.result_json or {}) if workflow is not None else {}
+    diagnostics_payload = dict(workflow.diagnostics_json or {}) if workflow is not None else {}
+    summary = workflow_summary(result_payload)
     payload = MarkdownReportPayload(
         generated_at=generated_at,
         project_id=str(project.id),
@@ -81,7 +92,7 @@ def build_report_payload(
         run_started_at=run.started_at,
         run_finished_at=run.finished_at,
         run_error=run.error_message,
-        run_errors=workflow_error_payload_or_empty(run),
+        run_errors=workflow_error_payload_or_empty(diagnostics_payload),
         input_file_hash=summary.input_sha256
         or (summary.input_upload.sha256 if summary.input_upload else None),
     )

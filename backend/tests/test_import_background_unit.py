@@ -13,7 +13,6 @@ from app import models as app_models
 from app.models.base import get_datetime_utc
 from app.services import import_background
 from app.services.import_background import (
-    _append_job_status,
     mark_import_run_background_failed,
     reconcile_stale_background_import_runs,
 )
@@ -45,7 +44,7 @@ def test_background_import_reconciliation_ignores_non_background_runs(
             input_type="cve-list",
             filename="request-cves.txt",
             status=app_models.AnalysisRunStatus.PENDING,
-            summary_json={
+            result_json={
                 "import_job": {
                     "id": "request-job",
                     "status": "pending",
@@ -69,10 +68,9 @@ def test_background_import_reconciliation_ignores_non_background_runs(
         run = session.get(app_models.AnalysisRun, run_id)
         assert run is not None
         assert run.status == app_models.AnalysisRunStatus.PENDING
-        assert "background_error" not in run.summary_json
 
 
-def test_mark_background_failed_preserves_job_history_and_terminal_noops(
+def test_mark_background_failed_updates_run_and_workflow_diagnostics(
     workbench_api_env: WorkbenchApiEnv,
 ) -> None:
     project_id = _create_project_id(workbench_api_env)
@@ -84,7 +82,7 @@ def test_mark_background_failed_preserves_job_history_and_terminal_noops(
             input_type="cve-list",
             filename="background-cves.txt",
             status=app_models.AnalysisRunStatus.RUNNING,
-            summary_json={
+            result_json={
                 "import_job": {
                     "id": "stable-job-id",
                     "status": "running",
@@ -98,7 +96,7 @@ def test_mark_background_failed_preserves_job_history_and_terminal_noops(
             input_type="cve-list",
             filename="terminal-cves.txt",
             status=app_models.AnalysisRunStatus.SUCCEEDED,
-            summary_json={
+            result_json={
                 "import_job": {
                     "id": "terminal-job-id",
                     "status": "succeeded",
@@ -123,17 +121,17 @@ def test_mark_background_failed_preserves_job_history_and_terminal_noops(
         assert failed is not None
         assert failed.status == app_models.AnalysisRunStatus.FAILED
         assert failed.error_message == "background worker crashed"
-        assert failed.summary_json["import_job"]["id"] == "stable-job-id"
-        assert [item["status"] for item in failed.summary_json["import_job"]["status_history"]] == [
-            "pending",
-            "running",
-            "failed",
-        ]
+        workflow = workbench_api_env.repositories.WorkflowRepository(
+            session
+        ).get_latest_analysis_workflow(
+            analysis_run_id=running.id,
+            kind=app_models.WorkflowRunKind.IMPORT,
+        )
+        assert workflow is not None
+        assert workflow.status == app_models.WorkflowRunStatus.FAILED
+        assert workflow.diagnostics_json["background_error"]["stage"] == "background_import"
         assert terminal_noop is not None
         assert terminal_noop.status == app_models.AnalysisRunStatus.SUCCEEDED
-        assert "background_error" not in terminal_noop.summary_json
-
-    assert _append_job_status([{"status": "failed"}], "failed") == [{"status": "failed"}]
 
 
 def test_background_import_runner_handles_service_and_unexpected_errors(
@@ -162,7 +160,7 @@ def test_background_import_runner_handles_service_and_unexpected_errors(
             input_type="cve-list",
             filename="service-error.txt",
             status=app_models.AnalysisRunStatus.RUNNING,
-            summary_json={
+            result_json={
                 "import_job": {
                     "id": "service-error-job",
                     "status": "running",
@@ -193,7 +191,6 @@ def test_background_import_runner_handles_service_and_unexpected_errors(
         run = session.get(app_models.AnalysisRun, service_error_run_id)
         assert run is not None
         assert run.status == app_models.AnalysisRunStatus.RUNNING
-        assert "background_error" not in run.summary_json
 
     async def raise_unexpected_error(**_kwargs: object) -> None:
         raise RuntimeError("boom")
@@ -206,7 +203,7 @@ def test_background_import_runner_handles_service_and_unexpected_errors(
             input_type="cve-list",
             filename="unexpected-error.txt",
             status=app_models.AnalysisRunStatus.RUNNING,
-            summary_json={
+            result_json={
                 "import_job": {
                     "id": "unexpected-error-job",
                     "status": "running",
@@ -237,4 +234,11 @@ def test_background_import_runner_handles_service_and_unexpected_errors(
         run = session.get(app_models.AnalysisRun, unexpected_error_run_id)
         assert run is not None
         assert run.status == app_models.AnalysisRunStatus.FAILED
-        assert run.summary_json["background_error"]["stage"] == "background_import"
+        workflow = workbench_api_env.repositories.WorkflowRepository(
+            session
+        ).get_latest_analysis_workflow(
+            analysis_run_id=unexpected_error_run_id,
+            kind=app_models.WorkflowRunKind.IMPORT,
+        )
+        assert workflow is not None
+        assert workflow.diagnostics_json["background_error"]["stage"] == "background_import"

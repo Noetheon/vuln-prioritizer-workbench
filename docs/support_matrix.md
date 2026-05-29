@@ -62,8 +62,8 @@ boundaries, but Workbench uploads must use one of the explicit values below.
 - Prefer the Workbench UI for local review and repeated triage.
 - Prefer `POST /api/v1/projects/{project_id}/imports` for automation that needs
   to feed the local Workbench directly.
-- Prefer `POST /api/v1/runs/{run_id}/reports` for automation that needs report
-  artifacts after a completed run.
+- Prefer `POST /api/v1/runs/{run_id}/report-jobs` for automation that needs
+  report artifacts after a completed run.
 - Keep input files local and explicit. The Workbench prioritizes already-known
   CVEs from supplied evidence; it does not scan systems.
 - This matrix was rechecked against backend and frontend format definitions on

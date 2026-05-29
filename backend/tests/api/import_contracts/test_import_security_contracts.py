@@ -10,7 +10,13 @@ from utils.import_contracts import (
     assert_no_sensitive_path_leak as _assert_no_sensitive_path_leak,
 )
 from utils.import_contracts import (
+    completed_run_payload as _completed_run_payload,
+)
+from utils.import_contracts import (
     configure_upload_dir as _configure_upload_dir,
+)
+from utils.import_contracts import (
+    public_run_aliases as _public_run_aliases,
 )
 from utils.import_contracts import (
     run_count as _run_count,
@@ -227,9 +233,10 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
         files={"file": ("bad.txt", content, "text/plain")},
     )
 
-    assert response.status_code == 422
-    assert response.json()["code"] == "import_parse_failed"
-    detail = response.json()["detail"]
+    assert response.status_code == 200
+    payload = _completed_run_payload(workbench_api_env, response, headers=headers)
+    assert payload["status"] == "failed"
+    detail = {**payload["diagnostics"], "analysis_run_id": payload["id"]}
     assert detail["message"] == "Import parsing failed."
     assert detail["analysis_run_id"]
     assert detail["ignored_lines"] == 0
@@ -242,13 +249,6 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
     assert "not-a-cve" in detail["parse_errors"][0]["message"]
     _assert_no_sensitive_path_leak(detail["parse_errors"], tmp_path, upload_dir)
 
-    run = workbench_api_env.client.get(
-        f"/api/v1/runs/{detail['analysis_run_id']}",
-        headers=headers,
-    )
-    assert run.status_code == 200
-    payload = run.json()
-    assert payload["status"] == "failed"
     assert [item["status"] for item in payload["import_job"]["status_history"]] == [
         "pending",
         "running",
@@ -277,7 +277,7 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
         headers=headers,
     )
     assert summary.status_code == 200
-    summary_payload = summary.json()
+    summary_payload = _public_run_aliases(summary.json())
     assert summary_payload["status"] == "failed"
     assert summary_payload["created_findings"] == 0
     assert summary_payload["updated_findings"] == 0
@@ -316,20 +316,15 @@ def test_xml_parse_errors_redact_local_upload_paths(
         },
     )
 
-    assert response.status_code == 422
-    detail = response.json()["detail"]
+    assert response.status_code == 200
+    run_payload = _completed_run_payload(workbench_api_env, response, headers=headers)
+    assert run_payload["status"] == "failed"
+    detail = {**run_payload["diagnostics"], "analysis_run_id": run_payload["id"]}
     assert detail["message"] == "Import parsing failed."
     assert detail["parse_errors"][0]["filename"] == "broken.nessus"
     assert detail["parse_errors"][0]["input_type"] == "nessus-xml"
     _assert_no_sensitive_path_leak(detail["parse_errors"], tmp_path, upload_dir)
 
-    run = workbench_api_env.client.get(
-        f"/api/v1/runs/{detail['analysis_run_id']}",
-        headers=headers,
-    )
-    assert run.status_code == 200
-    run_payload = run.json()
-    assert run_payload["status"] == "failed"
     assert run_payload["workflow_error"]["parse_errors"] == detail["parse_errors"]
     _assert_no_sensitive_path_leak(
         run_payload["workflow_error"]["parse_errors"], tmp_path, upload_dir

@@ -14,6 +14,7 @@ from utils.workbench_workflow_contracts import (
     create_report,
     list_reports,
     post_import,
+    run_all_workflows,
     run_summary,
 )
 
@@ -126,9 +127,18 @@ def test_provider_update_workflow_is_public_on_jobs_and_status(
 
         workflow = job["workflow"]
         assert workflow["kind"] == "provider_update"
-        assert workflow["status"] == "succeeded"
+        assert workflow["status"] == "pending"
         assert workflow["analysis_run_id"] == job["id"]
-        assert workflow["execution_mode"] == "request"
+        run_all_workflows(workbench_api_env)
+        listed = workbench_api_env.client.get(
+            "/api/v1/providers/update-jobs",
+            headers=headers,
+        )
+        assert listed.status_code == 200, listed.text
+        listed_job = listed.json()["data"][0]
+        workflow = listed_job["workflow"]
+        assert workflow["status"] == "succeeded"
+        assert workflow["execution_mode"] == "worker"
         assert workflow["current_stage"] == "succeeded"
         assert workflow["progress_current"] == 3
         assert workflow["progress_total"] == 3
@@ -143,15 +153,9 @@ def test_provider_update_workflow_is_public_on_jobs_and_status(
             event for event in events["data"] if event["event_type"] == "artifact"
         )
         assert artifact_event["artifact_kind"] == "provider_snapshot"
-        assert artifact_event["artifact_id"] == job["metadata"]["provider_snapshot_id"]
+        assert artifact_event["artifact_id"] == listed_job["metadata"]["provider_snapshot_id"]
         assert_no_raw_workflow_fields(events)
 
-        listed = workbench_api_env.client.get(
-            "/api/v1/providers/update-jobs",
-            headers=headers,
-        )
-        assert listed.status_code == 200, listed.text
-        listed_job = listed.json()["data"][0]
         assert listed_job["workflow"]["id"] == workflow["id"]
         assert listed_job["workflow"]["latest_event"]["event_type"] == "succeeded"
 

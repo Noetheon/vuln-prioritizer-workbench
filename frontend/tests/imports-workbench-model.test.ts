@@ -15,6 +15,7 @@ import {
   metadataRows,
   optionalContextLabels,
   runFileLabel,
+  runLockedProviderData,
   runTone,
   selectedFormat,
   uploadProgress,
@@ -321,10 +322,23 @@ test("import model derives upload progress and safe file labels", () => {
   )
   assert.equal(
     runFileLabel({
-      input_upload: { original_filename: "findings.txt" },
       input_type: "cve-list",
+      uploads: { input: { original_filename: "findings.txt" } },
     }),
     "findings.txt",
+  )
+  assert.equal(
+    runFileLabel({
+      input_type: "cve-list",
+      uploads: { input: { filename: "raw-upload.txt" } },
+    }),
+    "raw-upload.txt",
+  )
+  assert.equal(
+    runLockedProviderData({
+      provider_snapshot: { locked: true },
+    }),
+    true,
   )
 })
 
@@ -352,23 +366,26 @@ test("import model selects readable failure causes", () => {
   )
   assert.equal(
     failedRunCause(null, {
-      analysis_error: { message: "Parser error", stage: "analysis" },
+      diagnostics: {
+        analysis_error: { message: "Parser error", stage: "analysis" },
+      },
     } as never),
     "Parser error",
   )
   assert.equal(
     failedRunCause(null, {
-      workflow_error: {
-        analysis_error: { message: "Last parser error", stage: "analysis" },
+      workflow: {
+        diagnostics: {
+          analysis_error: { message: "Last parser error", stage: "analysis" },
+        },
       },
     } as never),
     "Last parser error",
   )
   assert.equal(
     failedRunCause(null, {
-      analysis_error: {
-        message: "Parser rejected the source file.",
-        stage: "analysis",
+      diagnostics: {
+        parse_errors: [{ message: "Parser rejected the source file." }],
       },
     } as never),
     "Parser rejected the source file.",
@@ -453,11 +470,15 @@ test("import run timeline only includes evidence-backed events", () => {
 
   const contextualSummary = {
     ...completedSummary,
-    asset_context_upload: { original_filename: "assets.csv" },
-    attack_source: "local-curated",
     created_findings: 2,
     provider_snapshot_id: "provider-snapshot-1",
-    provider_snapshot_file: "snapshot.json",
+    provider_snapshot: { file: "snapshot.json" },
+    result: {
+      attack_source: "local-curated",
+    },
+    uploads: {
+      asset_context: { original_filename: "assets.csv" },
+    },
   } as const
   assert.deepEqual(importRunTimelineItems(null, contextualSummary as never), [
     "Import started",
@@ -585,7 +606,6 @@ test("import upload payload omits empty optional file-name fields", () => {
 
   assert.deepEqual(payload, {
     attack_source: "none",
-    execution_mode: "worker",
     file: importFile,
     input_type: "cve-list",
     locked_provider_data: false,

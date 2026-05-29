@@ -10,6 +10,7 @@ from typing import Any
 
 from sqlmodel import Session, select
 
+from utils.import_contracts import drain_workflow_queue
 from utils.report_contract_fixtures import replace
 from utils.workbench_env import (
     DEMO_CVE_LOG4SHELL,
@@ -52,6 +53,47 @@ def _configure_report_dir(
         **overrides,
     )
     return report_dir
+
+
+def _queue_report_workflow(
+    workbench_api_env: WorkbenchApiEnv,
+    run_id: uuid.UUID,
+    *,
+    headers: dict[str, str],
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    response = workbench_api_env.client.post(
+        f"/api/v1/runs/{run_id}/report-jobs",
+        headers=headers,
+        json=payload,
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def _create_report_via_worker(
+    workbench_api_env: WorkbenchApiEnv,
+    run_id: uuid.UUID,
+    *,
+    headers: dict[str, str],
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    workflow = _queue_report_workflow(
+        workbench_api_env,
+        run_id,
+        headers=headers,
+        payload=payload,
+    )
+    drain_workflow_queue(workbench_api_env)
+    reports = workbench_api_env.client.get(
+        f"/api/v1/runs/{run_id}/reports",
+        headers=headers,
+    )
+    assert reports.status_code == 200, reports.text
+    for report in reports.json()["data"]:
+        if report.get("workflow", {}).get("id") == workflow["id"]:
+            return report
+    raise AssertionError(f"missing report for workflow {workflow['id']}")
 
 
 def _repo_root() -> Path:
@@ -107,8 +149,15 @@ def _add_vpw051_bundle_metadata(
     with Session(workbench_api_env.engine) as session:
         run = session.get(app_models.AnalysisRun, run_id)
         assert run is not None
-        run.summary_json = {
-            **dict(run.summary_json or {}),
+        workflow = workbench_api_env.repositories.WorkflowRepository(
+            session
+        ).get_latest_analysis_workflow(
+            analysis_run_id=run.id,
+            kind=app_models.WorkflowRunKind.IMPORT,
+        )
+        assert workflow is not None
+        workflow.result_json = {
+            **dict(workflow.result_json or {}),
             "input_sha256": input_metadata["sha256"],
             "input_upload": {
                 "original_filename": upload_path.name,
@@ -119,7 +168,8 @@ def _add_vpw051_bundle_metadata(
                 "token": "super-secret-token",
             },
         }
-        run.error_json = {"authorization": "Bearer super-secret-token"}
+        workflow.diagnostics_json = {"authorization": "Bearer super-secret-token"}
+        session.add(workflow)
         if run.provider_snapshot is not None:
             run.provider_snapshot.source_metadata_json = {
                 **dict(run.provider_snapshot.source_metadata_json or {}),
@@ -245,7 +295,7 @@ def _seed_reportable_run(workbench_api_env: WorkbenchApiEnv, project_id: uuid.UU
             input_type="cve-list",
             filename="known-cves.txt",
             status=app_models.AnalysisRunStatus.COMPLETED,
-            summary_json={
+            result_json={
                 "finding_count": 2,
                 "counts_by_priority": {"Critical": 1, "High": 1},
                 "locked_provider_data": True,
@@ -329,7 +379,7 @@ def _seed_formula_run(workbench_api_env: WorkbenchApiEnv, project_id: uuid.UUID)
             input_type="generic-occurrence-csv",
             filename="formula-cells.csv",
             status=app_models.AnalysisRunStatus.COMPLETED,
-            summary_json={"finding_count": 1},
+            result_json={"finding_count": 1},
         )
         finding = _seed_finding(
             session,

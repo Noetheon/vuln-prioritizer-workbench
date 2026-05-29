@@ -56,13 +56,7 @@ from app.services.provider_update_snapshot import (
     _provider_source_metadata,
     _write_provider_snapshot,
 )
-from app.services.run_workflow_metadata import (
-    merge_summary_payload,
-    set_workflow_error,
-    set_workflow_summary,
-    update_workflow_summary,
-    workflow_summary_payload,
-)
+from app.services.workflow_execution import WorkflowExecutionContext
 
 
 def create_provider_update_job(
@@ -122,7 +116,7 @@ def enqueue_provider_update_job(
         cve_ids=cve_ids,
         cache_only=payload.cache_only,
         status=AnalysisRunStatus.PENDING,
-        execution_mode="background",
+        execution_mode="worker",
     )
 
 
@@ -154,6 +148,7 @@ def resume_provider_update_job(
     payload: ProviderUpdateJobCreate,
     run_id: uuid.UUID,
     execution_mode: str = "background",
+    workflow_context: WorkflowExecutionContext | None = None,
 ) -> AnalysisRun | None:
     """Execute a pending provider update job in the current session."""
     repository = RunRepository(session)
@@ -165,14 +160,6 @@ def resume_provider_update_job(
 
     selected_sources, cve_ids = _provider_update_request_inputs(session, payload=payload)
     run.status = AnalysisRunStatus.RUNNING
-    update_workflow_summary(
-        run,
-        requested_sources=selected_sources,
-        requested_cves=len(cve_ids),
-        cache_only=payload.cache_only,
-        execution_mode=execution_mode,
-        mode="workbench-provider-update",
-    )
     session.add(run)
     session.flush()
     return _execute_provider_update_run(
@@ -185,6 +172,7 @@ def resume_provider_update_job(
         cache_only=payload.cache_only,
         execution_mode=execution_mode,
         fail_conflicts=True,
+        workflow_context=workflow_context,
     )
 
 
@@ -224,11 +212,15 @@ def mark_provider_update_job_background_failed(
     run = repository.get_analysis_run(run_id)
     if run is None or run.status not in {AnalysisRunStatus.PENDING, AnalysisRunStatus.RUNNING}:
         return run
-    metadata = workflow_summary_payload(run)
+    workflow = WorkflowRepository(session).get_latest_analysis_workflow(
+        analysis_run_id=run.id,
+        kind=WorkflowRunKind.PROVIDER_UPDATE,
+    )
+    metadata = dict(workflow.payload_json or workflow.metadata_json or {}) if workflow else {}
     failed = _mark_provider_update_run_failed(
         session=session,
         run=run,
-        selected_sources=_string_list(metadata.get("requested_sources")),
+        selected_sources=_string_list(metadata.get("requested_sources") or metadata.get("sources")),
         requested_cves=_int_value(metadata.get("requested_cves")),
         cache_only=bool(metadata.get("cache_only", True)),
         execution_mode=str(metadata.get("execution_mode") or "background"),
@@ -250,6 +242,7 @@ def _execute_provider_update_run(
     cache_only: bool,
     execution_mode: str,
     fail_conflicts: bool,
+    workflow_context: WorkflowExecutionContext | None = None,
 ) -> AnalysisRun:
     workflow_repository = WorkflowRepository(session)
     workflow = workflow_repository.ensure_analysis_workflow(
@@ -267,8 +260,11 @@ def _execute_provider_update_run(
             "cache_only": cache_only,
         },
     )
-    workflow_repository.start_workflow(
+    context = workflow_context or WorkflowExecutionContext.for_workflow(
+        workflow_repository,
         workflow.id,
+    )
+    context.start(
         stage="refresh_snapshot",
         message="Refreshing provider snapshot.",
         progress_current=1,
@@ -276,10 +272,9 @@ def _execute_provider_update_run(
     )
     try:
         with _provider_update_lock(settings.provider_snapshot_dir_path):
-            workflow_repository.record_stage(
-                workflow.id,
-                stage="provider_lock_acquired",
-                message="Provider snapshot lock acquired.",
+            context.stage(
+                "provider_lock_acquired",
+                "Provider snapshot lock acquired.",
                 progress_current=1,
                 progress_total=3,
             )
@@ -296,15 +291,13 @@ def _execute_provider_update_run(
             )
     except ProviderUpdateConflict as exc:
         if fail_conflicts:
-            workflow_repository.finish_workflow(
-                workflow.id,
-                status=WorkflowRunStatus.FAILED,
+            context.fail(
                 stage="conflict",
                 message=str(exc),
                 progress_current=1,
                 progress_total=3,
-                error_message=str(exc),
-                error_json={"stage": "conflict", "error_type": exc.__class__.__name__},
+                diagnostics={"stage": "conflict", "error_type": exc.__class__.__name__},
+                terminal_code="provider_conflict",
             )
             return _mark_provider_update_run_failed(
                 session=session,
@@ -318,15 +311,13 @@ def _execute_provider_update_run(
             )
         raise
     except Exception as exc:
-        workflow_repository.finish_workflow(
-            workflow.id,
-            status=WorkflowRunStatus.FAILED,
+        context.fail(
             stage="refresh_snapshot",
             message=str(exc),
             progress_current=1,
             progress_total=3,
-            error_message=str(exc),
-            error_json={"stage": "refresh_snapshot", "error_type": exc.__class__.__name__},
+            diagnostics={"stage": "refresh_snapshot", "error_type": exc.__class__.__name__},
+            terminal_code="provider_refresh_failed",
         )
         return _mark_provider_update_run_failed(
             session=session,
@@ -350,24 +341,22 @@ def _execute_provider_update_run(
     run.provider_snapshot_id = snapshot.id
     run.status = AnalysisRunStatus.COMPLETED
     run.finished_at = get_datetime_utc()
-    set_workflow_summary(run, _redacted_payload(metadata))
-    workflow_repository.attach_artifact(
-        workflow.id,
+    context.artifact(
         artifact_kind="provider_snapshot",
         artifact_id=str(snapshot.id),
-        metadata_json={
+        details={
             "selected_sources": selected_sources,
             "requested_cves": len(cve_ids),
         },
     )
-    workflow_repository.finish_workflow(
-        workflow.id,
-        status=WorkflowRunStatus.SUCCEEDED,
+    context.succeed(
         stage="succeeded",
         message="Provider snapshot refresh succeeded.",
         progress_current=3,
         progress_total=3,
-        metadata_json={"provider_snapshot_id": str(snapshot.id)},
+        result=_redacted_payload(metadata),
+        diagnostics={},
+        details={"provider_snapshot_id": str(snapshot.id)},
     )
     session.add(run)
     session.flush()
@@ -397,14 +386,6 @@ def _create_provider_update_run(
         project_id=project.id,
         input_type=PROVIDER_UPDATE_INPUT_TYPE,
         status=status,
-        summary_json=merge_summary_payload(
-            None,
-            requested_sources=selected_sources,
-            requested_cves=len(cve_ids),
-            cache_only=cache_only,
-            execution_mode=execution_mode,
-            mode="workbench-provider-update",
-        ),
     )
     queued = status == AnalysisRunStatus.PENDING
     WorkflowRepository(session).ensure_analysis_workflow(
@@ -461,21 +442,17 @@ def _mark_provider_update_run_failed(
     run.status = AnalysisRunStatus.FAILED
     run.finished_at = get_datetime_utc()
     run.error_message = error_message
-    set_workflow_error(run, None, **_redacted_payload({"detail": error_message}))
-    set_workflow_summary(run, _redacted_payload(failed_metadata))
     workflow_repository = WorkflowRepository(session)
     workflow = workflow_repository.get_latest_analysis_workflow(
         analysis_run_id=run.id,
         kind=WorkflowRunKind.PROVIDER_UPDATE,
     )
     if workflow is not None and workflow.status != WorkflowRunStatus.FAILED:
-        workflow_repository.finish_workflow(
-            workflow.id,
-            status=WorkflowRunStatus.FAILED,
+        WorkflowExecutionContext.for_workflow(workflow_repository, workflow.id).fail(
             stage="failed",
             message=error_message,
-            error_message=error_message,
-            error_json={"stage": "provider_update", "detail": detail},
+            diagnostics={"stage": "provider_update", **failed_metadata},
+            terminal_code="provider_update_failed",
         )
     session.add(run)
     session.flush()

@@ -26,9 +26,6 @@ from app.services.provider_updates import (
     ProviderUpdateValidationError,
     enqueue_provider_update_job,
 )
-from app.services.provider_updates import (
-    create_provider_update_job as execute_provider_update_job,
-)
 from app.services.workflows import latest_analysis_workflow_public
 
 router = APIRouter(prefix="/providers", tags=["providers"])
@@ -68,18 +65,11 @@ def create_provider_update_job(
     """Create a cache-friendly provider snapshot refresh job."""
     active_settings = _request_settings(request)
     try:
-        if payload.execution_mode == "background":
-            run = enqueue_provider_update_job(
-                session,
-                settings=active_settings,
-                payload=payload,
-            )
-        else:
-            run = execute_provider_update_job(
-                session,
-                settings=active_settings,
-                payload=payload,
-            )
+        run = enqueue_provider_update_job(
+            session,
+            settings=active_settings,
+            payload=payload,
+        )
     except ProviderUpdateValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -98,7 +88,7 @@ def create_provider_update_job(
         detail={
             "sources": list(payload.sources),
             "status": str(run.status),
-            "execution_mode": payload.execution_mode,
+            "workflow": "queued",
         },
     )
     session.commit()

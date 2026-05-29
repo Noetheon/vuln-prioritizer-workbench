@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlmodel import Session
+from utils.import_contracts import drain_workflow_queue
 from utils.workbench_env import WorkbenchApiEnv, local_api_headers
 
 from app.models.base import get_datetime_utc
@@ -26,6 +27,26 @@ from vuln_prioritizer.provider_snapshot import (
     generate_provider_snapshot_json,
     load_provider_snapshot,
 )
+
+
+def _completed_provider_job(
+    workbench_api_env: WorkbenchApiEnv,
+    response: object,
+    *,
+    headers: dict[str, str],
+) -> dict[str, object]:
+    assert getattr(response, "status_code") == 200, getattr(response, "text")
+    queued = response.json()
+    drain_workflow_queue(workbench_api_env)
+    list_response = workbench_api_env.client.get(
+        "/api/v1/providers/update-jobs",
+        headers=headers,
+    )
+    assert list_response.status_code == 200, list_response.text
+    for job in list_response.json()["data"]:
+        if job["id"] == queued["id"]:
+            return job
+    raise AssertionError(f"missing provider job {queued['id']}")
 
 
 def test_workbench_provider_status_is_available_locally(
@@ -188,8 +209,8 @@ def test_workbench_provider_status_surfaces_failed_provider_update(
             input_type="provider_update",
             status=workbench_api_env.app_models.AnalysisRunStatus.FAILED,
             provider_snapshot_id=snapshot.id,
-            summary_json={"requested_sources": ["nvd", "epss", "kev"]},
-            error_json={"detail": "forced provider cache failure"},
+            result_json={"requested_sources": ["nvd", "epss", "kev"]},
+            diagnostics_json={"detail": "forced provider cache failure"},
         )
         session.commit()
 
@@ -221,8 +242,8 @@ def test_workbench_provider_status_uses_error_metadata_when_summary_is_empty(
             project_id=project.id,
             input_type="provider_update",
             status=workbench_api_env.app_models.AnalysisRunStatus.FAILED,
-            summary_json={},
-            error_json={
+            result_json={},
+            diagnostics_json={
                 "detail": "legacy provider update failure",
                 "execution_mode": "background",
                 "requested_sources": ["kev"],
@@ -235,7 +256,6 @@ def test_workbench_provider_status_uses_error_metadata_when_summary_is_empty(
     assert response.status_code == 200
     latest_update_job = response.json()["latest_update_job"]
     assert latest_update_job["status"] == "failed"
-    assert latest_update_job["execution_mode"] == "background"
     assert latest_update_job["requested_sources"] == ["kev"]
     assert latest_update_job["error_message"] == "legacy provider update failure"
 
@@ -382,18 +402,27 @@ def test_provider_status_projection_redacts_failed_job_error_json_fallback(
         project_id=uuid.UUID("00000000-0000-4000-8000-000000000204"),
         input_type="provider_update",
         status=workbench_api_env.app_models.AnalysisRunStatus.FAILED,
-        error_json={"nested": {"path": str(private_path)}, "fallback": str(private_path)},
-        summary_json={
-            "sources": ["nvd"],
-            "execution_mode": "scheduled",
-            "provider_cache_dir": str(private_path.parent),
-        },
         started_at=datetime(2026, 4, 28, 10, 0, tzinfo=UTC),
+    )
+    workflow = workbench_api_env.app_models.WorkflowRunPublic(
+        id=uuid.UUID("00000000-0000-4000-8000-000000000205"),
+        kind=workbench_api_env.app_models.WorkflowRunKind.PROVIDER_UPDATE,
+        status=workbench_api_env.app_models.WorkflowRunStatus.FAILED,
+        title="Provider snapshot refresh",
+        handler="test",
+        execution_mode="scheduled",
+        project_id=failed_run.project_id,
+        analysis_run_id=failed_run.id,
+        details={"sources": ["nvd"], "provider_cache_dir": str(private_path.parent)},
+        diagnostics={"nested": {"path": str(private_path)}, "fallback": str(private_path)},
+        created_at=datetime(2026, 4, 28, 10, 0, tzinfo=UTC),
+        updated_at=datetime(2026, 4, 28, 10, 1, tzinfo=UTC),
     )
 
     payload = provider_status_payload(
         None,
         latest_update_run=failed_run,
+        latest_update_workflow=workflow,
         active_settings=replace(
             active_settings,
             ENVIRONMENT="production",
@@ -407,7 +436,6 @@ def test_provider_status_projection_redacts_failed_job_error_json_fallback(
     assert payload.cache_dir is None
     assert payload.snapshot_dir is None
     assert payload.latest_update_job is not None
-    assert payload.latest_update_job.execution_mode == "scheduled"
     assert payload.latest_update_job.requested_sources == ["nvd"]
     assert "provider_cache_dir" not in payload.latest_update_job.metadata_
     assert payload.last_error is not None
@@ -441,12 +469,11 @@ def test_workbench_provider_update_job_create_list_and_status(
         )
 
         assert create_response.status_code == 200
-        job = create_response.json()
-        assert job["status"] == "completed"
-        assert job["execution_mode"] == "request"
+        assert create_response.json()["status"] == "pending"
+        job = _completed_provider_job(workbench_api_env, create_response, headers=headers)
+        assert job["status"] == "succeeded"
         assert job["requested_sources"] == ["kev"]
         assert job["error_message"] is None
-        assert job["metadata"]["execution_mode"] == "request"
         assert job["metadata"]["snapshot_created"] is True
         assert job["metadata"]["requested_cves"] == 1
         assert job["metadata"]["provider_snapshot_id"]
@@ -475,8 +502,7 @@ def test_workbench_provider_update_job_create_list_and_status(
         assert status_response.status_code == 200
         status_payload = status_response.json()
         assert status_payload["latest_update_job"]["id"] == job["id"]
-        assert status_payload["latest_update_job"]["status"] == "completed"
-        assert status_payload["latest_update_job"]["execution_mode"] == "request"
+        assert status_payload["latest_update_job"]["status"] == "succeeded"
         assert status_payload["snapshot_mode"] == "cache-only"
         assert status_payload["snapshot"]["selected_sources"] == ["kev"]
         assert status_payload["snapshot"]["requested_cves"] == 1
@@ -516,7 +542,6 @@ def test_workbench_provider_update_job_can_run_in_background(
 
         assert response.status_code == 200, response.text
         queued_job = response.json()
-        assert queued_job["execution_mode"] == "background"
         assert queued_job["status"] == "pending"
 
         with Session(workbench_api_env.engine) as session:
@@ -524,10 +549,17 @@ def test_workbench_provider_update_job_can_run_in_background(
                 workbench_api_env.app_models.AnalysisRun,
                 uuid.UUID(queued_job["id"]),
             )
+            workflow = workbench_api_env.repositories.WorkflowRepository(
+                session
+            ).get_latest_analysis_workflow(
+                analysis_run_id=uuid.UUID(queued_job["id"]),
+                kind=workbench_api_env.app_models.WorkflowRunKind.PROVIDER_UPDATE,
+            )
 
         assert run is not None
         assert run.status == workbench_api_env.app_models.AnalysisRunStatus.PENDING
-        assert run.summary_json["execution_mode"] == "background"
+        assert workflow is not None
+        assert workflow.execution_mode == "worker"
 
         result = run_worker_once(
             engine=workbench_api_env.engine,
@@ -543,10 +575,17 @@ def test_workbench_provider_update_job_can_run_in_background(
                 workbench_api_env.app_models.AnalysisRun,
                 uuid.UUID(queued_job["id"]),
             )
+            completed_workflow = workbench_api_env.repositories.WorkflowRepository(
+                session
+            ).get_latest_analysis_workflow(
+                analysis_run_id=uuid.UUID(queued_job["id"]),
+                kind=workbench_api_env.app_models.WorkflowRunKind.PROVIDER_UPDATE,
+            )
         assert completed_run is not None
         assert completed_run.status == workbench_api_env.app_models.AnalysisRunStatus.COMPLETED
-        assert completed_run.summary_json["execution_mode"] == "background"
-        assert completed_run.summary_json["snapshot_created"] is True
+        assert completed_workflow is not None
+        assert completed_workflow.result_json["execution_mode"] == "worker"
+        assert completed_workflow.result_json["snapshot_created"] is True
     finally:
         workbench_api_env.client.app.state.workbench_settings = active_settings
 
@@ -636,9 +675,8 @@ def test_workbench_provider_update_live_failure_preserves_previous_snapshot(
         )
 
         assert response.status_code == 200, response.text
-        job = response.json()
+        job = _completed_provider_job(workbench_api_env, response, headers=headers)
         assert job["status"] == "failed"
-        assert job["metadata"]["snapshot_created"] is False
         assert "upstream unavailable" in job["error_message"]
         assert sorted(path.name for path in snapshot_dir.glob("*.json")) == [
             "baseline-provider-snapshot.json"
@@ -728,8 +766,8 @@ def test_workbench_provider_update_job_reuses_previous_provider_records(
         )
 
         assert response.status_code == 200
-        job = response.json()
-        assert job["status"] == "completed"
+        job = _completed_provider_job(workbench_api_env, response, headers=headers)
+        assert job["status"] == "succeeded"
         assert job["metadata"]["source_counts"]["kev"]["records"] == 1
         assert job["metadata"]["source_counts"]["kev"]["fallback_from_previous_snapshot"] == 1
         generated_report = load_provider_snapshot(snapshot_dir / job["metadata"]["snapshot_file"])
@@ -771,21 +809,14 @@ def test_workbench_provider_update_job_audits_failed_synchronous_run(
             },
         )
 
-        assert response.status_code == 200, response.text
-        job = response.json()
-        assert job["status"] == "failed"
-        assert job["error_message"]
+        assert response.status_code == 422, response.text
+        assert "not writable" in response.text
 
         audit_response = workbench_api_env.client.get("/api/v1/audit/events", headers=headers)
         assert audit_response.status_code == 200, audit_response.text
-        audit_event = next(
-            item
-            for item in audit_response.json()["data"]
-            if item["action"] == "provider.update_job.create"
+        assert all(
+            item["action"] != "provider.update_job.create" for item in audit_response.json()["data"]
         )
-        assert audit_event["status"] == "failure"
-        assert audit_event["resource_id"] == job["id"]
-        assert audit_event["detail"]["status"] == "failed"
     finally:
         workbench_api_env.client.app.state.workbench_settings = active_settings
 
@@ -810,7 +841,7 @@ def test_workbench_provider_update_job_rejects_active_job(
                 project_id=project.id,
                 input_type="provider_update",
                 status=workbench_api_env.app_models.AnalysisRunStatus.RUNNING,
-                summary_json={"requested_sources": ["kev"]},
+                result_json={"requested_sources": ["kev"]},
             )
             session.commit()
 
@@ -845,7 +876,7 @@ def test_workbench_provider_update_reconciliation_fails_stale_active_job(
             project_id=project.id,
             input_type="provider_update",
             status=workbench_api_env.app_models.AnalysisRunStatus.RUNNING,
-            summary_json={
+            result_json={
                 "requested_sources": ["kev"],
                 "requested_cves": 1,
                 "cache_only": True,

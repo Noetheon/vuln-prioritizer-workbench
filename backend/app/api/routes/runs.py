@@ -12,14 +12,12 @@ from app.models import (
     AnalysisRunPublic,
     AnalysisRunsPublic,
     AnalysisRunSummaryPublic,
-    AnalysisRunWorkflowMetadataPublic,
     WorkflowRunKind,
 )
 from app.repositories import RunRepository
 from app.services.run_workflow_projection import (
     analysis_run_public,
     analysis_run_summary_public,
-    analysis_run_workflow_metadata_public,
 )
 from app.services.workflows import latest_analysis_workflow_public
 
@@ -107,20 +105,3 @@ def read_run_summary(
             kind=WorkflowRunKind.IMPORT,
         ),
     )
-
-
-@router.get(
-    "/runs/{run_id}/workflow-metadata",
-    response_model=AnalysisRunWorkflowMetadataPublic,
-)
-def read_run_workflow_metadata(
-    run_id: uuid.UUID,
-    session: SessionDep,
-    local_actor: LocalActor,
-) -> AnalysisRunWorkflowMetadataPublic:
-    """Read redacted workflow metadata diagnostics for one visible analysis run."""
-    run = RunRepository(session).get_analysis_run(run_id)
-    if run is None:
-        raise HTTPException(status_code=404, detail="Analysis run not found")
-    require_project(session, run.project_id)
-    return analysis_run_workflow_metadata_public(run)

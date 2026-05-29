@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 from sqlmodel import Session
+from utils.workbench_contracts import _create_report_via_worker
 from utils.workbench_env import (
     DEMO_CVE_LOG4SHELL,
     WorkbenchApiEnv,
@@ -76,13 +77,13 @@ def test_vpw064_workbench_waiver_lifecycle_and_report_visibility(
         project_id=uuid.UUID(project["id"]),
         finding_id=finding_id,
     )
-    report = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    report = _create_report_via_worker(
+        workbench_api_env,
+        uuid.UUID(run_id),
         headers=headers,
-        json={"format": "csv"},
+        payload={"format": "csv"},
     )
-    assert report.status_code == 200, report.text
-    csv_download = workbench_api_env.client.get(report.json()["download_url"], headers=headers)
+    csv_download = workbench_api_env.client.get(report["download_url"], headers=headers)
     assert csv_download.status_code == 200
     assert "accepted" in csv_download.text
     assert "risk-owner" in csv_download.text
@@ -346,7 +347,7 @@ def _seed_report_run(
             input_type="generic-occurrence-csv",
             filename="waiver-report.csv",
             status=workbench_api_env.app_models.AnalysisRunStatus.COMPLETED,
-            summary_json={"parsed": 1, "findings": 1},
+            result_json={"parsed": 1, "findings": 1},
         )
         run_repo.add_finding_occurrence(
             finding_id=uuid.UUID(finding_id),

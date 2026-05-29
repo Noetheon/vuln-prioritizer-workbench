@@ -44,8 +44,12 @@ test("workflow model formats durable workflow state", () => {
   assert.equal(workflowNeedsPolling(succeededWorkflow), false)
   assert.equal(workflowStageLabel(runningWorkflow), "parse upload")
   assert.equal(workflowProgressLabel(runningWorkflow), "2/6")
+  assert.equal(
+    workflowProgressLabel({ status: "running", progress_total: null } as never),
+    "running",
+  )
   assert.equal(workflowSummaryLabel(runningWorkflow), "running · parse upload · 2/6")
-  assert.equal(workflowSummaryLabel(null), "Legacy run metadata")
+  assert.equal(workflowSummaryLabel(null), "Workflow not recorded")
 })
 
 test("workflow stream builds websocket URLs from the configured API base", () => {

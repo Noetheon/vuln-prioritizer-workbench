@@ -25,7 +25,10 @@ from app.services.import_execution import execute_project_import_upload
 from app.services.import_execution_types import ImportUploadContent, ProjectImportUploadRequest
 from app.services.provider_updates import resume_provider_update_job
 from app.services.reports import ReportGenerationError, ReportService
-from app.services.run_workflow_metadata import workflow_summary_payload
+from app.services.workflow_execution import (
+    WorkflowCancellationRequested,
+    WorkflowExecutionContext,
+)
 from app.services.workflows import finish_cancelled_workflow
 
 
@@ -46,19 +49,40 @@ def execute_workflow_handler(
     *,
     settings: Settings,
     workflow: WorkflowRun,
+    worker_id: str | None = None,
+    lease_seconds: int = 300,
 ) -> None:
     """Dispatch a claimed workflow to the concrete family handler."""
     repository = WorkflowRepository(session)
-    _raise_if_cancelled(repository, workflow.id)
-    if workflow.kind == WorkflowRunKind.IMPORT:
-        _execute_import_workflow(session, settings=settings, workflow=workflow)
-    elif workflow.kind == WorkflowRunKind.PROVIDER_UPDATE:
-        _execute_provider_update_workflow(session, settings=settings, workflow=workflow)
-    elif workflow.kind == WorkflowRunKind.REPORT_GENERATION:
-        _execute_report_generation_workflow(session, settings=settings, workflow=workflow)
-    else:  # pragma: no cover - enum exhaustiveness guard
-        raise WorkflowHandlerError(f"Unsupported workflow kind: {workflow.kind}")
-    _raise_if_cancelled(repository, workflow.id)
+    context = WorkflowExecutionContext.for_workflow(
+        repository,
+        workflow.id,
+        worker_id=worker_id,
+        lease_seconds=lease_seconds,
+    )
+    try:
+        _raise_if_cancelled(repository, workflow.id)
+        if workflow.kind == WorkflowRunKind.IMPORT:
+            _execute_import_workflow(session, settings=settings, workflow=workflow, context=context)
+        elif workflow.kind == WorkflowRunKind.PROVIDER_UPDATE:
+            _execute_provider_update_workflow(
+                session,
+                settings=settings,
+                workflow=workflow,
+                context=context,
+            )
+        elif workflow.kind == WorkflowRunKind.REPORT_GENERATION:
+            _execute_report_generation_workflow(
+                session,
+                settings=settings,
+                workflow=workflow,
+                context=context,
+            )
+        else:  # pragma: no cover - enum exhaustiveness guard
+            raise WorkflowHandlerError(f"Unsupported workflow kind: {workflow.kind}")
+        _raise_if_cancelled(repository, workflow.id)
+    except WorkflowCancellationRequested as exc:
+        raise WorkflowCancelled(str(exc)) from exc
     refreshed = repository.require_workflow(workflow.id)
     if refreshed.status == WorkflowRunStatus.FAILED:
         raise WorkflowHandlerError(refreshed.error_message or "Workflow execution failed.")
@@ -69,13 +93,23 @@ def _execute_import_workflow(
     *,
     settings: Settings,
     workflow: WorkflowRun,
+    context: WorkflowExecutionContext | None = None,
 ) -> None:
     if workflow.analysis_run_id is None or workflow.project_id is None:
         raise WorkflowHandlerError("Import workflow is missing run/project linkage.")
     run = session.get(AnalysisRun, workflow.analysis_run_id)
     if run is None:
         raise WorkflowHandlerError(f"Analysis run not found: {workflow.analysis_run_id}")
-    upload = _stored_import_upload_request(settings, run=run, payload=workflow.payload_json)
+    context = context or WorkflowExecutionContext.for_workflow(
+        WorkflowRepository(session),
+        workflow.id,
+    )
+    upload = _stored_import_upload_request(
+        settings,
+        run=run,
+        workflow=workflow,
+        payload=workflow.payload_json,
+    )
     try:
         asyncio.run(
             execute_project_import_upload(
@@ -86,6 +120,7 @@ def _execute_import_workflow(
                 upload=upload,
                 existing_run_id=run.id,
                 execution_mode="worker",
+                workflow_context=context,
             )
         )
     except ImportServiceError as exc:
@@ -97,23 +132,28 @@ def _execute_provider_update_workflow(
     *,
     settings: Settings,
     workflow: WorkflowRun,
+    context: WorkflowExecutionContext | None = None,
 ) -> None:
     if workflow.analysis_run_id is None:
         raise WorkflowHandlerError("Provider update workflow is missing run linkage.")
+    context = context or WorkflowExecutionContext.for_workflow(
+        WorkflowRepository(session),
+        workflow.id,
+    )
     payload = workflow.payload_json or {}
     job_payload = ProviderUpdateJobCreate(
         sources=_string_list(payload.get("sources")) or ["nvd", "epss", "kev"],
         cve_ids=_string_list(payload.get("cve_ids")),
         max_cves=payload.get("max_cves") if isinstance(payload.get("max_cves"), int) else None,
         cache_only=bool(payload.get("cache_only", True)),
-        execution_mode="background",
     )
     resume_provider_update_job(
         session,
         settings=settings,
         payload=job_payload,
         run_id=workflow.analysis_run_id,
-        execution_mode="background",
+        execution_mode="worker",
+        workflow_context=context,
     )
 
 
@@ -122,8 +162,13 @@ def _execute_report_generation_workflow(
     *,
     settings: Settings,
     workflow: WorkflowRun,
+    context: WorkflowExecutionContext | None = None,
 ) -> None:
     payload = workflow.payload_json or {}
+    context = context or WorkflowExecutionContext.for_workflow(
+        WorkflowRepository(session),
+        workflow.id,
+    )
     run_id = _uuid_value(payload.get("run_id")) or workflow.analysis_run_id
     if run_id is None:
         raise WorkflowHandlerError("Report workflow is missing run linkage.")
@@ -142,6 +187,7 @@ def _execute_report_generation_workflow(
             workflow_id=workflow.id,
             report_format=report_format,
             attack_filter=attack_filter,
+            workflow_context=context,
         )
     except ReportGenerationError as exc:
         raise WorkflowNonRetryableError(str(exc)) from exc
@@ -151,9 +197,10 @@ def _stored_import_upload_request(
     settings: Settings,
     *,
     run: AnalysisRun,
+    workflow: WorkflowRun | None = None,
     payload: dict[str, Any],
 ) -> ProjectImportUploadRequest:
-    summary = workflow_summary_payload(run)
+    summary = dict(workflow.result_json or {}) if workflow is not None else {}
     input_upload = _dict_value(summary.get("input_upload"))
     if not input_upload:
         raise WorkflowHandlerError("Import run has no stored input upload.")

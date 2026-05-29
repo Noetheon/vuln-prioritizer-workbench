@@ -6,6 +6,9 @@ from pathlib import Path
 
 from sqlmodel import Session
 from utils.import_contracts import (
+    completed_run_payload as _completed_run_payload,
+)
+from utils.import_contracts import (
     configure_upload_dir as _configure_upload_dir,
 )
 from utils.import_contracts import (
@@ -13,6 +16,9 @@ from utils.import_contracts import (
 )
 from utils.import_contracts import (
     finding_state as _finding_state,
+)
+from utils.import_contracts import (
+    public_run_aliases as _public_run_aliases,
 )
 from utils.workbench_env import (
     WorkbenchApiEnv,
@@ -40,7 +46,7 @@ def test_decision_api_endpoints_expose_explain_summary_and_cvss_comparison(
         files={"file": ("decision-api.txt", content, "text/plain")},
     )
     assert import_response.status_code == 200
-    run_payload = import_response.json()
+    run_payload = _completed_run_payload(workbench_api_env, import_response, headers=headers)
     assert not Path(run_payload["input_upload"]["path"]).is_absolute()
 
     findings_response = workbench_api_env.client.get(
@@ -147,7 +153,7 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
         files={"file": ("occurrences.csv", content, "text/csv")},
     )
     assert first.status_code == 200, first.text
-    first_payload = first.json()
+    first_payload = _completed_run_payload(workbench_api_env, first, headers=headers)
     assert first_payload["dedup_summary"]["created_findings"] == 2
     assert first_payload["dedup_summary"]["reused_findings"] == 0
     assert {item["action"] for item in first_payload["dedup_summary"]["decisions"]} == {"created"}
@@ -165,7 +171,7 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
         files={"file": ("occurrences.csv", content, "text/csv")},
     )
     assert second.status_code == 200, second.text
-    second_payload = second.json()
+    second_payload = _completed_run_payload(workbench_api_env, second, headers=headers)
     dedup_summary = second_payload["dedup_summary"]
     assert second_payload["occurrence_count"] == 2
     assert second_payload["finding_count"] == 2
@@ -222,7 +228,7 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
         headers=headers,
     )
     assert summary.status_code == 200
-    summary_payload = summary.json()
+    summary_payload = _public_run_aliases(summary.json())
     assert summary_payload["created_findings"] == 0
     assert summary_payload["updated_findings"] == 2
     assert summary_payload["occurrence_count"] == 2
@@ -255,7 +261,7 @@ def test_generic_import_persists_multi_fix_versions(
     )
 
     assert response.status_code == 200, response.text
-    payload = response.json()
+    payload = _completed_run_payload(workbench_api_env, response, headers=headers)
     assert payload["occurrence_count"] == 1
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -297,7 +303,7 @@ def test_same_batch_duplicate_bulk_import_reuses_finding_and_appends_occurrences
     )
 
     assert response.status_code == 200, response.text
-    payload = response.json()
+    payload = _completed_run_payload(workbench_api_env, response, headers=headers)
     dedup_summary = payload["dedup_summary"]
     assert payload["occurrence_count"] == 1000
     assert payload["finding_count"] == 1
@@ -350,7 +356,7 @@ def test_same_cve_on_different_assets_creates_distinct_findings(
     )
 
     assert response.status_code == 200, response.text
-    payload = response.json()
+    payload = _completed_run_payload(workbench_api_env, response, headers=headers)
     assert payload["finding_count"] == 2
     metadata_payload = workflow_metadata(workbench_api_env, payload["id"], headers=headers)
     assert metadata_payload["summary"]["analysis_semantics"] == {
@@ -431,6 +437,7 @@ def test_same_cve_vex_status_remains_occurrence_scoped(
     )
 
     assert response.status_code == 200, response.text
+    _completed_run_payload(workbench_api_env, response, headers=headers)
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
         headers=headers,

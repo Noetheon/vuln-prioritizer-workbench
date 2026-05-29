@@ -420,6 +420,6 @@ def _persist_project_run_graph(
             input_type="cve-list",
             filename="known-cves.txt",
             status=app_models.AnalysisRunStatus.COMPLETED,
-            summary_json={"finding_count": 1, "attack_mapped_cves": 1},
+            result_json={"finding_count": 1, "attack_mapped_cves": 1},
         )
     )

@@ -94,8 +94,6 @@ Minimum fields:
 - `started_at`
 - `finished_at`
 - `error_message`
-- `error_json`
-- `summary_json`
 
 Constraints and indexes:
 
@@ -107,12 +105,13 @@ Constraints and indexes:
 - index on `(project_id, status)`
 
 The run can be saved before any findings exist. This supports creating a durable
-record as soon as an upload/import starts, then appending compatibility summary
-data and occurrences after parsing and enrichment complete.
+record as soon as an upload/import starts, then appending occurrences after
+parsing and enrichment complete.
 
-Current execution state is no longer inferred from `summary_json` or
-`error_json`. It is owned by the durable workflow tables described below and is
-embedded as `workflow` on run-list and run-summary responses.
+Current execution state and run output are not inferred from run JSON columns.
+They are owned by the durable workflow tables described below and embedded as
+`workflow`, `result`, `diagnostics`, `uploads`, `provider_snapshot`, `counts`,
+and `warnings` on run-list and run-summary responses.
 
 ### `workflow_run`
 
@@ -136,15 +135,22 @@ Minimum fields:
 - `progress_total`
 - `retry_count`
 - `max_retries`
+- `attempt_count`
+- `max_attempts`
 - `cancellation_requested`
+- `cancel_requested_at`
 - `queue_name`
 - `priority`
 - `payload_json`
+- `result_json`
+- `diagnostics_json`
+- `artifact_refs_json`
 - `locked_by`
 - `locked_at`
 - `lease_expires_at`
 - `last_heartbeat_at`
 - `attempt_started_at`
+- `terminal_code`
 - `error_message`
 - `error_details_json`
 - `metadata_json`
@@ -193,8 +199,9 @@ Constraints and indexes:
 - unique event sequence per workflow run
 - index on `(workflow_run_id, created_at)`
 
-Public workflow projections expose redacted `details` and `error_details`
-instead of raw JSON column names. The API routes
+Public workflow projections expose redacted `details`, `result`,
+`diagnostics`, `artifact_refs`, and `error_details` instead of raw JSON column
+names. The API routes
 `GET /api/v1/projects/{project_id}/workflows`,
 `GET /api/v1/workflows/{workflow_id}`, and
 `GET /api/v1/workflows/{workflow_id}/events` expose the same workflow model used
@@ -207,33 +214,16 @@ when WebSocket connectivity is unavailable.
 
 The queued workflow runner stores handler payload in `payload_json`, claims
 pending work by queue name, keeps `locked_by` and lease timestamps while a job is
-running, refreshes `last_heartbeat_at`, and uses `next_retry_at` plus
-`retry_count` / `max_retries` for automatic retry scheduling. The default worker
-process is `python -m app.workers.workflow_worker`; it uses the Workbench
-database as the queue rather than Redis, Celery, or another broker.
+running, refreshes `last_heartbeat_at`, writes terminal output to
+`result_json`, `diagnostics_json`, and `artifact_refs_json`, and uses
+`next_retry_at`, `attempt_count`, and `max_attempts` for automatic retry
+scheduling. The default worker process is
+`python -m app.workers.workflow_worker`; it uses the Workbench database as the
+queue rather than Redis, Celery, or another broker.
 
-Workbench import runs expose stable workflow metadata through
-`run-workflow-summary.v1` and `run-workflow-error.v1` for legacy summary/error
-compatibility. The API still stores the raw compatibility metadata in
-`summary_json` and `error_json`, but writers validate and merge through the
-versioned contract, and public responses project typed top-level fields onto
-both run-list and run-summary responses.
-
-Normal run responses do not expose `summary_json` or `error_json`. Product UI
-and integrations should use the typed fields below. Diagnostics that need the
-redacted raw payload should call
-`GET /api/v1/runs/{run_id}/workflow-metadata`, which returns:
-
-- run identity and status
-- `workflow_schema_version`
-- `workflow_error_schema_version`
-- typed `summary` (`run-workflow-summary.v1`)
-- typed `error` (`run-workflow-error.v1`, or `null`)
-- redacted `raw_summary`
-- redacted `raw_error`
-
-`GET /api/v1/runs/{run_id}/summary` derives these UI fields from the typed
-workflow contract without requiring clients to parse raw JSON:
+`GET /api/v1/runs/{run_id}` and `GET /api/v1/runs/{run_id}/summary` derive these
+UI fields from the v2 workflow contract without requiring clients to parse raw
+run JSON:
 
 - `created_findings`
 - `updated_findings`
@@ -261,10 +251,9 @@ workflow contract without requiring clients to parse raw JSON:
 They may also contain a 1-based `line`, logical `field`, and rejected `value`
 when that detail is available from the importer error.
 
-The raw JSON columns are internal compatibility fields. New Workbench client
-logic should use embedded `workflow` for current execution state, typed top-level
-run fields for compatibility summary facts, and
-`/api/v1/runs/{run_id}/workflow-metadata` only for diagnostics.
+The removed `GET /api/v1/runs/{run_id}/workflow-metadata` route is not part of
+the v2 contract. Workbench client logic should use embedded `workflow` for
+current execution state and typed top-level run fields for output facts.
 
 ### `finding_occurrence`
 
@@ -307,7 +296,7 @@ occurrence is attached to a run. The key material is:
 - `asset_ref`, or an explicit empty marker when no asset is present
 
 The stored `finding.dedup_key` is a `vpw019:` SHA-256 digest of that canonical
-material. The unhashed parts are written to `analysis_run.summary_json` under
+material. The unhashed parts are returned through the workflow v2 result under
 `dedup_summary.decisions` so each import run records whether a finding was
 created or reused. Re-importing the same normalized occurrences therefore adds
 new `finding_occurrence` rows for the new run while keeping the existing

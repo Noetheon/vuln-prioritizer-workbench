@@ -130,9 +130,45 @@ def _execute_claimed_workflow(
                 worker_id=worker_id,
                 lease_seconds=lease_seconds,
             )
-            execute_workflow_handler(session, settings=settings, workflow=workflow)
+            try:
+                execute_workflow_handler(
+                    session,
+                    settings=settings,
+                    workflow=workflow,
+                    worker_id=worker_id,
+                    lease_seconds=lease_seconds,
+                )
+            except WorkflowNonRetryableError:
+                session.commit()
+                return "retried_or_failed"
             session.commit()
             return "completed"
+    except WorkflowNonRetryableError as exc:
+        with Session(engine) as session:
+            repository = WorkflowRepository(session)
+            current_workflow = repository.get_workflow(workflow_id)
+            if (
+                current_workflow is not None
+                and current_workflow.status == WorkflowRunStatus.RUNNING
+            ):
+                repository.finish_workflow(
+                    workflow_id,
+                    status=WorkflowRunStatus.FAILED,
+                    stage=current_workflow.current_stage or "failed",
+                    message=str(exc),
+                    error_message=str(exc),
+                    error_json={
+                        "message": str(exc),
+                        "error_type": "WorkflowNonRetryableError",
+                    },
+                    diagnostics_json={
+                        "message": str(exc),
+                        "error_type": "WorkflowNonRetryableError",
+                    },
+                    terminal_code="non_retryable_failed",
+                )
+            session.commit()
+        return "retried_or_failed"
     except WorkflowCancelled:
         with Session(engine) as session:
             finish_cancelled_workflow(
@@ -142,8 +178,6 @@ def _execute_claimed_workflow(
             )
             session.commit()
         return "cancelled"
-    except WorkflowNonRetryableError:
-        return "retried_or_failed"
     except Exception as exc:
         with Session(engine) as session:
             repository = WorkflowRepository(session)

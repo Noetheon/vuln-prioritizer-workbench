@@ -20,8 +20,7 @@ The project exposes three active interface families:
 | Workbench OpenAPI | `/api/v1/openapi.json` generated from the active FastAPI app. |
 | Import upload | `POST /api/v1/projects/{project_id}/imports` with multipart local evidence files and explicit `input_type`. |
 | Durable workflows | `workflow_run` / `workflow_event` state exposed through workflow routes, WebSocket streaming, and embedded `workflow` objects on imports, provider jobs, and reports. |
-| Report creation | `POST /api/v1/runs/{run_id}/reports` for completed visible Workbench runs. |
-| Report job creation | `POST /api/v1/runs/{run_id}/report-jobs` for queued report generation. |
+| Report job creation | `POST /api/v1/runs/{run_id}/report-jobs` for queued report generation. Deprecated `POST /api/v1/runs/{run_id}/reports` queues the same workflow and returns a workflow object. |
 | Report download | `GET /api/v1/reports/{report_id}/download`. |
 | Evidence verification | `POST /api/v1/reports/{report_id}/verify` for evidence ZIP reports. |
 | Analysis JSON | `analysis-result.v1.json`, validated by `docs/schemas/analysis-result.v1.schema.json`. |
@@ -90,13 +89,14 @@ Public workflow surfaces:
 Workflow kinds are `import`, `provider_update`, and `report_generation`.
 Workflow statuses are `pending`, `running`, `succeeded`,
 `completed_with_errors`, `failed`, and `cancelled`. Public workflow payloads use
-redacted `details` and `error_details` fields; they do not expose raw
-`summary_json`, `error_json`, or filesystem paths.
+redacted `details`, `result`, `diagnostics`, `artifact_refs`, and
+`error_details` fields; they do not expose raw `summary_json`, `error_json`, or
+filesystem paths.
 
-Queued execution is part of the workflow contract. Import uploads may pass
-`execution_mode=worker`; provider update jobs requested with background
-execution enqueue a provider workflow; report jobs enqueue through
-`/report-jobs`. The worker runtime is a separate process started with
+Queued execution is the workflow contract. Import uploads, provider refreshes,
+and report generation all enqueue worker-owned workflows. Public
+`execution_mode` request fields are removed or ignored as deprecated input; the
+server always uses the worker path. The worker runtime is a separate process started with
 `python -m app.workers.workflow_worker`. It claims due workflows from the
 database, records leases and heartbeats, retries retryable failures up to the
 stored retry budget, and stops cooperatively when cancellation has been
@@ -117,39 +117,24 @@ Compatibility rules:
 - additive public workflow fields are allowed on the same OpenAPI version
 - removals, meaning changes, or enum value changes require an explicit contract
   review
-- legacy run summary/error metadata remains available only for compatibility and
-  typed diagnostics
+- run responses expose workflow output through `workflow`, `result`,
+  `diagnostics`, `uploads`, `provider_snapshot`, `counts`, and `warnings`
 
-## Legacy Run Workflow Metadata
+## Run Workflow Output
 
-Import and provider-refresh runs persist workflow metadata in the existing
-`analysis_run.summary_json` and `analysis_run.error_json` columns for backward
-compatibility. Active writers still pass those compatibility payloads through
-versioned typed contracts:
+`workflow_run` is the only active execution metadata store. Import, provider,
+and report handlers write terminal output to:
 
-- `run-workflow-summary.v1`
-- `run-workflow-error.v1`
+- `workflow_run.result_json` for successful result metadata and stable refs
+- `workflow_run.diagnostics_json` for parser, provider, report, and worker
+  diagnostics
+- `workflow_run.artifact_refs_json` for generated report or provider snapshot
+  references
 
-The typed API projection exposes legacy summary fields directly on
-`AnalysisRunPublic` and `AnalysisRunSummaryPublic` so clients do not need to
-parse raw JSON blobs. Stable fields include upload references, job status,
-created/updated/ignored counts, parser diagnostics, provider snapshot replay
-metadata, ATT&CK context, optional asset/VEX context, deduplication summaries,
-and structured legacy workflow failures.
-
-Compatibility rules:
-
-- existing `summary_json` and `error_json` remain internal persistence fields;
-  normal run responses do not expose them
-- UI and integration code must consume the `workflow` object for current
-  execution state and the typed top-level fields for compatibility summary facts
-  instead of parsing raw JSON blobs
-- raw diagnostics are exposed through
-  `GET /api/v1/runs/{run_id}/workflow-metadata`, which returns typed
-  `summary` / `error` contracts plus redacted `raw_summary` / `raw_error`
-- additive summary/error keys are allowed and preserved by the v1 contract
-- removals or type changes require a new workflow metadata version
-- filesystem paths and secret-like values are redacted before public projection
+Normal run responses never expose `analysis_run.summary_json` or
+`analysis_run.error_json`, and `GET /api/v1/runs/{run_id}/workflow-metadata` has
+been removed. Local development data can be reset when this contract changes;
+there is no production migration compatibility promise for pre-v2 local runs.
 
 ## Analysis JSON
 

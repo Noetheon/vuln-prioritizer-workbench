@@ -17,10 +17,6 @@ from app.models import (
     WorkflowRunPublic,
 )
 from app.models.base import get_datetime_utc
-from app.services.run_workflow_metadata import (
-    workflow_error_payload_or_empty,
-    workflow_summary_payload_or_empty,
-)
 from vuln_prioritizer.security_redaction import redact_value
 
 PROVIDER_SOURCES = ("nvd", "epss", "kev")
@@ -55,13 +51,14 @@ def provider_status_payload(
     public_metadata = _provider_public_metadata(metadata, production_safe=production_safe)
     warnings = [_public_text(item) for item in _string_list(metadata.get("warnings"))]
     failed_update_error = _failed_update_error(latest_update_run)
-    raw_last_error = failed_update_error or _last_error(metadata)
+    workflow_update_error = _workflow_update_error(latest_update_workflow)
+    raw_last_error = failed_update_error or workflow_update_error or _last_error(metadata)
     last_error = _public_text(raw_last_error) if raw_last_error is not None else None
     snapshot_status = _snapshot_status(snapshot, metadata)
     if snapshot is None:
         warnings.append(NO_PROVIDER_SNAPSHOT_WARNING)
-    if failed_update_error is not None:
-        warnings.append(f"Latest provider update failed: {_public_text(failed_update_error)}")
+    if failed_update_error is not None or workflow_update_error is not None:
+        warnings.append(f"Latest provider update failed: {_public_text(raw_last_error)}")
 
     degraded = snapshot_status.missing or raw_last_error is not None
     return ProviderStatusPublic(
@@ -114,21 +111,33 @@ def _provider_update_job(
 ) -> ProviderUpdateJobPublic | None:
     if run is None:
         return None
-    metadata = workflow_summary_payload_or_empty(run) or workflow_error_payload_or_empty(run)
+    workflow_metadata = (
+        _dict_value(workflow.result)
+        or _dict_value(workflow.details)
+        or _dict_value(workflow.diagnostics)
+        if workflow is not None
+        else {}
+    )
+    metadata = workflow_metadata
     public_metadata = _provider_public_metadata(metadata, production_safe=production_safe)
     return ProviderUpdateJobPublic(
         id=str(run.id),
-        status=str(run.status),
-        execution_mode=_string_or_none(metadata.get("execution_mode")) or "request",
+        status=_provider_job_status(run, workflow),
         requested_sources=_string_list(
             metadata.get("requested_sources") or metadata.get("sources")
         ),
         started_at=_iso_datetime(run.started_at),
         finished_at=_iso_datetime(run.finished_at),
-        error_message=_public_text(_failed_update_error(run)),
+        error_message=_public_text(_failed_update_error(run) or _workflow_update_error(workflow)),
         metadata_=public_metadata,
         workflow=workflow,
     )
+
+
+def _provider_job_status(run: AnalysisRun, workflow: WorkflowRunPublic | None) -> str:
+    if workflow is not None:
+        return str(workflow.status)
+    return str(run.status)
 
 
 def _snapshot_status(
@@ -304,12 +313,20 @@ def _failed_update_error(run: AnalysisRun | None) -> str | None:
         return None
     if run.error_message:
         return run.error_message
-    error_json = workflow_error_payload_or_empty(run)
+    return None
+
+
+def _workflow_update_error(workflow: WorkflowRunPublic | None) -> str | None:
+    if workflow is None or workflow.status != "failed":
+        return None
+    if workflow.error_message:
+        return workflow.error_message
+    diagnostics = _dict_value(workflow.diagnostics) or _dict_value(workflow.error_details)
     for key in ("detail", "message", "error", "last_error"):
-        value = _string_or_none(error_json.get(key))
+        value = _string_or_none(diagnostics.get(key))
         if value is not None:
             return value
-    for value in error_json.values():
+    for value in diagnostics.values():
         text = _string_or_none(value)
         if text is not None:
             return text

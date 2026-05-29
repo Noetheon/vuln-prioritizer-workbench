@@ -70,20 +70,28 @@ def test_frontend_npm_engine_policy_is_enforced_for_local_and_ci_commands() -> N
     assert not (REPO_ROOT / "frontend" / ".npmrc").exists()
     assert root_package["engines"] == {"node": ">=22 <23", "npm": ">=10.9 <11"}
     assert frontend_package["engines"] == {"node": ">=22 <23", "npm": ">=10.9 <11"}
-    assert "NPM ?= npm" in makefile
-    assert (
-        "FRONTEND_NPM := $(NPM) --prefix frontend --workspaces=false --engine-strict=true"
-        in makefile
+    assert "NPM ?= scripts/frontend-npm.sh" in makefile
+    frontend_npm_command = (
+        "FRONTEND_NPM := $(NPM) --prefix frontend --workspaces=false "
+        "--engine-strict=$(FRONTEND_NPM_ENGINE_STRICT)"
     )
+    assert frontend_npm_command in makefile
     assert "cd frontend && npm" not in makefile
     assert all(
-        "npm --prefix frontend --workspaces=false --engine-strict=true" in command
+        "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true"
+        in command
         for command in root_package["scripts"].values()
-        if "npm --prefix frontend" in command
+        if "frontend" in command and "generate-client" not in command
     )
     assert 'node-version: "22"' in workflow_sources
-    assert "npm --prefix frontend --workspaces=false --engine-strict=true" in workflow_sources
-    assert "npm --prefix frontend --workspaces=false --engine-strict=true" in frontend_readme
+    assert (
+        "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true"
+        in workflow_sources
+    )
+    assert (
+        "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true"
+        in frontend_readme
+    )
     assert "cd frontend && npm" not in frontend_readme
     assert "Bun-compatible" not in frontend_readme
 

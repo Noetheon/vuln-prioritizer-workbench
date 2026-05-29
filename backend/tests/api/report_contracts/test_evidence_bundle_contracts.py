@@ -19,6 +19,7 @@ from utils.workbench_contracts import (
     _add_vpw051_bundle_metadata,
     _add_vpw060_attack_contexts,
     _configure_report_dir,
+    _create_report_via_worker,
     _load_schema,
     _normalize_html_snapshot,
     _replace_zip_member,
@@ -49,14 +50,13 @@ def test_vpw051_evidence_bundle_zip_create_downloads_manifest_integrity(
     run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
     input_metadata = _add_vpw051_bundle_metadata(workbench_api_env, run_id, tmp_path)
 
-    response = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    payload = _create_report_via_worker(
+        workbench_api_env,
+        run_id,
         headers=headers,
-        json={"format": "zip"},
+        payload={"format": "zip"},
     )
 
-    assert response.status_code == 200, response.text
-    payload = response.json()
     assert payload["format"] == "zip"
     assert payload["kind"] == "evidence-bundle"
     assert payload["filename"] == "evidence-bundle.zip"
@@ -340,14 +340,14 @@ def test_vpw060_evidence_bundle_includes_attack_navigator_layer_when_mapped(
     run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
     _add_vpw060_attack_contexts(workbench_api_env, run_id)
 
-    response = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    payload = _create_report_via_worker(
+        workbench_api_env,
+        run_id,
         headers=headers,
-        json={"format": "zip"},
+        payload={"format": "zip"},
     )
 
-    assert response.status_code == 200, response.text
-    download = workbench_api_env.client.get(response.json()["download_url"], headers=headers)
+    download = workbench_api_env.client.get(payload["download_url"], headers=headers)
     assert download.status_code == 200
 
     with zipfile.ZipFile(BytesIO(download.content)) as archive:
@@ -379,15 +379,15 @@ def test_vpw052_evidence_bundle_verify_api_reports_clean_bundle(
     project = create_project_via_api(workbench_api_env.client, headers)
     run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
 
-    created = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    created = _create_report_via_worker(
+        workbench_api_env,
+        run_id,
         headers=headers,
-        json={"format": "zip"},
+        payload={"format": "zip"},
     )
-    assert created.status_code == 200, created.text
 
     verified = workbench_api_env.client.post(
-        f"/api/v1/reports/{created.json()['id']}/verify",
+        f"/api/v1/reports/{created['id']}/verify",
         headers=headers,
     )
 
@@ -419,13 +419,13 @@ def test_vpw052_evidence_bundle_verify_api_reports_modified_member(
     headers = local_api_headers(workbench_api_env.client)
     project = create_project_via_api(workbench_api_env.client, headers)
     run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
-    created = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    created = _create_report_via_worker(
+        workbench_api_env,
+        run_id,
         headers=headers,
-        json={"format": "zip"},
+        payload={"format": "zip"},
     )
-    assert created.status_code == 200, created.text
-    report_id = uuid.UUID(created.json()["id"])
+    report_id = uuid.UUID(created["id"])
 
     with Session(workbench_api_env.engine) as session:
         report = session.get(workbench_api_env.app_models.Report, report_id)
@@ -472,15 +472,15 @@ def test_vpw052_verify_api_rejects_non_bundle_reports(
     headers = local_api_headers(workbench_api_env.client)
     project = create_project_via_api(workbench_api_env.client, headers)
     run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
-    created = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    created = _create_report_via_worker(
+        workbench_api_env,
+        run_id,
         headers=headers,
-        json={"format": "markdown"},
+        payload={"format": "markdown"},
     )
-    assert created.status_code == 200, created.text
 
     response = workbench_api_env.client.post(
-        f"/api/v1/reports/{created.json()['id']}/verify",
+        f"/api/v1/reports/{created['id']}/verify",
         headers=headers,
     )
 

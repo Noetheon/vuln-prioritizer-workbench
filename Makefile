@@ -16,8 +16,9 @@ PRODUCTION_SMOKE_SECRET_KEY ?= production-smoke-secret-key-change-in-real-deploy
 PRODUCTION_SMOKE_POSTGRES_PASSWORD ?= production-smoke-postgres-password
 PRODUCTION_SMOKE_FRONTEND_PORT ?= 5180
 ACTIONLINT_IMAGE ?= rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
-NPM ?= npm
-FRONTEND_NPM := $(NPM) --prefix frontend --workspaces=false --engine-strict=true
+NPM ?= scripts/frontend-npm.sh
+FRONTEND_NPM_ENGINE_STRICT ?= true
+FRONTEND_NPM := $(NPM) --prefix frontend --workspaces=false --engine-strict=$(FRONTEND_NPM_ENGINE_STRICT)
 
 .PHONY: install test lint format fix typecheck check critical-coverage-check property-check mutation-check quality-10-check local-workbench-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-design-audit frontend-audit frontend-check python-lock-check docker-base-image-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
 
@@ -176,7 +177,7 @@ docker-demo-smoke:
 	done; \
 	on_exit() { status=$$?; if [ "$$status" != "0" ]; then $(COMPOSE) ps || true; $(COMPOSE) logs --no-color || true; fi; $(COMPOSE) down -v --remove-orphans; exit "$$status"; }; \
 	trap on_exit EXIT; \
-	$(COMPOSE) up -d --build backend frontend; \
+	$(COMPOSE) up -d --build backend frontend worker; \
 	backend_ready=0; \
 		for attempt in $$(seq 1 30); do \
 			if $(PYTHON) -c "import json, sys, urllib.request; port=sys.argv[1]; data=json.load(urllib.request.urlopen(f'http://127.0.0.1:{port}/api/v1/utils/health-check/', timeout=2)); assert data is True; print(data)" "$$DOCKER_DEMO_BACKEND_PORT" 2>/dev/null; then \
@@ -228,7 +229,7 @@ docker-production-smoke:
 	$(PYTHON) -c "import socket, sys; port=int(sys.argv[1]); sock=socket.socket(); sock.settimeout(0.2); in_use=sock.connect_ex(('127.0.0.1', port)) == 0; sock.close(); sys.exit(f'Port {port} is already in use before docker-production-smoke.' if in_use else 0)" "$$PRODUCTION_SMOKE_FRONTEND_PORT"; \
 	on_exit() { status=$$?; if [ "$$status" != "0" ]; then $(PRODUCTION_SMOKE_COMPOSE) ps || true; $(PRODUCTION_SMOKE_COMPOSE) logs --no-color || true; fi; $(PRODUCTION_SMOKE_COMPOSE) down -v --remove-orphans; exit "$$status"; }; \
 	trap on_exit EXIT; \
-	$(PRODUCTION_SMOKE_COMPOSE) up -d --build backend frontend; \
+	$(PRODUCTION_SMOKE_COMPOSE) up -d --build backend frontend worker; \
 	frontend_ready=0; \
 	for attempt in $$(seq 1 45); do \
 		if $(PYTHON) -c "import sys, urllib.request; port=sys.argv[1]; req=urllib.request.Request(f'http://127.0.0.1:{port}/', headers={'Host': 'workbench.example.test'}); print(urllib.request.urlopen(req, timeout=2).status)" "$$PRODUCTION_SMOKE_FRONTEND_PORT" 2>/dev/null; then \

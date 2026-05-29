@@ -60,6 +60,7 @@ from app.services.report_service_persistence import (
     persist_binary_report,
     persist_text_report,
 )
+from app.services.workflow_execution import WorkflowExecutionContext
 
 __all__ = [
     "EXECUTIVE_REPORT_CSS",
@@ -391,6 +392,7 @@ class ReportService:
         workflow_id: uuid.UUID,
         report_format: str,
         attack_filter: str = "all",
+        workflow_context: WorkflowExecutionContext | None = None,
     ) -> Report:
         """Generate a report using an existing queued workflow."""
         report_kind, create_report = self._report_generation_target(
@@ -408,6 +410,7 @@ class ReportService:
             attack_filter=attack_filter if report_format == "attack-navigator" else None,
             workflow_id=workflow_id,
             execution_mode="worker",
+            workflow_context=workflow_context,
         )
 
     def _create_evidence_bundle(self, *, run: AnalysisRun, project: Project) -> Report:
@@ -460,6 +463,7 @@ class ReportService:
         attack_filter: str | None = None,
         workflow_id: uuid.UUID | None = None,
         execution_mode: str = "request",
+        workflow_context: WorkflowExecutionContext | None = None,
     ) -> Report:
         """Persist durable workflow state around one report generation."""
         workflow_repo = WorkflowRepository(self.session)
@@ -486,8 +490,11 @@ class ReportService:
             )
         else:
             workflow = workflow_repo.require_workflow(workflow_id)
-        workflow = workflow_repo.start_workflow(
+        context = workflow_context or WorkflowExecutionContext.for_workflow(
+            workflow_repo,
             workflow.id,
+        )
+        workflow = context.start(
             stage="render",
             message=f"Rendering {report_format} report.",
             progress_current=1,
@@ -496,43 +503,47 @@ class ReportService:
         try:
             report = create_report()
         except Exception as exc:
-            workflow_repo.finish_workflow(
-                workflow.id,
-                status=WorkflowRunStatus.FAILED,
+            context.fail(
                 stage="failed",
                 message=str(exc),
                 progress_current=1,
                 progress_total=3,
-                error_message=str(exc),
-                error_json={"report_error": str(exc), "format": report_format},
+                diagnostics={"report_error": str(exc), "format": report_format},
+                terminal_code="report_generation_failed",
             )
             raise
-        workflow_repo.record_stage(
-            workflow.id,
-            stage="persist",
-            message=f"Persisted {report_format} report metadata.",
+        context.stage(
+            "persist",
+            f"Persisted {report_format} report metadata.",
             progress_current=2,
             progress_total=3,
-            metadata_json={"report_id": str(report.id)},
+            details={"report_id": str(report.id)},
         )
-        workflow_repo.attach_artifact(
-            workflow.id,
+        context.artifact(
             artifact_kind="report",
             artifact_id=str(report.id),
             report_id=report.id,
-            metadata_json={
+            details={
                 "format": report.format,
                 "kind": report.kind,
                 "filename": report.filename,
             },
         )
-        workflow_repo.finish_workflow(
-            workflow.id,
-            status=WorkflowRunStatus.SUCCEEDED,
+        context.succeed(
             stage="succeeded",
             message=f"{report_format} report generated.",
             progress_current=3,
             progress_total=3,
+            result={
+                "report_id": str(report.id),
+                "report_format": report.format,
+                "report_kind": report.kind,
+                "filename": report.filename,
+                "content_type": report.content_type,
+                "size_bytes": report.size_bytes,
+                "sha256": report.sha256,
+            },
+            diagnostics={},
         )
         return report
 

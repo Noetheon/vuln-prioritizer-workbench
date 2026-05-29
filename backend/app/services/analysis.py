@@ -47,9 +47,9 @@ class WorkbenchAnalysisResult:
     locked_provider_data: bool
 
     @property
-    def summary_json(self) -> dict[str, Any]:
-        """Return run-summary fields that prove enrichment, scoring, and explanation."""
-        summary = {
+    def result_json(self) -> dict[str, Any]:
+        """Return workflow result fields that prove enrichment, scoring, and explanation."""
+        result = {
             "analysis_service": {
                 "pipeline": "parse-persist-enrich-score-explain",
                 "engine": "vuln_prioritizer.prepare_analysis",
@@ -85,8 +85,8 @@ class WorkbenchAnalysisResult:
             "under_investigation_count": self.context.under_investigation_count,
             "vex_conflict_count": self.context.vex_conflict_count,
         }
-        redacted, _paths = redact_value(summary)
-        return redacted if isinstance(redacted, dict) else summary
+        redacted, _paths = redact_value(result)
+        return redacted if isinstance(redacted, dict) else result
 
 
 class AnalysisService:

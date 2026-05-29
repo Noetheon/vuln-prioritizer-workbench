@@ -18,14 +18,6 @@ from app.models import (
     WorkflowRunStatus,
 )
 from app.repositories import RunRepository, WorkflowRepository
-from app.services.import_execution_summary import _job_payload, _job_status_entry
-from app.services.run_workflow_metadata import (
-    merge_error_payload,
-    merge_summary_payload,
-    workflow_error_payload_or_empty,
-    workflow_import_job_payload,
-    workflow_summary_payload,
-)
 from vuln_prioritizer.security_redaction import redact_value
 
 _TERMINAL_ANALYSIS_STATUSES = {
@@ -83,15 +75,24 @@ def workflow_run_public(
         progress_total=workflow.progress_total,
         retry_count=workflow.retry_count,
         max_retries=workflow.max_retries,
+        attempt_count=workflow.attempt_count,
+        max_attempts=workflow.max_attempts,
         cancellation_requested=workflow.cancellation_requested,
         error_message=_redacted_text(workflow.error_message),
         error_details=_redacted_payload(workflow.error_details_json),
+        result=_redacted_payload(workflow.result_json),
+        diagnostics=_redacted_payload(workflow.diagnostics_json),
+        artifact_refs=_redacted_artifacts(workflow.artifact_refs_json),
         details=_redacted_payload(workflow.metadata_json),
+        terminal_code=workflow.terminal_code,
         created_at=workflow.created_at,
         updated_at=workflow.updated_at,
         started_at=workflow.started_at,
         finished_at=workflow.finished_at,
         next_retry_at=workflow.next_retry_at,
+        last_heartbeat_at=workflow.last_heartbeat_at,
+        lease_expires_at=workflow.lease_expires_at,
+        cancel_requested_at=workflow.cancel_requested_at,
         latest_event=workflow_event_public(latest_event) if latest_event is not None else None,
     )
 
@@ -159,6 +160,13 @@ def _redacted_payload(payload: dict[str, Any] | None) -> dict[str, Any]:
     return redacted if isinstance(redacted, dict) else {}
 
 
+def _redacted_artifacts(payload: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    redacted, _paths = redact_value(payload or [])
+    if not isinstance(redacted, list):
+        return []
+    return [dict(item) for item in redacted if isinstance(item, dict)]
+
+
 def _redacted_text(value: str | None) -> str | None:
     if value is None:
         return None
@@ -182,71 +190,8 @@ def _cancel_linked_analysis_run(
     if run is None or run.status in _TERMINAL_ANALYSIS_STATUSES:
         return run
 
-    failure = {
-        "message": message,
-        "stage": "cancelled",
-        "error_type": "WorkflowCancelled",
-    }
-    updates: dict[str, Any] = {"background_error": failure}
-    error_updates: dict[str, Any] = {"background_error": failure}
-    import_job = _cancelled_import_job(run, workflow=workflow)
-    if import_job is not None:
-        updates["import_job"] = import_job
-        error_updates["import_job"] = import_job
-
     return run_repository.finish_analysis_run(
         run.id,
         status=AnalysisRunStatus.CANCELLED,
         error_message=message,
-        error_json=merge_error_payload(
-            workflow_error_payload_or_empty(run),
-            **error_updates,
-        ),
-        summary_json=merge_summary_payload(
-            workflow_summary_payload(run),
-            **updates,
-        ),
     )
-
-
-def _cancelled_import_job(
-    run: AnalysisRun,
-    *,
-    workflow: WorkflowRun,
-) -> dict[str, Any] | None:
-    existing_job = workflow_import_job_payload(run)
-    if not isinstance(existing_job, dict) and workflow.kind != WorkflowRunKind.IMPORT:
-        return None
-    job_id = (
-        str(existing_job.get("id") or workflow.id)
-        if isinstance(existing_job, dict)
-        else str(workflow.id)
-    )
-    raw_history = existing_job.get("status_history") if isinstance(existing_job, dict) else None
-    history = (
-        [item for item in raw_history if isinstance(item, dict)]
-        if isinstance(raw_history, list)
-        else []
-    )
-    if not history:
-        history = [_job_status_entry("pending")]
-    execution_mode = (
-        str(existing_job.get("execution_mode") or workflow.execution_mode)
-        if isinstance(existing_job, dict)
-        else workflow.execution_mode
-    )
-    return _job_payload(
-        job_id=job_id,
-        status="cancelled",
-        status_history=_append_job_status(history, "cancelled"),
-        execution_mode=execution_mode,
-    )
-
-
-def _append_job_status(
-    status_history: list[dict[str, Any]],
-    status: str,
-) -> list[dict[str, Any]]:
-    if status_history and status_history[-1].get("status") == status:
-        return status_history
-    return [*status_history, _job_status_entry(status)]

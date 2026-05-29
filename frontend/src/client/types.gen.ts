@@ -5,33 +5,15 @@ export type ClientOptions = {
 };
 
 /**
- * AnalysisRunPublic
+ * AnalysisRunCountsPublic
  *
- * Public analysis run response shape.
+ * Public import and analysis counters.
  */
-export type AnalysisRunPublic = {
-    analysis_error?: RunWorkflowFailure | null;
-    /**
-     * Asset Context
-     */
-    asset_context?: {
-        [key: string]: unknown;
-    } | null;
-    asset_context_error?: RunWorkflowFailure | null;
-    asset_context_upload?: RunWorkflowUploadRef | null;
+export type AnalysisRunCountsPublic = {
     /**
      * Attack Mapped Cves
      */
     attack_mapped_cves?: number;
-    /**
-     * Attack Mapping File
-     */
-    attack_mapping_file?: string | null;
-    /**
-     * Attack Source
-     */
-    attack_source?: string | null;
-    background_error?: RunWorkflowFailure | null;
     /**
      * Counts By Priority
      */
@@ -42,7 +24,77 @@ export type AnalysisRunPublic = {
      * Created Findings
      */
     created_findings?: number;
-    dedup_summary?: RunWorkflowDedupSummary | null;
+    /**
+     * Finding Count
+     */
+    finding_count?: number;
+    /**
+     * Ignored Lines
+     */
+    ignored_lines?: number;
+    /**
+     * Kev Hits
+     */
+    kev_hits?: number;
+    /**
+     * Occurrence Count
+     */
+    occurrence_count?: number;
+    /**
+     * Rows Read
+     */
+    rows_read?: number;
+    /**
+     * Suppressed By Vex
+     */
+    suppressed_by_vex?: number;
+    /**
+     * Updated Findings
+     */
+    updated_findings?: number;
+};
+
+/**
+ * AnalysisRunProviderSnapshotRefPublic
+ *
+ * Public provider snapshot reference for one run.
+ */
+export type AnalysisRunProviderSnapshotRefPublic = {
+    /**
+     * Degraded
+     */
+    degraded?: boolean;
+    /**
+     * File
+     */
+    file?: string | null;
+    /**
+     * Hash
+     */
+    hash?: string | null;
+    /**
+     * Id
+     */
+    id?: string | null;
+    /**
+     * Locked
+     */
+    locked?: boolean;
+};
+
+/**
+ * AnalysisRunPublic
+ *
+ * Public analysis run response shape.
+ */
+export type AnalysisRunPublic = {
+    counts?: AnalysisRunCountsPublic;
+    /**
+     * Diagnostics
+     */
+    diagnostics?: {
+        [key: string]: unknown;
+    };
     /**
      * Error Message
      */
@@ -52,10 +104,6 @@ export type AnalysisRunPublic = {
      */
     filename: string | null;
     /**
-     * Finding Count
-     */
-    finding_count?: number;
-    /**
      * Finished At
      */
     finished_at: string | null;
@@ -64,90 +112,35 @@ export type AnalysisRunPublic = {
      */
     id: string;
     /**
-     * Ignored Lines
-     */
-    ignored_lines?: number;
-    import_job?: RunWorkflowJob | null;
-    /**
-     * Input Sha256
-     */
-    input_sha256?: string | null;
-    /**
      * Input Type
      */
     input_type: string;
-    input_upload?: RunWorkflowUploadRef | null;
-    /**
-     * Kev Hits
-     */
-    kev_hits?: number;
-    /**
-     * Locked Provider Data
-     */
-    locked_provider_data?: boolean;
-    /**
-     * Occurrence Count
-     */
-    occurrence_count?: number;
     /**
      * Project Id
      */
     project_id: string;
-    /**
-     * Provider Degraded
-     */
-    provider_degraded?: boolean;
-    /**
-     * Provider Snapshot File
-     */
-    provider_snapshot_file?: string | null;
-    /**
-     * Provider Snapshot Hash
-     */
-    provider_snapshot_hash?: string | null;
+    provider_snapshot?: AnalysisRunProviderSnapshotRefPublic | null;
     /**
      * Provider Snapshot Id
      */
     provider_snapshot_id: string | null;
     /**
-     * Rows Read
+     * Result
      */
-    rows_read?: number;
+    result?: {
+        [key: string]: unknown;
+    };
     /**
      * Started At
      */
     started_at: string;
     status: AnalysisRunStatus;
-    /**
-     * Suppressed By Vex
-     */
-    suppressed_by_vex?: number;
-    /**
-     * Updated Findings
-     */
-    updated_findings?: number;
-    /**
-     * Vex
-     */
-    vex?: {
-        [key: string]: unknown;
-    } | null;
-    vex_error?: RunWorkflowFailure | null;
-    vex_upload?: RunWorkflowUploadRef | null;
+    uploads?: AnalysisRunUploadsPublic;
     /**
      * Warnings
      */
     warnings?: Array<string>;
     workflow?: WorkflowRunPublic | null;
-    workflow_error?: RunWorkflowErrorV1 | null;
-    /**
-     * Workflow Error Schema Version
-     */
-    workflow_error_schema_version?: string | null;
-    /**
-     * Workflow Schema Version
-     */
-    workflow_schema_version?: string;
 };
 
 /**
@@ -167,28 +160,6 @@ export type AnalysisRunSummaryPublic = {
      * Analysis Decision Scope
      */
     analysis_decision_scope?: string | null;
-    analysis_error?: RunWorkflowFailure | null;
-    /**
-     * Asset Context
-     */
-    asset_context?: {
-        [key: string]: unknown;
-    } | null;
-    asset_context_error?: RunWorkflowFailure | null;
-    asset_context_upload?: RunWorkflowUploadRef | null;
-    /**
-     * Attack Mapped Cves
-     */
-    attack_mapped_cves?: number;
-    /**
-     * Attack Mapping File
-     */
-    attack_mapping_file?: string | null;
-    /**
-     * Attack Source
-     */
-    attack_source?: string | null;
-    background_error?: RunWorkflowFailure | null;
     /**
      * Counts By Priority
      */
@@ -199,7 +170,12 @@ export type AnalysisRunSummaryPublic = {
      * Created Findings
      */
     created_findings?: number;
-    dedup_summary?: RunWorkflowDedupSummary | null;
+    /**
+     * Diagnostics
+     */
+    diagnostics?: {
+        [key: string]: unknown;
+    };
     /**
      * Filename
      */
@@ -220,24 +196,14 @@ export type AnalysisRunSummaryPublic = {
      * Ignored Lines
      */
     ignored_lines?: number;
-    import_job?: RunWorkflowJob | null;
-    /**
-     * Input Sha256
-     */
-    input_sha256?: string | null;
     /**
      * Input Type
      */
     input_type: string;
-    input_upload?: RunWorkflowUploadRef | null;
     /**
      * Kev Hits
      */
     kev_hits?: number;
-    /**
-     * Locked Provider Data
-     */
-    locked_provider_data?: boolean;
     /**
      * Occurrence Count
      */
@@ -258,18 +224,17 @@ export type AnalysisRunSummaryPublic = {
      * Provider Degraded
      */
     provider_degraded?: boolean;
-    /**
-     * Provider Snapshot File
-     */
-    provider_snapshot_file?: string | null;
-    /**
-     * Provider Snapshot Hash
-     */
-    provider_snapshot_hash?: string | null;
+    provider_snapshot?: AnalysisRunProviderSnapshotRefPublic | null;
     /**
      * Provider Snapshot Id
      */
     provider_snapshot_id?: string | null;
+    /**
+     * Result
+     */
+    result?: {
+        [key: string]: unknown;
+    };
     /**
      * Rows Read
      */
@@ -280,74 +245,41 @@ export type AnalysisRunSummaryPublic = {
     started_at: string;
     status: AnalysisRunStatus;
     /**
-     * Suppressed By Vex
-     */
-    suppressed_by_vex?: number;
-    /**
      * Updated Findings
      */
     updated_findings?: number;
+    uploads?: AnalysisRunUploadsPublic;
+    /**
+     * Warnings
+     */
+    warnings?: Array<string>;
+    workflow?: WorkflowRunPublic | null;
+};
+
+/**
+ * AnalysisRunUploadsPublic
+ *
+ * Public upload artifact references for one run.
+ */
+export type AnalysisRunUploadsPublic = {
+    /**
+     * Asset Context
+     */
+    asset_context?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Input
+     */
+    input?: {
+        [key: string]: unknown;
+    } | null;
     /**
      * Vex
      */
     vex?: {
         [key: string]: unknown;
     } | null;
-    vex_error?: RunWorkflowFailure | null;
-    vex_upload?: RunWorkflowUploadRef | null;
-    /**
-     * Warnings
-     */
-    warnings?: Array<string>;
-    workflow?: WorkflowRunPublic | null;
-    workflow_error?: RunWorkflowErrorV1 | null;
-    /**
-     * Workflow Error Schema Version
-     */
-    workflow_error_schema_version?: string | null;
-    /**
-     * Workflow Schema Version
-     */
-    workflow_schema_version?: string;
-};
-
-/**
- * AnalysisRunWorkflowMetadataPublic
- *
- * Explicit diagnostics view over redacted run workflow metadata.
- */
-export type AnalysisRunWorkflowMetadataPublic = {
-    error?: RunWorkflowErrorV1 | null;
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Project Id
-     */
-    project_id: string;
-    /**
-     * Raw Error
-     */
-    raw_error?: {
-        [key: string]: unknown;
-    };
-    /**
-     * Raw Summary
-     */
-    raw_summary?: {
-        [key: string]: unknown;
-    };
-    status: AnalysisRunStatus;
-    summary: RunWorkflowSummaryV1;
-    /**
-     * Workflow Error Schema Version
-     */
-    workflow_error_schema_version?: string | null;
-    /**
-     * Workflow Schema Version
-     */
-    workflow_schema_version?: string;
 };
 
 /**
@@ -750,10 +682,6 @@ export type BodyImportsImportProjectUpload = {
      * Attack Technique Metadata File
      */
     attack_technique_metadata_file?: string | null;
-    /**
-     * Execution Mode
-     */
-    execution_mode?: string;
     /**
      * File
      */
@@ -2752,10 +2680,6 @@ export type ProviderUpdateJobCreate = {
      */
     cve_ids?: Array<string>;
     /**
-     * Execution Mode
-     */
-    execution_mode?: 'request' | 'background';
-    /**
      * Max Cves
      */
     max_cves?: number | null;
@@ -2775,10 +2699,6 @@ export type ProviderUpdateJobPublic = {
      * Error Message
      */
     error_message?: string | null;
-    /**
-     * Execution Mode
-     */
-    execution_mode?: string;
     /**
      * Finished At
      */
@@ -2983,435 +2903,6 @@ export type ReportsPublic = {
      * Data
      */
     data: Array<ReportPublic>;
-};
-
-/**
- * RunWorkflowDedupDecision
- *
- * One sampled import deduplication decision.
- */
-export type RunWorkflowDedupDecision = {
-    /**
-     * Action
-     */
-    action: string;
-    /**
-     * Asset Ref
-     */
-    asset_ref?: string | null;
-    /**
-     * Component Identity
-     */
-    component_identity?: string | null;
-    /**
-     * Cve
-     */
-    cve?: string | null;
-    /**
-     * Dedup Key
-     */
-    dedup_key?: string | null;
-    /**
-     * Finding Id
-     */
-    finding_id?: string | null;
-    /**
-     * Source Id
-     */
-    source_id?: string | null;
-    [key: string]: unknown;
-};
-
-/**
- * RunWorkflowDedupSummary
- *
- * Import deduplication summary for a Workbench run.
- */
-export type RunWorkflowDedupSummary = {
-    /**
-     * Created Findings
-     */
-    created_findings?: number;
-    /**
-     * Decision Count
-     */
-    decision_count?: number;
-    /**
-     * Decision Sample Limit
-     */
-    decision_sample_limit?: number | null;
-    /**
-     * Decisions
-     */
-    decisions?: Array<RunWorkflowDedupDecision>;
-    /**
-     * Key Version
-     */
-    key_version?: string | null;
-    /**
-     * Omitted Decisions
-     */
-    omitted_decisions?: number;
-    /**
-     * Reused Findings
-     */
-    reused_findings?: number;
-    /**
-     * Updated Findings
-     */
-    updated_findings?: number;
-    [key: string]: unknown;
-};
-
-/**
- * RunWorkflowErrorV1
- *
- * Typed v1 contract for Workbench run error metadata.
- */
-export type RunWorkflowErrorV1 = {
-    analysis_error?: RunWorkflowFailure | null;
-    asset_context_error?: RunWorkflowFailure | null;
-    background_error?: RunWorkflowFailure | null;
-    /**
-     * Created Findings
-     */
-    created_findings?: number;
-    /**
-     * Ignored Lines
-     */
-    ignored_lines?: number;
-    import_job?: RunWorkflowJob | null;
-    /**
-     * Parse Errors
-     */
-    parse_errors?: Array<RunWorkflowParseError>;
-    /**
-     * Schema Version
-     */
-    schema_version?: 'run-workflow-error.v1';
-    /**
-     * Updated Findings
-     */
-    updated_findings?: number;
-    vex_error?: RunWorkflowFailure | null;
-    [key: string]: unknown;
-};
-
-/**
- * RunWorkflowFailure
- *
- * Structured workflow failure metadata.
- */
-export type RunWorkflowFailure = {
-    /**
-     * Error Type
-     */
-    error_type?: string | null;
-    /**
-     * Filename
-     */
-    filename?: string | null;
-    /**
-     * Message
-     */
-    message: string;
-    /**
-     * Stage
-     */
-    stage: string;
-    [key: string]: unknown;
-};
-
-/**
- * RunWorkflowJob
- *
- * Stable job metadata exposed on run summaries.
- */
-export type RunWorkflowJob = {
-    /**
-     * Execution Mode
-     */
-    execution_mode?: string;
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Status
-     */
-    status: string;
-    /**
-     * Status History
-     */
-    status_history?: Array<RunWorkflowJobStatusEntry>;
-    /**
-     * Updated At
-     */
-    updated_at?: string | null;
-    [key: string]: unknown;
-};
-
-/**
- * RunWorkflowJobStatusEntry
- *
- * One recorded status transition for an import or provider job.
- */
-export type RunWorkflowJobStatusEntry = {
-    /**
-     * Created At
-     */
-    created_at?: string | null;
-    /**
-     * Status
-     */
-    status: string;
-    [key: string]: unknown;
-};
-
-/**
- * RunWorkflowParseError
- *
- * Stable parser diagnostic item.
- */
-export type RunWorkflowParseError = {
-    /**
-     * Error Type
-     */
-    error_type: string;
-    /**
-     * Field
-     */
-    field?: string | null;
-    /**
-     * Filename
-     */
-    filename?: string | null;
-    /**
-     * Input Type
-     */
-    input_type: string;
-    /**
-     * Line
-     */
-    line?: number | null;
-    /**
-     * Message
-     */
-    message: string;
-    /**
-     * Value
-     */
-    value?: string | null;
-    [key: string]: unknown;
-};
-
-/**
- * RunWorkflowSummaryV1
- *
- * Typed v1 contract for Workbench import/run summary metadata.
- */
-export type RunWorkflowSummaryV1 = {
-    /**
-     * Analysis Decision Scope
-     */
-    analysis_decision_scope?: string | null;
-    analysis_error?: RunWorkflowFailure | null;
-    /**
-     * Analysis Semantics
-     */
-    analysis_semantics?: {
-        [key: string]: unknown;
-    } | null;
-    /**
-     * Analysis Service
-     */
-    analysis_service?: {
-        [key: string]: unknown;
-    } | null;
-    /**
-     * Asset Context
-     */
-    asset_context?: {
-        [key: string]: unknown;
-    } | null;
-    asset_context_error?: RunWorkflowFailure | null;
-    asset_context_upload?: RunWorkflowUploadRef | null;
-    /**
-     * Attack Enabled
-     */
-    attack_enabled?: boolean;
-    /**
-     * Attack Mapped Cves
-     */
-    attack_mapped_cves?: number;
-    /**
-     * Attack Mapping File
-     */
-    attack_mapping_file?: string | null;
-    /**
-     * Attack Mapping File Sha256
-     */
-    attack_mapping_file_sha256?: string | null;
-    /**
-     * Attack Source
-     */
-    attack_source?: string | null;
-    /**
-     * Attack Technique Metadata File
-     */
-    attack_technique_metadata_file?: string | null;
-    /**
-     * Attack Technique Metadata File Sha256
-     */
-    attack_technique_metadata_file_sha256?: string | null;
-    background_error?: RunWorkflowFailure | null;
-    /**
-     * Counts By Priority
-     */
-    counts_by_priority?: {
-        [key: string]: number;
-    };
-    /**
-     * Created Findings
-     */
-    created_findings?: number;
-    dedup_summary?: RunWorkflowDedupSummary | null;
-    /**
-     * Finding Count
-     */
-    finding_count?: number;
-    /**
-     * Ignored Lines
-     */
-    ignored_lines?: number;
-    import_job?: RunWorkflowJob | null;
-    /**
-     * Input Sha256
-     */
-    input_sha256?: string | null;
-    input_upload?: RunWorkflowUploadRef | null;
-    /**
-     * Kev Hits
-     */
-    kev_hits?: number;
-    /**
-     * Locked Provider Data
-     */
-    locked_provider_data?: boolean;
-    /**
-     * Occurrence Count
-     */
-    occurrence_count?: number;
-    /**
-     * Parse Errors
-     */
-    parse_errors?: Array<RunWorkflowParseError>;
-    /**
-     * Persistence Scope
-     */
-    persistence_scope?: string | null;
-    /**
-     * Provider Data Quality Flags
-     */
-    provider_data_quality_flags?: {
-        [key: string]: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-    /**
-     * Provider Degraded
-     */
-    provider_degraded?: boolean;
-    /**
-     * Provider Snapshot File
-     */
-    provider_snapshot_file?: string | null;
-    /**
-     * Provider Snapshot Hash
-     */
-    provider_snapshot_hash?: string | null;
-    /**
-     * Provider Snapshot Id
-     */
-    provider_snapshot_id?: string | null;
-    /**
-     * Rows Read
-     */
-    rows_read?: number;
-    /**
-     * Schema Version
-     */
-    schema_version?: 'run-workflow-summary.v1';
-    /**
-     * Suppressed By Vex
-     */
-    suppressed_by_vex?: number;
-    /**
-     * Under Investigation Count
-     */
-    under_investigation_count?: number;
-    /**
-     * Updated Findings
-     */
-    updated_findings?: number;
-    /**
-     * Vex
-     */
-    vex?: {
-        [key: string]: unknown;
-    } | null;
-    /**
-     * Vex Conflict Count
-     */
-    vex_conflict_count?: number;
-    vex_error?: RunWorkflowFailure | null;
-    vex_upload?: RunWorkflowUploadRef | null;
-    /**
-     * Warnings
-     */
-    warnings?: Array<string>;
-    [key: string]: unknown;
-};
-
-/**
- * RunWorkflowUploadRef
- *
- * Managed upload metadata without server-local filesystem paths.
- */
-export type RunWorkflowUploadRef = {
-    /**
-     * Content Type
-     */
-    content_type?: string | null;
-    /**
-     * Input Type
-     */
-    input_type?: string | null;
-    /**
-     * Original Filename
-     */
-    original_filename?: string | null;
-    /**
-     * Path
-     */
-    path?: string | null;
-    /**
-     * Sha256
-     */
-    sha256?: string | null;
-    /**
-     * Size Bytes
-     */
-    size_bytes?: number | null;
-    /**
-     * Storage Ref
-     */
-    storage_ref?: string | null;
-    /**
-     * Stored Filename
-     */
-    stored_filename?: string | null;
-    [key: string]: unknown;
 };
 
 /**
@@ -3879,6 +3370,20 @@ export type WorkflowRunPublic = {
      */
     analysis_run_id?: string | null;
     /**
+     * Artifact Refs
+     */
+    artifact_refs?: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Attempt Count
+     */
+    attempt_count?: number;
+    /**
+     * Cancel Requested At
+     */
+    cancel_requested_at?: string | null;
+    /**
      * Cancellation Requested
      */
     cancellation_requested?: boolean;
@@ -3894,6 +3399,12 @@ export type WorkflowRunPublic = {
      * Details
      */
     details?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Diagnostics
+     */
+    diagnostics?: {
         [key: string]: unknown;
     };
     /**
@@ -3923,7 +3434,19 @@ export type WorkflowRunPublic = {
      */
     id: string;
     kind: WorkflowRunKind;
+    /**
+     * Last Heartbeat At
+     */
+    last_heartbeat_at?: string | null;
     latest_event?: WorkflowEventPublic | null;
+    /**
+     * Lease Expires At
+     */
+    lease_expires_at?: string | null;
+    /**
+     * Max Attempts
+     */
+    max_attempts?: number;
     /**
      * Max Retries
      */
@@ -3953,6 +3476,12 @@ export type WorkflowRunPublic = {
      */
     report_id?: string | null;
     /**
+     * Result
+     */
+    result?: {
+        [key: string]: unknown;
+    };
+    /**
      * Retry Count
      */
     retry_count?: number;
@@ -3961,6 +3490,10 @@ export type WorkflowRunPublic = {
      */
     started_at?: string | null;
     status: WorkflowRunStatus;
+    /**
+     * Terminal Code
+     */
+    terminal_code?: string | null;
     /**
      * Title
      */
@@ -5145,7 +4678,7 @@ export type PostApiV1RunsByRunIdReportsResponses = {
     /**
      * Successful Response
      */
-    200: ReportPublic;
+    200: WorkflowRunPublic;
 };
 
 export type PostApiV1RunsByRunIdReportsResponse = PostApiV1RunsByRunIdReportsResponses[keyof PostApiV1RunsByRunIdReportsResponses];
@@ -5179,36 +4712,6 @@ export type GetApiV1RunsByRunIdSummaryResponses = {
 };
 
 export type GetApiV1RunsByRunIdSummaryResponse = GetApiV1RunsByRunIdSummaryResponses[keyof GetApiV1RunsByRunIdSummaryResponses];
-
-export type GetApiV1RunsByRunIdWorkflowMetadataData = {
-    body?: never;
-    path: {
-        /**
-         * Run Id
-         */
-        run_id: string;
-    };
-    query?: never;
-    url: '/api/v1/runs/{run_id}/workflow-metadata';
-};
-
-export type GetApiV1RunsByRunIdWorkflowMetadataErrors = {
-    /**
-     * Validation Error
-     */
-    422: ApiErrorEnvelope;
-};
-
-export type GetApiV1RunsByRunIdWorkflowMetadataError = GetApiV1RunsByRunIdWorkflowMetadataErrors[keyof GetApiV1RunsByRunIdWorkflowMetadataErrors];
-
-export type GetApiV1RunsByRunIdWorkflowMetadataResponses = {
-    /**
-     * Successful Response
-     */
-    200: AnalysisRunWorkflowMetadataPublic;
-};
-
-export type GetApiV1RunsByRunIdWorkflowMetadataResponse = GetApiV1RunsByRunIdWorkflowMetadataResponses[keyof GetApiV1RunsByRunIdWorkflowMetadataResponses];
 
 export type GetApiV1UtilsHealthCheckData = {
     body?: never;

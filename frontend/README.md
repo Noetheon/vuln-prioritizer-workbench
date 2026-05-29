@@ -14,20 +14,23 @@ owned like normal frontend source and should not be treated as generated drift.
 
 ## Local Commands
 
-Run frontend commands from the repository root so npm uses the same
-engine-strict policy as CI and Docker:
+Run frontend commands from the repository root so the checked-in wrapper selects
+the pinned Node 22 / npm 10 toolchain before applying the same engine-strict
+policy as CI and Docker:
 
 ```bash
 make frontend-check
 make playwright-check
-npm --prefix frontend --workspaces=false --engine-strict=true run test -- tests/accessibility.spec.ts --project=chromium
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test -- tests/accessibility.spec.ts --project=chromium
 make api-client-drift-check
 ```
 
 The audited local, CI, and Docker fallback paths use npm with the checked-in
 `frontend/package-lock.json`. Keep ad hoc npm invocations on the same
-`npm --prefix frontend --workspaces=false --engine-strict=true` wrapper unless a
-Make target already covers the command.
+`scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true`
+wrapper unless a Make target already covers the command. Volta and mise are
+supported through `.tool-versions` and the frontend package metadata; the
+wrapper also recognizes asdf and nvm.
 
 ## Dependency Audit Notes
 

@@ -13,6 +13,7 @@ from starlette.responses import Response
 from app import models as app_models
 from app.core.config import Settings
 from app.main import _upload_size_guard
+from app.workers.workflow_worker import run_worker_once
 from utils.import_contract_fixtures import PROJECT_ROOT
 from utils.workbench_env import WorkbenchApiEnv
 
@@ -96,6 +97,116 @@ def run_count(workbench_api_env: WorkbenchApiEnv, project_id: uuid.UUID) -> int:
         return len(
             workbench_api_env.repositories.RunRepository(session).list_analysis_runs(project_id)
         )
+
+
+def drain_workflow_queue(
+    workbench_api_env: WorkbenchApiEnv,
+    *,
+    max_ticks: int = 20,
+    retry_delay_seconds: int = 0,
+) -> None:
+    settings = workbench_api_env.client.app.state.workbench_settings
+    for tick in range(max_ticks):
+        result = run_worker_once(
+            engine=workbench_api_env.engine,
+            settings=settings,
+            worker_id=f"test-worker-{tick}",
+            limit=1,
+            retry_delay_seconds=retry_delay_seconds,
+        )
+        if result.claimed == 0:
+            return
+    raise AssertionError("workflow queue did not drain")
+
+
+def public_run_aliases(payload: dict[str, object]) -> dict[str, object]:
+    result = payload.get("result")
+    if not isinstance(result, dict):
+        return payload
+    aliases = {
+        "schema_version",
+        "input_upload",
+        "asset_context_upload",
+        "vex_upload",
+        "asset_context",
+        "vex",
+        "attack_mapped_cves",
+        "attack_mapping_file",
+        "attack_source",
+        "suppressed_by_vex",
+        "provider_snapshot_file",
+        "provider_snapshot_hash",
+        "provider_snapshot_id",
+        "locked_provider_data",
+        "created_findings",
+        "updated_findings",
+        "ignored_lines",
+        "rows_read",
+        "occurrence_count",
+        "finding_count",
+        "findings_count",
+        "counts_by_priority",
+        "kev_hits",
+        "epss_hits",
+        "nvd_hits",
+        "cvss_known_count",
+        "parse_errors",
+        "dedup_summary",
+        "analysis_service",
+        "analysis_semantics",
+        "input_sha256",
+        "import_job",
+        "warnings",
+        "provider_data_quality_flags",
+        "provider_degraded",
+        "under_investigation_count",
+        "vex_conflict_count",
+    }
+    diagnostics = payload.get("diagnostics")
+    diagnostic_aliases = diagnostics if isinstance(diagnostics, dict) else {}
+    alias_payload = {key: result[key] for key in aliases if key in result}
+    if "schema_version" in result:
+        alias_payload["workflow_schema_version"] = result["schema_version"]
+    if diagnostic_aliases:
+        alias_payload["workflow_error"] = diagnostic_aliases
+    return {
+        **alias_payload,
+        **diagnostic_aliases,
+        **payload,
+    }
+
+
+def completed_run_payload(
+    workbench_api_env: WorkbenchApiEnv,
+    response: object,
+    *,
+    headers: dict[str, str],
+) -> dict[str, object]:
+    assert getattr(response, "status_code") == 200, getattr(response, "text")
+    run_id = response.json()["id"]
+    drain_workflow_queue(workbench_api_env)
+    run = workbench_api_env.client.get(f"/api/v1/runs/{run_id}", headers=headers)
+    assert run.status_code == 200, run.text
+    return public_run_aliases(run.json())
+
+
+def completed_run_summary(
+    workbench_api_env: WorkbenchApiEnv,
+    response_or_run_id: object,
+    *,
+    headers: dict[str, str],
+) -> dict[str, object]:
+    if isinstance(response_or_run_id, str):
+        run_id = response_or_run_id
+    else:
+        assert getattr(response_or_run_id, "status_code") == 200, getattr(
+            response_or_run_id, "text"
+        )
+        run_id = response_or_run_id.json()["id"]
+    drain_workflow_queue(workbench_api_env)
+    summary = workbench_api_env.client.get(f"/api/v1/runs/{run_id}/summary", headers=headers)
+    assert summary.status_code == 200, summary.text
+    return public_run_aliases(summary.json())
 
 
 def finding_state(

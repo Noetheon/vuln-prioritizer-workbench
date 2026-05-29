@@ -75,6 +75,8 @@ class WorkflowRunBase(SQLModel):
     progress_total: int | None = Field(default=None, sa_column=Column(Integer, nullable=True))
     retry_count: int = Field(default=0, sa_column=Column(Integer, nullable=False))
     max_retries: int = Field(default=0, sa_column=Column(Integer, nullable=False))
+    attempt_count: int = Field(default=0, sa_column=Column(Integer, nullable=False))
+    max_attempts: int = Field(default=1, sa_column=Column(Integer, nullable=False))
     cancellation_requested: bool = Field(default=False, sa_column=Column(Boolean, nullable=False))
     error_message: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     error_details_json: dict[str, Any] = Field(
@@ -89,6 +91,19 @@ class WorkflowRunBase(SQLModel):
         default_factory=dict,
         sa_column=Column(JSON, nullable=False),
     )
+    result_json: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSON, nullable=False),
+    )
+    diagnostics_json: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSON, nullable=False),
+    )
+    artifact_refs_json: list[dict[str, Any]] = Field(
+        default_factory=list,
+        sa_column=Column(JSON, nullable=False),
+    )
+    terminal_code: str | None = Field(default=None, max_length=80)
 
 
 class WorkflowRun(WorkflowRunBase, table=True):
@@ -99,7 +114,14 @@ class WorkflowRun(WorkflowRunBase, table=True):
         Index("ix_workflow_run_project_created_at", "project_id", "created_at"),
         Index("ix_workflow_run_analysis_run_kind", "analysis_run_id", "kind"),
         Index("ix_workflow_run_status", "status"),
-        Index("ix_workflow_run_queue_ready", "queue_name", "status", "next_retry_at"),
+        Index(
+            "ix_workflow_run_queue_ready",
+            "queue_name",
+            "status",
+            "next_retry_at",
+            "priority",
+            "created_at",
+        ),
         Index("ix_workflow_run_idempotency_key", "idempotency_key"),
     )
 
@@ -158,6 +180,10 @@ class WorkflowRun(WorkflowRunBase, table=True):
         sa_column=Column(DateTime(timezone=True), nullable=True),
     )
     last_heartbeat_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    cancel_requested_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),
     )
@@ -243,15 +269,24 @@ class WorkflowRunPublic(SQLModel):
     progress_total: int | None = None
     retry_count: int = 0
     max_retries: int = 0
+    attempt_count: int = 0
+    max_attempts: int = 1
     cancellation_requested: bool = False
     error_message: str | None = None
     error_details: dict[str, Any] = Field(default_factory=dict)
+    result: dict[str, Any] = Field(default_factory=dict)
+    diagnostics: dict[str, Any] = Field(default_factory=dict)
+    artifact_refs: list[dict[str, Any]] = Field(default_factory=list)
     details: dict[str, Any] = Field(default_factory=dict)
+    terminal_code: str | None = None
     created_at: datetime
     updated_at: datetime
     started_at: datetime | None = None
     finished_at: datetime | None = None
     next_retry_at: datetime | None = None
+    last_heartbeat_at: datetime | None = None
+    lease_expires_at: datetime | None = None
+    cancel_requested_at: datetime | None = None
     latest_event: WorkflowEventPublic | None = None
 
 

@@ -23,8 +23,10 @@ PRIVATE_PATH_PATTERN = re.compile(
     re.IGNORECASE,
 )
 IMPORT_SUCCESS_STATUSES = {"completed", "succeeded"}
-IMPORT_FAILURE_STATUSES = {"failed"}
+IMPORT_FAILURE_STATUSES = {"failed", "cancelled"}
+WORKFLOW_FAILURE_STATUSES = {"failed", "cancelled"}
 IMPORT_POLL_SECONDS = int(os.environ.get("VPW_PRODUCTION_SMOKE_IMPORT_TIMEOUT", "60"))
+REPORT_POLL_SECONDS = int(os.environ.get("VPW_PRODUCTION_SMOKE_REPORT_TIMEOUT", "60"))
 REPORT_FORMATS = ("markdown", "html", "json", "csv", "sarif", "zip")
 
 
@@ -142,14 +144,52 @@ def _get_findings(project_id: str) -> list[dict[str, object]]:
 def _create_reports(run_id: str) -> dict[str, dict[str, object]]:
     reports: dict[str, dict[str, object]] = {}
     for report_format in REPORT_FORMATS:
-        response = _json(
-            f"/api/v1/runs/{run_id}/reports",
+        workflow = _json(
+            f"/api/v1/runs/{run_id}/report-jobs",
             data=json.dumps({"format": report_format}).encode(),
             headers={"Content-Type": "application/json"},
         )
-        _assert_no_private_paths(response)
-        reports[report_format] = response
+        _assert_no_private_paths(workflow)
+        reports[report_format] = _wait_for_report(run_id, workflow)
     return reports
+
+
+def _wait_for_report(run_id: str, workflow: dict[str, object]) -> dict[str, object]:
+    workflow_id = str(workflow.get("id") or "")
+    if not workflow_id:
+        raise RuntimeError(f"Report job response did not include a workflow id: {workflow!r}")
+
+    deadline = time.monotonic() + REPORT_POLL_SECONDS
+    last_workflow = workflow
+    while time.monotonic() < deadline:
+        report = _report_for_workflow(run_id, workflow_id)
+        if report is not None:
+            return report
+        if last_workflow.get("status") in WORKFLOW_FAILURE_STATUSES:
+            raise RuntimeError(f"Report workflow failed: {last_workflow!r}")
+        time.sleep(1)
+        last_workflow = _json(f"/api/v1/workflows/{workflow_id}")
+        _assert_no_private_paths(last_workflow)
+
+    raise RuntimeError(
+        f"Report workflow {workflow_id} did not produce an artifact within "
+        f"{REPORT_POLL_SECONDS}s: {last_workflow!r}"
+    )
+
+
+def _report_for_workflow(run_id: str, workflow_id: str) -> dict[str, object] | None:
+    response = _json(f"/api/v1/runs/{run_id}/reports")
+    _assert_no_private_paths(response)
+    reports = response.get("data")
+    if not isinstance(reports, list):
+        raise RuntimeError(f"Reports API did not return a data list: {response!r}")
+    for report in reports:
+        if not isinstance(report, dict):
+            continue
+        workflow = report.get("workflow")
+        if isinstance(workflow, dict) and workflow.get("id") == workflow_id:
+            return report
+    return None
 
 
 def _download_report(*, report_format: str, report: dict[str, object]) -> None:

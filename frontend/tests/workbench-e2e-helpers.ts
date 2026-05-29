@@ -4,7 +4,7 @@ import { expect, type Locator, type Page } from "@playwright/test"
 export const validCveList = Buffer.from("CVE-2021-44228\nCVE-2024-3094\n")
 
 export const cyclonedxVex = readFileSync(
-  "../data/input_fixtures/cyclonedx_vex.json",
+  new URL("../../data/input_fixtures/cyclonedx_vex.json", import.meta.url),
 )
 
 export const validOccurrenceCsv = Buffer.from(
@@ -124,4 +124,65 @@ export async function selectDashboardProject(page: Page, projectName: string) {
   const projectTrigger = page.getByRole("combobox").first()
   await selectRadixOption(page, projectTrigger, projectName)
   await expect(projectTrigger).toContainText(projectName)
+}
+
+type WorkflowBackedRun = {
+  diagnostics?: unknown
+  error_message?: string | null
+  id: string
+  status: string
+  workflow?: {
+    diagnostics?: unknown
+    error_message?: string | null
+    status?: string | null
+  } | null
+}
+
+export async function waitForRunSucceeded(
+  page: Page,
+  runId: string,
+  options: {
+    apiBaseUrl?: string
+    headers?: Record<string, string>
+    timeoutMs?: number
+  } = {},
+): Promise<WorkflowBackedRun> {
+  const startedAt = Date.now()
+  const timeoutMs = options.timeoutMs ?? 60_000
+  const apiBaseUrl = (options.apiBaseUrl ?? "").replace(/\/+$/, "")
+  let lastRun: WorkflowBackedRun | undefined
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const response = await page.request.get(`${apiBaseUrl}/api/v1/runs/${runId}`, {
+      headers: options.headers,
+    })
+    if (response.ok()) {
+      const run = (await response.json()) as WorkflowBackedRun
+      lastRun = run
+      const workflowStatus = run.workflow?.status ?? null
+      const status = workflowStatus ?? run.status
+      if (status === "succeeded" || status === "completed") {
+        return run
+      }
+      if (
+        status === "failed" ||
+        status === "cancelled" ||
+        run.status === "failed" ||
+        run.status === "cancelled"
+      ) {
+        throw new Error(
+          `Run ${runId} finished as ${status}: ${JSON.stringify(
+            run.workflow?.diagnostics ?? run.diagnostics ?? {},
+          )}`,
+        )
+      }
+    }
+    await page.waitForTimeout(250)
+  }
+
+  throw new Error(
+    `Run ${runId} did not finish within ${timeoutMs}ms; last status ${JSON.stringify(
+      lastRun?.workflow?.status ?? lastRun?.status ?? null,
+    )}`,
+  )
 }

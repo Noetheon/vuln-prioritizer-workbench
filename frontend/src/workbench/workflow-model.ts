@@ -53,7 +53,7 @@ export function workflowProgressLabel(
 export function workflowSummaryLabel(
   workflow: WorkflowRunPublic | null | undefined,
 ) {
-  if (!workflow) return "Legacy run metadata"
+  if (!workflow) return "Workflow not recorded"
   const stage = workflowStageLabel(workflow)
   const progress = workflowProgressLabel(workflow)
   return `${workflowStatusLabel(workflow)} · ${stage} · ${progress}`

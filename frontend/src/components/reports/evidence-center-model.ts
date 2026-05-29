@@ -108,7 +108,7 @@ export function verificationTone(label: string): VpwBadgeTone {
 }
 
 export function runFileLabel(run: AnalysisRunPublic): string {
-  const inputUpload = objectRecord(run.input_upload)
+  const inputUpload = objectRecord(run.uploads?.input ?? run.result?.input_upload)
   const uploadFilename =
     stringRecordValue(inputUpload, "original_filename") ??
     stringRecordValue(inputUpload, "stored_filename") ??
@@ -238,15 +238,31 @@ function workflowRecord(
 ) {
   if (!source) return {}
   const record: Record<string, unknown> = {}
-  setDefined(record, "input_upload", source.input_upload)
-  setDefined(record, "asset_context_upload", source.asset_context_upload)
-  setDefined(record, "vex_upload", source.vex_upload)
-  setDefined(record, "attack_mapped_cves", source.attack_mapped_cves)
-  setDefined(record, "attack_mapping_file", source.attack_mapping_file)
-  setDefined(record, "attack_source", source.attack_source)
-  setDefined(record, "asset_context", source.asset_context)
-  setDefined(record, "vex", source.vex)
-  setDefined(record, "suppressed_by_vex", source.suppressed_by_vex)
+  setDefined(record, "input_upload", source.uploads?.input ?? source.result?.input_upload)
+  setDefined(
+    record,
+    "asset_context_upload",
+    source.uploads?.asset_context ?? source.result?.asset_context_upload,
+  )
+  setDefined(record, "vex_upload", source.uploads?.vex ?? source.result?.vex_upload)
+  setDefined(
+    record,
+    "attack_mapped_cves",
+    "counts" in source
+      ? source.counts?.attack_mapped_cves
+      : source.result?.attack_mapped_cves,
+  )
+  setDefined(record, "attack_mapping_file", source.result?.attack_mapping_file)
+  setDefined(record, "attack_source", source.result?.attack_source)
+  setDefined(record, "asset_context", source.result?.asset_context)
+  setDefined(record, "vex", source.result?.vex)
+  setDefined(
+    record,
+    "suppressed_by_vex",
+    "counts" in source
+      ? source.counts?.suppressed_by_vex
+      : source.result?.suppressed_by_vex,
+  )
   return record
 }
 

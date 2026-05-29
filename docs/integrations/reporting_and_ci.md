@@ -52,7 +52,7 @@ curl -F input_type=trivy-json \
 Reports are created from completed runs:
 
 ```text
-POST /api/v1/runs/{run_id}/reports
+POST /api/v1/runs/{run_id}/report-jobs
 ```
 
 Supported report formats:

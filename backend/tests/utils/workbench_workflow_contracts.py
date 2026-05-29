@@ -8,12 +8,21 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy.orm import object_session
+
 from app.contracts.run_workflow import RunWorkflowErrorV1, RunWorkflowSummaryV1
+from app.models import WorkflowRunKind
+from app.repositories import WorkflowRepository
 from app.services.run_workflow_metadata import (
     workflow_error_or_none,
     workflow_summary,
 )
-from utils.import_contracts import assert_no_sensitive_path_leak, configure_upload_dir
+from app.workers.workflow_worker import run_worker_once
+from utils.import_contracts import (
+    assert_no_sensitive_path_leak,
+    configure_upload_dir,
+    public_run_aliases,
+)
 from utils.workbench_contracts import _configure_report_dir
 from utils.workbench_env import WorkbenchApiEnv, create_project_via_api, local_api_headers
 
@@ -62,17 +71,66 @@ def post_import(
     files: dict[str, tuple[str, bytes, str]],
     expected_status: int = 200,
 ) -> dict[str, Any]:
+    queue_only = data.get("execution_mode") == "worker"
     response = workbench_api_env.client.post(
         f"/api/v1/projects/{context.project_id}/imports",
         headers=context.headers,
         data=data,
         files=files,
     )
-    assert response.status_code == expected_status, response.text
+    if expected_status >= 400:
+        assert response.status_code == 200, response.text
+    else:
+        assert response.status_code == expected_status, response.text
     payload = response.json()
-    if expected_status < 400:
-        assert_no_raw_workflow_fields(payload)
+    assert_no_raw_workflow_fields(payload)
+    if not queue_only and payload.get("workflow", {}).get("status") in {"pending", "running"}:
+        run_all_workflows(workbench_api_env)
+        payload = read_run_payload(workbench_api_env, context, payload["id"])
+    if expected_status >= 400:
+        workflow = payload.get("workflow") or {}
+        assert workflow.get("status") == "failed"
+        diagnostics = workflow.get("diagnostics") or payload.get("diagnostics") or {}
+        if isinstance(diagnostics, dict):
+            diagnostics = {**diagnostics, "analysis_run_id": payload["id"]}
+        return {
+            "detail": diagnostics,
+            "run": payload,
+        }
     return payload
+
+
+def run_all_workflows(
+    workbench_api_env: WorkbenchApiEnv,
+    *,
+    max_ticks: int = 20,
+) -> None:
+    settings = workbench_api_env.client.app.state.workbench_settings
+    for tick in range(max_ticks):
+        result = run_worker_once(
+            engine=workbench_api_env.engine,
+            settings=settings,
+            worker_id=f"test-worker-{tick}",
+            limit=1,
+        )
+        if result.claimed == 0:
+            return
+    raise AssertionError("workflow queue did not drain")
+
+
+def read_run_payload(
+    workbench_api_env: WorkbenchApiEnv,
+    context: WorkflowContext,
+    run_id: str,
+) -> dict[str, Any]:
+    response = workbench_api_env.client.get(
+        f"/api/v1/runs/{run_id}",
+        headers=context.headers,
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert_no_raw_workflow_fields(payload)
+    return public_run_aliases(payload)
 
 
 def run_summary(
@@ -87,7 +145,7 @@ def run_summary(
     assert response.status_code == 200, response.text
     payload = response.json()
     assert_no_raw_workflow_fields(payload)
-    return payload
+    return public_run_aliases(payload)
 
 
 def workflow_metadata(
@@ -99,20 +157,44 @@ def workflow_metadata(
     expected_status: int = 200,
 ) -> dict[str, Any]:
     active_headers = headers if headers is not None else (context.headers if context else {})
-    response = workbench_api_env.client.get(
-        f"/api/v1/runs/{run_id}/workflow-metadata",
-        headers=active_headers,
-    )
+    response = workbench_api_env.client.get(f"/api/v1/runs/{run_id}", headers=active_headers)
     assert response.status_code == expected_status, response.text
-    return response.json()
+    if expected_status != 200:
+        return response.json()
+    payload = public_run_aliases(response.json())
+    diagnostics = payload.get("diagnostics")
+    result = payload.get("result")
+    summary = result if isinstance(result, dict) else {}
+    if isinstance(diagnostics, dict):
+        summary = {**summary, **diagnostics}
+    return {
+        "id": payload["id"],
+        "project_id": payload["project_id"],
+        "status": payload["status"],
+        "workflow": payload.get("workflow"),
+        "summary": summary,
+        "error": diagnostics if payload["status"] == "failed" else None,
+    }
 
 
 def persisted_workflow_summary(run: Any) -> RunWorkflowSummaryV1:
-    return workflow_summary(run)
+    workflow = _latest_import_workflow(run)
+    return workflow_summary(workflow.result_json if workflow is not None else {})
 
 
 def persisted_workflow_error(run: Any) -> RunWorkflowErrorV1 | None:
-    return workflow_error_or_none(run)
+    workflow = _latest_import_workflow(run)
+    return workflow_error_or_none(workflow.diagnostics_json if workflow is not None else {})
+
+
+def _latest_import_workflow(run: Any) -> Any | None:
+    session = object_session(run)
+    if session is None:
+        return None
+    return WorkflowRepository(session).get_latest_analysis_workflow(
+        analysis_run_id=run.id,
+        kind=WorkflowRunKind.IMPORT,
+    )
 
 
 def project_findings(
@@ -167,7 +249,7 @@ def report_response(
     payload = {"format": report_format}
     payload.update(payload_overrides or {})
     response = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+        f"/api/v1/runs/{run_id}/report-jobs",
         headers=context.headers,
         json=payload,
     )
@@ -183,13 +265,19 @@ def create_report(
     *,
     payload_overrides: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return report_response(
+    workflow = report_response(
         workbench_api_env,
         context,
         run_id,
         report_format=report_format,
         payload_overrides=payload_overrides,
     ).json()
+    run_all_workflows(workbench_api_env)
+    reports = list_reports(workbench_api_env, context, run_id)
+    for report in reports["data"]:
+        if report.get("workflow", {}).get("id") == workflow["id"]:
+            return report
+    raise AssertionError(f"missing report for workflow {workflow['id']}")
 
 
 def list_reports(

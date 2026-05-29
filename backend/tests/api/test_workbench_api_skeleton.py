@@ -47,8 +47,9 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "/api/v1/projects/{project_id}/runs/",
         "/api/v1/runs/{run_id}",
         "/api/v1/runs/{run_id}/summary",
-        "/api/v1/runs/{run_id}/workflow-metadata",
+        "/api/v1/runs/{run_id}/report-jobs",
         "/api/v1/runs/{run_id}/reports",
+        "/api/v1/workflows/{workflow_id}",
         "/api/v1/reports/{report_id}/download",
         "/api/v1/projects/{project_id}/findings/",
         "/api/v1/findings/{finding_id}",
@@ -65,7 +66,6 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
     expected_schemas = {
         "AnalysisRunPublic",
         "AnalysisRunSummaryPublic",
-        "AnalysisRunWorkflowMetadataPublic",
         "AnalysisRunsPublic",
         "AssetCreate",
         "AssetPublic",
@@ -366,9 +366,11 @@ def test_vpw011_run_list_and_get_use_repository_seeded_graph(
     detail = get_response.json()
     assert detail["id"] == str(seeded["run_id"])
     assert detail["provider_snapshot_id"] == str(seeded["provider_snapshot_id"])
-    assert detail["workflow_schema_version"] == "run-workflow-summary.v1"
-    assert detail["workflow_error_schema_version"] is None
-    assert detail["created_findings"] == 0
+    assert detail["workflow"]["status"] == "succeeded"
+    assert detail["result"]["parsed"] == 2
+    assert detail["diagnostics"] == {}
+    assert detail["counts"]["created_findings"] == 0
+    assert "workflow_schema_version" not in detail
     assert "summary_json" not in detail
     assert "error_json" not in detail
 
@@ -384,8 +386,10 @@ def test_vpw011_run_list_and_get_use_repository_seeded_graph(
     assert summary["created_findings"] == 0
     assert summary["updated_findings"] == 0
     assert summary["parse_errors"] == []
-    assert summary["workflow_schema_version"] == "run-workflow-summary.v1"
-    assert summary["workflow_error_schema_version"] is None
+    assert summary["workflow"]["status"] == "succeeded"
+    assert summary["result"]["parsed"] == 2
+    assert summary["diagnostics"] == {}
+    assert "workflow_schema_version" not in summary
     assert "summary_json" not in summary
     assert "error_json" not in summary
 
@@ -393,17 +397,7 @@ def test_vpw011_run_list_and_get_use_repository_seeded_graph(
         f"/api/v1/runs/{seeded['run_id']}/workflow-metadata",
         headers=headers,
     )
-    assert metadata_response.status_code == 200
-    metadata = metadata_response.json()
-    assert metadata["id"] == str(seeded["run_id"])
-    assert metadata["project_id"] == project["id"]
-    assert metadata["status"] == "completed"
-    assert metadata["workflow_schema_version"] == "run-workflow-summary.v1"
-    assert metadata["workflow_error_schema_version"] is None
-    assert metadata["summary"]["schema_version"] == "run-workflow-summary.v1"
-    assert metadata["error"] is None
-    assert metadata["raw_summary"] == {"parsed": 2, "findings": 2}
-    assert metadata["raw_error"] == {}
+    assert metadata_response.status_code == 404
 
 
 def test_run_workflow_metadata_endpoint_redacts_raw_diagnostics(
@@ -423,7 +417,14 @@ def test_run_workflow_metadata_endpoint_redacts_raw_diagnostics(
     with Session(workbench_api_env.engine) as session:
         run = session.get(workbench_api_env.app_models.AnalysisRun, seeded["run_id"])
         assert run is not None
-        run.summary_json = {
+        workflow = workbench_api_env.repositories.WorkflowRepository(
+            session
+        ).get_latest_analysis_workflow(
+            analysis_run_id=run.id,
+            kind=workbench_api_env.app_models.WorkflowRunKind.IMPORT,
+        )
+        assert workflow is not None
+        workflow.result_json = {
             "created_findings": 0,
             "updated_findings": 0,
             "input_upload": {
@@ -433,7 +434,7 @@ def test_run_workflow_metadata_endpoint_redacts_raw_diagnostics(
             },
             "token": "Bearer summary-secret-token",
         }
-        run.error_json = {
+        workflow.diagnostics_json = {
             "analysis_error": {
                 "stage": "import",
                 "message": f"failed at {private_log}",
@@ -441,11 +442,11 @@ def test_run_workflow_metadata_endpoint_redacts_raw_diagnostics(
             },
             "authorization": "Bearer error-secret-token",
         }
-        session.add(run)
+        session.add(workflow)
         session.commit()
 
     response = workbench_api_env.client.get(
-        f"/api/v1/runs/{seeded['run_id']}/workflow-metadata",
+        f"/api/v1/runs/{seeded['run_id']}",
         headers=headers,
     )
 
@@ -455,14 +456,10 @@ def test_run_workflow_metadata_endpoint_redacts_raw_diagnostics(
     assert str(tmp_path) not in serialized
     assert "summary-secret-token" not in serialized
     assert "error-secret-token" not in serialized
-    assert payload["workflow_schema_version"] == "run-workflow-summary.v1"
-    assert payload["workflow_error_schema_version"] == "run-workflow-error.v1"
-    assert payload["summary"]["input_upload"]["path"] == "[REDACTED]"
-    assert payload["summary"]["token"] == "[REDACTED]"
-    assert payload["error"]["schema_version"] == "run-workflow-error.v1"
-    assert payload["error"]["analysis_error"]["message"] == "[REDACTED]"
-    assert payload["raw_summary"]["input_upload"]["path"] == "[REDACTED]"
-    assert payload["raw_error"]["authorization"] == "[REDACTED]"
+    assert payload["result"]["input_upload"]["path"] == "[REDACTED]"
+    assert payload["diagnostics"]["analysis_error"]["message"] == "[REDACTED]"
+    assert "raw_summary" not in payload
+    assert "raw_error" not in payload
 
 
 def test_run_workflow_metadata_endpoint_returns_404_for_unknown_run(
@@ -477,7 +474,7 @@ def test_run_workflow_metadata_endpoint_returns_404_for_unknown_run(
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Analysis run not found"
+    assert response.json()["detail"] == "Not Found"
 
 
 def test_vpw011_finding_list_and_get_support_pagination(
@@ -1147,7 +1144,7 @@ def _seed_vpw042_findings(
             input_type="generic-occurrence-csv",
             filename="occurrences.csv",
             status=app_models.AnalysisRunStatus.COMPLETED,
-            summary_json={"parsed": 1, "findings": 1},
+            result_json={"parsed": 1, "findings": 1},
         )
         repositories.RunRepository(session).add_finding_occurrence(
             finding_id=critical.id,
@@ -1325,8 +1322,8 @@ def test_vpw202_project_dashboard_aggregate_replaces_dashboard_query_fanout(
         "Low": 0,
     }
     assert payload["runs"]["count"] == 1
-    assert payload["runs"]["data"][0]["workflow_schema_version"] == "run-workflow-summary.v1"
-    assert payload["runs"]["data"][0]["created_findings"] == 0
+    assert "workflow_schema_version" not in payload["runs"]["data"][0]
+    assert payload["runs"]["data"][0]["counts"]["created_findings"] == 0
     assert payload["findings"]["remediation_queue"]["count"] == 3
     assert [item["cve_id"] for item in payload["findings"]["remediation_queue"]["data"]] == [
         DEMO_CVE_LOG4SHELL,

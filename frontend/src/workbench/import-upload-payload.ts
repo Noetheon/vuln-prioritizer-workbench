@@ -40,7 +40,6 @@ export function buildImportUploadFormData({
         }
       : {}),
     file: selectedFile,
-    execution_mode: "worker",
     input_type: importWizard.inputType,
     locked_provider_data: importWizard.lockedProviderData,
     ...(importWizard.providerSnapshotFile.trim()

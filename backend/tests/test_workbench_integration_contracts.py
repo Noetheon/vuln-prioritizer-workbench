@@ -135,6 +135,7 @@ def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
     assert 'export DOCKER_DEMO_FRONTEND_PORT="$(DOCKER_DEMO_FRONTEND_PORT)"' in docker_smoke_block
     assert "DOCKER_QUICKSTART_API_BASE_URL=" in docker_smoke_block
     assert "$(PYTHON) scripts/docker_quickstart_api_smoke.py" in docker_smoke_block
+    assert "$(COMPOSE) up -d --build backend frontend worker" in docker_smoke_block
     assert "$(COMPOSE) exec -T backend python -m app.core.schema_smoke" in docker_smoke_block
     assert 'export POSTGRES_PASSWORD="$(DOCKER_DEMO_POSTGRES_PASSWORD)"' in docker_smoke_block
     assert "login/access-token" not in script

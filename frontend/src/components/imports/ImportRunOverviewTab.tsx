@@ -17,8 +17,13 @@ import {
   formatDateTime,
   formatDisplayType,
   importRunTimelineItems,
-  objectRecord,
+  runAssetContextUpload,
   runFileLabel,
+  runInputUpload,
+  runLockedProviderData,
+  runProviderSnapshotFile,
+  runResultString,
+  runVexUpload,
 } from "./imports-workbench-model"
 import { workflowSummaryLabel } from "@/workbench/workflow-model"
 import { CopyableValue } from "./ImportDiagnosticsDrawerParts"
@@ -42,11 +47,11 @@ export function OverviewTab({
   run: ImportRun
   summary: ImportRunSummary
 }) {
-  const inputUpload = objectRecord(summary.input_upload)
-  const assetContextUpload = objectRecord(summary.asset_context_upload)
-  const vexUpload = objectRecord(summary.vex_upload)
+  const inputUpload = runInputUpload(summary)
+  const assetContextUpload = runAssetContextUpload(summary)
+  const vexUpload = runVexUpload(summary)
   const lockedProviderData =
-    booleanLabel(summary.locked_provider_data) ??
+    booleanLabel(runLockedProviderData(summary)) ??
     booleanFromRecord(inputUpload, "locked_provider_data") ??
     "Not recorded"
   const timelineItems = importRunTimelineItems(run, summary)
@@ -101,14 +106,14 @@ export function OverviewTab({
             {
               label: "ATT&CK context",
               value:
-                summary.attack_source ??
+                runResultString(summary, "attack_source") ??
                 stringFromRecord(inputUpload, "attack_source") ??
                 "None",
             },
             {
               label: "Provider data",
               value:
-                summary.provider_snapshot_file ??
+                runProviderSnapshotFile(summary) ??
                 stringFromRecord(inputUpload, "provider_snapshot_file") ??
                 "Current provider data",
             },

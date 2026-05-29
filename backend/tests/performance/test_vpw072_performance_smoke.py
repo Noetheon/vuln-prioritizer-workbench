@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from utils.import_contracts import drain_workflow_queue, public_run_aliases
 from utils.workbench_env import WorkbenchApiEnv, create_project_via_api, local_api_headers
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -61,7 +62,23 @@ def test_vpw072_workbench_import_10k_occurrences_performance_smoke(
         },
         files={"file": ("vpw-072-10k-occurrences.csv", content, "text/csv")},
     )
-    import_payload = import_response.json() if import_response.status_code == 200 else {}
+    import_payload: dict[str, Any]
+    run_detail_status_code: int | None = None
+    if import_response.status_code == 200:
+        queued_payload = import_response.json()
+        drain_workflow_queue(workbench_api_env, max_ticks=5)
+        run_detail_response = workbench_api_env.client.get(
+            f"/api/v1/runs/{queued_payload['id']}",
+            headers=headers,
+        )
+        run_detail_status_code = run_detail_response.status_code
+        import_payload = (
+            public_run_aliases(run_detail_response.json())
+            if run_detail_response.status_code == 200
+            else queued_payload
+        )
+    else:
+        import_payload = {}
     import_seconds = time.perf_counter() - import_start
 
     page_offset = ROW_COUNT - PAGE_SIZE
@@ -126,6 +143,10 @@ def test_vpw072_workbench_import_10k_occurrences_performance_smoke(
         },
         "result": {
             "import_status_code": import_response.status_code,
+            "run_detail_status_code": run_detail_status_code,
+            "workflow_status": (import_payload.get("workflow") or {}).get("status")
+            if isinstance(import_payload.get("workflow"), dict)
+            else None,
             "analysis_run_status": import_payload.get("status"),
             "occurrence_count": summary.get("occurrence_count"),
             "finding_count": summary.get("finding_count"),
@@ -142,7 +163,8 @@ def test_vpw072_workbench_import_10k_occurrences_performance_smoke(
     _write_metrics(metrics)
 
     assert import_response.status_code == 200, import_response.text
-    assert import_payload["status"] == "succeeded"
+    assert run_detail_status_code == 200
+    assert import_payload["workflow"]["status"] == "succeeded"
     assert summary["locked_provider_data"] is True
     assert summary["occurrence_count"] == ROW_COUNT
     assert summary["finding_count"] == ROW_COUNT

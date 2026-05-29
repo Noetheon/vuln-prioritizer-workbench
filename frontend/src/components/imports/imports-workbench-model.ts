@@ -79,14 +79,110 @@ export type ImportsWorkbenchProps = {
 export function runFileLabel(run: {
   filename?: string | null
   input_type: string
-  input_upload?: unknown
+  uploads?: { input?: unknown } | null
+  result?: Record<string, unknown> | null
 }) {
-  const upload = objectRecord(run.input_upload)
+  const upload = runInputUpload(run)
   const uploadFilename =
     stringValue(upload.original_filename) ??
     stringValue(upload.stored_filename) ??
     stringValue(upload.filename)
   return run.filename ?? uploadFilename ?? `${run.input_type} upload`
+}
+
+export function runInputUpload(run: {
+  uploads?: { input?: unknown } | null
+  result?: Record<string, unknown> | null
+}) {
+  return objectRecord(run.uploads?.input ?? run.result?.input_upload)
+}
+
+export function runAssetContextUpload(run: {
+  uploads?: { asset_context?: unknown } | null
+  result?: Record<string, unknown> | null
+}) {
+  return objectRecord(run.uploads?.asset_context ?? run.result?.asset_context_upload)
+}
+
+export function runVexUpload(run: {
+  uploads?: { vex?: unknown } | null
+  result?: Record<string, unknown> | null
+}) {
+  return objectRecord(run.uploads?.vex ?? run.result?.vex_upload)
+}
+
+export function runProviderSnapshotFile(run: {
+  provider_snapshot?: { file?: string | null } | null
+  result?: Record<string, unknown> | null
+} | null | undefined) {
+  if (!run) return null
+  return (
+    run.provider_snapshot?.file ??
+    stringValue(run.result?.provider_snapshot_file)
+  )
+}
+
+export function runProviderSnapshotHash(run: {
+  provider_snapshot?: { hash?: string | null } | null
+  result?: Record<string, unknown> | null
+} | null | undefined) {
+  if (!run) return null
+  return (
+    run.provider_snapshot?.hash ??
+    stringValue(run.result?.provider_snapshot_hash)
+  )
+}
+
+export function runLockedProviderData(run: {
+  provider_snapshot?: { locked?: boolean | null } | null
+  result?: Record<string, unknown> | null
+} | null | undefined) {
+  if (!run) return undefined
+  if (typeof run.provider_snapshot?.locked === "boolean") {
+    return run.provider_snapshot.locked
+  }
+  const value = run.result?.locked_provider_data
+  return typeof value === "boolean" ? value : undefined
+}
+
+export function runResultRecord(
+  run: { result?: Record<string, unknown> | null } | null | undefined,
+  key: string,
+) {
+  return objectRecord(run?.result?.[key])
+}
+
+export function runResultString(
+  run: { result?: Record<string, unknown> | null } | null | undefined,
+  key: string,
+) {
+  return stringValue(run?.result?.[key])
+}
+
+export function runCount(
+  run:
+    | AnalysisRunPublic
+    | AnalysisRunSummaryPublic
+    | null
+    | undefined,
+  key:
+    | "created_findings"
+    | "updated_findings"
+    | "ignored_lines"
+    | "rows_read"
+    | "occurrence_count"
+    | "finding_count"
+    | "kev_hits"
+    | "suppressed_by_vex"
+    | "attack_mapped_cves",
+) {
+  if (!run) return 0
+  const direct = (run as Partial<Record<typeof key, unknown>>)[key]
+  if (typeof direct === "number") return direct
+  const countValue = "counts" in run ? run.counts?.[key] : undefined
+  if (typeof countValue === "number") return countValue
+  const resultValue = run.result?.[key]
+  return typeof resultValue === "number" ? resultValue : 0
 }
 
 export function metadataRows(value: unknown) {
@@ -114,32 +210,40 @@ export function failedRunCause(
   const typedMessage =
     run?.error_message ??
     failureMessage(
-      summary?.analysis_error,
-      summary?.asset_context_error,
-      summary?.vex_error,
-      summary?.background_error,
-      summary?.workflow_error?.analysis_error,
-      summary?.workflow_error?.asset_context_error,
-      summary?.workflow_error?.vex_error,
-      summary?.workflow_error?.background_error,
-      run?.analysis_error,
-      run?.asset_context_error,
-      run?.vex_error,
-      run?.background_error,
-      run?.workflow_error?.analysis_error,
-      run?.workflow_error?.asset_context_error,
-      run?.workflow_error?.vex_error,
-      run?.workflow_error?.background_error,
+      summary?.diagnostics,
+      run?.diagnostics,
+      summary?.workflow?.diagnostics,
+      run?.workflow?.diagnostics,
+      summary?.workflow?.error_details,
+      run?.workflow?.error_details,
     )
   if (typedMessage) return typedMessage
   return "No failure detail available."
 }
 
-function failureMessage(
-  ...failures: ({ message?: string | null } | null | undefined)[]
-) {
+function failureMessage(...failures: unknown[]) {
   for (const failure of failures) {
-    if (failure?.message?.trim()) return failure.message
+    const message = diagnosticMessage(failure)
+    if (message) return message
+  }
+  return null
+}
+
+function diagnosticMessage(value: unknown): string | null {
+  const record = objectRecord(value)
+  const directMessage = stringValue(record.message)?.trim()
+  if (directMessage) return directMessage
+
+  const analysisError = objectRecord(record.analysis_error)
+  const analysisMessage = stringValue(analysisError.message)?.trim()
+  if (analysisMessage) return analysisMessage
+
+  const parseErrors = Array.isArray(record.parse_errors)
+    ? record.parse_errors
+    : []
+  for (const parseError of parseErrors) {
+    const parseMessage = stringValue(objectRecord(parseError).message)?.trim()
+    if (parseMessage) return parseMessage
   }
   return null
 }

@@ -356,7 +356,7 @@ def create_analysis_run(
         input_type=input_type,
         filename=filename,
         status=status or app_models.AnalysisRunStatus.COMPLETED,
-        summary_json={"parsed": 2, "findings": 2},
+        result_json={"parsed": 2, "findings": 2},
     )
 
 

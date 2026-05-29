@@ -11,18 +11,9 @@ from app.core.local_actor import LocalWorkbenchActor
 from app.models import AnalysisRun, AnalysisRunStatus
 from app.repositories import RunRepository
 from app.services.import_errors import ImportServiceError
-from app.services.import_execution_summary import (
-    _job_payload,
-    _job_status_entry,
-    _record_import_audit,
-)
+from app.services.import_execution_summary import _record_import_audit
 from app.services.import_uploads import (
     sanitize_parser_error_message as _sanitize_parser_error_message,
-)
-from app.services.run_workflow_metadata import (
-    merge_error_payload,
-    merge_summary_payload,
-    workflow_summary_payload,
 )
 
 
@@ -47,38 +38,12 @@ def raise_analysis_failure(
         "stage": "enrich_score_explain",
         "error_type": exc.__class__.__name__,
     }
-    failed_history = [*job_history, _job_status_entry("failed")]
     failed_run = run_repo.finish_analysis_run(
         run.id,
         status=AnalysisRunStatus.FAILED,
         error_message=analysis_error_message,
-        error_json=merge_error_payload(
-            analysis_error=analysis_error,
-            created_findings=0,
-            updated_findings=0,
-            ignored_lines=ignored_lines,
-            import_job=_job_payload(
-                job_id=job_id,
-                status="failed",
-                status_history=failed_history,
-                execution_mode=execution_mode,
-            ),
-        ),
-        summary_json=merge_summary_payload(
-            workflow_summary_payload(run),
-            import_job=_job_payload(
-                job_id=job_id,
-                status="failed",
-                status_history=failed_history,
-                execution_mode=execution_mode,
-            ),
-            analysis_error=analysis_error,
-            parse_errors=[],
-            created_findings=0,
-            updated_findings=0,
-            ignored_lines=ignored_lines,
-        ),
     )
+    _ = job_id, job_history, analysis_error, execution_mode
     _record_import_audit(
         session,
         local_actor=local_actor,

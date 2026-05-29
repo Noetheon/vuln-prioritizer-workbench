@@ -208,7 +208,7 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.frontend-scope.outputs.run-frontend == 'true'
-        run: npm --prefix frontend --workspaces=false --engine-strict=true exec -- playwright install --with-deps chromium firefox webkit
+        run: scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true exec -- playwright install --with-deps chromium firefox webkit
 
       - name: Run VPW design audit screenshots
         if: steps.frontend-scope.outputs.run-frontend == 'true'
@@ -216,7 +216,7 @@ jobs:
 
       - name: Run full frontend Playwright suite
         if: steps.frontend-scope.outputs.run-frontend == 'true'
-        run: npm --prefix frontend --workspaces=false --engine-strict=true run test
+        run: scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test
 
       - name: Upload frontend Playwright failure evidence
         if: failure()

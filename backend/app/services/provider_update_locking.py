@@ -13,7 +13,10 @@ from app.services.provider_update_constants import (
     PROVIDER_UPDATE_LOCK_FILE,
     PROVIDER_UPDATE_LOCK_STALE_SECONDS,
 )
-from app.services.provider_update_errors import ProviderUpdateConflict
+from app.services.provider_update_errors import (
+    ProviderUpdateConflict,
+    ProviderUpdateValidationError,
+)
 from vuln_prioritizer.utils import iso_utc_now
 
 
@@ -44,7 +47,10 @@ def _provider_update_lock(snapshot_root: Path) -> Iterator[Path]:
 
 
 def _reject_active_provider_update_lock(snapshot_root: Path) -> None:
-    snapshot_root.mkdir(parents=True, exist_ok=True)
+    try:
+        snapshot_root.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise ProviderUpdateValidationError("Provider snapshot directory is not writable.") from exc
     lock_path = snapshot_root / PROVIDER_UPDATE_LOCK_FILE
     if not lock_path.exists():
         return

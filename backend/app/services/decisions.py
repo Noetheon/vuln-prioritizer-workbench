@@ -17,7 +17,6 @@ from app.models import (
     ProjectCvssOnlyComparisonPublic,
     ProjectDecisionSummaryPublic,
 )
-from app.services.run_workflow_metadata import workflow_summary_payload
 from vuln_prioritizer.models import PrioritizedFinding
 from vuln_prioritizer.services.baseline_comparison import (
     build_cvss_baseline_comparison_payload,
@@ -77,7 +76,7 @@ def build_project_summary_payload(
 ) -> ProjectDecisionSummaryPublic:
     """Build a dashboard summary from persisted findings and latest run metadata."""
     latest_run = runs[0] if runs else None
-    latest_run_summary = workflow_summary_payload(latest_run) if latest_run else {}
+    latest_run_summary: dict[str, Any] = {}
     return ProjectDecisionSummaryPublic(
         project_id=project_id,
         finding_count=len(findings),
@@ -103,7 +102,7 @@ def build_project_summary_payload_from_counts(
     latest_run: AnalysisRun | None,
 ) -> ProjectDecisionSummaryPublic:
     """Build a dashboard summary from pre-aggregated database counts."""
-    latest_run_summary = workflow_summary_payload(latest_run) if latest_run else {}
+    latest_run_summary: dict[str, Any] = {}
     return ProjectDecisionSummaryPublic(
         project_id=project_id,
         finding_count=int(summary_counts.get("finding_count", 0)),

@@ -15,7 +15,6 @@ const accessibleProviderStatus: ProviderStatusPublic = {
   cache_dir: "/var/tmp/vpw/cache",
   last_sync: "2025-04-30T10:00:00Z",
   latest_update_job: {
-    execution_mode: "background",
     finished_at: "2025-04-30T10:01:00Z",
     id: "provider-job-accessibility",
     requested_sources: ["nvd", "epss", "kev"],

@@ -18,12 +18,12 @@ def _empty_priority_counts() -> dict[str, int]:
 
 
 class _WorkflowContractModel(BaseModel):
-    """Base model that preserves older compatibility keys while typing known ones."""
+    """Base model for typed workflow v2 result and diagnostic payloads."""
 
     model_config = ConfigDict(extra="allow")
 
     def to_legacy_json(self) -> dict[str, Any]:
-        """Return the JSON shape stored in legacy ``summary_json``/``error_json`` columns."""
+        """Return the compact JSON payload stored by current workflow handlers."""
         return self.model_dump(mode="json", exclude_none=True)
 
 
@@ -193,17 +193,17 @@ def workflow_error_from_legacy(value: Mapping[str, Any] | None) -> RunWorkflowEr
 
 
 def workflow_public_fields(
-    summary_json: Mapping[str, Any] | None,
-    error_json: Mapping[str, Any] | None = None,
+    result_json: Mapping[str, Any] | None,
+    diagnostics_json: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return typed public fields derived from legacy workflow JSON columns."""
-    summary = workflow_summary_from_legacy(summary_json)
-    error = workflow_error_from_legacy(error_json)
+    """Return typed public fields derived from workflow v2 result and diagnostics."""
+    summary = workflow_summary_from_legacy(result_json)
+    error = workflow_error_from_legacy(diagnostics_json)
     import_job = summary.import_job or error.import_job
     return {
         "workflow_schema_version": summary.schema_version,
         "workflow_error_schema_version": (
-            error.schema_version if _mapping_payload(error_json) else None
+            error.schema_version if _mapping_payload(diagnostics_json) else None
         ),
         "input_upload": summary.input_upload,
         "asset_context_upload": summary.asset_context_upload,
@@ -234,7 +234,7 @@ def workflow_public_fields(
         "asset_context_error": summary.asset_context_error or error.asset_context_error,
         "vex_error": summary.vex_error or error.vex_error,
         "background_error": summary.background_error or error.background_error,
-        "workflow_error": error if _mapping_payload(error_json) else None,
+        "workflow_error": error if _mapping_payload(diagnostics_json) else None,
     }
 
 

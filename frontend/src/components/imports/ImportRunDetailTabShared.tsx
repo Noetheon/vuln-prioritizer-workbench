@@ -5,6 +5,7 @@ import {
   formatDateTime,
   formatDisplayType,
   objectRecord,
+  runCount,
   runFileLabel,
   type ImportsWorkbenchProps,
 } from "./imports-workbench-model"
@@ -63,8 +64,8 @@ export function booleanFromRecord(source: unknown, key: string) {
 }
 
 export function timelineDetail(item: string, summary: ImportRunSummary) {
-  const created = summary.created_findings ?? 0
-  const updated = summary.updated_findings ?? 0
+  const created = runCount(summary, "created_findings")
+  const updated = runCount(summary, "updated_findings")
   if (item === "File uploaded") return runFileLabel(summary)
   if (item === "Data parsed") return `${candidateFindings(summary)} candidate findings`
   if (item === "Provider data applied") {
@@ -86,18 +87,27 @@ export function timelineDetail(item: string, summary: ImportRunSummary) {
 export function timelineTime(item: string, summary: ImportRunSummary) {
   if (item === "Import completed") return formatDateTime(summary.finished_at)
   return item === "Findings created or updated"
-    ? `${summary.created_findings ?? 0} created`
+    ? `${runCount(summary, "created_findings")} created`
     : formatDateTime(summary.started_at)
 }
 
-export function numberFromSummary(summary: ImportRunSummary, key: string) {
-  const value = objectRecord(summary)[key]
-  return typeof value === "number" ? value : "Not recorded"
+export function numberFromSummary(
+  summary: ImportRunSummary,
+  key:
+    | "created_findings"
+    | "updated_findings"
+    | "ignored_lines"
+    | "rows_read"
+    | "occurrence_count"
+    | "finding_count"
+    | "kev_hits",
+) {
+  return runCount(summary, key)
 }
 
 export function candidateFindings(summary: ImportRunSummary) {
   if (typeof summary.finding_count === "number") return summary.finding_count
-  return (summary.created_findings ?? 0) + (summary.updated_findings ?? 0)
+  return runCount(summary, "created_findings") + runCount(summary, "updated_findings")
 }
 
 export function arrayFromRecord(source: Record<string, unknown>, key: string) {

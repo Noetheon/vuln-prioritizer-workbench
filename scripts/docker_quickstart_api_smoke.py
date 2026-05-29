@@ -6,6 +6,7 @@ import json
 import mimetypes
 import os
 import re
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -18,6 +19,13 @@ BASE_URL = os.environ.get("DOCKER_QUICKSTART_API_BASE_URL", "http://127.0.0.1:80
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_CVES = REPO_ROOT / "data" / "sample_cves.txt"
 REPORT_FORMATS = ("markdown", "html", "json", "csv", "sarif", "zip")
+IMPORT_SUCCESS_STATUSES = {"completed", "succeeded"}
+IMPORT_FAILURE_STATUSES = {"failed", "cancelled"}
+WORKFLOW_FAILURE_STATUSES = {"failed", "cancelled"}
+WORKFLOW_SUCCESS_STATUSES = {"succeeded", "completed_with_errors"}
+IMPORT_POLL_SECONDS = int(os.environ.get("DOCKER_QUICKSTART_IMPORT_TIMEOUT", "60"))
+REPORT_POLL_SECONDS = int(os.environ.get("DOCKER_QUICKSTART_REPORT_TIMEOUT", "60"))
+PROVIDER_POLL_SECONDS = int(os.environ.get("DOCKER_QUICKSTART_PROVIDER_TIMEOUT", "60"))
 PRIVATE_PATH_PATTERN = re.compile(
     r"(/Users/|/private/|/tmp/|/app/(?:template|workbench)-|[A-Za-z]:\\\\)",
     re.IGNORECASE,
@@ -47,9 +55,10 @@ def main() -> None:
         raise RuntimeError(f"Database readiness failed: {workbench_status!r}")
     if workbench_status.get("schema_status") != "ready":
         raise RuntimeError(f"Schema readiness failed: {workbench_status!r}")
-    if summary.get("locked_provider_data") is not True:
+    provider_snapshot = _provider_snapshot_ref(summary)
+    if provider_snapshot.get("locked") is not True:
         raise RuntimeError("Demo import did not use locked provider data.")
-    provider_snapshot_ref = str(summary.get("provider_snapshot_file", ""))
+    provider_snapshot_ref = str(provider_snapshot.get("file", ""))
     provider_snapshot_ref_normalized = provider_snapshot_ref.replace("\\", "/")
     if provider_snapshot_ref_normalized.startswith("/") or ":/" in provider_snapshot_ref_normalized:
         raise RuntimeError(
@@ -60,7 +69,7 @@ def main() -> None:
             "Demo import did not use the Compose-mounted provider snapshot: "
             f"{provider_snapshot_ref!r}"
         )
-    if provider_job.get("status") not in {"succeeded", "completed"}:
+    if provider_job.get("status") not in WORKFLOW_SUCCESS_STATUSES:
         raise RuntimeError(f"Provider update job did not complete: {provider_job!r}")
     if provider_status.get("latest_update_job", {}).get("id") != provider_job.get("id"):
         raise RuntimeError("Provider status did not surface the latest update job.")
@@ -74,7 +83,7 @@ def main() -> None:
         "Workbench demo import passed: "
         f"project_id={project_id} run_id={run['id']} findings={len(findings)} "
         f"reports={','.join(reports)} "
-        f"locked_provider_data={summary['locked_provider_data']} "
+        f"locked_provider_data={provider_snapshot['locked']} "
         f"provider_job_id={provider_job['id']}"
     )
 
@@ -118,7 +127,29 @@ def _import_demo(project_id: str) -> dict[str, object]:
     )
     _assert_no_private_paths(response)
     _assert_no_raw_workflow_fields(response)
-    return response
+    if response.get("status") in IMPORT_SUCCESS_STATUSES:
+        return response
+    return _wait_for_import_completion(response)
+
+
+def _wait_for_import_completion(initial_response: dict[str, object]) -> dict[str, object]:
+    run_id = str(initial_response.get("id") or "")
+    if not run_id:
+        raise RuntimeError(f"Import response did not include a run id: {initial_response!r}")
+
+    deadline = time.monotonic() + IMPORT_POLL_SECONDS
+    last_response = initial_response
+    while time.monotonic() < deadline:
+        if last_response.get("status") in IMPORT_FAILURE_STATUSES:
+            raise RuntimeError(f"Import failed: {last_response!r}")
+        if last_response.get("status") in IMPORT_SUCCESS_STATUSES:
+            return last_response
+        time.sleep(1)
+        last_response = _request(f"{BASE_URL}/runs/{run_id}")
+        _assert_no_private_paths(last_response)
+        _assert_no_raw_workflow_fields(last_response)
+
+    raise RuntimeError(f"Import did not complete within {IMPORT_POLL_SECONDS}s: {last_response!r}")
 
 
 def _get_run_summary(run_id: str) -> dict[str, object]:
@@ -141,14 +172,52 @@ def _get_findings(project_id: str) -> list[dict[str, object]]:
 def _create_reports(run_id: str) -> dict[str, dict[str, object]]:
     reports: dict[str, dict[str, object]] = {}
     for report_format in REPORT_FORMATS:
-        response = _request(
-            f"{BASE_URL}/runs/{run_id}/reports",
+        workflow = _request(
+            f"{BASE_URL}/runs/{run_id}/report-jobs",
             data=json.dumps({"format": report_format}).encode(),
             headers={"Content-Type": "application/json"},
         )
-        _assert_no_private_paths(response)
-        reports[report_format] = response
+        _assert_no_private_paths(workflow)
+        reports[report_format] = _wait_for_report(run_id, workflow)
     return reports
+
+
+def _wait_for_report(run_id: str, workflow: dict[str, object]) -> dict[str, object]:
+    workflow_id = str(workflow.get("id") or "")
+    if not workflow_id:
+        raise RuntimeError(f"Report job response did not include a workflow id: {workflow!r}")
+
+    deadline = time.monotonic() + REPORT_POLL_SECONDS
+    last_workflow = workflow
+    while time.monotonic() < deadline:
+        report = _report_for_workflow(run_id, workflow_id)
+        if report is not None:
+            return report
+        if last_workflow.get("status") in WORKFLOW_FAILURE_STATUSES:
+            raise RuntimeError(f"Report workflow failed: {last_workflow!r}")
+        time.sleep(1)
+        last_workflow = _request(f"{BASE_URL}/workflows/{workflow_id}")
+        _assert_no_private_paths(last_workflow)
+
+    raise RuntimeError(
+        f"Report workflow {workflow_id} did not produce an artifact within "
+        f"{REPORT_POLL_SECONDS}s: {last_workflow!r}"
+    )
+
+
+def _report_for_workflow(run_id: str, workflow_id: str) -> dict[str, object] | None:
+    response = _request(f"{BASE_URL}/runs/{run_id}/reports")
+    _assert_no_private_paths(response)
+    reports = response.get("data")
+    if not isinstance(reports, list):
+        raise RuntimeError(f"Reports API did not return a data list: {response!r}")
+    for report in reports:
+        if not isinstance(report, dict):
+            continue
+        report_workflow = report.get("workflow")
+        if isinstance(report_workflow, dict) and report_workflow.get("id") == workflow_id:
+            return report
+    return None
 
 
 def _download_report(*, report_format: str, report: dict[str, object]) -> None:
@@ -190,15 +259,55 @@ def _trigger_provider_update() -> dict[str, object]:
             "max_cves": 1,
         }
     ).encode()
-    return _request(
+    job = _request(
         f"{BASE_URL}/providers/update-jobs",
         data=payload,
         headers={"Content-Type": "application/json"},
+    )
+    _assert_no_private_paths(job)
+    if job.get("status") in WORKFLOW_SUCCESS_STATUSES:
+        return job
+    return _wait_for_provider_update(str(job.get("id") or ""))
+
+
+def _wait_for_provider_update(job_id: str) -> dict[str, object]:
+    if not job_id:
+        raise RuntimeError("Provider update response did not include a job id.")
+    deadline = time.monotonic() + PROVIDER_POLL_SECONDS
+    last_job: dict[str, object] | None = None
+    while time.monotonic() < deadline:
+        status = _get_provider_status()
+        latest = status.get("latest_update_job")
+        if isinstance(latest, dict) and latest.get("id") == job_id:
+            _assert_no_private_paths(latest)
+            last_job = latest
+            if latest.get("status") in WORKFLOW_SUCCESS_STATUSES:
+                return latest
+            if latest.get("status") in WORKFLOW_FAILURE_STATUSES:
+                raise RuntimeError(f"Provider update failed: {latest!r}")
+        time.sleep(1)
+
+    raise RuntimeError(
+        f"Provider update {job_id} did not complete within {PROVIDER_POLL_SECONDS}s: {last_job!r}"
     )
 
 
 def _get_provider_status() -> dict[str, object]:
     return _request(f"{BASE_URL}/providers/status")
+
+
+def _provider_snapshot_ref(summary: dict[str, object]) -> dict[str, object]:
+    provider_snapshot = summary.get("provider_snapshot")
+    if isinstance(provider_snapshot, dict):
+        return provider_snapshot
+    result = summary.get("result")
+    if isinstance(result, dict):
+        return {
+            "locked": result.get("locked_provider_data"),
+            "file": result.get("provider_snapshot_file"),
+            "hash": result.get("provider_snapshot_hash"),
+        }
+    return {}
 
 
 def _request(

@@ -31,6 +31,13 @@ def _internal_payload(payload: dict[str, Any] | None) -> dict[str, Any]:
     return dict(payload)
 
 
+def _public_artifacts(payload: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    redacted, _paths = redact_value(payload or [])
+    if not isinstance(redacted, list):
+        return []
+    return [dict(item) for item in redacted if isinstance(item, dict)]
+
+
 def _workflow_status(value: WorkflowRunStatus | str) -> WorkflowRunStatus:
     if isinstance(value, WorkflowRunStatus):
         return value
@@ -77,8 +84,11 @@ class WorkflowRepository:
         metadata_json: dict[str, Any] | None = None,
         payload_json: dict[str, Any] | None = None,
         max_retries: int = 0,
+        max_attempts: int | None = None,
     ) -> WorkflowRun:
         """Create a durable workflow run and its initial event."""
+        normalized_max_retries = max(0, max_retries)
+        normalized_max_attempts = max(1, max_attempts or normalized_max_retries + 1)
         workflow = WorkflowRun(
             kind=_workflow_kind(kind),
             status=_workflow_status(status),
@@ -97,7 +107,8 @@ class WorkflowRepository:
             progress_total=progress_total,
             metadata_json=_public_payload(metadata_json),
             payload_json=_internal_payload(payload_json),
-            max_retries=max_retries,
+            max_retries=normalized_max_retries,
+            max_attempts=normalized_max_attempts,
         )
         self.session.add(workflow)
         self.session.flush()
@@ -127,6 +138,7 @@ class WorkflowRepository:
         metadata_json: dict[str, Any] | None = None,
         payload_json: dict[str, Any] | None = None,
         max_retries: int | None = None,
+        max_attempts: int | None = None,
         queue_name: str | None = None,
     ) -> WorkflowRun:
         """Return an existing workflow for an analysis run, or create one."""
@@ -155,7 +167,15 @@ class WorkflowRepository:
                 existing.payload_json = _internal_payload(payload_json)
                 changed = True
             if max_retries is not None and existing.max_retries != max_retries:
-                existing.max_retries = max_retries
+                existing.max_retries = max(0, max_retries)
+                existing.max_attempts = max(
+                    existing.max_attempts,
+                    max_attempts or existing.max_retries + 1,
+                    1,
+                )
+                changed = True
+            elif max_attempts is not None and existing.max_attempts != max_attempts:
+                existing.max_attempts = max(1, max_attempts)
                 changed = True
             if queue_name is not None and existing.queue_name != queue_name:
                 existing.queue_name = queue_name
@@ -177,6 +197,7 @@ class WorkflowRepository:
             metadata_json=metadata_json,
             payload_json=payload_json,
             max_retries=max_retries or 0,
+            max_attempts=max_attempts,
             queue_name=queue_name or "default",
         )
 
@@ -257,11 +278,21 @@ class WorkflowRepository:
     ) -> WorkflowEvent:
         """Attach a generated artifact to a workflow."""
         workflow = self.require_workflow(workflow_id)
+        artifact_ref: dict[str, Any] = {
+            "kind": artifact_kind,
+            "id": artifact_id,
+        }
         if report_id is not None:
+            artifact_ref["report_id"] = str(report_id)
             workflow.report_id = report_id
-            workflow.updated_at = get_datetime_utc()
-            self.session.add(workflow)
-            self.session.flush()
+        if metadata_json:
+            artifact_ref["metadata"] = _public_payload(metadata_json)
+        workflow.artifact_refs_json = _public_artifacts(
+            [*list(workflow.artifact_refs_json or []), artifact_ref]
+        )
+        workflow.updated_at = get_datetime_utc()
+        self.session.add(workflow)
+        self.session.flush()
         return self.record_event(
             workflow.id,
             event_type=WorkflowEventType.ARTIFACT,
@@ -284,6 +315,10 @@ class WorkflowRepository:
         progress_total: int | None = None,
         error_message: str | None = None,
         error_json: dict[str, Any] | None = None,
+        diagnostics_json: dict[str, Any] | None = None,
+        result_json: dict[str, Any] | None = None,
+        artifact_refs_json: list[dict[str, Any]] | None = None,
+        terminal_code: str | None = None,
         metadata_json: dict[str, Any] | None = None,
     ) -> WorkflowRun:
         """Mark a workflow terminal and append the terminal event."""
@@ -308,6 +343,16 @@ class WorkflowRepository:
             workflow.error_message = error_message
         if error_json is not None:
             workflow.error_details_json = _public_payload(error_json)
+        if diagnostics_json is not None:
+            workflow.diagnostics_json = _public_payload(diagnostics_json)
+        elif error_json is not None and terminal_status == WorkflowRunStatus.FAILED:
+            workflow.diagnostics_json = _public_payload(error_json)
+        if result_json is not None:
+            workflow.result_json = _public_payload(result_json)
+        if artifact_refs_json is not None:
+            workflow.artifact_refs_json = _public_artifacts(artifact_refs_json)
+        if terminal_code is not None:
+            workflow.terminal_code = terminal_code
         if metadata_json:
             workflow.metadata_json = _public_payload(
                 {**dict(workflow.metadata_json or {}), **metadata_json}
@@ -365,6 +410,7 @@ class WorkflowRepository:
         payload_json: dict[str, Any],
         queue_name: str | None = None,
         max_retries: int | None = None,
+        max_attempts: int | None = None,
         priority: int | None = None,
     ) -> WorkflowRun:
         """Update private worker payload and queue metadata for a workflow."""
@@ -373,9 +419,42 @@ class WorkflowRepository:
         if queue_name is not None:
             workflow.queue_name = queue_name
         if max_retries is not None:
-            workflow.max_retries = max_retries
+            workflow.max_retries = max(0, max_retries)
+            workflow.max_attempts = max(
+                workflow.max_attempts,
+                max_attempts or workflow.max_retries + 1,
+                1,
+            )
+        elif max_attempts is not None:
+            workflow.max_attempts = max(1, max_attempts)
         if priority is not None:
             workflow.priority = priority
+        workflow.updated_at = get_datetime_utc()
+        self.session.add(workflow)
+        self.session.flush()
+        return workflow
+
+    def set_workflow_output(
+        self,
+        workflow_id: uuid.UUID,
+        *,
+        result_json: dict[str, Any] | None = None,
+        diagnostics_json: dict[str, Any] | None = None,
+        artifact_refs_json: list[dict[str, Any]] | None = None,
+        metadata_json: dict[str, Any] | None = None,
+    ) -> WorkflowRun:
+        """Update v2 workflow output fields without changing lifecycle status."""
+        workflow = self.require_workflow(workflow_id)
+        if result_json is not None:
+            workflow.result_json = _public_payload(result_json)
+        if diagnostics_json is not None:
+            workflow.diagnostics_json = _public_payload(diagnostics_json)
+        if artifact_refs_json is not None:
+            workflow.artifact_refs_json = _public_artifacts(artifact_refs_json)
+        if metadata_json:
+            workflow.metadata_json = _public_payload(
+                {**dict(workflow.metadata_json or {}), **metadata_json}
+            )
         workflow.updated_at = get_datetime_utc()
         self.session.add(workflow)
         self.session.flush()
@@ -416,6 +495,7 @@ class WorkflowRepository:
         lease_expires_at = ready_at + timedelta(seconds=max(1, lease_seconds))
         for workflow in workflows:
             workflow.status = WorkflowRunStatus.RUNNING
+            workflow.attempt_count += 1
             workflow.locked_by = worker_id
             workflow.locked_at = ready_at
             workflow.lease_expires_at = lease_expires_at
@@ -466,8 +546,10 @@ class WorkflowRepository:
         workflow = self.require_workflow(workflow_id)
         if _is_terminal_status(workflow.status):
             return workflow
+        timestamp = get_datetime_utc()
         workflow.cancellation_requested = True
-        workflow.updated_at = get_datetime_utc()
+        workflow.cancel_requested_at = workflow.cancel_requested_at or timestamp
+        workflow.updated_at = timestamp
         self.session.add(workflow)
         self.session.flush()
         if workflow.status == WorkflowRunStatus.PENDING:
@@ -526,7 +608,7 @@ class WorkflowRepository:
                 message="Workflow cancelled during execution.",
                 metadata_json={"cooperative_cancel": True},
             )
-        if workflow.retry_count >= workflow.max_retries:
+        if workflow.attempt_count >= workflow.max_attempts:
             return self.finish_workflow(
                 workflow.id,
                 status=WorkflowRunStatus.FAILED,
@@ -534,13 +616,16 @@ class WorkflowRepository:
                 message=error_message,
                 error_message=error_message,
                 error_json=error_json,
+                diagnostics_json=error_json,
+                terminal_code="max_attempts_exhausted",
             )
         timestamp = now or get_datetime_utc()
-        workflow.retry_count += 1
+        workflow.retry_count = max(workflow.retry_count + 1, workflow.attempt_count)
         workflow.status = WorkflowRunStatus.PENDING
         workflow.current_stage = "queued"
         workflow.error_message = error_message
         workflow.error_details_json = _public_payload(error_json)
+        workflow.diagnostics_json = _public_payload(error_json)
         workflow.next_retry_at = timestamp + timedelta(seconds=max(0, delay_seconds))
         workflow.updated_at = timestamp
         workflow.locked_by = None
@@ -557,7 +642,7 @@ class WorkflowRepository:
             stage=workflow.current_stage,
             message=(
                 f"Workflow attempt failed; retry {workflow.retry_count}/"
-                f"{workflow.max_retries} scheduled."
+                f"{max(workflow.max_attempts - 1, 0)} scheduled."
             ),
             metadata_json={
                 "error": error_message,
@@ -623,6 +708,7 @@ class WorkflowRepository:
             },
             payload_json=dict(workflow.payload_json or {}),
             max_retries=workflow.max_retries,
+            max_attempts=workflow.max_attempts,
         )
 
     def require_workflow(self, workflow_id: uuid.UUID) -> WorkflowRun:

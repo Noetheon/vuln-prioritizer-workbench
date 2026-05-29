@@ -36,9 +36,8 @@ async def import_project_upload(
     attack_source: str = Form("none"),
     attack_mapping_file: str | None = Form(None),
     attack_technique_metadata_file: str | None = Form(None),
-    execution_mode: str = Form("request"),
 ) -> AnalysisRunPublic:
-    """Accept one upload request and delegate import execution to the service layer."""
+    """Accept one upload request and queue a worker-first import workflow."""
     require_project(session, project_id)
     settings = workbench_settings(request)
     try:
@@ -54,33 +53,29 @@ async def import_project_upload(
             attack_mapping_file=attack_mapping_file,
             attack_technique_metadata_file=attack_technique_metadata_file,
         )
-        queued = execution_mode in {"background", "worker"}
-        if execution_mode not in {"request", "background", "worker"}:
-            raise HTTPException(status_code=422, detail="Unsupported execution mode.")
         run = await execute_project_import_upload(
             project_id=project_id,
             session=session,
             local_actor=local_actor,
             settings=settings,
             upload=upload,
-            defer_execution=queued,
-            execution_mode="worker" if queued else "request",
+            defer_execution=True,
+            execution_mode="worker",
         )
-        if queued:
-            workflow = WorkflowRepository(session).get_latest_analysis_workflow(
-                analysis_run_id=run.id,
-                kind=WorkflowRunKind.IMPORT,
-            )
-            if workflow is None:
-                raise HTTPException(status_code=500, detail="Import workflow could not be queued.")
-            WorkflowRepository(session).set_workflow_payload(
-                workflow.id,
-                payload_json=_import_queue_payload(upload, run_id=run.id),
-                queue_name="default",
-                max_retries=2,
-            )
-            session.commit()
-            session.refresh(run)
+        workflow = WorkflowRepository(session).get_latest_analysis_workflow(
+            analysis_run_id=run.id,
+            kind=WorkflowRunKind.IMPORT,
+        )
+        if workflow is None:
+            raise HTTPException(status_code=500, detail="Import workflow could not be queued.")
+        WorkflowRepository(session).set_workflow_payload(
+            workflow.id,
+            payload_json=_import_queue_payload(upload, run_id=run.id),
+            queue_name="default",
+            max_retries=2,
+        )
+        session.commit()
+        session.refresh(run)
         return analysis_run_public(
             run,
             workflow=latest_analysis_workflow_public(

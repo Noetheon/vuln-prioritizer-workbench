@@ -12,6 +12,9 @@ from utils.import_contracts import (
     assert_no_sensitive_path_leak as _assert_no_sensitive_path_leak,
 )
 from utils.import_contracts import (
+    completed_run_payload as _completed_run_payload,
+)
+from utils.import_contracts import (
     configure_upload_dir as _configure_upload_dir,
 )
 from utils.workbench_env import (
@@ -19,7 +22,7 @@ from utils.workbench_env import (
     create_project_via_api,
     local_api_headers,
 )
-from utils.workbench_workflow_contracts import persisted_workflow_summary
+from utils.workbench_workflow_contracts import persisted_workflow_error, persisted_workflow_summary
 
 from app import models as app_models
 from app.core.local_actor import configured_local_actor
@@ -150,10 +153,12 @@ def test_background_import_reconciliation_fails_stale_deferred_runs(
         assert run.status == app_models.AnalysisRunStatus.FAILED
         assert run.finished_at is not None
         summary = persisted_workflow_summary(run)
+        error = persisted_workflow_error(run)
         assert summary.import_job is not None
-        assert summary.background_error is not None
         assert summary.import_job.status == "failed"
-        assert summary.background_error.stage == "background_import"
+        assert error is not None
+        assert error.background_error is not None
+        assert error.background_error.stage == "background_import"
 
 
 def test_non_local_synchronous_import_audit_uses_local_actor(
@@ -191,9 +196,9 @@ def test_non_local_synchronous_import_audit_uses_local_actor(
         client.app.state.workbench_engine = old_engine
 
     assert response.status_code == 200, response.text
-    payload = response.json()
+    payload = _completed_run_payload(workbench_api_env, response, headers=headers)
     run_id = uuid.UUID(payload["id"])
-    assert payload["import_job"]["execution_mode"] == "request"
+    assert payload["import_job"]["execution_mode"] == "worker"
 
     with Session(workbench_api_env.engine) as session:
         run = session.get(app_models.AnalysisRun, run_id)
@@ -234,23 +239,16 @@ def test_analysis_failure_persists_failed_run_without_partial_findings(
         files={"file": ("sample.txt", b"CVE-2024-3094\n", "text/plain")},
     )
 
-    assert response.status_code == 422
-    assert response.json()["code"] == "import_analysis_failed"
-    assert response.json()["details"]["analysis_run_id"]
-    detail = response.json()["detail"]
+    assert response.status_code == 200
+    run_payload = _completed_run_payload(workbench_api_env, response, headers=headers)
+    assert run_payload["status"] == "failed"
+    detail = {**run_payload["diagnostics"], "analysis_run_id": run_payload["id"]}
     assert detail["message"] == "Import analysis failed."
     assert detail["analysis_error"]["stage"] == "enrich_score_explain"
     assert "scoring failed" in detail["analysis_error"]["message"]
     assert "uploaded file" in detail["analysis_error"]["message"]
     _assert_no_sensitive_path_leak(detail["analysis_error"], tmp_path, upload_dir)
 
-    run = workbench_api_env.client.get(
-        f"/api/v1/runs/{detail['analysis_run_id']}",
-        headers=headers,
-    )
-    assert run.status_code == 200
-    run_payload = run.json()
-    assert run_payload["status"] == "failed"
     assert run_payload["analysis_error"]["stage"] == "enrich_score_explain"
     assert run_payload["workflow_error"]["analysis_error"]["stage"] == "enrich_score_explain"
     _assert_no_sensitive_path_leak(

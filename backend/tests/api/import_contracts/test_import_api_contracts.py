@@ -7,7 +7,16 @@ from pathlib import Path
 import pytest
 from sqlmodel import Session, select
 from utils.import_contracts import (
+    completed_run_payload as _completed_run_payload,
+)
+from utils.import_contracts import (
+    completed_run_summary as _completed_run_summary,
+)
+from utils.import_contracts import (
     configure_upload_dir as _configure_upload_dir,
+)
+from utils.import_contracts import (
+    public_run_aliases as _public_run_aliases,
 )
 from utils.import_contracts import (
     run_count as _run_count,
@@ -40,7 +49,8 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     )
 
     assert response.status_code == 200, response.text
-    payload = response.json()
+    assert response.json()["workflow"]["status"] == "pending"
+    payload = _completed_run_payload(workbench_api_env, response, headers=headers)
     assert payload["project_id"] == project["id"]
     assert payload["input_type"] == "cve-list"
     assert payload["filename"] == "Team_Scan__prod_.txt"
@@ -78,7 +88,7 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert stored_path == upload_dir / project["id"] / payload["id"] / "Team_Scan__prod_.txt"
     assert stored_path.read_bytes() == content
     assert payload["import_job"]["status"] == "succeeded"
-    assert payload["import_job"]["execution_mode"] == "request"
+    assert payload["import_job"]["execution_mode"] == "worker"
     assert [item["status"] for item in payload["import_job"]["status_history"]] == [
         "pending",
         "running",
@@ -90,11 +100,12 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
         headers=headers,
     )
     assert runs.status_code == 200
+    listed_run = _public_run_aliases(runs.json()["data"][0])
     assert runs.json()["count"] == 1
-    assert runs.json()["data"][0]["id"] == payload["id"]
-    assert runs.json()["data"][0]["status"] == "succeeded"
-    assert runs.json()["data"][0]["workflow_schema_version"] == "run-workflow-summary.v1"
-    assert runs.json()["data"][0]["input_upload"]["sha256"] == expected_sha256
+    assert listed_run["id"] == payload["id"]
+    assert listed_run["status"] == "succeeded"
+    assert listed_run["workflow_schema_version"] == "run-workflow-summary.v1"
+    assert listed_run["input_upload"]["sha256"] == expected_sha256
     with Session(workbench_api_env.engine) as session:
         import_event = session.exec(
             select(app_models.AuditEvent).where(
@@ -127,7 +138,7 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
         headers=headers,
     )
     assert summary.status_code == 200
-    summary_payload = summary.json()
+    summary_payload = _public_run_aliases(summary.json())
     assert summary_payload["id"] == payload["id"]
     assert summary_payload["project_id"] == project["id"]
     assert summary_payload["status"] == "succeeded"
@@ -208,10 +219,7 @@ def test_summary_tracks_ignored_cve_list_lines(
     )
 
     assert response.status_code == 200, response.text
-    run_id = response.json()["id"]
-    summary = workbench_api_env.client.get(f"/api/v1/runs/{run_id}/summary", headers=headers)
-    assert summary.status_code == 200
-    summary_payload = summary.json()
+    summary_payload = _completed_run_summary(workbench_api_env, response, headers=headers)
     assert summary_payload["ignored_lines"] == 2
     assert summary_payload["created_findings"] == 1
     assert summary_payload["updated_findings"] == 0
