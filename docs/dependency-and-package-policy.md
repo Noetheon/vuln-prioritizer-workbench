@@ -121,18 +121,18 @@ npm installs. CI, Docker, local frontend gates, and dependency audit use npm
 against that lockfile:
 
 ```bash
-npm --prefix frontend --workspaces=false --engine-strict=true ci
-npm --prefix frontend --workspaces=false --engine-strict=true audit --audit-level=high
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true ci
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true audit --audit-level=high
 ```
 
-Frontend commands must run on Node 22 with npm 10.9. The repository carries the
-same policy in `.nvmrc`, root `package.json`, `frontend/package.json`, GitHub
-Actions `setup-node`, root `.npmrc`, and the root-owned Make frontend command
-wrapper. Run frontend npm commands from the repository root with
-`npm --prefix frontend --workspaces=false --engine-strict=true` or the
-equivalent Make target so the frontend package's engine policy is enforced
-consistently. The explicit flag is required because npm prefix commands do not
-reliably inherit the root `.npmrc`. Do not add a workspace-local
+Frontend commands must run on Node 22 with npm 10. The repository carries the
+same policy in `.tool-versions`, root `package.json`, `frontend/package.json`,
+GitHub Actions `setup-node`, root `.npmrc`, and the root-owned Make frontend
+command wrapper. Run ad hoc frontend npm commands from the repository root with
+`scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true`
+or the equivalent Make target so the frontend package's engine policy is
+enforced consistently. The explicit flag is required because npm prefix commands
+do not reliably inherit the root `.npmrc`. Do not add a workspace-local
 `frontend/.npmrc`; npm ignores workspace config for workspace script execution
 and emits warning noise instead of improving enforcement.
 Docker frontend builds must use the same explicit engine-strict install and
@@ -192,8 +192,8 @@ Use these commands when dependency or package policy changes:
 ```bash
 make dependency-audit
 make package-check
-npm --prefix frontend --workspaces=false --engine-strict=true ci
-npm --prefix frontend --workspaces=false --engine-strict=true audit --audit-level=high
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true ci
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true audit --audit-level=high
 ```
 
 Evidence must not include secrets, token values, cookies, customer exports,

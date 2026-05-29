@@ -43,7 +43,8 @@ Expected values:
 
 - `pending`: run was created but processing has not started
 - `running`: parser or enrichment work is active
-- `succeeded`: Workbench import route finished successfully and produced persisted run evidence
+- `succeeded`: import workflow completed successfully and produced persisted
+  run evidence
 - `completed`: run finished successfully
 - `completed_with_errors`: run produced usable output but retained recoverable
   errors or degraded provider evidence

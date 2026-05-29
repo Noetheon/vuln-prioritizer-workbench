@@ -19,12 +19,14 @@ make provider-snapshot-validate
 python3 -m pytest -q backend/tests/api/test_workbench_local_runtime_smoke.py backend/tests/api/import_contracts backend/tests/api/report_contracts --no-cov
 make docker-demo-smoke
 make dependency-audit
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
 ```
 
 Open `http://127.0.0.1:5173` and create the project `online-shop-demo`.
 The browser demo uses the active backend in `backend/app` and the generated
-`/api/v1` React client.
+`/api/v1` React client. The `worker` service must stay running because imports,
+provider refreshes, report generation, retry, and cancellation are durable
+Workflow v2 jobs.
 
 The smoke target defaults to backend `18080` and frontend `15174`. If those
 host ports are already occupied, run it with explicit host bindings, for

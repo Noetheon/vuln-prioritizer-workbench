@@ -163,7 +163,8 @@ local and existence-based rather than user-owned.
 
 ## Migration Contract
 
-The Workbench Alembic head under `backend/app/alembic` must create the four core
-Workbench tables and match SQLModel metadata on a fresh SQLite database. Tests
-use a temporary SQLite database and an Alembic `Config` rather than production
-settings.
+The Workbench Alembic head under `backend/app/alembic` is now a squashed v2
+initial migration for local-first development. It must create these four core
+Workbench tables as part of the full active schema and match SQLModel metadata
+on a fresh SQLite database. Tests use a temporary SQLite database and an Alembic
+`Config` rather than production settings.

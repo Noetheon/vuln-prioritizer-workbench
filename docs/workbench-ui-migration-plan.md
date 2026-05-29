@@ -123,10 +123,10 @@ Each batch is complete only when all of these are true:
 - Primary repeated information is table/list/row based; object facts use
   definition rows; rationale uses decision summaries; provenance uses evidence
   rows.
-- `npm --prefix frontend --workspaces=false --engine-strict=true run lint`,
-  `npm --prefix frontend --workspaces=false --engine-strict=true run test:types`,
-  `npm --prefix frontend --workspaces=false --engine-strict=true run build`, and
-  `npm --prefix frontend --workspaces=false --engine-strict=true run test:design-audit` pass for
+- `scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run lint`,
+  `scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test:types`,
+  `scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run build`, and
+  `scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test:design-audit` pass for
   implementation batches.
 
 ## Visual regression guardrails
@@ -427,25 +427,25 @@ Tasks:
 Run these from the repository root after each route migration unless the change is documentation-only.
 
 ```bash
-npm --prefix frontend --workspaces=false --engine-strict=true run lint
-npm --prefix frontend --workspaces=false --engine-strict=true run test:types
-npm --prefix frontend --workspaces=false --engine-strict=true run test:unit
-npm --prefix frontend --workspaces=false --engine-strict=true run test -- tests/ui-smoke.spec.ts --project=chromium
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run lint
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test:types
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test:unit
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test -- tests/ui-smoke.spec.ts --project=chromium
 ```
 
 Run these when the migrated route changes responsive layout, drawers, tabs, shell behavior, or evidence/report rendering:
 
 ```bash
-npm --prefix frontend --workspaces=false --engine-strict=true run test -- tests/responsive-shell.spec.ts --project=mobile-chromium
-npm --prefix frontend --workspaces=false --engine-strict=true run test -- tests/accessibility.spec.ts --project=chromium
-npm --prefix frontend --workspaces=false --engine-strict=true run test -- tests/ui-evidence-screenshots.spec.ts --project=chromium
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test -- tests/responsive-shell.spec.ts --project=mobile-chromium
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test -- tests/accessibility.spec.ts --project=chromium
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test -- tests/ui-evidence-screenshots.spec.ts --project=chromium
 ```
 
 Run these before a larger batch lands:
 
 ```bash
-npm --prefix frontend --workspaces=false --engine-strict=true run build
-npm --prefix frontend --workspaces=false --engine-strict=true run test
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run build
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test
 ```
 
 If a command fails because dependencies are missing, install dependencies using the repository-standard workflow before rerunning. Do not change generated client files to satisfy UI tests.

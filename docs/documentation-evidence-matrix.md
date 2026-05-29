@@ -7,7 +7,7 @@ successfully and still be misleading if it mixes current Workbench behavior,
 historical CLI/template material, archived demo evidence, or live provider
 facts.
 
-Last full documentation hygiene pass recorded from this checkout: 2026-05-25.
+Last full documentation hygiene pass recorded from this checkout: 2026-05-29.
 Scope: Public + Root documentation. That means every MkDocs-published
 `docs/**/*.md` page plus root/community docs, `backend/README.md`,
 `frontend/README.md`, `frontend/DESIGN.md`, `frontend/VPW_PAGE_PATTERNS.md`,
@@ -27,7 +27,23 @@ current docs link to them.
 - Downgrade unproven claims to limitations, historical notes, or evidence gaps.
   Do not convert local demo proof into public/shared deployment certification.
 
-## 2026-05-25 Hygiene Findings
+## 2026-05-29 Hygiene Findings
+
+- Workflow v2 documentation was checked against the active worker-first code
+  path. Quickstarts now include the `worker` service where imports, provider
+  refreshes, report generation, retry, and cancellation are expected to
+  complete.
+- Durable workflow docs describe `workflow_run` and `workflow_event` as the
+  active execution metadata store. Legacy run JSON fields and the removed
+  `/workflow-metadata` route are not active contracts.
+- Frontend command documentation uses the repository wrapper
+  `scripts/frontend-npm.sh` or Make targets so local docs match the pinned
+  Node 22 / npm 10 policy used by CI and Docker.
+- Docs were rechecked after the Workflow v2 migration with
+  `python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov`,
+  `make docs-check`, and the broader `make quality-10-check` gate.
+
+## 2026-05-25 Provider And Format Baseline
 
 - MkDocs navigation covers 83 public pages; no public Markdown page was outside
   navigation except the explicit non-public evidence-contract allowlist.

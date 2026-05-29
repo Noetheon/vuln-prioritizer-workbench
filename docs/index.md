@@ -51,7 +51,7 @@ Local Workbench from a repository checkout:
 
 ```bash
 cp .env.example .env
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
 curl http://127.0.0.1:8000/api/v1/workbench/health
 ```
 
@@ -62,9 +62,10 @@ snapshot source is `data/demo_provider_snapshot.json`. The current local
 Workbench is single-user and does not require a login step. This path works
 without live provider API keys.
 
-The Compose path starts the current FastAPI backend and React frontend. The
-Workbench remains local-first and uses the import-format matrix documented in
-[support_matrix.md](support_matrix.md) for supported inputs.
+The Compose path starts the current FastAPI backend, React frontend, and durable
+workflow worker. The Workbench remains local-first and uses the import-format
+matrix documented in [support_matrix.md](support_matrix.md) for supported
+inputs.
 
 ## Documentation Structure
 

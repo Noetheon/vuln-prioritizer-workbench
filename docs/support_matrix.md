@@ -10,7 +10,7 @@ SQLite state commands are no longer supported product paths.
 | --- | --- | --- |
 | React Workbench | active | Project selection, imports, findings, finding detail, assets, waivers, providers, reports, evidence center, and settings. |
 | FastAPI `/api/v1` | active | Local single-user API used by the Workbench. Routes do not require login, sessions, RBAC, API tokens, or CSRF headers. |
-| Docker Compose | active | Local self-hosted runtime for the backend, frontend, PostgreSQL, uploads, reports, cache, and provider snapshots. |
+| Docker Compose | active | Local self-hosted runtime for the backend, durable workflow worker, frontend, PostgreSQL, uploads, reports, cache, and provider snapshots. |
 | Domain package | active | Parser, provider, scoring, enrichment, ATT&CK, SARIF, Markdown, HTML, and evidence helpers used by the Workbench services. |
 | Legacy CLI entrypoint | removed | No console script, Typer command modules, GitHub composite Action, or CLI smoke contract remains active. |
 
@@ -61,9 +61,11 @@ boundaries, but Workbench uploads must use one of the explicit values below.
 
 - Prefer the Workbench UI for local review and repeated triage.
 - Prefer `POST /api/v1/projects/{project_id}/imports` for automation that needs
-  to feed the local Workbench directly.
+  to feed the local Workbench directly. The response contains the queued run and
+  embedded workflow; the durable worker performs parsing and persistence.
 - Prefer `POST /api/v1/runs/{run_id}/report-jobs` for automation that needs
-  report artifacts after a completed run.
+  report artifacts after a completed run. Poll or stream the returned workflow
+  until it reaches a terminal state before downloading artifacts.
 - Keep input files local and explicit. The Workbench prioritizes already-known
   CVEs from supplied evidence; it does not scan systems.
 - This matrix was rechecked against backend and frontend format definitions on

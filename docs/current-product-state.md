@@ -75,12 +75,14 @@ claims. A passing docs build is necessary, but it is not sufficient proof that a
 provider, release, deployment, or archived-evidence statement is current.
 
 The last full documentation hygiene pass recorded in this checkout is
-2026-05-25. It covered the Public + Root documentation scope, verified MkDocs
-navigation coverage, checked import and report format claims against code, and
-rechecked provider/version wording against NVD, FIRST EPSS, CISA KEV, the
-official KEV mirror, and MITRE ATT&CK primary sources. Treat that as a
-documentation baseline, not as live-provider uptime proof or public deployment
-certification.
+2026-05-29. It covered the Public + Root documentation scope, verified MkDocs
+navigation coverage, checked the Workflow v2 worker-first quickstarts and
+contracts against code, rechecked import/report format claims against active
+backend and frontend definitions, and ran the docs hygiene/build gates. The
+provider/version wording baseline from 2026-05-25 remains a source-fact
+baseline unless those external primary-source claims are revalidated again.
+Treat both as documentation baselines, not as live-provider uptime proof or
+public deployment certification.
 
 The current package maturity classifier is `Development Status :: 4 - Beta`.
 That means the self-hosted Workbench is release-gated for local-first

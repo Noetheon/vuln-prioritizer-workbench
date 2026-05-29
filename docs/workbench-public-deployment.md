@@ -184,8 +184,8 @@ private or edge-allowlisted deployments must keep the Traefik app/API
 allowlists active; do not replace them with CORS, Host validation, or API docs
 disablement, because none of those controls authenticate an operator.
 
-The current migration head drops the inactive API-token and auth-session
-tables. Treat any future reintroduction of
+The v2 initial Workbench schema does not create inactive API-token or
+auth-session tables. Treat any future reintroduction of
 automation tokens, browser login, or shared-user access as a new reviewed
 security design.
 

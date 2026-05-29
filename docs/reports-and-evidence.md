@@ -15,9 +15,10 @@ The current React Evidence Center lives in
 - checksum and manifest metadata
 - evidence bundle status and verification actions
 
-Report generation, download, and verification are still handled through the
-Workbench backend API. The frontend does not invent report content or bypass
-checksum validation.
+Report generation is queued through Workflow v2 and completed by the durable
+worker. Download and verification stay behind the Workbench backend API. The
+frontend does not invent report content, treat a queued report as finished, or
+bypass checksum validation.
 
 ## Report Formats
 

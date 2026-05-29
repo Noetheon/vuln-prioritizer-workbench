@@ -16,12 +16,15 @@ checkout and already have CVE evidence or scanner exports.
 
 ```bash
 cp .env.example .env
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
 ```
 
 Open `http://127.0.0.1:5173`, create or select a project, and upload your
 evidence through Imports. Choose the input type explicitly so parsing does not
 depend on filename detection.
+Keep the `worker` service running while using Imports, Providers, and Reports.
+Those actions enqueue durable Workflow v2 jobs and do not complete inside the
+initial HTTP request.
 
 Use the [support matrix](support_matrix.md) before wiring imports or reports
 into local automation. It lists supported input formats, output contracts, and
@@ -35,7 +38,7 @@ checkout without customer data or live-provider-only behavior.
 ```bash
 make install
 make provider-snapshot-validate
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
 ```
 
 Then open `http://127.0.0.1:5173`, create a local project, and follow the
@@ -122,10 +125,10 @@ or customer scanner exports in public docs.
 
 - The Workbench is local-first and single-node by default.
 - Local developer runs can use SQLite by default; the Compose quickstart uses a
-  private single-node Postgres service.
+  private single-node Postgres service plus one durable workflow worker.
 - Public internet exposure, SSO, multi-tenancy, managed backups, retention
-  policy, background workers, and organization-wide ticket-sync governance are
-  outside the current local-first threat model.
+  policy, multi-node worker fleets, and organization-wide ticket-sync
+  governance are outside the current local-first threat model.
 - Evidence bundles provide integrity metadata, not encryption.
 - Live provider availability can vary; use locked provider snapshots for
   reproducible local demos.

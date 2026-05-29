@@ -297,6 +297,24 @@ def test_workbench_demo_docs_use_managed_snapshot_filename_in_import_field() -> 
     assert violations == {name: [] for name in active_demo_docs}
 
 
+def test_active_quickstart_docs_start_the_workflow_worker() -> None:
+    active_quickstart_docs = {
+        "README.md": README_FILE,
+        "docs/index.md": REPO_ROOT / "docs" / "index.md",
+        "docs/user_documentation.md": USER_DOCUMENTATION_FILE,
+        "docs/workbench-offline-demo.md": WORKBENCH_OFFLINE_DEMO_FILE,
+    }
+    required = (
+        "docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker"
+    )
+    missing = {
+        name: required not in path.read_text(encoding="utf-8")
+        for name, path in active_quickstart_docs.items()
+    }
+
+    assert missing == {name: False for name in active_quickstart_docs}
+
+
 def test_gitignore_covers_workbench_runtime_artifacts() -> None:
     gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
     required_runtime_roots = {
@@ -495,10 +513,13 @@ def test_documentation_evidence_matrix_records_current_hygiene_baseline() -> Non
     normalized_reports_and_evidence = " ".join(reports_and_evidence.split())
 
     for text in (current_state, evidence_matrix):
+        assert "2026-05-29" in text
         assert "2026-05-25" in text
         assert "Public + Root" in text
         assert "documentation hygiene" in text.lower()
 
+    assert "Workflow v2 documentation was checked" in evidence_matrix
+    assert "provider/version wording baseline from 2026-05-25" in current_state
     assert "MkDocs navigation covers 83 public pages" in evidence_matrix
     assert "Supported Workbench import types" in evidence_matrix
     assert "Supported Workbench report formats" in evidence_matrix
