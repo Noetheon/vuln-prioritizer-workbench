@@ -964,7 +964,7 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   assert.match(makefile, /\.PHONY:.*frontend-design-audit/)
   assert.match(
     makefile,
-    /frontend-design-audit:\n\tcd frontend && npm run test:design-audit/,
+    /frontend-design-audit:\n\t\$\(FRONTEND_NPM\) run test:design-audit/,
   )
   assert.match(
     ci,

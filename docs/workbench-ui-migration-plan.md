@@ -123,9 +123,11 @@ Each batch is complete only when all of these are true:
 - Primary repeated information is table/list/row based; object facts use
   definition rows; rationale uses decision summaries; provenance uses evidence
   rows.
-- `npm --prefix frontend run lint`, `npm --prefix frontend run test:types`,
-  `npm --prefix frontend run build`, and `npm --prefix frontend run
-  test:design-audit` pass for implementation batches.
+- `npm --prefix frontend --workspaces=false --engine-strict=true run lint`,
+  `npm --prefix frontend --workspaces=false --engine-strict=true run test:types`,
+  `npm --prefix frontend --workspaces=false --engine-strict=true run build`, and
+  `npm --prefix frontend --workspaces=false --engine-strict=true run test:design-audit` pass for
+  implementation batches.
 
 ## Visual regression guardrails
 
@@ -425,24 +427,24 @@ Tasks:
 Run these from the repository root after each route migration unless the change is documentation-only.
 
 ```bash
-npm --prefix frontend run lint
-npm --prefix frontend run test -- --run frontend/tests/design-system-contracts.test.ts frontend/tests/ui-css-contracts.test.ts frontend/tests/route-organization.test.ts frontend/tests/product-copy-guardrails.test.ts
-npm --prefix frontend run test:ui -- --project=chromium frontend/tests/ui-smoke.spec.ts
+npm --prefix frontend --workspaces=false --engine-strict=true run lint
+npm --prefix frontend --workspaces=false --engine-strict=true run test -- --run frontend/tests/design-system-contracts.test.ts frontend/tests/ui-css-contracts.test.ts frontend/tests/route-organization.test.ts frontend/tests/product-copy-guardrails.test.ts
+npm --prefix frontend --workspaces=false --engine-strict=true run test:ui -- --project=chromium frontend/tests/ui-smoke.spec.ts
 ```
 
 Run these when the migrated route changes responsive layout, drawers, tabs, shell behavior, or evidence/report rendering:
 
 ```bash
-npm --prefix frontend run test:ui -- --project=chromium frontend/tests/responsive-shell.spec.ts
-npm --prefix frontend run test:ui -- --project=chromium frontend/tests/accessibility.spec.ts
-npm --prefix frontend run test:ui -- --project=chromium frontend/tests/ui-evidence-screenshots.spec.ts
+npm --prefix frontend --workspaces=false --engine-strict=true run test:ui -- --project=chromium frontend/tests/responsive-shell.spec.ts
+npm --prefix frontend --workspaces=false --engine-strict=true run test:ui -- --project=chromium frontend/tests/accessibility.spec.ts
+npm --prefix frontend --workspaces=false --engine-strict=true run test:ui -- --project=chromium frontend/tests/ui-evidence-screenshots.spec.ts
 ```
 
 Run these before a larger batch lands:
 
 ```bash
-npm --prefix frontend run build
-npm --prefix frontend run test
+npm --prefix frontend --workspaces=false --engine-strict=true run build
+npm --prefix frontend --workspaces=false --engine-strict=true run test
 ```
 
 If a command fails because dependencies are missing, install dependencies using the repository-standard workflow before rerunning. Do not change generated client files to satisfy UI tests.

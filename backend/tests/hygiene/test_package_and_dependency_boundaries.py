@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 
 from utils.hygiene import REPO_ROOT, ROOT
@@ -50,6 +51,37 @@ def test_dependency_audit_requirements_include_dev_gate_tools() -> None:
         }
         & runtime_pinned_package_names
     )
+
+
+def test_frontend_npm_engine_policy_is_enforced_for_local_and_ci_commands() -> None:
+    root_package = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))
+    frontend_package = json.loads(
+        (REPO_ROOT / "frontend" / "package.json").read_text(encoding="utf-8")
+    )
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+    workflow_sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((REPO_ROOT / ".github" / "workflows").glob("*.yml"))
+    )
+
+    assert (REPO_ROOT / ".nvmrc").read_text(encoding="utf-8").strip() == "22"
+    assert (REPO_ROOT / ".npmrc").read_text(encoding="utf-8").strip() == "engine-strict=true"
+    assert not (REPO_ROOT / "frontend" / ".npmrc").exists()
+    assert root_package["engines"] == {"node": ">=22 <23", "npm": ">=10.9 <11"}
+    assert frontend_package["engines"] == {"node": ">=22 <23", "npm": ">=10.9 <11"}
+    assert "NPM ?= npm" in makefile
+    assert (
+        "FRONTEND_NPM := $(NPM) --prefix frontend --workspaces=false --engine-strict=true"
+        in makefile
+    )
+    assert "cd frontend && npm" not in makefile
+    assert all(
+        "npm --prefix frontend --workspaces=false --engine-strict=true" in command
+        for command in root_package["scripts"].values()
+        if "npm --prefix frontend" in command
+    )
+    assert 'node-version: "22"' in workflow_sources
+    assert "npm --prefix frontend --workspaces=false --engine-strict=true" in workflow_sources
 
 
 def test_sdist_manifest_excludes_partial_test_tree() -> None:

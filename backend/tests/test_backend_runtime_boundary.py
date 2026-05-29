@@ -637,7 +637,7 @@ def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:
     assert "$(BACKEND_TESTS)/playwright" not in makefile
     assert "playwright install --with-deps chromium" in playwright_install
     assert "playwright-check: playwright-install" in makefile
-    assert "cd frontend && npm run test" in playwright_check
+    assert "$(FRONTEND_NPM) run test" in playwright_check
     assert "tests/ui-smoke.spec.ts tests/responsive-shell.spec.ts" not in playwright_check
     assert "frontend-test-unit-coverage" in makefile
     assert "public-production-evidence-check" not in release_readiness
@@ -657,8 +657,11 @@ def test_ci_frontend_gate_runs_coverage_and_full_playwright_suite() -> None:
 
     assert "make frontend-test-unit-coverage" in workflow
     assert "Run frontend Playwright representative PR gate" not in workflow
-    assert "npm --prefix frontend run test -- tests/" not in workflow
-    assert "npm --prefix frontend run test" in workflow
+    assert (
+        "npm --prefix frontend --workspaces=false --engine-strict=true run test -- tests/"
+        not in workflow
+    )
+    assert "npm --prefix frontend --workspaces=false --engine-strict=true run test" in workflow
 
 
 def test_legacy_cli_entrypoint_is_removed() -> None:

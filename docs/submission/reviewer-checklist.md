@@ -5,10 +5,10 @@ reproducibly.
 
 ## Build, Tests, Docs
 
-- [ ] Frontend build passes: `cd frontend && npm run build`
-- [ ] Frontend lint passes: `cd frontend && npm run lint`
-- [ ] Frontend unit tests pass: `cd frontend && npm run test:unit`
-- [ ] UI smoke passes: `cd frontend && npm run test -- tests/ui-smoke.spec.ts`
+- [ ] Frontend build passes: `npm --prefix frontend --workspaces=false --engine-strict=true run build`
+- [ ] Frontend lint passes: `npm --prefix frontend --workspaces=false --engine-strict=true run lint`
+- [ ] Frontend unit tests pass: `npm --prefix frontend --workspaces=false --engine-strict=true run test:unit`
+- [ ] UI smoke passes: `npm --prefix frontend --workspaces=false --engine-strict=true run test -- tests/ui-smoke.spec.ts`
 - [ ] Backend report contracts pass:
       `python3 -m pytest -q backend/tests/api/report_contracts --no-cov`
 - [ ] Backend smoke subset passes.

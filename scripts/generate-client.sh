@@ -22,7 +22,7 @@ Path("frontend/openapi.json").write_text(
 )
 PY
 
-npm --prefix frontend run generate-client
+npm --prefix frontend --workspaces=false --engine-strict=true run generate-client
 
 rm -rf frontend/src/client/client frontend/src/client/core
 cp frontend/src/client-runtime/local-client.ts frontend/src/client/client.ts
