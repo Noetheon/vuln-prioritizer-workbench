@@ -58,6 +58,7 @@ def test_frontend_npm_engine_policy_is_enforced_for_local_and_ci_commands() -> N
     frontend_package = json.loads(
         (REPO_ROOT / "frontend" / "package.json").read_text(encoding="utf-8")
     )
+    frontend_readme = (REPO_ROOT / "frontend" / "README.md").read_text(encoding="utf-8")
     makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
     workflow_sources = "\n".join(
         path.read_text(encoding="utf-8")
@@ -82,6 +83,9 @@ def test_frontend_npm_engine_policy_is_enforced_for_local_and_ci_commands() -> N
     )
     assert 'node-version: "22"' in workflow_sources
     assert "npm --prefix frontend --workspaces=false --engine-strict=true" in workflow_sources
+    assert "npm --prefix frontend --workspaces=false --engine-strict=true" in frontend_readme
+    assert "cd frontend && npm" not in frontend_readme
+    assert "Bun-compatible" not in frontend_readme
 
 
 def test_sdist_manifest_excludes_partial_test_tree() -> None:

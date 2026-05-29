@@ -336,6 +336,26 @@ def test_dependency_policy_does_not_carry_closed_dependency_prs() -> None:
     assert "remains the linked GitHub Actions dependency-update follow-up" not in policy
 
 
+def test_frontend_docs_use_current_npm_test_commands() -> None:
+    active_frontend_docs = {
+        "frontend/README.md": REPO_ROOT / "frontend" / "README.md",
+        "docs/workbench-ui-migration-plan.md": REPO_ROOT
+        / "docs"
+        / "workbench-ui-migration-plan.md",
+    }
+    stale_phrases = (
+        "cd frontend && npm",
+        "run test -- --run frontend/tests",
+        "run test:ui -- --project",
+    )
+    violations = {
+        name: [phrase for phrase in stale_phrases if phrase in path.read_text(encoding="utf-8")]
+        for name, path in active_frontend_docs.items()
+    }
+
+    assert violations == {name: [] for name in active_frontend_docs}
+
+
 def test_testpypi_release_docs_do_not_mix_package_indexes() -> None:
     runbook = RELEASE_OPERATIONS_FILE.read_text(encoding="utf-8")
     testpypi_section = runbook.split("## TestPyPI Validation Path", maxsplit=1)[1].split(

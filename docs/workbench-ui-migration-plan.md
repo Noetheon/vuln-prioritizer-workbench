@@ -428,16 +428,17 @@ Run these from the repository root after each route migration unless the change 
 
 ```bash
 npm --prefix frontend --workspaces=false --engine-strict=true run lint
-npm --prefix frontend --workspaces=false --engine-strict=true run test -- --run frontend/tests/design-system-contracts.test.ts frontend/tests/ui-css-contracts.test.ts frontend/tests/route-organization.test.ts frontend/tests/product-copy-guardrails.test.ts
-npm --prefix frontend --workspaces=false --engine-strict=true run test:ui -- --project=chromium frontend/tests/ui-smoke.spec.ts
+npm --prefix frontend --workspaces=false --engine-strict=true run test:types
+npm --prefix frontend --workspaces=false --engine-strict=true run test:unit
+npm --prefix frontend --workspaces=false --engine-strict=true run test -- tests/ui-smoke.spec.ts --project=chromium
 ```
 
 Run these when the migrated route changes responsive layout, drawers, tabs, shell behavior, or evidence/report rendering:
 
 ```bash
-npm --prefix frontend --workspaces=false --engine-strict=true run test:ui -- --project=chromium frontend/tests/responsive-shell.spec.ts
-npm --prefix frontend --workspaces=false --engine-strict=true run test:ui -- --project=chromium frontend/tests/accessibility.spec.ts
-npm --prefix frontend --workspaces=false --engine-strict=true run test:ui -- --project=chromium frontend/tests/ui-evidence-screenshots.spec.ts
+npm --prefix frontend --workspaces=false --engine-strict=true run test -- tests/responsive-shell.spec.ts --project=mobile-chromium
+npm --prefix frontend --workspaces=false --engine-strict=true run test -- tests/accessibility.spec.ts --project=chromium
+npm --prefix frontend --workspaces=false --engine-strict=true run test -- tests/ui-evidence-screenshots.spec.ts --project=chromium
 ```
 
 Run these before a larger batch lands:
