@@ -15,13 +15,13 @@
     "lint:fix": "biome lint --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true index.html src tests vite.config.ts openapi-ts.config.ts playwright.config.ts package.json tsconfig.json tsconfig.build.json tsconfig.tests.json tsconfig.node.json components.json",
     "preview": "vite preview --host 127.0.0.1",
     "generate-client": "openapi-ts",
-    "test": "playwright test",
-    "test:design-audit": "playwright test tests/workbench-design-audit.spec.ts --project=chromium",
+    "test": "env -u NO_COLOR FORCE_COLOR=0 DEBUG_COLORS=0 playwright test",
+    "test:design-audit": "env -u NO_COLOR FORCE_COLOR=0 DEBUG_COLORS=0 playwright test tests/workbench-design-audit.spec.ts --project=chromium",
     "test:types": "tsc -p tsconfig.tests.json",
     "test:unit": "node --test --experimental-strip-types tests/*.test.ts",
     "test:unit:coverage": "node --test --experimental-strip-types --experimental-test-coverage --test-coverage-include='src/lib/**/*.ts' --test-coverage-include='src/components/findings/*-state.ts' --test-coverage-include='src/components/imports/*-model.ts' --test-coverage-include='src/components/reports/*-model.ts' --test-coverage-include='src/workbench/*.ts' --test-coverage-exclude='src/client/**' --test-coverage-exclude='src/vite-env.d.ts' --test-coverage-lines=95 --test-coverage-functions=90 --test-coverage-branches=85 tests/*.test.ts",
     "test:pr-frontend": "npm run test:unit:coverage && npm run test",
-    "test:ui": "playwright test --ui"
+    "test:ui": "env -u NO_COLOR FORCE_COLOR=0 DEBUG_COLORS=0 playwright test --ui"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

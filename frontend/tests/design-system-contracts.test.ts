@@ -959,7 +959,7 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
 
   assert.equal(
     packageJson.scripts["test:design-audit"],
-    "playwright test tests/workbench-design-audit.spec.ts --project=chromium",
+    "env -u NO_COLOR FORCE_COLOR=0 DEBUG_COLORS=0 playwright test tests/workbench-design-audit.spec.ts --project=chromium",
   )
   assert.match(makefile, /\.PHONY:.*frontend-design-audit/)
   assert.match(
@@ -975,6 +975,20 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
       ci.indexOf("Run full frontend Playwright suite"),
   )
   assert.match(auditSpec, /expect\(manifest\)\.toHaveLength\(36\)/)
+})
+
+test("Playwright npm scripts keep inherited NO_COLOR logs deterministic", () => {
+  const packageJson = JSON.parse(readProjectFile("package.json")) as {
+    scripts: Record<string, string>
+  }
+
+  for (const scriptName of ["test", "test:design-audit", "test:ui"]) {
+    assert.match(
+      packageJson.scripts[scriptName],
+      /^env -u NO_COLOR FORCE_COLOR=0 DEBUG_COLORS=0 playwright test\b/,
+      `${scriptName} should neutralize Playwright color defaults`,
+    )
+  }
 })
 
 test("stylesheets do not couple to shadcn data-slot internals", () => {
