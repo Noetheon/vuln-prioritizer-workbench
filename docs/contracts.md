@@ -20,10 +20,11 @@ The project exposes three active interface families:
 | Workbench OpenAPI | `/api/v1/openapi.json` generated from the active FastAPI app. |
 | Import upload | `POST /api/v1/projects/{project_id}/imports` with multipart local evidence files and explicit `input_type`. |
 | Durable workflows | `workflow_run` / `workflow_event` state exposed through workflow routes, WebSocket streaming, and embedded `workflow` objects on imports, provider jobs, and reports. |
+| Decision/Evidence Kernel v2 | `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, and `RunDiagnosticsV2` from `backend/app/contracts/decision_evidence.py`, persisted through `analysis_evidence` and `finding_decision_evidence`. |
 | Report job creation | `POST /api/v1/runs/{run_id}/report-jobs` for queued report generation. Deprecated `POST /api/v1/runs/{run_id}/reports` queues the same workflow and returns a workflow object. |
 | Report download | `GET /api/v1/reports/{report_id}/download`. |
 | Evidence verification | `POST /api/v1/reports/{report_id}/verify` for evidence ZIP reports. |
-| Analysis JSON | `analysis-result.v1.json`, validated by `docs/schemas/analysis-result.v1.schema.json`. |
+| Analysis JSON | `analysis-result.v2.json`, validated by `docs/schemas/analysis-result.v2.schema.json`. |
 | Provider snapshot | `provider-snapshot-report.schema.json` validates Workbench provider snapshot artifacts used by locked/demo imports. |
 | Findings CSV | `findings.csv` with headers from `CSV_FINDINGS_COLUMNS`. |
 | SARIF | SARIF 2.1.0 with CVE-addressable rules and stable fingerprints. |
@@ -32,7 +33,7 @@ The project exposes three active interface families:
 
 Published schemas in `docs/schemas/` that remain active for the Workbench are:
 
-- `analysis-result.v1.schema.json`
+- `analysis-result.v2.schema.json`
 - `provider-snapshot-report.schema.json`
 - `evidence-bundle-manifest.schema.json`
 - `evidence-bundle-verification-report.schema.json`
@@ -89,9 +90,9 @@ Public workflow surfaces:
 Workflow kinds are `import`, `provider_update`, and `report_generation`.
 Workflow statuses are `pending`, `running`, `succeeded`,
 `completed_with_errors`, `failed`, and `cancelled`. Public workflow payloads use
-redacted `details`, `result`, `diagnostics`, `artifact_refs`, and
-`error_details` fields; they do not expose raw `summary_json`, `error_json`, or
-filesystem paths.
+redacted `details`, `artifact_refs`, `error_message`, and terminal state fields;
+they do not expose raw `result_json`, `diagnostics_json`, `summary_json`,
+`error_json`, or filesystem paths.
 
 Queued execution is the workflow contract. Import uploads, provider refreshes,
 and report generation all enqueue worker-owned workflows. Public
@@ -117,17 +118,54 @@ Compatibility rules:
 - additive public workflow fields are allowed on the same OpenAPI version
 - removals, meaning changes, or enum value changes require an explicit contract
   review
-- run responses expose workflow output through `workflow`, `result`,
-  `diagnostics`, `uploads`, `provider_snapshot`, `counts`, and `warnings`
+- run responses expose typed output through `evidence`, `diagnostics`,
+  `uploads`, `provider_snapshot`, `counts`, `warnings`, `parse_errors`, and the
+  embedded `workflow` object
 
-## Run Workflow Output
+## Decision/Evidence Kernel v2
 
-`workflow_run` is the only active execution metadata store. Import, provider,
-and report handlers write terminal output to:
+`analysis_evidence` is the run-wide evidence source for successful imports.
+`finding_decision_evidence` stores the current decision evidence for each
+finding/run pair. These tables hold the active product truth used by run
+projection, finding detail, dashboard rollups, waiver/governance views, and
+report rendering.
 
-- `workflow_run.result_json` for successful result metadata and stable refs
+`AnalysisEvidenceV2` intentionally does not embed the full finding list.
+Per-finding decision graphs are validated and stored as
+`FindingDecisionEvidenceV2` rows, then hydrated by finding-detail and report
+projection code. This keeps run responses and run-wide persistence bounded for
+large imports while preserving typed evidence for every finding.
+
+The persisted contract models include:
+
+- `AnalysisEvidenceV2`
+- `FindingDecisionEvidenceV2`
+- `OccurrenceEvidenceV2`
+- `ProviderEvidenceV2`
+- `PriorityEvidenceV2`
+- `GovernanceEvidenceV2`
+- `AttackEvidenceV2`
+- `RemediationEvidenceV2`
+- `RunDiagnosticsV2`
+
+`AnalysisRunPublic` and `AnalysisRunSummaryPublic` expose this layer through
+typed fields: `evidence`, `counts`, `uploads`, `provider_snapshot`, `warnings`,
+`parse_errors`, `diagnostics`, and `workflow`. They do not expose a free-form
+run `result` object.
+
+Failed imports may expose typed `RunDiagnosticsV2` without creating an empty
+`AnalysisEvidenceV2` object.
+
+## Workflow Output
+
+`workflow_run` is the active execution metadata store. Import, provider, and
+report handlers write terminal output to:
+
+- `workflow_run.result_json` for small internal ref payloads, such as
+  `analysis_evidence_id`, report artifact refs, provider artifact refs, and
+  schema version
 - `workflow_run.diagnostics_json` for parser, provider, report, and worker
-  diagnostics
+  diagnostics used to build typed `RunDiagnosticsV2`
 - `workflow_run.artifact_refs_json` for generated report or provider snapshot
   references
 
@@ -138,9 +176,11 @@ there is no production migration compatibility promise for pre-v2 local runs.
 
 ## Analysis JSON
 
-`analysis-result.v1.json` is the stable Workbench machine export. It includes:
+`analysis-result.v2.json` is the stable Workbench machine export. It includes:
 
 - `schema`
+- `schema_version`
+- `generated_at`
 - `project`
 - `analysis_run`
 - `provider_snapshot`

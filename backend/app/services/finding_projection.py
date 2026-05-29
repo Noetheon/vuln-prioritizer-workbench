@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import uuid
 
+from sqlalchemy.orm import object_session
 from sqlmodel import Session, col, select
 
+from app.contracts.decision_evidence import FindingDecisionEvidenceV2
 from app.models import (
     Finding,
     FindingAttackContext,
@@ -17,16 +19,20 @@ from app.models import (
     FindingOccurrencePublic,
     FindingPublic,
 )
+from app.repositories import EvidenceRepository
 from vuln_prioritizer.security_redaction import redact_value
 
 
-def _finding_public(finding: Finding) -> FindingPublic:
+def _finding_public(
+    finding: Finding,
+    *,
+    session: Session | None = None,
+) -> FindingPublic:
     """Return a finding DTO with display context needed by the Workbench table."""
+    evidence = _latest_decision_evidence(finding, session=session)
     return FindingPublic.model_validate(finding).model_copy(
         update={
-            "explanation_json": _redacted_finding_json(finding.explanation_json),
-            "data_quality_json": _redacted_finding_json(finding.data_quality_json),
-            "evidence_json": _redacted_finding_json(finding.evidence_json),
+            "evidence": evidence,
             "component_name": finding.component.name if finding.component else None,
             "component_version": finding.component.version if finding.component else None,
             "component_purl": finding.component.purl if finding.component else None,
@@ -40,6 +46,17 @@ def _finding_public(finding: Finding) -> FindingPublic:
             "exposure": finding.asset.exposure if finding.asset else None,
         }
     )
+
+
+def _latest_decision_evidence(
+    finding: Finding,
+    *,
+    session: Session | None = None,
+) -> FindingDecisionEvidenceV2 | None:
+    active_session = session or object_session(finding)
+    if not isinstance(active_session, Session):
+        return None
+    return EvidenceRepository(active_session).latest_finding_decision_evidence(finding.id)
 
 
 def _redacted_finding_json(value: dict[str, object] | None) -> dict[str, object]:
@@ -119,11 +136,12 @@ def _finding_attack_context_detail_public(
             techniques=techniques,
         )
 
-    raw_context = _object_record(finding.explanation_json.get("attack_context"))
-    if not raw_context or (
-        raw_context.get("mapped") is not True and raw_context.get("source") in {None, "none", ""}
+    evidence = _latest_decision_evidence(finding)
+    if evidence is None or (
+        evidence.attack.mapped is not True and evidence.attack.source in {None, "none", ""}
     ):
         return None
+    raw_context = evidence.attack.to_jsonable()
     mappings = _attack_mapping_rows(
         _array_records(raw_context.get("mappings")),
         source=_string_value(raw_context.get("source")) or "none",

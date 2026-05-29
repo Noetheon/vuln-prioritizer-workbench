@@ -9,6 +9,7 @@ from typing import Any
 
 from sqlmodel import Session, col, func, select
 
+from app.contracts.decision_evidence import FindingDecisionEvidenceV2
 from app.domain.asset_context_projection import (
     _asset_criticality,
     _asset_environment,
@@ -17,7 +18,7 @@ from app.domain.asset_context_projection import (
     _changed_asset_fields,
     _records_by_asset_key,
 )
-from app.domain.asset_rescore import mark_finding_rescore_needed, recalculate_asset_finding
+from app.domain.asset_rescore import recalculate_asset_finding
 from app.models import (
     Asset,
     AssetCreate,
@@ -26,9 +27,12 @@ from app.models import (
     AssetExposure,
     AssetUpdate,
     Finding,
+    FindingDecisionEvidence,
 )
 from app.models.base import get_datetime_utc
 from vuln_prioritizer.inputs.loader import AssetContextCatalog
+
+ASSET_CONTEXT_RESCORE_FLAG = "asset_context_rescore_needed"
 
 
 class AssetRepository:
@@ -226,14 +230,16 @@ class AssetRepository:
         statement = select(Finding).where(Finding.asset_id == asset_id)
         findings = list(self.session.exec(statement).all())
         for finding in findings:
-            marker = mark_finding_rescore_needed(
-                finding,
-                asset_id=asset_id,
-                changed_fields=changed,
-                changed_at=timestamp,
-            )
-            finding.data_quality_json = marker.data_quality_json
-            finding.evidence_json = marker.evidence_json
+            record = self._latest_finding_evidence_record(finding.id)
+            if record is not None:
+                record.payload_json = _mark_decision_evidence_rescore_needed(
+                    record.payload_json,
+                    asset_id=asset_id,
+                    changed_fields=changed,
+                    changed_at=timestamp,
+                )
+                record.updated_at = timestamp
+                self.session.add(record)
             finding.updated_at = timestamp
             self.session.add(finding)
         self.session.flush()
@@ -253,12 +259,20 @@ class AssetRepository:
                 recalculated_at=timestamp,
             )
             finding.risk_score = recalculation.risk_score
-            finding.explanation_json = recalculation.explanation_json
-            finding.data_quality_json = recalculation.data_quality_json
-            finding.evidence_json = recalculation.evidence_json
             finding.updated_at = timestamp
             self.session.add(finding)
             cleared_flags += recalculation.cleared_flags
+            record = self._latest_finding_evidence_record(finding.id)
+            if record is not None:
+                updated_payload, cleared = _clear_decision_evidence_rescore_needed(
+                    record.payload_json,
+                    asset=asset,
+                    recalculated_at=timestamp,
+                )
+                record.payload_json = updated_payload
+                record.updated_at = timestamp
+                self.session.add(record)
+                cleared_flags += cleared
             scores.append(recalculation.operational_score)
         self.session.flush()
         return {
@@ -269,3 +283,113 @@ class AssetRepository:
             "operational_scores": scores,
             "rescore_needed": False,
         }
+
+    def finding_rescore_needed(self, finding: Finding) -> bool:
+        """Return whether the latest v2 finding evidence is marked for re-score."""
+        record = self._latest_finding_evidence_record(finding.id)
+        return record is not None and _decision_evidence_rescore_needed(record.payload_json)
+
+    def _latest_finding_evidence_record(
+        self,
+        finding_id: uuid.UUID,
+    ) -> FindingDecisionEvidence | None:
+        return self.session.exec(
+            select(FindingDecisionEvidence)
+            .where(FindingDecisionEvidence.finding_id == finding_id)
+            .order_by(col(FindingDecisionEvidence.created_at).desc())
+        ).first()
+
+
+def _mark_decision_evidence_rescore_needed(
+    payload: dict[str, Any],
+    *,
+    asset_id: uuid.UUID,
+    changed_fields: Sequence[str],
+    changed_at: datetime,
+) -> dict[str, Any]:
+    candidate = _decision_payload(payload)
+    priority_evidence = _object_value(candidate.get("priority_evidence"))
+    flags = _flag_items(priority_evidence.get("data_quality_flags"))
+    flags = [flag for flag in flags if flag.get("code") != ASSET_CONTEXT_RESCORE_FLAG]
+    flags.append(
+        {
+            "source": "asset_context",
+            "code": ASSET_CONTEXT_RESCORE_FLAG,
+            "severity": "warning",
+            "message": (
+                "Asset context changed; rerun analysis or review the operational "
+                "score before relying on this priority."
+            ),
+            "asset_id": str(asset_id),
+            "changed_fields": list(changed_fields),
+            "changed_at": changed_at.isoformat(),
+        }
+    )
+    priority_evidence["data_quality_flags"] = flags
+    priority_evidence["data_quality_confidence"] = "medium"
+    candidate["priority_evidence"] = priority_evidence
+    return FindingDecisionEvidenceV2.model_validate(candidate).to_jsonable()
+
+
+def _clear_decision_evidence_rescore_needed(
+    payload: dict[str, Any],
+    *,
+    asset: Asset,
+    recalculated_at: datetime,
+) -> tuple[dict[str, Any], int]:
+    candidate = _decision_payload(payload)
+    priority_evidence = _object_value(candidate.get("priority_evidence"))
+    flags = _flag_items(priority_evidence.get("data_quality_flags"))
+    kept = [flag for flag in flags if flag.get("code") != ASSET_CONTEXT_RESCORE_FLAG]
+    cleared = len(flags) - len(kept)
+    priority_evidence["data_quality_flags"] = kept
+    priority_evidence["raw"] = _with_asset_rescore_metadata(
+        _object_value(priority_evidence.get("raw")),
+        asset=asset,
+        recalculated_at=recalculated_at,
+    )
+    candidate["priority_evidence"] = priority_evidence
+    candidate["risk_score"] = float(candidate.get("risk_score") or 0)
+    return FindingDecisionEvidenceV2.model_validate(candidate).to_jsonable(), cleared
+
+
+def _decision_evidence_rescore_needed(payload: dict[str, Any]) -> bool:
+    priority_evidence = _object_value(_object_value(payload).get("priority_evidence"))
+    return any(
+        flag.get("code") == ASSET_CONTEXT_RESCORE_FLAG
+        for flag in _flag_items(priority_evidence.get("data_quality_flags"))
+    )
+
+
+def _with_asset_rescore_metadata(
+    raw: dict[str, Any],
+    *,
+    asset: Asset,
+    recalculated_at: datetime,
+) -> dict[str, Any]:
+    updated = dict(raw)
+    asset_context = _object_value(updated.get("asset_context"))
+    asset_context.update(
+        {
+            "asset_id": str(asset.id),
+            "asset_key": asset.asset_key,
+            "rescore_needed": False,
+            "recalculated_at": recalculated_at.isoformat(),
+        }
+    )
+    updated["asset_context"] = asset_context
+    return updated
+
+
+def _decision_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return dict(_object_value(payload))
+
+
+def _object_value(value: Any) -> dict[str, Any]:
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def _flag_items(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [dict(item) for item in value if isinstance(item, dict)]

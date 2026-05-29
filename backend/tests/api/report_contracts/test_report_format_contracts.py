@@ -334,7 +334,7 @@ def test_vpw050_analysis_json_export_create_downloads_schema_valid_result(
 
     assert payload["format"] == "json"
     assert payload["kind"] == "analysis-result-json"
-    assert payload["filename"] == "analysis-result.v1.json"
+    assert payload["filename"] == "analysis-result.v2.json"
     assert payload["content_type"] == "application/json; charset=utf-8"
     assert payload["metadata_json"]["finding_count"] == 2
 
@@ -342,21 +342,21 @@ def test_vpw050_analysis_json_export_create_downloads_schema_valid_result(
         report = session.get(workbench_api_env.app_models.Report, uuid.UUID(payload["id"]))
         assert report is not None
         assert Path(report.path).resolve(strict=True).is_relative_to(report_dir)
-        assert report.path.endswith("analysis-result.v1.json")
+        assert report.path.endswith("analysis-result.v2.json")
 
     download = workbench_api_env.client.get(payload["download_url"], headers=headers)
 
     assert download.status_code == 200
     assert download.headers["cache-control"] == "no-store"
     assert download.headers["x-content-type-options"] == "nosniff"
-    assert "analysis-result.v1.json" in download.headers["content-disposition"]
+    assert "analysis-result.v2.json" in download.headers["content-disposition"]
     assert download.headers["content-type"].startswith("application/json")
     assert hashlib.sha256(download.content).hexdigest() == payload["sha256"]
 
     body = download.json()
-    jsonschema.validate(body, _load_schema("analysis-result.v1.schema.json"))
-    assert body["schema"] == "analysis-result.v1"
-    assert body["schema_version"] == "1.0.0"
+    jsonschema.validate(body, _load_schema("analysis-result.v2.schema.json"))
+    assert body["schema"] == "analysis-result.v2"
+    assert body["schema_version"] == "2.0.0"
     assert body["project"]["id"] == project["id"]
     assert body["analysis_run"]["id"] == str(run_id)
     assert body["provider_snapshot"]["content_hash"] == "sha256:vpw048-snapshot"
@@ -371,7 +371,7 @@ def test_vpw050_analysis_json_export_create_downloads_schema_valid_result(
     first = body["findings"][0]
     assert first["recommendation"]["decision_statement"].startswith("Decision Statement:")
     assert first["data_quality"]["raw"]["confidence"] == "high"
-    assert first["explanation"]["decision_guidance"]["sla"]["target_hours"] == 24
+    assert first["recommendation"]["decision_sla"] == "Emergency / 24h"
     assert first["occurrences"][0]["analysis_run_id"] == str(run_id)
     assert set(body["explanations"]) == {DEMO_CVE_XZ, DEMO_CVE_LOG4SHELL}
 

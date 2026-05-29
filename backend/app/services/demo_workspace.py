@@ -55,7 +55,7 @@ EXPECTED_REPORT_FILENAMES = frozenset(
     {
         "technical-report.md",
         "executive-report.html",
-        "analysis-result.v1.json",
+        "analysis-result.v2.json",
         "findings.csv",
         "attack-navigator-layer.json",
         "results.sarif",
@@ -278,7 +278,7 @@ async def _run_seed_imports(
             attack_source="local-curated",
             attack_mapping_file=_ATTACK_MAPPING_FILENAME,
         ),
-        execution_mode="request",
+        execution_mode="worker",
     )
 
 

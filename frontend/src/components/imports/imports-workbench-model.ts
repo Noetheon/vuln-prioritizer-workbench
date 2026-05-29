@@ -80,7 +80,7 @@ export function runFileLabel(run: {
   filename?: string | null
   input_type: string
   uploads?: { input?: unknown } | null
-  result?: Record<string, unknown> | null
+  evidence?: { uploads?: { input?: unknown } | null } | null
 }) {
   const upload = runInputUpload(run)
   const uploadFilename =
@@ -92,71 +92,98 @@ export function runFileLabel(run: {
 
 export function runInputUpload(run: {
   uploads?: { input?: unknown } | null
-  result?: Record<string, unknown> | null
-}) {
-  return objectRecord(run.uploads?.input ?? run.result?.input_upload)
+  evidence?: { uploads?: { input?: unknown } | null } | null
+} | null | undefined) {
+  return objectRecord(run?.uploads?.input ?? run?.evidence?.uploads?.input)
 }
 
 export function runAssetContextUpload(run: {
   uploads?: { asset_context?: unknown } | null
-  result?: Record<string, unknown> | null
-}) {
-  return objectRecord(run.uploads?.asset_context ?? run.result?.asset_context_upload)
+  evidence?: { uploads?: { asset_context?: unknown } | null } | null
+} | null | undefined) {
+  return objectRecord(
+    run?.uploads?.asset_context ?? run?.evidence?.uploads?.asset_context,
+  )
 }
 
 export function runVexUpload(run: {
   uploads?: { vex?: unknown } | null
-  result?: Record<string, unknown> | null
-}) {
-  return objectRecord(run.uploads?.vex ?? run.result?.vex_upload)
+  evidence?: { uploads?: { vex?: unknown } | null } | null
+} | null | undefined) {
+  return objectRecord(run?.uploads?.vex ?? run?.evidence?.uploads?.vex)
 }
 
 export function runProviderSnapshotFile(run: {
   provider_snapshot?: { file?: string | null } | null
-  result?: Record<string, unknown> | null
+  evidence?: {
+    provider?: { provider_snapshot_file?: string | null } | null
+  } | null
 } | null | undefined) {
   if (!run) return null
   return (
     run.provider_snapshot?.file ??
-    stringValue(run.result?.provider_snapshot_file)
+    stringValue(run.evidence?.provider?.provider_snapshot_file)
   )
 }
 
 export function runProviderSnapshotHash(run: {
   provider_snapshot?: { hash?: string | null } | null
-  result?: Record<string, unknown> | null
+  evidence?: {
+    provider?: { provider_snapshot_hash?: string | null } | null
+  } | null
 } | null | undefined) {
   if (!run) return null
   return (
     run.provider_snapshot?.hash ??
-    stringValue(run.result?.provider_snapshot_hash)
+    stringValue(run.evidence?.provider?.provider_snapshot_hash)
   )
 }
 
 export function runLockedProviderData(run: {
   provider_snapshot?: { locked?: boolean | null } | null
-  result?: Record<string, unknown> | null
+  evidence?: {
+    provider?: { locked_provider_data?: boolean | null } | null
+  } | null
 } | null | undefined) {
   if (!run) return undefined
   if (typeof run.provider_snapshot?.locked === "boolean") {
     return run.provider_snapshot.locked
   }
-  const value = run.result?.locked_provider_data
+  const value = run.evidence?.provider?.locked_provider_data
   return typeof value === "boolean" ? value : undefined
 }
 
 export function runResultRecord(
-  run: { result?: Record<string, unknown> | null } | null | undefined,
+  run: {
+    evidence?: {
+      asset_context?: unknown
+      vex?: unknown
+      analysis_semantics?: unknown
+    } | null
+  } | null | undefined,
   key: string,
 ) {
-  return objectRecord(run?.result?.[key])
+  if (key === "asset_context") return objectRecord(run?.evidence?.asset_context)
+  if (key === "vex") return objectRecord(run?.evidence?.vex)
+  if (key === "analysis_semantics") {
+    return objectRecord(run?.evidence?.analysis_semantics)
+  }
+  return {}
 }
 
 export function runResultString(
-  run: { result?: Record<string, unknown> | null } | null | undefined,
+  run: {
+    evidence?: {
+      attack?: { source?: unknown } | null
+      analysis_semantics?: Record<string, unknown>
+    } | null
+  } | null | undefined,
   key: string,
 ) {
-  return stringValue(run?.result?.[key])
+  if (key === "attack_source") {
+    return stringValue(objectRecord(run?.evidence?.attack).source)
+  }
+  return stringValue(run?.evidence?.analysis_semantics?.[key])
 }
 
 export function runCount(
@@ -181,8 +208,9 @@ export function runCount(
   if (typeof direct === "number") return direct
   const countValue = "counts" in run ? run.counts?.[key] : undefined
   if (typeof countValue === "number") return countValue
-  const resultValue = run.result?.[key]
-  return typeof resultValue === "number" ? resultValue : 0
+  const evidenceCountValue = run.evidence?.counts?.[key]
+  if (typeof evidenceCountValue === "number") return evidenceCountValue
+  return 0
 }
 
 export function metadataRows(value: unknown) {
@@ -212,10 +240,6 @@ export function failedRunCause(
     failureMessage(
       summary?.diagnostics,
       run?.diagnostics,
-      summary?.workflow?.diagnostics,
-      run?.workflow?.diagnostics,
-      summary?.workflow?.error_details,
-      run?.workflow?.error_details,
     )
   if (typedMessage) return typedMessage
   return "No failure detail available."

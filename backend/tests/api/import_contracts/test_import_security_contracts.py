@@ -239,7 +239,7 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
     detail = {**payload["diagnostics"], "analysis_run_id": payload["id"]}
     assert detail["message"] == "Import parsing failed."
     assert detail["analysis_run_id"]
-    assert detail["ignored_lines"] == 0
+    assert payload["counts"]["ignored_lines"] == 0
     assert detail["parse_errors"][0]["input_type"] == "cve-list"
     assert detail["parse_errors"][0]["filename"] == "bad.txt"
     assert detail["parse_errors"][0]["line"] == 2
@@ -249,13 +249,9 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
     assert "not-a-cve" in detail["parse_errors"][0]["message"]
     _assert_no_sensitive_path_leak(detail["parse_errors"], tmp_path, upload_dir)
 
-    assert [item["status"] for item in payload["import_job"]["status_history"]] == [
-        "pending",
-        "running",
-        "failed",
-    ]
-    assert payload["workflow_error"]["parse_errors"] == detail["parse_errors"]
-    _assert_no_sensitive_path_leak(payload["workflow_error"]["parse_errors"], tmp_path, upload_dir)
+    assert "import_job" not in payload
+    assert payload["diagnostics"]["parse_errors"] == detail["parse_errors"]
+    _assert_no_sensitive_path_leak(payload["diagnostics"]["parse_errors"], tmp_path, upload_dir)
     assert payload["input_upload"]["sha256"] == expected_sha256
     upload_ref = payload["input_upload"]["path"]
     assert not Path(upload_ref).is_absolute()
@@ -269,7 +265,6 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
     assert metadata_payload["status"] == "failed"
     assert metadata_payload["summary"]["parse_errors"] == detail["parse_errors"]
     assert metadata_payload["error"]["parse_errors"] == detail["parse_errors"]
-    assert metadata_payload["summary"]["input_upload"]["sha256"] == expected_sha256
     _assert_no_sensitive_path_leak(metadata_payload, tmp_path, upload_dir)
 
     summary = workbench_api_env.client.get(
@@ -325,10 +320,8 @@ def test_xml_parse_errors_redact_local_upload_paths(
     assert detail["parse_errors"][0]["input_type"] == "nessus-xml"
     _assert_no_sensitive_path_leak(detail["parse_errors"], tmp_path, upload_dir)
 
-    assert run_payload["workflow_error"]["parse_errors"] == detail["parse_errors"]
-    _assert_no_sensitive_path_leak(
-        run_payload["workflow_error"]["parse_errors"], tmp_path, upload_dir
-    )
+    assert run_payload["diagnostics"]["parse_errors"] == detail["parse_errors"]
+    _assert_no_sensitive_path_leak(run_payload["diagnostics"]["parse_errors"], tmp_path, upload_dir)
 
 
 @pytest.mark.parametrize(

@@ -16,6 +16,8 @@ import {
   optionalContextLabels,
   runFileLabel,
   runLockedProviderData,
+  runResultRecord,
+  runResultString,
   runTone,
   selectedFormat,
   uploadProgress,
@@ -380,17 +382,44 @@ test("import model selects readable failure causes", () => {
         },
       },
     } as never),
-    "Last parser error",
+    "No failure detail available.",
   )
   assert.equal(
     failedRunCause(null, {
       diagnostics: {
-        parse_errors: [{ message: "Parser rejected the source file." }],
+        parse_errors: [
+          { line: 1 },
+          { message: "Parser rejected the source file." },
+        ],
       },
     } as never),
     "Parser rejected the source file.",
   )
   assert.equal(jsonPreview({ message: "failed" }), '{\n  "message": "failed"\n}')
+  assert.equal(jsonPreview({}), "No error JSON recorded.")
+})
+
+test("import model reads typed evidence result slices", () => {
+  const run = {
+    evidence: {
+      analysis_semantics: { persistence_scope: "project" },
+      asset_context: { matched_occurrences: 2 },
+      attack: { source: "catalog" },
+      vex: { statement_count: 1 },
+    },
+  } as const
+
+  assert.deepEqual(runResultRecord(run as never, "asset_context"), {
+    matched_occurrences: 2,
+  })
+  assert.deepEqual(runResultRecord(run as never, "vex"), { statement_count: 1 })
+  assert.deepEqual(runResultRecord(run as never, "analysis_semantics"), {
+    persistence_scope: "project",
+  })
+  assert.deepEqual(runResultRecord(run as never, "unsupported"), {})
+  assert.equal(runResultString(run as never, "attack_source"), "catalog")
+  assert.equal(runResultString(run as never, "persistence_scope"), "project")
+  assert.equal(runResultString({ evidence: {} } as never, "missing"), null)
 })
 
 test("import model maps run statuses to Workbench badge tones", () => {

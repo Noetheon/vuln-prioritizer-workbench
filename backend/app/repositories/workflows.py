@@ -74,7 +74,7 @@ class WorkflowRepository:
         report_id: uuid.UUID | None = None,
         parent_workflow_run_id: uuid.UUID | None = None,
         status: WorkflowRunStatus | str = WorkflowRunStatus.PENDING,
-        execution_mode: str = "request",
+        execution_mode: str = "worker",
         idempotency_key: str | None = None,
         queue_name: str = "default",
         priority: int = 0,
@@ -120,7 +120,7 @@ class WorkflowRepository:
             message=f"{workflow.title} workflow created.",
             progress_current=progress_current,
             progress_total=progress_total,
-            metadata_json={"execution_mode": execution_mode},
+            metadata_json=None,
         )
         return workflow
 

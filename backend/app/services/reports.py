@@ -156,7 +156,7 @@ class ReportService:
         )
 
     def create_analysis_json_export(self, *, run: AnalysisRun, project: Project) -> Report:
-        """Generate a stable analysis-result.v1 JSON export and persist its metadata."""
+        """Generate a stable analysis-result.v2 JSON export and persist its metadata."""
         return self._create_report_with_workflow(
             run=run,
             project=project,
@@ -166,7 +166,7 @@ class ReportService:
         )
 
     def _create_analysis_json_export(self, *, run: AnalysisRun, project: Project) -> Report:
-        """Generate an analysis-result.v1 JSON export without workflow bookkeeping."""
+        """Generate an analysis-result.v2 JSON export without workflow bookkeeping."""
         payload, findings, generated_at = build_report_payload(
             self.session,
             run=run,
@@ -462,7 +462,7 @@ class ReportService:
         create_report: Callable[[], Report],
         attack_filter: str | None = None,
         workflow_id: uuid.UUID | None = None,
-        execution_mode: str = "request",
+        execution_mode: str = "worker",
         workflow_context: WorkflowExecutionContext | None = None,
     ) -> Report:
         """Persist durable workflow state around one report generation."""
@@ -494,7 +494,7 @@ class ReportService:
             workflow_repo,
             workflow.id,
         )
-        workflow = context.start(
+        context.start(
             stage="render",
             message=f"Rendering {report_format} report.",
             progress_current=1,

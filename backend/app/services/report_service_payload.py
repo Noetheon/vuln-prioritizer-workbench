@@ -7,6 +7,7 @@ from datetime import datetime
 
 from sqlmodel import Session, col, select
 
+from app.contracts.decision_evidence import AnalysisEvidenceV2
 from app.models import (
     AnalysisRun,
     AnalysisRunStatus,
@@ -16,8 +17,9 @@ from app.models import (
     WorkflowRunKind,
 )
 from app.models.base import get_datetime_utc
-from app.repositories import WaiverRepository
+from app.repositories import EvidenceRepository, WaiverRepository
 from app.repositories.workflows import WorkflowRepository
+from app.services.decision_evidence_builder import build_run_diagnostics
 from app.services.governance import build_project_governance_rollups_payload
 from app.services.report_models import MarkdownReportPayload, ReportGenerationError
 from app.services.report_projection import _finding_payload, _provider_snapshot_payload
@@ -25,7 +27,6 @@ from app.services.report_service_payload_attack import (
     merge_attack_context,
     run_attack_contexts_by_finding,
 )
-from app.services.run_workflow_metadata import workflow_error_payload_or_empty, workflow_summary
 
 REPORT_SUPPORTED_RUN_STATUSES = {
     AnalysisRunStatus.COMPLETED,
@@ -49,12 +50,14 @@ def build_report_payload(
     generated_at = get_datetime_utc()
     findings = run_findings(session, run)
     run_occurrences = run_occurrences_by_finding(session, run)
+    run_evidence = EvidenceRepository(session).finding_decision_evidence_for_run(run.id)
     attack_contexts = run_attack_contexts_by_finding(session, run)
     report_findings = [
         merge_attack_context(
             _finding_payload(
                 finding,
                 occurrences=run_occurrences.get(finding.id, []),
+                evidence=run_evidence.get(finding.id),
             ),
             attack_contexts.get(finding.id),
         )
@@ -71,9 +74,12 @@ def build_report_payload(
         analysis_run_id=run.id,
         kind=WorkflowRunKind.IMPORT,
     )
-    result_payload = dict(workflow.result_json or {}) if workflow is not None else {}
-    diagnostics_payload = dict(workflow.diagnostics_json or {}) if workflow is not None else {}
-    summary = workflow_summary(result_payload)
+    evidence_repository = EvidenceRepository(session)
+    evidence = evidence_repository.get_analysis_evidence(run.id)
+    diagnostics = evidence_repository.get_run_diagnostics(run.id)
+    if diagnostics is None and workflow is not None and workflow.diagnostics_json:
+        diagnostics = build_run_diagnostics(workflow.diagnostics_json)
+    summary = _report_summary_payload(evidence)
     payload = MarkdownReportPayload(
         generated_at=generated_at,
         project_id=str(project.id),
@@ -82,7 +88,7 @@ def build_report_payload(
         run_status=str(run.status),
         input_type=run.input_type,
         filename=run.filename,
-        summary=summary.to_legacy_json(),
+        summary=summary,
         findings=tuple(report_findings),
         provider_snapshot=_provider_snapshot_payload(run.provider_snapshot),
         governance_rollups=governance_rollups.model_dump(mode="json"),
@@ -92,9 +98,8 @@ def build_report_payload(
         run_started_at=run.started_at,
         run_finished_at=run.finished_at,
         run_error=run.error_message,
-        run_errors=workflow_error_payload_or_empty(diagnostics_payload),
-        input_file_hash=summary.input_sha256
-        or (summary.input_upload.sha256 if summary.input_upload else None),
+        run_errors=diagnostics.to_jsonable() if diagnostics is not None else {},
+        input_file_hash=_input_file_hash(evidence),
     )
 
     return payload, findings, generated_at
@@ -140,3 +145,40 @@ __all__ = [
     "run_findings",
     "run_occurrences_by_finding",
 ]
+
+
+def _report_summary_payload(evidence: AnalysisEvidenceV2 | None) -> dict[str, object]:
+    if evidence is None:
+        return {}
+    payload = evidence.to_jsonable()
+    provider = dict(payload.get("provider") or {})
+    counts = dict(payload.get("counts") or {})
+    uploads = dict(payload.get("uploads") or {})
+    return {
+        **counts,
+        **provider,
+        "input_upload": uploads.get("input"),
+        "asset_context_upload": uploads.get("asset_context"),
+        "vex_upload": uploads.get("vex"),
+        "input_sha256": payload.get("input_sha256"),
+        "warnings": payload.get("warnings") or [],
+        "parse_errors": payload.get("parse_errors") or [],
+        "analysis_service": payload.get("analysis_service") or {},
+        "analysis_semantics": payload.get("analysis_semantics") or {},
+        "asset_context": payload.get("asset_context"),
+        "vex": payload.get("vex"),
+        "dedup_summary": payload.get("dedup_summary"),
+    }
+
+
+def _input_file_hash(evidence: AnalysisEvidenceV2 | None) -> str | None:
+    if evidence is None:
+        return None
+    payload = evidence.to_jsonable()
+    if isinstance(payload.get("input_sha256"), str):
+        return payload["input_sha256"]
+    uploads = dict(payload.get("uploads") or {})
+    input_upload = uploads.get("input")
+    if isinstance(input_upload, dict) and isinstance(input_upload.get("sha256"), str):
+        return input_upload["sha256"]
+    return None

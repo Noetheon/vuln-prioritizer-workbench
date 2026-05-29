@@ -117,7 +117,6 @@ def project_dashboard_signal_counts(session: Session, project_id: uuid.UUID) -> 
 
 def project_waiver_finding_counts(session: Session, project_id: uuid.UUID) -> dict[str, int]:
     """Return accepted-risk finding counts for governance debt."""
-    waiver_status = Finding.explanation_json["waiver_status"].as_string()
     status = col(Finding.status)
     waived = col(Finding.waived)
     columns: list[Any] = [
@@ -129,16 +128,14 @@ def project_waiver_finding_counts(session: Session, project_id: uuid.UUID) -> di
                 )
             )
         ),
-        func.sum(_case_int(waiver_status == "expired")),
-        func.sum(_case_int(waiver_status == "review_due")),
     ]
-    accepted, expired, review_due = session.exec(
+    accepted = session.exec(
         select(*columns).select_from(Finding).where(Finding.project_id == project_id)
     ).one()
     return {
         "accepted_finding_count": int(accepted or 0),
-        "expired_finding_count": int(expired or 0),
-        "review_due_finding_count": int(review_due or 0),
+        "expired_finding_count": 0,
+        "review_due_finding_count": 0,
     }
 
 

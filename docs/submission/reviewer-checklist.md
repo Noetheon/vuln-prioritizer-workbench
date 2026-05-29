@@ -6,10 +6,12 @@ reproducibly.
 ## Build, Tests, Docs
 
 - [ ] Frontend build/lint/unit coverage passes: `make frontend-check`
-- [ ] UI smoke passes:
-      `scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test -- tests/ui-smoke.spec.ts`
+- [ ] Workbench import/status UI smoke passes:
+      `scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test -- tests/workbench-entry-status.spec.ts --project=chromium`
 - [ ] Backend report contracts pass:
       `python3 -m pytest -q backend/tests/api/report_contracts --no-cov`
+- [ ] Backend import/evidence contracts pass:
+      `python3 -m pytest -q backend/tests/api/import_contracts --no-cov`
 - [ ] Backend smoke subset passes.
 - [ ] Docs hygiene passes:
       `python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov`
@@ -23,7 +25,8 @@ reproducibly.
       source, not generated-client drift.
 - [ ] No unintended backend implementation changes.
 - [ ] No changes to `data/attack/**`.
-- [ ] No changes to contract artifacts under `docs/evidence/`.
+- [ ] Any changes to contract artifacts under `docs/evidence/` are intentional,
+      schema-validated, and covered by report/import contract tests.
 - [ ] No screenshots or large artifacts in the submission PR.
 
 ## Product Claims
@@ -34,6 +37,10 @@ reproducibly.
 - [ ] CVSS, EPSS, KEV, asset context, provider freshness, VEX, and waivers are
       documented as visible signals.
 - [ ] Evidence Center, reports, manifest, and checksums are documented.
+- [ ] `analysis-result.v2.json` is the active analysis JSON contract; no active
+      docs or tests still depend on `analysis-result.v1.json`.
+- [ ] Run and finding decisions are described as typed Decision/Evidence Kernel
+      v2 data, not as free-form workflow result JSON.
 
 ## ATT&CK/TTP Safety
 

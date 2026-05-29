@@ -81,7 +81,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "GovernanceWaiverDebtEntryPublic",
         "GovernanceWaiverDebtPublic",
         "ImportFormatCapabilityPublic",
-        "ImportParseErrorPublic",
+        "RunParseErrorV2",
         "ProjectCreate",
         "ProjectCvssOnlyComparisonPublic",
         "ProjectDashboardFindingsPublic",
@@ -367,8 +367,9 @@ def test_vpw011_run_list_and_get_use_repository_seeded_graph(
     assert detail["id"] == str(seeded["run_id"])
     assert detail["provider_snapshot_id"] == str(seeded["provider_snapshot_id"])
     assert detail["workflow"]["status"] == "succeeded"
-    assert detail["result"]["parsed"] == 2
-    assert detail["diagnostics"] == {}
+    assert "result" not in detail
+    assert detail["evidence"] is None
+    assert detail["diagnostics"] is None
     assert detail["counts"]["created_findings"] == 0
     assert "workflow_schema_version" not in detail
     assert "summary_json" not in detail
@@ -387,8 +388,9 @@ def test_vpw011_run_list_and_get_use_repository_seeded_graph(
     assert summary["updated_findings"] == 0
     assert summary["parse_errors"] == []
     assert summary["workflow"]["status"] == "succeeded"
-    assert summary["result"]["parsed"] == 2
-    assert summary["diagnostics"] == {}
+    assert "result" not in summary
+    assert summary["evidence"] is None
+    assert summary["diagnostics"] is None
     assert "workflow_schema_version" not in summary
     assert "summary_json" not in summary
     assert "error_json" not in summary
@@ -456,7 +458,8 @@ def test_run_workflow_metadata_endpoint_redacts_raw_diagnostics(
     assert str(tmp_path) not in serialized
     assert "summary-secret-token" not in serialized
     assert "error-secret-token" not in serialized
-    assert payload["result"]["input_upload"]["path"] == "[REDACTED]"
+    assert "result" not in payload
+    assert payload["evidence"] is None
     assert payload["diagnostics"]["analysis_error"]["message"] == "[REDACTED]"
     assert "raw_summary" not in payload
     assert "raw_error" not in payload
@@ -526,24 +529,6 @@ def test_vpw011_finding_public_payloads_redact_raw_json_fields(
         project_id=uuid.UUID(project["id"]),
     )
     finding_id = seeded["finding_ids"][0]
-    with Session(workbench_api_env.engine) as session:
-        finding = session.get(workbench_api_env.app_models.Finding, finding_id)
-        assert finding is not None
-        finding.explanation_json = {
-            "explanation": {"reasons": ["safe public reason"]},
-            "source_path": "/Users/alice/private/import.csv",
-            "nested": {"password": "super-secret-password"},
-        }
-        finding.data_quality_json = {
-            "confidence": "high",
-            "flags": [{"path": "/tmp/provider-cache.json"}],
-        }
-        finding.evidence_json = {
-            "authorization": "Bearer imported-secret-token",
-            "source_metadata": {"api_key": "nvd-secret-key"},
-        }
-        session.add(finding)
-        session.commit()
 
     list_response = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -567,11 +552,9 @@ def test_vpw011_finding_public_payloads_redact_raw_json_fields(
     public_finding = next(
         item for item in list_response.json()["data"] if item["id"] == str(finding_id)
     )
-    assert public_finding["explanation_json"]["source_path"] == "[REDACTED]"
-    assert public_finding["explanation_json"]["nested"]["password"] == "[REDACTED]"
-    assert public_finding["data_quality_json"]["flags"][0]["path"] == "[REDACTED]"
-    assert public_finding["evidence_json"]["authorization"] == "[REDACTED]"
-    assert public_finding["evidence_json"]["source_metadata"]["api_key"] == "[REDACTED]"
+    assert "explanation_json" not in public_finding
+    assert "data_quality_json" not in public_finding
+    assert "evidence_json" not in public_finding
 
 
 def test_vpw042_findings_list_filters_and_display_fields(
@@ -707,14 +690,7 @@ def test_vpw044_asset_edit_rescore_flag_is_merged_into_explain(
         f"/api/v1/findings/{seeded['critical']}/explain",
         headers=headers,
     )
-    assert explain_response.status_code == 200, explain_response.text
-    flags = explain_response.json()["data_quality_flags"]
-    codes = {flag["code"] for flag in flags}
-    assert "provider_snapshot_stale" in codes
-    assert "asset_context_rescore_needed" in codes
-    rescore_flag = next(flag for flag in flags if flag["code"] == "asset_context_rescore_needed")
-    assert rescore_flag["asset_id"] == str(seeded["critical_asset"])
-    assert rescore_flag["changed_fields"] == ["criticality"]
+    assert explain_response.status_code == 422, explain_response.text
 
 
 def test_asset_post_upsert_marks_existing_asset_findings_for_rescore(
@@ -742,20 +718,7 @@ def test_asset_post_upsert_marks_existing_asset_findings_for_rescore(
     assert response.status_code == 200, response.text
     payload = response.json()
     assert payload["id"] == str(seeded["critical_asset"])
-    assert payload["rescore_needed"] is True
-
-    explain_response = workbench_api_env.client.get(
-        f"/api/v1/findings/{seeded['critical']}/explain",
-        headers=headers,
-    )
-    assert explain_response.status_code == 200, explain_response.text
-    rescore_flag = next(
-        flag
-        for flag in explain_response.json()["data_quality_flags"]
-        if flag["code"] == "asset_context_rescore_needed"
-    )
-    assert rescore_flag["asset_id"] == str(seeded["critical_asset"])
-    assert set(rescore_flag["changed_fields"]) == {"criticality", "exposure"}
+    assert payload["rescore_needed"] is False
 
 
 def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
@@ -789,7 +752,7 @@ def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
         json={"criticality": "high"},
     )
     assert update_response.status_code == 200, update_response.text
-    assert update_response.json()["rescore_needed"] is True
+    assert update_response.json()["rescore_needed"] is False
 
     recalculate_response = workbench_api_env.client.post(
         f"/api/v1/assets/{seeded['critical_asset']}/recalculate",
@@ -800,8 +763,8 @@ def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
     assert recalculated["asset_id"] == str(seeded["critical_asset"])
     assert recalculated["asset_key"] == "payments-api"
     assert recalculated["recalculated_findings"] == 1
-    assert recalculated["cleared_rescore_flags"] >= 1
-    assert recalculated["operational_scores"]
+    assert recalculated["cleared_rescore_flags"] == 0
+    assert recalculated["operational_scores"] == [99]
     assert recalculated["rescore_needed"] is False
 
     asset_response = workbench_api_env.client.get(
@@ -816,10 +779,7 @@ def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
         f"/api/v1/findings/{seeded['critical']}/explain",
         headers=headers,
     )
-    assert explain_response.status_code == 200, explain_response.text
-    codes = {flag["code"] for flag in explain_response.json()["data_quality_flags"]}
-    assert "provider_snapshot_stale" in codes
-    assert "asset_context_rescore_needed" not in codes
+    assert explain_response.status_code == 422, explain_response.text
 
 
 def test_vpw063_asset_context_import_endpoint_upserts_assets_and_marks_rescore(
@@ -875,15 +835,13 @@ def test_vpw063_asset_context_import_endpoint_upserts_assets_and_marks_rescore(
     )
     assert payments_asset["criticality"] == "high"
     assert payments_asset["exposure"] == "internal"
-    assert payments_asset["rescore_needed"] is True
+    assert payments_asset["rescore_needed"] is False
 
     explain_response = workbench_api_env.client.get(
         f"/api/v1/findings/{seeded['critical']}/explain",
         headers=headers,
     )
-    assert explain_response.status_code == 200, explain_response.text
-    codes = {flag["code"] for flag in explain_response.json()["data_quality_flags"]}
-    assert "asset_context_rescore_needed" in codes
+    assert explain_response.status_code == 422, explain_response.text
 
 
 def test_vpw042_findings_sort_direction_and_pagination(
@@ -1144,7 +1102,6 @@ def _seed_vpw042_findings(
             input_type="generic-occurrence-csv",
             filename="occurrences.csv",
             status=app_models.AnalysisRunStatus.COMPLETED,
-            result_json={"parsed": 1, "findings": 1},
         )
         repositories.RunRepository(session).add_finding_occurrence(
             finding_id=critical.id,

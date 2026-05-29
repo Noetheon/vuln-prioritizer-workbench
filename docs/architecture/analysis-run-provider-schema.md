@@ -2,10 +2,10 @@
 
 ## Scope
 
-VPW-009 adds the Workbench persistence contract for import and analysis run
-provenance. It extends the VPW-008 project, asset, vulnerability, and finding
-tables with the run record, concrete source occurrences, and provider data
-snapshot metadata needed to explain where a finding came from.
+VPW-009 added the initial Workbench persistence contract for import and
+analysis run provenance. The current schema keeps that provenance layer and
+adds the Decision/Evidence Kernel v2 tables that now hold run-wide evidence and
+per-finding decisions.
 
 This slice is storage-only. It does not introduce scanning, exploit execution,
 remote plugin loading, or heuristic ATT&CK mapping.
@@ -13,8 +13,12 @@ remote plugin loading, or heuristic ATT&CK mapping.
 The SQLModel tables are singular and owned by the Workbench backend:
 
 - `analysis_run`
+- `analysis_evidence`
+- `finding_decision_evidence`
 - `finding_occurrence`
 - `provider_snapshot`
+- `workflow_run`
+- `workflow_event`
 
 Workbench backend code uses `app.models` exports and `app/alembic` migrations.
 
@@ -25,12 +29,14 @@ it to export:
 
 - `AnalysisRun`
 - `AnalysisRunStatus`
+- `AnalysisEvidence`
+- `FindingDecisionEvidence`
 - `FindingOccurrence`
 - `ProviderSnapshot`
 
 The model registry used by Alembic must import the module that declares these
 table models before `SQLModel.metadata` is read. A fresh Alembic upgrade should
-therefore create all three tables with no manual metadata imports in tests or
+therefore create all active tables with no manual metadata imports in tests or
 runtime code.
 
 ## Status Values
@@ -109,10 +115,75 @@ The run can be saved before any findings exist. This supports creating a durable
 record as soon as an upload/import starts, then appending occurrences after
 parsing and enrichment complete.
 
-Current execution state and run output are not inferred from run JSON columns.
-They are owned by the durable workflow tables described below and embedded as
-`workflow`, `result`, `diagnostics`, `uploads`, `provider_snapshot`, `counts`,
-and `warnings` on run-list and run-summary responses.
+Current execution state is owned by the durable workflow tables described
+below. Product output is owned by Decision/Evidence Kernel v2 and embedded on
+run-list and run-summary responses as `evidence`, `diagnostics`, `uploads`,
+`provider_snapshot`, `counts`, `warnings`, `parse_errors`, and `workflow`.
+Public run responses do not expose a free-form `result` object.
+
+### `analysis_evidence`
+
+Run-wide evidence records the validated `AnalysisEvidenceV2` payload for one
+successful import run. The payload is intentionally bounded to run-level facts:
+counts, uploads, provider snapshot facts, parser diagnostics, data-quality
+summaries, ATT&CK rollup state, VEX/asset-context summaries, and dedup summary.
+It does not embed every finding decision; those records live in
+`finding_decision_evidence`.
+
+Minimum fields:
+
+- `id`
+- `project_id`
+- `analysis_run_id`
+- `provider_snapshot_id`
+- `schema_version`
+- `payload_json`
+- `diagnostics_json`
+- `created_at`
+- `updated_at`
+
+Constraints and indexes:
+
+- unique constraint on `analysis_run_id`
+- foreign key from `analysis_run_id` to `analysis_run.id`
+- nullable foreign key from `provider_snapshot_id` to `provider_snapshot.id`
+- index on `project_id`
+- index on `(project_id, created_at)`
+
+`payload_json` is validated as `AnalysisEvidenceV2`. `diagnostics_json` is
+validated as `RunDiagnosticsV2` when diagnostics exist. Failed imports may have
+typed diagnostics without a corresponding `analysis_evidence` row.
+
+### `finding_decision_evidence`
+
+Finding decision evidence records the validated `FindingDecisionEvidenceV2`
+payload for one finding/run pair.
+
+Minimum fields:
+
+- `id`
+- `analysis_evidence_id`
+- `analysis_run_id`
+- `finding_id`
+- `project_id`
+- `schema_version`
+- `payload_json`
+- `created_at`
+- `updated_at`
+
+Constraints and indexes:
+
+- unique constraint on `(finding_id, analysis_run_id)`
+- foreign key from `analysis_evidence_id` to `analysis_evidence.id`
+- foreign key from `analysis_run_id` to `analysis_run.id`
+- foreign key from `finding_id` to `finding.id`
+- index on `(project_id, analysis_run_id)`
+- index on `(finding_id, created_at)`
+
+This table is the active source for priority explanations, provider evidence,
+governance signals, waiver state, ATT&CK mapping context, remediation fields,
+and asset re-score flags. It replaces the old active use of finding-level
+`explanation_json`, `data_quality_json`, and `evidence_json` fields.
 
 ### `workflow_run`
 
@@ -200,9 +271,10 @@ Constraints and indexes:
 - unique event sequence per workflow run
 - index on `(workflow_run_id, created_at)`
 
-Public workflow projections expose redacted `details`, `result`,
-`diagnostics`, `artifact_refs`, and `error_details` instead of raw JSON column
-names. The API routes
+Public workflow projections expose redacted `details`, `artifact_refs`,
+`error_message`, and lifecycle fields instead of raw JSON column names. They do
+not expose raw `result_json`, `diagnostics_json`, or `error_details_json`. The
+API routes
 `GET /api/v1/projects/{project_id}/workflows`,
 `GET /api/v1/workflows/{workflow_id}`, and
 `GET /api/v1/workflows/{workflow_id}/events` expose the same workflow model used
@@ -222,10 +294,21 @@ scheduling. The default worker process is
 `python -m app.workers.workflow_worker`; it uses the Workbench database as the
 queue rather than Redis, Celery, or another broker.
 
-`GET /api/v1/runs/{run_id}` and `GET /api/v1/runs/{run_id}/summary` derive these
-UI fields from the v2 workflow contract without requiring clients to parse raw
-run JSON:
+For successful imports, `result_json` is a small internal reference payload,
+for example `analysis_evidence_id`, schema version, and report/provider
+artifact refs. The typed evidence tables remain the source for product facts.
 
+`GET /api/v1/runs/{run_id}` and `GET /api/v1/runs/{run_id}/summary` derive these
+UI fields from Decision/Evidence Kernel v2 without requiring clients to parse
+raw workflow JSON:
+
+- `evidence`
+- `diagnostics`
+- `uploads`
+- `provider_snapshot`
+- `warnings`
+- `parse_errors`
+- `workflow`
 - `created_findings`
 - `updated_findings`
 - `ignored_lines`
@@ -234,19 +317,8 @@ run JSON:
 - `finding_count`
 - `counts_by_priority`
 - `kev_hits`
-- `parse_errors`
-- `import_job`
-- `input_upload`
-- `asset_context_upload`
-- `vex_upload`
-- `dedup_summary`
-- `locked_provider_data`
-- `provider_snapshot_file`
-- `provider_snapshot_hash`
-- `attack_source`
+- `suppressed_by_vex`
 - `attack_mapped_cves`
-- `attack_mapping_file`
-- `analysis_error`
 
 `parse_errors` contain `input_type`, `filename`, `message`, and `error_type`.
 They may also contain a 1-based `line`, logical `field`, and rejected `value`
@@ -297,11 +369,12 @@ occurrence is attached to a run. The key material is:
 - `asset_ref`, or an explicit empty marker when no asset is present
 
 The stored `finding.dedup_key` is a `vpw019:` SHA-256 digest of that canonical
-material. The unhashed parts are returned through the workflow v2 result under
-`dedup_summary.decisions` so each import run records whether a finding was
-created or reused. Re-importing the same normalized occurrences therefore adds
-new `finding_occurrence` rows for the new run while keeping the existing
-`finding.first_seen_at` and updating `finding.last_seen_at`.
+material. The import run records created/reused counts through
+`AnalysisEvidenceV2.counts`, while concrete source records remain auditable
+through `finding_occurrence` and finding decision evidence. Re-importing the
+same normalized occurrences therefore adds new `finding_occurrence` rows for
+the new run while keeping the existing `finding.first_seen_at` and updating
+`finding.last_seen_at`.
 
 Edge cases:
 
@@ -316,8 +389,10 @@ Edge cases:
 The expected graph is:
 
 ```text
+Project -> AnalysisRun -> AnalysisEvidence -> FindingDecisionEvidence -> Finding
 Project -> AnalysisRun -> FindingOccurrence -> Finding
 AnalysisRun -> ProviderSnapshot
+AnalysisRun -> WorkflowRun -> WorkflowEvent
 ```
 
 Deleting a project deletes its runs. Deleting a run deletes its occurrence
@@ -434,7 +509,10 @@ Timeout and retry contract:
 
 ## Migration Contract
 
-The Workbench Alembic head under `backend/app/alembic` must create the three
-VPW-009 tables and their foreign keys/indexes on a fresh SQLite database. The
-focused API model tests use a temporary SQLite database and an Alembic `Config`
-rather than production settings.
+The Workbench Alembic head under `backend/app/alembic` must create the active
+run, evidence, occurrence, provider snapshot, and workflow tables with their
+foreign keys/indexes on a fresh SQLite database. Local development data may be
+reset across contract changes; the current tree does not promise migration
+compatibility for pre-v2 local runs. The focused API model tests use a
+temporary SQLite database and an Alembic `Config` rather than production
+settings.

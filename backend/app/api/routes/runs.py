@@ -53,6 +53,7 @@ def read_project_runs(
         data=[
             analysis_run_public(
                 run,
+                session=session,
                 workflow=latest_analysis_workflow_public(
                     session,
                     analysis_run_id=run.id,
@@ -78,6 +79,7 @@ def read_run(
     require_project(session, run.project_id)
     return analysis_run_public(
         run,
+        session=session,
         workflow=latest_analysis_workflow_public(
             session,
             analysis_run_id=run.id,
@@ -99,6 +101,7 @@ def read_run_summary(
     require_project(session, run.project_id)
     return analysis_run_summary_public(
         run,
+        session=session,
         workflow=latest_analysis_workflow_public(
             session,
             analysis_run_id=run.id,

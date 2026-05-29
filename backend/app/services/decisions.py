@@ -8,7 +8,10 @@ from collections.abc import Sequence
 from typing import Any
 
 from pydantic import ValidationError
+from sqlalchemy.orm import object_session
+from sqlmodel import Session
 
+from app.contracts.decision_evidence import FindingDecisionEvidenceV2
 from app.models import (
     AnalysisRun,
     Finding,
@@ -17,6 +20,7 @@ from app.models import (
     ProjectCvssOnlyComparisonPublic,
     ProjectDecisionSummaryPublic,
 )
+from app.repositories import EvidenceRepository
 from vuln_prioritizer.models import PrioritizedFinding
 from vuln_prioritizer.services.baseline_comparison import (
     build_cvss_baseline_comparison_payload,
@@ -37,8 +41,11 @@ class DecisionDataUnavailableError(RuntimeError):
 
 def build_finding_explanation_payload(finding: Finding) -> FindingExplanationPublic:
     """Build the public explanation payload for one stored finding."""
-    explanation_json = _dict_value(finding.explanation_json)
-    decision_explanation = _dict_or_none(explanation_json.get("explanation"))
+    evidence = _required_finding_evidence(finding)
+    explanation_json = evidence.priority_evidence.raw
+    decision_explanation = evidence.priority_evidence.explanation or _dict_or_none(
+        explanation_json.get("explanation")
+    )
     if decision_explanation is None:
         raise DecisionDataUnavailableError("Finding explanation is not available.")
 
@@ -48,22 +55,19 @@ def build_finding_explanation_payload(finding: Finding) -> FindingExplanationPub
         cve_id=finding.cve_id,
         priority=finding.priority,
         priority_rank=finding.priority_rank,
-        priority_state=_string_or_none(explanation_json.get("priority_state"))
-        or _string_or_none(
-            _dict_value(_dict_value(finding.evidence_json).get("analysis")).get("priority_state")
-        )
+        priority_state=evidence.priority_evidence.priority_state
+        or _string_or_none(explanation_json.get("priority_state"))
         or _priority_label(str(finding.priority)),
         risk_score=finding.risk_score,
         operational_rank=finding.operational_rank,
         rationale=finding.rationale,
         recommended_action=finding.recommended_action,
-        decision_guidance=_dict_or_none(explanation_json.get("decision_guidance")),
+        decision_guidance=evidence.remediation.raw
+        or _dict_or_none(explanation_json.get("decision_guidance")),
         decision_explanation=decision_explanation,
-        provider_evidence=_dict_or_none(explanation_json.get("provider_evidence")),
-        data_quality_flags=_data_quality_flags(finding, explanation_json),
-        data_quality_confidence=_string_or_none(explanation_json.get("data_quality_confidence"))
-        or _string_or_none(_dict_value(finding.data_quality_json).get("confidence"))
-        or "high",
+        provider_evidence=evidence.provider.provider_evidence or None,
+        data_quality_flags=_data_quality_flags(evidence),
+        data_quality_confidence=evidence.priority_evidence.data_quality_confidence or "high",
         explanation=explanation_json,
     )
 
@@ -138,7 +142,8 @@ def build_cvss_only_comparison_payload(
 
 def prioritized_finding_from_workbench(finding: Finding) -> PrioritizedFinding:
     """Convert a stored Workbench finding back to the core decision model."""
-    explanation_json = _dict_value(finding.explanation_json)
+    evidence = _finding_evidence(finding)
+    explanation_json = evidence.priority_evidence.raw if evidence is not None else {}
     if explanation_json.get("cve_id") == finding.cve_id:
         try:
             return PrioritizedFinding.model_validate(explanation_json)
@@ -195,14 +200,24 @@ def _ordered_status_counts(value: Any) -> dict[str, int]:
     return {status: int(counts.get(status, 0)) for status in STATUS_LABELS}
 
 
-def _data_quality_flags(
-    finding: Finding,
-    explanation_json: dict[str, Any],
-) -> list[dict[str, Any]]:
-    data_quality_json = _dict_value(finding.data_quality_json)
-    return _flag_items(explanation_json.get("data_quality_flags")) + _flag_items(
-        data_quality_json.get("flags")
+def _data_quality_flags(evidence: FindingDecisionEvidenceV2) -> list[dict[str, Any]]:
+    return list(evidence.priority_evidence.data_quality_flags) + _flag_items(
+        evidence.governance.data_quality.get("flags")
     )
+
+
+def _required_finding_evidence(finding: Finding) -> FindingDecisionEvidenceV2:
+    evidence = _finding_evidence(finding)
+    if evidence is None:
+        raise DecisionDataUnavailableError("Finding explanation is not available.")
+    return evidence
+
+
+def _finding_evidence(finding: Finding) -> FindingDecisionEvidenceV2 | None:
+    session = object_session(finding)
+    if not isinstance(session, Session):
+        return None
+    return EvidenceRepository(session).latest_finding_decision_evidence(finding.id)
 
 
 def _flag_items(value: Any) -> list[dict[str, Any]]:

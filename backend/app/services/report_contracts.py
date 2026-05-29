@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import vuln_prioritizer.workbench_report_contracts as _workbench_report_contracts
+from app.contracts.decision_evidence import (
+    ANALYSIS_RESULT_SCHEMA_V2,
+    ANALYSIS_RESULT_SCHEMA_VERSION_V2,
+)
 
 CSV_FINDINGS_COLUMNS = _workbench_report_contracts.CSV_FINDINGS_COLUMNS
 
@@ -21,7 +25,7 @@ REPORT_KIND_GOVERNANCE_DETECTION_COVERAGE = "governance-detection-coverage"
 
 REPORT_FILENAME_TECHNICAL_MARKDOWN = "technical-report.md"
 REPORT_FILENAME_EXECUTIVE_HTML = "executive-report.html"
-REPORT_FILENAME_ANALYSIS_JSON = "analysis-result.v1.json"
+REPORT_FILENAME_ANALYSIS_JSON = "analysis-result.v2.json"
 REPORT_FILENAME_FINDINGS_CSV = "findings.csv"
 REPORT_FILENAME_EVIDENCE_BUNDLE = "evidence-bundle.zip"
 REPORT_FILENAME_ATTACK_NAVIGATOR = "attack-navigator-layer.json"
@@ -39,8 +43,8 @@ REPORT_CONTENT_TYPE_CSV = "text/csv; charset=utf-8"
 REPORT_CONTENT_TYPE_SARIF = "application/sarif+json; charset=utf-8"
 REPORT_CONTENT_TYPE_ZIP = "application/zip"
 
-ANALYSIS_RESULT_SCHEMA = "analysis-result.v1"
-ANALYSIS_RESULT_SCHEMA_VERSION = "1.0.0"
+ANALYSIS_RESULT_SCHEMA = ANALYSIS_RESULT_SCHEMA_V2
+ANALYSIS_RESULT_SCHEMA_VERSION = ANALYSIS_RESULT_SCHEMA_VERSION_V2
 EVIDENCE_BUNDLE_MANIFEST_SCHEMA_VERSION = "1.1.0"
 DETERMINISTIC_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 DETERMINISTIC_ZIP_FILE_MODE = 0o644 << 16

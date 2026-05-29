@@ -5,6 +5,100 @@ export type ClientOptions = {
 };
 
 /**
+ * AnalysisEvidenceUploadsV2
+ *
+ * Run upload refs that contributed to the evidence graph.
+ */
+export type AnalysisEvidenceUploadsV2 = {
+    asset_context?: EvidenceUploadRef | null;
+    input?: EvidenceUploadRef | null;
+    vex?: EvidenceUploadRef | null;
+};
+
+/**
+ * AnalysisEvidenceV2
+ *
+ * Run-wide source of truth for Workbench decisions and report generation.
+ */
+export type AnalysisEvidenceV2 = {
+    /**
+     * Analysis Evidence Id
+     */
+    analysis_evidence_id?: string | null;
+    /**
+     * Analysis Run Id
+     */
+    analysis_run_id: string;
+    /**
+     * Analysis Semantics
+     */
+    analysis_semantics?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Analysis Service
+     */
+    analysis_service?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Asset Context
+     */
+    asset_context?: {
+        [key: string]: unknown;
+    } | null;
+    attack?: AttackEvidenceV2;
+    counts?: RunCountsV2;
+    /**
+     * Dedup Summary
+     */
+    dedup_summary?: {
+        [key: string]: unknown;
+    } | null;
+    diagnostics?: RunDiagnosticsV2 | null;
+    /**
+     * Filename
+     */
+    filename?: string | null;
+    /**
+     * Input Sha256
+     */
+    input_sha256?: string | null;
+    /**
+     * Input Type
+     */
+    input_type: string;
+    /**
+     * Parse Errors
+     */
+    parse_errors?: Array<RunParseErrorV2>;
+    /**
+     * Project Id
+     */
+    project_id: string;
+    provider?: ProviderEvidenceV2;
+    /**
+     * Schema Version
+     */
+    schema_version?: 'analysis-evidence.v2';
+    /**
+     * Status
+     */
+    status: string;
+    uploads?: AnalysisEvidenceUploadsV2;
+    /**
+     * Vex
+     */
+    vex?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Warnings
+     */
+    warnings?: Array<string>;
+};
+
+/**
  * AnalysisRunCountsPublic
  *
  * Public import and analysis counters.
@@ -89,16 +183,12 @@ export type AnalysisRunProviderSnapshotRefPublic = {
  */
 export type AnalysisRunPublic = {
     counts?: AnalysisRunCountsPublic;
-    /**
-     * Diagnostics
-     */
-    diagnostics?: {
-        [key: string]: unknown;
-    };
+    diagnostics?: RunDiagnosticsV2 | null;
     /**
      * Error Message
      */
     error_message?: string | null;
+    evidence?: AnalysisEvidenceV2 | null;
     /**
      * Filename
      */
@@ -116,6 +206,10 @@ export type AnalysisRunPublic = {
      */
     input_type: string;
     /**
+     * Parse Errors
+     */
+    parse_errors?: Array<RunParseErrorV2>;
+    /**
      * Project Id
      */
     project_id: string;
@@ -124,12 +218,6 @@ export type AnalysisRunPublic = {
      * Provider Snapshot Id
      */
     provider_snapshot_id: string | null;
-    /**
-     * Result
-     */
-    result?: {
-        [key: string]: unknown;
-    };
     /**
      * Started At
      */
@@ -170,12 +258,8 @@ export type AnalysisRunSummaryPublic = {
      * Created Findings
      */
     created_findings?: number;
-    /**
-     * Diagnostics
-     */
-    diagnostics?: {
-        [key: string]: unknown;
-    };
+    diagnostics?: RunDiagnosticsV2 | null;
+    evidence?: AnalysisEvidenceV2 | null;
     /**
      * Filename
      */
@@ -211,7 +295,7 @@ export type AnalysisRunSummaryPublic = {
     /**
      * Parse Errors
      */
-    parse_errors?: Array<ImportParseErrorPublic>;
+    parse_errors?: Array<RunParseErrorV2>;
     /**
      * Persistence Scope
      */
@@ -229,12 +313,6 @@ export type AnalysisRunSummaryPublic = {
      * Provider Snapshot Id
      */
     provider_snapshot_id?: string | null;
-    /**
-     * Result
-     */
-    result?: {
-        [key: string]: unknown;
-    };
     /**
      * Rows Read
      */
@@ -567,6 +645,52 @@ export type AssetsPublic = {
 };
 
 /**
+ * AttackEvidenceV2
+ *
+ * Finding ATT&CK evidence used by details, reports, and Navigator export.
+ */
+export type AttackEvidenceV2 = {
+    /**
+     * Confidence
+     */
+    confidence?: string | null;
+    /**
+     * Defensive Note
+     */
+    defensive_note?: string | null;
+    /**
+     * Mapped
+     */
+    mapped?: boolean;
+    /**
+     * Mappings
+     */
+    mappings?: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Rationale
+     */
+    rationale?: string | null;
+    /**
+     * Review Status
+     */
+    review_status?: string;
+    /**
+     * Source
+     */
+    source?: string;
+    /**
+     * Tactic Ids
+     */
+    tactic_ids?: Array<string>;
+    /**
+     * Technique Ids
+     */
+    technique_ids?: Array<string>;
+};
+
+/**
  * AttackSourceCapabilityPublic
  *
  * Supported ATT&CK import source metadata.
@@ -860,6 +984,46 @@ export type DemoWorkspaceStatusPublic = {
 };
 
 /**
+ * EvidenceUploadRef
+ *
+ * Managed upload metadata without local filesystem paths.
+ */
+export type EvidenceUploadRef = {
+    /**
+     * Content Type
+     */
+    content_type?: string | null;
+    /**
+     * Input Type
+     */
+    input_type?: string | null;
+    /**
+     * Original Filename
+     */
+    original_filename?: string | null;
+    /**
+     * Path
+     */
+    path?: string | null;
+    /**
+     * Sha256
+     */
+    sha256?: string | null;
+    /**
+     * Size Bytes
+     */
+    size_bytes?: number | null;
+    /**
+     * Storage Ref
+     */
+    storage_ref?: string | null;
+    /**
+     * Stored Filename
+     */
+    stored_filename?: string | null;
+};
+
+/**
  * FindingAttackContextDetailPublic
  *
  * Safe finding-level ATT&CK context DTO for the React Workbench.
@@ -1008,6 +1172,109 @@ export type FindingAttackTechniqueDetailPublic = {
 };
 
 /**
+ * FindingDecisionEvidenceV2
+ *
+ * Current decision and evidence graph for one finding in one run.
+ */
+export type FindingDecisionEvidenceV2 = {
+    /**
+     * Analysis Run Id
+     */
+    analysis_run_id: string;
+    attack?: AttackEvidenceV2;
+    /**
+     * Attack Mapped
+     */
+    attack_mapped?: boolean;
+    /**
+     * Cve Id
+     */
+    cve_id: string;
+    /**
+     * Cvss Base Score
+     */
+    cvss_base_score?: number | null;
+    /**
+     * Dedup Key
+     */
+    dedup_key: string;
+    /**
+     * Epss
+     */
+    epss?: number | null;
+    /**
+     * Finding Id
+     */
+    finding_id: string;
+    governance?: GovernanceEvidenceV2;
+    /**
+     * In Kev
+     */
+    in_kev?: boolean;
+    /**
+     * Occurrence Scope
+     */
+    occurrence_scope?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Occurrences
+     */
+    occurrences?: Array<OccurrenceEvidenceV2>;
+    /**
+     * Operational Rank
+     */
+    operational_rank?: number;
+    /**
+     * Priority
+     */
+    priority: string;
+    priority_evidence: PriorityEvidenceV2;
+    /**
+     * Priority Rank
+     */
+    priority_rank: number;
+    /**
+     * Project Id
+     */
+    project_id: string;
+    provider?: ProviderEvidenceV2;
+    /**
+     * Rationale
+     */
+    rationale?: string | null;
+    /**
+     * Recommended Action
+     */
+    recommended_action?: string | null;
+    remediation?: RemediationEvidenceV2;
+    /**
+     * Risk Score
+     */
+    risk_score?: number | null;
+    /**
+     * Schema Version
+     */
+    schema_version?: 'finding-decision-evidence.v2';
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Suppressed By Vex
+     */
+    suppressed_by_vex?: boolean;
+    /**
+     * Under Investigation
+     */
+    under_investigation?: boolean;
+    /**
+     * Waived
+     */
+    waived?: boolean;
+};
+
+/**
  * FindingDetailPublic
  *
  * Public finding detail response shape.
@@ -1075,12 +1342,6 @@ export type FindingDetailPublic = {
      */
     cvss_base_score?: number | null;
     /**
-     * Data Quality Json
-     */
-    data_quality_json?: {
-        [key: string]: unknown;
-    };
-    /**
      * Dedup Key
      */
     dedup_key?: string;
@@ -1088,18 +1349,7 @@ export type FindingDetailPublic = {
      * Epss
      */
     epss?: number | null;
-    /**
-     * Evidence Json
-     */
-    evidence_json?: {
-        [key: string]: unknown;
-    };
-    /**
-     * Explanation Json
-     */
-    explanation_json?: {
-        [key: string]: unknown;
-    };
+    evidence?: FindingDecisionEvidenceV2 | null;
     /**
      * Exposure
      */
@@ -1453,12 +1703,6 @@ export type FindingPublic = {
      */
     cvss_base_score?: number | null;
     /**
-     * Data Quality Json
-     */
-    data_quality_json?: {
-        [key: string]: unknown;
-    };
-    /**
      * Dedup Key
      */
     dedup_key?: string;
@@ -1466,18 +1710,7 @@ export type FindingPublic = {
      * Epss
      */
     epss?: number | null;
-    /**
-     * Evidence Json
-     */
-    evidence_json?: {
-        [key: string]: unknown;
-    };
-    /**
-     * Explanation Json
-     */
-    explanation_json?: {
-        [key: string]: unknown;
-    };
+    evidence?: FindingDecisionEvidenceV2 | null;
     /**
      * Exposure
      */
@@ -1784,6 +2017,44 @@ export type GitHubIssuePreviewRecord = {
 };
 
 /**
+ * GovernanceEvidenceV2
+ *
+ * Governance signals from VEX, waivers, and accepted-risk state.
+ */
+export type GovernanceEvidenceV2 = {
+    /**
+     * Data Quality
+     */
+    data_quality?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Suppressed By Vex
+     */
+    suppressed_by_vex?: boolean;
+    /**
+     * Under Investigation
+     */
+    under_investigation?: boolean;
+    /**
+     * Vex Statuses
+     */
+    vex_statuses?: {
+        [key: string]: number;
+    };
+    /**
+     * Waived
+     */
+    waived?: boolean;
+    /**
+     * Waiver
+     */
+    waiver?: {
+        [key: string]: unknown;
+    };
+};
+
+/**
  * GovernanceRollupPublic
  *
  * Aggregated finding risk for one owner, service, asset, or environment.
@@ -2086,39 +2357,189 @@ export type ImportFormatCapabilityPublic = {
 };
 
 /**
- * ImportParseErrorPublic
+ * OccurrenceEvidenceV2
  *
- * Stable parser error item for import status and summary APIs.
+ * One source/scanner occurrence that contributed to a finding decision.
  */
-export type ImportParseErrorPublic = {
+export type OccurrenceEvidenceV2 = {
     /**
-     * Error Type
+     * Analysis Run Id
      */
-    error_type: string;
+    analysis_run_id: string;
     /**
-     * Field
+     * Asset Business Service
      */
-    field?: string | null;
+    asset_business_service?: string | null;
     /**
-     * Filename
+     * Asset Exposure
      */
-    filename?: string | null;
+    asset_exposure?: string | null;
     /**
-     * Input Type
+     * Asset Owner
      */
-    input_type: string;
+    asset_owner?: string | null;
     /**
-     * Line
+     * Asset Ref
      */
-    line?: number | null;
+    asset_ref?: string | null;
     /**
-     * Message
+     * Component Name
      */
-    message: string;
+    component_name?: string | null;
     /**
-     * Value
+     * Component Version
      */
-    value?: string | null;
+    component_version?: string | null;
+    /**
+     * Dedup
+     */
+    dedup?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Fix Version
+     */
+    fix_version?: string | null;
+    /**
+     * Fix Versions
+     */
+    fix_versions?: Array<string> | null;
+    /**
+     * Import Evidence
+     */
+    import_evidence?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Occurrence Id
+     */
+    occurrence_id?: string | null;
+    /**
+     * Purl
+     */
+    purl?: string | null;
+    /**
+     * Raw Reference
+     */
+    raw_reference?: string | null;
+    /**
+     * Raw Severity
+     */
+    raw_severity?: string | null;
+    /**
+     * Scanner
+     */
+    scanner?: string | null;
+    /**
+     * Source
+     */
+    source?: string | null;
+    /**
+     * Source Format
+     */
+    source_format?: string | null;
+    /**
+     * Source Id
+     */
+    source_id?: string | null;
+    /**
+     * Source Record Id
+     */
+    source_record_id?: string | null;
+    /**
+     * Target Kind
+     */
+    target_kind?: string | null;
+    /**
+     * Target Ref
+     */
+    target_ref?: string | null;
+    /**
+     * Vex Action Statement
+     */
+    vex_action_statement?: string | null;
+    /**
+     * Vex Candidate Count
+     */
+    vex_candidate_count?: number;
+    /**
+     * Vex Justification
+     */
+    vex_justification?: string | null;
+    /**
+     * Vex Match Type
+     */
+    vex_match_type?: string | null;
+    /**
+     * Vex Source Format
+     */
+    vex_source_format?: string | null;
+    /**
+     * Vex Source Path
+     */
+    vex_source_path?: string | null;
+    /**
+     * Vex Source Record Id
+     */
+    vex_source_record_id?: string | null;
+    /**
+     * Vex Status
+     */
+    vex_status?: string | null;
+};
+
+/**
+ * PriorityEvidenceV2
+ *
+ * Priority and scoring explanation for one finding decision.
+ */
+export type PriorityEvidenceV2 = {
+    /**
+     * Data Quality Confidence
+     */
+    data_quality_confidence?: string | null;
+    /**
+     * Data Quality Flags
+     */
+    data_quality_flags?: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Explanation
+     */
+    explanation?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Operational Score
+     */
+    operational_score?: number | null;
+    /**
+     * Operational Score Reasons
+     */
+    operational_score_reasons?: Array<string>;
+    /**
+     * Priority Label
+     */
+    priority_label: string;
+    /**
+     * Priority Rank
+     */
+    priority_rank: number;
+    /**
+     * Priority State
+     */
+    priority_state?: string | null;
+    /**
+     * Rationale
+     */
+    rationale?: string | null;
+    /**
+     * Raw
+     */
+    raw?: {
+        [key: string]: unknown;
+    };
 };
 
 /**
@@ -2504,6 +2925,58 @@ export type ProjectsPublic = {
 };
 
 /**
+ * ProviderEvidenceV2
+ *
+ * Provider snapshot and provider-quality evidence for a run or finding.
+ */
+export type ProviderEvidenceV2 = {
+    /**
+     * Epss Hits
+     */
+    epss_hits?: number;
+    /**
+     * Kev Hits
+     */
+    kev_hits?: number;
+    /**
+     * Locked Provider Data
+     */
+    locked_provider_data?: boolean;
+    /**
+     * Nvd Hits
+     */
+    nvd_hits?: number;
+    /**
+     * Provider Data Quality Flags
+     */
+    provider_data_quality_flags?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Provider Degraded
+     */
+    provider_degraded?: boolean;
+    /**
+     * Provider Evidence
+     */
+    provider_evidence?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Provider Snapshot File
+     */
+    provider_snapshot_file?: string | null;
+    /**
+     * Provider Snapshot Hash
+     */
+    provider_snapshot_hash?: string | null;
+    /**
+     * Provider Snapshot Id
+     */
+    provider_snapshot_id?: string | null;
+};
+
+/**
  * ProviderSnapshotStatusPublic
  *
  * Stable status projection for the latest provider snapshot.
@@ -2745,6 +3218,46 @@ export type ProviderUpdateJobsPublic = {
 };
 
 /**
+ * RemediationEvidenceV2
+ *
+ * Decision guidance used for worklist and report remediation views.
+ */
+export type RemediationEvidenceV2 = {
+    /**
+     * Business Impact
+     */
+    business_impact?: string | null;
+    /**
+     * Decision Statement
+     */
+    decision_statement?: string | null;
+    /**
+     * Raw
+     */
+    raw?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Recommendation
+     */
+    recommendation?: string | null;
+    /**
+     * Recommendation Label
+     */
+    recommendation_label?: string | null;
+    /**
+     * Recommended Action
+     */
+    recommended_action?: string | null;
+    /**
+     * Sla
+     */
+    sla?: {
+        [key: string]: unknown;
+    };
+};
+
+/**
  * ReportCreate
  *
  * Request payload for creating a run report.
@@ -2903,6 +3416,167 @@ export type ReportsPublic = {
      * Data
      */
     data: Array<ReportPublic>;
+};
+
+/**
+ * RunCountsV2
+ *
+ * Stable run/finding counters used by API and reports.
+ */
+export type RunCountsV2 = {
+    /**
+     * Attack Mapped Cves
+     */
+    attack_mapped_cves?: number;
+    /**
+     * Counts By Priority
+     */
+    counts_by_priority?: {
+        [key: string]: number;
+    };
+    /**
+     * Created Findings
+     */
+    created_findings?: number;
+    /**
+     * Epss Hits
+     */
+    epss_hits?: number;
+    /**
+     * Finding Count
+     */
+    finding_count?: number;
+    /**
+     * Ignored Lines
+     */
+    ignored_lines?: number;
+    /**
+     * Kev Hits
+     */
+    kev_hits?: number;
+    /**
+     * Nvd Hits
+     */
+    nvd_hits?: number;
+    /**
+     * Occurrence Count
+     */
+    occurrence_count?: number;
+    /**
+     * Rows Read
+     */
+    rows_read?: number;
+    /**
+     * Suppressed By Vex
+     */
+    suppressed_by_vex?: number;
+    /**
+     * Under Investigation Count
+     */
+    under_investigation_count?: number;
+    /**
+     * Updated Findings
+     */
+    updated_findings?: number;
+    /**
+     * Vex Conflict Count
+     */
+    vex_conflict_count?: number;
+};
+
+/**
+ * RunDiagnosticsV2
+ *
+ * Typed terminal diagnostics for failed or degraded runs.
+ */
+export type RunDiagnosticsV2 = {
+    analysis_error?: RunFailureV2 | null;
+    asset_context_error?: RunFailureV2 | null;
+    /**
+     * Error Type
+     */
+    error_type?: string | null;
+    /**
+     * Message
+     */
+    message?: string | null;
+    /**
+     * Parse Errors
+     */
+    parse_errors?: Array<RunParseErrorV2>;
+    /**
+     * Schema Version
+     */
+    schema_version?: 'run-diagnostics.v2';
+    /**
+     * Stage
+     */
+    stage?: string | null;
+    vex_error?: RunFailureV2 | null;
+    /**
+     * Warnings
+     */
+    warnings?: Array<string>;
+};
+
+/**
+ * RunFailureV2
+ *
+ * Structured workflow failure metadata.
+ */
+export type RunFailureV2 = {
+    /**
+     * Error Type
+     */
+    error_type?: string | null;
+    /**
+     * Filename
+     */
+    filename?: string | null;
+    /**
+     * Message
+     */
+    message: string;
+    /**
+     * Stage
+     */
+    stage: string;
+};
+
+/**
+ * RunParseErrorV2
+ *
+ * Stable parser diagnostic item.
+ */
+export type RunParseErrorV2 = {
+    /**
+     * Error Type
+     */
+    error_type: string;
+    /**
+     * Field
+     */
+    field?: string | null;
+    /**
+     * Filename
+     */
+    filename?: string | null;
+    /**
+     * Input Type
+     */
+    input_type: string;
+    /**
+     * Line
+     */
+    line?: number | null;
+    /**
+     * Message
+     */
+    message: string;
+    /**
+     * Value
+     */
+    value?: string | null;
 };
 
 /**
@@ -3402,25 +4076,9 @@ export type WorkflowRunPublic = {
         [key: string]: unknown;
     };
     /**
-     * Diagnostics
-     */
-    diagnostics?: {
-        [key: string]: unknown;
-    };
-    /**
-     * Error Details
-     */
-    error_details?: {
-        [key: string]: unknown;
-    };
-    /**
      * Error Message
      */
     error_message?: string | null;
-    /**
-     * Execution Mode
-     */
-    execution_mode: string;
     /**
      * Finished At
      */
@@ -3475,12 +4133,6 @@ export type WorkflowRunPublic = {
      * Report Id
      */
     report_id?: string | null;
-    /**
-     * Result
-     */
-    result?: {
-        [key: string]: unknown;
-    };
     /**
      * Retry Count
      */

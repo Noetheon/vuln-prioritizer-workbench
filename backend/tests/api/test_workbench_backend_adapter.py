@@ -599,7 +599,7 @@ def test_workbench_backend_non_local_startup_rejects_stale_schema(tmp_path) -> N
         selected_app.state.workbench_engine.dispose()
 
 
-def test_workbench_backend_local_startup_reconciles_stale_import_runs(
+def test_workbench_backend_local_startup_reconciles_stale_provider_update_runs(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -610,7 +610,7 @@ def test_workbench_backend_local_startup_reconciles_stale_import_runs(
         return 0
 
     monkeypatch.setattr(
-        "app.main.reconcile_stale_background_import_runs",
+        "app.main.reconcile_stale_provider_update_runs",
         record_reconciliation,
     )
     selected_app = create_app(

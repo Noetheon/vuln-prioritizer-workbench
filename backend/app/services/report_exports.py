@@ -14,7 +14,7 @@ from app.services.report_contracts import (
 from app.services.report_formatting import csv_safe_cell as _csv_safe_cell
 from app.services.report_formatting import format_number as _format_number
 from app.services.report_formatting import iso_datetime as _iso_datetime
-from app.services.report_models import AnalysisResultV1, MarkdownReportPayload
+from app.services.report_models import AnalysisResultV2, MarkdownReportPayload
 from app.services.report_projection import _analysis_finding, _analysis_provider_snapshot
 from app.services.report_renderer_common import (
     _boolish_signal,
@@ -27,9 +27,9 @@ from app.services.report_renderer_common import (
 
 
 def render_analysis_result_json(payload: MarkdownReportPayload) -> str:
-    """Render the stable machine-readable analysis-result.v1 JSON export."""
+    """Render the stable machine-readable analysis-result.v2 JSON export."""
     payload, _redactions = _redacted_bundle_payload(payload)
-    result_model = AnalysisResultV1(
+    result_model = AnalysisResultV2(
         schema=ANALYSIS_RESULT_SCHEMA,
         schema_version=ANALYSIS_RESULT_SCHEMA_VERSION,
         generated_at=_iso_datetime(payload.generated_at),

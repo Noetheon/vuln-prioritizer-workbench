@@ -251,16 +251,18 @@ def test_import_upload_applies_asset_context_sidecar_to_workbench_findings(
 
     detail = workbench_api_env.client.get(f"/api/v1/findings/{finding['id']}", headers=headers)
     assert detail.status_code == 200
-    explanation = detail.json()["explanation_json"]
+    evidence = detail.json()["evidence"]
+    explanation = evidence["priority_evidence"]
+    provenance = explanation["raw"]["provenance"]
     assert explanation["operational_score"] == 100
     assert "internet-facing asset context: +8" in explanation["operational_score_reasons"]
     assert "production asset context: +5" in explanation["operational_score_reasons"]
     assert "critical asset criticality: +7" in explanation["operational_score_reasons"]
-    assert explanation["highest_asset_criticality"] == "critical"
-    assert explanation["provenance"]["asset_ids"] == ["asset-web-1"]
-    assert explanation["provenance"]["highest_asset_exposure"] == "internet-facing"
-    assert explanation["provenance"]["asset_owners"] == ["team-platform"]
-    assert explanation["provenance"]["asset_business_services"] == ["payments"]
+    assert explanation["raw"]["highest_asset_criticality"] == "critical"
+    assert provenance["asset_ids"] == ["asset-web-1"]
+    assert provenance["highest_asset_exposure"] == "internet-facing"
+    assert provenance["asset_owners"] == ["team-platform"]
+    assert provenance["asset_business_services"] == ["payments"]
     occurrence = detail.json()["occurrences"][0]
     assert occurrence["asset_ref"] == "asset-web-1"
     assert occurrence["target_ref"] == "web-tier"
@@ -310,10 +312,10 @@ def test_generic_import_persists_core_canonical_asset_context_aliases(
 
     detail = workbench_api_env.client.get(f"/api/v1/findings/{finding['id']}", headers=headers)
     assert detail.status_code == 200, detail.text
-    explanation = detail.json()["explanation_json"]
-    assert explanation["highest_asset_criticality"] == "critical"
-    assert explanation["provenance"]["highest_asset_exposure"] == "internal"
-    assert explanation["provenance"]["asset_environments"] == ["test"]
+    explanation = detail.json()["evidence"]["priority_evidence"]
+    assert explanation["raw"]["highest_asset_criticality"] == "critical"
+    assert explanation["raw"]["provenance"]["highest_asset_exposure"] == "internal"
+    assert explanation["raw"]["provenance"]["asset_environments"] == ["test"]
     occurrence = detail.json()["occurrences"][0]
     assert occurrence["asset_exposure"] == "internal"
 
@@ -367,7 +369,7 @@ def test_import_upload_applies_openvex_sidecar_to_workbench_findings(
     assert payload["vex"]["matched_occurrences"] == 1
     assert payload["suppressed_by_vex"] == 1
     metadata_payload = workflow_metadata(workbench_api_env, payload["id"], headers=headers)
-    assert metadata_payload["summary"]["vex_conflict_count"] == 0
+    assert metadata_payload["summary"]["counts"].get("vex_conflict_count", 0) == 0
 
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -377,11 +379,12 @@ def test_import_upload_applies_openvex_sidecar_to_workbench_findings(
     finding = findings.json()["data"][0]
     assert finding["status"] == "fixed"
     assert finding["suppressed_by_vex"] is True
-    assert finding["explanation_json"]["priority_state"] == "Fixed"
-    assert finding["explanation_json"]["provenance"]["vex_statuses"] == {"fixed": 1}
+    finding_evidence = finding["evidence"]
+    assert finding_evidence["priority_evidence"]["priority_state"] == "Fixed"
+    assert finding_evidence["governance"]["vex_statuses"] == {"fixed": 1}
     vex_reason = next(
         reason
-        for reason in finding["explanation_json"]["explanation"]["reasons"]
+        for reason in finding_evidence["priority_evidence"]["explanation"]["reasons"]
         if reason["code"] == "governance.vex_status"
     )
     assert "fixed: 1" in vex_reason["message"]
@@ -446,11 +449,9 @@ def test_import_upload_applies_cyclonedx_vex_sidecar_to_workbench_findings(
     by_cve = {finding["cve_id"]: finding for finding in findings.json()["data"]}
     assert by_cve["CVE-2023-34362"]["status"] == "suppressed"
     assert by_cve["CVE-2023-34362"]["suppressed_by_vex"] is True
-    assert by_cve["CVE-2023-34362"]["explanation_json"]["provenance"]["vex_statuses"] == {
-        "not_affected": 1
-    }
+    assert by_cve["CVE-2023-34362"]["evidence"]["governance"]["vex_statuses"] == {"not_affected": 1}
     assert by_cve["CVE-2024-4577"]["status"] == "fixed"
-    assert by_cve["CVE-2024-4577"]["explanation_json"]["priority_state"] == "Fixed"
+    assert by_cve["CVE-2024-4577"]["evidence"]["priority_evidence"]["priority_state"] == "Fixed"
 
     detail = workbench_api_env.client.get(
         f"/api/v1/findings/{by_cve['CVE-2023-34362']['id']}",

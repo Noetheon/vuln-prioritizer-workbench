@@ -111,14 +111,7 @@ def _provider_update_job(
 ) -> ProviderUpdateJobPublic | None:
     if run is None:
         return None
-    workflow_metadata = (
-        _dict_value(workflow.result)
-        or _dict_value(workflow.details)
-        or _dict_value(workflow.diagnostics)
-        if workflow is not None
-        else {}
-    )
-    metadata = workflow_metadata
+    metadata = _dict_value(workflow.details) if workflow is not None else {}
     public_metadata = _provider_public_metadata(metadata, production_safe=production_safe)
     return ProviderUpdateJobPublic(
         id=str(run.id),
@@ -311,9 +304,7 @@ def _failed_update_error(run: AnalysisRun | None) -> str | None:
         return None
     if run.status != AnalysisRunStatus.FAILED:
         return None
-    if run.error_message:
-        return run.error_message
-    return None
+    return run.error_message
 
 
 def _workflow_update_error(workflow: WorkflowRunPublic | None) -> str | None:
@@ -321,15 +312,6 @@ def _workflow_update_error(workflow: WorkflowRunPublic | None) -> str | None:
         return None
     if workflow.error_message:
         return workflow.error_message
-    diagnostics = _dict_value(workflow.diagnostics) or _dict_value(workflow.error_details)
-    for key in ("detail", "message", "error", "last_error"):
-        value = _string_or_none(diagnostics.get(key))
-        if value is not None:
-            return value
-    for value in diagnostics.values():
-        text = _string_or_none(value)
-        if text is not None:
-            return text
     return None
 
 

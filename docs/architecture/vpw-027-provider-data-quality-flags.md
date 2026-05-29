@@ -37,8 +37,10 @@ Low, Medium, High, or Critical outcome depends on incomplete enrichment.
 
 ## Workbench/API
 
-Workbench persists the full finding payload in `finding_json` and
-`explanation_json`, so API list/detail payloads expose the same
-`data_quality_flags`, `data_quality_confidence`, and `provider_evidence` fields
-used by reports. Workbench CSV and SARIF exports include compact flag-code
-fields so downstream triage does not silently lose provider-confidence context.
+Workbench persists run-level provider context in `analysis_evidence` and the
+current per-finding decision graph in `finding_decision_evidence`. API
+list/detail payloads expose typed `FindingDecisionEvidenceV2.priority_evidence`
+and `ProviderEvidenceV2` slices instead of legacy finding-level
+`explanation_json` or `data_quality_json` fields. Workbench CSV and SARIF
+exports include compact flag-code fields so downstream triage does not silently
+lose provider-confidence context.

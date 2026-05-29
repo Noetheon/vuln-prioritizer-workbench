@@ -60,7 +60,9 @@ If `pip-audit`, npm, or advisory data is unavailable, record that as a release-c
    mode, and provider data-quality notes. State that locked replay means
    reproducible, not automatically fresh.
 10. Open **Evidence Center** and show technical Markdown, Executive HTML,
-    analysis JSON, findings CSV, SARIF, ATT&CK Navigator layer, and Evidence ZIP.
+    `analysis-result.v2.json`, findings CSV, SARIF, ATT&CK Navigator layer, and
+    Evidence ZIP. State that reports are rendered from the typed
+    Decision/Evidence Kernel v2 records created by the import.
 11. Download the Evidence ZIP and verify the manifest through the report API.
 12. Open **Settings** and confirm local workspace access, runtime health,
     provider status, and diagnostics are visible without exposing secrets.
@@ -131,7 +133,7 @@ If the browser demo cannot be shown, use these checked-in or generated artifacts
 - `docs/examples/example_report.html`
 - `docs/examples/vpw-054-workbench-technical-report.md`
 - `docs/examples/vpw-054-workbench-executive-report.html`
-- `docs/examples/vpw-054-workbench-analysis-result.v1.json`
+- `docs/examples/vpw-054-workbench-analysis-result.v2.json`
 - `docs/examples/example_pr_comment.md`
 - `docs/examples/example_results.sarif`
 - `data/demo_provider_snapshot.json`

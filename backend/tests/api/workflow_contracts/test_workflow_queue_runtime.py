@@ -40,15 +40,15 @@ def test_worker_executes_queued_import_provider_and_report_jobs(
             "input_type": "cve-list",
             "provider_snapshot_file": "demo_provider_snapshot.json",
             "locked_provider_data": "true",
-            "execution_mode": "worker",
         },
         files={"file": ("sample_cves.txt", SAMPLE_CVES.read_bytes(), "text/plain")},
+        drain=False,
     )
     import_workflow = queued_import["workflow"]
     assert queued_import["status"] == "pending"
     assert import_workflow["kind"] == "import"
     assert import_workflow["status"] == "pending"
-    assert import_workflow["execution_mode"] == "worker"
+    assert "execution_mode" not in import_workflow
 
     workflow_list_response = workbench_api_env.client.get(
         f"/api/v1/projects/{context.project_id}/workflows",
@@ -77,7 +77,7 @@ def test_worker_executes_queued_import_provider_and_report_jobs(
     report_workflow = report_job.json()
     assert report_workflow["kind"] == "report_generation"
     assert report_workflow["status"] == "pending"
-    assert report_workflow["execution_mode"] == "worker"
+    assert "execution_mode" not in report_workflow
 
     result = _run_worker_tick(workbench_api_env)
     assert result.claimed == 1
@@ -108,7 +108,7 @@ def test_worker_executes_queued_import_provider_and_report_jobs(
         provider_job = provider_response.json()
         assert provider_job["status"] == "pending"
         assert provider_job["workflow"]["kind"] == "provider_update"
-        assert provider_job["workflow"]["execution_mode"] == "worker"
+        assert "execution_mode" not in provider_job["workflow"]
 
         result = _run_worker_tick(workbench_api_env)
         assert result.claimed == 1
@@ -274,7 +274,7 @@ def test_cancel_retry_and_websocket_stream_routes_are_public_contracts(
     retry = retry_response.json()
     assert retry["status"] == "pending"
     assert retry["parent_workflow_run_id"] == workflow_id
-    assert retry["execution_mode"] == "worker"
+    assert "execution_mode" not in retry
 
     missing_workflow_id = uuid.uuid4()
     for method, path in (

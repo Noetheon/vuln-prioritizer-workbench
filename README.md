@@ -89,6 +89,11 @@ for decisions.
 - API boundary: generated client files under `frontend/src/client/**`; the
   `frontend/src/api-client.ts` wrapper is manual integration code over that
   generated client.
+- Decision/Evidence Kernel v2: `backend/app/contracts/decision_evidence.py`
+  defines the typed run and finding evidence contracts. `analysis_evidence`
+  stores run-wide evidence only, while `finding_decision_evidence` stores the
+  current per-finding decision graph; workflow rows hold lifecycle state and
+  stable artifact/reference metadata.
 - Domain layer: retained under `backend/src/vuln_prioritizer/**` for parsers,
   providers, scoring, SARIF contracts, and neutral vulnerability logic shared
   with the active backend. The old Typer CLI and legacy report facades have
@@ -191,7 +196,7 @@ README:
 - [Example PR comment body](docs/examples/example_pr_comment.md)
 - [VPW-054 technical report snapshot](docs/examples/vpw-054-workbench-technical-report.md)
 - [VPW-054 executive report snapshot](docs/examples/vpw-054-workbench-executive-report.html)
-- [VPW-054 analysis result snapshot](docs/examples/vpw-054-workbench-analysis-result.v1.json)
+- [VPW-054 analysis result snapshot](docs/examples/vpw-054-workbench-analysis-result.v2.json)
 
 Canonical report/evidence contract artifacts remain under `docs/evidence/` and
 are described in [Reports and Evidence](docs/reports-and-evidence.md).
@@ -219,7 +224,7 @@ Useful local checks:
 
 ```bash
 make frontend-check
-scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test -- tests/ui-smoke.spec.ts
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test -- tests/workbench-entry-status.spec.ts --project=chromium
 python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov
 python3 -m mkdocs build --clean
 make local-workbench-check

@@ -434,9 +434,6 @@ def upgrade() -> None:
         sa.Column("waived", sa.Boolean(), nullable=False),
         sa.Column("recommended_action", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column("rationale", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-        sa.Column("explanation_json", sa.JSON(), nullable=False),
-        sa.Column("data_quality_json", sa.JSON(), nullable=False),
-        sa.Column("evidence_json", sa.JSON(), nullable=False),
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("project_id", sa.Uuid(), nullable=False),
         sa.Column("vulnerability_id", sa.Uuid(), nullable=False),
@@ -470,6 +467,115 @@ def upgrade() -> None:
     )
     op.create_index(
         op.f("ix_finding_vulnerability_id"), "finding", ["vulnerability_id"], unique=False
+    )
+    op.create_table(
+        "analysis_evidence",
+        sa.Column("schema_version", sa.String(length=80), nullable=False),
+        sa.Column("payload_json", sa.JSON(), nullable=False),
+        sa.Column("diagnostics_json", sa.JSON(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("project_id", sa.Uuid(), nullable=False),
+        sa.Column("analysis_run_id", sa.Uuid(), nullable=False),
+        sa.Column("provider_snapshot_id", sa.Uuid(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["analysis_run_id"], ["analysis_run.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["project_id"], ["project.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["provider_snapshot_id"], ["provider_snapshot.id"], ondelete="SET NULL"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("analysis_run_id", name="uq_analysis_evidence_analysis_run"),
+    )
+    op.create_index(
+        op.f("ix_analysis_evidence_analysis_run_id"),
+        "analysis_evidence",
+        ["analysis_run_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_analysis_evidence_project_created_at",
+        "analysis_evidence",
+        ["project_id", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_analysis_evidence_project_id"),
+        "analysis_evidence",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_analysis_evidence_provider_snapshot_id"),
+        "analysis_evidence",
+        ["provider_snapshot_id"],
+        unique=False,
+    )
+    op.create_table(
+        "finding_decision_evidence",
+        sa.Column("schema_version", sa.String(length=80), nullable=False),
+        sa.Column("cve_id", sqlmodel.sql.sqltypes.AutoString(length=64), nullable=False),
+        sa.Column("dedup_key", sqlmodel.sql.sqltypes.AutoString(length=512), nullable=False),
+        sa.Column("priority", sqlmodel.sql.sqltypes.AutoString(length=40), nullable=False),
+        sa.Column("status", sqlmodel.sql.sqltypes.AutoString(length=40), nullable=False),
+        sa.Column("payload_json", sa.JSON(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("analysis_evidence_id", sa.Uuid(), nullable=False),
+        sa.Column("project_id", sa.Uuid(), nullable=False),
+        sa.Column("analysis_run_id", sa.Uuid(), nullable=False),
+        sa.Column("finding_id", sa.Uuid(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["analysis_evidence_id"],
+            ["analysis_evidence.id"],
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(["analysis_run_id"], ["analysis_run.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["finding_id"], ["finding.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["project_id"], ["project.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "finding_id",
+            "analysis_run_id",
+            name="uq_finding_decision_evidence_finding_run",
+        ),
+    )
+    op.create_index(
+        op.f("ix_finding_decision_evidence_analysis_evidence_id"),
+        "finding_decision_evidence",
+        ["analysis_evidence_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_finding_decision_evidence_analysis_run_id"),
+        "finding_decision_evidence",
+        ["analysis_run_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_finding_decision_evidence_finding_created",
+        "finding_decision_evidence",
+        ["finding_id", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_finding_decision_evidence_finding_id"),
+        "finding_decision_evidence",
+        ["finding_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_finding_decision_evidence_project_id"),
+        "finding_decision_evidence",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_finding_decision_evidence_project_run",
+        "finding_decision_evidence",
+        ["project_id", "analysis_run_id"],
+        unique=False,
     )
     op.create_table(
         "report",
@@ -803,6 +909,39 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_report_analysis_run_id"), table_name="report")
     op.drop_index("ix_report_analysis_run_created_at", table_name="report")
     op.drop_table("report")
+    op.drop_index(
+        "ix_finding_decision_evidence_project_run",
+        table_name="finding_decision_evidence",
+    )
+    op.drop_index(
+        op.f("ix_finding_decision_evidence_project_id"),
+        table_name="finding_decision_evidence",
+    )
+    op.drop_index(
+        op.f("ix_finding_decision_evidence_finding_id"),
+        table_name="finding_decision_evidence",
+    )
+    op.drop_index(
+        "ix_finding_decision_evidence_finding_created",
+        table_name="finding_decision_evidence",
+    )
+    op.drop_index(
+        op.f("ix_finding_decision_evidence_analysis_run_id"),
+        table_name="finding_decision_evidence",
+    )
+    op.drop_index(
+        op.f("ix_finding_decision_evidence_analysis_evidence_id"),
+        table_name="finding_decision_evidence",
+    )
+    op.drop_table("finding_decision_evidence")
+    op.drop_index(
+        op.f("ix_analysis_evidence_provider_snapshot_id"),
+        table_name="analysis_evidence",
+    )
+    op.drop_index(op.f("ix_analysis_evidence_project_id"), table_name="analysis_evidence")
+    op.drop_index("ix_analysis_evidence_project_created_at", table_name="analysis_evidence")
+    op.drop_index(op.f("ix_analysis_evidence_analysis_run_id"), table_name="analysis_evidence")
+    op.drop_table("analysis_evidence")
     op.drop_index(op.f("ix_finding_vulnerability_id"), table_name="finding")
     op.drop_index("ix_finding_project_vulnerability", table_name="finding")
     op.drop_index("ix_finding_project_status", table_name="finding")

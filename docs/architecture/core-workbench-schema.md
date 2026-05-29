@@ -126,9 +126,6 @@ Minimum fields:
 - `in_kev`
 - `epss`
 - `cvss_base_score`
-- `explanation_json`
-- `data_quality_json`
-- `evidence_json`
 
 Constraints and indexes:
 
@@ -150,6 +147,11 @@ preferred component identity; otherwise the key falls back to component name,
 version, and package type. Missing component or asset context is represented by
 an explicit empty marker so repeated minimal CVE-list imports reuse the same
 finding instead of relying on SQL NULL uniqueness behavior.
+
+Finding-level explanation, data-quality, provider, ATT&CK, governance, and
+remediation evidence lives in `finding_decision_evidence` as typed
+`FindingDecisionEvidenceV2`. `finding` intentionally keeps only indexed working
+fields and links so triage queries stay bounded.
 
 ## Persistence Contract
 

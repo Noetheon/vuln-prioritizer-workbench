@@ -120,53 +120,70 @@ def drain_workflow_queue(
 
 
 def public_run_aliases(payload: dict[str, object]) -> dict[str, object]:
-    result = payload.get("result")
-    if not isinstance(result, dict):
-        return payload
+    evidence = payload.get("evidence")
+    evidence_payload = evidence if isinstance(evidence, dict) else {}
     aliases = {
-        "schema_version",
-        "input_upload",
-        "asset_context_upload",
-        "vex_upload",
         "asset_context",
         "vex",
-        "attack_mapped_cves",
-        "attack_mapping_file",
-        "attack_source",
-        "suppressed_by_vex",
-        "provider_snapshot_file",
-        "provider_snapshot_hash",
-        "provider_snapshot_id",
-        "locked_provider_data",
-        "created_findings",
-        "updated_findings",
-        "ignored_lines",
-        "rows_read",
-        "occurrence_count",
-        "finding_count",
-        "findings_count",
-        "counts_by_priority",
-        "kev_hits",
-        "epss_hits",
-        "nvd_hits",
-        "cvss_known_count",
-        "parse_errors",
         "dedup_summary",
         "analysis_service",
         "analysis_semantics",
         "input_sha256",
-        "import_job",
         "warnings",
-        "provider_data_quality_flags",
-        "provider_degraded",
-        "under_investigation_count",
-        "vex_conflict_count",
     }
     diagnostics = payload.get("diagnostics")
     diagnostic_aliases = diagnostics if isinstance(diagnostics, dict) else {}
-    alias_payload = {key: result[key] for key in aliases if key in result}
-    if "schema_version" in result:
-        alias_payload["workflow_schema_version"] = result["schema_version"]
+    alias_payload = {key: evidence_payload[key] for key in aliases if key in evidence_payload}
+    if "schema_version" in evidence_payload:
+        alias_payload["workflow_schema_version"] = evidence_payload["schema_version"]
+    counts = evidence_payload.get("counts")
+    if not isinstance(counts, dict):
+        counts = payload.get("counts")
+    if isinstance(counts, dict):
+        for key in (
+            "attack_mapped_cves",
+            "suppressed_by_vex",
+            "created_findings",
+            "updated_findings",
+            "ignored_lines",
+            "rows_read",
+            "occurrence_count",
+            "finding_count",
+            "counts_by_priority",
+            "kev_hits",
+            "epss_hits",
+            "nvd_hits",
+            "under_investigation_count",
+            "vex_conflict_count",
+        ):
+            if key in counts:
+                alias_payload[key] = counts[key]
+    uploads = evidence_payload.get("uploads")
+    if not isinstance(uploads, dict):
+        uploads = payload.get("uploads")
+    if isinstance(uploads, dict):
+        alias_payload["input_upload"] = uploads.get("input")
+        alias_payload["asset_context_upload"] = uploads.get("asset_context")
+        alias_payload["vex_upload"] = uploads.get("vex")
+    provider = evidence_payload.get("provider")
+    if not isinstance(provider, dict):
+        provider = payload.get("provider_snapshot")
+    if isinstance(provider, dict):
+        for key in (
+            "provider_snapshot_file",
+            "provider_snapshot_hash",
+            "provider_snapshot_id",
+            "locked_provider_data",
+            "provider_data_quality_flags",
+            "provider_degraded",
+        ):
+            if key in provider:
+                alias_payload[key] = provider[key]
+    attack = evidence_payload.get("attack")
+    if isinstance(attack, dict):
+        alias_payload["attack_source"] = attack.get("source")
+    if "parse_errors" in payload:
+        alias_payload["parse_errors"] = payload["parse_errors"]
     if diagnostic_aliases:
         alias_payload["workflow_error"] = diagnostic_aliases
     return {
@@ -234,14 +251,12 @@ def finding_state(
 def decision_state(findings: list[app_models.Finding]) -> dict[str, dict[str, object]]:
     values: dict[str, dict[str, object]] = {}
     for finding in findings:
-        explanation = finding.explanation_json.get("explanation", {})
-        guidance = finding.explanation_json.get("decision_guidance", {})
         values[finding.cve_id] = {
             "priority": str(finding.priority),
             "priority_rank": finding.priority_rank,
             "risk_score": finding.risk_score,
             "operational_rank": finding.operational_rank,
-            "reason_codes": tuple(explanation.get("reason_codes", [])),
-            "decision_recommendation": guidance.get("recommendation"),
+            "rationale": finding.rationale,
+            "recommended_action": finding.recommended_action,
         }
     return values

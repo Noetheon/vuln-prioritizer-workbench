@@ -238,6 +238,88 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     assert summary_payload["counts_by_priority"] == second_payload["counts_by_priority"]
 
 
+def test_asset_rescore_marks_and_clears_decision_evidence_v2(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(workbench_api_env, tmp_path)
+    headers = local_api_headers(workbench_api_env.client)
+    project = create_project_via_api(workbench_api_env.client, headers)
+    content = "\n".join(
+        [
+            "cve_id,asset_ref,component,version,purl,severity,owner,business_service,exposure",
+            (
+                "CVE-2024-3094,build-host-1,xz,5.6.0,"
+                "pkg:apk/alpine/xz@5.6.0-r0,CRITICAL,team-platform,payments,public"
+            ),
+            "",
+        ]
+    ).encode()
+
+    import_response = workbench_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={"file": ("asset-rescore.csv", content, "text/csv")},
+    )
+    assert import_response.status_code == 200, import_response.text
+    _completed_run_payload(workbench_api_env, import_response, headers=headers)
+
+    assets_response = workbench_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/assets/",
+        headers=headers,
+    )
+    assert assets_response.status_code == 200, assets_response.text
+    asset = next(
+        item for item in assets_response.json()["data"] if item["asset_key"] == "build-host-1"
+    )
+    assert asset["rescore_needed"] is False
+
+    update_response = workbench_api_env.client.patch(
+        f"/api/v1/assets/{asset['id']}",
+        headers=headers,
+        json={"owner": "team-platform-updated"},
+    )
+    assert update_response.status_code == 200, update_response.text
+    assert update_response.json()["rescore_needed"] is True
+
+    finding_response = workbench_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+    )
+    assert finding_response.status_code == 200, finding_response.text
+    finding = next(
+        item for item in finding_response.json()["data"] if item["cve_id"] == "CVE-2024-3094"
+    )
+    detail_response = workbench_api_env.client.get(
+        f"/api/v1/findings/{finding['id']}",
+        headers=headers,
+    )
+    assert detail_response.status_code == 200, detail_response.text
+    flags = detail_response.json()["evidence"]["priority_evidence"]["data_quality_flags"]
+    assert [flag["code"] for flag in flags] == ["asset_context_rescore_needed"]
+    assert flags[0]["changed_fields"] == ["owner"]
+
+    recalculate_response = workbench_api_env.client.post(
+        f"/api/v1/assets/{asset['id']}/recalculate",
+        headers=headers,
+    )
+    assert recalculate_response.status_code == 200, recalculate_response.text
+    recalculated = recalculate_response.json()
+    assert recalculated["cleared_rescore_flags"] == 1
+    assert recalculated["rescore_needed"] is False
+
+    cleared_detail_response = workbench_api_env.client.get(
+        f"/api/v1/findings/{finding['id']}",
+        headers=headers,
+    )
+    assert cleared_detail_response.status_code == 200, cleared_detail_response.text
+    cleared_flags = cleared_detail_response.json()["evidence"]["priority_evidence"][
+        "data_quality_flags"
+    ]
+    assert not any(flag["code"] == "asset_context_rescore_needed" for flag in cleared_flags)
+
+
 def test_generic_import_persists_multi_fix_versions(
     workbench_api_env: WorkbenchApiEnv,
     tmp_path: Path,
@@ -447,13 +529,9 @@ def test_same_cve_vex_status_remains_occurrence_scoped(
 
     assert by_asset["log4j-fixed"]["status"] == "fixed"
     assert by_asset["log4j-fixed"]["suppressed_by_vex"] is True
-    assert by_asset["log4j-fixed"]["explanation_json"]["provenance"]["vex_statuses"] == {"fixed": 1}
-    assert by_asset["log4j-fixed"]["explanation_json"]["occurrence_scope"]["asset_ref"] == (
-        "log4j-fixed"
-    )
+    assert by_asset["log4j-fixed"]["evidence"]["governance"]["vex_statuses"] == {"fixed": 1}
+    assert by_asset["log4j-fixed"]["evidence"]["occurrence_scope"]["asset_ref"] == ("log4j-fixed")
     assert by_asset["log4j-open"]["status"] == "open"
     assert by_asset["log4j-open"]["suppressed_by_vex"] is False
-    assert by_asset["log4j-open"]["explanation_json"]["provenance"]["vex_statuses"] == {}
-    assert by_asset["log4j-open"]["explanation_json"]["occurrence_scope"]["asset_ref"] == (
-        "log4j-open"
-    )
+    assert by_asset["log4j-open"]["evidence"]["governance"]["vex_statuses"] == {}
+    assert by_asset["log4j-open"]["evidence"]["occurrence_scope"]["asset_ref"] == ("log4j-open")

@@ -227,7 +227,7 @@ def _download_report(*, report_format: str, report: dict[str, object]) -> None:
     if report_format == "json":
         payload = json.loads(response.body.decode("utf-8"))
         _assert_no_private_paths(payload)
-        if payload.get("schema") != "analysis-result.v1":
+        if payload.get("schema") != "analysis-result.v2":
             raise RuntimeError(f"JSON report has unexpected schema: {payload.get('schema')!r}")
     elif report_format == "sarif":
         payload = json.loads(response.body.decode("utf-8"))

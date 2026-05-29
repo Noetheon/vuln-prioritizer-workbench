@@ -138,7 +138,7 @@ def test_provider_update_workflow_is_public_on_jobs_and_status(
         listed_job = listed.json()["data"][0]
         workflow = listed_job["workflow"]
         assert workflow["status"] == "succeeded"
-        assert workflow["execution_mode"] == "worker"
+        assert "execution_mode" not in workflow
         assert workflow["current_stage"] == "succeeded"
         assert workflow["progress_current"] == 3
         assert workflow["progress_total"] == 3
@@ -190,8 +190,9 @@ def test_failed_import_writes_failed_workflow_without_raw_error_fields(
     assert workflow["analysis_run_id"] == run_id
     assert workflow["current_stage"] == "parse_upload"
     assert workflow["error_message"]
-    assert workflow["error_details"]["stage"] == "parse_upload"
-    assert workflow["error_details"]["error_type"] == "ImporterParseError"
+    assert "error_details" not in workflow
+    assert summary["diagnostics"]["stage"] == "parse_upload"
+    assert summary["diagnostics"]["error_type"] == "ImporterParseError"
     assert workflow["latest_event"]["event_type"] == "failed"
 
     events = _workflow_events(
@@ -220,7 +221,8 @@ def _assert_import_workflow(
     assert workflow["current_stage"] == "succeeded"
     assert workflow["progress_current"] == 6
     assert workflow["progress_total"] == 6
-    assert workflow["error_details"] == {}
+    assert "error_details" not in workflow
+    assert "execution_mode" not in workflow
     assert workflow["details"]["input_type"] == "cve-list"
     assert workflow["latest_event"]["event_type"] == "succeeded"
 

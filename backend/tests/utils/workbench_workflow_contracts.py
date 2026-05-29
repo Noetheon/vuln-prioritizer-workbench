@@ -10,13 +10,8 @@ from typing import Any
 
 from sqlalchemy.orm import object_session
 
-from app.contracts.run_workflow import RunWorkflowErrorV1, RunWorkflowSummaryV1
 from app.models import WorkflowRunKind
 from app.repositories import WorkflowRepository
-from app.services.run_workflow_metadata import (
-    workflow_error_or_none,
-    workflow_summary,
-)
 from app.workers.workflow_worker import run_worker_once
 from utils.import_contracts import (
     assert_no_sensitive_path_leak,
@@ -70,8 +65,8 @@ def post_import(
     data: dict[str, Any],
     files: dict[str, tuple[str, bytes, str]],
     expected_status: int = 200,
+    drain: bool = True,
 ) -> dict[str, Any]:
-    queue_only = data.get("execution_mode") == "worker"
     response = workbench_api_env.client.post(
         f"/api/v1/projects/{context.project_id}/imports",
         headers=context.headers,
@@ -84,13 +79,13 @@ def post_import(
         assert response.status_code == expected_status, response.text
     payload = response.json()
     assert_no_raw_workflow_fields(payload)
-    if not queue_only and payload.get("workflow", {}).get("status") in {"pending", "running"}:
+    if drain and payload.get("workflow", {}).get("status") in {"pending", "running"}:
         run_all_workflows(workbench_api_env)
         payload = read_run_payload(workbench_api_env, context, payload["id"])
     if expected_status >= 400:
         workflow = payload.get("workflow") or {}
         assert workflow.get("status") == "failed"
-        diagnostics = workflow.get("diagnostics") or payload.get("diagnostics") or {}
+        diagnostics = payload.get("diagnostics") or {}
         if isinstance(diagnostics, dict):
             diagnostics = {**diagnostics, "analysis_run_id": payload["id"]}
         return {
@@ -163,8 +158,14 @@ def workflow_metadata(
         return response.json()
     payload = public_run_aliases(response.json())
     diagnostics = payload.get("diagnostics")
-    result = payload.get("result")
-    summary = result if isinstance(result, dict) else {}
+    evidence = payload.get("evidence")
+    summary = evidence if isinstance(evidence, dict) else {}
+    counts = payload.get("counts")
+    if isinstance(counts, dict):
+        summary = {**summary, "counts": counts, **counts}
+    uploads = payload.get("uploads")
+    if isinstance(uploads, dict):
+        summary = {**summary, "uploads": uploads}
     if isinstance(diagnostics, dict):
         summary = {**summary, **diagnostics}
     return {
@@ -177,14 +178,16 @@ def workflow_metadata(
     }
 
 
-def persisted_workflow_summary(run: Any) -> RunWorkflowSummaryV1:
+def persisted_workflow_summary(run: Any) -> dict[str, Any]:
     workflow = _latest_import_workflow(run)
-    return workflow_summary(workflow.result_json if workflow is not None else {})
+    return dict(workflow.result_json if workflow is not None else {})
 
 
-def persisted_workflow_error(run: Any) -> RunWorkflowErrorV1 | None:
+def persisted_workflow_error(run: Any) -> dict[str, Any] | None:
     workflow = _latest_import_workflow(run)
-    return workflow_error_or_none(workflow.diagnostics_json if workflow is not None else {})
+    if workflow is None or not workflow.diagnostics_json:
+        return None
+    return dict(workflow.diagnostics_json)
 
 
 def _latest_import_workflow(run: Any) -> Any | None:

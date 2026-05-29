@@ -108,7 +108,9 @@ export function verificationTone(label: string): VpwBadgeTone {
 }
 
 export function runFileLabel(run: AnalysisRunPublic): string {
-  const inputUpload = objectRecord(run.uploads?.input ?? run.result?.input_upload)
+  const inputUpload = objectRecord(
+    run.uploads?.input ?? run.evidence?.uploads?.input,
+  )
   const uploadFilename =
     stringRecordValue(inputUpload, "original_filename") ??
     stringRecordValue(inputUpload, "stored_filename") ??
@@ -238,30 +240,36 @@ function workflowRecord(
 ) {
   if (!source) return {}
   const record: Record<string, unknown> = {}
-  setDefined(record, "input_upload", source.uploads?.input ?? source.result?.input_upload)
+  setDefined(
+    record,
+    "input_upload",
+    source.uploads?.input ?? source.evidence?.uploads?.input,
+  )
   setDefined(
     record,
     "asset_context_upload",
-    source.uploads?.asset_context ?? source.result?.asset_context_upload,
+    source.uploads?.asset_context ?? source.evidence?.uploads?.asset_context,
   )
-  setDefined(record, "vex_upload", source.uploads?.vex ?? source.result?.vex_upload)
+  setDefined(record, "vex_upload", source.uploads?.vex ?? source.evidence?.uploads?.vex)
   setDefined(
     record,
     "attack_mapped_cves",
-    "counts" in source
-      ? source.counts?.attack_mapped_cves
-      : source.result?.attack_mapped_cves,
+    ("counts" in source ? source.counts?.attack_mapped_cves : undefined) ??
+      source.evidence?.counts?.attack_mapped_cves,
   )
-  setDefined(record, "attack_mapping_file", source.result?.attack_mapping_file)
-  setDefined(record, "attack_source", source.result?.attack_source)
-  setDefined(record, "asset_context", source.result?.asset_context)
-  setDefined(record, "vex", source.result?.vex)
+  setDefined(
+    record,
+    "attack_mapping_file",
+    source.evidence?.analysis_semantics?.attack_mapping_file,
+  )
+  setDefined(record, "attack_source", source.evidence?.attack?.source)
+  setDefined(record, "asset_context", source.evidence?.asset_context)
+  setDefined(record, "vex", source.evidence?.vex)
   setDefined(
     record,
     "suppressed_by_vex",
-    "counts" in source
-      ? source.counts?.suppressed_by_vex
-      : source.result?.suppressed_by_vex,
+    ("counts" in source ? source.counts?.suppressed_by_vex : undefined) ??
+      source.evidence?.counts?.suppressed_by_vex,
   )
   return record
 }

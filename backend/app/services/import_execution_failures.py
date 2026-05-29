@@ -29,7 +29,7 @@ def raise_analysis_failure(
     ignored_lines: int,
     input_type: str,
     exc: Exception,
-    execution_mode: str = "request",
+    execution_mode: str = "worker",
 ) -> NoReturn:
     """Raise analysis failure function."""
     analysis_error_message = _sanitize_parser_error_message(str(exc))

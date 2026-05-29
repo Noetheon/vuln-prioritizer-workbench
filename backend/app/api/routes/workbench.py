@@ -201,6 +201,7 @@ def _demo_workspace_public(
         project=snapshot.project,
         latest_run=analysis_run_public(
             snapshot.latest_run,
+            session=session,
             workflow=latest_analysis_workflow_public(
                 session,
                 analysis_run_id=snapshot.latest_run.id,

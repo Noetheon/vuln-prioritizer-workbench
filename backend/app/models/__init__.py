@@ -73,6 +73,12 @@ from app.models.enums import (
     FindingPriority,
     FindingStatus,
 )
+from app.models.evidence import (
+    AnalysisEvidence,
+    AnalysisEvidenceBase,
+    FindingDecisionEvidence,
+    FindingDecisionEvidenceBase,
+)
 from app.models.findings import (
     Finding,
     FindingAttackContextDetailPublic,
@@ -180,6 +186,8 @@ __all__ = [
     "AnalysisRun",
     "AnalysisRunBase",
     "AnalysisRunCountsPublic",
+    "AnalysisEvidence",
+    "AnalysisEvidenceBase",
     "AnalysisRunProviderSnapshotRefPublic",
     "AnalysisRunPublic",
     "AnalysisRunSummaryPublic",
@@ -241,6 +249,8 @@ __all__ = [
     "FindingAttackTechniqueDetailPublic",
     "FindingBase",
     "FindingDetailPublic",
+    "FindingDecisionEvidence",
+    "FindingDecisionEvidenceBase",
     "FindingExplanationPublic",
     "FindingOccurrence",
     "FindingOccurrenceBase",

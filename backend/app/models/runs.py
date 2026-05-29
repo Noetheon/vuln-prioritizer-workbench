@@ -7,6 +7,7 @@ from typing import Any, Optional
 from sqlalchemy import JSON, Column, DateTime, Index, String, Text
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.contracts.decision_evidence import AnalysisEvidenceV2, RunDiagnosticsV2, RunParseErrorV2
 from app.models.base import get_datetime_utc
 from app.models.enums import AnalysisRunStatus
 from app.models.workflows import WorkflowRunPublic
@@ -138,12 +139,13 @@ class AnalysisRunPublic(SQLModel):
     id: uuid.UUID
     project_id: uuid.UUID
     provider_snapshot_id: uuid.UUID | None
-    result: dict[str, Any] = Field(default_factory=dict)
-    diagnostics: dict[str, Any] = Field(default_factory=dict)
+    evidence: AnalysisEvidenceV2 | None = None
+    diagnostics: RunDiagnosticsV2 | None = None
     uploads: AnalysisRunUploadsPublic = Field(default_factory=AnalysisRunUploadsPublic)
     provider_snapshot: AnalysisRunProviderSnapshotRefPublic | None = None
     counts: AnalysisRunCountsPublic = Field(default_factory=AnalysisRunCountsPublic)
     warnings: list[str] = Field(default_factory=list)
+    parse_errors: list[RunParseErrorV2] = Field(default_factory=list)
     workflow: WorkflowRunPublic | None = None
 
 
@@ -187,9 +189,9 @@ class AnalysisRunSummaryPublic(SQLModel):
     provider_snapshot_id: uuid.UUID | None = None
     provider_degraded: bool = False
     warnings: list[str] = Field(default_factory=list)
-    parse_errors: list[ImportParseErrorPublic] = Field(default_factory=list)
-    result: dict[str, Any] = Field(default_factory=dict)
-    diagnostics: dict[str, Any] = Field(default_factory=dict)
+    parse_errors: list[RunParseErrorV2] = Field(default_factory=list)
+    evidence: AnalysisEvidenceV2 | None = None
+    diagnostics: RunDiagnosticsV2 | None = None
     uploads: AnalysisRunUploadsPublic = Field(default_factory=AnalysisRunUploadsPublic)
     provider_snapshot: AnalysisRunProviderSnapshotRefPublic | None = None
     analysis_decision_scope: str | None = None

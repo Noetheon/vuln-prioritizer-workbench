@@ -65,7 +65,7 @@ test("critical Workbench evidence flow works across browser engines", async ({
   ).toBeVisible()
 
   const reports = [
-    { action: "Export analysis JSON", filename: "analysis-result.v1.json" },
+    { action: "Export analysis JSON", filename: "analysis-result.v2.json" },
     { action: "Build evidence ZIP", filename: "evidence-bundle.zip" },
   ]
   for (const report of reports) {
@@ -91,7 +91,7 @@ test("critical Workbench evidence flow works across browser engines", async ({
     expect(bytes.byteLength).toBeGreaterThan(0)
     if (report.filename.endsWith(".json")) {
       const payload = JSON.parse(bytes.toString("utf-8")) as { schema: string }
-      expect(payload.schema).toBe("analysis-result.v1")
+      expect(payload.schema).toBe("analysis-result.v2")
     } else {
       expect(bytes.subarray(0, 2).toString("utf-8")).toBe("PK")
     }

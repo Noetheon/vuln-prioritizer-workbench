@@ -78,6 +78,7 @@ async def import_project_upload(
         session.refresh(run)
         return analysis_run_public(
             run,
+            session=session,
             workflow=latest_analysis_workflow_public(
                 session,
                 analysis_run_id=run.id,

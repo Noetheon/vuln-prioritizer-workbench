@@ -95,7 +95,7 @@ def test_vpw051_evidence_bundle_zip_create_downloads_manifest_integrity(
         technical_report = archive.read("technical.md").decode("utf-8")
         executive_report = archive.read("executive.html").decode("utf-8")
         jsonschema.validate(manifest, _load_schema("evidence-bundle-manifest.schema.json"))
-        jsonschema.validate(analysis, _load_schema("analysis-result.v1.schema.json"))
+        jsonschema.validate(analysis, _load_schema("analysis-result.v2.schema.json"))
         assert manifest["bundle_kind"] == "evidence-bundle"
         assert manifest["source_analysis_path"] == "analysis.json"
         assert manifest["source_input_hashes"] == [input_metadata]
@@ -186,7 +186,7 @@ def test_vpw068_reports_and_evidence_bundle_export_governance_context() -> None:
     assert "service:checkout" in html
 
     analysis = json.loads(render_analysis_result_json(payload))
-    jsonschema.validate(analysis, _load_schema("analysis-result.v1.schema.json"))
+    jsonschema.validate(analysis, _load_schema("analysis-result.v2.schema.json"))
     assert analysis["governance_rollups"]["top_assets_by_risk"][0]["label"] == "payments-api"
     assert analysis["governance_rollups"]["waiver_debt"]["expiring_soon_count"] == 1
 
@@ -305,7 +305,7 @@ def test_vpw079_workbench_evidence_bundle_includes_detection_coverage_export() -
     assert "## Detection Coverage" in markdown
     assert "| Partial | 1 |" in markdown
     analysis = json.loads(render_analysis_result_json(payload))
-    jsonschema.validate(analysis, _load_schema("analysis-result.v1.schema.json"))
+    jsonschema.validate(analysis, _load_schema("analysis-result.v2.schema.json"))
     assert analysis["detection_coverage"]["summary"]["not_covered"] == 1
 
     bundle, manifest = render_evidence_bundle_zip(payload)
@@ -434,7 +434,7 @@ def test_vpw052_evidence_bundle_verify_api_reports_modified_member(
     tampered_bundle = _replace_zip_member(
         report_path.read_bytes(),
         "analysis.json",
-        b'{"schema":"analysis-result.v1","tampered":true}\n',
+        b'{"schema":"analysis-result.v2","tampered":true}\n',
     )
     report_path.write_bytes(tampered_bundle)
     with Session(workbench_api_env.engine) as session:

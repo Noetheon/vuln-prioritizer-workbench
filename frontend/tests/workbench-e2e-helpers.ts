@@ -172,7 +172,7 @@ export async function waitForRunSucceeded(
       ) {
         throw new Error(
           `Run ${runId} finished as ${status}: ${JSON.stringify(
-            run.workflow?.diagnostics ?? run.diagnostics ?? {},
+            run.diagnostics ?? {},
           )}`,
         )
       }

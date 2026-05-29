@@ -66,7 +66,7 @@ class WorkflowRunBase(SQLModel):
     )
     title: str = Field(max_length=240)
     handler: str = Field(max_length=240)
-    execution_mode: str = Field(default="request", max_length=40)
+    execution_mode: str = Field(default="worker", max_length=40)
     idempotency_key: str | None = Field(default=None, max_length=160)
     queue_name: str = Field(default="default", max_length=80)
     priority: int = Field(default=0, sa_column=Column(Integer, nullable=False))
@@ -259,7 +259,6 @@ class WorkflowRunPublic(SQLModel):
     status: WorkflowRunStatus
     title: str
     handler: str
-    execution_mode: str
     project_id: uuid.UUID | None = None
     analysis_run_id: uuid.UUID | None = None
     report_id: uuid.UUID | None = None
@@ -273,9 +272,6 @@ class WorkflowRunPublic(SQLModel):
     max_attempts: int = 1
     cancellation_requested: bool = False
     error_message: str | None = None
-    error_details: dict[str, Any] = Field(default_factory=dict)
-    result: dict[str, Any] = Field(default_factory=dict)
-    diagnostics: dict[str, Any] = Field(default_factory=dict)
     artifact_refs: list[dict[str, Any]] = Field(default_factory=list)
     details: dict[str, Any] = Field(default_factory=dict)
     terminal_code: str | None = None

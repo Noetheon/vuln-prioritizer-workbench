@@ -4,7 +4,8 @@ import uuid
 from typing import Any
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, select
+from utils.import_contracts import completed_run_payload, configure_upload_dir
 from utils.workbench_contracts import _create_report_via_worker
 from utils.workbench_env import (
     DEMO_CVE_LOG4SHELL,
@@ -69,8 +70,7 @@ def test_vpw064_workbench_waiver_lifecycle_and_report_visibility(
     accepted = accepted_detail.json()
     assert accepted["status"] == "accepted"
     assert accepted["waived"] is True
-    assert accepted["explanation_json"]["waiver_status"] == "active"
-    assert accepted["explanation_json"]["waiver_owner"] == "risk-owner"
+    assert "explanation_json" not in accepted
 
     run_id = _seed_report_run(
         workbench_api_env,
@@ -86,8 +86,7 @@ def test_vpw064_workbench_waiver_lifecycle_and_report_visibility(
     csv_download = workbench_api_env.client.get(report["download_url"], headers=headers)
     assert csv_download.status_code == 200
     assert "accepted" in csv_download.text
-    assert "risk-owner" in csv_download.text
-    assert "active" in csv_download.text
+    assert "Accepted-risk governance remains visible." in csv_download.text
 
     updated = workbench_api_env.client.patch(
         f"/api/v1/waivers/{waiver['id']}",
@@ -121,8 +120,7 @@ def test_vpw064_workbench_waiver_lifecycle_and_report_visibility(
     expired_finding = expired_detail.json()
     assert expired_finding["status"] == "open"
     assert expired_finding["waived"] is False
-    assert expired_finding["explanation_json"]["waiver_status"] == "expired"
-    assert expired_finding["explanation_json"]["waiver_owner"] == "service-risk"
+    assert "explanation_json" not in expired_finding
 
 
 def test_vpw064_workbench_waiver_scopes_match_finding_cve_asset_and_service(
@@ -238,7 +236,7 @@ def test_workbench_asset_context_changes_resync_waiver_state(
     finding_payload = refreshed.json()
     assert finding_payload["status"] == "open"
     assert finding_payload["waived"] is False
-    assert "waiver" not in finding_payload["evidence_json"]
+    assert "evidence_json" not in finding_payload
 
 
 def test_workbench_asset_context_import_resyncs_waiver_state(
@@ -292,6 +290,75 @@ def test_workbench_asset_context_import_resyncs_waiver_state(
     assert refreshed.status_code == 200
     assert refreshed.json()["status"] == "open"
     assert refreshed.json()["waived"] is False
+
+
+def test_workbench_expired_waiver_sync_updates_v2_evidence_with_string_status(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Any,
+) -> None:
+    configure_upload_dir(workbench_api_env, tmp_path)
+    headers = local_api_headers(workbench_api_env.client)
+    project = create_project_via_api(workbench_api_env.client, headers)
+    project_id = uuid.UUID(project["id"])
+    occurrence_csv = "\n".join(
+        [
+            "cve_id,asset_ref,component,version,business_service",
+            f"{DEMO_CVE_LOG4SHELL},identity-api,log4j,2.14.1,checkout",
+            "",
+        ]
+    ).encode()
+    imported = workbench_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={"file": ("waiver-evidence.csv", occurrence_csv, "text/csv")},
+    )
+    run_payload = completed_run_payload(workbench_api_env, imported, headers=headers)
+    assert run_payload["evidence"]["analysis_evidence_id"]
+
+    with Session(workbench_api_env.engine) as session:
+        finding = session.exec(
+            select(workbench_api_env.app_models.Finding).where(
+                workbench_api_env.app_models.Finding.project_id == project_id,
+                workbench_api_env.app_models.Finding.cve_id == DEMO_CVE_LOG4SHELL,
+            )
+        ).one()
+        finding_id = finding.id
+        finding.status = "open"
+        session.add(finding)
+        session.commit()
+
+    expired = workbench_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/waivers/",
+        headers=headers,
+        json={
+            "cve_id": DEMO_CVE_LOG4SHELL,
+            "owner": "legacy-risk",
+            "reason": "Expired waiver should still update typed evidence.",
+            "expires_at": "2020-01-01",
+            "review_at": "2019-12-31",
+            "approval_ref": "CAB-STRING-STATUS",
+        },
+    )
+    assert expired.status_code == 200, expired.text
+    assert expired.json()["matched_findings"] == 1
+
+    detail = workbench_api_env.client.get(f"/api/v1/findings/{finding_id}", headers=headers)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["status"] == "open"
+    assert detail.json()["waived"] is False
+    with Session(workbench_api_env.engine) as session:
+        evidence = workbench_api_env.repositories.EvidenceRepository(
+            session
+        ).latest_finding_decision_evidence(finding_id)
+        assert evidence is not None
+        assert evidence.status == "open"
+        assert evidence.governance.waived is False
+        waiver_record = {
+            **evidence.governance.waiver,
+            **dict(evidence.priority_evidence.raw.get("waiver") or {}),
+        }
+        assert waiver_record["waiver_status"] == "expired"
 
 
 def test_vpw064_workbench_waiver_validation_errors(workbench_api_env: WorkbenchApiEnv) -> None:

@@ -125,7 +125,7 @@ omit = [
 
 [tool.mutmut]
 paths_to_mutate = [
-  "app/services/import_background.py",
+  "app/services/decision_evidence_builder.py",
   "app/services/report_bundle_archive_verification.py",
   "app/services/report_sarif_validation.py",
   "src/vuln_prioritizer/services/analysis_pipeline.py",
@@ -136,7 +136,7 @@ also_copy = [
   "tests",
 ]
 tests_dir = [
-  "tests/test_import_background_unit.py",
+  "tests/api/import_contracts/test_decision_evidence_contract.py",
   "tests/api/test_workbench_evidence_verification_unit.py",
   "tests/test_analysis_refactor.py",
   "tests/property",

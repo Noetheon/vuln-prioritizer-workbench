@@ -24,6 +24,7 @@ hosted SaaS product.
 | --- | --- | --- |
 | Backend runtime | `backend/app` | Active FastAPI app, `/api/v1` routes, SQLModel models, repositories, services, and Alembic migrations. |
 | Worker runtime | `backend/app/workers` | Separate database-backed worker process for queued durable imports, provider refreshes, retries, cancellation, and report generation. |
+| Decision/Evidence Kernel | `backend/app/contracts/decision_evidence.py`, `analysis_evidence`, `finding_decision_evidence` | Typed v2 source of truth for bounded run evidence, per-finding decisions, provider facts, governance signals, priority explanations, diagnostics, and report projection. |
 | Frontend runtime | `frontend` | React, Vite, TypeScript, TanStack Query, local route adapter, Playwright tests, and Workbench UI. |
 | Generated client | `frontend/src/client/**` | Generated from backend OpenAPI. Do not edit generated files manually. |
 | Frontend integration wrapper | `frontend/src/api-client.ts` | Handwritten wrapper over generated client code. Normal app code should use this boundary. |
@@ -76,13 +77,15 @@ provider, release, deployment, or archived-evidence statement is current.
 
 The last full documentation hygiene pass recorded in this checkout is
 2026-05-29. It covered the Public + Root documentation scope, verified MkDocs
-navigation coverage, checked the Workflow v2 worker-first quickstarts and
-contracts against code, rechecked import/report format claims against active
-backend and frontend definitions, and ran the docs hygiene/build gates. The
-provider/version wording baseline from 2026-05-25 remains a source-fact
-baseline unless those external primary-source claims are revalidated again.
-Treat both as documentation baselines, not as live-provider uptime proof or
-public deployment certification.
+navigation coverage, checked the worker-first Workflow v2 quickstarts and the
+Decision/Evidence Kernel v2 contracts against code, rechecked import/report
+format claims against active backend and frontend definitions, and ran the docs
+hygiene/build gates. The active evidence baseline is
+`analysis-result.v2.json`; `analysis-result.v1.json` is no longer an active
+contract. The provider/version wording baseline from 2026-05-25 remains a
+source-fact baseline unless those external primary-source claims are revalidated
+again. Treat both as documentation baselines, not as live-provider uptime proof
+or public deployment certification.
 
 The current package maturity classifier is `Development Status :: 4 - Beta`.
 That means the self-hosted Workbench is release-gated for local-first

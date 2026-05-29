@@ -52,7 +52,7 @@ TEXT_SUFFIXES = {
 }
 MEDIA_SUFFIXES = {".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"}
 CANONICAL_EVIDENCE_CONTRACT_ARTIFACTS = {
-    Path("docs/evidence/vpw-050-analysis-result.v1.json"),
+    Path("docs/evidence/vpw-050-analysis-result.v2.json"),
     Path("docs/evidence/vpw-050-findings.csv"),
     Path("docs/evidence/vpw-051-analysis.json"),
     Path("docs/evidence/vpw-051-manifest.json"),

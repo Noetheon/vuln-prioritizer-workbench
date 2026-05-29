@@ -31,7 +31,7 @@ def raise_parse_failure(
     input_type: str,
     filename: str,
     exc: Exception,
-    execution_mode: str = "request",
+    execution_mode: str = "worker",
 ) -> NoReturn:
     """Raise parse failure function."""
     parse_errors = _parse_errors(exc, filename=filename, input_type=input_type)
@@ -82,7 +82,7 @@ def raise_sidecar_parse_failure(
     filename: str | None,
     stage: str,
     exc: Exception,
-    execution_mode: str = "request",
+    execution_mode: str = "worker",
 ) -> NoReturn:
     """Raise sidecar parse failure function."""
     sidecar_error = _sidecar_error_payload(

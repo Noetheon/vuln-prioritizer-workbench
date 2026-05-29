@@ -80,7 +80,7 @@ def create_provider_update_job(
         cve_ids=cve_ids,
         cache_only=payload.cache_only,
         status=AnalysisRunStatus.RUNNING,
-        execution_mode="request",
+        execution_mode="worker",
     )
     return _execute_provider_update_run(
         session=session,
@@ -90,7 +90,7 @@ def create_provider_update_job(
         selected_sources=selected_sources,
         cve_ids=cve_ids,
         cache_only=payload.cache_only,
-        execution_mode="request",
+        execution_mode="worker",
         fail_conflicts=False,
     )
 
@@ -147,7 +147,7 @@ def resume_provider_update_job(
     settings: Settings,
     payload: ProviderUpdateJobCreate,
     run_id: uuid.UUID,
-    execution_mode: str = "background",
+    execution_mode: str = "worker",
     workflow_context: WorkflowExecutionContext | None = None,
 ) -> AnalysisRun | None:
     """Execute a pending provider update job in the current session."""
@@ -223,7 +223,7 @@ def mark_provider_update_job_background_failed(
         selected_sources=_string_list(metadata.get("requested_sources") or metadata.get("sources")),
         requested_cves=_int_value(metadata.get("requested_cves")),
         cache_only=bool(metadata.get("cache_only", True)),
-        execution_mode=str(metadata.get("execution_mode") or "background"),
+        execution_mode="worker",
         error_message=error_message,
         detail="Provider refresh failed before replacing or mutating existing snapshots.",
     )
@@ -335,7 +335,6 @@ def _execute_provider_update_run(
         "requested_sources": selected_sources,
         "requested_cves": len(cve_ids),
         "cache_only": cache_only,
-        "execution_mode": execution_mode,
         "provider_snapshot_id": str(snapshot.id),
     }
     run.provider_snapshot_id = snapshot.id
@@ -435,7 +434,6 @@ def _mark_provider_update_run_failed(
         "requested_sources": selected_sources,
         "requested_cves": requested_cves,
         "cache_only": cache_only,
-        "execution_mode": execution_mode,
         "snapshot_created": False,
         "detail": detail,
     }

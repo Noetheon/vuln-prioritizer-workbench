@@ -15,8 +15,9 @@ export function findingOccurrenceRows(
   }
   const explanationPayload = objectRecord(explanation?.explanation)
   const explanationProvenance = objectRecord(explanationPayload.provenance)
+  const evidenceRaw = objectRecord(finding?.evidence?.priority_evidence.raw)
   const findingProvenance = objectRecord(
-    objectRecord(finding?.explanation_json).provenance,
+    evidenceRaw.provenance,
   )
   return arrayRecords(
     explanationProvenance.occurrences ?? findingProvenance.occurrences,
@@ -32,7 +33,8 @@ export function findingDataQualityRows(
 ) {
   const flags =
     explanation?.data_quality_flags ??
-    arrayRecords(objectRecord(finding?.data_quality_json).flags)
+    finding?.evidence?.priority_evidence.data_quality_flags ??
+    arrayRecords(finding?.evidence?.governance?.data_quality?.flags)
   return flags.map((flag, index) => ({
     code: stringValue(flag.code) ?? "data_quality_flag",
     key: [flag.source, flag.code, flag.message, index].join(":"),
@@ -51,7 +53,7 @@ export function findingProviderGaps(
   }
   const providerEvidence = objectRecord(
     explanation?.provider_evidence ??
-      objectRecord(finding.explanation_json).provider_evidence,
+      finding.evidence?.provider?.provider_evidence,
   )
   const gaps: string[] = []
   if (finding.epss === null || finding.epss === undefined) {
