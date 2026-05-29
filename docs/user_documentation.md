@@ -81,7 +81,7 @@ DOCKER_DEMO_BACKEND_PORT=18081 DOCKER_DEMO_FRONTEND_PORT=15175 make docker-demo-
 | Scoring and explanation | [Methodology](methodology.md), [Contracts](contracts.md) | Base priority from CVSS, EPSS, and KEV; operational score; decision guidance; comparison and explain semantics. |
 | Reports and evidence | [Support matrix](support_matrix.md), [Contracts](contracts.md), [Evidence archive](evidence.md) | Markdown, JSON, SARIF, HTML, CSV, evidence ZIP manifests, verification, and governance artifacts. |
 | ATT&CK boundaries | [ATT&CK/TTP methodology](attack-ttp-methodology.md), [Workbench ATT&CK methodology](workbench-attack-methodology.md), [Methodology](methodology.md) | CTID/local mapping sources, confidence, no heuristic mappings, tactic/technique/procedure boundary, and report wording rules. |
-| Security and deployment limits | [Workbench threat model](workbench-threat-model.md), [Release checklist](workbench-v1-release-checklist.md) | Local-first assumptions, upload/download controls, secret redaction, public-exposure blockers, Docker and dependency evidence. |
+| Security and deployment limits | [Workbench threat model](workbench-threat-model.md), [Local/private deployment runbook](workbench-public-deployment.md) | Local-first assumptions, upload/download controls, secret redaction, public-exposure blockers, Docker and dependency evidence. |
 | Reports and integrations | [Reporting and CI integrations](integrations/reporting_and_ci.md) | SARIF validation, summaries, evidence bundles, fail gates, and report artifacts. |
 | Current release status | [v1.1.0 release notes](releases/v1.1.0.md), [Roadmap](roadmap.md) | Current package line, Workbench milestone evidence, shipped surfaces, and deliberate future scope. |
 

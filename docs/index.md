@@ -91,14 +91,14 @@ inputs.
 - Read [attack-ttp-methodology.md](attack-ttp-methodology.md) for curated ATT&CK/TTP mapping rules, no-inference boundaries, and the current mapped demo proof.
 - Read [reports-and-evidence.md](reports-and-evidence.md) for Evidence Center formats, ZIP bundle verification, canonical contract artifacts, and archive layout.
 - Read [demo-readiness.md](demo-readiness.md) for the Project -> Import -> Findings -> Finding Detail -> TTP Context -> Waivers -> Evidence Center demo flow.
+- Use [workbench-offline-demo.md](workbench-offline-demo.md) for the
+  reproducible locked-provider demo runbook.
 - Use [support_matrix.md](support_matrix.md) and [contracts.md](contracts.md) for stable consumer-facing surfaces.
 - Use [architecture/index.md](architecture/index.md), [architecture/core-workbench-schema.md](architecture/core-workbench-schema.md), and [architecture/analysis-run-provider-schema.md](architecture/analysis-run-provider-schema.md) for architecture and data-model details.
 - Use [asset-context-csv.md](asset-context-csv.md) for the local asset-context CSV schema, match modes, precedence, and re-score semantics.
 - Use [playbooks.md](playbooks.md) when you want the shortest role-oriented path for CI scans, SBOM triage, or infrastructure scan triage.
 - Use [integrations/reporting_and_ci.md](integrations/reporting_and_ci.md) for SARIF, HTML, and local workflow guidance.
 - Use [workbench-threat-model.md](workbench-threat-model.md) for Workbench security boundaries, residual risk, and release readiness checks.
-- Use [workbench-offline-demo.md](workbench-offline-demo.md) only when you need
-  the older locked-provider demo runbook.
 - Use [submission/evidence-sheet.md](submission/evidence-sheet.md) for the
   final claim-to-evidence map.
 - Use [user_documentation.md#known-limitations](user_documentation.md#known-limitations) for the consolidated external-user limitations list.

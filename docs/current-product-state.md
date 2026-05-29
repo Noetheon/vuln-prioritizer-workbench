@@ -56,6 +56,7 @@ hosted SaaS product.
 | Scoring rules | [Scoring Methodology](scoring-methodology.md) |
 | ATT&CK/TTP provenance | [ATT&CK/TTP Methodology](attack-ttp-methodology.md) |
 | Reports and evidence bundles | [Reports and Evidence](reports-and-evidence.md) |
+| Reproducible local demo | [Demo Readiness](demo-readiness.md), [Workbench Offline Demo Runbook](workbench-offline-demo.md) |
 | Security boundaries | [Workbench Threat Model](workbench-threat-model.md) |
 | Deployment caveats | [Local/Private Workbench Deployment](workbench-public-deployment.md) |
 | Local readiness posture | [Dependency and Package Policy](dependency-and-package-policy.md), [Local/Private Workbench Deployment](workbench-public-deployment.md) |
