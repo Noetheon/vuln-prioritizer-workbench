@@ -18,7 +18,8 @@ RUN npm run build
 FROM nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6
 
 USER root
-RUN apk del --no-network curl libcurl
+RUN apk upgrade --no-cache \
+    && apk del --no-network curl libcurl nginx-module-image-filter
 USER 101
 
 COPY --from=build-stage /app/frontend/dist/ /usr/share/nginx/html
