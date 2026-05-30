@@ -90,6 +90,10 @@ rollups, governance views, and report exports project from those typed records.
 `workflow_run.result_json` remains an internal lifecycle/ref payload, not the
 source of product truth.
 
+See [Decision/Evidence Kernel](architecture/decision-evidence-kernel.md) for
+the kernel input/output contract, projection rules, and the exact successful
+workflow result boundary.
+
 The old Workbench runtime packages, runtime database package, provider
 scheduler, and `web`/`db` CLI entrypoints have been removed. The active
 repository no longer ships a second FastAPI Workbench stack. `backend/app` must

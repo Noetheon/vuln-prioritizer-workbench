@@ -41,6 +41,9 @@ reproducibly.
       docs or tests still depend on `analysis-result.v1.json`.
 - [ ] Run and finding decisions are described as typed Decision/Evidence Kernel
       v2 data, not as free-form workflow result JSON.
+- [ ] Successful import workflow `result_json` is described only as a compact
+      `workflow-result-ref.v2` payload with `analysis_evidence_id` and
+      `artifact_refs`.
 
 ## ATT&CK/TTP Safety
 

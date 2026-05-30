@@ -1,6 +1,6 @@
 # Workbench Threat Model and Readiness
 
-Status: current local-first Workbench threat model. Last reviewed: 2026-05-29.
+Status: current local-first Workbench threat model. Last reviewed: 2026-05-30.
 
 This page defines the defensive threat model and operational readiness assumptions for the local Workbench. It keeps the same product boundaries as the rest of the project: `vuln-prioritizer` prioritizes known CVEs and existing findings. It is not a scanner, exploit tool, proof-of-concept generator, or general-purpose vulnerability-management platform.
 

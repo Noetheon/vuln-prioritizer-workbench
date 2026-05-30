@@ -131,6 +131,9 @@ finding/run pair. These tables hold the active product truth used by run
 projection, finding detail, dashboard rollups, waiver/governance views, and
 report rendering.
 
+The internal producer and projection rules are documented in
+[Decision/Evidence Kernel](architecture/decision-evidence-kernel.md).
+
 `AnalysisEvidenceV2` intentionally does not embed the full finding list.
 Per-finding decision graphs are validated and stored as
 `FindingDecisionEvidenceV2` rows, then hydrated by finding-detail and report
@@ -162,9 +165,9 @@ Failed imports may expose typed `RunDiagnosticsV2` without creating an empty
 `workflow_run` is the active execution metadata store. Import, provider, and
 report handlers write terminal output to:
 
-- `workflow_run.result_json` for small internal ref payloads only, such as
-  `analysis_evidence_id`, report artifact refs, provider artifact refs, and
-  schema version
+- `workflow_run.result_json` for small internal ref payloads only. Successful
+  imports use `schema_version: workflow-result-ref.v2`,
+  `analysis_evidence_id`, and `artifact_refs`.
 - `workflow_run.diagnostics_json` for parser, provider, report, and worker
   diagnostics used to build typed `RunDiagnosticsV2`
 - `workflow_run.artifact_refs_json` for generated report or provider snapshot

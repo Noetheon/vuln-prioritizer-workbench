@@ -89,11 +89,12 @@ for decisions.
 - API boundary: generated client files under `frontend/src/client/**`; the
   `frontend/src/api-client.ts` wrapper is manual integration code over that
   generated client.
-- Decision/Evidence Kernel v2: `backend/app/contracts/decision_evidence.py`
-  defines the typed run and finding evidence contracts. `analysis_evidence`
-  stores run-wide evidence only, while `finding_decision_evidence` stores the
-  current per-finding decision graph; workflow rows hold lifecycle state and
-  stable artifact/reference metadata.
+- Decision/Evidence Kernel v2: `backend/app/services/decision_kernel.py`
+  produces a typed `DecisionRunResult`, and
+  `backend/app/contracts/decision_evidence.py` defines the public evidence
+  contracts. `analysis_evidence` stores run-wide evidence only, while
+  `finding_decision_evidence` stores the current per-finding decision graph;
+  workflow rows hold lifecycle state and compact artifact/reference metadata.
 - Domain layer: retained under `backend/src/vuln_prioritizer/**` for parsers,
   providers, scoring, SARIF contracts, and neutral vulnerability logic shared
   with the active backend. The old Typer CLI and legacy report facades have
@@ -162,6 +163,7 @@ Public docs:
 - [Documentation home](docs/index.md)
 - [User Documentation Guide](docs/user_documentation.md)
 - [Product Architecture](docs/architecture.md)
+- [Decision/Evidence Kernel](docs/architecture/decision-evidence-kernel.md)
 - [Dependency and Package Policy](docs/dependency-and-package-policy.md)
 - [Scoring Methodology](docs/scoring-methodology.md)
 - [ATT&CK/TTP Methodology](docs/attack-ttp-methodology.md)

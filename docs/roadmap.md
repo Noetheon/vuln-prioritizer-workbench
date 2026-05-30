@@ -33,8 +33,9 @@ current acceptance source.
   score.
 - The active analysis JSON export is `analysis-result.v2.json`.
 - The active decision/evidence source is Decision/Evidence Kernel v2:
-  `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, `RunDiagnosticsV2`,
-  `analysis_evidence`, and `finding_decision_evidence`.
+  `backend/app/services/decision_kernel.py`, `AnalysisEvidenceV2`,
+  `FindingDecisionEvidenceV2`, `RunDiagnosticsV2`, `analysis_evidence`, and
+  `finding_decision_evidence`.
 - Default prioritization stays grounded in `CVSS + EPSS + KEV`.
 - ATT&CK, asset context, and VEX remain explicit contextual layers.
 - The old composite GitHub Action is no longer an active delivery surface; Workbench/API flows are the supported direction.

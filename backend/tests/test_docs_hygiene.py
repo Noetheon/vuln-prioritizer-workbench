@@ -468,6 +468,7 @@ def test_documentation_map_defines_current_and_historical_boundaries() -> None:
 
     assert Path("docs/current-product-state.md") in nav_pages
     assert Path("docs/documentation-map.md") in nav_pages
+    assert Path("docs/architecture/decision-evidence-kernel.md") in nav_pages
     assert Path("docs/workbench-threat-model.md") in current_product_pages
     assert Path("docs/workbench-public-deployment.md") in current_product_pages
     assert Path("docs/workbench-threat-model.md") not in history_pages
@@ -513,16 +514,17 @@ def test_documentation_evidence_matrix_records_current_hygiene_baseline() -> Non
     normalized_reports_and_evidence = " ".join(reports_and_evidence.split())
 
     for text in (current_state, evidence_matrix):
-        assert "2026-05-29" in text
-        assert "2026-05-25" in text
+        assert "2026-05-30" in text
         assert "Public + Root" in text
         assert "documentation hygiene" in text.lower()
 
     assert "Workflow v2 documentation was checked" in evidence_matrix
-    assert "provider/version wording baseline from 2026-05-25" in current_state
-    assert "MkDocs navigation covers 83 public pages" in evidence_matrix
+    assert "provider/version wording baseline was refreshed" in current_state
+    assert "MkDocs navigation covers 84 public pages" in evidence_matrix
     assert "Supported Workbench import types" in evidence_matrix
     assert "Supported Workbench report formats" in evidence_matrix
+    assert "backend/app/services/decision_kernel.py" in evidence_matrix
+    assert "workflow-result-ref.v2" in evidence_matrix
     assert "NVD CVE API 2.0 uses `cveIds`" in evidence_matrix
     assert "FIRST EPSS exposes `/data/v1/epss`" in evidence_matrix
     assert "official `cisagov/kev-data` mirror" in evidence_matrix

@@ -21,6 +21,12 @@ contracts, not from free-form workflow JSON. Download and verification stay
 behind the Workbench backend API. The frontend does not invent report content,
 treat a queued report as finished, or bypass checksum validation.
 
+All report formats are rendered from the same persisted evidence snapshot used
+by run and finding APIs: run-wide `AnalysisEvidenceV2` plus per-finding
+`FindingDecisionEvidenceV2`. Individual renderers must not reconstruct counts,
+provider facts, VEX state, governance signals, or occurrence semantics from
+successful workflow result JSON.
+
 ## Report Formats
 
 The current report surface supports:

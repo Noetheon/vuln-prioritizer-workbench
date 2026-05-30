@@ -137,9 +137,10 @@ If the browser demo cannot be shown, use these checked-in or generated artifacts
 - `docs/examples/example_pr_comment.md`
 - `docs/examples/example_results.sarif`
 - `data/demo_provider_snapshot.json`
-- `build/v1.0-demo-analysis.json`
-- `build/v1.0-demo-evidence-bundle.zip`
-- `build/v1.0-demo-evidence-bundle-verification.json`
+
+Historical `build/v1.0-demo-*` artifacts may appear in older release notes, but
+they are ignored local outputs and are not current checked-in fallback
+artifacts.
 
 ## No-Secret Rules
 

@@ -38,6 +38,7 @@ nav:
   - Benchmarking: benchmarking.md
   - Architecture:
       - Overview: architecture/index.md
+      - Decision/Evidence Kernel: architecture/decision-evidence-kernel.md
       - Model Import Registry: architecture/model-imports.md
       - Core Workbench Schema: architecture/core-workbench-schema.md
       - Analysis Run Provider Schema: architecture/analysis-run-provider-schema.md

@@ -7,6 +7,9 @@ analysis run provenance. The current schema keeps that provenance layer and
 adds the Decision/Evidence Kernel v2 tables that now hold run-wide evidence and
 per-finding decisions.
 
+The kernel-first producer and projection rules are documented in
+[Decision/Evidence Kernel](decision-evidence-kernel.md).
+
 This slice is storage-only. It does not introduce scanning, exploit execution,
 remote plugin loading, or heuristic ATT&CK mapping.
 
@@ -295,8 +298,8 @@ scheduling. The default worker process is
 queue rather than Redis, Celery, or another broker.
 
 For successful imports, `result_json` is a small internal reference payload
-only, for example `analysis_evidence_id`, schema version, and report/provider
-artifact refs. Counts, provider facts, sidecar summaries, dedup summaries, and
+only: `schema_version: workflow-result-ref.v2`, `analysis_evidence_id`, and
+`artifact_refs`. Counts, provider facts, sidecar summaries, dedup summaries, and
 finding semantics come from `AnalysisEvidenceV2` and
 `FindingDecisionEvidenceV2`, not from workflow result JSON.
 

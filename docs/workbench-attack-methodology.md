@@ -8,7 +8,7 @@ confidence rubric, and mapping review checklist live in
 surfaces follow the same safety contract.
 
 Version note: MITRE lists ATT&CK v19.1 as the current public website version as
-of the 2026-05-25 documentation hygiene pass. The checked-in Workbench demo
+of the 2026-05-30 documentation hygiene pass. The checked-in Workbench demo
 fixtures referenced by current examples are pinned to ATT&CK 16.1 for
 deterministic local evidence. That pin is not a claim that the demo fixture set
 is current ATT&CK coverage.

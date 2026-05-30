@@ -84,6 +84,9 @@ inputs.
   Security Project submission package.
 - Read [methodology.md](methodology.md) for scoring, ATT&CK, Asset Context, and VEX semantics.
 - Read [architecture.md](architecture.md) for the current FastAPI/React route architecture, generated client boundary, VPW design-system role, and shared state ownership.
+- Read [architecture/decision-evidence-kernel.md](architecture/decision-evidence-kernel.md)
+  for the kernel-first import/evidence flow, projection rules, and workflow
+  result boundary.
 - Read [dependency-and-package-policy.md](dependency-and-package-policy.md) for
   backend package contents, frontend lockfile ownership, Dependabot labels, and
   dependency-audit policy.

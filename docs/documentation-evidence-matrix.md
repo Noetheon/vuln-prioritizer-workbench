@@ -7,7 +7,7 @@ successfully and still be misleading if it mixes current Workbench behavior,
 historical CLI/template material, archived demo evidence, or live provider
 facts.
 
-Last full documentation hygiene pass recorded from this checkout: 2026-05-29.
+Latest documentation hygiene pass recorded from this checkout: 2026-05-30.
 Scope: Public + Root documentation. That means every MkDocs-published
 `docs/**/*.md` page plus root/community docs, `backend/README.md`,
 `frontend/README.md`, `frontend/DESIGN.md`, `frontend/VPW_PAGE_PATTERNS.md`,
@@ -27,29 +27,35 @@ current docs link to them.
 - Downgrade unproven claims to limitations, historical notes, or evidence gaps.
   Do not convert local demo proof into public/shared deployment certification.
 
-## 2026-05-29 Hygiene Findings
+## 2026-05-30 Kernel-First Hygiene Findings
 
 - Workflow v2 documentation was checked against the active worker-first code
   path. Quickstarts now include the `worker` service where imports, provider
   refreshes, report generation, retry, and cancellation are expected to
   complete.
-- Decision/Evidence Kernel v2 documentation was checked against the active
-  `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, `RunDiagnosticsV2`,
-  `analysis_evidence`, and `finding_decision_evidence` code path.
+- Decision/Evidence Kernel v2 documentation was checked against the
+  kernel-first `DecisionRunResult` path in
+  `backend/app/services/decision_kernel.py`, the public
+  `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, and `RunDiagnosticsV2`
+  contracts, and the `analysis_evidence` /
+  `finding_decision_evidence` persistence path.
 - Durable workflow docs describe `workflow_run` and `workflow_event` as the
   active execution metadata store. Workflow result JSON is internal reference
   metadata; legacy run JSON fields and the removed `/workflow-metadata` route
   are not active contracts.
+- Successful import workflow result JSON is documented as
+  `workflow-result-ref.v2` only. Counts, provider facts, finding semantics,
+  dedup summaries, and sidecar summaries belong to evidence v2.
 - Frontend command documentation uses the repository wrapper
   `scripts/frontend-npm.sh` or Make targets so local docs match the pinned
   Node 22 / npm 10 policy used by CI and Docker.
-- Docs were rechecked after the Workflow v2 migration with
+- Docs were rechecked after the kernel-first documentation refresh with
   `python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov`,
-  `make docs-check`, and the broader `make quality-10-check` gate.
+  `make docs-check`, and the targeted import/report/workflow contract gates.
 
-## 2026-05-25 Provider And Format Baseline
+## 2026-05-30 Provider And Format Baseline
 
-- MkDocs navigation covers 83 public pages; no public Markdown page was outside
+- MkDocs navigation covers 84 public pages; no public Markdown page was outside
   navigation except the explicit non-public evidence-contract allowlist.
 - Supported Workbench import types in [Support Matrix](support_matrix.md)
   matched `backend/src/vuln_prioritizer/options.py` and
@@ -77,12 +83,12 @@ current docs link to them.
 | Active stack | FastAPI backend under `backend/app`, React/Vite frontend under `frontend`, retained domain package under `backend/src/vuln_prioritizer`. | `backend/app/main.py`, `backend/app/api/routes/**`, `frontend/package.json`, `frontend/src/AppRouter.tsx`, `backend/pyproject.toml` | Not applicable. | `make local-workbench-check` |
 | Supported imports | Active Workbench import types are `cve-list`, `generic-occurrence-csv`, `trivy-json`, `grype-json`, `cyclonedx-json`, `spdx-json`, `dependency-check-json`, `github-alerts-json`, `nessus-xml`, and `openvas-xml`. | `backend/app/importers/offline_loader.py`, `backend/src/vuln_prioritizer/options.py`, `frontend/src/lib/import-format-types.ts`, `docs/support_matrix.md` | Tool format ownership remains external, but support is repo-defined. | `python3 -m pytest -q backend/tests/test_input_fixtures.py backend/tests/test_trivy_json_parser.py backend/tests/test_grype_json_parser.py --no-cov` |
 | Report outputs | Active report formats are Markdown, HTML, JSON, CSV, Evidence ZIP, ATT&CK Navigator, and SARIF. | `backend/app/models/reports.py`, `backend/app/services/report_contracts.py`, `frontend/src/lib/report-format.ts`, `docs/contracts.md` | SARIF version is external; VPW support is repo-defined. | `python3 -m pytest -q backend/tests/api/report_contracts backend/tests/test_report_formatting.py --no-cov` |
-| Decision/Evidence Kernel v2 | Run and finding decisions are typed through `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, and `RunDiagnosticsV2`; bounded run evidence lives in `analysis_evidence`, while per-finding decision graphs live in `finding_decision_evidence`. | `backend/app/contracts/decision_evidence.py`, `backend/app/models/evidence.py`, `backend/app/repositories/evidence.py`, `backend/app/services/decision_evidence_builder.py`, `backend/tests/api/import_contracts/`, `backend/tests/api/report_contracts/` | Not applicable. | `python3 -m pytest -q backend/tests/api/import_contracts backend/tests/api/report_contracts --no-cov` |
+| Decision/Evidence Kernel v2 | Successful imports produce one typed `DecisionRunResult`; bounded run evidence lives in `analysis_evidence`, while per-finding decision graphs live in `finding_decision_evidence`. Successful workflow result JSON is only a compact reference payload. | `backend/app/services/decision_kernel.py`, `backend/app/contracts/decision_evidence.py`, `backend/app/models/evidence.py`, `backend/app/repositories/evidence.py`, `backend/app/services/import_execution.py`, `backend/app/services/run_workflow_projection.py`, `backend/tests/api/import_contracts/test_kernel_first_import_contract.py`, `backend/tests/api/import_contracts/`, `backend/tests/api/report_contracts/` | Not applicable. | `python3 -m pytest -q backend/tests/api/import_contracts backend/tests/api/report_contracts backend/tests/api/workflow_contracts --no-cov` |
 | Provider enrichment | VPW uses NVD, FIRST EPSS, and CISA KEV as transparent provider signals and surfaces degraded or missing provider data. | `backend/src/vuln_prioritizer/providers/*.py`, `backend/tests/test_provider_response_contracts.py`, `backend/tests/live/test_provider_live_contracts.py` | [NVD CVE API 2.0](https://nvd.nist.gov/developers/vulnerabilities), [FIRST EPSS API](https://api.first.org/epss/), [CISA KEV catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) | `VPW_RUN_LIVE_PROVIDER_TESTS=1 python3 -m pytest -q backend/tests/live/test_provider_live_contracts.py --no-cov` |
 | Provider request limits | NVD documents `cveIds` as the current parameter with up to 100 CVE IDs per request. FIRST EPSS documents comma-separated CVEs with a 2000-character `cve` parameter limit. VPW currently sends NVD requests per CVE and EPSS chunks below the documented limit. | `backend/src/vuln_prioritizer/providers/nvd.py`, `backend/src/vuln_prioritizer/providers/epss.py`, `backend/src/vuln_prioritizer/config.py` | [NVD vulnerability API](https://nvd.nist.gov/developers/vulnerabilities), [FIRST EPSS API](https://api.first.org/epss/) | Provider fixture tests plus live provider smoke. |
 | CISA KEV source | cisa.gov is the authoritative catalog. `cisagov/kev-data` is an official mirror used as fallback. | `backend/src/vuln_prioritizer/providers/kev.py`, `backend/src/vuln_prioritizer/config.py`, `backend/tests/test_provider_response_contracts.py` | [CISA KEV catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog), [cisagov/kev-data](https://github.com/cisagov/kev-data) | `python3 -m pytest -q backend/tests/test_provider_response_contracts.py --no-cov` |
 | ATT&CK context | ATT&CK mappings are optional, local, explicit, and defensive. No fuzzy, heuristic, or LLM-generated CVE-to-technique mapping is allowed. | `backend/src/vuln_prioritizer/providers/attack.py`, `backend/src/vuln_prioritizer/providers/curated_attack_mappings.py`, `docs/attack-ttp-methodology.md`, `.github/ISSUE_TEMPLATE/attack_mapping_review.md` | [MITRE ATT&CK version history](https://attack.mitre.org/resources/versions/) | `python3 -m pytest -q backend/tests/test_attack_enrichment.py backend/tests/api/test_workbench_attack_models.py --no-cov` when those surfaces change. |
-| ATT&CK version wording | MITRE ATT&CK current public website version is time-sensitive. As of 2026-05-25 it is v19.1; repo demo fixtures remain pinned to ATT&CK 16.1 for deterministic evidence. | `data/attack/*16.1*`, `docs/example_attack_report.md`, `docs/example_attack_coverage.md` | [MITRE ATT&CK version history](https://attack.mitre.org/resources/versions/) | `python3 -m pytest -q backend/tests/api/test_workbench_attack_stix_snapshot_import.py backend/tests/test_attack_enrichment.py --no-cov` when fixtures change. |
+| ATT&CK version wording | MITRE ATT&CK current public website version is time-sensitive. As of 2026-05-30 it is v19.1; repo demo fixtures remain pinned to ATT&CK 16.1 for deterministic evidence. | `data/attack/*16.1*`, `docs/example_attack_report.md`, `docs/example_attack_coverage.md` | [MITRE ATT&CK version history](https://attack.mitre.org/resources/versions/) | `python3 -m pytest -q backend/tests/api/test_workbench_attack_stix_snapshot_import.py backend/tests/test_attack_enrichment.py --no-cov` when fixtures change. |
 | Release/tag history | `v1.1.0` is the current VPW package release tag. Older `0.x` tags in this repository include inherited historical/template-line tags and must not be treated as current VPW release proof unless a page explicitly scopes them. | `git tag --sort=-v:refname`, `CHANGELOG.md`, `docs/releases/**`, `docs/roadmap.md` | GitHub release objects are live GitHub state and must be checked for the exact tag. | `git for-each-ref refs/tags --format='%(refname:short)%09%(creatordate:iso8601)%09%(subject)'` |
 | Package maturity | Current metadata is `Development Status :: 4 - Beta`, reflecting local-first/self-hosted readiness without public/shared deployment certification. | `backend/pyproject.toml`, `README.md`, `docs/current-product-state.md`, `scripts/check_release_evidence_hygiene.py` | PyPI/TestPyPI state is live if publication is enabled. | `make release-evidence-hygiene-check` |
 | Public/shared deployment | Public or shared deployment readiness is candidate-specific and cannot be inherited from local smokes, archived scorecards, or demo screenshots. | `SECURITY.md`, `docs/workbench-public-deployment.md`, `docs/public-production-release-evidence-ledger.md`, `scripts/check_public_deployment_evidence.py` | Live public TLS/header evidence is deployment-specific. | `make public-production-evidence-check` plus exact-candidate live evidence. |
@@ -101,10 +107,11 @@ VPW_RUN_LIVE_PROVIDER_TESTS=1 python3 -m pytest -q backend/tests/live/test_provi
 make local-workbench-check
 ```
 
-The 2026-05-25 hygiene implementation additionally used these targeted
+The 2026-05-30 hygiene implementation additionally used these targeted
 contract checks while auditing docs:
 
 ```bash
+python3 -m pytest -q backend/tests/api/import_contracts/test_kernel_first_import_contract.py --no-cov
 python3 -m pytest -q backend/tests/test_input_fixtures.py backend/tests/test_trivy_json_parser.py backend/tests/test_grype_json_parser.py --no-cov
 python3 -m pytest -q backend/tests/api/report_contracts backend/tests/test_report_formatting.py --no-cov
 python3 -m pytest -q backend/tests/test_provider_response_contracts.py --no-cov
