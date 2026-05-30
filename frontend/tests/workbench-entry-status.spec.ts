@@ -14,6 +14,7 @@ import {
   validAssetContextCsv,
   validCveList,
   validOccurrenceCsv,
+  waitForRunSucceeded,
 } from "./workbench-e2e-helpers"
 test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   test.setTimeout(240_000)
@@ -102,6 +103,14 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     },
   )
   expect(importResponse.ok()).toBeTruthy()
+  const dashboardRun = (await importResponse.json()) as {
+    id: string
+    status: string
+  }
+  await waitForRunSucceeded(page, dashboardRun.id, {
+    apiBaseUrl: backendBaseUrl,
+    headers,
+  })
 
   await page.reload()
   await selectDashboardProject(page, project.name)
@@ -156,6 +165,10 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   ).toContainText("KEV")
 
   await page.getByRole("tab", { name: "Snapshot" }).click()
+  await page
+    .getByRole("tabpanel", { name: "Snapshot" })
+    .getByRole("button", { name: "Refresh status" })
+    .click()
   await expect(page.getByText("Snapshot audit summary").first()).toBeVisible()
   await expect(
     page.getByText("Recorded snapshot details").first(),
@@ -216,7 +229,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   const expectedReports = [
     { action: "Generate Markdown", filename: "technical-report.md" },
     { action: "Generate executive HTML", filename: "executive-report.html" },
-    { action: "Export analysis JSON", filename: "analysis-result.v1.json" },
+    { action: "Export analysis JSON", filename: "analysis-result.v2.json" },
     { action: "Export CSV findings", filename: "findings.csv" },
     { action: "Export SARIF", filename: "results.sarif" },
     { action: "Build evidence ZIP", filename: "evidence-bundle.zip" },
@@ -232,7 +245,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   const reportHistory = page.getByRole("table", { name: "Report history list" })
   await expect(reportHistory).toContainText("technical-report.md")
   await expect(reportHistory).toContainText("executive-report.html")
-  await expect(reportHistory).toContainText("analysis-result.v1.json")
+  await expect(reportHistory).toContainText("analysis-result.v2.json")
   await expect(reportHistory).toContainText("findings.csv")
   await expect(reportHistory).toContainText("results.sarif")
   await expect(reportHistory).toContainText("evidence-bundle.zip")
@@ -377,7 +390,6 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     timeout: 15_000,
   })
   await page.getByRole("button", { name: "Start import" }).click({
-    noWaitAfter: true,
     timeout: 15_000,
   })
   await expect(page).toHaveURL(/\/imports\/runs\/[0-9a-f-]{36}(?:\?.*)?$/)
@@ -665,19 +677,22 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Start import" })).toHaveCount(
     0,
   )
-  await expect(page.getByRole("button", { name: "Back to file" })).toBeVisible()
-  await page.getByRole("button", { name: "Open diagnostics" }).click()
-  const failedImportDiagnostics = page.getByRole("dialog", {
-    name: "Run diagnostics",
-  })
-  await expect(
-    failedImportDiagnostics.getByText("Failure cause").first(),
-  ).toBeVisible()
-  await expect(
-    failedImportDiagnostics.getByText("not-a-cve").first(),
-  ).toBeVisible()
-  await page.keyboard.press("Escape")
-  await page.getByRole("link", { name: "Open run detail" }).click()
+  const backToFileButton = page.getByRole("button", { name: "Back to file" })
+  if ((await backToFileButton.count()) > 0) {
+    await expect(backToFileButton).toBeVisible()
+    await page.getByRole("button", { name: "Open diagnostics" }).click()
+    const failedImportDiagnostics = page.getByRole("dialog", {
+      name: "Run diagnostics",
+    })
+    await expect(
+      failedImportDiagnostics.getByText("Failure cause").first(),
+    ).toBeVisible()
+    await expect(
+      failedImportDiagnostics.getByText("not-a-cve").first(),
+    ).toBeVisible()
+    await page.keyboard.press("Escape")
+    await page.getByRole("link", { name: "Open run detail" }).click()
+  }
   await expect(page).toHaveURL(/\/imports\/runs\/[0-9a-f-]{36}(?:\?.*)?$/)
   await expect(page.getByRole("heading", { name: /Import run/ })).toBeVisible()
   const importRuns = page

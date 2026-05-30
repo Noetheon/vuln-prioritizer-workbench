@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
       - name: Check out repository
@@ -73,7 +73,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
           cache: pip
           cache-dependency-path: |
             pyproject.toml
@@ -129,6 +129,9 @@ jobs:
               frontend/*|backend/app/*|backend/src/*)
                 run_frontend=true
                 ;;
+              .nvmrc|.npmrc|package.json)
+                run_frontend=true
+                ;;
               backend/pyproject.toml|pyproject.toml|Makefile)
                 run_frontend=true
                 ;;
@@ -153,7 +156,7 @@ jobs:
         if: steps.frontend-scope.outputs.run-frontend == 'true'
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
           cache: pip
           cache-dependency-path: |
             pyproject.toml
@@ -205,8 +208,7 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.frontend-scope.outputs.run-frontend == 'true'
-        working-directory: frontend
-        run: npx playwright install --with-deps chromium firefox webkit
+        run: scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true exec -- playwright install --with-deps chromium firefox webkit
 
       - name: Run VPW design audit screenshots
         if: steps.frontend-scope.outputs.run-frontend == 'true'
@@ -214,7 +216,7 @@ jobs:
 
       - name: Run full frontend Playwright suite
         if: steps.frontend-scope.outputs.run-frontend == 'true'
-        run: npm --prefix frontend run test
+        run: scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test
 
       - name: Upload frontend Playwright failure evidence
         if: failure()

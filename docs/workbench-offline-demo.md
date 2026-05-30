@@ -19,12 +19,14 @@ make provider-snapshot-validate
 python3 -m pytest -q backend/tests/api/test_workbench_local_runtime_smoke.py backend/tests/api/import_contracts backend/tests/api/report_contracts --no-cov
 make docker-demo-smoke
 make dependency-audit
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
 ```
 
 Open `http://127.0.0.1:5173` and create the project `online-shop-demo`.
 The browser demo uses the active backend in `backend/app` and the generated
-`/api/v1` React client.
+`/api/v1` React client. The `worker` service must stay running because imports,
+provider refreshes, report generation, retry, and cancellation are durable
+Workflow v2 jobs.
 
 The smoke target defaults to backend `18080` and frontend `15174`. If those
 host ports are already occupied, run it with explicit host bindings, for
@@ -58,7 +60,9 @@ If `pip-audit`, npm, or advisory data is unavailable, record that as a release-c
    mode, and provider data-quality notes. State that locked replay means
    reproducible, not automatically fresh.
 10. Open **Evidence Center** and show technical Markdown, Executive HTML,
-    analysis JSON, findings CSV, SARIF, ATT&CK Navigator layer, and Evidence ZIP.
+    `analysis-result.v2.json`, findings CSV, SARIF, ATT&CK Navigator layer, and
+    Evidence ZIP. State that reports are rendered from the typed
+    Decision/Evidence Kernel v2 records created by the import.
 11. Download the Evidence ZIP and verify the manifest through the report API.
 12. Open **Settings** and confirm local workspace access, runtime health,
     provider status, and diagnostics are visible without exposing secrets.
@@ -129,13 +133,14 @@ If the browser demo cannot be shown, use these checked-in or generated artifacts
 - `docs/examples/example_report.html`
 - `docs/examples/vpw-054-workbench-technical-report.md`
 - `docs/examples/vpw-054-workbench-executive-report.html`
-- `docs/examples/vpw-054-workbench-analysis-result.v1.json`
+- `docs/examples/vpw-054-workbench-analysis-result.v2.json`
 - `docs/examples/example_pr_comment.md`
 - `docs/examples/example_results.sarif`
 - `data/demo_provider_snapshot.json`
-- `build/v1.0-demo-analysis.json`
-- `build/v1.0-demo-evidence-bundle.zip`
-- `build/v1.0-demo-evidence-bundle-verification.json`
+
+Historical `build/v1.0-demo-*` artifacts may appear in older release notes, but
+they are ignored local outputs and are not current checked-in fallback
+artifacts.
 
 ## No-Secret Rules
 

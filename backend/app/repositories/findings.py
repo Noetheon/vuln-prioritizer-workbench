@@ -208,9 +208,7 @@ class FindingRepository:
         finding.waived = waived
         finding.recommended_action = recommended_action
         finding.rationale = rationale
-        finding.explanation_json = explanation_json or {}
-        finding.data_quality_json = data_quality_json or {}
-        finding.evidence_json = evidence_json or {}
+        _ = explanation_json, data_quality_json, evidence_json
         finding.last_seen_at = get_datetime_utc()
         if flush:
             self.session.flush()

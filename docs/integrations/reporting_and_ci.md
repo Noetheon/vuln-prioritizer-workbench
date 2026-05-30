@@ -11,9 +11,12 @@ prioritization and report generation.
    CycloneDX JSON, SPDX JSON, Dependency-Check JSON, Nessus XML, or OpenVAS XML.
 2. A local Workbench operator or automation imports that file into a Workbench
    project.
-3. The completed run generates report artifacts from the Workbench Reports
-   surface.
-4. Optional evidence bundles are verified before external sharing.
+3. The API returns a queued run with an embedded durable workflow. The Workbench
+   worker processes the import; automation polls or streams the workflow until
+   it reaches a terminal state.
+4. The completed run queues report artifacts from the Workbench Reports
+   surface through the same worker-first workflow model.
+5. Optional evidence bundles are verified before external sharing.
 
 ## Import API
 
@@ -22,6 +25,12 @@ The local API endpoint is:
 ```text
 POST /api/v1/projects/{project_id}/imports
 ```
+
+The response is an `AnalysisRunPublic` object with an embedded `workflow`.
+Treat `workflow.status` as the execution source of truth. Poll
+`GET /api/v1/workflows/{workflow_id}` or use
+`WS /api/v1/workflows/{workflow_id}/stream`; do not treat the upload response as
+completed import evidence.
 
 Required multipart fields:
 
@@ -52,8 +61,11 @@ curl -F input_type=trivy-json \
 Reports are created from completed runs:
 
 ```text
-POST /api/v1/runs/{run_id}/reports
+POST /api/v1/runs/{run_id}/report-jobs
 ```
+
+The response is a durable workflow object. Download links appear after the
+report-generation workflow succeeds and a report artifact exists.
 
 Supported report formats:
 

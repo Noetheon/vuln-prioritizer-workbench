@@ -359,7 +359,7 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
     assert "class ReportProviderSnapshot(StrictModel)" in models_source
     assert "class RemediationCampaign(StrictModel)" in models_source
     assert "class ExecutiveReportViewModel(StrictModel)" in models_source
-    assert "class AnalysisResultV1(StrictModel)" in models_source
+    assert "class AnalysisResultV2(StrictModel)" in models_source
     assert "MarkdownReportPayload: TypeAlias = ReportPayload" in models_source
     assert "MarkdownReportFinding: TypeAlias = ReportFinding" in models_source
     assert "MarkdownProviderSnapshot: TypeAlias = ReportProviderSnapshot" in models_source
@@ -601,8 +601,8 @@ def test_workbench_import_validation_and_storage_are_split_from_route_facade() -
     assert "def raise_sidecar_parse_failure" in parse_failure_source
 
 
-def test_run_workflow_metadata_uses_versioned_contract_projection() -> None:
-    contract_source = (ROOT / "app/contracts/run_workflow.py").read_text(encoding="utf-8")
+def test_run_workflow_metadata_uses_decision_evidence_v2_projection() -> None:
+    contract_source = (ROOT / "app/contracts/decision_evidence.py").read_text(encoding="utf-8")
     metadata_source = (ROOT / "app/services/run_workflow_metadata.py").read_text(encoding="utf-8")
     projection_source = (ROOT / "app/services/run_workflow_projection.py").read_text(
         encoding="utf-8"
@@ -610,42 +610,46 @@ def test_run_workflow_metadata_uses_versioned_contract_projection() -> None:
     model_source = (ROOT / "app/models/runs.py").read_text(encoding="utf-8")
     run_route_imports = _imported_modules("app/api/routes/runs.py")
     import_route_imports = _imported_modules("app/api/routes/imports.py")
-    writer_paths = (
+    result_writer_paths = (
         "app/services/import_execution.py",
         "app/services/import_execution_run_state.py",
-        "app/services/import_execution_failures.py",
-        "app/services/import_execution_parse_failures.py",
-        "app/services/import_background.py",
         "app/services/provider_updates.py",
     )
+    failure_paths = (
+        "app/services/import_execution_failures.py",
+        "app/services/import_execution_parse_failures.py",
+    )
 
-    assert "RUN_WORKFLOW_SUMMARY_SCHEMA_VERSION" in contract_source
-    assert "class RunWorkflowSummaryV1" in contract_source
-    assert "class RunWorkflowErrorV1" in contract_source
-    assert "def workflow_public_fields" in contract_source
-    assert "app.contracts.run_workflow" in model_source
+    assert "class AnalysisEvidenceV2" in contract_source
+    assert "class FindingDecisionEvidenceV2" in contract_source
+    assert "class RunDiagnosticsV2" in contract_source
+    assert "analysis-evidence.v2" in contract_source
+    assert "finding-decision-evidence.v2" in contract_source
+    assert "app.contracts.run_workflow" not in model_source
     assert "app.services.run_workflow_projection" in run_route_imports
     assert "app.services.run_workflow_projection" in import_route_imports
-    assert "def public_workflow_fields" in metadata_source
-    assert "workflow_public_fields(summary, error)" in metadata_source
-    assert "public_workflow_fields(run)" in projection_source
+    assert "def redacted_workflow_summary_payload" in metadata_source
+    assert "AnalysisEvidenceV2" in projection_source
+    assert "RunDiagnosticsV2" in projection_source
+    assert "analysis_run_workflow_metadata_public" not in projection_source
     assert "AnalysisRunPublic(" in projection_source
     assert "AnalysisRunSummaryPublic(" in projection_source
-    for path in writer_paths:
+    assert "summary_json" not in model_source
+    assert "error_json" not in model_source
+    assert "result: dict" not in model_source
+    assert "diagnostics: dict" not in model_source
+    for path in result_writer_paths:
         source = (ROOT / path).read_text(encoding="utf-8")
         assert (
             "merge_summary_payload" in source
-            or "update_workflow_summary" in source
-            or "set_workflow_summary" in source
+            or "context.succeed(" in source
+            or "finish_workflow(" in source
         ), path
-    for path in (
-        "app/services/import_execution_failures.py",
-        "app/services/import_execution_parse_failures.py",
-        "app/services/import_background.py",
-        "app/services/provider_updates.py",
-    ):
+    for path in failure_paths:
         source = (ROOT / path).read_text(encoding="utf-8")
-        assert "merge_error_payload" in source or "set_workflow_error" in source, path
+        assert "finish_analysis_run(" in source, path
+        assert "result_json=" not in source
+        assert "diagnostics_json=" not in source
 
 
 def test_run_workflow_raw_metadata_access_stays_behind_service_boundary() -> None:
@@ -763,7 +767,7 @@ def test_asset_repository_delegates_projection_and_rescore_rules() -> None:
     assert "def _with_rescore_flag" in projection_source
     assert "def mark_finding_rescore_needed" in rescore_source
     assert "def recalculate_asset_finding" in rescore_source
-    assert "build_operational_score" in rescore_source
+    assert "build_operational_score" not in rescore_source
 
 
 def test_scoring_operational_rules_are_split_from_priority_facade() -> None:

@@ -8,6 +8,7 @@ import {
 import {
   cyclonedxVex,
   cyclonedxVexOccurrenceCsv,
+  waitForRunSucceeded,
 } from "./workbench-e2e-helpers"
 
 test("workbench frontend renders CycloneDX VEX occurrence evidence", async ({
@@ -52,6 +53,11 @@ test("workbench frontend renders CycloneDX VEX occurrence evidence", async ({
     },
   )
   expect(importResponse.ok()).toBeTruthy()
+  const importedRun = (await importResponse.json()) as { id: string }
+  await waitForRunSucceeded(page, importedRun.id, {
+    apiBaseUrl: backendBaseUrl,
+    headers,
+  })
 
   const findingsResponse = await page.request.get(
     `${backendBaseUrl}/api/v1/projects/${project.id}/findings/?sort=cve`,

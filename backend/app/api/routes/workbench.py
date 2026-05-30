@@ -18,6 +18,7 @@ from app.models import (
     WorkbenchCapabilitiesPublic,
     WorkbenchHealth,
     WorkbenchStatus,
+    WorkflowRunKind,
 )
 from app.services.audit import record_audit_event
 from app.services.demo_workspace import (
@@ -30,7 +31,9 @@ from app.services.demo_workspace import (
 from app.services.import_errors import ImportServiceError
 from app.services.report_artifacts import build_report_public
 from app.services.report_models import ReportGenerationError
+from app.services.run_workflow_projection import analysis_run_public
 from app.services.workbench_capabilities import build_workbench_capabilities
+from app.services.workflows import latest_analysis_workflow_public, latest_report_workflow_public
 from vuln_prioritizer import __version__
 
 router = APIRouter(prefix="/workbench", tags=["workbench"])
@@ -130,7 +133,7 @@ async def create_demo_workspace(
         },
     )
     session.commit()
-    return _demo_workspace_public(snapshot, active_settings)
+    return _demo_workspace_public(snapshot, active_settings, session=session)
 
 
 @router.delete("/demo", status_code=204)
@@ -188,14 +191,31 @@ def _demo_workspace_status(
 def _demo_workspace_public(
     snapshot: DemoWorkspaceSnapshot,
     settings: Settings,
+    *,
+    session: Session,
 ) -> DemoWorkspacePublic:
     if snapshot.project is None or snapshot.latest_run is None:
         raise HTTPException(status_code=500, detail="Demo workspace seed did not complete.")
     return DemoWorkspacePublic(
         **_demo_workspace_status(snapshot, enabled=demo_workspace_enabled(settings)).model_dump(),
         project=snapshot.project,
-        latest_run=snapshot.latest_run,
-        reports=[build_report_public(report, settings) for report in snapshot.reports],
+        latest_run=analysis_run_public(
+            snapshot.latest_run,
+            session=session,
+            workflow=latest_analysis_workflow_public(
+                session,
+                analysis_run_id=snapshot.latest_run.id,
+                kind=WorkflowRunKind.IMPORT,
+            ),
+        ),
+        reports=[
+            build_report_public(
+                report,
+                settings,
+                workflow=latest_report_workflow_public(session, report_id=report.id),
+            )
+            for report in snapshot.reports
+        ],
     )
 
 

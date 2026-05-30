@@ -118,5 +118,8 @@ export async function invalidateProjectScopedWorkbenchQueries(
     queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.demoWorkspace(),
     }),
+    queryClient.invalidateQueries({
+      queryKey: workbenchQueryKeys.providerStatus(),
+    }),
   ])
 }

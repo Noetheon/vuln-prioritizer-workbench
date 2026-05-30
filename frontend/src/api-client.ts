@@ -2,6 +2,7 @@ import { client } from "./client/client.gen"
 import { createApiFetch, ApiError } from "./lib/api-client-errors"
 
 export * from "./client"
+export type { RunParseErrorV2 as ImportParseErrorPublic } from "./client"
 export { client } from "./client/client.gen"
 export { ApiError, createApiFetch } from "./lib/api-client-errors"
 export type FindingsReadProjectFindingsData = Parameters<

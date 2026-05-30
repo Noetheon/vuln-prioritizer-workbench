@@ -9,7 +9,6 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-KILLED_EXIT_CODE = 1
 STATUS_BY_EXIT_CODE = {
     None: "not checked",
     0: "survived",
@@ -18,6 +17,16 @@ STATUS_BY_EXIT_CODE = {
     3: "suspicious",
     33: "skipped",
 }
+
+
+def _mutant_status(exit_code: int | None) -> str:
+    if isinstance(exit_code, int) and exit_code < 0:
+        return f"killed by signal {-exit_code}"
+    return STATUS_BY_EXIT_CODE.get(exit_code, f"exit {exit_code}")
+
+
+def _is_killed(exit_code: int | None) -> bool:
+    return exit_code == 1 or (isinstance(exit_code, int) and exit_code < 0)
 
 
 def _load_exit_codes(mutants_dir: Path) -> dict[str, int | None]:
@@ -54,9 +63,9 @@ def main(argv: list[str]) -> int:
         print("No mutants matched the configured mutation-check patterns.", file=sys.stderr)
         return 1
 
-    counts = Counter(STATUS_BY_EXIT_CODE.get(code, f"exit {code}") for code in selected.values())
+    counts = Counter(_mutant_status(code) for code in selected.values())
     failures = {
-        name: exit_code for name, exit_code in selected.items() if exit_code != KILLED_EXIT_CODE
+        name: exit_code for name, exit_code in selected.items() if not _is_killed(exit_code)
     }
     summary = ", ".join(f"{status}={count}" for status, count in sorted(counts.items()))
     print(f"Focused mutation results: {len(selected)} mutants ({summary})")
@@ -64,8 +73,7 @@ def main(argv: list[str]) -> int:
     if failures:
         print("Mutation gate failed for selected mutants:", file=sys.stderr)
         for name, exit_code in sorted(failures.items()):
-            status = STATUS_BY_EXIT_CODE.get(exit_code, f"exit {exit_code}")
-            print(f"  {name}: {status}", file=sys.stderr)
+            print(f"  {name}: {_mutant_status(exit_code)}", file=sys.stderr)
         return 1
 
     return 0

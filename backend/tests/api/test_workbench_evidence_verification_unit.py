@@ -24,7 +24,7 @@ from vuln_prioritizer.models import EvidenceBundleFile, EvidenceBundleManifest
 
 def test_verify_evidence_bundle_reports_missing_manifest(tmp_path: Path) -> None:
     bundle_path = tmp_path / "missing-manifest.zip"
-    _write_zip(bundle_path, {"analysis.json": b'{"schema":"analysis-result.v1"}\n'})
+    _write_zip(bundle_path, {"analysis.json": b'{"schema":"analysis-result.v2"}\n'})
 
     metadata, summary, items = verify_evidence_bundle(bundle_path)
 
@@ -39,7 +39,7 @@ def test_verify_evidence_bundle_reports_missing_manifest(tmp_path: Path) -> None
 def test_verify_evidence_bundle_reports_missing_modified_and_unexpected_members(
     tmp_path: Path,
 ) -> None:
-    expected_analysis = b'{"schema":"analysis-result.v1","ok":true}\n'
+    expected_analysis = b'{"schema":"analysis-result.v2","ok":true}\n'
     manifest = _manifest(
         [
             _bundle_file("analysis.json", "analysis-json", expected_analysis),
@@ -51,7 +51,7 @@ def test_verify_evidence_bundle_reports_missing_modified_and_unexpected_members(
         bundle_path,
         {
             "manifest.json": json.dumps(manifest).encode(),
-            "analysis.json": b'{"schema":"analysis-result.v1","tampered":true}\n',
+            "analysis.json": b'{"schema":"analysis-result.v2","tampered":true}\n',
             "extra.txt": b"not declared\n",
         },
     )

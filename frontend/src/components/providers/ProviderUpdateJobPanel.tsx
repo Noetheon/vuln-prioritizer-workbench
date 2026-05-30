@@ -12,6 +12,7 @@ import {
   evidenceReadinessTone,
   formatDateTime,
 } from "./providers-workbench-model"
+import { workflowSummaryLabel } from "@/workbench/workflow-model"
 
 export function ProviderUpdateJobPanel({
   providerStatus,
@@ -55,6 +56,12 @@ export function ProviderUpdateJobPanel({
               label: "Finished",
               value: formatDateTime(
                 providerStatus.latest_update_job.finished_at,
+              ),
+            },
+            {
+              label: "Workflow",
+              value: workflowSummaryLabel(
+                providerStatus.latest_update_job.workflow,
               ),
             },
             {

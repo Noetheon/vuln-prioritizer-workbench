@@ -147,15 +147,17 @@ export function findingWaiverEvidence(
   if (!finding?.waived) {
     return null
   }
-  const explanation = objectRecord(finding.explanation_json)
-  const evidence = objectRecord(finding.evidence_json)
+  const evidence = objectRecord(finding.evidence)
+  const priorityRaw = objectRecord(finding.evidence?.priority_evidence.raw)
+  const governanceWaiver = objectRecord(finding.evidence?.governance?.waiver)
   const nested = {
     ...objectRecord(evidence.waiver),
-    ...objectRecord(explanation.waiver),
+    ...objectRecord(priorityRaw.waiver),
+    ...governanceWaiver,
   }
   const record = {
     ...evidence,
-    ...explanation,
+    ...priorityRaw,
     ...nested,
   }
   const status = stringValue(record.waiver_status)

@@ -970,7 +970,6 @@ function runSummaryFromRun(run: AnalysisRunPublic): AnalysisRunSummaryPublic {
     id: run.id,
     ignored_lines: 0,
     input_type: run.input_type,
-    input_upload: run.input_upload,
     parse_errors: [],
     project_id: run.project_id,
     provider_degraded: false,
@@ -978,6 +977,7 @@ function runSummaryFromRun(run: AnalysisRunPublic): AnalysisRunSummaryPublic {
     started_at: run.started_at ?? "2025-01-01T00:00:00Z",
     status: run.status ?? "pending",
     updated_findings: 0,
+    uploads: run.uploads,
   }
 }
 

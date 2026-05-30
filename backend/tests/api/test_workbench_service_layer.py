@@ -299,8 +299,8 @@ def test_asset_finding_and_run_repositories_persist_domain_graph(
     finished = run_repository.finish_analysis_run(
         run.id,
         status=app_models.AnalysisRunStatus.COMPLETED_WITH_ERRORS,
-        summary_json={"findings": 1, "degraded_providers": ["nvd"]},
-        error_json={"nvd": "cache replay used"},
+        result_json={"findings": 1, "degraded_providers": ["nvd"]},
+        diagnostics_json={"nvd": "cache replay used"},
     )
     session.commit()
 
@@ -309,7 +309,13 @@ def test_asset_finding_and_run_repositories_persist_domain_graph(
     assert snapshot.source_metadata_json["source_path"] == "[REDACTED]"
     assert occurrence.finding_id == finding.id
     assert finished.finished_at is not None
-    assert finished.summary_json["findings"] == 1
+    workflow = repository_classes.WorkflowRepository(session).get_latest_analysis_workflow(
+        analysis_run_id=finished.id,
+        kind=app_models.WorkflowRunKind.IMPORT,
+    )
+    assert workflow is not None
+    assert workflow.result_json["findings"] == 1
+    assert workflow.diagnostics_json["nvd"] == "cache replay used"
     assert [item.id for item in asset_repository.list_project_assets(project.id)] == [asset.id]
     assert [item.id for item in finding_repository.list_project_findings(project.id)] == [
         finding.id

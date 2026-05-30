@@ -2,11 +2,12 @@
 
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Optional
 
-from sqlalchemy import JSON, Column, DateTime, Float, Index, Integer, String, UniqueConstraint
+from sqlalchemy import Column, DateTime, Float, Index, Integer, String, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.contracts.decision_evidence import FindingDecisionEvidenceV2
 from app.models.base import get_datetime_utc
 from app.models.enums import FindingPriority, FindingStatus
 
@@ -36,18 +37,6 @@ class FindingBase(SQLModel):
     waived: bool = False
     recommended_action: str | None = None
     rationale: str | None = None
-    explanation_json: dict[str, Any] = Field(
-        default_factory=dict,
-        sa_column=Column(JSON, nullable=False),
-    )
-    data_quality_json: dict[str, Any] = Field(
-        default_factory=dict,
-        sa_column=Column(JSON, nullable=False),
-    )
-    evidence_json: dict[str, Any] = Field(
-        default_factory=dict,
-        sa_column=Column(JSON, nullable=False),
-    )
 
 
 class Finding(FindingBase, table=True):
@@ -137,6 +126,7 @@ class FindingPublic(FindingBase):
     owner: str | None = None
     business_service: str | None = None
     exposure: str | None = None
+    evidence: FindingDecisionEvidenceV2 | None = None
 
 
 class FindingOccurrencePublic(SQLModel):

@@ -9,7 +9,7 @@ from typing import Any
 
 CRITICAL_COVERAGE_FLOOR = 90.0
 CRITICAL_MODULES = (
-    "backend/app/services/import_background.py",
+    "backend/app/services/decision_kernel.py",
     "backend/app/services/report_bundle_archive_verification.py",
     "backend/app/services/report_sarif_validation.py",
     "backend/src/vuln_prioritizer/services/analysis_pipeline.py",

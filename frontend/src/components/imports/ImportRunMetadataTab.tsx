@@ -4,7 +4,7 @@ import {
 } from "@/components/vpw"
 import {
   jsonPreview,
-  objectRecord,
+  runInputUpload,
 } from "./imports-workbench-model"
 import {
   CopyableValue,
@@ -24,7 +24,7 @@ export function MetadataTab({
   run: ImportRun
   summary: ImportRunSummary
 }) {
-  const inputUpload = objectRecord(summary.input_upload)
+  const inputUpload = runInputUpload(summary)
   const rawJson = jsonPreview({ run, summary })
   const sha256 = stringFromRecord(inputUpload, "sha256")
   const storageRef = stringFromRecord(inputUpload, "storage_ref")

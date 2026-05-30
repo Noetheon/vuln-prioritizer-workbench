@@ -44,11 +44,6 @@ def test_workbench_github_issue_preview_selected_findings_markdown_redacts_secre
         finding.recommended_action = "Upgrade log4j-core and rotate api_key=super-secret-value."
         finding.risk_score = 98.6
         finding.epss = 0.9442
-        finding.evidence_json = {
-            "report_url": "https://github.com/acme/app/security/advisories/GHSA-demo",
-            "token": "ghp_hiddenvalue",
-            "artifact": "evidence-bundle.zip",
-        }
         session.add(finding)
         session.commit()
 
@@ -81,8 +76,6 @@ def test_workbench_github_issue_preview_selected_findings_markdown_redacts_secre
     assert "## Evidence References" in body
     assert f"/api/v1/findings/{selected_id}" in body
     assert "https://nvd.nist.gov/vuln/detail/CVE-2021-44228" in body
-    assert "https://github.com/acme/app/security/advisories/GHSA-demo" in body
-    assert "evidence-bundle.zip" in body
     assert "ghp_secretshouldnotleak" not in body
     assert "ghp_hiddenvalue" not in body
     assert "super-secret-value" not in body

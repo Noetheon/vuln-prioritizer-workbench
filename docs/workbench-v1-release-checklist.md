@@ -50,7 +50,7 @@ candidate-specific public deployment scorecard.
 - [x] Run the documented quickstart:
 
 ```bash
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
 curl http://127.0.0.1:8000/api/v1/workbench/health
 ```
 

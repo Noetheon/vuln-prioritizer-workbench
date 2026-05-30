@@ -11,14 +11,14 @@
     "frontend"
   ],
   "scripts": {
-    "dev": "npm --prefix frontend run dev",
-    "lint": "npm --prefix frontend run lint",
-    "test": "npm --prefix frontend run test",
-    "test:ui": "npm --prefix frontend run test:ui",
-    "frontend:build": "npm --prefix frontend run build",
+    "dev": "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run dev",
+    "lint": "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run lint",
+    "test": "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test",
+    "test:ui": "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test:ui",
+    "frontend:build": "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run build",
     "frontend:generate-client": "bash scripts/generate-client.sh",
-    "frontend:lint": "npm --prefix frontend run lint",
-    "frontend:test": "npm --prefix frontend run test",
-    "frontend:test:unit": "npm --prefix frontend run test:unit"
+    "frontend:lint": "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run lint",
+    "frontend:test": "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test",
+    "frontend:test:unit": "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test:unit"
   }
 }

@@ -33,16 +33,19 @@ def test_workbench_project_migration_creates_single_user_project_tables_without_
     from sqlalchemy import create_engine
 
     engine = create_engine(f"sqlite:///{tmp_path / 'workbench.db'}")
-    inspector = inspect(engine)
-    tables = set(inspector.get_table_names())
+    try:
+        inspector = inspect(engine)
+        tables = set(inspector.get_table_names())
 
-    assert {"project", "audit_event"}.issubset(tables)
-    assert {"user", "api_token", "auth_session"}.isdisjoint(tables)
-    assert "item" not in tables
+        assert {"project", "audit_event"}.issubset(tables)
+        assert {"user", "api_token", "auth_session"}.isdisjoint(tables)
+        assert "item" not in tables
 
-    project_columns = {column["name"] for column in inspector.get_columns("project")}
-    assert {"id", "name", "description", "created_at", "updated_at"}.issubset(project_columns)
-    assert "owner_id" not in project_columns
+        project_columns = {column["name"] for column in inspector.get_columns("project")}
+        assert {"id", "name", "description", "created_at", "updated_at"}.issubset(project_columns)
+        assert "owner_id" not in project_columns
+    finally:
+        engine.dispose()
 
 
 def test_local_single_user_can_create_list_and_read_projects() -> None:
@@ -108,8 +111,10 @@ def test_project_delete_removes_managed_artifact_trees_and_writes_audit(
 
 def test_workbench_project_openapi_exposes_projects_without_items() -> None:
     client = TestClient(app)
-
-    response = client.get("/api/v1/openapi.json")
+    try:
+        response = client.get("/api/v1/openapi.json")
+    finally:
+        client.close()
 
     assert response.status_code == 200
     payload = response.json()
@@ -153,9 +158,11 @@ def _client_with_temp_database() -> tuple[TestClient, Any]:
 
     app.dependency_overrides[get_db] = override_get_db
     app.state.rate_limiter = InMemoryRateLimiter()
+    client = TestClient(app)
 
     def cleanup() -> None:
+        client.close()
         app.dependency_overrides.pop(get_db, None)
         engine.dispose()
 
-    return TestClient(app), cleanup
+    return client, cleanup

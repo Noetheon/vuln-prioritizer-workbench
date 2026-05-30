@@ -14,12 +14,9 @@ from app.models import (
     ProviderSourceStatusPublic,
     ProviderStatusPublic,
     ProviderUpdateJobPublic,
+    WorkflowRunPublic,
 )
 from app.models.base import get_datetime_utc
-from app.services.run_workflow_metadata import (
-    workflow_error_payload_or_empty,
-    workflow_summary_payload_or_empty,
-)
 from vuln_prioritizer.security_redaction import redact_value
 
 PROVIDER_SOURCES = ("nvd", "epss", "kev")
@@ -31,9 +28,14 @@ def provider_update_job_public(
     run: AnalysisRun | None,
     *,
     active_settings: Settings,
+    workflow: WorkflowRunPublic | None = None,
 ) -> ProviderUpdateJobPublic | None:
     """Return public provider update job metadata for the current environment."""
-    return _provider_update_job(run, production_safe=_production_safe(active_settings))
+    return _provider_update_job(
+        run,
+        production_safe=_production_safe(active_settings),
+        workflow=workflow,
+    )
 
 
 def provider_status_payload(
@@ -41,6 +43,7 @@ def provider_status_payload(
     *,
     latest_update_run: AnalysisRun | None,
     active_settings: Settings,
+    latest_update_workflow: WorkflowRunPublic | None = None,
 ) -> ProviderStatusPublic:
     """Build the provider status response from persisted snapshot and job state."""
     metadata = _snapshot_metadata(snapshot)
@@ -48,13 +51,14 @@ def provider_status_payload(
     public_metadata = _provider_public_metadata(metadata, production_safe=production_safe)
     warnings = [_public_text(item) for item in _string_list(metadata.get("warnings"))]
     failed_update_error = _failed_update_error(latest_update_run)
-    raw_last_error = failed_update_error or _last_error(metadata)
+    workflow_update_error = _workflow_update_error(latest_update_workflow)
+    raw_last_error = failed_update_error or workflow_update_error or _last_error(metadata)
     last_error = _public_text(raw_last_error) if raw_last_error is not None else None
     snapshot_status = _snapshot_status(snapshot, metadata)
     if snapshot is None:
         warnings.append(NO_PROVIDER_SNAPSHOT_WARNING)
-    if failed_update_error is not None:
-        warnings.append(f"Latest provider update failed: {_public_text(failed_update_error)}")
+    if failed_update_error is not None or workflow_update_error is not None:
+        warnings.append(f"Latest provider update failed: {_public_text(raw_last_error)}")
 
     degraded = snapshot_status.missing or raw_last_error is not None
     return ProviderStatusPublic(
@@ -69,6 +73,7 @@ def provider_status_payload(
         latest_update_job=_provider_update_job(
             latest_update_run,
             production_safe=production_safe,
+            workflow=latest_update_workflow,
         ),
         cache_dir=(
             None
@@ -102,23 +107,30 @@ def _provider_update_job(
     run: AnalysisRun | None,
     *,
     production_safe: bool = False,
+    workflow: WorkflowRunPublic | None = None,
 ) -> ProviderUpdateJobPublic | None:
     if run is None:
         return None
-    metadata = workflow_summary_payload_or_empty(run) or workflow_error_payload_or_empty(run)
+    metadata = _dict_value(workflow.details) if workflow is not None else {}
     public_metadata = _provider_public_metadata(metadata, production_safe=production_safe)
     return ProviderUpdateJobPublic(
         id=str(run.id),
-        status=str(run.status),
-        execution_mode=_string_or_none(metadata.get("execution_mode")) or "request",
+        status=_provider_job_status(run, workflow),
         requested_sources=_string_list(
             metadata.get("requested_sources") or metadata.get("sources")
         ),
         started_at=_iso_datetime(run.started_at),
         finished_at=_iso_datetime(run.finished_at),
-        error_message=_public_text(_failed_update_error(run)),
+        error_message=_public_text(_failed_update_error(run) or _workflow_update_error(workflow)),
         metadata_=public_metadata,
+        workflow=workflow,
     )
+
+
+def _provider_job_status(run: AnalysisRun, workflow: WorkflowRunPublic | None) -> str:
+    if workflow is not None:
+        return str(workflow.status)
+    return str(run.status)
 
 
 def _snapshot_status(
@@ -292,17 +304,14 @@ def _failed_update_error(run: AnalysisRun | None) -> str | None:
         return None
     if run.status != AnalysisRunStatus.FAILED:
         return None
-    if run.error_message:
-        return run.error_message
-    error_json = workflow_error_payload_or_empty(run)
-    for key in ("detail", "message", "error", "last_error"):
-        value = _string_or_none(error_json.get(key))
-        if value is not None:
-            return value
-    for value in error_json.values():
-        text = _string_or_none(value)
-        if text is not None:
-            return text
+    return run.error_message
+
+
+def _workflow_update_error(workflow: WorkflowRunPublic | None) -> str | None:
+    if workflow is None or workflow.status != "failed":
+        return None
+    if workflow.error_message:
+        return workflow.error_message
     return None
 
 

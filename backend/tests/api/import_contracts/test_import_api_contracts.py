@@ -7,7 +7,16 @@ from pathlib import Path
 import pytest
 from sqlmodel import Session, select
 from utils.import_contracts import (
+    completed_run_payload as _completed_run_payload,
+)
+from utils.import_contracts import (
+    completed_run_summary as _completed_run_summary,
+)
+from utils.import_contracts import (
     configure_upload_dir as _configure_upload_dir,
+)
+from utils.import_contracts import (
+    public_run_aliases as _public_run_aliases,
 )
 from utils.import_contracts import (
     run_count as _run_count,
@@ -40,12 +49,15 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     )
 
     assert response.status_code == 200, response.text
-    payload = response.json()
+    assert response.json()["workflow"]["status"] == "pending"
+    payload = _completed_run_payload(workbench_api_env, response, headers=headers)
     assert payload["project_id"] == project["id"]
     assert payload["input_type"] == "cve-list"
     assert payload["filename"] == "Team_Scan__prod_.txt"
     assert payload["status"] == "succeeded"
-    assert payload["workflow_schema_version"] == "run-workflow-summary.v1"
+    assert payload["workflow_schema_version"] == "analysis-evidence.v2"
+    assert payload["evidence"]["schema_version"] == "analysis-evidence.v2"
+    assert payload["evidence"]["analysis_evidence_id"]
     assert payload["input_sha256"] == expected_sha256
     assert payload["occurrence_count"] == 2
     assert payload["finding_count"] == 2
@@ -56,7 +68,6 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert payload["input_upload"]["storage_ref"] == (
         f"{project['id']}/{payload['id']}/Team_Scan__prod_.txt"
     )
-    assert payload["import_job"]["status"] == "succeeded"
     assert payload["dedup_summary"]["created_findings"] == 2
     assert payload["dedup_summary"]["reused_findings"] == 0
     assert payload["provider_snapshot_id"]
@@ -77,24 +88,20 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     stored_path = upload_dir / stored_ref
     assert stored_path == upload_dir / project["id"] / payload["id"] / "Team_Scan__prod_.txt"
     assert stored_path.read_bytes() == content
-    assert payload["import_job"]["status"] == "succeeded"
-    assert payload["import_job"]["execution_mode"] == "request"
-    assert [item["status"] for item in payload["import_job"]["status_history"]] == [
-        "pending",
-        "running",
-        "succeeded",
-    ]
+    assert "import_job" not in payload
+    assert "execution_mode" not in payload["workflow"]
 
     runs = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/runs/",
         headers=headers,
     )
     assert runs.status_code == 200
+    listed_run = _public_run_aliases(runs.json()["data"][0])
     assert runs.json()["count"] == 1
-    assert runs.json()["data"][0]["id"] == payload["id"]
-    assert runs.json()["data"][0]["status"] == "succeeded"
-    assert runs.json()["data"][0]["workflow_schema_version"] == "run-workflow-summary.v1"
-    assert runs.json()["data"][0]["input_upload"]["sha256"] == expected_sha256
+    assert listed_run["id"] == payload["id"]
+    assert listed_run["status"] == "succeeded"
+    assert listed_run["workflow_schema_version"] == "analysis-evidence.v2"
+    assert listed_run["input_upload"]["sha256"] == expected_sha256
     with Session(workbench_api_env.engine) as session:
         import_event = session.exec(
             select(app_models.AuditEvent).where(
@@ -116,18 +123,19 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert {item["priority"] for item in finding_payloads} == {"critical"}
     assert all(item["risk_score"] is not None for item in finding_payloads)
     assert all(item["operational_rank"] > 0 for item in finding_payloads)
-    assert all(item["explanation_json"]["explanation"]["reasons"] for item in finding_payloads)
     assert all(
-        item["explanation_json"]["decision_guidance"]["decision_statement"]
+        item["evidence"]["schema_version"] == "finding-decision-evidence.v2"
         for item in finding_payloads
     )
+    assert all(item["evidence"]["priority_evidence"]["explanation"] for item in finding_payloads)
+    assert all(item["evidence"]["remediation"]["decision_statement"] for item in finding_payloads)
 
     summary = workbench_api_env.client.get(
         f"/api/v1/runs/{payload['id']}/summary",
         headers=headers,
     )
     assert summary.status_code == 200
-    summary_payload = summary.json()
+    summary_payload = _public_run_aliases(summary.json())
     assert summary_payload["id"] == payload["id"]
     assert summary_payload["project_id"] == project["id"]
     assert summary_payload["status"] == "succeeded"
@@ -140,14 +148,17 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert summary_payload["counts_by_priority"] == payload["counts_by_priority"]
     assert summary_payload["kev_hits"] == payload["kev_hits"]
     assert summary_payload["parse_errors"] == []
-    assert summary_payload["workflow_schema_version"] == "run-workflow-summary.v1"
+    assert summary_payload["workflow_schema_version"] == "analysis-evidence.v2"
     assert summary_payload["input_upload"]["sha256"] == expected_sha256
-    assert summary_payload["import_job"]["status"] == "succeeded"
+    assert "import_job" not in summary_payload
     assert summary_payload["dedup_summary"]["reused_findings"] == 0
 
     metadata_payload = workflow_metadata(workbench_api_env, payload["id"], headers=headers)
-    assert metadata_payload["summary"]["schema_version"] == "run-workflow-summary.v1"
-    assert metadata_payload["summary"]["provider_snapshot_id"] == payload["provider_snapshot_id"]
+    assert metadata_payload["summary"]["schema_version"] == "analysis-evidence.v2"
+    assert (
+        metadata_payload["summary"]["provider"]["provider_snapshot_id"]
+        == payload["provider_snapshot_id"]
+    )
     assert metadata_payload["summary"]["analysis_service"]["pipeline"] == (
         "parse-persist-enrich-score-explain"
     )
@@ -208,10 +219,7 @@ def test_summary_tracks_ignored_cve_list_lines(
     )
 
     assert response.status_code == 200, response.text
-    run_id = response.json()["id"]
-    summary = workbench_api_env.client.get(f"/api/v1/runs/{run_id}/summary", headers=headers)
-    assert summary.status_code == 200
-    summary_payload = summary.json()
+    summary_payload = _completed_run_summary(workbench_api_env, response, headers=headers)
     assert summary_payload["ignored_lines"] == 2
     assert summary_payload["created_findings"] == 1
     assert summary_payload["updated_findings"] == 0

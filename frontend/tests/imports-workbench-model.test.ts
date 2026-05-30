@@ -15,6 +15,9 @@ import {
   metadataRows,
   optionalContextLabels,
   runFileLabel,
+  runLockedProviderData,
+  runResultRecord,
+  runResultString,
   runTone,
   selectedFormat,
   uploadProgress,
@@ -321,10 +324,23 @@ test("import model derives upload progress and safe file labels", () => {
   )
   assert.equal(
     runFileLabel({
-      input_upload: { original_filename: "findings.txt" },
       input_type: "cve-list",
+      uploads: { input: { original_filename: "findings.txt" } },
     }),
     "findings.txt",
+  )
+  assert.equal(
+    runFileLabel({
+      input_type: "cve-list",
+      uploads: { input: { filename: "raw-upload.txt" } },
+    }),
+    "raw-upload.txt",
+  )
+  assert.equal(
+    runLockedProviderData({
+      provider_snapshot: { locked: true },
+    }),
+    true,
   )
 })
 
@@ -352,28 +368,58 @@ test("import model selects readable failure causes", () => {
   )
   assert.equal(
     failedRunCause(null, {
-      analysis_error: { message: "Parser error", stage: "analysis" },
+      diagnostics: {
+        analysis_error: { message: "Parser error", stage: "analysis" },
+      },
     } as never),
     "Parser error",
   )
   assert.equal(
     failedRunCause(null, {
-      workflow_error: {
-        analysis_error: { message: "Last parser error", stage: "analysis" },
+      workflow: {
+        diagnostics: {
+          analysis_error: { message: "Last parser error", stage: "analysis" },
+        },
       },
     } as never),
-    "Last parser error",
+    "No failure detail available.",
   )
   assert.equal(
     failedRunCause(null, {
-      analysis_error: {
-        message: "Parser rejected the source file.",
-        stage: "analysis",
+      diagnostics: {
+        parse_errors: [
+          { line: 1 },
+          { message: "Parser rejected the source file." },
+        ],
       },
     } as never),
     "Parser rejected the source file.",
   )
   assert.equal(jsonPreview({ message: "failed" }), '{\n  "message": "failed"\n}')
+  assert.equal(jsonPreview({}), "No error JSON recorded.")
+})
+
+test("import model reads typed evidence result slices", () => {
+  const run = {
+    evidence: {
+      analysis_semantics: { persistence_scope: "project" },
+      asset_context: { matched_occurrences: 2 },
+      attack: { source: "catalog" },
+      vex: { statement_count: 1 },
+    },
+  } as const
+
+  assert.deepEqual(runResultRecord(run as never, "asset_context"), {
+    matched_occurrences: 2,
+  })
+  assert.deepEqual(runResultRecord(run as never, "vex"), { statement_count: 1 })
+  assert.deepEqual(runResultRecord(run as never, "analysis_semantics"), {
+    persistence_scope: "project",
+  })
+  assert.deepEqual(runResultRecord(run as never, "unsupported"), {})
+  assert.equal(runResultString(run as never, "attack_source"), "catalog")
+  assert.equal(runResultString(run as never, "persistence_scope"), "project")
+  assert.equal(runResultString({ evidence: {} } as never, "missing"), null)
 })
 
 test("import model maps run statuses to Workbench badge tones", () => {
@@ -453,11 +499,15 @@ test("import run timeline only includes evidence-backed events", () => {
 
   const contextualSummary = {
     ...completedSummary,
-    asset_context_upload: { original_filename: "assets.csv" },
-    attack_source: "local-curated",
     created_findings: 2,
     provider_snapshot_id: "provider-snapshot-1",
-    provider_snapshot_file: "snapshot.json",
+    provider_snapshot: { file: "snapshot.json" },
+    result: {
+      attack_source: "local-curated",
+    },
+    uploads: {
+      asset_context: { original_filename: "assets.csv" },
+    },
   } as const
   assert.deepEqual(importRunTimelineItems(null, contextualSummary as never), [
     "Import started",

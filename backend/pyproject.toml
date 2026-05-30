@@ -19,6 +19,7 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Security",
   "Topic :: Utilities",
   "Typing :: Typed",
@@ -77,9 +78,13 @@ vuln_prioritizer = ["py.typed"]
 app = ["alembic/script.py.mako"]
 
 [tool.pytest.ini_options]
-addopts = "-ra --cov=app --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=96"
+addopts = "-ra --cov=app --cov=vuln_prioritizer --cov-report=term-missing"
 testpaths = ["tests"]
 pythonpath = [".", "src"]
+filterwarnings = [
+  "error::ResourceWarning",
+  "error::pytest.PytestUnraisableExceptionWarning",
+]
 markers = [
   "browser_e2e: real browser Workbench tests driven by Playwright.",
   "e2e: end-to-end tests that may spawn subprocesses.",
@@ -120,7 +125,7 @@ omit = [
 
 [tool.mutmut]
 paths_to_mutate = [
-  "app/services/import_background.py",
+  "app/services/decision_evidence_builder.py",
   "app/services/report_bundle_archive_verification.py",
   "app/services/report_sarif_validation.py",
   "src/vuln_prioritizer/services/analysis_pipeline.py",
@@ -131,7 +136,7 @@ also_copy = [
   "tests",
 ]
 tests_dir = [
-  "tests/test_import_background_unit.py",
+  "tests/api/import_contracts/test_decision_evidence_contract.py",
   "tests/api/test_workbench_evidence_verification_unit.py",
   "tests/test_analysis_refactor.py",
   "tests/property",

@@ -7,6 +7,9 @@ from collections import Counter
 from collections.abc import Callable, Sequence
 from typing import Any
 
+from sqlalchemy.orm import object_session
+from sqlmodel import Session
+
 from app.models import (
     Finding,
     GovernanceRollupPublic,
@@ -16,6 +19,7 @@ from app.models import (
     Waiver,
 )
 from app.models.base import get_datetime_utc
+from app.repositories import EvidenceRepository
 from app.repositories.findings import FindingRepository
 from app.repositories.waivers import (
     WaiverRepository,
@@ -401,21 +405,25 @@ def _waiver_status(finding: Finding) -> str | None:
 
 
 def _waiver_record(finding: Finding) -> dict[str, Any]:
-    explanation = _dict_value(finding.explanation_json)
-    evidence = _dict_value(finding.evidence_json)
+    evidence = _finding_evidence_payload(finding)
+    explanation = _dict_value(evidence.get("priority_evidence", {}).get("raw"))
     record: dict[str, Any] = {}
-    for source in (evidence.get("waiver"), explanation.get("waiver"), explanation, evidence):
+    governance = _dict_value(evidence.get("governance"))
+    for source in (governance.get("waiver"), explanation.get("waiver"), explanation, governance):
         if isinstance(source, dict):
             record.update(source)
     return record
 
 
 def _record_string(finding: Finding, keys: Sequence[str]) -> str | None:
+    evidence = _finding_evidence_payload(finding)
+    priority_raw = _dict_value(_dict_value(evidence.get("priority_evidence")).get("raw"))
+    occurrence_scope = _dict_value(evidence.get("occurrence_scope"))
     records = (
-        _dict_value(finding.explanation_json),
-        _dict_value(finding.evidence_json),
-        _dict_value(_dict_value(finding.evidence_json).get("asset_context")),
-        _dict_value(_dict_value(finding.explanation_json).get("provenance")),
+        priority_raw,
+        evidence,
+        occurrence_scope,
+        _dict_value(priority_raw.get("provenance")),
     )
     for record in records:
         for key in keys:
@@ -423,6 +431,14 @@ def _record_string(finding: Finding, keys: Sequence[str]) -> str | None:
             if value:
                 return value
     return None
+
+
+def _finding_evidence_payload(finding: Finding) -> dict[str, Any]:
+    session = object_session(finding)
+    if not isinstance(session, Session):
+        return {}
+    evidence = EvidenceRepository(session).latest_finding_decision_evidence(finding.id)
+    return evidence.to_jsonable() if evidence is not None else {}
 
 
 def _clean_label(value: object) -> str:

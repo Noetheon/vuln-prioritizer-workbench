@@ -19,6 +19,7 @@ import {
   type ReportFormat,
 } from "../../lib/report-format.ts"
 import { runStatusTone } from "../../lib/risk-format.ts"
+import { workflowNeedsPolling, workflowStageLabel } from "../../workbench/workflow-model.ts"
 
 export function reportForFormat(
   reports: readonly ReportPublic[],
@@ -46,6 +47,9 @@ export function newestReport(reports: readonly ReportPublic[]) {
 export function generatedArtifactsDetail(reports: readonly ReportPublic[]) {
   const latest = newestReport(reports)
   if (!latest) return "Generate the first artifact for this run"
+  if (workflowNeedsPolling(latest.workflow)) {
+    return `Latest workflow ${workflowStageLabel(latest.workflow)}`
+  }
   return `Latest generated ${formatReportDateTime(latest.created_at)}`
 }
 
@@ -104,7 +108,7 @@ export function verificationTone(label: string): VpwBadgeTone {
 }
 
 export function runFileLabel(run: AnalysisRunPublic): string {
-  const inputUpload = objectRecord(run.input_upload)
+  const inputUpload = objectRecord(run.uploads?.input)
   const uploadFilename =
     stringRecordValue(inputUpload, "original_filename") ??
     stringRecordValue(inputUpload, "stored_filename") ??
@@ -234,15 +238,33 @@ function workflowRecord(
 ) {
   if (!source) return {}
   const record: Record<string, unknown> = {}
-  setDefined(record, "input_upload", source.input_upload)
-  setDefined(record, "asset_context_upload", source.asset_context_upload)
-  setDefined(record, "vex_upload", source.vex_upload)
-  setDefined(record, "attack_mapped_cves", source.attack_mapped_cves)
-  setDefined(record, "attack_mapping_file", source.attack_mapping_file)
-  setDefined(record, "attack_source", source.attack_source)
-  setDefined(record, "asset_context", source.asset_context)
-  setDefined(record, "vex", source.vex)
-  setDefined(record, "suppressed_by_vex", source.suppressed_by_vex)
+  const runCounts = "counts" in source ? source.counts : undefined
+  const summaryAttackMappedCves =
+    "attack_mapped_cves" in source ? source.attack_mapped_cves : undefined
+  const summarySuppressedByVex =
+    "suppressed_by_vex" in source ? source.suppressed_by_vex : undefined
+
+  setDefined(record, "input_upload", source.uploads?.input)
+  setDefined(record, "asset_context_upload", source.uploads?.asset_context)
+  setDefined(record, "vex_upload", source.uploads?.vex)
+  setDefined(
+    record,
+    "attack_mapped_cves",
+    runCounts?.attack_mapped_cves ?? summaryAttackMappedCves,
+  )
+  setDefined(
+    record,
+    "attack_mapping_file",
+    source.evidence?.analysis_semantics?.attack_mapping_file,
+  )
+  setDefined(record, "attack_source", source.evidence?.attack?.source)
+  setDefined(record, "asset_context", source.evidence?.asset_context)
+  setDefined(record, "vex", source.evidence?.vex)
+  setDefined(
+    record,
+    "suppressed_by_vex",
+    runCounts?.suppressed_by_vex ?? summarySuppressedByVex,
+  )
   return record
 }
 

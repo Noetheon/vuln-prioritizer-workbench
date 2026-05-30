@@ -20,6 +20,7 @@ from app.api.routes import (
     utils,
     waivers,
     workbench,
+    workflows,
 )
 
 PUBLIC_API_ROUTE_SUFFIXES = frozenset(
@@ -44,6 +45,7 @@ api_router.include_router(github_issues.router)
 api_router.include_router(waivers.router)
 api_router.include_router(utils.router)
 api_router.include_router(workbench.router)
+api_router.include_router(workflows.router)
 
 
 def assert_api_local_actor_policy(api_prefix: str) -> None:

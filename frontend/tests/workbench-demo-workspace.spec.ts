@@ -93,7 +93,7 @@ test("workbench demo workspace seeds persisted dashboard and reports", async ({
   const reportHistory = page.getByRole("table", { name: "Report history list" })
   await expect(reportHistory).toContainText("technical-report.md")
   await expect(reportHistory).toContainText("executive-report.html")
-  await expect(reportHistory).toContainText("analysis-result.v1.json")
+  await expect(reportHistory).toContainText("analysis-result.v2.json")
   await expect(reportHistory).toContainText("findings.csv")
   await expect(reportHistory).toContainText("attack-navigator-layer.json")
   await expect(reportHistory).toContainText("results.sarif")
@@ -171,11 +171,11 @@ const demoReportArtifacts = [
     },
   },
   {
-    filename: "analysis-result.v1.json",
+    filename: "analysis-result.v2.json",
     minimumBytes: 1_000,
     assertContent(bytes: Buffer) {
       const payload = JSON.parse(bytes.toString("utf-8")) as { schema: string }
-      expect(payload.schema).toBe("analysis-result.v1")
+      expect(payload.schema).toBe("analysis-result.v2")
     },
   },
   {

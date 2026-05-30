@@ -31,13 +31,20 @@ current acceptance source.
 - Waivers, evidence bundles, governance rollups, and fixture regressions extend
   the operational governance surface without changing the transparent base
   score.
-- The active analysis JSON export is `analysis-result.v1.json`.
+- The active analysis JSON export is `analysis-result.v2.json`.
+- The active decision/evidence source is Decision/Evidence Kernel v2:
+  `backend/app/services/decision_kernel.py`, `AnalysisEvidenceV2`,
+  `FindingDecisionEvidenceV2`, `RunDiagnosticsV2`, `analysis_evidence`, and
+  `finding_decision_evidence`.
 - Default prioritization stays grounded in `CVSS + EPSS + KEV`.
 - ATT&CK, asset context, and VEX remain explicit contextual layers.
 - The old composite GitHub Action is no longer an active delivery surface; Workbench/API flows are the supported direction.
-- Local quality gates now enforce backend coverage with `--cov-fail-under=96`,
-  and docs/frontend/browser checks validate the active Workbench surface.
+- Local quality gates collect backend coverage through pytest-cov and enforce
+  critical Workbench module floors through `make critical-coverage-check`;
+  docs/frontend/browser checks validate the active Workbench surface.
 - Docker and Compose provide a local runtime bootstrap for the Workbench.
+- Workflow v2 is the active execution core: imports, provider refreshes, and
+  report generation are queued durable workflows processed by the local worker.
 - Parser and provider contributions are governed by the static local
   [extension strategy](./extension_strategy.md), including fixture requirements,
   contributor checklist, and a compiled example stub.
@@ -58,7 +65,8 @@ Current Workbench scope:
 
 - Docker Compose quickstart as the local web/API runtime entry point.
 - Local developer runs may use SQLite; the Compose quickstart uses private
-  Postgres plus mounted provider cache, upload, snapshot, and report volumes.
+  Postgres plus a durable workflow worker and mounted provider cache, upload,
+  snapshot, and report volumes.
 - Import paths for the local input-format matrix, including CVE lists, generic occurrence CSV, Trivy JSON, Grype JSON, CycloneDX JSON, SPDX JSON, Dependency-Check JSON, GitHub alerts JSON, Nessus XML, and OpenVAS XML.
 - Findings table and detail views that expose priority, evidence, owner/service context, and "why this priority?" explanations.
 - Dashboard and report flows for Markdown, HTML, JSON, and evidence bundles.
@@ -68,14 +76,16 @@ Current Workbench scope:
   issue preview/export, SARIF validation, and CI/CD docs.
 
 The current active Compose stack runs the `backend/app` FastAPI runtime on
-`127.0.0.1:8000` and the React frontend on `127.0.0.1:5173`.
+`127.0.0.1:8000`, the durable workflow worker in the backend image, and the
+React frontend on `127.0.0.1:5173`.
 
 Current local Workbench limits:
 
 - Local-first single-node runtime, not a hardened shared or exposed deployment.
-- Active Compose uses `backend/app`. Browser login, API tokens, SSO,
-  organization-wide ticket sync policy, a separate async worker process, and
-  multi-workspace support remain outside the current local-first scope.
+- Active Compose uses `backend/app` plus the local durable workflow worker.
+  Browser login, API tokens, SSO, organization-wide ticket sync policy,
+  multi-node worker fleets, and multi-workspace support remain outside the
+  current local-first scope.
 - Web/API import path supports the local input-format matrix for single-file
   and multi-file imports.
 - No vulnerability scanning, AI autopatching, or heuristic/AI CVE-to-ATT&CK mapping.

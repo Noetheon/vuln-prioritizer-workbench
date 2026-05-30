@@ -6,8 +6,11 @@ import type {
   FindingExplanationPublic,
   FindingPublic,
   ProjectDecisionSummaryPublic,
+  ProviderStatusPublic,
+  ReportPublic,
 } from "../api-client"
 import type { DashboardSignalCounts } from "../components/dashboard/dashboard-model"
+import { workflowNeedsPolling } from "./workflow-model.ts"
 
 export type RunDetailQueryData = {
   run: AnalysisRunPublic
@@ -53,6 +56,25 @@ export const emptyDashboardSignalCounts: DashboardSignalCounts = {
 
 export function emptyFindingQueryPage(enabled: boolean) {
   return enabled ? undefined : { count: 0, data: [] as FindingPublic[] }
+}
+
+export function runDetailNeedsPolling(data: RunDetailQueryData | undefined) {
+  if (!data) return false
+  return (
+    workflowNeedsPolling(data.run.workflow) ||
+    workflowNeedsPolling(data.summary.workflow) ||
+    RUN_DETAIL_POLL_STATUSES.has(data.run.status)
+  )
+}
+
+export function reportsNeedPolling(reports: readonly ReportPublic[]) {
+  return reports.some((report) => workflowNeedsPolling(report.workflow))
+}
+
+export function providerStatusNeedsPolling(
+  providerStatus: ProviderStatusPublic | undefined,
+) {
+  return workflowNeedsPolling(providerStatus?.latest_update_job?.workflow)
 }
 
 export async function readAllPages<T>(

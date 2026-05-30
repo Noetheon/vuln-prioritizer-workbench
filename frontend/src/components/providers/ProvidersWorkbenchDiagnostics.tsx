@@ -21,6 +21,7 @@ import {
   sourceDisplayName,
   snapshotModeLabel,
 } from "./providers-workbench-model"
+import { workflowStageLabel, workflowStatusLabel } from "@/workbench/workflow-model"
 
 export function ProviderDiagnosticsSection({
   providerStatus,
@@ -154,6 +155,14 @@ export function ProviderDiagnosticsSection({
                   value: formatDateTime(
                     providerStatus.latest_update_job.finished_at,
                   ),
+                },
+                {
+                  label: "Workflow status",
+                  value: workflowStatusLabel(providerStatus.latest_update_job.workflow),
+                },
+                {
+                  label: "Workflow stage",
+                  value: workflowStageLabel(providerStatus.latest_update_job.workflow),
                 },
               ]}
             />

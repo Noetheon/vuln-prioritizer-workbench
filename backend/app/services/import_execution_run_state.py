@@ -20,9 +20,6 @@ from app.services.import_uploads import (
 )
 from app.services.run_workflow_metadata import (
     merge_summary_payload,
-    update_workflow_summary,
-    workflow_import_job_payload,
-    workflow_summary_payload,
 )
 
 
@@ -58,12 +55,6 @@ def resolve_import_run(
         input_type=prepared.input_type,
         filename=prepared.stored_filename,
         status=AnalysisRunStatus.PENDING,
-        summary_json=_initial_run_summary(
-            prepared,
-            job_id=job_id,
-            job_history=job_history,
-            execution_mode=execution_mode,
-        ),
     )
     return ResolvedImportRun(run=run, job_id=job_id, job_history=job_history)
 
@@ -72,14 +63,21 @@ def apply_stored_upload_summaries(
     run: AnalysisRun,
     *,
     resolved_run: ResolvedImportRun,
+    prepared: PreparedImportUpload,
     artifacts: StoredImportArtifacts,
     execution_mode: str,
-) -> None:
-    """Attach storage refs for persisted upload artifacts to the run summary."""
-    summary = workflow_summary_payload(run)
+) -> dict[str, Any]:
+    """Return v2 result refs for persisted upload artifacts."""
+    _ = run
+    summary = _initial_run_summary(
+        prepared,
+        job_id=resolved_run.job_id,
+        job_history=resolved_run.job_history,
+        execution_mode=execution_mode,
+    )
     input_upload = summary.get("input_upload")
-    update_workflow_summary(
-        run,
+    return merge_summary_payload(
+        summary,
         import_job=_job_payload(
             job_id=resolved_run.job_id,
             status="pending",
@@ -111,17 +109,8 @@ def mark_import_run_running(
 ) -> list[dict[str, str]]:
     """Mark a pending import run as actively running."""
     run.status = AnalysisRunStatus.RUNNING
-    running_history = _append_job_status(job_history, "running")
-    update_workflow_summary(
-        run,
-        import_job=_job_payload(
-            job_id=job_id,
-            status="running",
-            status_history=running_history,
-            execution_mode=execution_mode,
-        ),
-    )
-    return running_history
+    _ = job_id, execution_mode
+    return _append_job_status(job_history, "running")
 
 
 def _append_job_status(
@@ -157,14 +146,5 @@ def _initial_run_summary(
 
 
 def _extract_existing_job_state(run: AnalysisRun) -> tuple[str, list[dict[str, str]]]:
-    job_id = str(uuid.uuid4())
-    job_history = [_job_status_entry("pending")]
-    existing_job = workflow_import_job_payload(run)
-    if not isinstance(existing_job, dict):
-        return job_id, job_history
-
-    job_id = str(existing_job.get("id") or job_id)
-    raw_history = existing_job.get("status_history")
-    if isinstance(raw_history, list) and raw_history:
-        job_history = [item for item in raw_history if isinstance(item, dict)]
-    return job_id, job_history
+    _ = run
+    return str(uuid.uuid4()), [_job_status_entry("pending")]

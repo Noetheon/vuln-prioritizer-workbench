@@ -2,7 +2,7 @@
 
 import { buildClientParams, type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AssetCreate, AssetExposure, AssetUpdate, BodyAssetsImportProjectAssets, BodyImportsImportProjectUpload, DeleteApiV1ProjectsByProjectIdErrors, DeleteApiV1ProjectsByProjectIdResponses, DeleteApiV1WorkbenchDemoResponses, DemoWorkspaceCreate, FindingPriority, FindingStatus, GetApiV1AuditEventsErrors, GetApiV1AuditEventsResponses, GetApiV1FindingsByFindingIdErrors, GetApiV1FindingsByFindingIdExplainErrors, GetApiV1FindingsByFindingIdExplainResponses, GetApiV1FindingsByFindingIdResponses, GetApiV1ProjectsByProjectIdAssetsErrors, GetApiV1ProjectsByProjectIdAssetsResponses, GetApiV1ProjectsByProjectIdAttackSummaryErrors, GetApiV1ProjectsByProjectIdAttackSummaryResponses, GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors, GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses, GetApiV1ProjectsByProjectIdDashboardErrors, GetApiV1ProjectsByProjectIdDashboardResponses, GetApiV1ProjectsByProjectIdErrors, GetApiV1ProjectsByProjectIdFindingsErrors, GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdGovernanceRollupsErrors, GetApiV1ProjectsByProjectIdGovernanceRollupsResponses, GetApiV1ProjectsByProjectIdResponses, GetApiV1ProjectsByProjectIdRunsErrors, GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdSummaryErrors, GetApiV1ProjectsByProjectIdSummaryResponses, GetApiV1ProjectsByProjectIdWaiversErrors, GetApiV1ProjectsByProjectIdWaiversResponses, GetApiV1ProjectsErrors, GetApiV1ProjectsResponses, GetApiV1ProvidersStatusResponses, GetApiV1ProvidersUpdateJobsResponses, GetApiV1ReportsByReportIdDownloadErrors, GetApiV1ReportsByReportIdDownloadResponses, GetApiV1RunsByRunIdErrors, GetApiV1RunsByRunIdReportsErrors, GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdResponses, GetApiV1RunsByRunIdSummaryErrors, GetApiV1RunsByRunIdSummaryResponses, GetApiV1RunsByRunIdWorkflowMetadataErrors, GetApiV1RunsByRunIdWorkflowMetadataResponses, GetApiV1UtilsHealthCheckResponses, GetApiV1WorkbenchCapabilitiesResponses, GetApiV1WorkbenchDemoResponses, GetApiV1WorkbenchHealthResponses, GetApiV1WorkbenchStatusResponses, GitHubIssueExportCreate, GitHubIssuePreviewCreate, PatchApiV1AssetsByAssetIdErrors, PatchApiV1AssetsByAssetIdResponses, PatchApiV1ProjectsByProjectIdErrors, PatchApiV1ProjectsByProjectIdResponses, PatchApiV1WaiversByWaiverIdErrors, PatchApiV1WaiversByWaiverIdResponses, PostApiV1AssetsByAssetIdRecalculateErrors, PostApiV1AssetsByAssetIdRecalculateResponses, PostApiV1ProjectsByProjectIdAssetsErrors, PostApiV1ProjectsByProjectIdAssetsImportErrors, PostApiV1ProjectsByProjectIdAssetsImportResponses, PostApiV1ProjectsByProjectIdAssetsResponses, PostApiV1ProjectsByProjectIdGithubIssuesExportErrors, PostApiV1ProjectsByProjectIdGithubIssuesExportResponses, PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors, PostApiV1ProjectsByProjectIdGithubIssuesPreviewResponses, PostApiV1ProjectsByProjectIdImportsErrors, PostApiV1ProjectsByProjectIdImportsResponses, PostApiV1ProjectsByProjectIdWaiversErrors, PostApiV1ProjectsByProjectIdWaiversResponses, PostApiV1ProjectsErrors, PostApiV1ProjectsResponses, PostApiV1ProvidersUpdateJobsErrors, PostApiV1ProvidersUpdateJobsResponses, PostApiV1ReportsByReportIdVerifyErrors, PostApiV1ReportsByReportIdVerifyResponses, PostApiV1RunsByRunIdReportsErrors, PostApiV1RunsByRunIdReportsResponses, PostApiV1WaiversByWaiverIdExpireErrors, PostApiV1WaiversByWaiverIdExpireResponses, PostApiV1WorkbenchDemoErrors, PostApiV1WorkbenchDemoResponses, ProjectCreate, ProjectUpdate, ProviderUpdateJobCreate, ReportCreate, WaiverCreate, WaiverUpdate } from './types.gen';
+import type { AssetCreate, AssetExposure, AssetUpdate, BodyAssetsImportProjectAssets, BodyImportsImportProjectUpload, DeleteApiV1ProjectsByProjectIdErrors, DeleteApiV1ProjectsByProjectIdResponses, DeleteApiV1WorkbenchDemoResponses, DemoWorkspaceCreate, FindingPriority, FindingStatus, GetApiV1AuditEventsErrors, GetApiV1AuditEventsResponses, GetApiV1FindingsByFindingIdErrors, GetApiV1FindingsByFindingIdExplainErrors, GetApiV1FindingsByFindingIdExplainResponses, GetApiV1FindingsByFindingIdResponses, GetApiV1ProjectsByProjectIdAssetsErrors, GetApiV1ProjectsByProjectIdAssetsResponses, GetApiV1ProjectsByProjectIdAttackSummaryErrors, GetApiV1ProjectsByProjectIdAttackSummaryResponses, GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors, GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses, GetApiV1ProjectsByProjectIdDashboardErrors, GetApiV1ProjectsByProjectIdDashboardResponses, GetApiV1ProjectsByProjectIdErrors, GetApiV1ProjectsByProjectIdFindingsErrors, GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdGovernanceRollupsErrors, GetApiV1ProjectsByProjectIdGovernanceRollupsResponses, GetApiV1ProjectsByProjectIdResponses, GetApiV1ProjectsByProjectIdRunsErrors, GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdSummaryErrors, GetApiV1ProjectsByProjectIdSummaryResponses, GetApiV1ProjectsByProjectIdWaiversErrors, GetApiV1ProjectsByProjectIdWaiversResponses, GetApiV1ProjectsByProjectIdWorkflowsErrors, GetApiV1ProjectsByProjectIdWorkflowsResponses, GetApiV1ProjectsErrors, GetApiV1ProjectsResponses, GetApiV1ProvidersStatusResponses, GetApiV1ProvidersUpdateJobsResponses, GetApiV1ReportsByReportIdDownloadErrors, GetApiV1ReportsByReportIdDownloadResponses, GetApiV1RunsByRunIdErrors, GetApiV1RunsByRunIdReportsErrors, GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdResponses, GetApiV1RunsByRunIdSummaryErrors, GetApiV1RunsByRunIdSummaryResponses, GetApiV1UtilsHealthCheckResponses, GetApiV1WorkbenchCapabilitiesResponses, GetApiV1WorkbenchDemoResponses, GetApiV1WorkbenchHealthResponses, GetApiV1WorkbenchStatusResponses, GetApiV1WorkflowsByWorkflowIdErrors, GetApiV1WorkflowsByWorkflowIdEventsErrors, GetApiV1WorkflowsByWorkflowIdEventsResponses, GetApiV1WorkflowsByWorkflowIdResponses, GitHubIssueExportCreate, GitHubIssuePreviewCreate, PatchApiV1AssetsByAssetIdErrors, PatchApiV1AssetsByAssetIdResponses, PatchApiV1ProjectsByProjectIdErrors, PatchApiV1ProjectsByProjectIdResponses, PatchApiV1WaiversByWaiverIdErrors, PatchApiV1WaiversByWaiverIdResponses, PostApiV1AssetsByAssetIdRecalculateErrors, PostApiV1AssetsByAssetIdRecalculateResponses, PostApiV1ProjectsByProjectIdAssetsErrors, PostApiV1ProjectsByProjectIdAssetsImportErrors, PostApiV1ProjectsByProjectIdAssetsImportResponses, PostApiV1ProjectsByProjectIdAssetsResponses, PostApiV1ProjectsByProjectIdGithubIssuesExportErrors, PostApiV1ProjectsByProjectIdGithubIssuesExportResponses, PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors, PostApiV1ProjectsByProjectIdGithubIssuesPreviewResponses, PostApiV1ProjectsByProjectIdImportsErrors, PostApiV1ProjectsByProjectIdImportsResponses, PostApiV1ProjectsByProjectIdWaiversErrors, PostApiV1ProjectsByProjectIdWaiversResponses, PostApiV1ProjectsErrors, PostApiV1ProjectsResponses, PostApiV1ProvidersUpdateJobsErrors, PostApiV1ProvidersUpdateJobsResponses, PostApiV1ReportsByReportIdVerifyErrors, PostApiV1ReportsByReportIdVerifyResponses, PostApiV1RunsByRunIdReportJobsErrors, PostApiV1RunsByRunIdReportJobsResponses, PostApiV1RunsByRunIdReportsErrors, PostApiV1RunsByRunIdReportsResponses, PostApiV1WaiversByWaiverIdExpireErrors, PostApiV1WaiversByWaiverIdExpireResponses, PostApiV1WorkbenchDemoErrors, PostApiV1WorkbenchDemoResponses, PostApiV1WorkflowsByWorkflowIdCancelErrors, PostApiV1WorkflowsByWorkflowIdCancelResponses, PostApiV1WorkflowsByWorkflowIdRetryErrors, PostApiV1WorkflowsByWorkflowIdRetryResponses, ProjectCreate, ProjectUpdate, ProviderUpdateJobCreate, ReportCreate, WaiverCreate, WaiverUpdate } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -492,7 +492,7 @@ export class ImportsService {
     /**
      * Import Project Upload
      *
-     * Accept one upload request and delegate import execution to the service layer.
+     * Accept one upload request and queue a worker-first import workflow.
      */
     public static importProjectUpload<ThrowOnError extends boolean = true>(parameters: {
         project_id: string;
@@ -567,23 +567,6 @@ export class RunsService {
         return (options?.client ?? client).get<GetApiV1RunsByRunIdSummaryResponses, GetApiV1RunsByRunIdSummaryErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
             url: '/api/v1/runs/{run_id}/summary',
-            ...options,
-            ...params
-        });
-    }
-
-    /**
-     * Read Run Workflow Metadata
-     *
-     * Read redacted workflow metadata diagnostics for one visible analysis run.
-     */
-    public static readRunWorkflowMetadata<ThrowOnError extends boolean = true>(parameters: {
-        run_id: string;
-    }, options?: Options<never, ThrowOnError>) {
-        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'run_id' }] }]);
-        return (options?.client ?? client).get<GetApiV1RunsByRunIdWorkflowMetadataResponses, GetApiV1RunsByRunIdWorkflowMetadataErrors, ThrowOnError, 'data'>({
-            responseStyle: 'data',
-            url: '/api/v1/runs/{run_id}/workflow-metadata',
             ...options,
             ...params
         });
@@ -678,6 +661,105 @@ export class WaiversService {
     }
 }
 
+export class WorkflowsService {
+    /**
+     * Read Project Workflows
+     *
+     * Return durable workflows for a visible project.
+     */
+    public static readProjectWorkflows<ThrowOnError extends boolean = true>(parameters: {
+        project_id: string;
+        limit?: number;
+        offset?: number;
+    }, options?: Options<never, ThrowOnError>) {
+        const params = buildClientParams([parameters], [{ args: [
+                    { in: 'path', key: 'project_id' },
+                    { in: 'query', key: 'limit' },
+                    { in: 'query', key: 'offset' }
+                ] }]);
+        return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdWorkflowsResponses, GetApiV1ProjectsByProjectIdWorkflowsErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            url: '/api/v1/projects/{project_id}/workflows',
+            ...options,
+            ...params
+        });
+    }
+
+    /**
+     * Read Workflow
+     *
+     * Return one durable workflow by id.
+     */
+    public static readWorkflow<ThrowOnError extends boolean = true>(parameters: {
+        workflow_id: string;
+    }, options?: Options<never, ThrowOnError>) {
+        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'workflow_id' }] }]);
+        return (options?.client ?? client).get<GetApiV1WorkflowsByWorkflowIdResponses, GetApiV1WorkflowsByWorkflowIdErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            url: '/api/v1/workflows/{workflow_id}',
+            ...options,
+            ...params
+        });
+    }
+
+    /**
+     * Cancel Workflow
+     *
+     * Request cooperative cancellation for one workflow.
+     */
+    public static cancelWorkflow<ThrowOnError extends boolean = true>(parameters: {
+        workflow_id: string;
+    }, options?: Options<never, ThrowOnError>) {
+        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'workflow_id' }] }]);
+        return (options?.client ?? client).post<PostApiV1WorkflowsByWorkflowIdCancelResponses, PostApiV1WorkflowsByWorkflowIdCancelErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            url: '/api/v1/workflows/{workflow_id}/cancel',
+            ...options,
+            ...params
+        });
+    }
+
+    /**
+     * Read Workflow Events
+     *
+     * Return append-only events for one durable workflow.
+     */
+    public static readWorkflowEvents<ThrowOnError extends boolean = true>(parameters: {
+        workflow_id: string;
+        limit?: number;
+        offset?: number;
+    }, options?: Options<never, ThrowOnError>) {
+        const params = buildClientParams([parameters], [{ args: [
+                    { in: 'path', key: 'workflow_id' },
+                    { in: 'query', key: 'limit' },
+                    { in: 'query', key: 'offset' }
+                ] }]);
+        return (options?.client ?? client).get<GetApiV1WorkflowsByWorkflowIdEventsResponses, GetApiV1WorkflowsByWorkflowIdEventsErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            url: '/api/v1/workflows/{workflow_id}/events',
+            ...options,
+            ...params
+        });
+    }
+
+    /**
+     * Retry Workflow
+     *
+     * Create a new queued workflow from a previous failed/cancelled workflow payload.
+     */
+    public static retryWorkflow<ThrowOnError extends boolean = true>(parameters: {
+        workflow_id: string;
+    }, options?: Options<never, ThrowOnError>) {
+        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'workflow_id' }] }]);
+        return (options?.client ?? client).post<PostApiV1WorkflowsByWorkflowIdRetryResponses, PostApiV1WorkflowsByWorkflowIdRetryErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            url: '/api/v1/workflows/{workflow_id}/retry',
+            ...options,
+            ...params
+        });
+    }
+}
+
 export class ProvidersService {
     /**
      * Read Provider Status
@@ -764,6 +846,29 @@ export class ReportsService {
     }
 
     /**
+     * Queue Run Report
+     *
+     * Queue a report artifact generation workflow for a completed visible run.
+     */
+    public static queueRunReport<ThrowOnError extends boolean = true>(parameters: {
+        run_id: string;
+        reportCreate: ReportCreate;
+    }, options?: Options<never, ThrowOnError>) {
+        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'run_id' }, { key: 'reportCreate', map: 'body' }] }]);
+        return (options?.client ?? client).post<PostApiV1RunsByRunIdReportJobsResponses, PostApiV1RunsByRunIdReportJobsErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            url: '/api/v1/runs/{run_id}/report-jobs',
+            ...options,
+            ...params,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options?.headers,
+                ...params.headers
+            }
+        });
+    }
+
+    /**
      * Read Run Reports
      *
      * List report metadata for a visible analysis run.
@@ -783,7 +888,9 @@ export class ReportsService {
     /**
      * Create Run Report
      *
-     * Create a report artifact for a completed visible analysis run.
+     * Deprecated compatibility route that queues the same worker-first report job.
+     *
+     * @deprecated
      */
     public static createRunReport<ThrowOnError extends boolean = true>(parameters: {
         run_id: string;

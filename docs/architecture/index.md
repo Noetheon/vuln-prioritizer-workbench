@@ -30,10 +30,12 @@ flowchart LR
   F --> I["Prioritization service"]
   G --> I
   H --> I
-  I --> J["Finding and comparison models"]
-  J --> K["Report and evidence renderers"]
-  J --> L["Analysis JSON"]
-  L --> M["Static HTML renderer"]
+  I --> J["Finding and occurrence persistence"]
+  J --> K["Decision/Evidence Kernel"]
+  K --> L["AnalysisEvidenceV2"]
+  K --> M["FindingDecisionEvidenceV2"]
+  L --> N["API, reports, and evidence bundle"]
+  M --> N["API, reports, and evidence bundle"]
 ```
 
 ## Layering
@@ -176,19 +178,30 @@ Markdown or HTML layout.
 
 ### Stable machine-readable boundary
 
-The current machine-facing contract is centered on the JSON exports:
+The current machine-facing contract is centered on the Workbench API, typed
+Decision/Evidence Kernel v2 persistence, and report/evidence exports:
 
-- analysis JSON
-- compare JSON
-- explain JSON
+- generated `/api/v1` OpenAPI and client schemas
+- `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, `OccurrenceEvidenceV2`,
+  and `RunDiagnosticsV2`
+- `analysis-result.v2.json`
+- evidence ZIP `manifest.json` and verification report JSON
+- SARIF 2.1.0 exports
 
-These payloads embed `metadata.schema_version`, currently `1.0.0`.
+The old CLI-era `analyze`, `compare`, and `explain` JSON contracts are
+historical package-line material. Current Workbench explain and comparison
+routes are API projections over persisted findings and typed decision evidence,
+not a replacement source of product truth.
+
+See [Decision/Evidence Kernel](decision-evidence-kernel.md) and
+[Contracts](../contracts.md) for the active evidence and report boundaries.
 
 ### Derived renderers
 
-HTML report rendering does not rerun enrichment. It consumes an existing
-analysis JSON export and renders a static document from that saved payload.
-This keeps HTML generation reproducible and decoupled from live provider state.
+Markdown, HTML, CSV, SARIF, ATT&CK Navigator, JSON, and Evidence ZIP reports do
+not rerun enrichment. They consume the same persisted evidence snapshot used by
+the API and UI. This keeps report generation reproducible and decoupled from
+live provider state.
 
 ### Human-facing surfaces
 

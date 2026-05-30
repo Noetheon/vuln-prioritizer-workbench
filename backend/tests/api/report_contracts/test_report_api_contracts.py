@@ -8,6 +8,8 @@ import pytest
 from sqlmodel import Session, select
 from utils.workbench_contracts import (
     _configure_report_dir,
+    _create_report_via_worker,
+    _queue_report_workflow,
     _seed_reportable_run,
     _seed_secondary_project_report,
     _seed_status_run,
@@ -74,7 +76,7 @@ def test_vpw048_report_local_project_visibility_and_invalid_run_state(
     with Session(secondary_workbench_api_env.engine) as session:
         failure_events = session.exec(
             select(secondary_workbench_api_env.app_models.AuditEvent).where(
-                secondary_workbench_api_env.app_models.AuditEvent.action == "report.create",
+                secondary_workbench_api_env.app_models.AuditEvent.action == "report.job.create",
                 secondary_workbench_api_env.app_models.AuditEvent.status == "failure",
             )
         ).all()
@@ -94,11 +96,12 @@ def test_vpw048_download_rejects_path_escape_and_checksum_mismatch(
     headers = local_api_headers(workbench_api_env.client)
     project = create_project_via_api(workbench_api_env.client, headers)
     run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
-    created = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    created = _create_report_via_worker(
+        workbench_api_env,
+        run_id,
         headers=headers,
-        json={"format": "markdown"},
-    ).json()
+        payload={"format": "markdown"},
+    )
     report_id = uuid.UUID(created["id"])
 
     with Session(workbench_api_env.engine) as session:
@@ -136,14 +139,23 @@ def test_report_generation_rejects_artifacts_over_configured_size_limit(
         project = create_project_via_api(workbench_api_env.client, headers)
         run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
 
-        response = workbench_api_env.client.post(
-            f"/api/v1/runs/{run_id}/reports",
+        workflow = _queue_report_workflow(
+            workbench_api_env,
+            run_id,
             headers=headers,
-            json={"format": "markdown"},
+            payload={"format": "markdown"},
+        )
+        from utils.import_contracts import drain_workflow_queue
+
+        drain_workflow_queue(workbench_api_env)
+        response = workbench_api_env.client.get(
+            f"/api/v1/workflows/{workflow['id']}",
+            headers=headers,
         )
 
-        assert response.status_code == 422
-        assert "configured report size limit" in response.text
+        assert response.status_code == 200
+        assert response.json()["status"] == "failed"
+        assert "configured report size limit" in response.json()["error_message"]
         with Session(workbench_api_env.engine) as session:
             reports = workbench_api_env.repositories.ReportRepository(session).list_run_reports(
                 run_id
@@ -222,13 +234,13 @@ def test_report_generation_prunes_oldest_reports_for_run(
 
         created = []
         for _ in range(3):
-            response = workbench_api_env.client.post(
-                f"/api/v1/runs/{run_id}/reports",
+            response = _create_report_via_worker(
+                workbench_api_env,
+                run_id,
                 headers=headers,
-                json={"format": "markdown"},
+                payload={"format": "markdown"},
             )
-            assert response.status_code == 200, response.text
-            created.append(response.json())
+            created.append(response)
 
         with Session(workbench_api_env.engine) as session:
             reports = workbench_api_env.repositories.ReportRepository(session).list_run_reports(

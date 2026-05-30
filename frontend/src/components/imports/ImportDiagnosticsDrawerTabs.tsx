@@ -21,7 +21,10 @@ import {
   formatDisplayType,
   jsonPreview,
   metadataRows,
+  runCount,
   runFileLabel,
+  runInputUpload,
+  runLockedProviderData,
 } from "./imports-workbench-model"
 
 type ImportDiagnosticsDrawerTabsProps = {
@@ -35,14 +38,15 @@ export function ImportDiagnosticsDrawerTabs({
 }: ImportDiagnosticsDrawerTabsProps) {
   const parseErrors = summary.parse_errors ?? []
   const rawJson = jsonPreview({ run, summary })
-  const uploadRows = metadataRows(summary.input_upload).map(([label, value]) => ({
+  const inputUpload = runInputUpload(summary)
+  const uploadRows = metadataRows(inputUpload).map(([label, value]) => ({
     label,
     value: String(value),
   }))
   const providerRows = [
     {
       label: "Provider mode",
-      value: stringValue(summary.input_upload, "provider_mode") ?? "Current provider data",
+      value: stringValue(inputUpload, "provider_mode") ?? "Current provider data",
     },
     {
       label: "Provider snapshot",
@@ -58,8 +62,8 @@ export function ImportDiagnosticsDrawerTabs({
     {
       label: "Locked replay",
       value:
-        booleanLabel(summary.locked_provider_data) ??
-        stringValue(summary.input_upload, "locked_provider_data") ??
+        booleanLabel(runLockedProviderData(summary)) ??
+        stringValue(inputUpload, "locked_provider_data") ??
         "Not recorded",
     },
   ]
@@ -116,15 +120,15 @@ export function ImportDiagnosticsDrawerTabs({
               },
               {
                 label: "Created",
-                value: summary.created_findings ?? 0,
+                value: runCount(summary, "created_findings"),
               },
               {
                 label: "Updated",
-                value: summary.updated_findings ?? 0,
+                value: runCount(summary, "updated_findings"),
               },
               {
                 label: "Ignored",
-                value: summary.ignored_lines ?? 0,
+                value: runCount(summary, "ignored_lines"),
               },
             ]}
           />
@@ -140,11 +144,11 @@ export function ImportDiagnosticsDrawerTabs({
           <CompactRows
             items={[
               { label: "Parser status", value: runStatusLabel(summary.status) },
-              { label: "Rows read", value: recordedValue(summary.rows_read) },
-              { label: "Created findings", value: summary.created_findings ?? 0 },
-              { label: "Updated findings", value: summary.updated_findings ?? 0 },
-              { label: "Finding count", value: summary.finding_count ?? 0 },
-              { label: "Ignored lines", value: summary.ignored_lines ?? 0 },
+              { label: "Rows read", value: recordedValue(runCount(summary, "rows_read")) },
+              { label: "Created findings", value: runCount(summary, "created_findings") },
+              { label: "Updated findings", value: runCount(summary, "updated_findings") },
+              { label: "Finding count", value: runCount(summary, "finding_count") },
+              { label: "Ignored lines", value: runCount(summary, "ignored_lines") },
               { label: "Parser errors", value: parseErrors.length },
               { label: "Warnings", value: warningCount(summary.warnings) },
             ]}

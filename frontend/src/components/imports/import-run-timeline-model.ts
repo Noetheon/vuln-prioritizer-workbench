@@ -1,5 +1,16 @@
 import type { AnalysisRunPublic, AnalysisRunSummaryPublic } from "@/api-client"
-import { objectRecord, stringValue } from "./imports-workbench-records.ts"
+import {
+  runAssetContextUpload,
+  runCount,
+  runInputUpload,
+  runLockedProviderData,
+  runProviderSnapshotFile,
+  runProviderSnapshotHash,
+  runResultRecord,
+  runResultString,
+  runVexUpload,
+  stringValue,
+} from "./imports-workbench-model.ts"
 
 export function importRunTimelineItems(
   run: AnalysisRunPublic | null,
@@ -7,7 +18,7 @@ export function importRunTimelineItems(
 ) {
   if (!summary) return []
 
-  const inputUpload = objectRecord(summary.input_upload ?? run?.input_upload)
+  const inputUpload = runInputUpload(summary)
   const items: string[] = []
 
   if (summary.started_at || run?.started_at) {
@@ -44,8 +55,8 @@ export function importRunTimelineItems(
   }
 
   if (
-    numberValue(summary.created_findings, run?.created_findings) +
-      numberValue(summary.updated_findings, run?.updated_findings) >
+    runCount(summary, "created_findings") + runCount(run, "created_findings") +
+      runCount(summary, "updated_findings") + runCount(run, "updated_findings") >
     0
   ) {
     items.push("Findings created or updated")
@@ -83,15 +94,15 @@ function hasProviderEvidence(
   inputUpload: Record<string, unknown>,
 ) {
   return Boolean(
-    summary.provider_snapshot_id ||
+      summary.provider_snapshot_id ||
       run?.provider_snapshot_id ||
-      summary.provider_snapshot_file ||
-      summary.provider_snapshot_hash ||
-      run?.provider_snapshot_file ||
-      run?.provider_snapshot_hash ||
+      runProviderSnapshotFile(summary) ||
+      runProviderSnapshotHash(summary) ||
+      runProviderSnapshotFile(run) ||
+      runProviderSnapshotHash(run) ||
       stringValue(inputUpload.provider_snapshot_file) ||
-      typeof summary.locked_provider_data === "boolean" ||
-      typeof run?.locked_provider_data === "boolean" ||
+      typeof runLockedProviderData(summary) === "boolean" ||
+      typeof runLockedProviderData(run ?? undefined) === "boolean" ||
       typeof inputUpload.locked_provider_data === "boolean",
   )
 }
@@ -100,11 +111,11 @@ function hasOptionalContextEvidence(
   summary: AnalysisRunSummaryPublic,
   inputUpload: Record<string, unknown>,
 ) {
-  const assetContextUpload = objectRecord(summary.asset_context_upload)
-  const vexUpload = objectRecord(summary.vex_upload)
-  const assetContext = objectRecord(summary.asset_context)
-  const vex = objectRecord(summary.vex)
-  const attackSource = summary.attack_source ?? stringValue(inputUpload.attack_source)
+  const assetContextUpload = runAssetContextUpload(summary)
+  const vexUpload = runVexUpload(summary)
+  const assetContext = runResultRecord(summary, "asset_context")
+  const vex = runResultRecord(summary, "vex")
+  const attackSource = runResultString(summary, "attack_source") ?? stringValue(inputUpload.attack_source)
   return (
     hasStringRecordValue(assetContextUpload, [
       "original_filename",
@@ -126,20 +137,13 @@ function hasOptionalContextEvidence(
     ]) ||
     Object.keys(assetContext).length > 0 ||
     Object.keys(vex).length > 0 ||
-    Boolean(summary.attack_mapping_file) ||
-    Number(summary.attack_mapped_cves ?? 0) > 0 ||
-    Number(summary.suppressed_by_vex ?? 0) > 0 ||
+    Boolean(runResultString(summary, "attack_mapping_file")) ||
+    runCount(summary, "attack_mapped_cves") > 0 ||
+    runCount(summary, "suppressed_by_vex") > 0 ||
     Boolean(attackSource && attackSource !== "none")
   )
 }
 
 function hasStringRecordValue(record: Record<string, unknown>, keys: string[]) {
   return keys.some((key) => Boolean(stringValue(record[key])))
-}
-
-function numberValue(...values: unknown[]) {
-  for (const value of values) {
-    if (typeof value === "number") return value
-  }
-  return 0
 }

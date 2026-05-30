@@ -19,7 +19,7 @@ from app.models.github_issues import (
     GitHubIssuePreviewCreate,
     GitHubIssuePreviewRecord,
 )
-from app.repositories import FindingPageQuery, FindingRepository
+from app.repositories import EvidenceRepository, FindingPageQuery, FindingRepository
 from vuln_prioritizer.security_redaction import redact_text, redact_value
 
 GITHUB_SECRET_PATTERN = re.compile(
@@ -272,7 +272,10 @@ def _evidence_refs(finding: Finding) -> list[str]:
         f"/api/v1/findings/{finding.id}",
         f"https://nvd.nist.gov/vuln/detail/{finding.cve_id}",
     ]
-    refs.extend(_extract_evidence_refs(finding.evidence_json))
+    evidence = EvidenceRepository(_finding_session(finding)).latest_finding_decision_evidence(
+        finding.id
+    )
+    refs.extend(_extract_evidence_refs(evidence.to_jsonable() if evidence is not None else {}))
     seen: set[str] = set()
     deduped: list[str] = []
     for ref in refs:
@@ -281,6 +284,15 @@ def _evidence_refs(finding: Finding) -> list[str]:
             deduped.append(safe_ref)
             seen.add(safe_ref)
     return deduped[:10]
+
+
+def _finding_session(finding: Finding) -> Any:
+    from sqlalchemy.orm import object_session
+
+    session = object_session(finding)
+    if session is None:
+        raise RuntimeError("Finding is not attached to a session.")
+    return session
 
 
 def _extract_evidence_refs(value: Any) -> list[str]:

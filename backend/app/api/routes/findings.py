@@ -90,7 +90,7 @@ def read_project_findings(
         )
     )
     return FindingsPublic(
-        data=[_finding_public(finding) for finding in findings],
+        data=[_finding_public(finding, session=session) for finding in findings],
         count=count,
     )
 

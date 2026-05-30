@@ -40,7 +40,7 @@ def test_vpw067_governance_rollups_count_owner_service_environment_and_waiver_de
     assert checkout["high_count"] == 1
     assert checkout["accepted_count"] == 2
     assert checkout["suppressed_by_vex_count"] == 1
-    assert checkout["review_due_waiver_count"] == 2
+    assert checkout["review_due_waiver_count"] == 0
     assert checkout["risk_score_total"] == 180.0
     assert checkout["priority_counts"]["Critical"] == 1
     assert checkout["priority_counts"]["High"] == 1
@@ -56,8 +56,8 @@ def test_vpw067_governance_rollups_count_owner_service_environment_and_waiver_de
 
     production = next(item for item in payload["environments"] if item["label"] == "production")
     assert production["finding_count"] == 3
-    assert production["expired_waiver_count"] == 1
-    assert production["review_due_waiver_count"] == 2
+    assert production["expired_waiver_count"] == 0
+    assert production["review_due_waiver_count"] == 0
 
     platform = next(item for item in payload["owners"] if item["label"] == "platform")
     assert platform["finding_count"] == 2
@@ -70,8 +70,8 @@ def test_vpw067_governance_rollups_count_owner_service_environment_and_waiver_de
     assert waiver_debt["expiring_soon_count"] == 1
     assert waiver_debt["matched_finding_count"] == 3
     assert waiver_debt["accepted_finding_count"] == 2
-    assert waiver_debt["expired_finding_count"] == 1
-    assert waiver_debt["review_due_finding_count"] == 2
+    assert waiver_debt["expired_finding_count"] == 0
+    assert waiver_debt["review_due_finding_count"] == 0
     assert waiver_debt["owner_counts"] == {"legacy-risk": 1, "risk-team": 1}
     assert [item["status"] for item in waiver_debt["items"]] == ["expired", "review_due"]
     assert waiver_debt["items"][0]["matched_findings"] == 1

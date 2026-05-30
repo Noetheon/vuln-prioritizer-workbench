@@ -15,9 +15,17 @@ The current React Evidence Center lives in
 - checksum and manifest metadata
 - evidence bundle status and verification actions
 
-Report generation, download, and verification are still handled through the
-Workbench backend API. The frontend does not invent report content or bypass
-checksum validation.
+Report generation is queued through Workflow v2 and completed by the durable
+worker. Report content is projected from the Decision/Evidence Kernel v2
+contracts, not from free-form workflow JSON. Download and verification stay
+behind the Workbench backend API. The frontend does not invent report content,
+treat a queued report as finished, or bypass checksum validation.
+
+All report formats are rendered from the same persisted evidence snapshot used
+by run and finding APIs: run-wide `AnalysisEvidenceV2` plus per-finding
+`FindingDecisionEvidenceV2`. Individual renderers must not reconstruct counts,
+provider facts, VEX state, governance signals, or occurrence semantics from
+successful workflow result JSON.
 
 ## Report Formats
 
@@ -27,7 +35,7 @@ The current report surface supports:
 | --- | --- |
 | HTML | Executive browser report with priority summary and evidence links. |
 | Markdown | Technical handoff for analysts, PR notes, and audit review. |
-| JSON | Machine-readable analysis and report data. |
+| JSON | Machine-readable `analysis-result.v2.json` analysis and report data. |
 | CSV | Finding table export for spreadsheets and ticket routing. |
 | SARIF | Code-scanning and CI evidence workflows. |
 | ATT&CK Navigator | Defensive layer for mapped techniques when ATT&CK context exists. |
@@ -57,7 +65,7 @@ fresh at review time.
 `docs/evidence/` intentionally remains small. It contains only committed
 contract artifacts used by backend report/evidence tests:
 
-- `docs/evidence/vpw-050-analysis-result.v1.json`
+- `docs/evidence/vpw-050-analysis-result.v2.json`
 - `docs/evidence/vpw-050-findings.csv`
 - `docs/evidence/vpw-051-analysis.json`
 - `docs/evidence/vpw-051-manifest.json`

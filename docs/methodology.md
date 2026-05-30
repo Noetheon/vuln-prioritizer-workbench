@@ -57,7 +57,7 @@ Three local ATT&CK modes exist:
 The `ctid-json` workflow is the preferred current ATT&CK path.
 
 ATT&CK version wording must distinguish current upstream ATT&CK from pinned
-demo fixtures. As of the 2026-05-25 hygiene pass, MITRE lists ATT&CK v19.1 as
+demo fixtures. As of the 2026-05-30 hygiene pass, MITRE lists ATT&CK v19.1 as
 the current website version. The checked-in Workbench demo and report fixtures
 remain pinned to ATT&CK 16.1 so evidence generation is deterministic.
 

@@ -72,7 +72,7 @@ jobs:
               scripts/docker_quickstart_api_smoke.py|scripts/production_readiness_smoke.py|scripts/start*)
                 run_docker=true
                 ;;
-              package.json|frontend/package.json|frontend/package-lock.json)
+              .nvmrc|.npmrc|package.json|frontend/package.json|frontend/package-lock.json)
                 run_docker=true
                 ;;
               frontend/nginx.conf|frontend/nginx-backend-not-found.conf)

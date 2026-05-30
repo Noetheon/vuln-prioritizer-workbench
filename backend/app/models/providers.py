@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 from sqlmodel import Field, SQLModel
+
+from app.models.workflows import WorkflowRunPublic
 
 
 class ProviderSourceStatusPublic(SQLModel):
@@ -49,7 +51,6 @@ class ProviderUpdateJobCreate(BaseModel):
     cve_ids: list[str] = Field(default_factory=list)
     max_cves: int | None = Field(default=None, ge=1, le=10000)
     cache_only: bool = True
-    execution_mode: Literal["request", "background"] = "request"
 
 
 class ProviderUpdateJobPublic(BaseModel):
@@ -59,12 +60,12 @@ class ProviderUpdateJobPublic(BaseModel):
 
     id: str
     status: str
-    execution_mode: str = "request"
     requested_sources: list[str] = Field(default_factory=list)
     started_at: str | None = None
     finished_at: str | None = None
     error_message: str | None = None
     metadata_: dict[str, Any] = Field(default_factory=dict, alias="metadata")
+    workflow: WorkflowRunPublic | None = None
 
 
 class ProviderUpdateJobsPublic(BaseModel):

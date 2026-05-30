@@ -136,7 +136,7 @@ def test_sarif_validator_is_deterministic_for_generated_payloads(
 bundle_paths = st.lists(
     st.sampled_from(
         [
-            "analysis-result.v1.json",
+            "analysis-result.v2.json",
             "findings.csv",
             "manifest.json",
             "reports/technical-report.md",
@@ -157,7 +157,7 @@ def test_evidence_manifest_validator_is_deterministic_for_generated_paths(
     digest = hashlib.sha256(str(size).encode()).hexdigest()
     manifest = EvidenceBundleManifest(
         generated_at="2026-05-15T00:00:00Z",
-        source_analysis_path="analysis-result.v1.json",
+        source_analysis_path="analysis-result.v2.json",
         files=[
             EvidenceBundleFile(
                 path=path,
@@ -185,7 +185,7 @@ def test_evidence_bundle_mismatch_description_is_deterministic(
     content: bytes,
 ) -> None:
     expected = EvidenceBundleFile(
-        path="analysis-result.v1.json",
+        path="analysis-result.v2.json",
         kind="analysis-json",
         size_bytes=len(content),
         sha256=hashlib.sha256(content).hexdigest(),

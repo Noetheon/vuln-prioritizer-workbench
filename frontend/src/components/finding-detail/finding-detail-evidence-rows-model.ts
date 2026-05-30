@@ -19,9 +19,9 @@ export function findingEvidenceRows(
   const firstOccurrence = occurrences[0]
   const providerEvidence = objectRecord(
     explanation?.provider_evidence ??
-      objectRecord(finding?.explanation_json).provider_evidence,
+      finding?.evidence?.provider?.provider_evidence,
   )
-  const evidence = objectRecord(finding?.evidence_json)
+  const evidence = objectRecord(finding?.evidence)
   const providerSignalLabels = [
     finding?.epss !== null && finding?.epss !== undefined ? "EPSS" : null,
     finding?.cvss_base_score !== null && finding?.cvss_base_score !== undefined
@@ -85,7 +85,8 @@ export function findingEvidenceRows(
       label: "Data quality notes",
       value:
         explanation?.data_quality_confidence ??
-        stringValue(objectRecord(finding?.data_quality_json).confidence) ??
+        finding?.evidence?.priority_evidence?.data_quality_confidence ??
+        stringValue(finding?.evidence?.governance?.data_quality?.confidence) ??
         "Recorded",
     },
     {
@@ -173,7 +174,7 @@ export function findingHistoryRows(
         "Provider snapshot changes are recorded through the imported evidence and explanation payload when supplied.",
       label: "Provider snapshot changed",
       value:
-        finding?.explanation_json || finding?.evidence_json
+        finding?.evidence
           ? "Stored with finding"
           : "Not recorded",
     },

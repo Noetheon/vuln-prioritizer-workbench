@@ -51,7 +51,8 @@ def read_project_assets(
 ) -> AssetsPublic:
     """List assets for a visible project."""
     require_project(session, project_id)
-    assets, count = AssetRepository(session).list_project_assets_page(
+    repository = AssetRepository(session)
+    assets, count = repository.list_project_assets_page(
         project_id,
         owner=owner,
         service=service,
@@ -59,7 +60,7 @@ def read_project_assets(
         offset=offset,
     )
     return AssetsPublic(
-        data=[_asset_public(asset) for asset in assets],
+        data=[_asset_public(asset, repository=repository) for asset in assets],
         count=count,
     )
 
@@ -105,7 +106,7 @@ def create_project_asset(
     )
     session.commit()
     session.refresh(asset)
-    return _asset_public(asset)
+    return _asset_public(asset, repository=repository)
 
 
 @router.post("/projects/{project_id}/assets/import", response_model=AssetContextImportPublic)
@@ -195,7 +196,7 @@ def update_asset(
     )
     session.commit()
     session.refresh(updated)
-    return _asset_public(updated)
+    return _asset_public(updated, repository=repository)
 
 
 @router.post("/assets/{asset_id}/recalculate", response_model=AssetRecalculatePublic)
@@ -227,12 +228,14 @@ def recalculate_asset(
     return AssetRecalculatePublic.model_validate(result)
 
 
-def _asset_public(asset: Asset) -> AssetPublic:
+def _asset_public(asset: Asset, *, repository: AssetRepository) -> AssetPublic:
     """Return asset DTO with lightweight finding context for the Assets page."""
     return AssetPublic.model_validate(asset).model_copy(
         update={
             "finding_count": len(asset.findings),
-            "rescore_needed": any(_finding_rescore_needed(finding) for finding in asset.findings),
+            "rescore_needed": any(
+                repository.finding_rescore_needed(finding) for finding in asset.findings
+            ),
         }
     )
 
@@ -240,17 +243,6 @@ def _asset_public(asset: Asset) -> AssetPublic:
 def _asset_context(asset: Asset) -> dict[str, Any]:
     """Return mutable asset context fields that affect operational scoring."""
     return {field: getattr(asset, field) for field in ASSET_CONTEXT_FIELDS}
-
-
-def _finding_rescore_needed(finding: Any) -> bool:
-    data_quality = getattr(finding, "data_quality_json", {}) or {}
-    if not isinstance(data_quality, dict):
-        return False
-    flags = data_quality.get("flags")
-    return isinstance(flags, list) and any(
-        isinstance(flag, dict) and flag.get("code") == "asset_context_rescore_needed"
-        for flag in flags
-    )
 
 
 def _validate_asset_context_upload(file: UploadFile) -> None:

@@ -152,12 +152,6 @@ def _with_rescore_evidence(
 
 def _finding_as_prioritized(finding: Finding) -> PrioritizedFinding:
     """Finding as prioritized function."""
-    payload = dict(finding.explanation_json or {})
-    if payload.get("cve_id") == finding.cve_id:
-        try:
-            return PrioritizedFinding.model_validate(payload)
-        except ValueError:
-            pass
     return PrioritizedFinding(
         cve_id=finding.cve_id,
         description=getattr(finding.vulnerability, "description", None),

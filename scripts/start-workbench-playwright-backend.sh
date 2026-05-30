@@ -28,4 +28,17 @@ export SECRET_KEY="${SECRET_KEY:-local-workbench-dev-secret}"
 
 python3 -m alembic -c backend/alembic.ini upgrade head
 
-exec python3 -m uvicorn app.main:app --host 127.0.0.1 --port "$backend_port"
+python3 -m app.workers.workflow_worker \
+  --worker-id "playwright-worker-$backend_port" \
+  --poll-interval 0.2 \
+  --lease-seconds 30 \
+  --retry-delay-seconds 0 &
+worker_pid="$!"
+
+cleanup() {
+  kill "$worker_pid" 2>/dev/null || true
+  wait "$worker_pid" 2>/dev/null || true
+}
+trap cleanup EXIT INT TERM
+
+python3 -m uvicorn app.main:app --host 127.0.0.1 --port "$backend_port"

@@ -27,7 +27,6 @@ from app.core.config import Settings, settings
 from app.core.db import create_db_engine
 from app.core.rate_limit import RateLimiter, create_rate_limiter, rate_limit_key
 from app.core.schema_smoke import assert_migrated_schema
-from app.services.import_background import reconcile_stale_background_import_runs
 from app.services.provider_updates import reconcile_stale_provider_update_runs
 
 SECURITY_HEADERS = {
@@ -79,6 +78,7 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
     app.router.on_startup.append(
         lambda: _reconcile_stale_import_runs_on_startup(active_engine, selected_settings)
     )
+    app.router.on_shutdown.append(lambda: active_engine.dispose())
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=list(selected_settings.ALLOWED_HOSTS),
@@ -108,11 +108,7 @@ def _reconcile_stale_import_runs_on_startup(
 ) -> int:
     """Reconcile stale local jobs without breaking first-run local schema setup."""
     try:
-        reconciled = reconcile_stale_background_import_runs(
-            engine=active_engine,
-            settings=selected_settings,
-        )
-        reconciled += reconcile_stale_provider_update_runs(
+        reconciled = reconcile_stale_provider_update_runs(
             engine=active_engine,
             settings=selected_settings,
         )

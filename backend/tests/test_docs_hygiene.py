@@ -52,7 +52,7 @@ TEXT_SUFFIXES = {
 }
 MEDIA_SUFFIXES = {".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"}
 CANONICAL_EVIDENCE_CONTRACT_ARTIFACTS = {
-    Path("docs/evidence/vpw-050-analysis-result.v1.json"),
+    Path("docs/evidence/vpw-050-analysis-result.v2.json"),
     Path("docs/evidence/vpw-050-findings.csv"),
     Path("docs/evidence/vpw-051-analysis.json"),
     Path("docs/evidence/vpw-051-manifest.json"),
@@ -297,6 +297,24 @@ def test_workbench_demo_docs_use_managed_snapshot_filename_in_import_field() -> 
     assert violations == {name: [] for name in active_demo_docs}
 
 
+def test_active_quickstart_docs_start_the_workflow_worker() -> None:
+    active_quickstart_docs = {
+        "README.md": README_FILE,
+        "docs/index.md": REPO_ROOT / "docs" / "index.md",
+        "docs/user_documentation.md": USER_DOCUMENTATION_FILE,
+        "docs/workbench-offline-demo.md": WORKBENCH_OFFLINE_DEMO_FILE,
+    }
+    required = (
+        "docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker"
+    )
+    missing = {
+        name: required not in path.read_text(encoding="utf-8")
+        for name, path in active_quickstart_docs.items()
+    }
+
+    assert missing == {name: False for name in active_quickstart_docs}
+
+
 def test_gitignore_covers_workbench_runtime_artifacts() -> None:
     gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
     required_runtime_roots = {
@@ -334,6 +352,26 @@ def test_dependency_policy_does_not_carry_closed_dependency_prs() -> None:
 
     assert "pull/287" not in policy
     assert "remains the linked GitHub Actions dependency-update follow-up" not in policy
+
+
+def test_frontend_docs_use_current_npm_test_commands() -> None:
+    active_frontend_docs = {
+        "frontend/README.md": REPO_ROOT / "frontend" / "README.md",
+        "docs/workbench-ui-migration-plan.md": REPO_ROOT
+        / "docs"
+        / "workbench-ui-migration-plan.md",
+    }
+    stale_phrases = (
+        "cd frontend && npm",
+        "run test -- --run frontend/tests",
+        "run test:ui -- --project",
+    )
+    violations = {
+        name: [phrase for phrase in stale_phrases if phrase in path.read_text(encoding="utf-8")]
+        for name, path in active_frontend_docs.items()
+    }
+
+    assert violations == {name: [] for name in active_frontend_docs}
 
 
 def test_testpypi_release_docs_do_not_mix_package_indexes() -> None:
@@ -430,6 +468,7 @@ def test_documentation_map_defines_current_and_historical_boundaries() -> None:
 
     assert Path("docs/current-product-state.md") in nav_pages
     assert Path("docs/documentation-map.md") in nav_pages
+    assert Path("docs/architecture/decision-evidence-kernel.md") in nav_pages
     assert Path("docs/workbench-threat-model.md") in current_product_pages
     assert Path("docs/workbench-public-deployment.md") in current_product_pages
     assert Path("docs/workbench-threat-model.md") not in history_pages
@@ -475,13 +514,17 @@ def test_documentation_evidence_matrix_records_current_hygiene_baseline() -> Non
     normalized_reports_and_evidence = " ".join(reports_and_evidence.split())
 
     for text in (current_state, evidence_matrix):
-        assert "2026-05-25" in text
+        assert "2026-05-30" in text
         assert "Public + Root" in text
         assert "documentation hygiene" in text.lower()
 
-    assert "MkDocs navigation covers 83 public pages" in evidence_matrix
+    assert "Workflow v2 documentation was checked" in evidence_matrix
+    assert "provider/version wording baseline was refreshed" in current_state
+    assert "MkDocs navigation covers 84 public pages" in evidence_matrix
     assert "Supported Workbench import types" in evidence_matrix
     assert "Supported Workbench report formats" in evidence_matrix
+    assert "backend/app/services/decision_kernel.py" in evidence_matrix
+    assert "workflow-result-ref.v2" in evidence_matrix
     assert "NVD CVE API 2.0 uses `cveIds`" in evidence_matrix
     assert "FIRST EPSS exposes `/data/v1/epss`" in evidence_matrix
     assert "official `cisagov/kev-data` mirror" in evidence_matrix

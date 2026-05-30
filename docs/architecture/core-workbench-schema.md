@@ -126,9 +126,6 @@ Minimum fields:
 - `in_kev`
 - `epss`
 - `cvss_base_score`
-- `explanation_json`
-- `data_quality_json`
-- `evidence_json`
 
 Constraints and indexes:
 
@@ -151,6 +148,11 @@ version, and package type. Missing component or asset context is represented by
 an explicit empty marker so repeated minimal CVE-list imports reuse the same
 finding instead of relying on SQL NULL uniqueness behavior.
 
+Finding-level explanation, data-quality, provider, ATT&CK, governance, and
+remediation evidence lives in `finding_decision_evidence` as typed
+`FindingDecisionEvidenceV2`. `finding` intentionally keeps only indexed working
+fields and links so triage queries stay bounded.
+
 ## Persistence Contract
 
 A single project must be able to persist and retrieve a connected graph:
@@ -163,7 +165,8 @@ local and existence-based rather than user-owned.
 
 ## Migration Contract
 
-The Workbench Alembic head under `backend/app/alembic` must create the four core
-Workbench tables and match SQLModel metadata on a fresh SQLite database. Tests
-use a temporary SQLite database and an Alembic `Config` rather than production
-settings.
+The Workbench Alembic head under `backend/app/alembic` is now a squashed v2
+initial migration for local-first development. It must create these four core
+Workbench tables as part of the full active schema and match SQLModel metadata
+on a fresh SQLite database. Tests use a temporary SQLite database and an Alembic
+`Config` rather than production settings.

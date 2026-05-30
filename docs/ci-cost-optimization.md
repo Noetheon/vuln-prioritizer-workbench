@@ -9,10 +9,10 @@ leave branch protection waiting for a check that never starts.
 
 Ready pull requests keep the merge-safety checks that are required on `main`:
 
-- `check (3.12)` runs the local-equivalent Python workflow gate.
-- `check (3.11)` remains as a required context and exits with a clear skip
-  message on pull requests. The full 3.11 gate runs on `main` and manual
-  dispatch.
+- `check (3.13)` runs the local-equivalent Python workflow gate on the current
+  Docker runtime Python line.
+- `check (3.11)` and `check (3.12)` keep the supported Python compatibility
+  contexts visible.
 - `frontend` runs frontend lint, build, generated-client drift, unit coverage,
   and the full Playwright suite unless the PR is documentation/archive-only or
   otherwise outside frontend/API/runtime scope.
@@ -26,7 +26,7 @@ Ready pull requests keep the merge-safety checks that are required on `main`:
 
 Pushes to `main` run the full merge validation:
 
-- Python workflow gate on 3.11 and 3.12.
+- Python workflow gate on 3.11, 3.12, and 3.13.
 - Full frontend Playwright suite.
 - Demo and production-like Docker compose smokes, including the Compose
   Postgres Alembic/schema/repository check inside the backend container.
@@ -81,12 +81,11 @@ routing, public-deployment controls, or report download paths.
 
 ## Tradeoffs
 
-The main tradeoff is that pull requests no longer run the expensive Python gate
-on every supported Python version. The 3.11 required context remains present,
-but the full 3.11 gate runs after merge on `main` and can be run manually before
-merge when a dependency or compatibility-sensitive change warrants it. In
-exchange, ready PRs that touch frontend/API/runtime behavior now run the full
-browser suite before merge.
+The main tradeoff is that dependency and runtime PRs pay for the full supported
+Python matrix. That cost is intentional for compatibility-sensitive changes,
+while frontend and Docker jobs still skip internally when scope analysis shows
+they are not affected. Ready PRs that touch frontend/API/runtime behavior also
+run the full browser suite before merge.
 
 CodeQL stays conservative on ready PRs because branch protection currently
 requires `Analyze Python`. If branch protection changes later, CodeQL can move

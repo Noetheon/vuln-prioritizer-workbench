@@ -87,11 +87,11 @@ def test_cve_list_import_flows_to_summary_findings_and_core_reports(
     assert_no_workflow_path_leak(markdown_text, context)
 
     json_report = create_report(workbench_api_env, context, run_id, "json")
-    assert json_report["filename"] == "analysis-result.v1.json"
+    assert json_report["filename"] == "analysis-result.v2.json"
     assert json_report["kind"] == "analysis-result-json"
     analysis_json = downloaded_json(workbench_api_env, context, json_report)
-    jsonschema.validate(analysis_json, _load_schema("analysis-result.v1.schema.json"))
-    assert analysis_json["schema"] == "analysis-result.v1"
+    jsonschema.validate(analysis_json, _load_schema("analysis-result.v2.schema.json"))
+    assert analysis_json["schema"] == "analysis-result.v2"
     assert analysis_json["project"]["id"] == context.project_id
     assert analysis_json["analysis_run"]["id"] == run_id
     assert analysis_json["analysis_run"]["project_id"] == context.project_id
@@ -160,8 +160,12 @@ def test_asset_context_import_flows_to_finding_context_and_csv_html_reports(
     assert detail["business_service"] == "payments"
     assert detail["asset_environment"] == "production"
     assert detail["exposure"] == "internet-facing"
-    assert detail["explanation_json"]["provenance"]["asset_owners"] == ["team-platform"]
-    assert detail["explanation_json"]["provenance"]["asset_business_services"] == ["payments"]
+    assert detail["evidence"]["priority_evidence"]["raw"]["provenance"]["asset_owners"] == [
+        "team-platform"
+    ]
+    assert detail["evidence"]["priority_evidence"]["raw"]["provenance"][
+        "asset_business_services"
+    ] == ["payments"]
 
     csv_report = create_report(workbench_api_env, context, run_id, "csv")
     assert csv_report["filename"] == "findings.csv"
@@ -226,7 +230,7 @@ def test_openvex_import_flows_to_fixed_status_and_json_markdown_reports(
     assert import_payload["suppressed_by_vex"] == 1
     assert detail["status"] == "fixed"
     assert detail["suppressed_by_vex"] is True
-    assert detail["explanation_json"]["provenance"]["vex_statuses"] == {"fixed": 1}
+    assert detail["evidence"]["governance"]["vex_statuses"] == {"fixed": 1}
     occurrence = detail["occurrences"][0]
     assert occurrence["analysis_run_id"] == run_id
     assert occurrence["vex_status"] == "fixed"

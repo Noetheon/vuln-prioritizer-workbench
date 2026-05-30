@@ -42,6 +42,7 @@ test("Workbench queries propagate abort signals into generated client calls", ()
   assert.match(queries, /readProjectSummary\(\s*\{ project_id: projectId \},\s*\{ signal \}/s)
   assert.match(queries, /readProjectFindings\(params, \{ signal \}\)/)
   assert.match(queries, /if \(signal\.aborted\) \{\s*throw caught\s*\}/s)
+  assert.match(queries, /runDetailNeedsPolling/)
 })
 
 test("project summary fanout is concurrency-limited", () => {
@@ -76,12 +77,14 @@ test("runtime and report queries propagate abort signals", () => {
     runtimeQueries,
     /ProvidersService\.readProviderStatus\(\{ signal \}\)/,
   )
+  assert.match(runtimeQueries, /providerStatusNeedsPolling/)
   assert.match(runtimeQueries, /WorkbenchService\.workbenchStatus\(\{ signal \}\)/)
   assert.match(runtimeQueries, /WorkbenchService\.readDemoWorkspace\(\{ signal \}\)/)
   assert.match(
     reportsRouteState,
     /ReportsService\.readRunReports\(\{ run_id: selectedRunId \}, \{ signal \}\)/,
   )
+  assert.match(reportsRouteState, /reportsNeedPolling/)
 })
 
 test("frontend CI typechecks unit and source-contract tests", () => {

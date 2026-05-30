@@ -16,12 +16,15 @@ checkout and already have CVE evidence or scanner exports.
 
 ```bash
 cp .env.example .env
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
 ```
 
 Open `http://127.0.0.1:5173`, create or select a project, and upload your
 evidence through Imports. Choose the input type explicitly so parsing does not
 depend on filename detection.
+Keep the `worker` service running while using Imports, Providers, and Reports.
+Those actions enqueue durable Workflow v2 jobs and do not complete inside the
+initial HTTP request.
 
 Use the [support matrix](support_matrix.md) before wiring imports or reports
 into local automation. It lists supported input formats, output contracts, and
@@ -35,7 +38,7 @@ checkout without customer data or live-provider-only behavior.
 ```bash
 make install
 make provider-snapshot-validate
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
 ```
 
 Then open `http://127.0.0.1:5173`, create a local project, and follow the
@@ -72,13 +75,13 @@ DOCKER_DEMO_BACKEND_PORT=18081 DOCKER_DEMO_FRONTEND_PORT=15175 make docker-demo-
 | Product scope and non-goals | [concept.md](concept.md), [README](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/README.md) | Known-CVE prioritization, local-first Workbench scope, and explicit non-scanner boundaries. |
 | Quickstart and Docker | [README](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/README.md), [Workbench offline demo](workbench-offline-demo.md) | Compose smoke, local Workbench commands, and demo fixtures. |
 | Architecture | [Architecture overview](architecture/index.md) | Workbench surface, input normalization, provider enrichment, prioritization, reporting, cache, and contract boundaries. |
-| Data model and contracts | [Contracts](contracts.md), [Core Workbench schema](architecture/core-workbench-schema.md), [Analysis run provider schema](architecture/analysis-run-provider-schema.md) | JSON envelopes, schema versions, active Workbench models, analysis runs, provider evidence, and API rules. |
+| Data model and contracts | [Contracts](contracts.md), [Decision/Evidence Kernel](architecture/decision-evidence-kernel.md), [Core Workbench schema](architecture/core-workbench-schema.md), [Analysis run provider schema](architecture/analysis-run-provider-schema.md) | JSON envelopes, schema versions, active Workbench models, analysis runs, provider evidence, kernel-first evidence production, and API rules. |
 | Import formats | [Support matrix](support_matrix.md), [CVE list import](cve-list-import.md), [Generic occurrence CSV](generic-occurrence-csv-import.md), [Trivy JSON import](trivy-json-import.md), [Grype JSON import](grype-json-import.md) | Supported file formats, preserved provenance, parser safety boundaries, and CI guidance. |
 | Providers and replay | [Provider cache and snapshots](architecture/vpw-022-provider-cache-status-snapshots.md), [Provider snapshot replay](architecture/vpw-026-provider-snapshot-replay.md), [Provider data quality flags](architecture/vpw-027-provider-data-quality-flags.md) | NVD, EPSS, KEV, cache state, locked snapshots, confidence/freshness flags, and replay behavior. |
 | Scoring and explanation | [Methodology](methodology.md), [Contracts](contracts.md) | Base priority from CVSS, EPSS, and KEV; operational score; decision guidance; comparison and explain semantics. |
 | Reports and evidence | [Support matrix](support_matrix.md), [Contracts](contracts.md), [Evidence archive](evidence.md) | Markdown, JSON, SARIF, HTML, CSV, evidence ZIP manifests, verification, and governance artifacts. |
 | ATT&CK boundaries | [ATT&CK/TTP methodology](attack-ttp-methodology.md), [Workbench ATT&CK methodology](workbench-attack-methodology.md), [Methodology](methodology.md) | CTID/local mapping sources, confidence, no heuristic mappings, tactic/technique/procedure boundary, and report wording rules. |
-| Security and deployment limits | [Workbench threat model](workbench-threat-model.md), [Release checklist](workbench-v1-release-checklist.md) | Local-first assumptions, upload/download controls, secret redaction, public-exposure blockers, Docker and dependency evidence. |
+| Security and deployment limits | [Workbench threat model](workbench-threat-model.md), [Local/private deployment runbook](workbench-public-deployment.md) | Local-first assumptions, upload/download controls, secret redaction, public-exposure blockers, Docker and dependency evidence. |
 | Reports and integrations | [Reporting and CI integrations](integrations/reporting_and_ci.md) | SARIF validation, summaries, evidence bundles, fail gates, and report artifacts. |
 | Current release status | [v1.1.0 release notes](releases/v1.1.0.md), [Roadmap](roadmap.md) | Current package line, Workbench milestone evidence, shipped surfaces, and deliberate future scope. |
 
@@ -122,10 +125,10 @@ or customer scanner exports in public docs.
 
 - The Workbench is local-first and single-node by default.
 - Local developer runs can use SQLite by default; the Compose quickstart uses a
-  private single-node Postgres service.
+  private single-node Postgres service plus one durable workflow worker.
 - Public internet exposure, SSO, multi-tenancy, managed backups, retention
-  policy, background workers, and organization-wide ticket-sync governance are
-  outside the current local-first threat model.
+  policy, multi-node worker fleets, and organization-wide ticket-sync
+  governance are outside the current local-first threat model.
 - Evidence bundles provide integrity metadata, not encryption.
 - Live provider availability can vary; use locked provider snapshots for
   reproducible local demos.

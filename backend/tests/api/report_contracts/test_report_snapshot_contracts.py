@@ -42,10 +42,10 @@ from app.services.report_contracts import CSV_FINDINGS_COLUMNS
 
 
 def test_vpw050_analysis_schema_rejects_contract_drift() -> None:
-    schema = _load_schema("analysis-result.v1.schema.json")
+    schema = _load_schema("analysis-result.v2.schema.json")
     jsonschema.Draft202012Validator.check_schema(schema)
     valid = json.loads(
-        (_repo_root() / "docs" / "evidence" / "vpw-050-analysis-result.v1.json").read_text(
+        (_repo_root() / "docs" / "evidence" / "vpw-050-analysis-result.v2.json").read_text(
             encoding="utf-8"
         )
     )
@@ -70,13 +70,13 @@ def test_vpw050_analysis_schema_rejects_contract_drift() -> None:
 
 def test_vpw050_committed_evidence_artifacts_are_contract_valid() -> None:
     evidence_dir = _repo_root() / "docs" / "evidence"
-    schema = _load_schema("analysis-result.v1.schema.json")
+    schema = _load_schema("analysis-result.v2.schema.json")
     analysis_json = json.loads(
-        (evidence_dir / "vpw-050-analysis-result.v1.json").read_text(encoding="utf-8")
+        (evidence_dir / "vpw-050-analysis-result.v2.json").read_text(encoding="utf-8")
     )
 
     jsonschema.validate(analysis_json, schema)
-    assert analysis_json["schema"] == "analysis-result.v1"
+    assert analysis_json["schema"] == "analysis-result.v2"
     assert analysis_json["analysis_run"]["id"] == "00000000-0000-4000-8000-000000000050"
     assert [finding["cve_id"] for finding in analysis_json["findings"]] == [
         DEMO_CVE_XZ,
@@ -298,7 +298,7 @@ def test_vpw049_html_report_snapshot_is_stable() -> None:
 
 def test_vpw050_analysis_json_export_snapshot_is_stable() -> None:
     payload = _vpw050_snapshot_payload()
-    snapshot_path = _repo_root() / "backend/tests/api/snapshots" / "vpw_050_analysis_result.v1.json"
+    snapshot_path = _repo_root() / "backend/tests/api/snapshots" / "vpw_050_analysis_result.v2.json"
 
     assert render_analysis_result_json(payload) == snapshot_path.read_text(encoding="utf-8")
 
@@ -325,7 +325,7 @@ def test_vpw054_demo_report_artifacts_match_current_renderers() -> None:
 
     jsonschema.validate(
         json.loads(rendered["json"]),
-        _load_schema("analysis-result.v1.schema.json"),
+        _load_schema("analysis-result.v2.schema.json"),
     )
 
 

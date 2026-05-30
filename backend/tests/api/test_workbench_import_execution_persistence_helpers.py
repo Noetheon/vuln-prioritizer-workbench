@@ -270,5 +270,8 @@ def test_import_persistence_bulk_insert_fast_path_persists_large_new_import(
     assert len(occurrence_rows) == 1000
     first_finding = next(finding for finding in findings if finding.cve_id == "CVE-2099-1000")
     assert first_finding.component_id is None
-    assert first_finding.evidence_json["dedup"]["action"] == "created"
-    assert first_finding.explanation_json["occurrence_scope"]["target_ref"] == "host-0"
+    first_evidence = next(
+        item for item in summary["finding_evidence"] if item.cve_id == "CVE-2099-1000"
+    )
+    assert first_evidence.occurrences[0].dedup["action"] == "created"
+    assert first_evidence.occurrence_scope["target_ref"] == "host-0"

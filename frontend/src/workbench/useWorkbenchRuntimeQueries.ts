@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 
 import { ProvidersService, WorkbenchService } from "../api-client"
+import { providerStatusNeedsPolling } from "./workbench-query-model"
 import { workbenchQueryKeys } from "./workbench-query-keys"
 
 export const workbenchProviderStatusQueryKey = workbenchQueryKeys.providerStatus()
@@ -12,6 +13,8 @@ export function useWorkbenchProviderStatusQuery() {
   return useQuery({
     queryFn: ({ signal }) => ProvidersService.readProviderStatus({ signal }),
     queryKey: workbenchProviderStatusQueryKey,
+    refetchInterval: (query) =>
+      providerStatusNeedsPolling(query.state.data) ? 3000 : false,
     retry: false,
     staleTime: 30_000,
   })

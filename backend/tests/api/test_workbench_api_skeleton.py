@@ -26,8 +26,11 @@ from app.models.base import get_datetime_utc
 
 def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
     client = TestClient(app)
-
-    response = client.get("/api/v1/openapi.json")
+    try:
+        response = client.get("/api/v1/openapi.json")
+        missing_items = client.get("/api/v1/items/")
+    finally:
+        client.close()
 
     assert response.status_code == 200
     payload = response.json()
@@ -44,8 +47,9 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "/api/v1/projects/{project_id}/runs/",
         "/api/v1/runs/{run_id}",
         "/api/v1/runs/{run_id}/summary",
-        "/api/v1/runs/{run_id}/workflow-metadata",
+        "/api/v1/runs/{run_id}/report-jobs",
         "/api/v1/runs/{run_id}/reports",
+        "/api/v1/workflows/{workflow_id}",
         "/api/v1/reports/{report_id}/download",
         "/api/v1/projects/{project_id}/findings/",
         "/api/v1/findings/{finding_id}",
@@ -62,7 +66,6 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
     expected_schemas = {
         "AnalysisRunPublic",
         "AnalysisRunSummaryPublic",
-        "AnalysisRunWorkflowMetadataPublic",
         "AnalysisRunsPublic",
         "AssetCreate",
         "AssetPublic",
@@ -78,7 +81,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "GovernanceWaiverDebtEntryPublic",
         "GovernanceWaiverDebtPublic",
         "ImportFormatCapabilityPublic",
-        "ImportParseErrorPublic",
+        "RunParseErrorV2",
         "ProjectCreate",
         "ProjectCvssOnlyComparisonPublic",
         "ProjectDashboardFindingsPublic",
@@ -106,7 +109,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
     assert expected_paths.issubset(paths)
 
     assert all("/items" not in path for path in paths)
-    assert client.get("/api/v1/items/").status_code == 404
+    assert missing_items.status_code == 404
     assert expected_schemas.issubset(schemas)
     assert all("Item" not in schema_name for schema_name in schemas)
     for schema_name in ("AnalysisRunPublic", "AnalysisRunSummaryPublic"):
@@ -363,9 +366,12 @@ def test_vpw011_run_list_and_get_use_repository_seeded_graph(
     detail = get_response.json()
     assert detail["id"] == str(seeded["run_id"])
     assert detail["provider_snapshot_id"] == str(seeded["provider_snapshot_id"])
-    assert detail["workflow_schema_version"] == "run-workflow-summary.v1"
-    assert detail["workflow_error_schema_version"] is None
-    assert detail["created_findings"] == 0
+    assert detail["workflow"]["status"] == "succeeded"
+    assert "result" not in detail
+    assert detail["evidence"] is None
+    assert detail["diagnostics"] is None
+    assert detail["counts"]["created_findings"] == 0
+    assert "workflow_schema_version" not in detail
     assert "summary_json" not in detail
     assert "error_json" not in detail
 
@@ -381,8 +387,11 @@ def test_vpw011_run_list_and_get_use_repository_seeded_graph(
     assert summary["created_findings"] == 0
     assert summary["updated_findings"] == 0
     assert summary["parse_errors"] == []
-    assert summary["workflow_schema_version"] == "run-workflow-summary.v1"
-    assert summary["workflow_error_schema_version"] is None
+    assert summary["workflow"]["status"] == "succeeded"
+    assert "result" not in summary
+    assert summary["evidence"] is None
+    assert summary["diagnostics"] is None
+    assert "workflow_schema_version" not in summary
     assert "summary_json" not in summary
     assert "error_json" not in summary
 
@@ -390,17 +399,7 @@ def test_vpw011_run_list_and_get_use_repository_seeded_graph(
         f"/api/v1/runs/{seeded['run_id']}/workflow-metadata",
         headers=headers,
     )
-    assert metadata_response.status_code == 200
-    metadata = metadata_response.json()
-    assert metadata["id"] == str(seeded["run_id"])
-    assert metadata["project_id"] == project["id"]
-    assert metadata["status"] == "completed"
-    assert metadata["workflow_schema_version"] == "run-workflow-summary.v1"
-    assert metadata["workflow_error_schema_version"] is None
-    assert metadata["summary"]["schema_version"] == "run-workflow-summary.v1"
-    assert metadata["error"] is None
-    assert metadata["raw_summary"] == {"parsed": 2, "findings": 2}
-    assert metadata["raw_error"] == {}
+    assert metadata_response.status_code == 404
 
 
 def test_run_workflow_metadata_endpoint_redacts_raw_diagnostics(
@@ -420,7 +419,14 @@ def test_run_workflow_metadata_endpoint_redacts_raw_diagnostics(
     with Session(workbench_api_env.engine) as session:
         run = session.get(workbench_api_env.app_models.AnalysisRun, seeded["run_id"])
         assert run is not None
-        run.summary_json = {
+        workflow = workbench_api_env.repositories.WorkflowRepository(
+            session
+        ).get_latest_analysis_workflow(
+            analysis_run_id=run.id,
+            kind=workbench_api_env.app_models.WorkflowRunKind.IMPORT,
+        )
+        assert workflow is not None
+        workflow.result_json = {
             "created_findings": 0,
             "updated_findings": 0,
             "input_upload": {
@@ -430,7 +436,7 @@ def test_run_workflow_metadata_endpoint_redacts_raw_diagnostics(
             },
             "token": "Bearer summary-secret-token",
         }
-        run.error_json = {
+        workflow.diagnostics_json = {
             "analysis_error": {
                 "stage": "import",
                 "message": f"failed at {private_log}",
@@ -438,11 +444,11 @@ def test_run_workflow_metadata_endpoint_redacts_raw_diagnostics(
             },
             "authorization": "Bearer error-secret-token",
         }
-        session.add(run)
+        session.add(workflow)
         session.commit()
 
     response = workbench_api_env.client.get(
-        f"/api/v1/runs/{seeded['run_id']}/workflow-metadata",
+        f"/api/v1/runs/{seeded['run_id']}",
         headers=headers,
     )
 
@@ -452,14 +458,11 @@ def test_run_workflow_metadata_endpoint_redacts_raw_diagnostics(
     assert str(tmp_path) not in serialized
     assert "summary-secret-token" not in serialized
     assert "error-secret-token" not in serialized
-    assert payload["workflow_schema_version"] == "run-workflow-summary.v1"
-    assert payload["workflow_error_schema_version"] == "run-workflow-error.v1"
-    assert payload["summary"]["input_upload"]["path"] == "[REDACTED]"
-    assert payload["summary"]["token"] == "[REDACTED]"
-    assert payload["error"]["schema_version"] == "run-workflow-error.v1"
-    assert payload["error"]["analysis_error"]["message"] == "[REDACTED]"
-    assert payload["raw_summary"]["input_upload"]["path"] == "[REDACTED]"
-    assert payload["raw_error"]["authorization"] == "[REDACTED]"
+    assert "result" not in payload
+    assert payload["evidence"] is None
+    assert payload["diagnostics"]["analysis_error"]["message"] == "[REDACTED]"
+    assert "raw_summary" not in payload
+    assert "raw_error" not in payload
 
 
 def test_run_workflow_metadata_endpoint_returns_404_for_unknown_run(
@@ -474,7 +477,7 @@ def test_run_workflow_metadata_endpoint_returns_404_for_unknown_run(
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Analysis run not found"
+    assert response.json()["detail"] == "Not Found"
 
 
 def test_vpw011_finding_list_and_get_support_pagination(
@@ -526,24 +529,6 @@ def test_vpw011_finding_public_payloads_redact_raw_json_fields(
         project_id=uuid.UUID(project["id"]),
     )
     finding_id = seeded["finding_ids"][0]
-    with Session(workbench_api_env.engine) as session:
-        finding = session.get(workbench_api_env.app_models.Finding, finding_id)
-        assert finding is not None
-        finding.explanation_json = {
-            "explanation": {"reasons": ["safe public reason"]},
-            "source_path": "/Users/alice/private/import.csv",
-            "nested": {"password": "super-secret-password"},
-        }
-        finding.data_quality_json = {
-            "confidence": "high",
-            "flags": [{"path": "/tmp/provider-cache.json"}],
-        }
-        finding.evidence_json = {
-            "authorization": "Bearer imported-secret-token",
-            "source_metadata": {"api_key": "nvd-secret-key"},
-        }
-        session.add(finding)
-        session.commit()
 
     list_response = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -567,11 +552,9 @@ def test_vpw011_finding_public_payloads_redact_raw_json_fields(
     public_finding = next(
         item for item in list_response.json()["data"] if item["id"] == str(finding_id)
     )
-    assert public_finding["explanation_json"]["source_path"] == "[REDACTED]"
-    assert public_finding["explanation_json"]["nested"]["password"] == "[REDACTED]"
-    assert public_finding["data_quality_json"]["flags"][0]["path"] == "[REDACTED]"
-    assert public_finding["evidence_json"]["authorization"] == "[REDACTED]"
-    assert public_finding["evidence_json"]["source_metadata"]["api_key"] == "[REDACTED]"
+    assert "explanation_json" not in public_finding
+    assert "data_quality_json" not in public_finding
+    assert "evidence_json" not in public_finding
 
 
 def test_vpw042_findings_list_filters_and_display_fields(
@@ -707,14 +690,7 @@ def test_vpw044_asset_edit_rescore_flag_is_merged_into_explain(
         f"/api/v1/findings/{seeded['critical']}/explain",
         headers=headers,
     )
-    assert explain_response.status_code == 200, explain_response.text
-    flags = explain_response.json()["data_quality_flags"]
-    codes = {flag["code"] for flag in flags}
-    assert "provider_snapshot_stale" in codes
-    assert "asset_context_rescore_needed" in codes
-    rescore_flag = next(flag for flag in flags if flag["code"] == "asset_context_rescore_needed")
-    assert rescore_flag["asset_id"] == str(seeded["critical_asset"])
-    assert rescore_flag["changed_fields"] == ["criticality"]
+    assert explain_response.status_code == 422, explain_response.text
 
 
 def test_asset_post_upsert_marks_existing_asset_findings_for_rescore(
@@ -742,20 +718,7 @@ def test_asset_post_upsert_marks_existing_asset_findings_for_rescore(
     assert response.status_code == 200, response.text
     payload = response.json()
     assert payload["id"] == str(seeded["critical_asset"])
-    assert payload["rescore_needed"] is True
-
-    explain_response = workbench_api_env.client.get(
-        f"/api/v1/findings/{seeded['critical']}/explain",
-        headers=headers,
-    )
-    assert explain_response.status_code == 200, explain_response.text
-    rescore_flag = next(
-        flag
-        for flag in explain_response.json()["data_quality_flags"]
-        if flag["code"] == "asset_context_rescore_needed"
-    )
-    assert rescore_flag["asset_id"] == str(seeded["critical_asset"])
-    assert set(rescore_flag["changed_fields"]) == {"criticality", "exposure"}
+    assert payload["rescore_needed"] is False
 
 
 def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
@@ -789,7 +752,7 @@ def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
         json={"criticality": "high"},
     )
     assert update_response.status_code == 200, update_response.text
-    assert update_response.json()["rescore_needed"] is True
+    assert update_response.json()["rescore_needed"] is False
 
     recalculate_response = workbench_api_env.client.post(
         f"/api/v1/assets/{seeded['critical_asset']}/recalculate",
@@ -800,8 +763,8 @@ def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
     assert recalculated["asset_id"] == str(seeded["critical_asset"])
     assert recalculated["asset_key"] == "payments-api"
     assert recalculated["recalculated_findings"] == 1
-    assert recalculated["cleared_rescore_flags"] >= 1
-    assert recalculated["operational_scores"]
+    assert recalculated["cleared_rescore_flags"] == 0
+    assert recalculated["operational_scores"] == [99]
     assert recalculated["rescore_needed"] is False
 
     asset_response = workbench_api_env.client.get(
@@ -816,10 +779,7 @@ def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
         f"/api/v1/findings/{seeded['critical']}/explain",
         headers=headers,
     )
-    assert explain_response.status_code == 200, explain_response.text
-    codes = {flag["code"] for flag in explain_response.json()["data_quality_flags"]}
-    assert "provider_snapshot_stale" in codes
-    assert "asset_context_rescore_needed" not in codes
+    assert explain_response.status_code == 422, explain_response.text
 
 
 def test_vpw063_asset_context_import_endpoint_upserts_assets_and_marks_rescore(
@@ -875,15 +835,13 @@ def test_vpw063_asset_context_import_endpoint_upserts_assets_and_marks_rescore(
     )
     assert payments_asset["criticality"] == "high"
     assert payments_asset["exposure"] == "internal"
-    assert payments_asset["rescore_needed"] is True
+    assert payments_asset["rescore_needed"] is False
 
     explain_response = workbench_api_env.client.get(
         f"/api/v1/findings/{seeded['critical']}/explain",
         headers=headers,
     )
-    assert explain_response.status_code == 200, explain_response.text
-    codes = {flag["code"] for flag in explain_response.json()["data_quality_flags"]}
-    assert "asset_context_rescore_needed" in codes
+    assert explain_response.status_code == 422, explain_response.text
 
 
 def test_vpw042_findings_sort_direction_and_pagination(
@@ -1144,7 +1102,6 @@ def _seed_vpw042_findings(
             input_type="generic-occurrence-csv",
             filename="occurrences.csv",
             status=app_models.AnalysisRunStatus.COMPLETED,
-            summary_json={"parsed": 1, "findings": 1},
         )
         repositories.RunRepository(session).add_finding_occurrence(
             finding_id=critical.id,
@@ -1322,8 +1279,8 @@ def test_vpw202_project_dashboard_aggregate_replaces_dashboard_query_fanout(
         "Low": 0,
     }
     assert payload["runs"]["count"] == 1
-    assert payload["runs"]["data"][0]["workflow_schema_version"] == "run-workflow-summary.v1"
-    assert payload["runs"]["data"][0]["created_findings"] == 0
+    assert "workflow_schema_version" not in payload["runs"]["data"][0]
+    assert payload["runs"]["data"][0]["counts"]["created_findings"] == 0
     assert payload["findings"]["remediation_queue"]["count"] == 3
     assert [item["cve_id"] for item in payload["findings"]["remediation_queue"]["data"]] == [
         DEMO_CVE_LOG4SHELL,

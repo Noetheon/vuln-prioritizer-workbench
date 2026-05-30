@@ -12,14 +12,14 @@ from app.models import (
     AnalysisRunPublic,
     AnalysisRunsPublic,
     AnalysisRunSummaryPublic,
-    AnalysisRunWorkflowMetadataPublic,
+    WorkflowRunKind,
 )
 from app.repositories import RunRepository
 from app.services.run_workflow_projection import (
     analysis_run_public,
     analysis_run_summary_public,
-    analysis_run_workflow_metadata_public,
 )
+from app.services.workflows import latest_analysis_workflow_public
 
 router = APIRouter(tags=["runs"])
 
@@ -50,7 +50,18 @@ def read_project_runs(
         offset=offset,
     )
     return AnalysisRunsPublic(
-        data=[analysis_run_public(run) for run in runs],
+        data=[
+            analysis_run_public(
+                run,
+                session=session,
+                workflow=latest_analysis_workflow_public(
+                    session,
+                    analysis_run_id=run.id,
+                    kind=WorkflowRunKind.IMPORT,
+                ),
+            )
+            for run in runs
+        ],
         count=count,
     )
 
@@ -66,7 +77,15 @@ def read_run(
     if run is None:
         raise HTTPException(status_code=404, detail="Analysis run not found")
     require_project(session, run.project_id)
-    return analysis_run_public(run)
+    return analysis_run_public(
+        run,
+        session=session,
+        workflow=latest_analysis_workflow_public(
+            session,
+            analysis_run_id=run.id,
+            kind=WorkflowRunKind.IMPORT,
+        ),
+    )
 
 
 @router.get("/runs/{run_id}/summary", response_model=AnalysisRunSummaryPublic)
@@ -80,21 +99,12 @@ def read_run_summary(
     if run is None:
         raise HTTPException(status_code=404, detail="Analysis run not found")
     require_project(session, run.project_id)
-    return analysis_run_summary_public(run)
-
-
-@router.get(
-    "/runs/{run_id}/workflow-metadata",
-    response_model=AnalysisRunWorkflowMetadataPublic,
-)
-def read_run_workflow_metadata(
-    run_id: uuid.UUID,
-    session: SessionDep,
-    local_actor: LocalActor,
-) -> AnalysisRunWorkflowMetadataPublic:
-    """Read redacted workflow metadata diagnostics for one visible analysis run."""
-    run = RunRepository(session).get_analysis_run(run_id)
-    if run is None:
-        raise HTTPException(status_code=404, detail="Analysis run not found")
-    require_project(session, run.project_id)
-    return analysis_run_workflow_metadata_public(run)
+    return analysis_run_summary_public(
+        run,
+        session=session,
+        workflow=latest_analysis_workflow_public(
+            session,
+            analysis_run_id=run.id,
+            kind=WorkflowRunKind.IMPORT,
+        ),
+    )

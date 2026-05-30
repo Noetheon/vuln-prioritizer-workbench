@@ -350,8 +350,8 @@ class ExecutiveReportViewModel(StrictModel):
     technical_appendix: TechnicalAppendix
 
 
-class AnalysisResultV1(StrictModel):
-    """Stable machine-readable analysis-result.v1 export model."""
+class AnalysisResultV2(StrictModel):
+    """Stable machine-readable analysis-result.v2 export model."""
 
     schema_: str = Field(alias="schema", serialization_alias="schema")
     schema_version: str
@@ -372,7 +372,7 @@ MarkdownReportPayload: TypeAlias = ReportPayload
 
 __all__ = [
     "ActionPlanRow",
-    "AnalysisResultV1",
+    "AnalysisResultV2",
     "AttackContextView",
     "BusinessServiceRiskRow",
     "DecisionBrief",

@@ -3,10 +3,13 @@ import { useEffect, useRef, useState } from "react"
 
 import {
   type AnalysisRunPublic,
+  OpenAPI,
   type ReportFormatCapabilityPublic,
   type ReportPublic,
   ReportsService,
   type ReportVerificationPublic,
+  type WorkflowRunPublic,
+  WorkflowsService,
 } from "../api-client"
 import { apiErrorMessage, objectRecord } from "../lib/app-errors"
 import {
@@ -16,7 +19,10 @@ import {
 import type { WorkbenchPath } from "../lib/workbench-navigation"
 import { fetchReportDownload, startReportDownload } from "./report-download"
 import { reportActionsAvailable } from "./report-action-state.ts"
+import { reportsNeedPolling } from "./workbench-query-model"
 import { workbenchQueryKeys } from "./workbench-query-keys"
+import { workflowNeedsPolling, workflowStatusLabel } from "./workflow-model"
+import { subscribeWorkflowUpdates } from "./workflow-stream"
 
 type UseReportsRouteStateOptions = {
   currentPath: WorkbenchPath
@@ -47,17 +53,24 @@ export function useReportsRouteState({
   const [reportActionError, setReportActionError] = useState("")
   const reportGenerationInFlight = useRef(false)
   const [activeReportFormat, setActiveReportFormat] = useState<ReportFormat | "">("")
+  const [activeReportWorkflow, setActiveReportWorkflow] =
+    useState<WorkflowRunPublic | null>(null)
   const reportsQuery = useQuery({
     enabled: currentPath === "/reports" && Boolean(selectedRunId),
     queryFn: ({ signal }) =>
       ReportsService.readRunReports({ run_id: selectedRunId }, { signal }),
     queryKey: workbenchQueryKeys.reports(selectedRunId),
+    refetchInterval: (query) =>
+      reportsNeedPolling(query.state.data?.data ?? []) ||
+      workflowNeedsPolling(activeReportWorkflow)
+        ? 1000
+        : false,
     retry: false,
     staleTime: 15_000,
   })
   const createReportMutation = useMutation({
     mutationFn: (format: ReportFormat) =>
-      ReportsService.createRunReport({
+      ReportsService.queueRunReport({
         run_id: selectedRunId,
         reportCreate: { format },
       }),
@@ -79,7 +92,8 @@ export function useReportsRouteState({
   const reportActionPending =
     createReportMutation.isPending ||
     Boolean(activeReportFormat) ||
-    reportGenerationInFlight.current
+    reportGenerationInFlight.current ||
+    workflowNeedsPolling(activeReportWorkflow)
   const reportActionsEnabled = reportActionsAvailable({
     currentPath,
     reportActionPending,
@@ -98,6 +112,54 @@ export function useReportsRouteState({
     setVerificationReportTarget(null)
     setVerificationLoading(false)
   }, [currentPath, selectedRunId])
+
+  useEffect(() => {
+    if (!activeReportWorkflow?.id || currentPath !== "/reports") {
+      return
+    }
+    return subscribeWorkflowUpdates({
+      workflowId: activeReportWorkflow.id,
+      apiBase: OpenAPI.BASE,
+      onEvent: () => {
+        void queryClient.invalidateQueries({
+          queryKey: workbenchQueryKeys.reports(selectedRunId),
+        })
+      },
+      onTerminal: (workflow) => {
+        setActiveReportWorkflow(workflow)
+        void queryClient.invalidateQueries({
+          queryKey: workbenchQueryKeys.reports(selectedRunId),
+        })
+        if (workflow.status === "failed" || workflow.status === "cancelled") {
+          setReportActionError(`Report workflow ${workflowStatusLabel(workflow)}.`)
+          return
+        }
+        setReportActionMessage("Report workflow completed.")
+      },
+      onWorkflow: setActiveReportWorkflow,
+      readWorkflow: (workflowId) =>
+        WorkflowsService.readWorkflow({ workflow_id: workflowId }),
+      readWorkflowEvents: (workflowId) =>
+        WorkflowsService.readWorkflowEvents({
+          workflow_id: workflowId,
+          limit: 1000,
+        }),
+    })
+  }, [activeReportWorkflow?.id, currentPath, queryClient, selectedRunId])
+
+  useEffect(() => {
+    if (!activeReportWorkflow?.id) {
+      return
+    }
+    const completedReport = reports.find(
+      (report) => report.workflow?.id === activeReportWorkflow.id,
+    )
+    if (!completedReport?.workflow || workflowNeedsPolling(completedReport.workflow)) {
+      return
+    }
+    setActiveReportWorkflow(completedReport.workflow)
+    setReportActionMessage("Report workflow completed.")
+  }, [activeReportWorkflow?.id, reports])
 
   function refreshReports() {
     void queryClient.invalidateQueries({
@@ -130,10 +192,9 @@ export function useReportsRouteState({
     reportGenerationInFlight.current = true
     setActiveReportFormat(format)
     try {
-      const report = await createReportMutation.mutateAsync(format)
-      setReportActionMessage(
-        `${reportFormatLabel(report.format)} report generated as ${report.filename}.`,
-      )
+      const workflow = await createReportMutation.mutateAsync(format)
+      setActiveReportWorkflow(workflow)
+      setReportActionMessage(`${reportFormatLabel(format)} report queued.`)
     } catch (caught) {
       setReportActionError(apiErrorMessage("Report generation failed", caught))
     } finally {

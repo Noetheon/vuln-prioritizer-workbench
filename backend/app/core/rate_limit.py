@@ -10,10 +10,13 @@ from time import monotonic
 from typing import Protocol, runtime_checkable
 
 from fastapi import Request
-from sqlalchemy import text
+from sqlalchemy import DateTime, bindparam, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.sql.elements import TextClause
 
 from app.core.config import Settings
+
+_RATE_LIMIT_DATETIME = DateTime(timezone=True)
 
 
 @dataclass
@@ -95,7 +98,10 @@ class DatabaseRateLimiter:
         cutoff = now - timedelta(seconds=self.window_seconds)
         with self.engine.begin() as connection:
             connection.execute(
-                text("DELETE FROM rate_limit_bucket WHERE window_started_at <= :cutoff"),
+                _text_with_datetime_binds(
+                    "DELETE FROM rate_limit_bucket WHERE window_started_at <= :cutoff",
+                    "cutoff",
+                ),
                 {"cutoff": cutoff},
             )
             if not record:
@@ -125,11 +131,13 @@ class DatabaseRateLimiter:
                 )
 
             connection.execute(
-                text(
+                _text_with_datetime_binds(
                     "INSERT INTO rate_limit_bucket "
                     "(bucket_key, request_count, window_started_at, updated_at) "
                     "VALUES (:bucket_key, 0, :window_started_at, :updated_at) "
-                    "ON CONFLICT(bucket_key) DO NOTHING"
+                    "ON CONFLICT(bucket_key) DO NOTHING",
+                    "window_started_at",
+                    "updated_at",
                 ),
                 {
                     "bucket_key": key,
@@ -138,10 +146,11 @@ class DatabaseRateLimiter:
                 },
             )
             increment = connection.execute(
-                text(
+                _text_with_datetime_binds(
                     "UPDATE rate_limit_bucket "
                     "SET request_count = request_count + 1, updated_at = :updated_at "
-                    "WHERE bucket_key = :bucket_key AND request_count < :limit"
+                    "WHERE bucket_key = :bucket_key AND request_count < :limit",
+                    "updated_at",
                 ),
                 {"bucket_key": key, "limit": limit, "updated_at": now},
             )
@@ -176,6 +185,15 @@ def create_rate_limiter(settings: Settings, engine: Engine) -> RateLimiter:
     if settings.ENVIRONMENT == "local":
         return InMemoryRateLimiter()
     return DatabaseRateLimiter(engine)
+
+
+def _text_with_datetime_binds(sql: str, *datetime_params: str) -> TextClause:
+    statement = text(sql)
+    if not datetime_params:
+        return statement
+    return statement.bindparams(
+        *(bindparam(param, type_=_RATE_LIMIT_DATETIME) for param in datetime_params)
+    )
 
 
 def _aware_utc(value: datetime | str) -> datetime:

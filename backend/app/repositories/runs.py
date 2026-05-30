@@ -13,6 +13,7 @@ from app.models import (
     AnalysisRunStatus,
     FindingOccurrence,
     ProviderSnapshot,
+    WorkflowRunStatus,
 )
 from app.models.base import get_datetime_utc
 from vuln_prioritizer.security_redaction import redact_value
@@ -22,6 +23,21 @@ def _redacted_json_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Redacted json payload function."""
     redacted, _paths = redact_value(payload)
     return redacted if isinstance(redacted, dict) else {}
+
+
+def _workflow_status_for_run(status: AnalysisRunStatus | str) -> WorkflowRunStatus:
+    normalized = AnalysisRunStatus(status)
+    if normalized == AnalysisRunStatus.RUNNING:
+        return WorkflowRunStatus.RUNNING
+    if normalized == AnalysisRunStatus.FAILED:
+        return WorkflowRunStatus.FAILED
+    if normalized == AnalysisRunStatus.CANCELLED:
+        return WorkflowRunStatus.CANCELLED
+    if normalized == AnalysisRunStatus.COMPLETED_WITH_ERRORS:
+        return WorkflowRunStatus.COMPLETED_WITH_ERRORS
+    if normalized in {AnalysisRunStatus.SUCCEEDED, AnalysisRunStatus.COMPLETED}:
+        return WorkflowRunStatus.SUCCEEDED
+    return WorkflowRunStatus.PENDING
 
 
 class RunRepository:
@@ -136,8 +152,8 @@ class RunRepository:
         filename: str | None = None,
         status: AnalysisRunStatus | str = AnalysisRunStatus.PENDING,
         provider_snapshot_id: uuid.UUID | None = None,
-        summary_json: dict[str, Any] | None = None,
-        error_json: dict[str, Any] | None = None,
+        result_json: dict[str, Any] | None = None,
+        diagnostics_json: dict[str, Any] | None = None,
     ) -> AnalysisRun:
         """Create an analysis run without committing the transaction."""
         run = AnalysisRun(
@@ -146,11 +162,14 @@ class RunRepository:
             filename=filename,
             status=AnalysisRunStatus(status),
             provider_snapshot_id=provider_snapshot_id,
-            summary_json=summary_json or {},
-            error_json=error_json or {},
         )
         self.session.add(run)
         self.session.flush()
+        self._project_workflow_payloads(
+            run,
+            result_json=result_json,
+            diagnostics_json=diagnostics_json,
+        )
         return run
 
     def finish_analysis_run(
@@ -160,8 +179,8 @@ class RunRepository:
         status: AnalysisRunStatus | str = AnalysisRunStatus.COMPLETED,
         finished_at: datetime | None = None,
         error_message: str | None = None,
-        error_json: dict[str, Any] | None = None,
-        summary_json: dict[str, Any] | None = None,
+        result_json: dict[str, Any] | None = None,
+        diagnostics_json: dict[str, Any] | None = None,
     ) -> AnalysisRun:
         """Mark a run terminal and flush the transaction."""
         run = self.session.get(AnalysisRun, run_id)
@@ -171,12 +190,54 @@ class RunRepository:
         run.status = AnalysisRunStatus(status)
         run.finished_at = finished_at or get_datetime_utc()
         run.error_message = error_message
-        if error_json is not None:
-            run.error_json = error_json
-        if summary_json is not None:
-            run.summary_json = summary_json
         self.session.flush()
+        self._project_workflow_payloads(
+            run,
+            result_json=result_json,
+            diagnostics_json=diagnostics_json,
+        )
         return run
+
+    def _project_workflow_payloads(
+        self,
+        run: AnalysisRun,
+        *,
+        result_json: dict[str, Any] | None = None,
+        diagnostics_json: dict[str, Any] | None = None,
+    ) -> None:
+        """Project repository payload arguments into workflow v2 fields."""
+        if result_json is None and diagnostics_json is None:
+            return
+        from app.models import WorkflowRunKind, WorkflowRunStatus
+        from app.repositories.workflows import WorkflowRepository
+
+        kind = (
+            WorkflowRunKind.PROVIDER_UPDATE
+            if run.input_type == "provider_update"
+            else WorkflowRunKind.IMPORT
+        )
+        workflow_repository = WorkflowRepository(self.session)
+        workflow = workflow_repository.ensure_analysis_workflow(
+            kind=kind,
+            analysis_run_id=run.id,
+            project_id=run.project_id,
+            title="Provider snapshot refresh"
+            if kind == WorkflowRunKind.PROVIDER_UPDATE
+            else f"Import {run.input_type}",
+            handler="app.repositories.runs.deprecated_payload_projection",
+            status=_workflow_status_for_run(run.status),
+            execution_mode="worker",
+            current_stage="projected",
+        )
+        if result_json is not None:
+            workflow.result_json = dict(result_json)
+        if diagnostics_json is not None:
+            workflow.diagnostics_json = dict(diagnostics_json)
+            workflow.error_details_json = dict(diagnostics_json)
+        if workflow.status == WorkflowRunStatus.FAILED and run.error_message:
+            workflow.error_message = run.error_message
+        self.session.add(workflow)
+        self.session.flush()
 
     def add_finding_occurrence(
         self,

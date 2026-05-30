@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from copy import deepcopy
 from datetime import timedelta
 from typing import Any
 
@@ -11,6 +12,7 @@ from sqlmodel import Session, col, func, select
 
 from app.models import Asset, Finding, FindingStatus, Waiver, WaiverCreate, WaiverUpdate
 from app.models.base import get_datetime_utc
+from app.repositories.evidence import EvidenceRepository
 
 
 class WaiverRepository:
@@ -203,10 +205,17 @@ class WaiverRepository:
 
     def _clear_workbench_waiver_state(self, finding: Finding) -> None:
         """Clear workbench waiver state method for WaiverRepository."""
-        explanation = dict(finding.explanation_json or {})
-        evidence = dict(finding.evidence_json or {})
-        waiver_record = _object_value(explanation.get("waiver"))
-        if waiver_record.get("source") != "workbench-api":
+        evidence_record = EvidenceRepository(self.session).latest_finding_decision_evidence_record(
+            finding.id
+        )
+        payload = (
+            deepcopy(evidence_record.payload_json or {}) if evidence_record is not None else {}
+        )
+        priority_evidence = _object_value(payload.get("priority_evidence"))
+        explanation = _object_value(priority_evidence.get("raw"))
+        governance = _object_value(payload.get("governance"))
+        waiver_record = _object_value(governance.get("waiver") or explanation.get("waiver"))
+        if waiver_record.get("source") != "workbench-api" and not finding.waived:
             return
 
         for key in (
@@ -220,12 +229,21 @@ class WaiverRepository:
             "waiver_scope",
         ):
             explanation.pop(key, None)
-        evidence.pop("waiver", None)
+        governance.pop("waiver", None)
+        governance["waived"] = False
         if finding.status == FindingStatus.ACCEPTED:
             finding.status = FindingStatus.OPEN
         finding.waived = False
-        finding.explanation_json = explanation
-        finding.evidence_json = evidence
+        if evidence_record is not None:
+            priority_evidence["raw"] = explanation
+            payload["priority_evidence"] = priority_evidence
+            payload["governance"] = governance
+            payload["waived"] = False
+            payload["status"] = _finding_status_value(finding.status)
+            evidence_record.payload_json = payload
+            evidence_record.status = _finding_status_value(finding.status)
+            evidence_record.updated_at = get_datetime_utc()
+            self.session.add(evidence_record)
         finding.updated_at = get_datetime_utc()
         self.session.add(finding)
 
@@ -239,8 +257,15 @@ class WaiverRepository:
         elif finding.status == FindingStatus.ACCEPTED:
             finding.status = FindingStatus.OPEN
 
-        explanation = dict(finding.explanation_json or {})
-        evidence = dict(finding.evidence_json or {})
+        evidence_record = EvidenceRepository(self.session).latest_finding_decision_evidence_record(
+            finding.id
+        )
+        payload = (
+            deepcopy(evidence_record.payload_json or {}) if evidence_record is not None else {}
+        )
+        priority_evidence = _object_value(payload.get("priority_evidence"))
+        explanation = _object_value(priority_evidence.get("raw"))
+        governance = _object_value(payload.get("governance"))
         waiver_payload = {
             "source": "workbench-api",
             "waiver_id": str(waiver.id),
@@ -262,9 +287,18 @@ class WaiverRepository:
         explanation["waiver_review_on"] = waiver.review_at.isoformat() if waiver.review_at else None
         explanation["waiver_approval_ref"] = waiver.approval_ref
         explanation["waiver_scope"] = scope
-        evidence["waiver"] = waiver_payload
-        finding.explanation_json = explanation
-        finding.evidence_json = evidence
+        governance["waiver"] = waiver_payload
+        governance["waived"] = finding.waived
+        if evidence_record is not None:
+            priority_evidence["raw"] = explanation
+            payload["priority_evidence"] = priority_evidence
+            payload["governance"] = governance
+            payload["waived"] = finding.waived
+            payload["status"] = _finding_status_value(finding.status)
+            evidence_record.payload_json = payload
+            evidence_record.status = _finding_status_value(finding.status)
+            evidence_record.updated_at = get_datetime_utc()
+            self.session.add(evidence_record)
         finding.updated_at = get_datetime_utc()
         self.session.add(finding)
 
@@ -349,6 +383,13 @@ def _waiver_status_sort_key(waiver: Waiver) -> int:
 def _object_value(value: object) -> dict[str, object]:
     """Object value function."""
     return value if isinstance(value, dict) else {}
+
+
+def _finding_status_value(status: FindingStatus | str | None) -> str:
+    """Return the persisted status string for enum and SQL-loaded string values."""
+    if isinstance(status, FindingStatus):
+        return status.value
+    return str(status or FindingStatus.OPEN.value)
 
 
 def _case_int(condition: Any) -> Any:

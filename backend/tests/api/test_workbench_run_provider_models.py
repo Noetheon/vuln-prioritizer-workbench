@@ -94,7 +94,6 @@ def test_project_can_persist_analysis_run_without_findings_then_with_occurrence(
                 filename="trivy-results.json",
                 status=app_models.AnalysisRunStatus.RUNNING,
                 started_at=FIXED_STARTED_AT,
-                summary_json={"parsed": 0, "findings": 0},
             )
         )
         session.commit()
@@ -154,7 +153,6 @@ def test_project_can_persist_analysis_run_without_findings_then_with_occurrence(
         assert run is not None
         run.status = app_models.AnalysisRunStatus.COMPLETED
         run.finished_at = FIXED_FINISHED_AT
-        run.summary_json = {"parsed": 1, "findings": 1}
         session.commit()
 
     with Session(migrated_engine) as session:
@@ -171,7 +169,6 @@ def test_project_can_persist_analysis_run_without_findings_then_with_occurrence(
         run = session.get(app_models.AnalysisRun, ids["run"])
         assert run is not None
         assert _value(run.status) == "completed"
-        assert run.summary_json == {"parsed": 1, "findings": 1}
 
 
 def test_provider_snapshot_can_be_linked_to_analysis_run(migrated_engine: Engine) -> None:
@@ -209,7 +206,7 @@ def test_provider_snapshot_can_be_linked_to_analysis_run(migrated_engine: Engine
                 status=app_models.AnalysisRunStatus.COMPLETED,
                 started_at=FIXED_STARTED_AT,
                 finished_at=FIXED_FINISHED_AT,
-                summary_json={"parsed": 1, "findings": 1},
+                result_json={"parsed": 1, "findings": 1},
             )
         )
         session.commit()
@@ -239,14 +236,12 @@ def test_analysis_run_status_values_serialize_as_stable_strings() -> None:
             filename="known-cves.txt",
             status=status_enum(value),
             error_message="Provider enrichment failed." if value == "failed" else None,
-            error_json={"provider": "nvd"} if value == "failed" else {},
         )
         payload = run.model_dump(mode="json")
 
         assert payload["status"] == value
         if value == "failed":
             assert payload["error_message"] == "Provider enrichment failed."
-            assert payload["error_json"] == {"provider": "nvd"}
 
 
 def test_run_provider_constraints_and_indexes_exist(migrated_engine: Engine) -> None:
