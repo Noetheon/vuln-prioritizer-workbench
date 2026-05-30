@@ -7,7 +7,7 @@ import uuid
 from sqlalchemy.orm import object_session
 from sqlmodel import Session, col, select
 
-from app.contracts.decision_evidence import FindingDecisionEvidenceV2
+from app.contracts.decision_evidence import FindingDecisionEvidenceV2, OccurrenceEvidenceV2
 from app.models import (
     Finding,
     FindingAttackContext,
@@ -17,7 +17,9 @@ from app.models import (
     FindingDetailPublic,
     FindingOccurrence,
     FindingOccurrencePublic,
+    FindingPriority,
     FindingPublic,
+    FindingStatus,
 )
 from app.repositories import EvidenceRepository
 from vuln_prioritizer.security_redaction import redact_value
@@ -30,8 +32,9 @@ def _finding_public(
 ) -> FindingPublic:
     """Return a finding DTO with display context needed by the Workbench table."""
     evidence = _latest_decision_evidence(finding, session=session)
-    return FindingPublic.model_validate(finding).model_copy(
-        update={
+    update = _finding_decision_update(finding, evidence=evidence)
+    update.update(
+        {
             "evidence": evidence,
             "component_name": finding.component.name if finding.component else None,
             "component_version": finding.component.version if finding.component else None,
@@ -46,6 +49,48 @@ def _finding_public(
             "exposure": finding.asset.exposure if finding.asset else None,
         }
     )
+    return FindingPublic.model_validate(finding).model_copy(update=update)
+
+
+def _finding_decision_update(
+    finding: Finding,
+    *,
+    evidence: FindingDecisionEvidenceV2 | None,
+) -> dict[str, object]:
+    if evidence is None:
+        return {}
+    return {
+        "cve_id": evidence.cve_id,
+        "dedup_key": evidence.dedup_key,
+        "status": _status_value(evidence.status, fallback=finding.status),
+        "priority": _priority_value(evidence.priority, fallback=finding.priority),
+        "priority_rank": evidence.priority_rank,
+        "risk_score": evidence.risk_score,
+        "operational_rank": evidence.operational_rank,
+        "in_kev": evidence.in_kev,
+        "epss": evidence.epss,
+        "cvss_base_score": evidence.cvss_base_score,
+        "attack_mapped": evidence.attack_mapped,
+        "suppressed_by_vex": evidence.suppressed_by_vex,
+        "under_investigation": evidence.under_investigation,
+        "waived": evidence.waived,
+        "recommended_action": evidence.recommended_action,
+        "rationale": evidence.rationale,
+    }
+
+
+def _status_value(value: str, *, fallback: FindingStatus) -> FindingStatus:
+    try:
+        return FindingStatus(value)
+    except ValueError:
+        return fallback
+
+
+def _priority_value(value: str, *, fallback: FindingPriority) -> FindingPriority:
+    try:
+        return FindingPriority(value)
+    except ValueError:
+        return fallback
 
 
 def _latest_decision_evidence(
@@ -66,9 +111,13 @@ def _redacted_finding_json(value: dict[str, object] | None) -> dict[str, object]
 
 def _finding_detail_public(finding: Finding) -> FindingDetailPublic:
     """Return a finding detail DTO with source occurrence rows."""
+    evidence = _latest_decision_evidence(finding)
+    evidence_occurrences = _evidence_occurrences_public(evidence, finding=finding)
     return FindingDetailPublic.model_validate(_finding_public(finding)).model_copy(
         update={
-            "occurrences": [
+            "occurrences": evidence_occurrences
+            if evidence_occurrences is not None
+            else [
                 _finding_occurrence_public(occurrence, finding)
                 for occurrence in finding.occurrences
             ],
@@ -410,6 +459,76 @@ def _finding_occurrence_public(
         vex_source_path=_string_evidence(evidence, "vex_source_path"),
         vex_candidate_count=_int_evidence(evidence, "vex_candidate_count"),
         created_at=getattr(occurrence, "created_at", None),
+    )
+
+
+def _evidence_occurrences_public(
+    evidence: FindingDecisionEvidenceV2 | None,
+    *,
+    finding: Finding,
+) -> list[FindingOccurrencePublic] | None:
+    if evidence is None or not evidence.occurrences:
+        return None
+    rows: list[FindingOccurrencePublic] = []
+    for occurrence in evidence.occurrences:
+        row = _evidence_occurrence_public(occurrence, finding=finding)
+        if row is None:
+            return None
+        rows.append(row)
+    return rows
+
+
+def _evidence_occurrence_public(
+    occurrence: OccurrenceEvidenceV2,
+    *,
+    finding: Finding,
+) -> FindingOccurrencePublic | None:
+    if occurrence.occurrence_id is None:
+        return None
+    try:
+        occurrence_id = uuid.UUID(occurrence.occurrence_id)
+        analysis_run_id = uuid.UUID(occurrence.analysis_run_id)
+    except ValueError:
+        return None
+    import_evidence = occurrence.import_evidence
+    return FindingOccurrencePublic(
+        id=occurrence_id,
+        analysis_run_id=analysis_run_id,
+        source=occurrence.source,
+        scanner=occurrence.scanner,
+        raw_reference=occurrence.raw_reference,
+        fix_version=occurrence.fix_version,
+        source_format=occurrence.source_format or occurrence.source,
+        source_id=occurrence.source_id,
+        source_record_id=occurrence.source_record_id or occurrence.raw_reference,
+        component_name=occurrence.component_name,
+        component_version=occurrence.component_version,
+        purl=occurrence.purl,
+        fix_versions=occurrence.fix_versions,
+        target_kind=occurrence.target_kind,
+        target_ref=occurrence.target_ref,
+        asset_ref=occurrence.asset_ref,
+        asset_owner=occurrence.asset_owner
+        or _string_evidence(import_evidence, "asset_owner")
+        or _string_evidence(import_evidence, "owner")
+        or (finding.asset.owner if finding.asset else None),
+        asset_business_service=occurrence.asset_business_service
+        or _string_evidence(import_evidence, "asset_business_service")
+        or _string_evidence(import_evidence, "business_service")
+        or (finding.asset.business_service if finding.asset else None),
+        asset_exposure=occurrence.asset_exposure
+        or _string_evidence(import_evidence, "asset_exposure")
+        or _string_evidence(import_evidence, "exposure")
+        or (finding.asset.exposure if finding.asset else None),
+        raw_severity=occurrence.raw_severity,
+        vex_status=occurrence.vex_status,
+        vex_justification=occurrence.vex_justification,
+        vex_action_statement=occurrence.vex_action_statement,
+        vex_match_type=occurrence.vex_match_type,
+        vex_source_format=occurrence.vex_source_format,
+        vex_source_record_id=occurrence.vex_source_record_id,
+        vex_source_path=occurrence.vex_source_path,
+        vex_candidate_count=occurrence.vex_candidate_count,
     )
 
 

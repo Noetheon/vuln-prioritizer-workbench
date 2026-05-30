@@ -80,7 +80,7 @@ def build_project_summary_payload(
 ) -> ProjectDecisionSummaryPublic:
     """Build a dashboard summary from persisted findings and latest run metadata."""
     latest_run = runs[0] if runs else None
-    latest_run_summary: dict[str, Any] = {}
+    latest_run_summary = _latest_run_summary(latest_run)
     return ProjectDecisionSummaryPublic(
         project_id=project_id,
         finding_count=len(findings),
@@ -106,7 +106,7 @@ def build_project_summary_payload_from_counts(
     latest_run: AnalysisRun | None,
 ) -> ProjectDecisionSummaryPublic:
     """Build a dashboard summary from pre-aggregated database counts."""
-    latest_run_summary: dict[str, Any] = {}
+    latest_run_summary = _latest_run_summary(latest_run)
     return ProjectDecisionSummaryPublic(
         project_id=project_id,
         finding_count=int(summary_counts.get("finding_count", 0)),
@@ -121,6 +121,22 @@ def build_project_summary_payload_from_counts(
         latest_run_status=latest_run.status if latest_run is not None else None,
         latest_run_summary=latest_run_summary,
     )
+
+
+def _latest_run_summary(latest_run: AnalysisRun | None) -> dict[str, Any]:
+    if latest_run is None:
+        return {}
+    session = object_session(latest_run)
+    if not isinstance(session, Session):
+        return {}
+    evidence = EvidenceRepository(session).get_analysis_evidence(latest_run.id)
+    if evidence is None:
+        return {}
+    return {
+        "provider_degraded": evidence.provider.provider_degraded,
+        "counts": evidence.counts.to_jsonable(),
+        "warnings": list(evidence.warnings),
+    }
 
 
 def build_cvss_only_comparison_payload(

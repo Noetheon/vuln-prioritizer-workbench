@@ -80,7 +80,6 @@ export function runFileLabel(run: {
   filename?: string | null
   input_type: string
   uploads?: { input?: unknown } | null
-  evidence?: { uploads?: { input?: unknown } | null } | null
 }) {
   const upload = runInputUpload(run)
   const uploadFilename =
@@ -92,65 +91,44 @@ export function runFileLabel(run: {
 
 export function runInputUpload(run: {
   uploads?: { input?: unknown } | null
-  evidence?: { uploads?: { input?: unknown } | null } | null
 } | null | undefined) {
-  return objectRecord(run?.uploads?.input ?? run?.evidence?.uploads?.input)
+  return objectRecord(run?.uploads?.input)
 }
 
 export function runAssetContextUpload(run: {
   uploads?: { asset_context?: unknown } | null
-  evidence?: { uploads?: { asset_context?: unknown } | null } | null
 } | null | undefined) {
-  return objectRecord(
-    run?.uploads?.asset_context ?? run?.evidence?.uploads?.asset_context,
-  )
+  return objectRecord(run?.uploads?.asset_context)
 }
 
 export function runVexUpload(run: {
   uploads?: { vex?: unknown } | null
-  evidence?: { uploads?: { vex?: unknown } | null } | null
 } | null | undefined) {
-  return objectRecord(run?.uploads?.vex ?? run?.evidence?.uploads?.vex)
+  return objectRecord(run?.uploads?.vex)
 }
 
 export function runProviderSnapshotFile(run: {
   provider_snapshot?: { file?: string | null } | null
-  evidence?: {
-    provider?: { provider_snapshot_file?: string | null } | null
-  } | null
 } | null | undefined) {
   if (!run) return null
-  return (
-    run.provider_snapshot?.file ??
-    stringValue(run.evidence?.provider?.provider_snapshot_file)
-  )
+  return run.provider_snapshot?.file ?? null
 }
 
 export function runProviderSnapshotHash(run: {
   provider_snapshot?: { hash?: string | null } | null
-  evidence?: {
-    provider?: { provider_snapshot_hash?: string | null } | null
-  } | null
 } | null | undefined) {
   if (!run) return null
-  return (
-    run.provider_snapshot?.hash ??
-    stringValue(run.evidence?.provider?.provider_snapshot_hash)
-  )
+  return run.provider_snapshot?.hash ?? null
 }
 
 export function runLockedProviderData(run: {
   provider_snapshot?: { locked?: boolean | null } | null
-  evidence?: {
-    provider?: { locked_provider_data?: boolean | null } | null
-  } | null
 } | null | undefined) {
   if (!run) return undefined
   if (typeof run.provider_snapshot?.locked === "boolean") {
     return run.provider_snapshot.locked
   }
-  const value = run.evidence?.provider?.locked_provider_data
-  return typeof value === "boolean" ? value : undefined
+  return undefined
 }
 
 export function runResultRecord(
@@ -208,8 +186,6 @@ export function runCount(
   if (typeof direct === "number") return direct
   const countValue = "counts" in run ? run.counts?.[key] : undefined
   if (typeof countValue === "number") return countValue
-  const evidenceCountValue = run.evidence?.counts?.[key]
-  if (typeof evidenceCountValue === "number") return evidenceCountValue
   return 0
 }
 

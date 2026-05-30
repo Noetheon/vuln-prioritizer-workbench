@@ -20,7 +20,7 @@ The project exposes three active interface families:
 | Workbench OpenAPI | `/api/v1/openapi.json` generated from the active FastAPI app. |
 | Import upload | `POST /api/v1/projects/{project_id}/imports` with multipart local evidence files and explicit `input_type`. |
 | Durable workflows | `workflow_run` / `workflow_event` state exposed through workflow routes, WebSocket streaming, and embedded `workflow` objects on imports, provider jobs, and reports. |
-| Decision/Evidence Kernel v2 | `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, and `RunDiagnosticsV2` from `backend/app/contracts/decision_evidence.py`, persisted through `analysis_evidence` and `finding_decision_evidence`. |
+| Decision/Evidence Kernel v2 | Kernel-first `DecisionRunResult` production in `backend/app/services/decision_kernel.py`, exported as `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, and `RunDiagnosticsV2` from `backend/app/contracts/decision_evidence.py`, persisted through `analysis_evidence` and `finding_decision_evidence`. |
 | Report job creation | `POST /api/v1/runs/{run_id}/report-jobs` for queued report generation. Deprecated `POST /api/v1/runs/{run_id}/reports` queues the same workflow and returns a workflow object. |
 | Report download | `GET /api/v1/reports/{report_id}/download`. |
 | Evidence verification | `POST /api/v1/reports/{report_id}/verify` for evidence ZIP reports. |
@@ -124,8 +124,9 @@ Compatibility rules:
 
 ## Decision/Evidence Kernel v2
 
-`analysis_evidence` is the run-wide evidence source for successful imports.
-`finding_decision_evidence` stores the current decision evidence for each
+Successful imports build one typed `DecisionRunResult` before terminal workflow
+completion. `analysis_evidence` stores the run-wide evidence from that result,
+and `finding_decision_evidence` stores the current decision evidence for each
 finding/run pair. These tables hold the active product truth used by run
 projection, finding detail, dashboard rollups, waiver/governance views, and
 report rendering.
@@ -161,7 +162,7 @@ Failed imports may expose typed `RunDiagnosticsV2` without creating an empty
 `workflow_run` is the active execution metadata store. Import, provider, and
 report handlers write terminal output to:
 
-- `workflow_run.result_json` for small internal ref payloads, such as
+- `workflow_run.result_json` for small internal ref payloads only, such as
   `analysis_evidence_id`, report artifact refs, provider artifact refs, and
   schema version
 - `workflow_run.diagnostics_json` for parser, provider, report, and worker
@@ -169,6 +170,9 @@ report handlers write terminal output to:
 - `workflow_run.artifact_refs_json` for generated report or provider snapshot
   references
 
+Successful import workflows must not store counts, provider facts, finding
+semantics, dedup summaries, or sidecar summaries in `workflow_run.result_json`.
+Those values belong to `AnalysisEvidenceV2` and `FindingDecisionEvidenceV2`.
 Normal run responses never expose `analysis_run.summary_json` or
 `analysis_run.error_json`, and `GET /api/v1/runs/{run_id}/workflow-metadata` has
 been removed. Local development data can be reset when this contract changes;

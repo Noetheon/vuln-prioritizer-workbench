@@ -6,7 +6,11 @@ from typing import Any
 import pytest
 from sqlmodel import Session, select
 from utils.import_contracts import completed_run_payload, configure_upload_dir
-from utils.workbench_contracts import _create_report_via_worker
+from utils.workbench_contracts import (
+    _create_report_via_worker,
+    _seed_analysis_evidence,
+    _seed_finding_evidence,
+)
 from utils.workbench_env import (
     DEMO_CVE_LOG4SHELL,
     WorkbenchApiEnv,
@@ -14,6 +18,8 @@ from utils.workbench_env import (
     local_api_headers,
     seed_finding_pair,
 )
+
+from app.contracts.decision_evidence import OccurrenceEvidenceV2
 
 
 def test_vpw064_workbench_waiver_lifecycle_and_report_visibility(
@@ -416,11 +422,67 @@ def _seed_report_run(
             status=workbench_api_env.app_models.AnalysisRunStatus.COMPLETED,
             result_json={"parsed": 1, "findings": 1},
         )
-        run_repo.add_finding_occurrence(
+        finding = session.get(workbench_api_env.app_models.Finding, uuid.UUID(finding_id))
+        assert finding is not None
+        occurrence = run_repo.add_finding_occurrence(
             finding_id=uuid.UUID(finding_id),
             analysis_run_id=run.id,
             source="generic-occurrence-csv",
             raw_reference=DEMO_CVE_LOG4SHELL,
+        )
+        finding_evidence = _seed_finding_evidence(
+            finding=finding,
+            analysis_run_id=run.id,
+            project_id=project_id,
+            asset_key=finding.asset.asset_key if finding.asset is not None else "payments-api",
+            asset_name=finding.asset.name if finding.asset is not None else "Payments API",
+            component_name=finding.component.name
+            if finding.component is not None
+            else "log4j-core",
+            component_version=finding.component.version
+            if finding.component is not None
+            else "2.14.1",
+            priority=finding.priority,
+            priority_rank=finding.priority_rank,
+            risk_score=finding.risk_score or 0.0,
+            operational_rank=finding.operational_rank,
+            epss=finding.epss or 0.0,
+            cvss=finding.cvss_base_score or 0.0,
+            in_kev=finding.in_kev,
+            rationale=finding.rationale or "Accepted risk report seed.",
+            action=finding.recommended_action or "Review accepted risk.",
+            confidence="high",
+            flags=[],
+        )
+        finding_evidence.occurrences.append(
+            OccurrenceEvidenceV2(
+                occurrence_id=str(occurrence.id),
+                analysis_run_id=str(run.id),
+                source="generic-occurrence-csv",
+                raw_reference=DEMO_CVE_LOG4SHELL,
+            )
+        )
+        evidence_repo = workbench_api_env.repositories.EvidenceRepository(session)
+        analysis_evidence = evidence_repo.upsert_analysis_evidence(
+            project_id=project_id,
+            analysis_run_id=run.id,
+            provider_snapshot_id=run.provider_snapshot_id,
+            evidence=_seed_analysis_evidence(
+                project_id=project_id,
+                run=run,
+                provider_snapshot_id=run.provider_snapshot_id,
+                provider_snapshot_hash=None,
+                finding_count=1,
+                counts_by_priority={finding_evidence.priority_evidence.priority_label: 1},
+                locked_provider_data=False,
+                findings=[finding_evidence],
+            ),
+        )
+        evidence_repo.replace_finding_decision_evidence(
+            analysis_evidence_id=analysis_evidence.id,
+            project_id=project_id,
+            analysis_run_id=run.id,
+            evidence_items=[finding_evidence],
         )
         session.commit()
         return str(run.id)

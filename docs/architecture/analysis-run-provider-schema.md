@@ -294,9 +294,11 @@ scheduling. The default worker process is
 `python -m app.workers.workflow_worker`; it uses the Workbench database as the
 queue rather than Redis, Celery, or another broker.
 
-For successful imports, `result_json` is a small internal reference payload,
-for example `analysis_evidence_id`, schema version, and report/provider
-artifact refs. The typed evidence tables remain the source for product facts.
+For successful imports, `result_json` is a small internal reference payload
+only, for example `analysis_evidence_id`, schema version, and report/provider
+artifact refs. Counts, provider facts, sidecar summaries, dedup summaries, and
+finding semantics come from `AnalysisEvidenceV2` and
+`FindingDecisionEvidenceV2`, not from workflow result JSON.
 
 `GET /api/v1/runs/{run_id}` and `GET /api/v1/runs/{run_id}/summary` derive these
 UI fields from Decision/Evidence Kernel v2 without requiring clients to parse

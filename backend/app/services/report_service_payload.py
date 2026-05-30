@@ -48,9 +48,13 @@ def build_report_payload(
         )
 
     generated_at = get_datetime_utc()
+    evidence_repository = EvidenceRepository(session)
+    evidence = evidence_repository.get_analysis_evidence(run.id)
+    if evidence is None:
+        raise ReportGenerationError("Analysis evidence v2 is required before reporting.")
     findings = run_findings(session, run)
     run_occurrences = run_occurrences_by_finding(session, run)
-    run_evidence = EvidenceRepository(session).finding_decision_evidence_for_run(run.id)
+    run_evidence = evidence_repository.finding_decision_evidence_for_run(run.id)
     attack_contexts = run_attack_contexts_by_finding(session, run)
     report_findings = [
         merge_attack_context(
@@ -74,8 +78,6 @@ def build_report_payload(
         analysis_run_id=run.id,
         kind=WorkflowRunKind.IMPORT,
     )
-    evidence_repository = EvidenceRepository(session)
-    evidence = evidence_repository.get_analysis_evidence(run.id)
     diagnostics = evidence_repository.get_run_diagnostics(run.id)
     if diagnostics is None and workflow is not None and workflow.diagnostics_json:
         diagnostics = build_run_diagnostics(workflow.diagnostics_json)

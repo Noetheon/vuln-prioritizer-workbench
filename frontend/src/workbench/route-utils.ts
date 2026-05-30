@@ -119,9 +119,8 @@ export function runFileLabel(run: {
   filename?: string | null
   input_type: string
   uploads?: { input?: unknown } | null
-  evidence?: { uploads?: { input?: unknown } | null } | null
 }) {
-  const upload = objectRecord(run.uploads?.input ?? run.evidence?.uploads?.input)
+  const upload = objectRecord(run.uploads?.input)
   const uploadFilename =
     stringValue(upload.original_filename) ??
     stringValue(upload.stored_filename) ??

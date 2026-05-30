@@ -8,16 +8,16 @@ from typing import Any, Literal
 
 from sqlmodel import Session
 
-from app.contracts.decision_evidence import FindingDecisionEvidenceV2
 from app.core.config import Settings
 from app.core.local_actor import LocalWorkbenchActor
 from app.importers import ImporterParseError, ImporterValidationError
 from app.models import AnalysisRun, AnalysisRunStatus, WorkflowRunKind, WorkflowRunStatus
 from app.repositories import EvidenceRepository, RunRepository, WorkflowRepository
 from app.services.analysis import AnalysisService, WorkbenchAnalysisError
-from app.services.decision_evidence_builder import (
-    build_analysis_evidence,
-    workflow_ref_payload,
+from app.services.decision_kernel import (
+    DecisionKernelInput,
+    DecisionPersistencePlan,
+    build_run_result,
 )
 from app.services.import_execution_context import (
     _apply_workbench_asset_context,
@@ -61,7 +61,6 @@ from app.services.import_execution_uploads import (
     store_prepared_uploads as _store_prepared_uploads,
 )
 from app.services.import_uploads import sanitize_parser_error_message as _sanitize_error_message
-from app.services.run_workflow_metadata import merge_summary_payload
 from app.services.workflow_execution import WorkflowExecutionContext
 
 __all__ = [
@@ -504,64 +503,50 @@ async def execute_project_import_upload(
         analysis_result=analysis_result,
         analysis_evidence_id=prepared_evidence_record.id,
     )
-    finding_evidence = _finding_evidence_items(persist_summary)
-    persist_summary_payload = {
-        key: value for key, value in persist_summary.items() if key != "finding_evidence"
-    }
     run.provider_snapshot_id = analysis_result.provider_snapshot_id
-    result_payload = merge_summary_payload(
-        context.workflow().result_json,
-        import_job=_job_payload(
-            job_id=resolved_run.job_id,
-            status="succeeded",
-            status_history=[*job_history, _job_status_entry("succeeded")],
-            execution_mode=execution_mode,
-        ),
-        **analysis_result.result_json,
-        **persist_summary_payload,
-        asset_context=asset_context_summary,
-        vex=vex_summary,
-        ignored_lines=prepared.ignored_lines,
-        input_sha256=prepared.upload_sha256,
-        parse_errors=[],
-    )
     finished_run = run_repo.finish_analysis_run(
         run.id,
         status=AnalysisRunStatus.SUCCEEDED,
     )
-    evidence = build_analysis_evidence(
-        project_id=project_id,
-        run=finished_run,
+    persistence_plan = DecisionPersistencePlan.from_summary(
+        analysis_evidence_id=prepared_evidence_record.id,
+        ignored_lines=prepared.ignored_lines,
         analysis_result=analysis_result,
-        run_payload=result_payload,
-        finding_evidence=finding_evidence,
+        summary=persist_summary,
+    )
+    decision_result = build_run_result(
+        kernel_input=DecisionKernelInput(
+            project_id=project_id,
+            run=finished_run,
+            prepared=prepared,
+            artifacts=artifacts,
+            analysis_result=analysis_result,
+            asset_context_summary=asset_context_summary,
+            vex_summary=vex_summary,
+        ),
+        persistence_plan=persistence_plan,
     )
     evidence_record = evidence_repo.upsert_analysis_evidence(
         project_id=project_id,
         analysis_run_id=finished_run.id,
         provider_snapshot_id=analysis_result.provider_snapshot_id,
-        evidence=evidence,
+        evidence=decision_result.analysis_evidence,
     )
-    if finding_evidence:
+    if decision_result.finding_evidence:
         evidence_repo.replace_finding_decision_evidence(
             analysis_evidence_id=evidence_record.id,
             project_id=project_id,
             analysis_run_id=finished_run.id,
-            evidence_items=finding_evidence,
+            evidence_items=decision_result.finding_evidence,
         )
     context.succeed(
         stage="succeeded",
         message="Import workflow succeeded.",
         progress_current=6,
         progress_total=6,
-        result=workflow_ref_payload(analysis_evidence_id=evidence_record.id),
+        result=decision_result.workflow_result,
         diagnostics={},
-        details={
-            "finding_count": persist_summary.get("finding_count"),
-            "occurrence_count": persist_summary.get("occurrence_count"),
-            "created_findings": persist_summary.get("created_findings"),
-            "updated_findings": persist_summary.get("updated_findings"),
-        },
+        details=decision_result.workflow_details,
     )
     _record_import_audit(
         session,
@@ -589,15 +574,3 @@ def _workflow_status_for_run(status: AnalysisRunStatus | str) -> WorkflowRunStat
     if normalized == AnalysisRunStatus.RUNNING:
         return WorkflowRunStatus.RUNNING
     return WorkflowRunStatus.PENDING
-
-
-def _finding_evidence_items(summary: dict[str, Any]) -> list[FindingDecisionEvidenceV2]:
-    raw_items = summary.get("finding_evidence")
-    if not isinstance(raw_items, list):
-        return []
-    return [
-        item
-        if isinstance(item, FindingDecisionEvidenceV2)
-        else FindingDecisionEvidenceV2.model_validate(item)
-        for item in raw_items
-    ]

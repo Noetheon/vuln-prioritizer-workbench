@@ -24,7 +24,7 @@ hosted SaaS product.
 | --- | --- | --- |
 | Backend runtime | `backend/app` | Active FastAPI app, `/api/v1` routes, SQLModel models, repositories, services, and Alembic migrations. |
 | Worker runtime | `backend/app/workers` | Separate database-backed worker process for queued durable imports, provider refreshes, retries, cancellation, and report generation. |
-| Decision/Evidence Kernel | `backend/app/contracts/decision_evidence.py`, `analysis_evidence`, `finding_decision_evidence` | Typed v2 source of truth for bounded run evidence, per-finding decisions, provider facts, governance signals, priority explanations, diagnostics, and report projection. |
+| Decision/Evidence Kernel | `backend/app/services/decision_kernel.py`, `backend/app/contracts/decision_evidence.py`, `analysis_evidence`, `finding_decision_evidence` | Kernel-first typed v2 source of truth for bounded run evidence, per-finding decisions, provider facts, governance signals, priority explanations, diagnostics, and report projection. |
 | Frontend runtime | `frontend` | React, Vite, TypeScript, TanStack Query, local route adapter, Playwright tests, and Workbench UI. |
 | Generated client | `frontend/src/client/**` | Generated from backend OpenAPI. Do not edit generated files manually. |
 | Frontend integration wrapper | `frontend/src/api-client.ts` | Handwritten wrapper over generated client code. Normal app code should use this boundary. |

@@ -16,6 +16,7 @@ from app.models import (
     AnalysisRunCountsPublic,
     AnalysisRunProviderSnapshotRefPublic,
     AnalysisRunPublic,
+    AnalysisRunStatus,
     AnalysisRunSummaryPublic,
     AnalysisRunUploadsPublic,
     WorkflowRunKind,
@@ -24,6 +25,12 @@ from app.models import (
 from app.repositories import EvidenceRepository, WorkflowRepository
 from app.services.decision_evidence_builder import build_run_diagnostics
 from app.services.run_workflow_metadata import redact_public_payload
+
+SUCCESSFUL_RUN_STATUSES = {
+    AnalysisRunStatus.SUCCEEDED,
+    AnalysisRunStatus.COMPLETED,
+    AnalysisRunStatus.COMPLETED_WITH_ERRORS,
+}
 
 
 def analysis_run_public(
@@ -118,9 +125,9 @@ def _evidence_context(
         analysis_run_id=run.id,
         kind=WorkflowRunKind.IMPORT,
     )
-    raw_result = (
-        _dict_value(redact_public_payload(workflow.result_json)) if workflow is not None else {}
-    )
+    raw_result: dict[str, Any] = {}
+    if workflow is not None and run.status not in SUCCESSFUL_RUN_STATUSES:
+        raw_result = _dict_value(redact_public_payload(workflow.result_json))
     if diagnostics is None and workflow is not None and workflow.diagnostics_json:
         diagnostics = build_run_diagnostics(redact_public_payload(workflow.diagnostics_json))
     return evidence, diagnostics, raw_result
