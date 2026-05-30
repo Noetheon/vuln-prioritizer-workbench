@@ -36,7 +36,7 @@ linked from an issue or PR.
 - `uv.lock` is the reproducible Python resolution artifact.
 - `backend/requirements.lock.txt` is the hash-pinned Python audit input exported
   from `uv.lock`.
-- `backend/requirements.runtime.lock.txt` is the hash-pinned Python 3.12 Docker
+- `backend/requirements.runtime.lock.txt` is the hash-pinned Python 3.13 Docker
   runtime install input exported from `uv.lock` without dev extras.
 - `frontend/package-lock.json` is the audited frontend lockfile.
 - There is no tracked root `bun.lock`; npm and `frontend/package-lock.json`
@@ -137,7 +137,7 @@ decisions.
 | [#380](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/380) | CI frontend PR gate runs lint, build, unit coverage, generated-client drift, and the full Playwright suite for frontend/API/runtime changes. | Fresh workflow evidence is still required for docs-only, frontend-only, and API-client-impacting PR examples. |
 | [#381](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/381) | Docker PR gate runs `make docker-demo-smoke` and `make docker-production-smoke` for runtime inputs and prints compose status/logs on failure. | Fresh workflow evidence is still required for backend/Compose and docs-only PR examples. |
 | [#382](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/382) | Tag release workflow runs `make release-readiness-check`, uploads release-readiness evidence, and attaches SHA-256 artifact hashes to GitHub Releases. | A tag-specific workflow run is required before claiming candidate evidence. |
-| [#383](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/383) | `backend/requirements.txt` is the bounded Python policy input; `uv.lock` records the resolver state; `backend/requirements.lock.txt` is exported with pins and hashes for dependency audit; `backend/requirements.runtime.lock.txt` is exported separately for the Python 3.12 Docker runtime install. | Fresh lock refresh and audit output are still required for each exact release candidate. |
+| [#383](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/383) | `backend/requirements.txt` is the bounded Python policy input; `uv.lock` records the resolver state; `backend/requirements.lock.txt` is exported with pins and hashes for dependency audit; `backend/requirements.runtime.lock.txt` is exported separately for the Python 3.13 Docker runtime install. | Fresh lock refresh and audit output are still required for each exact release candidate. |
 | [#384](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/384) | `make docs-check` runs the release-evidence hygiene script and archive manifest check before MkDocs to catch stale release wording and tracked artifact drift in active docs. | Public-deployment evidence remains an explicit release-readiness/public-deployment check, not a default docs-build requirement. |
 | [#385](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/385) | This ledger now requires commit/tag, command, result, artifact or CI URL, residual risk, owner, and follow-up fields for candidate evidence. | Build-local artifacts under `build/` are checked only when present in generated release workflow evidence. |
 | [#386](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/386) | PR template scopes release-readiness validation to explicit release, public/shared deployment, or release-evidence work instead of ordinary local Workbench PRs. | Branch protection itself must be confirmed in GitHub repository settings by a maintainer. |

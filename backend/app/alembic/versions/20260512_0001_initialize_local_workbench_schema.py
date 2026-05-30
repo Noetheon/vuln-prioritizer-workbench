@@ -138,8 +138,6 @@ def upgrade() -> None:
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("error_message", sa.Text(), nullable=True),
-        sa.Column("error_json", sa.JSON(), nullable=False),
-        sa.Column("summary_json", sa.JSON(), nullable=False),
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("project_id", sa.Uuid(), nullable=False),
         sa.Column("provider_snapshot_id", sa.Uuid(), nullable=True),
@@ -436,9 +434,6 @@ def upgrade() -> None:
         sa.Column("waived", sa.Boolean(), nullable=False),
         sa.Column("recommended_action", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column("rationale", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-        sa.Column("explanation_json", sa.JSON(), nullable=False),
-        sa.Column("data_quality_json", sa.JSON(), nullable=False),
-        sa.Column("evidence_json", sa.JSON(), nullable=False),
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("project_id", sa.Uuid(), nullable=False),
         sa.Column("vulnerability_id", sa.Uuid(), nullable=False),
@@ -474,6 +469,115 @@ def upgrade() -> None:
         op.f("ix_finding_vulnerability_id"), "finding", ["vulnerability_id"], unique=False
     )
     op.create_table(
+        "analysis_evidence",
+        sa.Column("schema_version", sa.String(length=80), nullable=False),
+        sa.Column("payload_json", sa.JSON(), nullable=False),
+        sa.Column("diagnostics_json", sa.JSON(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("project_id", sa.Uuid(), nullable=False),
+        sa.Column("analysis_run_id", sa.Uuid(), nullable=False),
+        sa.Column("provider_snapshot_id", sa.Uuid(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["analysis_run_id"], ["analysis_run.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["project_id"], ["project.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["provider_snapshot_id"], ["provider_snapshot.id"], ondelete="SET NULL"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("analysis_run_id", name="uq_analysis_evidence_analysis_run"),
+    )
+    op.create_index(
+        op.f("ix_analysis_evidence_analysis_run_id"),
+        "analysis_evidence",
+        ["analysis_run_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_analysis_evidence_project_created_at",
+        "analysis_evidence",
+        ["project_id", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_analysis_evidence_project_id"),
+        "analysis_evidence",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_analysis_evidence_provider_snapshot_id"),
+        "analysis_evidence",
+        ["provider_snapshot_id"],
+        unique=False,
+    )
+    op.create_table(
+        "finding_decision_evidence",
+        sa.Column("schema_version", sa.String(length=80), nullable=False),
+        sa.Column("cve_id", sqlmodel.sql.sqltypes.AutoString(length=64), nullable=False),
+        sa.Column("dedup_key", sqlmodel.sql.sqltypes.AutoString(length=512), nullable=False),
+        sa.Column("priority", sqlmodel.sql.sqltypes.AutoString(length=40), nullable=False),
+        sa.Column("status", sqlmodel.sql.sqltypes.AutoString(length=40), nullable=False),
+        sa.Column("payload_json", sa.JSON(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("analysis_evidence_id", sa.Uuid(), nullable=False),
+        sa.Column("project_id", sa.Uuid(), nullable=False),
+        sa.Column("analysis_run_id", sa.Uuid(), nullable=False),
+        sa.Column("finding_id", sa.Uuid(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["analysis_evidence_id"],
+            ["analysis_evidence.id"],
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(["analysis_run_id"], ["analysis_run.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["finding_id"], ["finding.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["project_id"], ["project.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "finding_id",
+            "analysis_run_id",
+            name="uq_finding_decision_evidence_finding_run",
+        ),
+    )
+    op.create_index(
+        op.f("ix_finding_decision_evidence_analysis_evidence_id"),
+        "finding_decision_evidence",
+        ["analysis_evidence_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_finding_decision_evidence_analysis_run_id"),
+        "finding_decision_evidence",
+        ["analysis_run_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_finding_decision_evidence_finding_created",
+        "finding_decision_evidence",
+        ["finding_id", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_finding_decision_evidence_finding_id"),
+        "finding_decision_evidence",
+        ["finding_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_finding_decision_evidence_project_id"),
+        "finding_decision_evidence",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_finding_decision_evidence_project_run",
+        "finding_decision_evidence",
+        ["project_id", "analysis_run_id"],
+        unique=False,
+    )
+    op.create_table(
         "report",
         sa.Column("kind", sqlmodel.sql.sqltypes.AutoString(length=80), nullable=False),
         sa.Column("format", sqlmodel.sql.sqltypes.AutoString(length=40), nullable=False),
@@ -502,6 +606,128 @@ def upgrade() -> None:
         "ix_report_project_created_at", "report", ["project_id", "created_at"], unique=False
     )
     op.create_index(op.f("ix_report_project_id"), "report", ["project_id"], unique=False)
+    op.create_table(
+        "workflow_run",
+        sa.Column("kind", sa.String(length=80), nullable=False),
+        sa.Column("status", sa.String(length=40), nullable=False),
+        sa.Column("title", sqlmodel.sql.sqltypes.AutoString(length=240), nullable=False),
+        sa.Column("handler", sqlmodel.sql.sqltypes.AutoString(length=240), nullable=False),
+        sa.Column("execution_mode", sqlmodel.sql.sqltypes.AutoString(length=40), nullable=False),
+        sa.Column("idempotency_key", sqlmodel.sql.sqltypes.AutoString(length=160), nullable=True),
+        sa.Column("queue_name", sqlmodel.sql.sqltypes.AutoString(length=80), nullable=False),
+        sa.Column("priority", sa.Integer(), nullable=False),
+        sa.Column("current_stage", sqlmodel.sql.sqltypes.AutoString(length=120), nullable=True),
+        sa.Column("progress_current", sa.Integer(), nullable=False),
+        sa.Column("progress_total", sa.Integer(), nullable=True),
+        sa.Column("retry_count", sa.Integer(), nullable=False),
+        sa.Column("max_retries", sa.Integer(), nullable=False),
+        sa.Column("attempt_count", sa.Integer(), nullable=False),
+        sa.Column("max_attempts", sa.Integer(), nullable=False),
+        sa.Column("cancellation_requested", sa.Boolean(), nullable=False),
+        sa.Column("error_message", sa.Text(), nullable=True),
+        sa.Column("error_details_json", sa.JSON(), nullable=False),
+        sa.Column("metadata_json", sa.JSON(), nullable=False),
+        sa.Column("payload_json", sa.JSON(), nullable=False),
+        sa.Column("result_json", sa.JSON(), nullable=False),
+        sa.Column("diagnostics_json", sa.JSON(), nullable=False),
+        sa.Column("artifact_refs_json", sa.JSON(), nullable=False),
+        sa.Column("terminal_code", sqlmodel.sql.sqltypes.AutoString(length=80), nullable=True),
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("project_id", sa.Uuid(), nullable=True),
+        sa.Column("analysis_run_id", sa.Uuid(), nullable=True),
+        sa.Column("report_id", sa.Uuid(), nullable=True),
+        sa.Column("parent_workflow_run_id", sa.Uuid(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("next_retry_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("locked_by", sqlmodel.sql.sqltypes.AutoString(length=120), nullable=True),
+        sa.Column("locked_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("lease_expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("last_heartbeat_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("cancel_requested_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("attempt_started_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(["analysis_run_id"], ["analysis_run.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["parent_workflow_run_id"],
+            ["workflow_run.id"],
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["project.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["report_id"], ["report.id"], ondelete="SET NULL"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        "ix_workflow_run_analysis_run_id",
+        "workflow_run",
+        ["analysis_run_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_workflow_run_analysis_run_kind",
+        "workflow_run",
+        ["analysis_run_id", "kind"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_workflow_run_idempotency_key",
+        "workflow_run",
+        ["idempotency_key"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_workflow_run_parent_workflow_run_id",
+        "workflow_run",
+        ["parent_workflow_run_id"],
+        unique=False,
+    )
+    op.create_index("ix_workflow_run_project_id", "workflow_run", ["project_id"], unique=False)
+    op.create_index(
+        "ix_workflow_run_project_created_at",
+        "workflow_run",
+        ["project_id", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_workflow_run_queue_ready",
+        "workflow_run",
+        ["queue_name", "status", "next_retry_at", "priority", "created_at"],
+        unique=False,
+    )
+    op.create_index("ix_workflow_run_report_id", "workflow_run", ["report_id"], unique=False)
+    op.create_index("ix_workflow_run_status", "workflow_run", ["status"], unique=False)
+    op.create_table(
+        "workflow_event",
+        sa.Column("sequence", sa.Integer(), nullable=False),
+        sa.Column("event_type", sa.String(length=40), nullable=False),
+        sa.Column("status", sa.String(length=40), nullable=False),
+        sa.Column("stage", sqlmodel.sql.sqltypes.AutoString(length=120), nullable=True),
+        sa.Column("message", sa.Text(), nullable=True),
+        sa.Column("progress_current", sa.Integer(), nullable=True),
+        sa.Column("progress_total", sa.Integer(), nullable=True),
+        sa.Column("artifact_kind", sqlmodel.sql.sqltypes.AutoString(length=80), nullable=True),
+        sa.Column("artifact_id", sqlmodel.sql.sqltypes.AutoString(length=120), nullable=True),
+        sa.Column("metadata_json", sa.JSON(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("workflow_run_id", sa.Uuid(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["workflow_run_id"], ["workflow_run.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("workflow_run_id", "sequence", name="uq_workflow_event_sequence"),
+    )
+    op.create_index(
+        "ix_workflow_event_workflow_created_at",
+        "workflow_event",
+        ["workflow_run_id", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_workflow_event_workflow_run_id",
+        "workflow_event",
+        ["workflow_run_id"],
+        unique=False,
+    )
     op.create_table(
         "finding_attack_context",
         sa.Column("cve_id", sqlmodel.sql.sqltypes.AutoString(length=64), nullable=False),
@@ -665,11 +891,57 @@ def downgrade() -> None:
         op.f("ix_finding_attack_context_analysis_run_id"), table_name="finding_attack_context"
     )
     op.drop_table("finding_attack_context")
+    op.drop_index("ix_workflow_event_workflow_run_id", table_name="workflow_event")
+    op.drop_index("ix_workflow_event_workflow_created_at", table_name="workflow_event")
+    op.drop_table("workflow_event")
+    op.drop_index("ix_workflow_run_status", table_name="workflow_run")
+    op.drop_index("ix_workflow_run_report_id", table_name="workflow_run")
+    op.drop_index("ix_workflow_run_queue_ready", table_name="workflow_run")
+    op.drop_index("ix_workflow_run_project_created_at", table_name="workflow_run")
+    op.drop_index("ix_workflow_run_project_id", table_name="workflow_run")
+    op.drop_index("ix_workflow_run_parent_workflow_run_id", table_name="workflow_run")
+    op.drop_index("ix_workflow_run_idempotency_key", table_name="workflow_run")
+    op.drop_index("ix_workflow_run_analysis_run_kind", table_name="workflow_run")
+    op.drop_index("ix_workflow_run_analysis_run_id", table_name="workflow_run")
+    op.drop_table("workflow_run")
     op.drop_index(op.f("ix_report_project_id"), table_name="report")
     op.drop_index("ix_report_project_created_at", table_name="report")
     op.drop_index(op.f("ix_report_analysis_run_id"), table_name="report")
     op.drop_index("ix_report_analysis_run_created_at", table_name="report")
     op.drop_table("report")
+    op.drop_index(
+        "ix_finding_decision_evidence_project_run",
+        table_name="finding_decision_evidence",
+    )
+    op.drop_index(
+        op.f("ix_finding_decision_evidence_project_id"),
+        table_name="finding_decision_evidence",
+    )
+    op.drop_index(
+        op.f("ix_finding_decision_evidence_finding_id"),
+        table_name="finding_decision_evidence",
+    )
+    op.drop_index(
+        "ix_finding_decision_evidence_finding_created",
+        table_name="finding_decision_evidence",
+    )
+    op.drop_index(
+        op.f("ix_finding_decision_evidence_analysis_run_id"),
+        table_name="finding_decision_evidence",
+    )
+    op.drop_index(
+        op.f("ix_finding_decision_evidence_analysis_evidence_id"),
+        table_name="finding_decision_evidence",
+    )
+    op.drop_table("finding_decision_evidence")
+    op.drop_index(
+        op.f("ix_analysis_evidence_provider_snapshot_id"),
+        table_name="analysis_evidence",
+    )
+    op.drop_index(op.f("ix_analysis_evidence_project_id"), table_name="analysis_evidence")
+    op.drop_index("ix_analysis_evidence_project_created_at", table_name="analysis_evidence")
+    op.drop_index(op.f("ix_analysis_evidence_analysis_run_id"), table_name="analysis_evidence")
+    op.drop_table("analysis_evidence")
     op.drop_index(op.f("ix_finding_vulnerability_id"), table_name="finding")
     op.drop_index("ix_finding_project_vulnerability", table_name="finding")
     op.drop_index("ix_finding_project_status", table_name="finding")

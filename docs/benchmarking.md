@@ -103,10 +103,11 @@ The latest VPW-072 evidence is stored in:
 - `archive/vpw-evidence/vpw-072-performance-smoke.json`
 
 Known limits: this smoke uses local SQLite and FastAPI `TestClient`. It is not a
-Postgres or concurrent-user benchmark. The large all-new bulk path stores compact
-score/explain JSON per finding to avoid duplicating full provider payloads across
-thousands of repeated occurrences; normalized provider details remain on
-vulnerability records.
+Postgres or concurrent-user benchmark. The large all-new bulk path still emits
+the same Decision/Evidence Kernel v2 result as the normal path: bounded
+`AnalysisEvidenceV2` for run-wide facts plus per-finding
+`FindingDecisionEvidenceV2` rows. Normalized provider details remain on
+vulnerability records instead of being duplicated into run-wide evidence.
 
 ## Edge-Case Policy
 

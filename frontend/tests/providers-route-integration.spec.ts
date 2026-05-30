@@ -10,7 +10,6 @@ const degradedProviderStatus: ProviderStatusPublic = {
   last_sync: "2025-04-30T10:00:00Z",
   latest_update_job: {
     error_message: "EPSS refresh failed",
-    execution_mode: "background",
     finished_at: "2025-04-30T10:05:00Z",
     id: "provider-job-1",
     metadata: {

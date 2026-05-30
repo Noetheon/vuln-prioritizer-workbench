@@ -17,7 +17,7 @@ reviewable.
 
 Current upstream ATT&CK version and checked-in demo fixture version are separate
 claims. MITRE lists ATT&CK v19.1 as the current public website version as of the
-2026-05-25 documentation hygiene pass. VPW's checked-in demo fixtures are still
+2026-05-30 documentation hygiene pass. VPW's checked-in demo fixtures are still
 pinned to ATT&CK 16.1 for deterministic local evidence. Do not describe the
 16.1 fixture set as current ATT&CK coverage.
 

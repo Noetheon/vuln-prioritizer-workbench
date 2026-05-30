@@ -18,6 +18,7 @@ from utils.report_contract_fixtures import (
 from utils.workbench_contracts import (
     _add_vpw060_attack_contexts,
     _configure_report_dir,
+    _create_report_via_worker,
     _layer_metadata,
     _load_schema,
     _seed_formula_run,
@@ -73,7 +74,11 @@ from vuln_prioritizer.sarif_contract import (
 
 
 def test_vpw049_openapi_exposes_report_format_contract() -> None:
-    response = TestClient(app).get("/api/v1/openapi.json")
+    client = TestClient(app)
+    try:
+        response = client.get("/api/v1/openapi.json")
+    finally:
+        client.close()
 
     assert response.status_code == 200
     payload = response.json()
@@ -162,14 +167,13 @@ def test_vpw048_markdown_report_create_downloads_for_completed_run(
     project = create_project_via_api(workbench_api_env.client, headers)
     run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
 
-    response = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    payload = _create_report_via_worker(
+        workbench_api_env,
+        run_id,
         headers=headers,
-        json={"format": "markdown"},
+        payload={"format": "markdown"},
     )
 
-    assert response.status_code == 200, response.text
-    payload = response.json()
     assert payload["format"] == "markdown"
     assert payload["kind"] == "technical-markdown"
     assert payload["filename"] == "technical-report.md"
@@ -216,14 +220,13 @@ def test_vpw049_html_report_create_downloads_executive_report(
     project = create_project_via_api(workbench_api_env.client, headers)
     run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
 
-    response = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    payload = _create_report_via_worker(
+        workbench_api_env,
+        run_id,
         headers=headers,
-        json={"format": "html"},
+        payload={"format": "html"},
     )
 
-    assert response.status_code == 200, response.text
-    payload = response.json()
     assert payload["format"] == "html"
     assert payload["kind"] == "executive-html"
     assert payload["filename"] == "executive-report.html"
@@ -322,17 +325,16 @@ def test_vpw050_analysis_json_export_create_downloads_schema_valid_result(
     project = create_project_via_api(workbench_api_env.client, headers)
     run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
 
-    response = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    payload = _create_report_via_worker(
+        workbench_api_env,
+        run_id,
         headers=headers,
-        json={"format": "json"},
+        payload={"format": "json"},
     )
 
-    assert response.status_code == 200, response.text
-    payload = response.json()
     assert payload["format"] == "json"
     assert payload["kind"] == "analysis-result-json"
-    assert payload["filename"] == "analysis-result.v1.json"
+    assert payload["filename"] == "analysis-result.v2.json"
     assert payload["content_type"] == "application/json; charset=utf-8"
     assert payload["metadata_json"]["finding_count"] == 2
 
@@ -340,21 +342,21 @@ def test_vpw050_analysis_json_export_create_downloads_schema_valid_result(
         report = session.get(workbench_api_env.app_models.Report, uuid.UUID(payload["id"]))
         assert report is not None
         assert Path(report.path).resolve(strict=True).is_relative_to(report_dir)
-        assert report.path.endswith("analysis-result.v1.json")
+        assert report.path.endswith("analysis-result.v2.json")
 
     download = workbench_api_env.client.get(payload["download_url"], headers=headers)
 
     assert download.status_code == 200
     assert download.headers["cache-control"] == "no-store"
     assert download.headers["x-content-type-options"] == "nosniff"
-    assert "analysis-result.v1.json" in download.headers["content-disposition"]
+    assert "analysis-result.v2.json" in download.headers["content-disposition"]
     assert download.headers["content-type"].startswith("application/json")
     assert hashlib.sha256(download.content).hexdigest() == payload["sha256"]
 
     body = download.json()
-    jsonschema.validate(body, _load_schema("analysis-result.v1.schema.json"))
-    assert body["schema"] == "analysis-result.v1"
-    assert body["schema_version"] == "1.0.0"
+    jsonschema.validate(body, _load_schema("analysis-result.v2.schema.json"))
+    assert body["schema"] == "analysis-result.v2"
+    assert body["schema_version"] == "2.0.0"
     assert body["project"]["id"] == project["id"]
     assert body["analysis_run"]["id"] == str(run_id)
     assert body["provider_snapshot"]["content_hash"] == "sha256:vpw048-snapshot"
@@ -369,7 +371,7 @@ def test_vpw050_analysis_json_export_create_downloads_schema_valid_result(
     first = body["findings"][0]
     assert first["recommendation"]["decision_statement"].startswith("Decision Statement:")
     assert first["data_quality"]["raw"]["confidence"] == "high"
-    assert first["explanation"]["decision_guidance"]["sla"]["target_hours"] == 24
+    assert first["recommendation"]["decision_sla"] == "Emergency / 24h"
     assert first["occurrences"][0]["analysis_run_id"] == str(run_id)
     assert set(body["explanations"]) == {DEMO_CVE_XZ, DEMO_CVE_LOG4SHELL}
 
@@ -383,14 +385,13 @@ def test_vpw050_findings_csv_export_create_downloads_stable_columns(
     project = create_project_via_api(workbench_api_env.client, headers)
     run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
 
-    response = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    payload = _create_report_via_worker(
+        workbench_api_env,
+        run_id,
         headers=headers,
-        json={"format": "csv"},
+        payload={"format": "csv"},
     )
 
-    assert response.status_code == 200, response.text
-    payload = response.json()
     assert payload["format"] == "csv"
     assert payload["kind"] == "findings-csv"
     assert payload["filename"] == "findings.csv"
@@ -428,14 +429,13 @@ def test_vpw080_sarif_report_create_downloads_valid_results(
     project = create_project_via_api(workbench_api_env.client, headers)
     run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
 
-    response = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    payload = _create_report_via_worker(
+        workbench_api_env,
+        run_id,
         headers=headers,
-        json={"format": "sarif"},
+        payload={"format": "sarif"},
     )
 
-    assert response.status_code == 200, response.text
-    payload = response.json()
     assert payload["format"] == "sarif"
     assert payload["kind"] == "sarif-results"
     assert payload["filename"] == "results.sarif"
@@ -567,14 +567,13 @@ def test_vpw060_attack_navigator_report_create_downloads_filtered_layer(
     run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
     _add_vpw060_attack_contexts(workbench_api_env, run_id)
 
-    response = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    payload = _create_report_via_worker(
+        workbench_api_env,
+        run_id,
         headers=headers,
-        json={"format": "attack-navigator", "attack_filter": "all"},
+        payload={"format": "attack-navigator", "attack_filter": "all"},
     )
 
-    assert response.status_code == 200, response.text
-    payload = response.json()
     assert payload["format"] == "attack-navigator"
     assert payload["kind"] == "attack-navigator-layer"
     assert payload["filename"] == "attack-navigator-layer.json"
@@ -607,28 +606,28 @@ def test_vpw060_attack_navigator_report_create_downloads_filtered_layer(
     assert "payload" not in json.dumps(layer).lower()
     assert _layer_metadata(layer, "Unmapped findings omitted") == "0"
 
-    kev_response = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    kev_payload = _create_report_via_worker(
+        workbench_api_env,
+        run_id,
         headers=headers,
-        json={"format": "attack-navigator", "attack_filter": "kev"},
+        payload={"format": "attack-navigator", "attack_filter": "kev"},
     )
-    assert kev_response.status_code == 200, kev_response.text
     kev_layer = workbench_api_env.client.get(
-        kev_response.json()["download_url"],
+        kev_payload["download_url"],
         headers=headers,
     ).json()
     assert [item["techniqueID"] for item in kev_layer["techniques"]] == ["T1190"]
     assert _layer_metadata(kev_layer, "Filter") == "kev"
     assert "KEV: 1 finding(s)" in kev_layer["techniques"][0]["comment"]
 
-    no_coverage_response = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    no_coverage_payload = _create_report_via_worker(
+        workbench_api_env,
+        run_id,
         headers=headers,
-        json={"format": "attack-navigator", "attack_filter": "no-coverage"},
+        payload={"format": "attack-navigator", "attack_filter": "no-coverage"},
     )
-    assert no_coverage_response.status_code == 200, no_coverage_response.text
     no_coverage_layer = workbench_api_env.client.get(
-        no_coverage_response.json()["download_url"],
+        no_coverage_payload["download_url"],
         headers=headers,
     ).json()
     assert _layer_metadata(no_coverage_layer, "Filter") == "no-coverage"
@@ -647,14 +646,14 @@ def test_vpw050_csv_export_escapes_spreadsheet_formula_cells(
     project = create_project_via_api(workbench_api_env.client, headers)
     run_id = _seed_formula_run(workbench_api_env, uuid.UUID(project["id"]))
 
-    created = workbench_api_env.client.post(
-        f"/api/v1/runs/{run_id}/reports",
+    created = _create_report_via_worker(
+        workbench_api_env,
+        run_id,
         headers=headers,
-        json={"format": "csv"},
+        payload={"format": "csv"},
     )
 
-    assert created.status_code == 200, created.text
-    csv_report = workbench_api_env.client.get(created.json()["download_url"], headers=headers)
+    csv_report = workbench_api_env.client.get(created["download_url"], headers=headers)
     assert csv_report.status_code == 200
     text = csv_report.text
     assert "'=HYPERLINK" in text

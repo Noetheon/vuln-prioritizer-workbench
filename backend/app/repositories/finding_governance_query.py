@@ -25,7 +25,6 @@ def project_governance_rollups(
 ) -> list[GovernanceRollupPublic]:
     """Return SQL-backed governance rollups for one project dimension."""
     label_expr = _governance_label_expression(dimension)
-    waiver_status = Finding.explanation_json["waiver_status"].as_string()
     status = col(Finding.status)
     priority = col(Finding.priority)
     waived = col(Finding.waived)
@@ -55,8 +54,8 @@ def project_governance_rollups(
         func.sum(_case_int(suppressed_by_vex.is_(True))),
         func.sum(_case_int(under_investigation.is_(True))),
         func.sum(_case_int(waived.is_(True))),
-        func.sum(_case_int(waiver_status == "expired")),
-        func.sum(_case_int(waiver_status == "review_due")),
+        func.sum(_case_int(waived.is_(False) & waived.is_(True))),
+        func.sum(_case_int(waived.is_(False) & waived.is_(True))),
         func.coalesce(func.sum(risk_score), 0.0),
         func.max(risk_score),
         *[

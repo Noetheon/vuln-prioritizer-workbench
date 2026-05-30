@@ -89,6 +89,12 @@ for decisions.
 - API boundary: generated client files under `frontend/src/client/**`; the
   `frontend/src/api-client.ts` wrapper is manual integration code over that
   generated client.
+- Decision/Evidence Kernel v2: `backend/app/services/decision_kernel.py`
+  produces a typed `DecisionRunResult`, and
+  `backend/app/contracts/decision_evidence.py` defines the public evidence
+  contracts. `analysis_evidence` stores run-wide evidence only, while
+  `finding_decision_evidence` stores the current per-finding decision graph;
+  workflow rows hold lifecycle state and compact artifact/reference metadata.
 - Domain layer: retained under `backend/src/vuln_prioritizer/**` for parsers,
   providers, scoring, SARIF contracts, and neutral vulnerability logic shared
   with the active backend. The old Typer CLI and legacy report facades have
@@ -107,7 +113,7 @@ From a fresh repository checkout:
 
 ```bash
 cp .env.example .env
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
 ```
 
 Open:
@@ -130,7 +136,9 @@ ports: frontend `http://127.0.0.1:15173` and backend
 `VPW_E2E_FRONTEND_URL`, or `VPW_E2E_BACKEND_URL` when reusing an existing
 local server.
 
-The current local mode is single-user and does not require a login step.
+The current local mode is single-user and does not require a login step. The
+worker service is required for imports, provider refreshes, report generation,
+retry, and cancellation because Workflow v2 is worker-first.
 
 Suggested demo path:
 
@@ -155,6 +163,7 @@ Public docs:
 - [Documentation home](docs/index.md)
 - [User Documentation Guide](docs/user_documentation.md)
 - [Product Architecture](docs/architecture.md)
+- [Decision/Evidence Kernel](docs/architecture/decision-evidence-kernel.md)
 - [Dependency and Package Policy](docs/dependency-and-package-policy.md)
 - [Scoring Methodology](docs/scoring-methodology.md)
 - [ATT&CK/TTP Methodology](docs/attack-ttp-methodology.md)
@@ -189,7 +198,7 @@ README:
 - [Example PR comment body](docs/examples/example_pr_comment.md)
 - [VPW-054 technical report snapshot](docs/examples/vpw-054-workbench-technical-report.md)
 - [VPW-054 executive report snapshot](docs/examples/vpw-054-workbench-executive-report.html)
-- [VPW-054 analysis result snapshot](docs/examples/vpw-054-workbench-analysis-result.v1.json)
+- [VPW-054 analysis result snapshot](docs/examples/vpw-054-workbench-analysis-result.v2.json)
 
 Canonical report/evidence contract artifacts remain under `docs/evidence/` and
 are described in [Reports and Evidence](docs/reports-and-evidence.md).
@@ -216,11 +225,8 @@ compromised.
 Useful local checks:
 
 ```bash
-cd frontend && npm run build
-cd frontend && npm run lint
-cd frontend && npm run test:unit
-cd frontend && npm run test -- tests/ui-smoke.spec.ts
-
+make frontend-check
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test -- tests/workbench-entry-status.spec.ts --project=chromium
 python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov
 python3 -m mkdocs build --clean
 make local-workbench-check

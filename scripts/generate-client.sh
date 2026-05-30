@@ -22,7 +22,8 @@ Path("frontend/openapi.json").write_text(
 )
 PY
 
-npm --prefix frontend run generate-client
+engine_strict="${FRONTEND_NPM_ENGINE_STRICT:-true}"
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict="$engine_strict" run generate-client
 
 rm -rf frontend/src/client/client frontend/src/client/core
 cp frontend/src/client-runtime/local-client.ts frontend/src/client/client.ts

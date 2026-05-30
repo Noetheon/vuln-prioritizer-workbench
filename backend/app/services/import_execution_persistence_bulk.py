@@ -8,6 +8,10 @@ from typing import Any
 from sqlalchemy import insert
 from sqlmodel import Session
 
+from app.contracts.decision_evidence import (
+    FINDING_DECISION_EVIDENCE_SCHEMA_VERSION,
+    FindingDecisionEvidenceV2,
+)
 from app.domain.import_asset_context import (
     asset_criticality_from_evidence as _asset_criticality,
 )
@@ -17,9 +21,13 @@ from app.domain.import_asset_context import (
 from app.domain.import_asset_context import asset_exposure_from_evidence as _asset_exposure
 from app.domain.import_asset_context import string_evidence as _string_evidence
 from app.importers.contracts import NormalizedOccurrence
-from app.models import Asset, Finding, FindingOccurrence, Vulnerability
+from app.models import Asset, Finding, FindingDecisionEvidence, FindingOccurrence, Vulnerability
 from app.models.base import get_datetime_utc
 from app.services.analysis import WorkbenchAnalysisResult
+from app.services.decision_evidence_builder import (
+    build_finding_decision_evidence,
+    build_occurrence_evidence,
+)
 from app.services.import_execution_dedup import _dedup_key_parts, _finding_dedup_key
 from app.services.import_execution_persistence_attack import _attack_context_enabled
 from app.services.import_execution_persistence_common import DEDUP_DECISION_SAMPLE_LIMIT
@@ -55,6 +63,7 @@ def _persist_workbench_occurrences_bulk_insert(
     run_id: uuid.UUID,
     occurrences: list[NormalizedOccurrence],
     analysis_result: WorkbenchAnalysisResult,
+    analysis_evidence_id: uuid.UUID | None = None,
 ) -> dict[str, Any] | None:
     """Fast path for large all-new occurrence imports with no component rows."""
     if len(occurrences) < 1000:
@@ -67,8 +76,9 @@ def _persist_workbench_occurrences_bulk_insert(
     ):
         return None
 
-    dedup_parts_by_index = [_dedup_key_parts(project_id, occurrence) for occurrence in occurrences]
-    dedup_keys = [_finding_dedup_key(parts) for parts in dedup_parts_by_index]
+    dedup_keys = [
+        _finding_dedup_key(_dedup_key_parts(project_id, occurrence)) for occurrence in occurrences
+    ]
     if len(set(dedup_keys)) != len(dedup_keys):
         return None
     if _existing_findings_by_dedup_key(
@@ -93,12 +103,10 @@ def _persist_workbench_occurrences_bulk_insert(
     asset_ids_by_key: dict[str, uuid.UUID] = {
         asset_key: asset.id for asset_key, asset in existing_assets.items()
     }
-    first_occurrence_by_asset = {
-        occurrence.asset_ref: occurrence
-        for occurrence in occurrences
-        if occurrence.asset_ref and occurrence.asset_ref not in existing_assets
-    }
-    for asset_key, occurrence in first_occurrence_by_asset.items():
+    for occurrence in occurrences:
+        asset_key = occurrence.asset_ref
+        if not asset_key or asset_key in asset_ids_by_key:
+            continue
         asset_id = uuid.uuid4()
         asset_ids_by_key[asset_key] = asset_id
         asset_rows.append(
@@ -133,9 +141,8 @@ def _persist_workbench_occurrences_bulk_insert(
         if cve in vulnerability_ids_by_cve:
             continue
         decision = analysis_result.findings_by_cve[cve]
-        dedup_parts = dedup_parts_by_index[
-            next(index for index, occurrence in enumerate(occurrences) if occurrence.cve == cve)
-        ]
+        source_occurrence = next(occurrence for occurrence in occurrences if occurrence.cve == cve)
+        dedup_parts = _dedup_key_parts(project_id, source_occurrence)
         vulnerability_id = uuid.uuid4()
         vulnerability_ids_by_cve[cve] = vulnerability_id
         vulnerability_rows.append(
@@ -167,12 +174,15 @@ def _persist_workbench_occurrences_bulk_insert(
     compact_payload_by_cve: dict[str, dict[str, Any]] = {}
     finding_batch: list[dict[str, Any]] = []
     occurrence_batch: list[dict[str, Any]] = []
+    evidence_batch: list[dict[str, Any]] = []
     decisions: list[dict[str, Any]] = []
-    touched_finding_ids: set[str] = set()
-    for index, (occurrence, dedup_parts, dedup_key) in enumerate(
-        zip(occurrences, dedup_parts_by_index, dedup_keys, strict=True),
+    finding_evidence: list[FindingDecisionEvidenceV2] = []
+    created_count = len(occurrences)
+    for index, (occurrence, dedup_key) in enumerate(
+        zip(occurrences, dedup_keys, strict=True),
         start=1,
     ):
+        dedup_parts = _dedup_key_parts(project_id, occurrence)
         decision = analysis_result.findings_by_cve[occurrence.cve]
         compact_payload = compact_payload_by_cve.get(occurrence.cve)
         if compact_payload is None:
@@ -192,9 +202,26 @@ def _persist_workbench_occurrences_bulk_insert(
             data_quality_by_cve[occurrence.cve] = data_quality_payload
 
         finding_id = uuid.uuid4()
+        occurrence_id = uuid.uuid4()
         finding_asset_id: uuid.UUID | None = (
             asset_ids_by_key.get(occurrence.asset_ref) if occurrence.asset_ref else None
         )
+        evidence_payload = {
+            "import": dict(occurrence.raw_evidence),
+            "analysis": _analysis_evidence_for_occurrence(
+                analysis_result,
+                decision,
+                occurrence,
+                priority_state=decision_payload.get("priority_state"),
+                occurrence_scope=occurrence_scope,
+            ),
+            "dedup": {
+                "key": dedup_key,
+                "key_version": "vpw019-v1",
+                "action": "created",
+                "parts": dedup_parts,
+            },
+        }
         finding_batch.append(
             {
                 "id": finding_id,
@@ -221,24 +248,6 @@ def _persist_workbench_occurrences_bulk_insert(
                 "waived": decision.waived,
                 "recommended_action": decision.recommended_action,
                 "rationale": decision.rationale,
-                "explanation_json": decision_payload,
-                "data_quality_json": data_quality_payload,
-                "evidence_json": {
-                    "import": dict(occurrence.raw_evidence),
-                    "analysis": _analysis_evidence_for_occurrence(
-                        analysis_result,
-                        decision,
-                        occurrence,
-                        priority_state=decision_payload.get("priority_state"),
-                        occurrence_scope=occurrence_scope,
-                    ),
-                    "dedup": {
-                        "key": dedup_key,
-                        "key_version": "vpw019-v1",
-                        "action": "created",
-                        "parts": dedup_parts,
-                    },
-                },
                 "first_seen_at": now,
                 "last_seen_at": now,
                 "created_at": now,
@@ -247,7 +256,7 @@ def _persist_workbench_occurrences_bulk_insert(
         )
         occurrence_batch.append(
             {
-                "id": uuid.uuid4(),
+                "id": occurrence_id,
                 "finding_id": finding_id,
                 "analysis_run_id": run_id,
                 "source": occurrence.source,
@@ -261,7 +270,67 @@ def _persist_workbench_occurrences_bulk_insert(
                 },
             }
         )
-        touched_finding_ids.add(str(finding_id))
+        occurrence_evidence = build_occurrence_evidence(
+            analysis_run_id=run_id,
+            occurrence_id=occurrence_id,
+            source=occurrence.source,
+            scanner=None,
+            raw_reference=_string_evidence(occurrence.raw_evidence, "source_record_id"),
+            fix_version=occurrence.fix_version,
+            raw_evidence={
+                **dict(occurrence.raw_evidence),
+                "component": occurrence.component,
+                "version": occurrence.version,
+                "asset_ref": occurrence.asset_ref,
+            },
+            dedup=evidence_payload["dedup"],
+        )
+        evidence_item = build_finding_decision_evidence(
+            project_id=project_id,
+            run_id=run_id,
+            finding_id=finding_id,
+            cve_id=occurrence.cve,
+            dedup_key=dedup_key,
+            status=_finding_status_for_occurrence(decision, occurrence).value,
+            priority=_decision_priority(decision).value,
+            priority_rank=decision.priority_rank,
+            risk_score=float(decision.operational_score),
+            operational_rank=decision.operational_rank or index,
+            in_kev=decision.in_kev,
+            epss=decision.epss,
+            cvss_base_score=decision.cvss_base_score,
+            attack_mapped=decision.attack_mapped,
+            suppressed_by_vex=_suppressed_by_vex_for_occurrence(decision, occurrence),
+            under_investigation=decision.under_investigation,
+            waived=decision.waived,
+            rationale=decision.rationale,
+            recommended_action=decision.recommended_action,
+            decision_payload=decision_payload,
+            data_quality_payload=data_quality_payload,
+            provider_payload=_decision_provider_json(decision),
+            occurrence_scope=occurrence_scope,
+            occurrence_evidence=[occurrence_evidence],
+        )
+        if analysis_evidence_id is None:
+            finding_evidence.append(evidence_item)
+        else:
+            evidence_batch.append(
+                {
+                    "id": uuid.uuid4(),
+                    "analysis_evidence_id": analysis_evidence_id,
+                    "project_id": project_id,
+                    "analysis_run_id": run_id,
+                    "finding_id": finding_id,
+                    "schema_version": FINDING_DECISION_EVIDENCE_SCHEMA_VERSION,
+                    "cve_id": evidence_item.cve_id,
+                    "dedup_key": evidence_item.dedup_key,
+                    "priority": evidence_item.priority,
+                    "status": evidence_item.status,
+                    "payload_json": evidence_item.to_jsonable(),
+                    "created_at": now,
+                    "updated_at": now,
+                }
+            )
         if len(decisions) < DEDUP_DECISION_SAMPLE_LIMIT:
             decisions.append(
                 {
@@ -280,25 +349,30 @@ def _persist_workbench_occurrences_bulk_insert(
         if len(occurrence_batch) >= 500:
             session.execute(insert(FindingOccurrence), occurrence_batch)
             occurrence_batch.clear()
+        if len(evidence_batch) >= 100:
+            session.execute(insert(FindingDecisionEvidence), evidence_batch)
+            evidence_batch.clear()
 
     if finding_batch:
         session.execute(insert(Finding), finding_batch)
     if occurrence_batch:
         session.execute(insert(FindingOccurrence), occurrence_batch)
+    if evidence_batch:
+        session.execute(insert(FindingDecisionEvidence), evidence_batch)
     session.flush()
 
     return {
         "occurrence_count": len(occurrences),
-        "finding_count": len(touched_finding_ids),
-        "created_findings": len(touched_finding_ids),
+        "finding_count": created_count,
+        "created_findings": created_count,
         "updated_findings": 0,
         "analysis_semantics": _analysis_semantics_summary(
             occurrences=occurrences,
-            finding_count=len(touched_finding_ids),
+            finding_count=created_count,
         ),
         "dedup_summary": {
             "key_version": "vpw019-v1",
-            "created_findings": len(touched_finding_ids),
+            "created_findings": created_count,
             "updated_findings": 0,
             "reused_findings": 0,
             "decision_count": len(occurrences),
@@ -306,4 +380,5 @@ def _persist_workbench_occurrences_bulk_insert(
             "decision_sample_limit": DEDUP_DECISION_SAMPLE_LIMIT,
             "omitted_decisions": max(0, len(occurrences) - len(decisions)),
         },
+        "finding_evidence": finding_evidence,
     }

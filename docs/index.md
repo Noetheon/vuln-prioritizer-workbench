@@ -51,7 +51,7 @@ Local Workbench from a repository checkout:
 
 ```bash
 cp .env.example .env
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
 curl http://127.0.0.1:8000/api/v1/workbench/health
 ```
 
@@ -62,9 +62,10 @@ snapshot source is `data/demo_provider_snapshot.json`. The current local
 Workbench is single-user and does not require a login step. This path works
 without live provider API keys.
 
-The Compose path starts the current FastAPI backend and React frontend. The
-Workbench remains local-first and uses the import-format matrix documented in
-[support_matrix.md](support_matrix.md) for supported inputs.
+The Compose path starts the current FastAPI backend, React frontend, and durable
+workflow worker. The Workbench remains local-first and uses the import-format
+matrix documented in [support_matrix.md](support_matrix.md) for supported
+inputs.
 
 ## Documentation Structure
 
@@ -83,6 +84,9 @@ Workbench remains local-first and uses the import-format matrix documented in
   Security Project submission package.
 - Read [methodology.md](methodology.md) for scoring, ATT&CK, Asset Context, and VEX semantics.
 - Read [architecture.md](architecture.md) for the current FastAPI/React route architecture, generated client boundary, VPW design-system role, and shared state ownership.
+- Read [architecture/decision-evidence-kernel.md](architecture/decision-evidence-kernel.md)
+  for the kernel-first import/evidence flow, projection rules, and workflow
+  result boundary.
 - Read [dependency-and-package-policy.md](dependency-and-package-policy.md) for
   backend package contents, frontend lockfile ownership, Dependabot labels, and
   dependency-audit policy.
@@ -90,14 +94,14 @@ Workbench remains local-first and uses the import-format matrix documented in
 - Read [attack-ttp-methodology.md](attack-ttp-methodology.md) for curated ATT&CK/TTP mapping rules, no-inference boundaries, and the current mapped demo proof.
 - Read [reports-and-evidence.md](reports-and-evidence.md) for Evidence Center formats, ZIP bundle verification, canonical contract artifacts, and archive layout.
 - Read [demo-readiness.md](demo-readiness.md) for the Project -> Import -> Findings -> Finding Detail -> TTP Context -> Waivers -> Evidence Center demo flow.
+- Use [workbench-offline-demo.md](workbench-offline-demo.md) for the
+  reproducible locked-provider demo runbook.
 - Use [support_matrix.md](support_matrix.md) and [contracts.md](contracts.md) for stable consumer-facing surfaces.
 - Use [architecture/index.md](architecture/index.md), [architecture/core-workbench-schema.md](architecture/core-workbench-schema.md), and [architecture/analysis-run-provider-schema.md](architecture/analysis-run-provider-schema.md) for architecture and data-model details.
 - Use [asset-context-csv.md](asset-context-csv.md) for the local asset-context CSV schema, match modes, precedence, and re-score semantics.
 - Use [playbooks.md](playbooks.md) when you want the shortest role-oriented path for CI scans, SBOM triage, or infrastructure scan triage.
 - Use [integrations/reporting_and_ci.md](integrations/reporting_and_ci.md) for SARIF, HTML, and local workflow guidance.
 - Use [workbench-threat-model.md](workbench-threat-model.md) for Workbench security boundaries, residual risk, and release readiness checks.
-- Use [workbench-offline-demo.md](workbench-offline-demo.md) only when you need
-  the older locked-provider demo runbook.
 - Use [submission/evidence-sheet.md](submission/evidence-sheet.md) for the
   final claim-to-evidence map.
 - Use [user_documentation.md#known-limitations](user_documentation.md#known-limitations) for the consolidated external-user limitations list.

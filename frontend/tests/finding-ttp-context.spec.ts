@@ -5,7 +5,7 @@ import {
   localApiHeaders,
   openWorkbench,
 } from "./workbench-runtime-helpers"
-import { validCveList } from "./workbench-e2e-helpers"
+import { validCveList, waitForRunSucceeded } from "./workbench-e2e-helpers"
 
 test("workbench finding detail renders ATT&CK tab", async ({ page }) => {
   test.setTimeout(60_000)
@@ -41,6 +41,11 @@ test("workbench finding detail renders ATT&CK tab", async ({ page }) => {
     },
   )
   expect(importResponse.ok()).toBeTruthy()
+  const importedRun = (await importResponse.json()) as { id: string }
+  await waitForRunSucceeded(page, importedRun.id, {
+    apiBaseUrl: backendBaseUrl,
+    headers,
+  })
 
   const findingsResponse = await page.request.get(
     `${backendBaseUrl}/api/v1/projects/${project.id}/findings/?sort=cve`,

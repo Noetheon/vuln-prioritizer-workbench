@@ -240,19 +240,19 @@ where configured. Docs/archive-only PRs still get successful frontend and Docker
 workflow contexts, but the expensive browser and Docker compose work is skipped
 after the workflows confirm that only non-runtime paths changed.
 
-The CI frontend gate runs for frontend, API, generated-client, runtime, and CI
-gate changes. It runs lint, build, unit tests, generated-client drift, and
-the full Playwright suite. Docs/archive-only PRs still get an explicit
-successful skip.
+The CI frontend gate runs for frontend, API, generated-client, runtime, Node/npm
+toolchain policy, and CI gate changes. It runs lint, build, unit tests,
+generated-client drift, and the full Playwright suite. Docs/archive-only PRs
+still get an explicit successful skip.
 
 The Docker workflow runs `make docker-demo-smoke` and
 `make docker-production-smoke` for backend, Compose, Docker, dependency,
-runtime script, frontend build-config, and Docker workflow changes. Those
-smokes cover health, local readiness, locked-provider import, findings,
-provider status, Postgres Alembic/schema/repository readiness, same-origin
-production routing, security headers, report download, and path redaction.
-Docs/archive-only PRs still get an explicit successful skip, and failures print
-compose status/logs.
+runtime script, Node/npm toolchain policy, frontend build-config, and Docker
+workflow changes. Those smokes cover health, local readiness, locked-provider
+import, findings, provider status, Postgres Alembic/schema/repository readiness,
+same-origin production routing, security headers, report download, and path
+redaction. Docs/archive-only PRs still get an explicit successful skip, and
+failures print compose status/logs.
 
 Pushes to `main` run the post-merge version of the same CI workflows. Manual
 `workflow_dispatch` remains available for full validation of CI, Docker,
@@ -279,7 +279,7 @@ the PR is marked ready for review.
 Branch protection should treat these release-adjacent contexts as required for
 release or runtime PRs:
 
-- `CI / check (3.12)` for the local-equivalent Python workflow gate.
+- `CI / check (3.13)` for the local-equivalent Python workflow gate.
 - `CI / frontend` for frontend/API/runtime representative browser evidence.
 - `Docker / compose-smoke` for runtime and Compose evidence.
 - CodeQL where repository security policy requires it.

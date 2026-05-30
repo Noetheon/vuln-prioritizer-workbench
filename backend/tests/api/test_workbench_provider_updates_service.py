@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import os
 import time
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from sqlmodel import Session
+from utils.workbench_env import WorkbenchApiEnv
 
-from app.models import ProviderUpdateJobCreate
+from app.models import AnalysisRunStatus, ProviderUpdateJobCreate
 from app.services import provider_update_locking as provider_update_locking_module
 from app.services import provider_update_snapshot as provider_update_snapshot_module
 from app.services.provider_updates import (
@@ -30,6 +33,8 @@ from app.services.provider_updates import (
     _provider_update_lock_is_stale,
     _provider_update_project,
     _redacted_payload,
+    _workflow_status_for_run,
+    create_provider_update_job,
 )
 from vuln_prioritizer.cache import FileCache
 from vuln_prioritizer.models import (
@@ -45,6 +50,51 @@ from vuln_prioritizer.provider_snapshot import generate_provider_snapshot_json
 
 def test_provider_update_source_normalization_deduplicates_valid_sources() -> None:
     assert _normalize_sources([" NVD ", "epss", "nvd", "KEV"]) == ["nvd", "epss", "kev"]
+
+
+def test_provider_update_sync_service_executes_worker_workflow(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    settings = replace(
+        workbench_api_env.client.app.state.workbench_settings,
+        PROVIDER_SNAPSHOT_DIR=str(tmp_path / "snapshots"),
+        PROVIDER_CACHE_DIR=str(tmp_path / "cache"),
+    )
+    with Session(workbench_api_env.engine) as session:
+        run = create_provider_update_job(
+            session,
+            settings=settings,
+            payload=ProviderUpdateJobCreate(
+                sources=["kev"],
+                cve_ids=["CVE-2024-3094"],
+                cache_only=True,
+            ),
+        )
+        session.commit()
+
+        assert run.status == AnalysisRunStatus.COMPLETED
+        assert run.provider_snapshot_id is not None
+        workflow = workbench_api_env.repositories.WorkflowRepository(
+            session
+        ).get_latest_analysis_workflow(
+            analysis_run_id=run.id,
+            kind=workbench_api_env.app_models.WorkflowRunKind.PROVIDER_UPDATE,
+        )
+        assert workflow is not None
+        assert workflow.status == workbench_api_env.app_models.WorkflowRunStatus.SUCCEEDED
+        assert workflow.result_json["provider_snapshot_id"] == str(run.provider_snapshot_id)
+
+
+def test_provider_update_workflow_status_mapping_covers_terminal_states() -> None:
+    assert str(_workflow_status_for_run(AnalysisRunStatus.RUNNING)) == "running"
+    assert str(_workflow_status_for_run(AnalysisRunStatus.FAILED)) == "failed"
+    assert str(_workflow_status_for_run(AnalysisRunStatus.CANCELLED)) == "cancelled"
+    assert str(_workflow_status_for_run(AnalysisRunStatus.COMPLETED_WITH_ERRORS)) == (
+        "completed_with_errors"
+    )
+    assert str(_workflow_status_for_run(AnalysisRunStatus.COMPLETED)) == "succeeded"
+    assert str(_workflow_status_for_run(AnalysisRunStatus.PENDING)) == "pending"
 
 
 @pytest.mark.parametrize(

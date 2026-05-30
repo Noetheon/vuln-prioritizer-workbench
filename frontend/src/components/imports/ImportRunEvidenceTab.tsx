@@ -15,7 +15,7 @@ import { workbenchQueryKeys } from "@/workbench/workbench-query-keys"
 import {
   formatDateTime,
   formatDisplayType,
-  objectRecord,
+  runInputUpload,
   runFileLabel,
 } from "./imports-workbench-model"
 import { CopyableValue } from "./ImportDiagnosticsDrawerParts"
@@ -36,7 +36,7 @@ export function EvidenceTab({
 }) {
   const runId = summary.id
   const queryClient = useQueryClient()
-  const inputUpload = objectRecord(summary.input_upload)
+  const inputUpload = runInputUpload(summary)
   const reportsQuery = useQuery({
     enabled: Boolean(runId),
     queryFn: ({ signal }) => ReportsService.readRunReports({ run_id: runId }, { signal }),

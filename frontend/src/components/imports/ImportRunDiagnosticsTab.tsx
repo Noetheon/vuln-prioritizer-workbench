@@ -9,7 +9,8 @@ import {
   failedRunCause,
   formatDisplayType,
   jsonPreview,
-  objectRecord,
+  runInputUpload,
+  runProviderSnapshotFile,
   runFileLabel,
 } from "./imports-workbench-model"
 import {
@@ -35,7 +36,7 @@ export function DiagnosticsTab({
   summary: ImportRunSummary
 }) {
   const parseErrors = summary.parse_errors ?? []
-  const inputUpload = objectRecord(summary.input_upload)
+  const inputUpload = runInputUpload(summary)
   const warnings = summary.warnings ?? []
   const rawJson = jsonPreview({ run, summary })
   return (
@@ -111,7 +112,7 @@ export function DiagnosticsTab({
               {
                 label: "Provider data",
                 value:
-                  summary.provider_snapshot_file ??
+                  runProviderSnapshotFile(summary) ??
                   stringFromRecord(inputUpload, "provider_snapshot_file") ??
                   "Current provider data",
               },

@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/tooltip"
 import { StatusLozenge } from "@/components/vpw"
 import { reportFormatLabel } from "@/lib/report-format"
+import { workflowStageLabel, workflowStatusLabel } from "@/workbench/workflow-model"
 
 export function ReportArtifactCell({ report }: { report: ReportPublic }) {
   return (
@@ -17,7 +18,7 @@ export function ReportArtifactCell({ report }: { report: ReportPublic }) {
         </span>
       </div>
       <p className="mt-1 text-xs text-[var(--vpw-text-secondary)]">
-        {reportFormatLabel(report.format)}
+        {reportFormatLabel(report.format)} · {workflowStageLabel(report.workflow)}
       </p>
     </div>
   )
@@ -34,22 +35,28 @@ export function ReportStatusCell({
   verificationInProgress: boolean
   verificationOk: boolean
 }) {
-  const status = verificationInProgress
-    ? "in_review"
-    : verificationOk
-      ? "succeeded"
-      : verificationFailed
-        ? "failed"
-        : "succeeded"
-  const label = verificationInProgress
-    ? "Verifying"
-    : verificationOk
-      ? "Verified"
-      : verificationFailed
-        ? "Verify failed"
-        : report.format === "zip"
-          ? "Bundle available"
-          : "Generated"
+  let status = "succeeded"
+  let label =
+    report.format === "zip" ? "Bundle available" : "Generated"
+
+  if (verificationInProgress) {
+    status = "in_review"
+    label = "Verifying"
+  } else if (report.workflow?.status === "failed") {
+    status = "failed"
+    label = "Generation failed"
+  } else if (
+    report.workflow?.status === "running" ||
+    report.workflow?.status === "pending"
+  ) {
+    status = "in_review"
+    label = workflowStatusLabel(report.workflow)
+  } else if (verificationOk) {
+    label = "Verified"
+  } else if (verificationFailed) {
+    status = "failed"
+    label = "Verify failed"
+  }
 
   return <StatusLozenge density="compact" label={label} status={status} />
 }

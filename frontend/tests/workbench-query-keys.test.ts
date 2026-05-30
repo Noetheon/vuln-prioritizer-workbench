@@ -147,6 +147,7 @@ test("project-scoped invalidation covers route data that can change by project",
     workbenchQueryKeys.assetFindingsRoot("project-1"),
     workbenchQueryKeys.reportsRoot(),
     workbenchQueryKeys.demoWorkspace(),
+    workbenchQueryKeys.providerStatus(),
   ])
 })
 

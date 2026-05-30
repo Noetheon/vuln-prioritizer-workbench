@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 
 from utils.hygiene import REPO_ROOT, ROOT
@@ -32,7 +33,7 @@ def test_dependency_audit_requirements_include_dev_gate_tools() -> None:
     assert "--hash=sha256:" in audit_lock
     assert {"mkdocs", "pip-audit", "pytest-cov"}.issubset(pinned_package_names)
     assert "backend/requirements.runtime.lock.txt" in runtime_lock
-    assert "--python 3.12" in runtime_lock
+    assert "--python 3.13" in runtime_lock
     assert "--no-dev" in runtime_lock
     assert "--hash=sha256:" in runtime_lock
     assert {"fastapi", "psycopg", "uvicorn"}.issubset(runtime_pinned_package_names)
@@ -50,6 +51,49 @@ def test_dependency_audit_requirements_include_dev_gate_tools() -> None:
         }
         & runtime_pinned_package_names
     )
+
+
+def test_frontend_npm_engine_policy_is_enforced_for_local_and_ci_commands() -> None:
+    root_package = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))
+    frontend_package = json.loads(
+        (REPO_ROOT / "frontend" / "package.json").read_text(encoding="utf-8")
+    )
+    frontend_readme = (REPO_ROOT / "frontend" / "README.md").read_text(encoding="utf-8")
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+    workflow_sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((REPO_ROOT / ".github" / "workflows").glob("*.yml"))
+    )
+
+    assert (REPO_ROOT / ".nvmrc").read_text(encoding="utf-8").strip() == "22"
+    assert (REPO_ROOT / ".npmrc").read_text(encoding="utf-8").strip() == "engine-strict=true"
+    assert not (REPO_ROOT / "frontend" / ".npmrc").exists()
+    assert root_package["engines"] == {"node": ">=22 <23", "npm": ">=10.9 <11"}
+    assert frontend_package["engines"] == {"node": ">=22 <23", "npm": ">=10.9 <11"}
+    assert "NPM ?= scripts/frontend-npm.sh" in makefile
+    frontend_npm_command = (
+        "FRONTEND_NPM := $(NPM) --prefix frontend --workspaces=false "
+        "--engine-strict=$(FRONTEND_NPM_ENGINE_STRICT)"
+    )
+    assert frontend_npm_command in makefile
+    assert "cd frontend && npm" not in makefile
+    assert all(
+        "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true"
+        in command
+        for command in root_package["scripts"].values()
+        if "frontend" in command and "generate-client" not in command
+    )
+    assert 'node-version: "22"' in workflow_sources
+    assert (
+        "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true"
+        in workflow_sources
+    )
+    assert (
+        "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true"
+        in frontend_readme
+    )
+    assert "cd frontend && npm" not in frontend_readme
+    assert "Bun-compatible" not in frontend_readme
 
 
 def test_sdist_manifest_excludes_partial_test_tree() -> None:

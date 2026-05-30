@@ -297,7 +297,7 @@ def test_imports_workbench_model_helpers_are_split_from_component() -> None:
     assert "export function uploadProgress" in model_source
     assert "import-run-timeline-model" in model_source
     assert "imports-workbench-records" in model_source
-    assert "imports-workbench-records" in timeline_source
+    assert "imports-workbench-model" in timeline_source
     assert "export function importRunTimelineItems" in timeline_source
     assert "export function objectRecord" in records_source
     assert "export function stringValue" in records_source

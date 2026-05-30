@@ -233,6 +233,6 @@
       ]
     }
   },
-  "schema": "analysis-result.v1",
-  "schema_version": "1.0.0"
+  "schema": "analysis-result.v2",
+  "schema_version": "2.0.0"
 }

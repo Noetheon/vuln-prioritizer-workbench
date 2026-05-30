@@ -9,37 +9,34 @@ from app.services.finding_projection import (
 )
 
 
-def test_finding_attack_context_falls_back_to_redacted_explanation_payload() -> None:
-    finding = _finding(
-        explanation_json={
-            "attack_context": {
-                "mapped": True,
-                "source": "curated",
-                "rationale": "Reviewed defensive mapping.",
-                "attack_relevance": "High",
-                "mappings": [
-                    {
-                        "technique": {
-                            "attack_object_id": "T1190",
-                            "name": "Exploit Public-Facing Application",
-                            "tactics": ["Initial Access"],
-                        },
-                        "confidence": 0.35,
-                        "mapping_type": "exploitation",
-                        "references": ["https://attack.mitre.org/techniques/T1190/"],
-                    },
-                    {"mapping_type": "invalid-without-technique"},
-                ],
-                "techniques": [
-                    {"attack_object_id": "T1190", "name": "Duplicate from mapping"},
-                    {"technique_id": "T1059"},
-                ],
-                "low_confidence": True,
-            }
-        }
+def test_finding_attack_context_uses_persisted_context_rows() -> None:
+    finding = _finding()
+    context = app_models.FindingAttackContext(
+        id=uuid.uuid4(),
+        finding_id=finding.id,
+        mapped=True,
+        source="curated",
+        review_status="reviewed",
+        rationale="Reviewed defensive mapping.",
+        defensive_note="Use only for defensive detection planning.",
+        technique_ids_json=["T1190", "T1059"],
+        tactic_ids_json=["Initial Access"],
+        mappings_json=[
+            {
+                "technique": {
+                    "attack_object_id": "T1190",
+                    "name": "Exploit Public-Facing Application",
+                    "tactics": ["Initial Access"],
+                },
+                "confidence": 0.35,
+                "mapping_type": "detection_context",
+                "references": ["https://attack.mitre.org/techniques/T1190/"],
+            },
+            {"mapping_type": "invalid-without-technique"},
+        ],
     )
 
-    context = _finding_attack_context_detail_public(None, finding)
+    context = _finding_attack_context_detail_public(context, finding)
 
     assert context is not None
     assert context.mapped is True
@@ -47,7 +44,7 @@ def test_finding_attack_context_falls_back_to_redacted_explanation_payload() -> 
     assert context.review_status == "reviewed"
     assert context.confidence == "low"
     assert context.low_confidence is True
-    assert context.attack_relevance == "High"
+    assert context.attack_relevance == "Mapped"
     assert context.technique_ids == ["T1190", "T1059"]
     assert context.tactics == ["Initial Access"]
     assert [mapping.technique_id for mapping in context.mappings] == ["T1190"]
@@ -56,8 +53,8 @@ def test_finding_attack_context_falls_back_to_redacted_explanation_payload() -> 
     assert [technique.technique_id for technique in context.techniques] == ["T1190", "T1059"]
 
 
-def test_finding_attack_context_ignores_empty_legacy_payload() -> None:
-    finding = _finding(explanation_json={"attack_context": {"mapped": False, "source": "none"}})
+def test_finding_attack_context_ignores_missing_v2_evidence() -> None:
+    finding = _finding()
 
     assert _finding_attack_context_detail_public(None, finding) is None
 
@@ -172,9 +169,6 @@ def _finding(**overrides: object) -> app_models.Finding:
         "operational_rank": 1,
         "recommended_action": "Patch affected systems.",
         "rationale": "Remote code execution risk.",
-        "explanation_json": {},
-        "data_quality_json": {},
-        "evidence_json": {},
     }
     values.update(overrides)
     return app_models.Finding(**values)

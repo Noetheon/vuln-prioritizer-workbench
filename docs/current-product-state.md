@@ -23,6 +23,8 @@ hosted SaaS product.
 | Layer | Current source of truth | Notes |
 | --- | --- | --- |
 | Backend runtime | `backend/app` | Active FastAPI app, `/api/v1` routes, SQLModel models, repositories, services, and Alembic migrations. |
+| Worker runtime | `backend/app/workers` | Separate database-backed worker process for queued durable imports, provider refreshes, retries, cancellation, and report generation. |
+| Decision/Evidence Kernel | `backend/app/services/decision_kernel.py`, `backend/app/contracts/decision_evidence.py`, `analysis_evidence`, `finding_decision_evidence` | Kernel-first typed v2 source of truth for bounded run evidence, per-finding decisions, provider facts, governance signals, priority explanations, diagnostics, and report projection. |
 | Frontend runtime | `frontend` | React, Vite, TypeScript, TanStack Query, local route adapter, Playwright tests, and Workbench UI. |
 | Generated client | `frontend/src/client/**` | Generated from backend OpenAPI. Do not edit generated files manually. |
 | Frontend integration wrapper | `frontend/src/api-client.ts` | Handwritten wrapper over generated client code. Normal app code should use this boundary. |
@@ -34,9 +36,12 @@ hosted SaaS product.
 
 - Workbench UI: Dashboard, Projects, Imports, Findings, Finding Detail, TTP
   Context, Waivers, Assets, Providers, Reports, Evidence Center, and Settings.
-- API: versioned FastAPI routes under `/api/v1`.
+- API: versioned FastAPI routes under `/api/v1`, including durable workflow
+  status/events, cancel/retry, queued report jobs, and WebSocket streaming for
+  imports, provider refreshes, and report generation.
 - Docker Compose: local self-hosted Workbench quickstart and production-like
-  smoke topology.
+  smoke topology with a backend, frontend, database, and durable workflow
+  worker.
 
 ## Canonical Docs
 
@@ -51,6 +56,7 @@ hosted SaaS product.
 | Scoring rules | [Scoring Methodology](scoring-methodology.md) |
 | ATT&CK/TTP provenance | [ATT&CK/TTP Methodology](attack-ttp-methodology.md) |
 | Reports and evidence bundles | [Reports and Evidence](reports-and-evidence.md) |
+| Reproducible local demo | [Demo Readiness](demo-readiness.md), [Workbench Offline Demo Runbook](workbench-offline-demo.md) |
 | Security boundaries | [Workbench Threat Model](workbench-threat-model.md) |
 | Deployment caveats | [Local/Private Workbench Deployment](workbench-public-deployment.md) |
 | Local readiness posture | [Dependency and Package Policy](dependency-and-package-policy.md), [Local/Private Workbench Deployment](workbench-public-deployment.md) |
@@ -70,13 +76,15 @@ archive artifacts, or external primary sources own the major documentation
 claims. A passing docs build is necessary, but it is not sufficient proof that a
 provider, release, deployment, or archived-evidence statement is current.
 
-The last full documentation hygiene pass recorded in this checkout is
-2026-05-25. It covered the Public + Root documentation scope, verified MkDocs
-navigation coverage, checked import and report format claims against code, and
-rechecked provider/version wording against NVD, FIRST EPSS, CISA KEV, the
-official KEV mirror, and MITRE ATT&CK primary sources. Treat that as a
-documentation baseline, not as live-provider uptime proof or public deployment
-certification.
+The latest documentation hygiene pass recorded in this checkout is 2026-05-30.
+It covered the Public + Root documentation scope, verified MkDocs navigation
+coverage, checked the worker-first Workflow v2 quickstarts and the
+kernel-first Decision/Evidence Kernel v2 contracts against code, rechecked
+import/report format claims against active backend and frontend definitions,
+and ran the docs hygiene/build gates. The active evidence baseline is
+`analysis-result.v2.json`; `analysis-result.v1.json` is no longer an active
+contract. The provider/version wording baseline was refreshed against primary
+sources on 2026-05-30. Treat these as documentation baselines, not as live-provider uptime proof or public deployment certification.
 
 The current package maturity classifier is `Development Status :: 4 - Beta`.
 That means the self-hosted Workbench is release-gated for local-first

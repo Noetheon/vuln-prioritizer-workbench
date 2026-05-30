@@ -8,7 +8,7 @@ confidence rubric, and mapping review checklist live in
 surfaces follow the same safety contract.
 
 Version note: MITRE lists ATT&CK v19.1 as the current public website version as
-of the 2026-05-25 documentation hygiene pass. The checked-in Workbench demo
+of the 2026-05-30 documentation hygiene pass. The checked-in Workbench demo
 fixtures referenced by current examples are pinned to ATT&CK 16.1 for
 deterministic local evidence. That pin is not a claim that the demo fixture set
 is current ATT&CK coverage.
@@ -79,7 +79,7 @@ The current Workbench API preserves project, import, finding, report, and eviden
 - `GET /api/v1/projects/{project_id}/findings/` includes per-finding `attack_mapped` and `threat_context_rank` while keeping base priority fields separate.
 - `GET /api/v1/findings/{finding_id}` returns the base finding detail and stored ATT&CK context.
 - `GET /api/v1/projects/{project_id}/attack/summary` returns project-level tactic and technique rollups from persisted finding ATT&CK context.
-- Report creation supports `POST /api/v1/runs/{run_id}/reports`
+- Report creation supports `POST /api/v1/runs/{run_id}/report-jobs`
   with `format=attack-navigator` and `attack_filter` set to `all`,
   `critical-high`, `kev`, or `no-coverage`. The generated artifact downloads
   through the same checksum-validated report download endpoint as other report

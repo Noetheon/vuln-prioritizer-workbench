@@ -3,7 +3,7 @@ MUTMUT ?= $(shell command -v mutmut 2>/dev/null || $(PYTHON) -c 'import os, shut
 BACKEND_DIR := backend
 BACKEND_SRC := $(BACKEND_DIR)/src
 BACKEND_TESTS := $(BACKEND_DIR)/tests
-MUTATION_PATTERNS := "app.services.import_background.x__append_job_status*" "app.services.report_sarif_validation.x_validate_sarif_file*" "vuln_prioritizer.services.analysis_quality.x__finding_data_quality_confidence*" "vuln_prioritizer.services.analysis_snapshot.x__provider_snapshot_hash*" "vuln_prioritizer.services.analysis_snapshot.x__provider_snapshot_metadata_path*" "vuln_prioritizer.services.analysis_quality.x_attach_provider_data_quality_flags*"
+MUTATION_PATTERNS := "app.services.decision_evidence_builder.x_build_run_diagnostics*" "app.services.report_sarif_validation.x_validate_sarif_file*" "vuln_prioritizer.services.analysis_quality.x__finding_data_quality_confidence*" "vuln_prioritizer.services.analysis_snapshot.x__provider_snapshot_hash*" "vuln_prioritizer.services.analysis_snapshot.x__provider_snapshot_metadata_path*" "vuln_prioritizer.services.analysis_quality.x_attach_provider_data_quality_flags*"
 PYTHON_AUDIT_LOCK := $(BACKEND_DIR)/requirements.lock.txt
 PYTHON_RUNTIME_LOCK := $(BACKEND_DIR)/requirements.runtime.lock.txt
 COMPOSE := docker compose -f compose.yml -f compose.override.yml
@@ -16,6 +16,9 @@ PRODUCTION_SMOKE_SECRET_KEY ?= production-smoke-secret-key-change-in-real-deploy
 PRODUCTION_SMOKE_POSTGRES_PASSWORD ?= production-smoke-postgres-password
 PRODUCTION_SMOKE_FRONTEND_PORT ?= 5180
 ACTIONLINT_IMAGE ?= rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+NPM ?= scripts/frontend-npm.sh
+FRONTEND_NPM_ENGINE_STRICT ?= true
+FRONTEND_NPM := $(NPM) --prefix frontend --workspaces=false --engine-strict=$(FRONTEND_NPM_ENGINE_STRICT)
 
 .PHONY: install test lint format fix typecheck check critical-coverage-check property-check mutation-check quality-10-check local-workbench-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-design-audit frontend-audit frontend-check python-lock-check docker-base-image-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
 
@@ -67,34 +70,34 @@ performance-smoke:
 	VPW_PERFORMANCE_SMOKE=1 VPW_PERFORMANCE_SMOKE_OUTPUT=build/vpw-072-performance-smoke.json $(PYTHON) -m pytest -q $(BACKEND_TESTS)/performance/test_vpw072_performance_smoke.py --no-cov
 
 playwright-install: frontend-install
-	cd frontend && npm --workspaces=false exec -- playwright install --with-deps chromium firefox webkit
+	$(FRONTEND_NPM) exec -- playwright install --with-deps chromium firefox webkit
 
 playwright-check: playwright-install
-	cd frontend && npm run test
+	$(FRONTEND_NPM) run test
 
 frontend-install:
-	cd frontend && npm ci --workspaces=false
+	$(FRONTEND_NPM) ci
 
 frontend-build:
-	cd frontend && npm run build
+	$(FRONTEND_NPM) run build
 
 frontend-lint:
-	cd frontend && npm run lint
+	$(FRONTEND_NPM) run lint
 
 frontend-test-types:
-	cd frontend && npm run test:types
+	$(FRONTEND_NPM) run test:types
 
 frontend-test-unit:
-	cd frontend && npm run test:unit
+	$(FRONTEND_NPM) run test:unit
 
 frontend-test-unit-coverage:
-	cd frontend && npm run test:unit:coverage
+	$(FRONTEND_NPM) run test:unit:coverage
 
 frontend-generate-client:
 	bash scripts/generate-client.sh
 
 frontend-design-audit:
-	cd frontend && npm run test:design-audit
+	$(FRONTEND_NPM) run test:design-audit
 
 api-client-drift-check:
 	before=$$(mktemp); after=$$(mktemp); \
@@ -110,7 +113,7 @@ api-client-drift-check:
 	rm -f "$$before" "$$after"
 
 frontend-audit:
-	cd frontend && npm --workspaces=false audit --audit-level=high
+	$(FRONTEND_NPM) audit --audit-level=high
 
 frontend-check: frontend-install frontend-lint frontend-build frontend-test-types frontend-test-unit-coverage api-client-drift-check
 
@@ -174,7 +177,7 @@ docker-demo-smoke:
 	done; \
 	on_exit() { status=$$?; if [ "$$status" != "0" ]; then $(COMPOSE) ps || true; $(COMPOSE) logs --no-color || true; fi; $(COMPOSE) down -v --remove-orphans; exit "$$status"; }; \
 	trap on_exit EXIT; \
-	$(COMPOSE) up -d --build backend frontend; \
+	$(COMPOSE) up -d --build backend frontend worker; \
 	backend_ready=0; \
 		for attempt in $$(seq 1 30); do \
 			if $(PYTHON) -c "import json, sys, urllib.request; port=sys.argv[1]; data=json.load(urllib.request.urlopen(f'http://127.0.0.1:{port}/api/v1/utils/health-check/', timeout=2)); assert data is True; print(data)" "$$DOCKER_DEMO_BACKEND_PORT" 2>/dev/null; then \
@@ -226,7 +229,7 @@ docker-production-smoke:
 	$(PYTHON) -c "import socket, sys; port=int(sys.argv[1]); sock=socket.socket(); sock.settimeout(0.2); in_use=sock.connect_ex(('127.0.0.1', port)) == 0; sock.close(); sys.exit(f'Port {port} is already in use before docker-production-smoke.' if in_use else 0)" "$$PRODUCTION_SMOKE_FRONTEND_PORT"; \
 	on_exit() { status=$$?; if [ "$$status" != "0" ]; then $(PRODUCTION_SMOKE_COMPOSE) ps || true; $(PRODUCTION_SMOKE_COMPOSE) logs --no-color || true; fi; $(PRODUCTION_SMOKE_COMPOSE) down -v --remove-orphans; exit "$$status"; }; \
 	trap on_exit EXIT; \
-	$(PRODUCTION_SMOKE_COMPOSE) up -d --build backend frontend; \
+	$(PRODUCTION_SMOKE_COMPOSE) up -d --build backend frontend worker; \
 	frontend_ready=0; \
 	for attempt in $$(seq 1 45); do \
 		if $(PYTHON) -c "import sys, urllib.request; port=sys.argv[1]; req=urllib.request.Request(f'http://127.0.0.1:{port}/', headers={'Host': 'workbench.example.test'}); print(urllib.request.urlopen(req, timeout=2).status)" "$$PRODUCTION_SMOKE_FRONTEND_PORT" 2>/dev/null; then \
@@ -248,7 +251,7 @@ dependency-audit: python-lock-check docker-base-image-check
 		echo "Install pip-audit first: python3 -m pip install pip-audit" >&2; \
 		exit 1; \
 	}
-	$(PYTHON) -m pip_audit --requirement $(PYTHON_AUDIT_LOCK)
+	$(PYTHON) -m pip_audit --requirement $(PYTHON_AUDIT_LOCK) --require-hashes --disable-pip
 	$(MAKE) frontend-audit
 
 clean-local:

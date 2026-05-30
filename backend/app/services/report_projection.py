@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
+from app.contracts.decision_evidence import FindingDecisionEvidenceV2
 from app.models import Finding, FindingOccurrence, ProviderSnapshot
 from app.services.report_formatting import dict_value as _dict_value
 from app.services.report_formatting import iso_datetime as _iso_datetime
@@ -100,26 +101,35 @@ def _finding_payload(
     finding: Finding,
     *,
     occurrences: list[FindingOccurrence],
+    evidence: FindingDecisionEvidenceV2 | None = None,
 ) -> MarkdownReportFinding:
-    decision_guidance = _decision_guidance(finding)
-    explanation = _dict_value(finding.explanation_json)
+    decision_guidance = _decision_guidance(finding, evidence=evidence)
+    explanation = _finding_explanation(finding, evidence=evidence)
+    recommended_action = (
+        evidence.recommended_action if evidence is not None else finding.recommended_action
+    )
+    rationale = evidence.rationale if evidence is not None else finding.rationale
     base_decision_statement = _decision_text(
         decision_guidance,
         "decision_statement",
-        fallback=finding.recommended_action,
+        fallback=recommended_action,
     )
     return MarkdownReportFinding(
-        id=str(finding.id),
-        dedup_key=finding.dedup_key,
-        operational_rank=finding.operational_rank,
-        cve_id=finding.cve_id,
-        priority=str(finding.priority),
-        status=str(finding.status),
-        priority_rank=finding.priority_rank,
-        risk_score=finding.risk_score,
-        epss=finding.epss,
-        cvss_base_score=finding.cvss_base_score,
-        in_kev=finding.in_kev,
+        id=evidence.finding_id if evidence is not None else str(finding.id),
+        dedup_key=evidence.dedup_key if evidence is not None else finding.dedup_key,
+        operational_rank=evidence.operational_rank
+        if evidence is not None
+        else finding.operational_rank,
+        cve_id=evidence.cve_id if evidence is not None else finding.cve_id,
+        priority=evidence.priority if evidence is not None else str(finding.priority),
+        status=evidence.status if evidence is not None else str(finding.status),
+        priority_rank=evidence.priority_rank if evidence is not None else finding.priority_rank,
+        risk_score=evidence.risk_score if evidence is not None else finding.risk_score,
+        epss=evidence.epss if evidence is not None else finding.epss,
+        cvss_base_score=evidence.cvss_base_score
+        if evidence is not None
+        else finding.cvss_base_score,
+        in_kev=evidence.in_kev if evidence is not None else finding.in_kev,
         asset=_asset_label(finding),
         asset_key=finding.asset.asset_key if finding.asset is not None else None,
         owner=finding.asset.owner if finding.asset is not None else None,
@@ -129,18 +139,22 @@ def _finding_payload(
         criticality=str(finding.asset.criticality) if finding.asset is not None else None,
         component=_component_label(finding),
         component_purl=finding.component.purl if finding.component is not None else None,
-        attack_mapped=finding.attack_mapped,
-        suppressed_by_vex=finding.suppressed_by_vex,
-        under_investigation=finding.under_investigation,
-        waived=finding.waived,
+        attack_mapped=evidence.attack_mapped if evidence is not None else finding.attack_mapped,
+        suppressed_by_vex=evidence.suppressed_by_vex
+        if evidence is not None
+        else finding.suppressed_by_vex,
+        under_investigation=evidence.under_investigation
+        if evidence is not None
+        else finding.under_investigation,
+        waived=evidence.waived if evidence is not None else finding.waived,
         vulnerability=_vulnerability_payload(finding),
-        rationale=finding.rationale,
-        recommended_action=finding.recommended_action,
+        rationale=rationale,
+        recommended_action=recommended_action,
         explanation=explanation,
-        data_quality=_dict_value(finding.data_quality_json),
-        evidence=_dict_value(finding.evidence_json),
-        occurrences=tuple(_occurrence_payload(occurrence) for occurrence in occurrences),
-        data_quality_confidence=_data_quality_confidence(finding),
+        data_quality=_finding_data_quality(finding, evidence=evidence),
+        evidence=evidence.to_jsonable() if evidence is not None else {},
+        occurrences=_report_occurrences(evidence=evidence, occurrences=occurrences),
+        data_quality_confidence=_data_quality_confidence(finding, evidence=evidence),
         decision_statement=_governance_decision_statement(
             finding=finding,
             explanation=explanation,
@@ -148,7 +162,7 @@ def _finding_payload(
         ),
         business_impact=_decision_text(decision_guidance, "business_impact"),
         decision_sla=_decision_sla(decision_guidance),
-        data_quality_flags=tuple(_data_quality_flags(finding)),
+        data_quality_flags=tuple(_data_quality_flags(finding, evidence=evidence)),
         first_seen_at=finding.first_seen_at,
         last_seen_at=finding.last_seen_at,
         created_at=finding.created_at,
@@ -286,18 +300,67 @@ def _occurrence_payload(occurrence: FindingOccurrence) -> ReportOccurrence:
     )
 
 
-def _data_quality_confidence(finding: Finding) -> str | None:
-    explanation_json = _dict_value(finding.explanation_json)
-    data_quality_json = _dict_value(finding.data_quality_json)
-    value = explanation_json.get("data_quality_confidence") or data_quality_json.get("confidence")
-    return str(value) if value else None
+def _report_occurrences(
+    *,
+    evidence: FindingDecisionEvidenceV2 | None,
+    occurrences: list[FindingOccurrence],
+) -> tuple[ReportOccurrence, ...]:
+    if evidence is not None and evidence.occurrences:
+        return tuple(
+            ReportOccurrence(
+                id=occurrence.occurrence_id,
+                analysis_run_id=occurrence.analysis_run_id,
+                source=occurrence.source,
+                scanner=occurrence.scanner,
+                raw_reference=occurrence.raw_reference,
+                fix_version=occurrence.fix_version,
+                evidence=occurrence.to_jsonable(),
+            )
+            for occurrence in evidence.occurrences
+        )
+    return tuple(_occurrence_payload(occurrence) for occurrence in occurrences)
 
 
-def _data_quality_flags(finding: Finding) -> list[str]:
-    explanation_json = _dict_value(finding.explanation_json)
-    data_quality_json = _dict_value(finding.data_quality_json)
-    flags = _flag_items(explanation_json.get("data_quality_flags"))
-    flags.extend(_flag_items(data_quality_json.get("flags")))
+def _finding_explanation(
+    finding: Finding,
+    *,
+    evidence: FindingDecisionEvidenceV2 | None,
+) -> dict[str, Any]:
+    _ = finding
+    return evidence.priority_evidence.raw if evidence is not None else {}
+
+
+def _finding_data_quality(
+    finding: Finding,
+    *,
+    evidence: FindingDecisionEvidenceV2 | None,
+) -> dict[str, Any]:
+    _ = finding
+    return evidence.governance.data_quality if evidence is not None else {}
+
+
+def _data_quality_confidence(
+    finding: Finding,
+    *,
+    evidence: FindingDecisionEvidenceV2 | None = None,
+) -> str | None:
+    _ = finding
+    if evidence is not None:
+        return evidence.priority_evidence.data_quality_confidence
+    return None
+
+
+def _data_quality_flags(
+    finding: Finding,
+    *,
+    evidence: FindingDecisionEvidenceV2 | None = None,
+) -> list[str]:
+    if evidence is not None:
+        flags = _flag_items(evidence.priority_evidence.data_quality_flags)
+        flags.extend(_flag_items(evidence.governance.data_quality.get("flags")))
+    else:
+        flags = []
+    _ = finding
     deduped: list[str] = []
     for flag in flags:
         if flag not in deduped:
@@ -305,9 +368,17 @@ def _data_quality_flags(finding: Finding) -> list[str]:
     return deduped
 
 
-def _decision_guidance(finding: Finding) -> dict[str, Any]:
-    explanation_json = _dict_value(finding.explanation_json)
-    return _dict_value(explanation_json.get("decision_guidance"))
+def _decision_guidance(
+    finding: Finding,
+    *,
+    evidence: FindingDecisionEvidenceV2 | None = None,
+) -> dict[str, Any]:
+    _ = finding
+    if evidence is not None:
+        remediation = evidence.remediation.to_jsonable()
+        raw = dict(remediation.pop("raw", {}) or {})
+        return {**remediation, **raw}
+    return {}
 
 
 def _decision_text(

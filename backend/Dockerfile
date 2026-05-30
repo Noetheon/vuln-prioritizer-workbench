@@ -1,4 +1,4 @@
-FROM python:3.12-slim@sha256:ec948fa5f90f4f8907e89f4800cfd2d2e91e391a4bce4a6afa77ba265bc3a2fe AS runtime
+FROM python:3.13-slim@sha256:b04b5d7233d2ad9c379e22ea8927cd1378cd15c60d4ef876c065b25ea8fb3bf3 AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -12,13 +12,11 @@ COPY backend/app ./backend/app
 COPY backend/src ./backend/src
 
 RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --only-upgrade \
-        libc-bin \
-        libc6 \
-        libcap2 \
+    && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && python -m pip install --require-hashes -r backend/requirements.runtime.lock.txt \
     && python -m pip install --no-deps ./backend \
+    && python -m pip uninstall -y pip setuptools wheel \
     && adduser --disabled-password --gecos "" --uid 10001 workbench \
     && mkdir -p \
         /app/data \

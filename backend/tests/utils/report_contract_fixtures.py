@@ -18,7 +18,7 @@ from utils.workbench_env import DEMO_CVE_LOG4SHELL, DEMO_CVE_XZ
 VPW054_DEMO_ARTIFACTS = {
     "markdown": Path("docs/examples/vpw-054-workbench-technical-report.md"),
     "html": Path("docs/examples/vpw-054-workbench-executive-report.html"),
-    "json": Path("docs/examples/vpw-054-workbench-analysis-result.v1.json"),
+    "json": Path("docs/examples/vpw-054-workbench-analysis-result.v2.json"),
 }
 VPW054_HTML_SNAPSHOT = Path("backend/tests/api/snapshots/vpw_054_executive_report.normalized.html")
 VPW068_MARKDOWN_SNAPSHOT = Path("backend/tests/api/snapshots/vpw_068_governance_report.md")

@@ -19,6 +19,10 @@ PYTHON_AUDIT_LOCK = ROOT / "backend" / "requirements.lock.txt"
 PYTHON_RUNTIME_LOCK = ROOT / "backend" / "requirements.runtime.lock.txt"
 PYTHON_LOCK = ROOT / "uv.lock"
 LEDGER = ROOT / "docs" / "public-production-release-evidence-ledger.md"
+WORKFLOW_DIR = ROOT / ".github" / "workflows"
+RUNTIME_PYTHON_VERSION = "3.13"
+SUPPORTED_PYTHON_VERSIONS = ("3.11", "3.12", RUNTIME_PYTHON_VERSION)
+SETUP_PYTHON_MATRIX_EXPRESSION = "${{ matrix.python-version }}"
 RUNTIME_LOCK_FORBIDDEN_PACKAGES = {
     "build",
     "mkdocs",
@@ -101,6 +105,7 @@ def main() -> int:
     """Run release-evidence hygiene checks and print a compact status line."""
     failures: list[str] = []
     failures.extend(_check_python_audit_input())
+    failures.extend(_check_workflow_python_versions())
     failures.extend(_check_package_metadata_maturity())
     failures.extend(_check_stale_wording())
     failures.extend(_check_ledger())
@@ -150,6 +155,62 @@ def _check_python_audit_input() -> list[str]:
     failures.extend(_check_python_audit_lock(audit_requirements))
     failures.extend(_check_python_runtime_lock(runtime_requirements, dev_requirements))
     return failures
+
+
+def _check_workflow_python_versions() -> list[str]:
+    failures: list[str] = []
+    for workflow in sorted(WORKFLOW_DIR.glob("*.y*ml")):
+        document = yaml.safe_load(workflow.read_text(encoding="utf-8")) or {}
+        jobs = document.get("jobs", {})
+        if not isinstance(jobs, dict):
+            continue
+        for job_name, job in sorted(jobs.items()):
+            if not isinstance(job, dict):
+                continue
+            matrix_versions = _workflow_python_matrix_versions(job)
+            steps = job.get("steps", [])
+            if not isinstance(steps, list):
+                continue
+            for index, step in enumerate(steps, 1):
+                if not isinstance(step, dict):
+                    continue
+                uses = step.get("uses")
+                if not isinstance(uses, str) or not uses.startswith("actions/setup-python@"):
+                    continue
+                with_config = step.get("with")
+                python_version = (
+                    with_config.get("python-version") if isinstance(with_config, dict) else None
+                )
+                location = f"{workflow.relative_to(ROOT)}:jobs.{job_name}.steps[{index}]"
+                if python_version == SETUP_PYTHON_MATRIX_EXPRESSION:
+                    if matrix_versions != SUPPORTED_PYTHON_VERSIONS:
+                        failures.append(
+                            f"{location} must use the supported Python matrix "
+                            f"{list(SUPPORTED_PYTHON_VERSIONS)!r}."
+                        )
+                    continue
+                if python_version != RUNTIME_PYTHON_VERSION:
+                    failures.append(
+                        f"{location} must use Python {RUNTIME_PYTHON_VERSION!r} or "
+                        f"{SETUP_PYTHON_MATRIX_EXPRESSION!r} for the supported-version matrix."
+                    )
+
+    if not failures:
+        print("workflow Python version policy: OK")
+    return failures
+
+
+def _workflow_python_matrix_versions(job: dict[str, object]) -> tuple[str, ...]:
+    strategy = job.get("strategy")
+    if not isinstance(strategy, dict):
+        return ()
+    matrix = strategy.get("matrix")
+    if not isinstance(matrix, dict):
+        return ()
+    versions = matrix.get("python-version")
+    if not isinstance(versions, list) or not all(isinstance(version, str) for version in versions):
+        return ()
+    return tuple(versions)
 
 
 def _check_package_metadata_maturity() -> list[str]:
@@ -266,7 +327,7 @@ def _check_python_runtime_lock(
     for expected_fragment in (
         "--package vuln-prioritizer",
         "--no-dev",
-        "--python 3.12",
+        "--python 3.13",
         "backend/requirements.runtime.lock.txt",
     ):
         if expected_fragment not in runtime_lock_text:

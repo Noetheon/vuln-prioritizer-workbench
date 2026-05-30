@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import Settings
-from app.models import Report, ReportPublic
+from app.models import Report, ReportPublic, WorkflowRunPublic
 from vuln_prioritizer.security_redaction import redact_value
 
 
@@ -19,7 +19,12 @@ class ReportArtifactChecksumError(RuntimeError):
     """Raised when a report artifact no longer matches stored metadata."""
 
 
-def build_report_public(report: Report, settings: Settings) -> ReportPublic:
+def build_report_public(
+    report: Report,
+    settings: Settings,
+    *,
+    workflow: WorkflowRunPublic | None = None,
+) -> ReportPublic:
     """Build the public report DTO without exposing the server path."""
     return ReportPublic(
         id=report.id,
@@ -34,6 +39,7 @@ def build_report_public(report: Report, settings: Settings) -> ReportPublic:
         metadata_json=_public_metadata(report.metadata_json or {}),
         created_at=report.created_at,
         download_url=f"{settings.API_V1_STR}/reports/{report.id}/download",
+        workflow=workflow,
     )
 
 

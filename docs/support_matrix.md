@@ -10,7 +10,8 @@ SQLite state commands are no longer supported product paths.
 | --- | --- | --- |
 | React Workbench | active | Project selection, imports, findings, finding detail, assets, waivers, providers, reports, evidence center, and settings. |
 | FastAPI `/api/v1` | active | Local single-user API used by the Workbench. Routes do not require login, sessions, RBAC, API tokens, or CSRF headers. |
-| Docker Compose | active | Local self-hosted runtime for the backend, frontend, PostgreSQL, uploads, reports, cache, and provider snapshots. |
+| Docker Compose | active | Local self-hosted runtime for the backend, durable workflow worker, frontend, PostgreSQL, uploads, reports, cache, and provider snapshots. |
+| Decision/Evidence Kernel v2 | active | Kernel-first `DecisionRunResult` production backed by typed `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, and `RunDiagnosticsV2` contracts in `analysis_evidence` and `finding_decision_evidence`. |
 | Domain package | active | Parser, provider, scoring, enrichment, ATT&CK, SARIF, Markdown, HTML, and evidence helpers used by the Workbench services. |
 | Legacy CLI entrypoint | removed | No console script, Typer command modules, GitHub composite Action, or CLI smoke contract remains active. |
 
@@ -51,7 +52,7 @@ boundaries, but Workbench uploads must use one of the explicit values below.
 | --- | --- | --- |
 | Technical Markdown | `markdown` | Human-readable finding and decision summary. |
 | Executive HTML | `html` | Static HTML report for local review. |
-| Analysis JSON | `json` | Stable `analysis-result.v1.json` Workbench export. |
+| Analysis JSON | `json` | Stable `analysis-result.v2.json` Workbench export. |
 | Findings CSV | `csv` | Spreadsheet-safe findings export with stable headers. |
 | SARIF | `sarif` | SARIF 2.1.0 results with stable CVE-addressable rules and fingerprints. |
 | Evidence ZIP | `zip` | Deterministic evidence bundle with `manifest.json`, analysis JSON, reports, provider snapshot, optional ATT&CK layer, and optional governance artifacts. |
@@ -61,11 +62,14 @@ boundaries, but Workbench uploads must use one of the explicit values below.
 
 - Prefer the Workbench UI for local review and repeated triage.
 - Prefer `POST /api/v1/projects/{project_id}/imports` for automation that needs
-  to feed the local Workbench directly.
-- Prefer `POST /api/v1/runs/{run_id}/reports` for automation that needs report
-  artifacts after a completed run.
+  to feed the local Workbench directly. The response contains the queued run and
+  embedded workflow; the durable worker performs parsing and persistence.
+- Prefer `POST /api/v1/runs/{run_id}/report-jobs` for automation that needs
+  report artifacts after a completed run. Poll or stream the returned workflow
+  until it reaches a terminal state before downloading artifacts.
 - Keep input files local and explicit. The Workbench prioritizes already-known
   CVEs from supplied evidence; it does not scan systems.
-- This matrix was rechecked against backend and frontend format definitions on
-  2026-05-25. Re-run the docs hygiene tests when adding or removing an import
-  type or report format.
+- This matrix was rechecked against backend/frontend format definitions and the
+  Decision/Evidence Kernel v2 contract on 2026-05-30. Re-run the docs hygiene
+  tests when adding or removing an import type, report format, or evidence
+  field.

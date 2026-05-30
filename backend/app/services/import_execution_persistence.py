@@ -8,6 +8,7 @@ from typing import Any
 
 from sqlmodel import Session
 
+from app.contracts.decision_evidence import FindingDecisionEvidenceV2
 from app.domain.import_asset_context import (
     asset_criticality_from_evidence as _asset_criticality,
 )
@@ -19,6 +20,10 @@ from app.domain.import_asset_context import string_evidence as _string_evidence
 from app.importers.contracts import NormalizedOccurrence
 from app.repositories import AssetRepository, FindingRepository, RunRepository
 from app.services.analysis import WorkbenchAnalysisResult
+from app.services.decision_evidence_builder import (
+    build_finding_decision_evidence,
+    build_occurrence_evidence,
+)
 from app.services.import_execution_dedup import _dedup_key_parts, _finding_dedup_key
 from app.services.import_execution_persistence_attack import (
     _attack_context_defensive_note,
@@ -82,6 +87,7 @@ def _persist_workbench_occurrences(
     run_id: uuid.UUID,
     occurrences: list[NormalizedOccurrence],
     analysis_result: WorkbenchAnalysisResult,
+    analysis_evidence_id: uuid.UUID | None = None,
 ) -> dict[str, Any]:
     bulk_summary = _persist_workbench_occurrences_bulk_insert(
         session=session,
@@ -89,6 +95,7 @@ def _persist_workbench_occurrences(
         run_id=run_id,
         occurrences=occurrences,
         analysis_result=analysis_result,
+        analysis_evidence_id=analysis_evidence_id,
     )
     if bulk_summary is not None:
         return bulk_summary
@@ -97,6 +104,7 @@ def _persist_workbench_occurrences(
     finding_repo = FindingRepository(session)
     run_repo = RunRepository(session)
     decisions: list[dict[str, Any]] = []
+    finding_evidence_by_id: dict[uuid.UUID, FindingDecisionEvidenceV2] = {}
     created_count = 0
     reused_count = 0
     touched_finding_ids: set[str] = set()
@@ -189,6 +197,22 @@ def _persist_workbench_occurrences(
                 vulnerabilities_by_cve[occurrence.cve] = vulnerability
             existing_finding = findings_by_dedup_key.get(dedup_key)
             action = "reused" if existing_finding is not None else "created"
+            evidence_payload = {
+                "import": dict(occurrence.raw_evidence),
+                "analysis": _analysis_evidence_for_occurrence(
+                    analysis_result,
+                    decision,
+                    occurrence,
+                    priority_state=decision_payload.get("priority_state"),
+                    occurrence_scope=occurrence_scope,
+                ),
+                "dedup": {
+                    "key": dedup_key,
+                    "key_version": "vpw019-v1",
+                    "action": action,
+                    "parts": dedup_parts,
+                },
+            }
             finding = finding_repo.create_or_update_finding(
                 project_id=project_id,
                 vulnerability_id=vulnerability.id,
@@ -210,24 +234,6 @@ def _persist_workbench_occurrences(
                 waived=decision.waived,
                 recommended_action=decision.recommended_action,
                 rationale=decision.rationale,
-                explanation_json=decision_payload,
-                data_quality_json=data_quality_payload,
-                evidence_json={
-                    "import": dict(occurrence.raw_evidence),
-                    "analysis": _analysis_evidence_for_occurrence(
-                        analysis_result,
-                        decision,
-                        occurrence,
-                        priority_state=decision_payload.get("priority_state"),
-                        occurrence_scope=occurrence_scope,
-                    ),
-                    "dedup": {
-                        "key": dedup_key,
-                        "key_version": "vpw019-v1",
-                        "action": action,
-                        "parts": dedup_parts,
-                    },
-                },
                 existing_finding=existing_finding,
                 lookup_existing=False,
                 flush=False,
@@ -251,7 +257,7 @@ def _persist_workbench_occurrences(
             else:
                 reused_count += 1
             touched_finding_ids.add(str(finding.id))
-            run_repo.add_finding_occurrence(
+            occurrence_row = run_repo.add_finding_occurrence(
                 finding_id=finding.id,
                 analysis_run_id=run_id,
                 source=occurrence.source,
@@ -264,6 +270,51 @@ def _persist_workbench_occurrences(
                 },
                 flush=False,
             )
+            occurrence_evidence = build_occurrence_evidence(
+                analysis_run_id=run_id,
+                occurrence_id=occurrence_row.id,
+                source=occurrence.source,
+                scanner=None,
+                raw_reference=_string_evidence(occurrence.raw_evidence, "source_record_id"),
+                fix_version=occurrence.fix_version,
+                raw_evidence={
+                    **dict(occurrence.raw_evidence),
+                    "component": occurrence.component,
+                    "version": occurrence.version,
+                    "asset_ref": occurrence.asset_ref,
+                },
+                dedup=evidence_payload["dedup"],
+            )
+            existing_evidence = finding_evidence_by_id.get(finding.id)
+            if existing_evidence is None:
+                finding_evidence_by_id[finding.id] = build_finding_decision_evidence(
+                    project_id=project_id,
+                    run_id=run_id,
+                    finding_id=finding.id,
+                    cve_id=occurrence.cve,
+                    dedup_key=dedup_key,
+                    status=finding.status.value,
+                    priority=finding.priority.value,
+                    priority_rank=finding.priority_rank,
+                    risk_score=finding.risk_score,
+                    operational_rank=finding.operational_rank,
+                    in_kev=finding.in_kev,
+                    epss=finding.epss,
+                    cvss_base_score=finding.cvss_base_score,
+                    attack_mapped=finding.attack_mapped,
+                    suppressed_by_vex=finding.suppressed_by_vex,
+                    under_investigation=finding.under_investigation,
+                    waived=finding.waived,
+                    rationale=finding.rationale,
+                    recommended_action=finding.recommended_action,
+                    decision_payload=decision_payload,
+                    data_quality_payload=data_quality_payload,
+                    provider_payload=_decision_provider_json(decision),
+                    occurrence_scope=occurrence_scope,
+                    occurrence_evidence=[occurrence_evidence],
+                )
+            else:
+                existing_evidence.occurrences.append(occurrence_evidence)
             if len(decisions) < DEDUP_DECISION_SAMPLE_LIMIT:
                 decisions.append(
                     {
@@ -297,4 +348,5 @@ def _persist_workbench_occurrences(
             "decision_sample_limit": DEDUP_DECISION_SAMPLE_LIMIT,
             "omitted_decisions": max(0, len(occurrences) - len(decisions)),
         },
+        "finding_evidence": list(finding_evidence_by_id.values()),
     }

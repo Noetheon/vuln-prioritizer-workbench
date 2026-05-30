@@ -22,7 +22,7 @@ DEMO_PROJECT_NAME = "Online Shop Demo Workspace"
 EXPECTED_REPORT_FILENAMES = {
     "technical-report.md",
     "executive-report.html",
-    "analysis-result.v1.json",
+    "analysis-result.v2.json",
     "findings.csv",
     "attack-navigator-layer.json",
     "results.sarif",
@@ -107,18 +107,23 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
     assert payload["asset_count"] == 21
     assert payload["waiver_count"] == 4
     assert payload["report_count"] == 7
-    assert payload["latest_run"]["workflow_schema_version"] == "run-workflow-summary.v1"
+    assert "result" not in payload["latest_run"]
+    assert payload["latest_run"]["evidence"]["schema_version"] == "analysis-evidence.v2"
+    assert payload["latest_run"]["workflow"]["kind"] == "import"
+    assert payload["latest_run"]["workflow"]["status"] == "succeeded"
     assert "summary_json" not in payload["latest_run"]
     assert "error_json" not in payload["latest_run"]
     assert {report["filename"] for report in payload["reports"]} >= {
         "technical-report.md",
         "executive-report.html",
-        "analysis-result.v1.json",
+        "analysis-result.v2.json",
         "findings.csv",
         "attack-navigator-layer.json",
         "results.sarif",
         "evidence-bundle.zip",
     }
+    assert all(report["workflow"]["kind"] == "report_generation" for report in payload["reports"])
+    assert all(report["workflow"]["status"] == "succeeded" for report in payload["reports"])
 
     projects_response = workbench_api_env.client.get("/api/v1/projects/", headers=headers)
     findings_response = workbench_api_env.client.get(
@@ -177,6 +182,10 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
     assert waiver_debt["accepted_finding_count"] == 4
     assert reports_response.status_code == 200
     assert reports_response.json()["count"] == 7
+    assert all(
+        report["workflow"]["latest_event"]["event_type"] == "succeeded"
+        for report in reports_response.json()["data"]
+    )
     assert dashboard_response.status_code == 200
     assert attack_response.status_code == 200
     _assert_demo_totals_are_coherent(
@@ -539,9 +548,9 @@ def _assert_demo_report_downloads(
             assert "CVE-2021-44228 / Log4Shell" in download.text
             assert "CVE-2022-22965 / Spring4Shell" in download.text
             assert "Decision Ready Recommendations" in download.text
-        elif filename == "analysis-result.v1.json":
+        elif filename == "analysis-result.v2.json":
             payload = download.json()
-            assert payload["schema"] == "analysis-result.v1"
+            assert payload["schema"] == "analysis-result.v2"
             assert payload["project"]["name"] == DEMO_PROJECT_NAME
         elif filename == "findings.csv":
             assert "cve_id" in download.text

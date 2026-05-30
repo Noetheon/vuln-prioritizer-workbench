@@ -6,6 +6,9 @@ import uuid
 from collections.abc import Sequence
 from typing import Any
 
+from sqlalchemy.orm import object_session
+from sqlmodel import Session
+
 from app.models import (
     AnalysisRun,
     AnalysisRunsPublic,
@@ -21,6 +24,7 @@ from app.models import (
     Waiver,
 )
 from app.models.base import get_datetime_utc
+from app.repositories.evidence import EvidenceRepository
 from app.repositories.findings import FindingRepository
 from app.repositories.runs import RunRepository
 from app.repositories.waivers import WaiverRepository
@@ -33,7 +37,6 @@ from app.services.governance import (
     build_project_governance_rollups_payload_from_repositories,
 )
 from app.services.run_workflow_projection import analysis_run_public
-from vuln_prioritizer.security_redaction import redact_value
 
 
 def build_project_dashboard_payload(
@@ -119,7 +122,7 @@ def build_project_dashboard_payload_from_repositories(
             limit=rollup_limit,
         ),
         runs=AnalysisRunsPublic(
-            data=[analysis_run_public(run) for run in runs],
+            data=[analysis_run_public(run, session=finding_repository.session) for run in runs],
             count=run_count,
         ),
         findings=ProjectDashboardFindingsPublic(
@@ -175,11 +178,15 @@ def dashboard_signal_counts_from_counts(counts: dict[str, Any]) -> DashboardSign
 
 def finding_public(finding: Finding) -> FindingPublic:
     """Return a finding DTO with display context needed by dashboard tables."""
+    session = object_session(finding)
+    evidence = (
+        EvidenceRepository(session).latest_finding_decision_evidence(finding.id)
+        if isinstance(session, Session)
+        else None
+    )
     return FindingPublic.model_validate(finding).model_copy(
         update={
-            "explanation_json": _redacted_json_payload(finding.explanation_json),
-            "data_quality_json": _redacted_json_payload(finding.data_quality_json),
-            "evidence_json": _redacted_json_payload(finding.evidence_json),
+            "evidence": evidence,
             "component_name": finding.component.name if finding.component else None,
             "component_version": finding.component.version if finding.component else None,
             "component_purl": finding.component.purl if finding.component else None,
@@ -204,8 +211,3 @@ def _epss_in_range(
     if finding.epss is None or finding.epss < minimum:
         return False
     return maximum is None or finding.epss <= maximum
-
-
-def _redacted_json_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    redacted, _paths = redact_value(payload)
-    return redacted if isinstance(redacted, dict) else {}

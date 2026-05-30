@@ -125,11 +125,11 @@ function analysisRun(): AnalysisRunPublic {
     finished_at: "2026-05-10T10:05:00Z",
     id: runId,
     input_type: "cve-list",
-    input_upload: { original_filename: "reports-input.txt" },
     project_id: mockProject.id,
     provider_snapshot_id: "demo",
     started_at: "2026-05-10T10:00:00Z",
     status: "succeeded",
+    uploads: { input: { original_filename: "reports-input.txt" } },
   }
 }
 
@@ -143,7 +143,6 @@ function runSummary(): AnalysisRunSummaryPublic {
     id: runId,
     ignored_lines: 1,
     input_type: "cve-list",
-    input_upload: { filename: "reports-input.txt" },
     kev_hits: 1,
     parse_errors: [
       {
@@ -160,6 +159,7 @@ function runSummary(): AnalysisRunSummaryPublic {
     started_at: "2026-05-10T10:00:00Z",
     status: "succeeded",
     updated_findings: 0,
+    uploads: { input: { filename: "reports-input.txt" } },
   }
 }
 

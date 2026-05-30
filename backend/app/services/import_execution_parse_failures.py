@@ -12,18 +12,9 @@ from app.models import AnalysisRun, AnalysisRunStatus
 from app.repositories import RunRepository
 from app.services.import_errors import ImportServiceError
 from app.services.import_execution_context import _parse_errors
-from app.services.import_execution_summary import (
-    _job_payload,
-    _job_status_entry,
-    _record_import_audit,
-)
+from app.services.import_execution_summary import _record_import_audit
 from app.services.import_uploads import (
     sanitize_parser_error_message as _sanitize_parser_error_message,
-)
-from app.services.run_workflow_metadata import (
-    merge_error_payload,
-    merge_summary_payload,
-    workflow_summary_payload,
 )
 
 
@@ -40,7 +31,7 @@ def raise_parse_failure(
     input_type: str,
     filename: str,
     exc: Exception,
-    execution_mode: str = "request",
+    execution_mode: str = "worker",
 ) -> NoReturn:
     """Raise parse failure function."""
     parse_errors = _parse_errors(exc, filename=filename, input_type=input_type)
@@ -91,7 +82,7 @@ def raise_sidecar_parse_failure(
     filename: str | None,
     stage: str,
     exc: Exception,
-    execution_mode: str = "request",
+    execution_mode: str = "worker",
 ) -> NoReturn:
     """Raise sidecar parse failure function."""
     sidecar_error = _sidecar_error_payload(
@@ -142,36 +133,11 @@ def _finish_failed_parse_run(
     execution_mode: str,
 ) -> AnalysisRun:
     """Finish failed parse run function."""
-    failed_history = [*job_history, _job_status_entry("failed")]
+    _ = job_id, job_history, ignored_lines, parse_errors, execution_mode
     return run_repo.finish_analysis_run(
         run.id,
         status=AnalysisRunStatus.FAILED,
         error_message=_sanitize_parser_error_message(str(exc)),
-        error_json=merge_error_payload(
-            parse_errors=parse_errors,
-            created_findings=0,
-            updated_findings=0,
-            ignored_lines=ignored_lines,
-            import_job=_job_payload(
-                job_id=job_id,
-                status="failed",
-                status_history=failed_history,
-                execution_mode=execution_mode,
-            ),
-        ),
-        summary_json=merge_summary_payload(
-            workflow_summary_payload(run),
-            import_job=_job_payload(
-                job_id=job_id,
-                status="failed",
-                status_history=failed_history,
-                execution_mode=execution_mode,
-            ),
-            parse_errors=parse_errors,
-            created_findings=0,
-            updated_findings=0,
-            ignored_lines=ignored_lines,
-        ),
     )
 
 
@@ -183,6 +149,7 @@ def _sidecar_error_payload(
     exc: Exception,
 ) -> dict[str, Any]:
     """Sidecar error payload function."""
+    _ = error_key
     return {
         "message": _sanitize_parser_error_message(str(exc)),
         "filename": filename,
@@ -203,35 +170,9 @@ def _finish_failed_sidecar_run(
     execution_mode: str,
 ) -> AnalysisRun:
     """Finish failed sidecar run function."""
-    failed_history = [*job_history, _job_status_entry("failed")]
+    _ = job_id, job_history, ignored_lines, error_key, execution_mode
     return run_repo.finish_analysis_run(
         run.id,
         status=AnalysisRunStatus.FAILED,
         error_message=str(sidecar_error["message"]),
-        error_json=merge_error_payload(
-            **{error_key: sidecar_error},
-            created_findings=0,
-            updated_findings=0,
-            ignored_lines=ignored_lines,
-            import_job=_job_payload(
-                job_id=job_id,
-                status="failed",
-                status_history=failed_history,
-                execution_mode=execution_mode,
-            ),
-        ),
-        summary_json=merge_summary_payload(
-            workflow_summary_payload(run),
-            import_job=_job_payload(
-                job_id=job_id,
-                status="failed",
-                status_history=failed_history,
-                execution_mode=execution_mode,
-            ),
-            **{error_key: sidecar_error},
-            parse_errors=[],
-            created_findings=0,
-            updated_findings=0,
-            ignored_lines=ignored_lines,
-        ),
     )

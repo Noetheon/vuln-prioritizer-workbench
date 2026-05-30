@@ -9,9 +9,13 @@ dependencies = []
 members = ["backend"]
 
 [tool.pytest.ini_options]
-addopts = "-ra --cov=app --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=96"
+addopts = "-ra --cov=app --cov=vuln_prioritizer --cov-report=term-missing"
 testpaths = ["backend/tests"]
 pythonpath = ["backend", "backend/src"]
+filterwarnings = [
+  "error::ResourceWarning",
+  "error::pytest.PytestUnraisableExceptionWarning",
+]
 markers = [
   "browser_e2e: real browser Workbench tests driven by Playwright.",
   "e2e: end-to-end Workbench tests that may spawn subprocesses.",

@@ -40,14 +40,18 @@ Workbench runtime packages under
 
 ## Coverage Boundary
 
-The current backend pytest coverage gate in `backend/pyproject.toml` measures
-both `vuln_prioritizer` and the active FastAPI Workbench package under
-`backend/app`. This keeps the domain package and shipped API runtime inside the
-same enforced release threshold.
+The current backend pytest coverage configuration in `backend/pyproject.toml`
+measures both `vuln_prioritizer` and the active FastAPI Workbench package under
+`backend/app`. `pytest-cov` owns measurement and the terminal report, while the
+enforced backend gate is `make critical-coverage-check` over the generated
+coverage JSON. This avoids a misleading total-project fail-under message while
+still protecting the critical Workbench modules.
 
 Coverage configuration must stay aligned with the package boundary when modules
-move. Package inclusion of `app*` is not coverage proof by itself; the pytest
-coverage command must continue to measure both `app` and `vuln_prioritizer`.
+move. Package inclusion of `app*` is not coverage proof by itself; pytest must
+continue to measure both `app` and `vuln_prioritizer`, and `make check` must
+continue to generate `build/coverage-current.json` before running the critical
+coverage gate.
 
 ## Python Dependencies
 
@@ -67,12 +71,19 @@ dependency-audit input is `backend/requirements.lock.txt`, exported from
 `uv.lock` with exact pins and hashes for runtime plus maintainer dependencies.
 The backend Docker install input is the separate
 `backend/requirements.runtime.lock.txt`, exported from the same `uv.lock` for
-Python 3.12 without dev extras. Keep all three committed together when Python
+Python 3.13 without dev extras. Keep all three committed together when Python
 dependency metadata changes. The backend Docker image installs the local backend
 package from `backend/pyproject.toml` with `--no-deps` after installing the
 runtime lock, so runtime containers do not carry test, docs, or maintainer
 tooling. `backend/requirements.lock.txt` remains the audited candidate
 dependency set for release evidence.
+
+GitHub workflows use Python 3.13 for single-version release, audit,
+maintenance, provider-live, frontend, and CodeQL jobs so workflow evidence stays
+aligned with the current Docker runtime. The CI Python matrix remains the
+compatibility gate for every supported package version: 3.11, 3.12, and 3.13.
+`make python-lock-check` enforces both the runtime lock export version and this
+workflow Python policy.
 
 Regenerate or refresh the audit input by reconciling the union of
 `project.dependencies` and `project.optional-dependencies.dev` from
@@ -86,7 +97,7 @@ uv export --format requirements.txt --all-packages --all-extras \
   --python 3.11 --output-file backend/requirements.lock.txt --no-progress
 uv export --format requirements.txt --package vuln-prioritizer --no-dev \
   --no-emit-project --no-emit-workspace --locked \
-  --python 3.12 --output-file backend/requirements.runtime.lock.txt --no-progress
+  --python 3.13 --output-file backend/requirements.runtime.lock.txt --no-progress
 ```
 
 The drift and lock checks are enforced by:
@@ -114,9 +125,23 @@ npm installs. CI, Docker, local frontend gates, and dependency audit use npm
 against that lockfile:
 
 ```bash
-cd frontend && npm ci --workspaces=false
-cd frontend && npm --workspaces=false audit --audit-level=high
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true ci
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true audit --audit-level=high
 ```
+
+Frontend commands must run on Node 22 with npm 10. The repository carries the
+same policy in `.tool-versions`, root `package.json`, `frontend/package.json`,
+GitHub Actions `setup-node`, root `.npmrc`, and the root-owned Make frontend
+command wrapper. Run ad hoc frontend npm commands from the repository root with
+`scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true`
+or the equivalent Make target so the frontend package's engine policy is
+enforced consistently. The explicit flag is required because npm prefix commands
+do not reliably inherit the root `.npmrc`. Do not add a workspace-local
+`frontend/.npmrc`; npm ignores workspace config for workspace script execution
+and emits warning noise instead of improving enforcement.
+Docker frontend builds must use the same explicit engine-strict install and
+build flags so container evidence cannot silently diverge from CI/local npm
+policy.
 
 The frontend audit intentionally covers both runtime and dev/build-chain
 dependencies from the committed lockfile. Do not exclude dev dependencies from
@@ -171,8 +196,8 @@ Use these commands when dependency or package policy changes:
 ```bash
 make dependency-audit
 make package-check
-cd frontend && npm ci --workspaces=false
-cd frontend && npm --workspaces=false audit --audit-level=high
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true ci
+scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true audit --audit-level=high
 ```
 
 Evidence must not include secrets, token values, cookies, customer exports,

@@ -16,12 +16,12 @@ import { matchesAsset } from "../components/assets/asset-model"
 import { apiErrorMessage } from "../lib/app-errors"
 import {
   ASSET_FINDINGS_PAGE_LIMIT,
-  RUN_DETAIL_POLL_STATUSES,
   type FindingDetailQueryData,
   type ProjectSummariesQueryData,
   type RunDetailQueryData,
   readAllPages,
   readProjectSummariesWithLimit,
+  runDetailNeedsPolling,
 } from "./workbench-query-model"
 import { workbenchQueryKeys } from "./workbench-query-keys"
 
@@ -208,8 +208,7 @@ export function useRunDetailQuery(runId: string, enabled: boolean) {
     },
     queryKey: workbenchQueryKeys.runDetail(runId),
     refetchInterval: (query) => {
-      const status = query.state.data?.run.status
-      return status && RUN_DETAIL_POLL_STATUSES.has(status) ? 3000 : false
+      return runDetailNeedsPolling(query.state.data) ? 3000 : false
     },
     retry: false,
     staleTime: 15_000,

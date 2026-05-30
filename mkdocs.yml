@@ -23,6 +23,7 @@ nav:
       - ATT&CK/TTP Methodology: attack-ttp-methodology.md
       - Reports and Evidence: reports-and-evidence.md
       - Demo Readiness: demo-readiness.md
+      - Offline Demo Runbook: workbench-offline-demo.md
       - Threat Model and Readiness: workbench-threat-model.md
       - Local/Private Deployment Runbook: workbench-public-deployment.md
   - Submission Package:
@@ -37,6 +38,7 @@ nav:
   - Benchmarking: benchmarking.md
   - Architecture:
       - Overview: architecture/index.md
+      - Decision/Evidence Kernel: architecture/decision-evidence-kernel.md
       - Model Import Registry: architecture/model-imports.md
       - Core Workbench Schema: architecture/core-workbench-schema.md
       - Analysis Run Provider Schema: architecture/analysis-run-provider-schema.md
@@ -75,7 +77,6 @@ nav:
   - Roadmap: roadmap.md
   - Workbench History:
       - v1.0 Release Checklist: workbench-v1-release-checklist.md
-      - Offline Demo Runbook: workbench-offline-demo.md
       - ATT&CK Methodology: workbench-attack-methodology.md
   - Examples:
       - CVE List Import: cve-list-import.md

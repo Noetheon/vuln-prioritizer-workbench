@@ -17,6 +17,9 @@ from utils.import_contracts import (
     assert_no_sensitive_path_leak as _assert_no_sensitive_path_leak,
 )
 from utils.import_contracts import (
+    completed_run_payload as _completed_run_payload,
+)
+from utils.import_contracts import (
     configure_upload_dir as _configure_upload_dir,
 )
 from utils.workbench_env import (
@@ -54,7 +57,7 @@ def test_workbench_import_uses_demo_snapshot_without_network_or_keys(
     )
 
     assert response.status_code == 200, response.text
-    payload = response.json()
+    payload = _completed_run_payload(workbench_api_env, response, headers=headers)
     summary = payload
     assert payload["status"] == "succeeded"
     assert summary["locked_provider_data"] is True
@@ -92,7 +95,7 @@ def test_attack_import_exposes_workbench_finding_ttp_context(
     )
 
     assert response.status_code == 200, response.text
-    run_payload = response.json()
+    run_payload = _completed_run_payload(workbench_api_env, response, headers=headers)
     assert run_payload["attack_mapped_cves"] == 1
     assert run_payload["attack_source"] == "local-curated"
 
@@ -154,6 +157,7 @@ def test_attack_summary_api_rolls_up_top_techniques_and_confidence(
         files={"file": ("trivy.json", TRIVY_REPORT.read_bytes(), "application/json")},
     )
     assert import_response.status_code == 200, import_response.text
+    _completed_run_payload(workbench_api_env, import_response, headers=headers)
 
     response = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/attack/summary",
@@ -221,7 +225,7 @@ def test_import_upload_applies_asset_context_sidecar_to_workbench_findings(
     )
 
     assert response.status_code == 200, response.text
-    payload = response.json()
+    payload = _completed_run_payload(workbench_api_env, response, headers=headers)
     sidecar_upload = payload["asset_context_upload"]
     assert sidecar_upload["sha256"] == expected_sidecar_sha256
     assert sidecar_upload["stored_filename"] == "asset-context.csv"
@@ -247,16 +251,18 @@ def test_import_upload_applies_asset_context_sidecar_to_workbench_findings(
 
     detail = workbench_api_env.client.get(f"/api/v1/findings/{finding['id']}", headers=headers)
     assert detail.status_code == 200
-    explanation = detail.json()["explanation_json"]
+    evidence = detail.json()["evidence"]
+    explanation = evidence["priority_evidence"]
+    provenance = explanation["raw"]["provenance"]
     assert explanation["operational_score"] == 100
     assert "internet-facing asset context: +8" in explanation["operational_score_reasons"]
     assert "production asset context: +5" in explanation["operational_score_reasons"]
     assert "critical asset criticality: +7" in explanation["operational_score_reasons"]
-    assert explanation["highest_asset_criticality"] == "critical"
-    assert explanation["provenance"]["asset_ids"] == ["asset-web-1"]
-    assert explanation["provenance"]["highest_asset_exposure"] == "internet-facing"
-    assert explanation["provenance"]["asset_owners"] == ["team-platform"]
-    assert explanation["provenance"]["asset_business_services"] == ["payments"]
+    assert explanation["raw"]["highest_asset_criticality"] == "critical"
+    assert provenance["asset_ids"] == ["asset-web-1"]
+    assert provenance["highest_asset_exposure"] == "internet-facing"
+    assert provenance["asset_owners"] == ["team-platform"]
+    assert provenance["asset_business_services"] == ["payments"]
     occurrence = detail.json()["occurrences"][0]
     assert occurrence["asset_ref"] == "asset-web-1"
     assert occurrence["target_ref"] == "web-tier"
@@ -292,6 +298,7 @@ def test_generic_import_persists_core_canonical_asset_context_aliases(
     )
 
     assert response.status_code == 200, response.text
+    _completed_run_payload(workbench_api_env, response, headers=headers)
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
         headers=headers,
@@ -305,10 +312,10 @@ def test_generic_import_persists_core_canonical_asset_context_aliases(
 
     detail = workbench_api_env.client.get(f"/api/v1/findings/{finding['id']}", headers=headers)
     assert detail.status_code == 200, detail.text
-    explanation = detail.json()["explanation_json"]
-    assert explanation["highest_asset_criticality"] == "critical"
-    assert explanation["provenance"]["highest_asset_exposure"] == "internal"
-    assert explanation["provenance"]["asset_environments"] == ["test"]
+    explanation = detail.json()["evidence"]["priority_evidence"]
+    assert explanation["raw"]["highest_asset_criticality"] == "critical"
+    assert explanation["raw"]["provenance"]["highest_asset_exposure"] == "internal"
+    assert explanation["raw"]["provenance"]["asset_environments"] == ["test"]
     occurrence = detail.json()["occurrences"][0]
     assert occurrence["asset_exposure"] == "internal"
 
@@ -352,7 +359,7 @@ def test_import_upload_applies_openvex_sidecar_to_workbench_findings(
     )
 
     assert response.status_code == 200, response.text
-    payload = response.json()
+    payload = _completed_run_payload(workbench_api_env, response, headers=headers)
     vex_upload = payload["vex_upload"]
     assert vex_upload["sha256"] == expected_vex_sha256
     assert vex_upload["stored_filename"] == "openvex.json"
@@ -362,7 +369,7 @@ def test_import_upload_applies_openvex_sidecar_to_workbench_findings(
     assert payload["vex"]["matched_occurrences"] == 1
     assert payload["suppressed_by_vex"] == 1
     metadata_payload = workflow_metadata(workbench_api_env, payload["id"], headers=headers)
-    assert metadata_payload["summary"]["vex_conflict_count"] == 0
+    assert metadata_payload["summary"]["counts"].get("vex_conflict_count", 0) == 0
 
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -372,11 +379,12 @@ def test_import_upload_applies_openvex_sidecar_to_workbench_findings(
     finding = findings.json()["data"][0]
     assert finding["status"] == "fixed"
     assert finding["suppressed_by_vex"] is True
-    assert finding["explanation_json"]["priority_state"] == "Fixed"
-    assert finding["explanation_json"]["provenance"]["vex_statuses"] == {"fixed": 1}
+    finding_evidence = finding["evidence"]
+    assert finding_evidence["priority_evidence"]["priority_state"] == "Fixed"
+    assert finding_evidence["governance"]["vex_statuses"] == {"fixed": 1}
     vex_reason = next(
         reason
-        for reason in finding["explanation_json"]["explanation"]["reasons"]
+        for reason in finding_evidence["priority_evidence"]["explanation"]["reasons"]
         if reason["code"] == "governance.vex_status"
     )
     assert "fixed: 1" in vex_reason["message"]
@@ -424,7 +432,7 @@ def test_import_upload_applies_cyclonedx_vex_sidecar_to_workbench_findings(
     )
 
     assert response.status_code == 200, response.text
-    payload = response.json()
+    payload = _completed_run_payload(workbench_api_env, response, headers=headers)
     vex_upload = payload["vex_upload"]
     assert vex_upload["input_type"] == "vex-json"
     assert vex_upload["stored_filename"] == "cyclonedx-vex.json"
@@ -441,11 +449,9 @@ def test_import_upload_applies_cyclonedx_vex_sidecar_to_workbench_findings(
     by_cve = {finding["cve_id"]: finding for finding in findings.json()["data"]}
     assert by_cve["CVE-2023-34362"]["status"] == "suppressed"
     assert by_cve["CVE-2023-34362"]["suppressed_by_vex"] is True
-    assert by_cve["CVE-2023-34362"]["explanation_json"]["provenance"]["vex_statuses"] == {
-        "not_affected": 1
-    }
+    assert by_cve["CVE-2023-34362"]["evidence"]["governance"]["vex_statuses"] == {"not_affected": 1}
     assert by_cve["CVE-2024-4577"]["status"] == "fixed"
-    assert by_cve["CVE-2024-4577"]["explanation_json"]["priority_state"] == "Fixed"
+    assert by_cve["CVE-2024-4577"]["evidence"]["priority_evidence"]["priority_state"] == "Fixed"
 
     detail = workbench_api_env.client.get(
         f"/api/v1/findings/{by_cve['CVE-2023-34362']['id']}",
@@ -481,10 +487,10 @@ def test_import_upload_rejects_invalid_vex_sidecar_with_clear_error(
         },
     )
 
-    assert response.status_code == 422, response.text
-    assert response.json()["code"] == "import_vex_parse_failed"
-    assert response.json()["details"]["analysis_run_id"]
-    detail = response.json()["detail"]
+    assert response.status_code == 200, response.text
+    run_payload = _completed_run_payload(workbench_api_env, response, headers=headers)
+    assert run_payload["status"] == "failed"
+    detail = {**run_payload["diagnostics"], "analysis_run_id": run_payload["id"]}
     assert detail["message"] == "VEX parsing failed."
     assert detail["analysis_run_id"]
     assert detail["vex_error"]["stage"] == "vex_parse"
@@ -492,13 +498,6 @@ def test_import_upload_rejects_invalid_vex_sidecar_with_clear_error(
     assert "uploaded file" in detail["vex_error"]["message"]
     _assert_no_sensitive_path_leak(detail["vex_error"], tmp_path, upload_dir)
 
-    run = workbench_api_env.client.get(
-        f"/api/v1/runs/{detail['analysis_run_id']}",
-        headers=headers,
-    )
-    assert run.status_code == 200
-    run_payload = run.json()
-    assert run_payload["status"] == "failed"
     assert run_payload["vex_error"]["stage"] == "vex_parse"
     assert run_payload["workflow_error"]["vex_error"]["stage"] == "vex_parse"
     _assert_no_sensitive_path_leak(run_payload["workflow_error"]["vex_error"], tmp_path, upload_dir)
@@ -552,23 +551,16 @@ def test_import_upload_rejects_invalid_asset_context_sidecar_with_clear_error(
         },
     )
 
-    assert response.status_code == 422, response.text
-    assert response.json()["code"] == "import_asset_context_parse_failed"
-    assert response.json()["details"]["analysis_run_id"]
-    detail = response.json()["detail"]
+    assert response.status_code == 200, response.text
+    run_payload = _completed_run_payload(workbench_api_env, response, headers=headers)
+    assert run_payload["status"] == "failed"
+    detail = {**run_payload["diagnostics"], "analysis_run_id": run_payload["id"]}
     assert detail["message"] == "Asset context parsing failed."
     assert detail["analysis_run_id"]
     assert detail["asset_context_error"]["stage"] == "asset_context_parse"
     assert "asset_id" in detail["asset_context_error"]["message"]
     _assert_no_sensitive_path_leak(detail["asset_context_error"], tmp_path, upload_dir)
 
-    run = workbench_api_env.client.get(
-        f"/api/v1/runs/{detail['analysis_run_id']}",
-        headers=headers,
-    )
-    assert run.status_code == 200
-    run_payload = run.json()
-    assert run_payload["status"] == "failed"
     assert run_payload["asset_context_error"]["stage"] == "asset_context_parse"
     assert run_payload["workflow_error"]["asset_context_error"]["stage"] == "asset_context_parse"
     _assert_no_sensitive_path_leak(
@@ -618,6 +610,7 @@ def test_import_upload_rejects_unsafe_asset_context_regex_sidecar(
         },
     )
 
-    assert response.status_code == 422, response.text
-    assert response.json()["code"] == "import_asset_context_parse_failed"
-    assert "regex at row 1 is unsafe" in response.text
+    assert response.status_code == 200, response.text
+    run_payload = _completed_run_payload(workbench_api_env, response, headers=headers)
+    assert run_payload["status"] == "failed"
+    assert "regex at row 1 is unsafe" in str(run_payload["diagnostics"])

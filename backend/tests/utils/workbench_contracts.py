@@ -10,6 +10,19 @@ from typing import Any
 
 from sqlmodel import Session, select
 
+from app.contracts.decision_evidence import (
+    AnalysisEvidenceUploadsV2,
+    AnalysisEvidenceV2,
+    AttackEvidenceV2,
+    EvidenceUploadRef,
+    FindingDecisionEvidenceV2,
+    GovernanceEvidenceV2,
+    PriorityEvidenceV2,
+    ProviderEvidenceV2,
+    RemediationEvidenceV2,
+    RunCountsV2,
+)
+from utils.import_contracts import drain_workflow_queue
 from utils.report_contract_fixtures import replace
 from utils.workbench_env import (
     DEMO_CVE_LOG4SHELL,
@@ -52,6 +65,47 @@ def _configure_report_dir(
         **overrides,
     )
     return report_dir
+
+
+def _queue_report_workflow(
+    workbench_api_env: WorkbenchApiEnv,
+    run_id: uuid.UUID,
+    *,
+    headers: dict[str, str],
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    response = workbench_api_env.client.post(
+        f"/api/v1/runs/{run_id}/report-jobs",
+        headers=headers,
+        json=payload,
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def _create_report_via_worker(
+    workbench_api_env: WorkbenchApiEnv,
+    run_id: uuid.UUID,
+    *,
+    headers: dict[str, str],
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    workflow = _queue_report_workflow(
+        workbench_api_env,
+        run_id,
+        headers=headers,
+        payload=payload,
+    )
+    drain_workflow_queue(workbench_api_env)
+    reports = workbench_api_env.client.get(
+        f"/api/v1/runs/{run_id}/reports",
+        headers=headers,
+    )
+    assert reports.status_code == 200, reports.text
+    for report in reports.json()["data"]:
+        if report.get("workflow", {}).get("id") == workflow["id"]:
+            return report
+    raise AssertionError(f"missing report for workflow {workflow['id']}")
 
 
 def _repo_root() -> Path:
@@ -107,19 +161,30 @@ def _add_vpw051_bundle_metadata(
     with Session(workbench_api_env.engine) as session:
         run = session.get(app_models.AnalysisRun, run_id)
         assert run is not None
-        run.summary_json = {
-            **dict(run.summary_json or {}),
-            "input_sha256": input_metadata["sha256"],
-            "input_upload": {
-                "original_filename": upload_path.name,
-                "stored_filename": upload_path.name,
-                "size_bytes": input_metadata["size_bytes"],
-                "sha256": input_metadata["sha256"],
-                "path": str(upload_path),
-                "token": "super-secret-token",
-            },
-        }
-        run.error_json = {"authorization": "Bearer super-secret-token"}
+        evidence_repo = workbench_api_env.repositories.EvidenceRepository(session)
+        evidence = evidence_repo.get_analysis_evidence(run.id)
+        assert evidence is not None
+        evidence_repo.upsert_analysis_evidence(
+            project_id=run.project_id,
+            analysis_run_id=run.id,
+            provider_snapshot_id=run.provider_snapshot_id,
+            evidence=evidence.model_copy(
+                update={
+                    "input_sha256": input_metadata["sha256"],
+                    "uploads": AnalysisEvidenceUploadsV2(
+                        input=EvidenceUploadRef(
+                            input_type=run.input_type,
+                            original_filename=upload_path.name,
+                            stored_filename=upload_path.name,
+                            size_bytes=input_metadata["size_bytes"],
+                            sha256=input_metadata["sha256"],
+                            path=str(upload_path),
+                            storage_ref=upload_path.name,
+                        )
+                    ),
+                }
+            ),
+        )
         if run.provider_snapshot is not None:
             run.provider_snapshot.source_metadata_json = {
                 **dict(run.provider_snapshot.source_metadata_json or {}),
@@ -136,11 +201,34 @@ def _add_vpw051_bundle_metadata(
         assert finding is not None
         finding.recommended_action = "Patch after using super-secret-token in the approval system."
         finding.rationale = f"Review local evidence from {tmp_path}/private/vpw-051-input.txt."
-        finding.evidence_json = {
-            "source": "snapshot",
-            "authorization": "Bearer super-secret-token",
-            "upload_path": str(upload_path),
-        }
+        finding_evidence = evidence_repo.latest_finding_decision_evidence(finding.id)
+        assert finding_evidence is not None
+        evidence_record = evidence_repo.get_analysis_evidence_record(run.id)
+        assert evidence_record is not None
+        evidence_repo.replace_finding_decision_evidence(
+            analysis_evidence_id=evidence_record.id,
+            project_id=run.project_id,
+            analysis_run_id=run.id,
+            evidence_items=[
+                finding_evidence.model_copy(
+                    update={
+                        "rationale": finding.rationale,
+                        "recommended_action": finding.recommended_action,
+                        "remediation": finding_evidence.remediation.model_copy(
+                            update={
+                                "recommended_action": finding.recommended_action,
+                                "recommendation": finding.recommended_action,
+                                "raw": {
+                                    **finding_evidence.remediation.raw,
+                                    "authorization": "Bearer super-secret-token",
+                                    "upload_path": str(upload_path),
+                                },
+                            }
+                        ),
+                    }
+                )
+            ],
+        )
         session.add(finding)
         session.add(run)
         session.commit()
@@ -184,10 +272,6 @@ def _add_vpw060_attack_contexts(
             ),
         ):
             finding.attack_mapped = True
-            finding.explanation_json = {
-                **dict(finding.explanation_json or {}),
-                "attack_techniques": [technique_id],
-            }
             session.add(finding)
             session.add(
                 app_models_for_env.FindingAttackContext(
@@ -245,16 +329,29 @@ def _seed_reportable_run(workbench_api_env: WorkbenchApiEnv, project_id: uuid.UU
             input_type="cve-list",
             filename="known-cves.txt",
             status=app_models.AnalysisRunStatus.COMPLETED,
-            summary_json={
-                "finding_count": 2,
-                "counts_by_priority": {"Critical": 1, "High": 1},
-                "locked_provider_data": True,
-            },
+        )
+        evidence_repo = repositories.EvidenceRepository(session)
+        analysis_evidence = evidence_repo.upsert_analysis_evidence(
+            project_id=project_id,
+            analysis_run_id=run.id,
+            provider_snapshot_id=snapshot.id,
+            evidence=_seed_analysis_evidence(
+                project_id=project_id,
+                run=run,
+                provider_snapshot_id=snapshot.id,
+                provider_snapshot_hash=snapshot.content_hash,
+                finding_count=0,
+                counts_by_priority={},
+                locked_provider_data=True,
+                findings=[],
+            ),
         )
         first = _seed_finding(
             session,
             app_models,
             repositories,
+            analysis_evidence_id=analysis_evidence.id,
+            analysis_run_id=run.id,
             project_id=project_id,
             cve_id=DEMO_CVE_LOG4SHELL,
             asset_key="ops-api",
@@ -277,6 +374,8 @@ def _seed_reportable_run(workbench_api_env: WorkbenchApiEnv, project_id: uuid.UU
             session,
             app_models,
             repositories,
+            analysis_evidence_id=analysis_evidence.id,
+            analysis_run_id=run.id,
             project_id=project_id,
             cve_id=DEMO_CVE_XZ,
             asset_key="payments-api",
@@ -307,6 +406,22 @@ def _seed_reportable_run(workbench_api_env: WorkbenchApiEnv, project_id: uuid.UU
             source="cve-list",
             raw_reference=DEMO_CVE_XZ,
         )
+        findings_evidence = list(evidence_repo.finding_decision_evidence_for_run(run.id).values())
+        evidence_repo.upsert_analysis_evidence(
+            project_id=project_id,
+            analysis_run_id=run.id,
+            provider_snapshot_id=snapshot.id,
+            evidence=_seed_analysis_evidence(
+                project_id=project_id,
+                run=run,
+                provider_snapshot_id=snapshot.id,
+                provider_snapshot_hash=snapshot.content_hash,
+                finding_count=2,
+                counts_by_priority={"Critical": 1, "High": 1},
+                locked_provider_data=True,
+                findings=findings_evidence,
+            ),
+        )
         run_id = run.id
         session.commit()
         return run_id
@@ -329,12 +444,29 @@ def _seed_formula_run(workbench_api_env: WorkbenchApiEnv, project_id: uuid.UUID)
             input_type="generic-occurrence-csv",
             filename="formula-cells.csv",
             status=app_models.AnalysisRunStatus.COMPLETED,
-            summary_json={"finding_count": 1},
+        )
+        evidence_repo = repositories.EvidenceRepository(session)
+        analysis_evidence = evidence_repo.upsert_analysis_evidence(
+            project_id=project_id,
+            analysis_run_id=run.id,
+            provider_snapshot_id=snapshot.id,
+            evidence=_seed_analysis_evidence(
+                project_id=project_id,
+                run=run,
+                provider_snapshot_id=snapshot.id,
+                provider_snapshot_hash=snapshot.content_hash,
+                finding_count=0,
+                counts_by_priority={},
+                locked_provider_data=False,
+                findings=[],
+            ),
         )
         finding = _seed_finding(
             session,
             app_models,
             repositories,
+            analysis_evidence_id=analysis_evidence.id,
+            analysis_run_id=run.id,
             project_id=project_id,
             cve_id=DEMO_CVE_XZ,
             asset_key="=asset-key",
@@ -361,6 +493,22 @@ def _seed_formula_run(workbench_api_env: WorkbenchApiEnv, project_id: uuid.UUID)
             source="generic-occurrence-csv",
             raw_reference=DEMO_CVE_XZ,
         )
+        findings_evidence = list(evidence_repo.finding_decision_evidence_for_run(run.id).values())
+        evidence_repo.upsert_analysis_evidence(
+            project_id=project_id,
+            analysis_run_id=run.id,
+            provider_snapshot_id=snapshot.id,
+            evidence=_seed_analysis_evidence(
+                project_id=project_id,
+                run=run,
+                provider_snapshot_id=snapshot.id,
+                provider_snapshot_hash=snapshot.content_hash,
+                finding_count=1,
+                counts_by_priority={"Critical": 1},
+                locked_provider_data=False,
+                findings=findings_evidence,
+            ),
+        )
         run_id = run.id
         session.commit()
         return run_id
@@ -371,6 +519,8 @@ def _seed_finding(
     app_models: Any,
     repositories: Any,
     *,
+    analysis_evidence_id: uuid.UUID,
+    analysis_run_id: uuid.UUID,
     project_id: uuid.UUID,
     cve_id: str,
     asset_key: str,
@@ -429,26 +579,178 @@ def _seed_finding(
     finding.in_kev = in_kev
     finding.rationale = rationale
     finding.recommended_action = action
-    finding.data_quality_json = {"confidence": confidence, "flags": flags}
-    finding.explanation_json = {
-        "data_quality_confidence": confidence,
-        "data_quality_flags": flags,
-        "decision_guidance": {
-            "decision_statement": (
-                f"Decision Statement: remediate {cve_id} on {asset_name} with the "
-                "assigned owner before the emergency SLA expires."
-            ),
-            "business_impact": {
-                "text": (
-                    f"Executive attention is warranted for {asset_name} because the "
-                    f"finding combines {priority} priority with provider-backed risk signals."
-                ),
-            },
-            "sla": {"label": "Emergency", "target_hours": 24},
-        },
-    }
     session.flush()
+    evidence = _seed_finding_evidence(
+        finding=finding,
+        analysis_run_id=analysis_run_id,
+        project_id=project_id,
+        asset_key=asset_key,
+        asset_name=asset_name,
+        component_name=component_name,
+        component_version=component_version,
+        priority=priority,
+        priority_rank=priority_rank,
+        risk_score=risk_score,
+        operational_rank=operational_rank,
+        epss=epss,
+        cvss=cvss,
+        in_kev=in_kev,
+        rationale=rationale,
+        action=action,
+        confidence=confidence,
+        flags=flags,
+    )
+    repositories.EvidenceRepository(session).replace_finding_decision_evidence(
+        analysis_evidence_id=analysis_evidence_id,
+        project_id=project_id,
+        analysis_run_id=analysis_run_id,
+        evidence_items=[evidence],
+    )
     return finding
+
+
+def _seed_analysis_evidence(
+    *,
+    project_id: uuid.UUID,
+    run: Any,
+    provider_snapshot_id: uuid.UUID | None,
+    provider_snapshot_hash: str | None,
+    finding_count: int,
+    counts_by_priority: dict[str, int],
+    locked_provider_data: bool,
+    findings: list[FindingDecisionEvidenceV2],
+) -> AnalysisEvidenceV2:
+    return AnalysisEvidenceV2(
+        analysis_run_id=str(run.id),
+        project_id=str(project_id),
+        input_type=run.input_type,
+        filename=run.filename,
+        status=str(run.status),
+        input_sha256="sha256:vpw050-input",
+        counts=RunCountsV2(
+            finding_count=finding_count,
+            occurrence_count=finding_count,
+            counts_by_priority=counts_by_priority,
+            kev_hits=sum(1 for finding in findings if finding.in_kev),
+        ),
+        uploads=AnalysisEvidenceUploadsV2(
+            input=EvidenceUploadRef(
+                input_type=run.input_type,
+                original_filename=run.filename,
+                stored_filename=run.filename,
+                sha256="sha256:vpw050-input",
+                storage_ref=f"{project_id}/{run.id}/{run.filename}",
+            )
+        ),
+        provider=ProviderEvidenceV2(
+            provider_snapshot_id=str(provider_snapshot_id) if provider_snapshot_id else None,
+            provider_snapshot_hash=provider_snapshot_hash,
+            provider_snapshot_file="demo_provider_snapshot.json",
+            locked_provider_data=locked_provider_data,
+            kev_hits=sum(1 for finding in findings if finding.in_kev),
+            epss_hits=sum(1 for finding in findings if finding.epss is not None),
+            nvd_hits=sum(1 for finding in findings if finding.cvss_base_score is not None),
+        ),
+    )
+
+
+def _seed_finding_evidence(
+    *,
+    finding: Any,
+    analysis_run_id: uuid.UUID,
+    project_id: uuid.UUID,
+    asset_key: str,
+    asset_name: str,
+    component_name: str,
+    component_version: str,
+    priority: Any,
+    priority_rank: int,
+    risk_score: float,
+    operational_rank: int,
+    epss: float,
+    cvss: float,
+    in_kev: bool,
+    rationale: str,
+    action: str,
+    confidence: str,
+    flags: list[dict[str, str]],
+) -> FindingDecisionEvidenceV2:
+    priority_value = str(getattr(priority, "value", priority))
+    priority_label = priority_value.title()
+    decision_statement = (
+        f"Decision Statement: remediate {finding.cve_id} on {asset_name} with the "
+        "assigned owner before the emergency SLA expires."
+    )
+    business_impact = (
+        f"Executive attention is warranted for {asset_name} because the finding combines "
+        f"{priority_label} priority with provider-backed risk signals."
+    )
+    return FindingDecisionEvidenceV2(
+        finding_id=str(finding.id),
+        analysis_run_id=str(analysis_run_id),
+        project_id=str(project_id),
+        cve_id=finding.cve_id,
+        dedup_key=finding.dedup_key,
+        status=str(finding.status),
+        priority=priority_value,
+        priority_rank=priority_rank,
+        risk_score=risk_score,
+        operational_rank=operational_rank,
+        in_kev=in_kev,
+        epss=epss,
+        cvss_base_score=cvss,
+        rationale=rationale,
+        recommended_action=action,
+        occurrence_scope={"asset_ref": asset_key},
+        priority_evidence=PriorityEvidenceV2(
+            priority_label=priority_label,
+            priority_rank=priority_rank,
+            operational_score=risk_score,
+            operational_score_reasons=[rationale],
+            explanation={
+                "reasons": [{"code": "seed.provider_signal", "message": rationale}],
+                "reason_codes": ["seed.provider_signal"],
+            },
+            rationale=rationale,
+            data_quality_confidence=confidence,
+            data_quality_flags=list(flags),
+            raw={
+                "data_quality_confidence": confidence,
+                "data_quality_flags": flags,
+                "provenance": {
+                    "asset_ids": [asset_key],
+                    "asset_names": [asset_name],
+                    "components": [component_name],
+                    "versions": [component_version],
+                },
+            },
+        ),
+        provider=ProviderEvidenceV2(
+            provider_evidence={"epss": epss, "cvss_base_score": cvss, "in_kev": in_kev},
+            epss_hits=1,
+            kev_hits=1 if in_kev else 0,
+            nvd_hits=1,
+        ),
+        governance=GovernanceEvidenceV2(
+            data_quality={"confidence": confidence, "flags": flags},
+        ),
+        attack=AttackEvidenceV2(),
+        remediation=RemediationEvidenceV2(
+            recommended_action=action,
+            decision_statement=decision_statement,
+            recommendation=action,
+            recommendation_label="Patch",
+            business_impact=business_impact,
+            sla={"label": "Emergency", "target_hours": 24},
+            raw={
+                "decision_statement": decision_statement,
+                "recommendation": action,
+                "recommendation_label": "Patch",
+                "business_impact": {"text": business_impact},
+                "sla": {"label": "Emergency", "target_hours": 24},
+            },
+        ),
+    )
 
 
 def _seed_status_run(workbench_api_env: WorkbenchApiEnv, status: str) -> uuid.UUID:

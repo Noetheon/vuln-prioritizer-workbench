@@ -255,8 +255,6 @@ def workbench_analysis_run(
         "started_at": FIXED_STARTED_AT + timedelta(minutes=index - 1),
         "finished_at": FIXED_FINISHED_AT + timedelta(minutes=index - 1),
         "error_message": None,
-        "error_json": {},
-        "summary_json": {"parsed": 1, "findings": 1},
     }
     values.update(overrides)
     analysis_run = app_models.AnalysisRun(**values)

@@ -234,15 +234,20 @@ def test_container_image_digest_policy_covers_compose_service_images() -> None:
     assert "@sha256:" in traefik_compose["services"]["traefik"]["image"]
 
 
-def test_runtime_containers_avoid_unpinned_upgrade_drift() -> None:
+def test_runtime_containers_keep_upgrade_and_package_surface_guards() -> None:
     backend_dockerfile = _read_repo_text("backend/Dockerfile")
     frontend_dockerfile = _read_repo_text("frontend/Dockerfile")
 
     assert "python -m pip install --upgrade pip" not in backend_dockerfile
     assert "python -m pip install --require-hashes" in backend_dockerfile
-    assert "apk upgrade" not in frontend_dockerfile
-    assert "apk del --no-network curl libcurl" in frontend_dockerfile
-    assert "npm ci --workspaces=false" in frontend_dockerfile
+    assert "DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends" in (
+        backend_dockerfile
+    )
+    assert "python -m pip uninstall -y pip setuptools wheel" in backend_dockerfile
+    assert "apk upgrade --no-cache" in frontend_dockerfile
+    assert "apk del --no-network curl libcurl nginx-module-image-filter" in frontend_dockerfile
+    assert "npm ci --workspaces=false --engine-strict=true" in frontend_dockerfile
+    assert "npm --workspaces=false --engine-strict=true run build" in frontend_dockerfile
 
 
 def test_node_package_manifests_pin_ci_runtime_family() -> None:
@@ -633,13 +638,18 @@ def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:
     assert "$(BACKEND_TESTS)/playwright" not in makefile
     assert "playwright install --with-deps chromium" in playwright_install
     assert "playwright-check: playwright-install" in makefile
-    assert "cd frontend && npm run test" in playwright_check
+    assert "$(FRONTEND_NPM) run test" in playwright_check
     assert "tests/ui-smoke.spec.ts tests/responsive-shell.spec.ts" not in playwright_check
     assert "frontend-test-unit-coverage" in makefile
     assert "public-production-evidence-check" not in release_readiness
     assert "release-check api-client-drift-check archive-evidence-check" in release_readiness
     assert "--profile legacy-postgres" not in docker_demo_smoke
     assert "workbench-postgres" not in docker_demo_smoke
+    assert "$(COMPOSE) up -d --build backend frontend worker" in docker_demo_smoke
+    assert (
+        "$(PRODUCTION_SMOKE_COMPOSE) up -d --build backend frontend worker"
+        in docker_production_smoke
+    )
     assert "$(COMPOSE) exec -T backend python -m app.core.schema_smoke" in docker_demo_smoke
     assert (
         "$(PRODUCTION_SMOKE_COMPOSE) exec -T backend python -m app.core.schema_smoke"
@@ -653,8 +663,23 @@ def test_ci_frontend_gate_runs_coverage_and_full_playwright_suite() -> None:
 
     assert "make frontend-test-unit-coverage" in workflow
     assert "Run frontend Playwright representative PR gate" not in workflow
-    assert "npm --prefix frontend run test -- tests/" not in workflow
-    assert "npm --prefix frontend run test" in workflow
+    assert (
+        "npm --prefix frontend --workspaces=false --engine-strict=true run test -- tests/"
+        not in workflow
+    )
+    assert (
+        "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test"
+    ) in workflow
+    assert "frontend/*|backend/app/*|backend/src/*" in workflow
+    assert ".nvmrc|.npmrc|package.json" in workflow
+
+
+def test_ci_docker_gate_runs_for_frontend_toolchain_policy_changes() -> None:
+    workflow = _read_repo_text(".github/workflows/docker.yml")
+
+    assert ".nvmrc|.npmrc|package.json|frontend/package.json|frontend/package-lock.json" in workflow
+    assert "make docker-demo-smoke" in workflow
+    assert "make docker-production-smoke" in workflow
 
 
 def test_legacy_cli_entrypoint_is_removed() -> None:
@@ -675,7 +700,13 @@ def test_backend_package_boundary_matches_pytest_coverage_boundary() -> None:
         pytest_options = config["tool"]["pytest"]["ini_options"]
         addopts = set(pytest_options["addopts"].split())
         assert {"--cov=app", "--cov=vuln_prioritizer"}.issubset(addopts)
+        assert not any(option.startswith("--cov-fail-under") for option in addopts)
         assert set(pytest_options["pythonpath"]) == expected_pythonpath
+
+    makefile = _read_repo_text("Makefile")
+    assert "$(PYTHON) -m coverage json -o build/coverage-current.json" in makefile
+    assert "$(MAKE) critical-coverage-check" in makefile
+    assert "$(PYTHON) scripts/check_critical_coverage.py build/coverage-current.json" in makefile
 
 
 def test_active_status_contract_has_no_migration_or_legacy_fields() -> None:

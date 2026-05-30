@@ -69,16 +69,19 @@ def test_local_actor_is_stable_without_db_user_bootstrap(tmp_path: Path) -> None
     )
     engine = db_module.create_db_engine(active_settings)
 
-    assert db_module._connect_args("postgresql+psycopg://workbench@db/workbench") == {}
-    assert local_actor_id("ADMIN@example.test") == local_actor_id("admin@example.test")
+    try:
+        assert db_module._connect_args("postgresql+psycopg://workbench@db/workbench") == {}
+        assert local_actor_id("ADMIN@example.test") == local_actor_id("admin@example.test")
 
-    actor = configured_local_actor(active_settings)
-    assert actor.id == local_actor_id(active_settings.LOCAL_WORKBENCH_USER_EMAIL)
-    assert actor.email == active_settings.LOCAL_WORKBENCH_USER_EMAIL
-    assert actor.is_active is True
+        actor = configured_local_actor(active_settings)
+        assert actor.id == local_actor_id(active_settings.LOCAL_WORKBENCH_USER_EMAIL)
+        assert actor.email == active_settings.LOCAL_WORKBENCH_USER_EMAIL
+        assert actor.is_active is True
 
-    with Session(engine) as session:
-        db_module.init_db(session, active_settings=active_settings)
+        with Session(engine) as session:
+            db_module.init_db(session, active_settings=active_settings)
+    finally:
+        engine.dispose()
 
 
 def test_rate_limit_edges_cover_disabled_limits_and_trusted_forwarding(
@@ -149,35 +152,38 @@ def test_rate_limit_edges_cover_disabled_limits_and_trusted_forwarding(
 
 def test_database_rate_limiter_persists_shared_window_state() -> None:
     engine = create_engine("sqlite://")
-    with engine.begin() as connection:
-        connection.execute(
-            text(
-                "CREATE TABLE rate_limit_bucket ("
-                "bucket_key VARCHAR(255) NOT NULL PRIMARY KEY, "
-                "request_count INTEGER NOT NULL, "
-                "window_started_at DATETIME NOT NULL, "
-                "updated_at DATETIME NOT NULL)"
-            )
-        )
-    limiter = rate_limit_module.DatabaseRateLimiter(engine, window_seconds=60)
-
-    assert limiter.check("api:shared", limit=1).allowed is True
-    blocked = limiter.check("api:shared", limit=1)
-    assert blocked.allowed is False
-    assert blocked.retry_after_seconds > 0
-    preflight_blocked = limiter.check("api:shared", limit=1, record=False)
-    assert preflight_blocked.allowed is False
-    assert preflight_blocked.retry_after_seconds > 0
-    assert limiter.check("api:preflight", limit=1, record=False).allowed is True
-
-    with engine.connect() as connection:
-        assert (
+    try:
+        with engine.begin() as connection:
             connection.execute(
-                text("SELECT COUNT(*) FROM rate_limit_bucket WHERE bucket_key = :key"),
-                {"key": "api:preflight"},
-            ).scalar_one()
-            == 0
-        )
+                text(
+                    "CREATE TABLE rate_limit_bucket ("
+                    "bucket_key VARCHAR(255) NOT NULL PRIMARY KEY, "
+                    "request_count INTEGER NOT NULL, "
+                    "window_started_at DATETIME NOT NULL, "
+                    "updated_at DATETIME NOT NULL)"
+                )
+            )
+        limiter = rate_limit_module.DatabaseRateLimiter(engine, window_seconds=60)
+
+        assert limiter.check("api:shared", limit=1).allowed is True
+        blocked = limiter.check("api:shared", limit=1)
+        assert blocked.allowed is False
+        assert blocked.retry_after_seconds > 0
+        preflight_blocked = limiter.check("api:shared", limit=1, record=False)
+        assert preflight_blocked.allowed is False
+        assert preflight_blocked.retry_after_seconds > 0
+        assert limiter.check("api:preflight", limit=1, record=False).allowed is True
+
+        with engine.connect() as connection:
+            assert (
+                connection.execute(
+                    text("SELECT COUNT(*) FROM rate_limit_bucket WHERE bucket_key = :key"),
+                    {"key": "api:preflight"},
+                ).scalar_one()
+                == 0
+            )
+    finally:
+        engine.dispose()
 
 
 def test_user_and_session_admin_routes_are_not_active(

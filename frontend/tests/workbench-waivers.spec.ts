@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test"
 import { evidenceScreenshotPath } from "./evidence-paths"
+import { waitForRunSucceeded } from "./workbench-e2e-helpers"
 import { localApiHeaders } from "./workbench-runtime-helpers"
 
 const validOccurrenceCsv = Buffer.from(
@@ -58,6 +59,8 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
     },
   )
   expect(importResponse.ok(), await importResponse.text()).toBeTruthy()
+  const importedRun = (await importResponse.json()) as { id: string }
+  await waitForRunSucceeded(page, importedRun.id, { headers })
 
   await page.goto(`/waivers?projectId=${project.id}`)
   await expect(
@@ -180,6 +183,8 @@ test("workbench governance rollups show service risk and accepted-risk debt", as
     },
   )
   expect(importResponse.ok(), await importResponse.text()).toBeTruthy()
+  const importedRun = (await importResponse.json()) as { id: string }
+  await waitForRunSucceeded(page, importedRun.id, { headers })
 
   const reviewDueWaiver = await page.request.post(
     `/api/v1/projects/${project.id}/waivers/`,

@@ -28,11 +28,11 @@ current tests, current contracts, or current local validation evidence.
 
 | Category | Pages | Owner | Rules |
 | --- | --- | --- | --- |
-| Current product truth | `current-product-state.md`, `architecture.md`, `documentation-map.md` | Maintainers | Must describe the active Workbench-first runtime only. |
+| Current product truth | `current-product-state.md`, `architecture.md`, `architecture/decision-evidence-kernel.md`, `documentation-map.md` | Maintainers | Must describe the active Workbench-first runtime only. |
 | Evidence-backed claim routing | `documentation-evidence-matrix.md` | Maintainers | Must map major claims to code, tests, schemas, commands, archive artifacts, or external primary sources before wording is strengthened. |
-| User and operator docs | `user_documentation.md`, `use_cases.md`, `playbooks.md`, `playbooks/**` | Product/docs owner | Must favor external-user paths and mark repo-checkout-only commands. |
+| User and operator docs | `user_documentation.md`, `use_cases.md`, `demo-readiness.md`, `workbench-offline-demo.md`, `playbooks.md`, `playbooks/**` | Product/docs owner | Must favor external-user paths and mark repo-checkout-only commands. |
 | Methodology | `methodology.md`, `scoring-methodology.md`, `attack-ttp-methodology.md`, `workbench-attack-methodology.md`, `benchmarking.md` | Domain owner | Must keep scoring, ATT&CK, VEX, and asset-context semantics transparent. |
-| Contracts | `contracts.md`, `support_matrix.md`, `asset-context-csv.md`, importer docs, examples, schemas | API/report owners | Must change with tests and generated/example artifacts when contracts change. |
+| Contracts | `contracts.md`, `support_matrix.md`, `architecture/decision-evidence-kernel.md`, `asset-context-csv.md`, importer docs, examples, schemas | API/report owners | Must change with tests and generated/example artifacts when contracts change. |
 | Security and deployment | `workbench-threat-model.md`, `workbench-public-deployment.md`, `release_operations.md` | Security/release owner | Must keep local/private operation as the default and treat public or shared deployment evidence as candidate-specific exception evidence. |
 | Package maturity | `backend/pyproject.toml`, `README.md`, `current-product-state.md`, `dependency-and-package-policy.md`, `release_operations.md` | Release owner | Must use the same readiness level; today that level is `Development Status :: 4 - Beta` for local-first/self-hosted readiness without public/shared deployment certification. |
 | Open-source repository health | `github-open-source-readiness.md`, `community_repository_setup.md`, root `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `MAINTAINERS.md`, `CHANGELOG.md`, `.github/**` templates | Maintainers | Must route public questions, contributions, security reports, conduct issues, ownership, and GitHub-side settings without overstating what repo files configure. |
