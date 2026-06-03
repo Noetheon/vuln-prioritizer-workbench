@@ -20,7 +20,8 @@ payloads.
 | Import orchestration | `backend/app/services/import_execution.py` | Store uploads, run parser/enrichment, persist findings/occurrences, call the kernel, persist evidence, and close the workflow. |
 | Persistence summary adapters | `backend/app/services/import_execution_persistence.py`, `backend/app/services/import_execution_persistence_bulk.py` | Persist relational records and return the typed summary consumed by `DecisionPersistencePlan`. |
 | Evidence repository | `backend/app/repositories/evidence.py` | Upsert run-wide evidence and replace per-finding decision evidence. |
-| Projections | `backend/app/services/run_workflow_projection.py`, `backend/app/services/finding_projection.py`, `backend/app/services/report_projection.py`, `backend/app/services/report_service_payload.py` | Map typed evidence into API, finding detail, dashboard, waiver/governance, and report payloads. |
+| Evidence read model | `backend/app/services/decision_projection.py` | Centralize evidence-first run, finding, occurrence, report, dashboard, governance, and GitHub issue read views. |
+| Public projections | `backend/app/services/run_workflow_projection.py`, `backend/app/services/finding_projection.py`, `backend/app/services/report_projection.py`, `backend/app/services/report_service_payload.py` | Map central decision views into stable API, finding detail, dashboard, waiver/governance, and report payloads. |
 
 `backend/app/services/decision_evidence_builder.py` remains an adapter module for
 diagnostics, finding-level builders, and public payload-boundary helpers. It is
@@ -40,10 +41,10 @@ flowchart LR
   G --> H["AnalysisEvidenceV2"]
   G --> I["FindingDecisionEvidenceV2 rows"]
   G --> J["workflow-result-ref.v2"]
-  H --> K["Run API and summaries"]
-  I --> L["Finding detail and governance"]
-  H --> M["Reports and Evidence ZIP"]
-  I --> M
+  H --> K["decision_projection.DecisionRunView"]
+  I --> L["decision_projection.DecisionFindingView"]
+  K --> M["Run API and summaries"]
+  L --> N["Finding detail, governance, reports, GitHub export"]
 ```
 
 ## Kernel Output
@@ -90,14 +91,18 @@ or cancelled workflows may still expose typed diagnostics through
 Projection code should follow these rules:
 
 - Run APIs read successful output facts from `AnalysisEvidenceV2`.
-- Finding list/detail payloads prefer the latest `FindingDecisionEvidenceV2`
-  for decision fields and occurrence evidence.
-- Reports use the same persisted evidence snapshot as API and UI projections.
+- Finding list/detail payloads read decision fields and occurrence evidence from
+  `DecisionFindingView`.
+- Reports, dashboard, waiver/governance views, and GitHub issue previews use
+  the same central decision views as API and UI projections.
 - SQL tables such as `finding`, `finding_occurrence`, and `analysis_run` remain
   useful for identities, pagination, sorting, relational joins, and lifecycle
   state, but not as a second source of decision semantics.
 - Missing `analysis_evidence` for a successful v2 import is inconsistent state,
   not a reason to rebuild product facts from workflow JSON.
+- Missing per-finding `FindingDecisionEvidenceV2` for a successful run finding
+  is inconsistent state, not a reason to fall back to `finding` decision
+  columns.
 
 ## Contract Tests
 
@@ -107,6 +112,7 @@ The kernel-first path is protected by:
 - `backend/tests/api/import_contracts/`
 - `backend/tests/api/report_contracts/`
 - `backend/tests/api/workflow_contracts/`
+- `backend/tests/test_decision_projection.py`
 - `backend/tests/test_docs_hygiene.py`
 
 Run the focused documentation and contract checks after changing this page or

@@ -156,9 +156,6 @@ class FindingRepository:
         waived: bool = False,
         recommended_action: str | None = None,
         rationale: str | None = None,
-        explanation_json: dict[str, Any] | None = None,
-        data_quality_json: dict[str, Any] | None = None,
-        evidence_json: dict[str, Any] | None = None,
         existing_finding: Finding | None = None,
         lookup_existing: bool = True,
         flush: bool = True,
@@ -208,7 +205,6 @@ class FindingRepository:
         finding.waived = waived
         finding.recommended_action = recommended_action
         finding.rationale = rationale
-        _ = explanation_json, data_quality_json, evidence_json
         finding.last_seen_at = get_datetime_utc()
         if flush:
             self.session.flush()

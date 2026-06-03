@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy.orm import object_session
 from sqlmodel import Session, col, select
 
 from app.contracts.decision_evidence import FindingDecisionEvidenceV2, OccurrenceEvidenceV2
@@ -17,11 +16,12 @@ from app.models import (
     FindingDetailPublic,
     FindingOccurrence,
     FindingOccurrencePublic,
-    FindingPriority,
     FindingPublic,
-    FindingStatus,
 )
-from app.repositories import EvidenceRepository
+from app.services.decision_projection import (
+    DecisionFindingView,
+    latest_finding_decision_view,
+)
 from vuln_prioritizer.security_redaction import redact_value
 
 
@@ -31,66 +31,8 @@ def _finding_public(
     session: Session | None = None,
 ) -> FindingPublic:
     """Return a finding DTO with display context needed by the Workbench table."""
-    evidence = _latest_decision_evidence(finding, session=session)
-    update = _finding_decision_update(finding, evidence=evidence)
-    update.update(
-        {
-            "evidence": evidence,
-            "component_name": finding.component.name if finding.component else None,
-            "component_version": finding.component.version if finding.component else None,
-            "component_purl": finding.component.purl if finding.component else None,
-            "asset_name": finding.asset.name if finding.asset else None,
-            "asset_key": finding.asset.asset_key if finding.asset else None,
-            "asset_target_ref": finding.asset.target_ref if finding.asset else None,
-            "asset_environment": finding.asset.environment if finding.asset else None,
-            "asset_criticality": finding.asset.criticality if finding.asset else None,
-            "owner": finding.asset.owner if finding.asset else None,
-            "business_service": finding.asset.business_service if finding.asset else None,
-            "exposure": finding.asset.exposure if finding.asset else None,
-        }
-    )
-    return FindingPublic.model_validate(finding).model_copy(update=update)
-
-
-def _finding_decision_update(
-    finding: Finding,
-    *,
-    evidence: FindingDecisionEvidenceV2 | None,
-) -> dict[str, object]:
-    if evidence is None:
-        return {}
-    return {
-        "cve_id": evidence.cve_id,
-        "dedup_key": evidence.dedup_key,
-        "status": _status_value(evidence.status, fallback=finding.status),
-        "priority": _priority_value(evidence.priority, fallback=finding.priority),
-        "priority_rank": evidence.priority_rank,
-        "risk_score": evidence.risk_score,
-        "operational_rank": evidence.operational_rank,
-        "in_kev": evidence.in_kev,
-        "epss": evidence.epss,
-        "cvss_base_score": evidence.cvss_base_score,
-        "attack_mapped": evidence.attack_mapped,
-        "suppressed_by_vex": evidence.suppressed_by_vex,
-        "under_investigation": evidence.under_investigation,
-        "waived": evidence.waived,
-        "recommended_action": evidence.recommended_action,
-        "rationale": evidence.rationale,
-    }
-
-
-def _status_value(value: str, *, fallback: FindingStatus) -> FindingStatus:
-    try:
-        return FindingStatus(value)
-    except ValueError:
-        return fallback
-
-
-def _priority_value(value: str, *, fallback: FindingPriority) -> FindingPriority:
-    try:
-        return FindingPriority(value)
-    except ValueError:
-        return fallback
+    view = latest_finding_decision_view(finding, session=session)
+    return FindingPublic.model_validate(finding).model_copy(update=view.public_update())
 
 
 def _latest_decision_evidence(
@@ -98,10 +40,7 @@ def _latest_decision_evidence(
     *,
     session: Session | None = None,
 ) -> FindingDecisionEvidenceV2 | None:
-    active_session = session or object_session(finding)
-    if not isinstance(active_session, Session):
-        return None
-    return EvidenceRepository(active_session).latest_finding_decision_evidence(finding.id)
+    return latest_finding_decision_view(finding, session=session).evidence
 
 
 def _redacted_finding_json(value: dict[str, object] | None) -> dict[str, object]:
@@ -111,8 +50,8 @@ def _redacted_finding_json(value: dict[str, object] | None) -> dict[str, object]
 
 def _finding_detail_public(finding: Finding) -> FindingDetailPublic:
     """Return a finding detail DTO with source occurrence rows."""
-    evidence = _latest_decision_evidence(finding)
-    evidence_occurrences = _evidence_occurrences_public(evidence, finding=finding)
+    view = latest_finding_decision_view(finding)
+    evidence_occurrences = _evidence_occurrences_public(view)
     return FindingDetailPublic.model_validate(_finding_public(finding)).model_copy(
         update={
             "occurrences": evidence_occurrences
@@ -185,7 +124,7 @@ def _finding_attack_context_detail_public(
             techniques=techniques,
         )
 
-    evidence = _latest_decision_evidence(finding)
+    evidence = latest_finding_decision_view(finding).evidence
     if evidence is None or (
         evidence.attack.mapped is not True and evidence.attack.source in {None, "none", ""}
     ):
@@ -463,15 +402,14 @@ def _finding_occurrence_public(
 
 
 def _evidence_occurrences_public(
-    evidence: FindingDecisionEvidenceV2 | None,
-    *,
-    finding: Finding,
+    view: DecisionFindingView,
 ) -> list[FindingOccurrencePublic] | None:
+    evidence = view.evidence
     if evidence is None or not evidence.occurrences:
         return None
     rows: list[FindingOccurrencePublic] = []
     for occurrence in evidence.occurrences:
-        row = _evidence_occurrence_public(occurrence, finding=finding)
+        row = _evidence_occurrence_public(occurrence, finding=view.finding)
         if row is None:
             return None
         rows.append(row)

@@ -7,9 +7,6 @@ from collections import Counter
 from collections.abc import Callable, Sequence
 from typing import Any
 
-from sqlalchemy.orm import object_session
-from sqlmodel import Session
-
 from app.models import (
     Finding,
     GovernanceRollupPublic,
@@ -19,49 +16,63 @@ from app.models import (
     Waiver,
 )
 from app.models.base import get_datetime_utc
-from app.repositories import EvidenceRepository
 from app.repositories.findings import FindingRepository
 from app.repositories.waivers import (
     WaiverRepository,
     waiver_lifecycle_status,
     waiver_scope_label,
 )
+from app.services.decision_projection import DecisionFindingView, decision_views_for_findings
 
 PRIORITY_LABELS = ("Critical", "High", "Medium", "Low")
 STATUS_LABELS = ("open", "in_review", "remediating", "fixed", "accepted", "suppressed")
 UNKNOWN_LABEL = "Unassigned"
 
 
+def _decision_views(
+    findings: Sequence[Finding | DecisionFindingView],
+) -> list[DecisionFindingView]:
+    if not findings:
+        return []
+    first = findings[0]
+    if isinstance(first, DecisionFindingView):
+        return [finding for finding in findings if isinstance(finding, DecisionFindingView)]
+    return decision_views_for_findings(
+        [finding for finding in findings if isinstance(finding, Finding)]
+    )
+
+
 def build_project_governance_rollups_payload(
     *,
     project_id: uuid.UUID,
-    findings: Sequence[Finding],
+    findings: Sequence[Finding | DecisionFindingView],
     waivers: Sequence[Waiver] | None = None,
     waiver_repository: WaiverRepository | None = None,
     limit: int = 5,
 ) -> ProjectGovernanceRollupsPublic:
     """Build owner, service, asset, environment, and waiver-debt rollups for a project."""
     bounded_limit = max(1, min(limit, 50))
+    finding_views = _decision_views(findings)
     owner_rollups = _rollups_for_dimension(
-        findings,
+        finding_views,
         dimension="owner",
         label_for_finding=_owner_label,
         limit=bounded_limit,
     )
     service_rollups = _rollups_for_dimension(
-        findings,
+        finding_views,
         dimension="service",
         label_for_finding=_service_label,
         limit=bounded_limit,
     )
     asset_rollups = _rollups_for_dimension(
-        findings,
+        finding_views,
         dimension="asset",
         label_for_finding=_asset_label,
         limit=bounded_limit,
     )
     environment_rollups = _rollups_for_dimension(
-        findings,
+        finding_views,
         dimension="environment",
         label_for_finding=_environment_label,
         limit=bounded_limit,
@@ -76,7 +87,7 @@ def build_project_governance_rollups_payload(
         top_services_by_risk=service_rollups[:bounded_limit],
         top_assets_by_risk=asset_rollups[:bounded_limit],
         waiver_debt=_waiver_debt_summary(
-            findings=findings,
+            findings=finding_views,
             waivers=list(waivers or []),
             waiver_repository=waiver_repository,
             limit=bounded_limit,
@@ -93,52 +104,24 @@ def build_project_governance_rollups_payload_from_repositories(
 ) -> ProjectGovernanceRollupsPublic:
     """Build governance rollups from bounded SQL-backed repository queries."""
     bounded_limit = max(1, min(limit, 50))
-    owner_rollups = finding_repository.project_governance_rollups(
-        project_id,
-        dimension="owner",
-        limit=bounded_limit,
-    )
-    service_rollups = finding_repository.project_governance_rollups(
-        project_id,
-        dimension="service",
-        limit=bounded_limit,
-    )
-    asset_rollups = finding_repository.project_governance_rollups(
-        project_id,
-        dimension="asset",
-        limit=bounded_limit,
-    )
-    environment_rollups = finding_repository.project_governance_rollups(
-        project_id,
-        dimension="environment",
-        limit=bounded_limit,
-    )
-    return ProjectGovernanceRollupsPublic(
+    findings = finding_repository.list_project_findings(project_id)
+    return build_project_governance_rollups_payload(
         project_id=project_id,
-        generated_at=get_datetime_utc(),
-        owners=owner_rollups,
-        services=service_rollups,
-        assets=asset_rollups,
-        environments=environment_rollups,
-        top_services_by_risk=service_rollups[:bounded_limit],
-        top_assets_by_risk=asset_rollups[:bounded_limit],
-        waiver_debt=_waiver_debt_summary_from_repositories(
-            project_id=project_id,
-            finding_repository=finding_repository,
-            waiver_repository=waiver_repository,
-            limit=bounded_limit,
-        ),
+        findings=findings,
+        waivers=waiver_repository.list_project_waivers(project_id),
+        waiver_repository=waiver_repository,
+        limit=bounded_limit,
     )
 
 
 def _rollups_for_dimension(
-    findings: Sequence[Finding],
+    findings: Sequence[DecisionFindingView],
     *,
     dimension: str,
-    label_for_finding: Callable[[Finding], str],
+    label_for_finding: Callable[[DecisionFindingView], str],
     limit: int,
 ) -> list[GovernanceRollupPublic]:
-    grouped: dict[str, list[Finding]] = {}
+    grouped: dict[str, list[DecisionFindingView]] = {}
     for finding in findings:
         label = label_for_finding(finding)
         grouped.setdefault(label, []).append(finding)
@@ -163,7 +146,7 @@ def _rollup_for_findings(
     *,
     dimension: str,
     label: str,
-    findings: Sequence[Finding],
+    findings: Sequence[DecisionFindingView],
 ) -> GovernanceRollupPublic:
     priority_counts = Counter(_priority_label(finding) for finding in findings)
     status_counts = Counter(_status_label(finding) for finding in findings)
@@ -214,7 +197,7 @@ def _rollup_for_findings(
 
 def _waiver_debt_summary(
     *,
-    findings: Sequence[Finding],
+    findings: Sequence[DecisionFindingView],
     waivers: Sequence[Waiver],
     waiver_repository: WaiverRepository | None,
     limit: int,
@@ -279,64 +262,8 @@ def _waiver_debt_summary(
     )
 
 
-def _waiver_debt_summary_from_repositories(
-    *,
-    project_id: uuid.UUID,
-    finding_repository: FindingRepository,
-    waiver_repository: WaiverRepository,
-    limit: int,
-) -> GovernanceWaiverDebtPublic:
-    lifecycle = waiver_repository.project_waiver_lifecycle_summary(project_id)
-    finding_counts = finding_repository.project_waiver_finding_counts(project_id)
-    item_waivers = waiver_repository.list_project_waiver_debt_items(
-        project_id,
-        limit=limit,
-    )
-    items: list[GovernanceWaiverDebtEntryPublic] = []
-    for waiver in item_waivers:
-        status, days_remaining = waiver_lifecycle_status(waiver)
-        matched_findings = waiver_repository.matching_finding_count(waiver)
-        items.append(
-            GovernanceWaiverDebtEntryPublic(
-                id=waiver.id,
-                owner=waiver.owner,
-                scope=waiver_scope_label(waiver),
-                status=status,
-                days_remaining=days_remaining,
-                expires_at=waiver.expires_at,
-                review_at=waiver.review_at,
-                matched_findings=matched_findings,
-                cve_id=waiver.cve_id,
-                service=waiver.service,
-                asset_key=waiver.asset_key,
-                finding_id=waiver.finding_id,
-                reason=waiver.reason,
-                approval_ref=waiver.approval_ref,
-                ticket_url=waiver.ticket_url,
-            )
-        )
-    all_waivers = waiver_repository.list_project_waivers(project_id)
-    matched_finding_count = sum(
-        waiver_repository.matching_finding_count(waiver) for waiver in all_waivers
-    )
-    return GovernanceWaiverDebtPublic(
-        waiver_count=int(lifecycle["waiver_count"]),
-        active_count=int(lifecycle["active_count"]),
-        review_due_count=int(lifecycle["review_due_count"]),
-        expired_count=int(lifecycle["expired_count"]),
-        expiring_soon_count=int(lifecycle["expiring_soon_count"]),
-        matched_finding_count=matched_finding_count,
-        accepted_finding_count=finding_counts["accepted_finding_count"],
-        expired_finding_count=finding_counts["expired_finding_count"],
-        review_due_finding_count=finding_counts["review_due_finding_count"],
-        owner_counts=dict(lifecycle["owner_counts"]),
-        service_counts=dict(lifecycle["service_counts"]),
-        items=items,
-    )
-
-
-def _owner_label(finding: Finding) -> str:
-    asset_owner = getattr(finding.asset, "owner", None)
+def _owner_label(finding: DecisionFindingView) -> str:
+    asset_owner = getattr(finding.finding.asset, "owner", None)
     return _clean_label(
         asset_owner
         or _record_string(finding, ("owner", "asset_owner", "waiver_owner"))
@@ -344,8 +271,8 @@ def _owner_label(finding: Finding) -> str:
     )
 
 
-def _service_label(finding: Finding) -> str:
-    asset_service = getattr(finding.asset, "business_service", None)
+def _service_label(finding: DecisionFindingView) -> str:
+    asset_service = getattr(finding.finding.asset, "business_service", None)
     return _clean_label(
         asset_service
         or _record_string(
@@ -356,8 +283,8 @@ def _service_label(finding: Finding) -> str:
     )
 
 
-def _asset_label(finding: Finding) -> str:
-    asset = getattr(finding, "asset", None)
+def _asset_label(finding: DecisionFindingView) -> str:
+    asset = getattr(finding.finding, "asset", None)
     asset_key = getattr(asset, "asset_key", None)
     asset_name = getattr(asset, "name", None)
     return _clean_label(
@@ -368,8 +295,8 @@ def _asset_label(finding: Finding) -> str:
     )
 
 
-def _environment_label(finding: Finding) -> str:
-    asset_environment = getattr(finding.asset, "environment", None)
+def _environment_label(finding: DecisionFindingView) -> str:
+    asset_environment = getattr(finding.finding.asset, "environment", None)
     return _clean_label(
         _enum_value(asset_environment)
         or _record_string(finding, ("environment", "asset_environment"))
@@ -377,17 +304,11 @@ def _environment_label(finding: Finding) -> str:
     )
 
 
-def _priority_label(finding: Finding) -> str:
-    raw = _enum_value(finding.priority).strip().lower()
-    return {
-        "critical": "Critical",
-        "high": "High",
-        "medium": "Medium",
-        "low": "Low",
-    }.get(raw, "Low")
+def _priority_label(finding: DecisionFindingView) -> str:
+    return finding.priority_label
 
 
-def _status_label(finding: Finding) -> str:
+def _status_label(finding: DecisionFindingView) -> str:
     return _enum_value(finding.status).strip().lower() or "open"
 
 
@@ -398,14 +319,14 @@ def _highest_priority(priority_counts: Counter[str]) -> str | None:
     return None
 
 
-def _waiver_status(finding: Finding) -> str | None:
+def _waiver_status(finding: DecisionFindingView) -> str | None:
     record = _waiver_record(finding)
     status = _string_value(record.get("waiver_status")) or _string_value(record.get("status"))
     return status.strip().lower() if status else None
 
 
-def _waiver_record(finding: Finding) -> dict[str, Any]:
-    evidence = _finding_evidence_payload(finding)
+def _waiver_record(finding: DecisionFindingView) -> dict[str, Any]:
+    evidence = finding.evidence_payload
     explanation = _dict_value(evidence.get("priority_evidence", {}).get("raw"))
     record: dict[str, Any] = {}
     governance = _dict_value(evidence.get("governance"))
@@ -415,8 +336,8 @@ def _waiver_record(finding: Finding) -> dict[str, Any]:
     return record
 
 
-def _record_string(finding: Finding, keys: Sequence[str]) -> str | None:
-    evidence = _finding_evidence_payload(finding)
+def _record_string(finding: DecisionFindingView, keys: Sequence[str]) -> str | None:
+    evidence = finding.evidence_payload
     priority_raw = _dict_value(_dict_value(evidence.get("priority_evidence")).get("raw"))
     occurrence_scope = _dict_value(evidence.get("occurrence_scope"))
     records = (
@@ -431,14 +352,6 @@ def _record_string(finding: Finding, keys: Sequence[str]) -> str | None:
             if value:
                 return value
     return None
-
-
-def _finding_evidence_payload(finding: Finding) -> dict[str, Any]:
-    session = object_session(finding)
-    if not isinstance(session, Session):
-        return {}
-    evidence = EvidenceRepository(session).latest_finding_decision_evidence(finding.id)
-    return evidence.to_jsonable() if evidence is not None else {}
 
 
 def _clean_label(value: object) -> str:
