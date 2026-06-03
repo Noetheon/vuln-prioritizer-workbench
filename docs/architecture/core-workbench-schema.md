@@ -9,7 +9,12 @@ CVE findings and their project, asset, component, and vulnerability context. It
 does not introduce scanning, exploit execution, heuristic ATT&CK mapping, or a
 second opaque scoring model.
 
-The SQLModel tables are singular and owned by the Workbench backend:
+This page focuses on the core triage graph. The broader active schema also
+contains analysis runs, workflow rows, provider snapshots, finding occurrences,
+and the Decision/Evidence Kernel v2 tables documented in
+[Analysis Run Provider Schema](analysis-run-provider-schema.md).
+
+The core SQLModel tables are singular and owned by the Workbench backend:
 
 - `asset`
 - `component`
@@ -109,7 +114,9 @@ Constraints and indexes:
 ### `finding`
 
 A finding links one project to one vulnerability, optionally scoped to an asset
-and component. It stores the transparent priority result plus persisted status.
+and component. It stores stable identity, join context, persisted lifecycle
+status, and indexed priority/cache fields used for filtering, sorting, and
+pagination. It is not the source of truth for successful v2 decision semantics.
 
 Minimum fields:
 
@@ -148,10 +155,12 @@ version, and package type. Missing component or asset context is represented by
 an explicit empty marker so repeated minimal CVE-list imports reuse the same
 finding instead of relying on SQL NULL uniqueness behavior.
 
-Finding-level explanation, data-quality, provider, ATT&CK, governance, and
-remediation evidence lives in `finding_decision_evidence` as typed
-`FindingDecisionEvidenceV2`. `finding` intentionally keeps only indexed working
-fields and links so triage queries stay bounded.
+Finding-level explanation, data-quality, provider, ATT&CK, governance, waiver,
+occurrence, and remediation evidence lives in `finding_decision_evidence` as
+typed `FindingDecisionEvidenceV2`. `finding` intentionally keeps only indexed
+working fields and links so triage queries stay bounded. Successful v2 read
+paths project product facts from `decision_projection.py`, not from stale
+finding decision columns.
 
 ## Persistence Contract
 

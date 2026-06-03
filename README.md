@@ -94,7 +94,10 @@ for decisions.
   `backend/app/contracts/decision_evidence.py` defines the public evidence
   contracts. `analysis_evidence` stores run-wide evidence only, while
   `finding_decision_evidence` stores the current per-finding decision graph;
-  workflow rows hold lifecycle state and compact artifact/reference metadata.
+  `backend/app/services/decision_projection.py` is the central evidence-first
+  read model for API, dashboard, governance, GitHub preview, and report
+  projections. Workflow rows hold lifecycle state and compact
+  artifact/reference metadata.
 - Domain layer: retained under `backend/src/vuln_prioritizer/**` for parsers,
   providers, scoring, SARIF contracts, and neutral vulnerability logic shared
   with the active backend. The old Typer CLI and legacy report facades have

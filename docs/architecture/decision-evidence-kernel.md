@@ -21,7 +21,7 @@ payloads.
 | Persistence summary adapters | `backend/app/services/import_execution_persistence.py`, `backend/app/services/import_execution_persistence_bulk.py` | Persist relational records and return the typed summary consumed by `DecisionPersistencePlan`. |
 | Evidence repository | `backend/app/repositories/evidence.py` | Upsert run-wide evidence and replace per-finding decision evidence. |
 | Evidence read model | `backend/app/services/decision_projection.py` | Centralize evidence-first run, finding, occurrence, report, dashboard, governance, and GitHub issue read views. |
-| Public projections | `backend/app/services/run_workflow_projection.py`, `backend/app/services/finding_projection.py`, `backend/app/services/report_projection.py`, `backend/app/services/report_service_payload.py` | Map central decision views into stable API, finding detail, dashboard, waiver/governance, and report payloads. |
+| Public projections | `backend/app/services/run_workflow_projection.py`, `backend/app/services/finding_projection.py`, `backend/app/services/dashboard.py`, `backend/app/services/governance.py`, `backend/app/services/decisions.py`, `backend/app/services/github_issues.py`, `backend/app/services/report_projection.py`, `backend/app/services/report_service_payload.py` | Map central decision views into stable API, finding detail, dashboard, waiver/governance, GitHub issue preview, and report payloads. |
 
 `backend/app/services/decision_evidence_builder.py` remains an adapter module for
 diagnostics, finding-level builders, and public payload-boundary helpers. It is
@@ -98,6 +98,8 @@ Projection code should follow these rules:
 - SQL tables such as `finding`, `finding_occurrence`, and `analysis_run` remain
   useful for identities, pagination, sorting, relational joins, and lifecycle
   state, but not as a second source of decision semantics.
+- Public DTO shapes remain stable. The evidence-first read model is an internal
+  projection boundary, not a new public API surface.
 - Missing `analysis_evidence` for a successful v2 import is inconsistent state,
   not a reason to rebuild product facts from workflow JSON.
 - Missing per-finding `FindingDecisionEvidenceV2` for a successful run finding
