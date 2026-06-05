@@ -173,6 +173,11 @@ maintainer triage without making the required PR smoke permanently red. Public
 production release evidence still needs candidate-specific image digests and
 any required signing/provenance attestation for those exact images.
 
+Any Grype ignore in `.grype.yaml` must be narrow, documented, and temporary.
+Use it only for upstream base-image findings where the scanner reports a fix
+outside the repository's current stable runtime policy, such as a beta-only
+Python fix while the Docker runtime remains pinned to stable Python 3.13.
+
 ## Dependabot Labels
 
 Dependabot PR labels must use labels that exist in the repository taxonomy.
