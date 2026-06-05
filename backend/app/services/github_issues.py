@@ -19,7 +19,8 @@ from app.models.github_issues import (
     GitHubIssuePreviewCreate,
     GitHubIssuePreviewRecord,
 )
-from app.repositories import EvidenceRepository, FindingPageQuery, FindingRepository
+from app.repositories import FindingPageQuery, FindingRepository
+from app.services.decision_projection import DecisionFindingView, project_finding_decision_views
 from vuln_prioritizer.security_redaction import redact_text, redact_value
 
 GITHUB_SECRET_PATTERN = re.compile(
@@ -59,7 +60,8 @@ def build_github_issue_preview_items(
 ) -> list[GitHubIssuePreviewRecord]:
     """Return GitHub issue markdown for selected or top-ranked findings."""
     findings = _selected_findings(session, project_id=project_id, payload=payload)
-    return [_preview_item(finding, payload=payload) for finding in findings]
+    finding_views = project_finding_decision_views(session, findings)
+    return [_preview_item(view, payload=payload) for view in finding_views]
 
 
 def github_export_token(token_env: str | None) -> str:
@@ -168,33 +170,34 @@ def _selected_findings(
 
 
 def _preview_item(
-    finding: Finding,
+    view: DecisionFindingView,
     *,
     payload: GitHubIssuePreviewCreate,
 ) -> GitHubIssuePreviewRecord:
     """Preview item function."""
-    priority = _safe_text(str(finding.priority).title())
-    title = f"{_safe_text(finding.cve_id)}: {priority} priority remediation"
+    finding = view.finding
+    priority = _safe_text(view.priority_label)
+    title = f"{_safe_text(view.cve_id)}: {priority} priority remediation"
     labels = [
         payload.label_prefix,
-        f"{payload.label_prefix}:priority-{str(finding.priority).lower()}",
+        f"{payload.label_prefix}:priority-{str(view.priority).lower()}",
         "security",
     ]
-    if finding.in_kev:
+    if view.in_kev:
         labels.append(f"{payload.label_prefix}:kev")
-    evidence_refs = _evidence_refs(finding) if payload.include_evidence_refs else []
+    evidence_refs = _evidence_refs(view) if payload.include_evidence_refs else []
     duplicate_key = (
-        f"{finding.project_id}:{finding.id}:{finding.cve_id}:"
+        f"{finding.project_id}:{finding.id}:{view.cve_id}:"
         f"{finding.asset_id or 'no-asset'}:{finding.component_id or 'no-component'}"
     )
     body = _issue_body(
-        finding,
+        view,
         evidence_refs=evidence_refs,
         duplicate_key=duplicate_key,
     )
     return GitHubIssuePreviewRecord(
         finding_id=finding.id,
-        cve_id=finding.cve_id,
+        cve_id=view.cve_id,
         title=title,
         body=body,
         labels=labels,
@@ -205,12 +208,13 @@ def _preview_item(
 
 
 def _issue_body(
-    finding: Finding,
+    view: DecisionFindingView,
     *,
     evidence_refs: list[str],
     duplicate_key: str,
 ) -> str:
     """Issue body function."""
+    finding = view.finding
     finding_url = f"/api/v1/findings/{finding.id}"
     evidence_lines = [f"- {_safe_text(ref)}" for ref in evidence_refs] or [
         "- No additional evidence references captured."
@@ -221,14 +225,14 @@ def _issue_body(
             "",
             "| Field | Value |",
             "| --- | --- |",
-            f"| CVE | `{_table_cell(finding.cve_id)}` |",
-            f"| Priority | {_table_cell(str(finding.priority).title())} |",
-            f"| Status | {_table_cell(str(finding.status))} |",
-            f"| Operational rank | {_table_cell(str(finding.operational_rank))} |",
-            f"| Risk score | {_table_cell(_number_label(finding.risk_score))} |",
-            f"| CVSS | {_table_cell(_number_label(finding.cvss_base_score))} |",
-            f"| EPSS | {_table_cell(_epss_label(finding.epss))} |",
-            f"| KEV | {_table_cell('yes' if finding.in_kev else 'no')} |",
+            f"| CVE | `{_table_cell(view.cve_id)}` |",
+            f"| Priority | {_table_cell(view.priority_label)} |",
+            f"| Status | {_table_cell(str(view.status))} |",
+            f"| Operational rank | {_table_cell(str(view.operational_rank))} |",
+            f"| Risk score | {_table_cell(_number_label(view.risk_score))} |",
+            f"| CVSS | {_table_cell(_number_label(view.cvss_base_score))} |",
+            f"| EPSS | {_table_cell(_epss_label(view.epss))} |",
+            f"| KEV | {_table_cell('yes' if view.in_kev else 'no')} |",
             f"| Component | {_table_cell(_component_label(finding))} |",
             f"| Asset | {_table_cell(_asset_label(finding))} |",
             f"| Owner | {_table_cell(finding.asset.owner if finding.asset else None)} |",
@@ -239,12 +243,12 @@ def _issue_body(
             "",
             "## Why This Should Be Prioritized",
             "",
-            _safe_block(finding.rationale, fallback="No rationale captured."),
+            _safe_block(view.rationale, fallback="No rationale captured."),
             "",
             "## Recommended Remediation",
             "",
             _safe_block(
-                finding.recommended_action,
+                view.recommended_action,
                 fallback=(
                     "Review the affected component or asset and remediate according to policy."
                 ),
@@ -266,16 +270,14 @@ def _issue_body(
     return body
 
 
-def _evidence_refs(finding: Finding) -> list[str]:
+def _evidence_refs(view: DecisionFindingView) -> list[str]:
     """Evidence refs function."""
+    finding = view.finding
     refs = [
         f"/api/v1/findings/{finding.id}",
-        f"https://nvd.nist.gov/vuln/detail/{finding.cve_id}",
+        f"https://nvd.nist.gov/vuln/detail/{view.cve_id}",
     ]
-    evidence = EvidenceRepository(_finding_session(finding)).latest_finding_decision_evidence(
-        finding.id
-    )
-    refs.extend(_extract_evidence_refs(evidence.to_jsonable() if evidence is not None else {}))
+    refs.extend(_extract_evidence_refs(view.evidence_payload))
     seen: set[str] = set()
     deduped: list[str] = []
     for ref in refs:
@@ -284,15 +286,6 @@ def _evidence_refs(finding: Finding) -> list[str]:
             deduped.append(safe_ref)
             seen.add(safe_ref)
     return deduped[:10]
-
-
-def _finding_session(finding: Finding) -> Any:
-    from sqlalchemy.orm import object_session
-
-    session = object_session(finding)
-    if session is None:
-        raise RuntimeError("Finding is not attached to a session.")
-    return session
 
 
 def _extract_evidence_refs(value: Any) -> list[str]:

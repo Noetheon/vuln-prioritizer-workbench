@@ -79,6 +79,7 @@ composition modules.
 
 Decision and evidence data are centralized in the Decision/Evidence Kernel v2:
 `backend/app/services/decision_kernel.py`,
+`backend/app/services/decision_projection.py`,
 `backend/app/contracts/decision_evidence.py`, `analysis_evidence`, and
 `finding_decision_evidence`. Successful imports produce a typed
 `DecisionRunResult`, then validate and persist run-wide `AnalysisEvidenceV2`
@@ -86,7 +87,8 @@ plus per-finding `FindingDecisionEvidenceV2` records before the workflow is
 terminal. Run-wide evidence deliberately does not embed every finding decision;
 reports and detail views hydrate those decisions from
 `finding_decision_evidence`. Run summaries, finding detail, dashboards, waiver
-rollups, governance views, and report exports project from those typed records.
+rollups, governance views, GitHub issue previews, and report exports project
+through the central evidence-first read model in `decision_projection.py`.
 `workflow_run.result_json` remains an internal lifecycle/ref payload, not the
 source of product truth.
 

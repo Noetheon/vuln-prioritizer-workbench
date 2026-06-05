@@ -24,7 +24,7 @@ hosted SaaS product.
 | --- | --- | --- |
 | Backend runtime | `backend/app` | Active FastAPI app, `/api/v1` routes, SQLModel models, repositories, services, and Alembic migrations. |
 | Worker runtime | `backend/app/workers` | Separate database-backed worker process for queued durable imports, provider refreshes, retries, cancellation, and report generation. |
-| Decision/Evidence Kernel | `backend/app/services/decision_kernel.py`, `backend/app/contracts/decision_evidence.py`, `analysis_evidence`, `finding_decision_evidence` | Kernel-first typed v2 source of truth for bounded run evidence, per-finding decisions, provider facts, governance signals, priority explanations, diagnostics, and report projection. |
+| Decision/Evidence Kernel | `backend/app/services/decision_kernel.py`, `backend/app/services/decision_projection.py`, `backend/app/contracts/decision_evidence.py`, `analysis_evidence`, `finding_decision_evidence` | Kernel-first typed v2 producer plus evidence-first read model for bounded run evidence, per-finding decisions, provider facts, governance signals, priority explanations, diagnostics, API projection, dashboard, governance, GitHub preview, and reports. |
 | Frontend runtime | `frontend` | React, Vite, TypeScript, TanStack Query, local route adapter, Playwright tests, and Workbench UI. |
 | Generated client | `frontend/src/client/**` | Generated from backend OpenAPI. Do not edit generated files manually. |
 | Frontend integration wrapper | `frontend/src/api-client.ts` | Handwritten wrapper over generated client code. Normal app code should use this boundary. |
@@ -76,15 +76,20 @@ archive artifacts, or external primary sources own the major documentation
 claims. A passing docs build is necessary, but it is not sufficient proof that a
 provider, release, deployment, or archived-evidence statement is current.
 
-The latest documentation hygiene pass recorded in this checkout is 2026-05-30.
+The latest documentation hygiene pass recorded in this checkout is 2026-06-03.
 It covered the Public + Root documentation scope, verified MkDocs navigation
-coverage, checked the worker-first Workflow v2 quickstarts and the
-kernel-first Decision/Evidence Kernel v2 contracts against code, rechecked
-import/report format claims against active backend and frontend definitions,
-and ran the docs hygiene/build gates. The active evidence baseline is
-`analysis-result.v2.json`; `analysis-result.v1.json` is no longer an active
-contract. The provider/version wording baseline was refreshed against primary
-sources on 2026-05-30. Treat these as documentation baselines, not as live-provider uptime proof or public deployment certification.
+coverage, checked the worker-first Workflow v2 quickstarts, rechecked the
+kernel-first Decision/Evidence Kernel v2 producer, and validated the
+evidence-first `decision_projection.py` read model against code and tests.
+Successful v2 imports now read product output facts from `AnalysisEvidenceV2`
+and `FindingDecisionEvidenceV2` through that central read model; relational
+finding columns remain useful for identity, joins, pagination, sorting, and
+lifecycle context. The same pass rechecked import/report format claims against
+active backend and frontend definitions and ran the docs hygiene/build gates.
+The active evidence baseline is `analysis-result.v2.json`;
+`analysis-result.v1.json` is no longer an active contract. The
+provider/version wording baseline was refreshed against primary sources on
+2026-05-30. Treat these as documentation baselines, not as live-provider uptime proof or public deployment certification.
 
 The current package maturity classifier is `Development Status :: 4 - Beta`.
 That means the self-hosted Workbench is release-gated for local-first

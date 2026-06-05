@@ -7,7 +7,7 @@ successfully and still be misleading if it mixes current Workbench behavior,
 historical CLI/template material, archived demo evidence, or live provider
 facts.
 
-Latest documentation hygiene pass recorded from this checkout: 2026-05-30.
+Latest documentation hygiene pass recorded from this checkout: 2026-06-03.
 Scope: Public + Root documentation. That means every MkDocs-published
 `docs/**/*.md` page plus root/community docs, `backend/README.md`,
 `frontend/README.md`, `frontend/DESIGN.md`, `frontend/VPW_PAGE_PATTERNS.md`,
@@ -27,7 +27,29 @@ current docs link to them.
 - Downgrade unproven claims to limitations, historical notes, or evidence gaps.
   Do not convert local demo proof into public/shared deployment certification.
 
-## 2026-05-30 Kernel-First Hygiene Findings
+## 2026-06-03 Evidence-First Read Model Findings
+
+- Decision/Evidence Kernel v2 documentation was rechecked after the
+  evidence-first read-model consolidation. Successful v2 output facts now flow
+  through `backend/app/services/decision_projection.py` before being mapped to
+  run APIs, finding list/detail, dashboard, governance/waiver views, GitHub
+  issue previews, reports, and evidence bundles.
+- Strict v2 invariants are documented: a successful run without
+  `AnalysisEvidenceV2`, or a run-related finding without
+  `FindingDecisionEvidenceV2`, is inconsistent state. The supported response is
+  an operator-safe server error, not reconstruction from `workflow_run.result_json`
+  or stale `finding` columns.
+- Failed, cancelled, and running workflows keep their lifecycle and diagnostics
+  path. The strict evidence-first rule applies to successful product output
+  facts, not to pending workflow status or failure diagnostics.
+- Public DTO shapes remain stable. The new read-model types are internal
+  projection boundaries, while `AnalysisRunPublic`, `FindingPublic`, reports,
+  dashboard, governance, and GitHub-preview responses retain their existing
+  wire shape.
+- The documentation pass was rechecked with docs hygiene/build gates plus the
+  targeted decision/import/report/workflow contract suites.
+
+## 2026-05-30 Kernel-First Producer Findings
 
 - Workflow v2 documentation was checked against the active worker-first code
   path. Quickstarts now include the `worker` service where imports, provider
@@ -83,7 +105,7 @@ current docs link to them.
 | Active stack | FastAPI backend under `backend/app`, React/Vite frontend under `frontend`, retained domain package under `backend/src/vuln_prioritizer`. | `backend/app/main.py`, `backend/app/api/routes/**`, `frontend/package.json`, `frontend/src/AppRouter.tsx`, `backend/pyproject.toml` | Not applicable. | `make local-workbench-check` |
 | Supported imports | Active Workbench import types are `cve-list`, `generic-occurrence-csv`, `trivy-json`, `grype-json`, `cyclonedx-json`, `spdx-json`, `dependency-check-json`, `github-alerts-json`, `nessus-xml`, and `openvas-xml`. | `backend/app/importers/offline_loader.py`, `backend/src/vuln_prioritizer/options.py`, `frontend/src/lib/import-format-types.ts`, `docs/support_matrix.md` | Tool format ownership remains external, but support is repo-defined. | `python3 -m pytest -q backend/tests/test_input_fixtures.py backend/tests/test_trivy_json_parser.py backend/tests/test_grype_json_parser.py --no-cov` |
 | Report outputs | Active report formats are Markdown, HTML, JSON, CSV, Evidence ZIP, ATT&CK Navigator, and SARIF. | `backend/app/models/reports.py`, `backend/app/services/report_contracts.py`, `frontend/src/lib/report-format.ts`, `docs/contracts.md` | SARIF version is external; VPW support is repo-defined. | `python3 -m pytest -q backend/tests/api/report_contracts backend/tests/test_report_formatting.py --no-cov` |
-| Decision/Evidence Kernel v2 | Successful imports produce one typed `DecisionRunResult`; bounded run evidence lives in `analysis_evidence`, while per-finding decision graphs live in `finding_decision_evidence`. Successful workflow result JSON is only a compact reference payload. | `backend/app/services/decision_kernel.py`, `backend/app/contracts/decision_evidence.py`, `backend/app/models/evidence.py`, `backend/app/repositories/evidence.py`, `backend/app/services/import_execution.py`, `backend/app/services/run_workflow_projection.py`, `backend/tests/api/import_contracts/test_kernel_first_import_contract.py`, `backend/tests/api/import_contracts/`, `backend/tests/api/report_contracts/` | Not applicable. | `python3 -m pytest -q backend/tests/api/import_contracts backend/tests/api/report_contracts backend/tests/api/workflow_contracts --no-cov` |
+| Decision/Evidence Kernel v2 | Successful imports produce one typed `DecisionRunResult`; bounded run evidence lives in `analysis_evidence`, while per-finding decision graphs live in `finding_decision_evidence`. Successful workflow result JSON is only a compact reference payload, and successful read paths hydrate public DTOs through the central `decision_projection.py` read model. Relational finding columns remain identity/join/index context, not a second decision source. | `backend/app/services/decision_kernel.py`, `backend/app/services/decision_projection.py`, `backend/app/contracts/decision_evidence.py`, `backend/app/models/evidence.py`, `backend/app/repositories/evidence.py`, `backend/app/services/import_execution.py`, `backend/app/services/run_workflow_projection.py`, `backend/app/services/finding_projection.py`, `backend/app/services/dashboard.py`, `backend/app/services/governance.py`, `backend/app/services/github_issues.py`, `backend/app/services/report_service_payload.py`, `backend/tests/test_decision_projection.py`, `backend/tests/api/import_contracts/test_kernel_first_import_contract.py`, `backend/tests/api/import_contracts/`, `backend/tests/api/report_contracts/`, `backend/tests/hygiene/test_backend_boundaries.py` | Not applicable. | `python3 -m pytest -q backend/tests/test_decision_projection.py backend/tests/hygiene/test_backend_boundaries.py backend/tests/api/import_contracts backend/tests/api/report_contracts backend/tests/api/workflow_contracts --no-cov` |
 | Provider enrichment | VPW uses NVD, FIRST EPSS, and CISA KEV as transparent provider signals and surfaces degraded or missing provider data. | `backend/src/vuln_prioritizer/providers/*.py`, `backend/tests/test_provider_response_contracts.py`, `backend/tests/live/test_provider_live_contracts.py` | [NVD CVE API 2.0](https://nvd.nist.gov/developers/vulnerabilities), [FIRST EPSS API](https://api.first.org/epss/), [CISA KEV catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) | `VPW_RUN_LIVE_PROVIDER_TESTS=1 python3 -m pytest -q backend/tests/live/test_provider_live_contracts.py --no-cov` |
 | Provider request limits | NVD documents `cveIds` as the current parameter with up to 100 CVE IDs per request. FIRST EPSS documents comma-separated CVEs with a 2000-character `cve` parameter limit. VPW currently sends NVD requests per CVE and EPSS chunks below the documented limit. | `backend/src/vuln_prioritizer/providers/nvd.py`, `backend/src/vuln_prioritizer/providers/epss.py`, `backend/src/vuln_prioritizer/config.py` | [NVD vulnerability API](https://nvd.nist.gov/developers/vulnerabilities), [FIRST EPSS API](https://api.first.org/epss/) | Provider fixture tests plus live provider smoke. |
 | CISA KEV source | cisa.gov is the authoritative catalog. `cisagov/kev-data` is an official mirror used as fallback. | `backend/src/vuln_prioritizer/providers/kev.py`, `backend/src/vuln_prioritizer/config.py`, `backend/tests/test_provider_response_contracts.py` | [CISA KEV catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog), [cisagov/kev-data](https://github.com/cisagov/kev-data) | `python3 -m pytest -q backend/tests/test_provider_response_contracts.py --no-cov` |
@@ -107,10 +129,11 @@ VPW_RUN_LIVE_PROVIDER_TESTS=1 python3 -m pytest -q backend/tests/live/test_provi
 make local-workbench-check
 ```
 
-The 2026-05-30 hygiene implementation additionally used these targeted
+The 2026-06-03 evidence-first read-model pass additionally used these targeted
 contract checks while auditing docs:
 
 ```bash
+python3 -m pytest -q backend/tests/test_decision_projection.py backend/tests/hygiene/test_backend_boundaries.py --no-cov
 python3 -m pytest -q backend/tests/api/import_contracts/test_kernel_first_import_contract.py --no-cov
 python3 -m pytest -q backend/tests/test_input_fixtures.py backend/tests/test_trivy_json_parser.py backend/tests/test_grype_json_parser.py --no-cov
 python3 -m pytest -q backend/tests/api/report_contracts backend/tests/test_report_formatting.py --no-cov

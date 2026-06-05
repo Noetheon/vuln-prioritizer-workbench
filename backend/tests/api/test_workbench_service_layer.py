@@ -264,7 +264,6 @@ def test_asset_finding_and_run_repositories_persist_domain_graph(
         priority=app_models.FindingPriority.CRITICAL,
         priority_rank=1,
         in_kev=True,
-        explanation_json={"reason": "KEV and internet-facing production asset"},
     )
     snapshot = run_repository.get_or_create_provider_snapshot(
         content_hash="sha256:repo-contract",

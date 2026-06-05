@@ -603,6 +603,9 @@ def test_workbench_import_validation_and_storage_are_split_from_route_facade() -
 
 def test_run_workflow_metadata_uses_decision_evidence_v2_projection() -> None:
     contract_source = (ROOT / "app/contracts/decision_evidence.py").read_text(encoding="utf-8")
+    decision_projection_source = (ROOT / "app/services/decision_projection.py").read_text(
+        encoding="utf-8"
+    )
     metadata_source = (ROOT / "app/services/run_workflow_metadata.py").read_text(encoding="utf-8")
     projection_source = (ROOT / "app/services/run_workflow_projection.py").read_text(
         encoding="utf-8"
@@ -629,8 +632,12 @@ def test_run_workflow_metadata_uses_decision_evidence_v2_projection() -> None:
     assert "app.services.run_workflow_projection" in run_route_imports
     assert "app.services.run_workflow_projection" in import_route_imports
     assert "def redacted_workflow_summary_payload" in metadata_source
-    assert "AnalysisEvidenceV2" in projection_source
-    assert "RunDiagnosticsV2" in projection_source
+    assert "DecisionRunView" in decision_projection_source
+    assert "DecisionFindingView" in decision_projection_source
+    assert "AnalysisEvidenceV2" in decision_projection_source
+    assert "RunDiagnosticsV2" in decision_projection_source
+    assert "decision_run_view(" in projection_source
+    assert "raw_result" not in projection_source
     assert "analysis_run_workflow_metadata_public" not in projection_source
     assert "AnalysisRunPublic(" in projection_source
     assert "AnalysisRunSummaryPublic(" in projection_source
@@ -650,6 +657,37 @@ def test_run_workflow_metadata_uses_decision_evidence_v2_projection() -> None:
         assert "finish_analysis_run(" in source, path
         assert "result_json=" not in source
         assert "diagnostics_json=" not in source
+
+
+def test_successful_decision_read_paths_use_central_decision_projection() -> None:
+    decision_projection_source = (ROOT / "app/services/decision_projection.py").read_text(
+        encoding="utf-8"
+    )
+    projection_paths = (
+        "app/services/run_workflow_projection.py",
+        "app/services/finding_projection.py",
+        "app/services/report_service_payload.py",
+        "app/services/report_projection.py",
+        "app/services/dashboard.py",
+        "app/services/governance.py",
+        "app/services/github_issues.py",
+        "app/services/decisions.py",
+    )
+    forbidden_direct_reads = (
+        "EvidenceRepository",
+        "get_analysis_evidence(",
+        "latest_finding_decision_evidence(",
+        "finding_decision_evidence_for_run(",
+    )
+
+    assert "class DecisionEvidenceInvariantError" in decision_projection_source
+    assert "def decision_run_view" in decision_projection_source
+    assert "def run_finding_decision_views" in decision_projection_source
+    for path in projection_paths:
+        source = (ROOT / path).read_text(encoding="utf-8")
+        assert "app.services.decision_projection" in source, path
+        for forbidden in forbidden_direct_reads:
+            assert forbidden not in source, path
 
 
 def test_run_workflow_raw_metadata_access_stays_behind_service_boundary() -> None:

@@ -1,0 +1,14 @@
+# Temporary CI waiver for the official Python 3.13 runtime image.
+#
+# Grype currently marks the Python 3.13.13 binary from python:3.13-slim as
+# fixable for CVE-2026-7210 because a 3.15.0 beta carries a fix. The project
+# runtime and CI policy remain on stable Python 3.13, and no stable 3.13 slim
+# image with this fix is available yet. Keep this ignore scoped to the exact
+# binary package/version so it expires automatically when the base image moves.
+ignore:
+  - vulnerability: CVE-2026-7210
+    fix-state: fixed
+    package:
+      name: python
+      version: 3.13.13
+      type: binary

@@ -8,8 +8,6 @@ from collections.abc import Sequence
 from typing import Any
 
 from pydantic import ValidationError
-from sqlalchemy.orm import object_session
-from sqlmodel import Session
 
 from app.contracts.decision_evidence import FindingDecisionEvidenceV2
 from app.models import (
@@ -20,7 +18,12 @@ from app.models import (
     ProjectCvssOnlyComparisonPublic,
     ProjectDecisionSummaryPublic,
 )
-from app.repositories import EvidenceRepository
+from app.services.decision_projection import (
+    DecisionFindingView,
+    decision_run_view,
+    decision_views_for_findings,
+    latest_finding_decision_view,
+)
 from vuln_prioritizer.models import PrioritizedFinding
 from vuln_prioritizer.services.baseline_comparison import (
     build_cvss_baseline_comparison_payload,
@@ -41,7 +44,8 @@ class DecisionDataUnavailableError(RuntimeError):
 
 def build_finding_explanation_payload(finding: Finding) -> FindingExplanationPublic:
     """Build the public explanation payload for one stored finding."""
-    evidence = _required_finding_evidence(finding)
+    view = latest_finding_decision_view(finding)
+    evidence = _required_finding_evidence(view)
     explanation_json = evidence.priority_evidence.raw
     decision_explanation = evidence.priority_evidence.explanation or _dict_or_none(
         explanation_json.get("explanation")
@@ -52,16 +56,16 @@ def build_finding_explanation_payload(finding: Finding) -> FindingExplanationPub
     return FindingExplanationPublic(
         finding_id=finding.id,
         project_id=finding.project_id,
-        cve_id=finding.cve_id,
-        priority=finding.priority,
-        priority_rank=finding.priority_rank,
+        cve_id=view.cve_id,
+        priority=view.priority,
+        priority_rank=view.priority_rank,
         priority_state=evidence.priority_evidence.priority_state
         or _string_or_none(explanation_json.get("priority_state"))
-        or _priority_label(str(finding.priority)),
-        risk_score=finding.risk_score,
-        operational_rank=finding.operational_rank,
-        rationale=finding.rationale,
-        recommended_action=finding.recommended_action,
+        or view.priority_label,
+        risk_score=view.risk_score,
+        operational_rank=view.operational_rank,
+        rationale=view.rationale,
+        recommended_action=view.recommended_action,
         decision_guidance=evidence.remediation.raw
         or _dict_or_none(explanation_json.get("decision_guidance")),
         decision_explanation=decision_explanation,
@@ -75,23 +79,24 @@ def build_finding_explanation_payload(finding: Finding) -> FindingExplanationPub
 def build_project_summary_payload(
     *,
     project_id: uuid.UUID,
-    findings: Sequence[Finding],
+    findings: Sequence[Finding | DecisionFindingView],
     runs: Sequence[AnalysisRun],
 ) -> ProjectDecisionSummaryPublic:
     """Build a dashboard summary from persisted findings and latest run metadata."""
+    finding_views = _decision_views(findings)
     latest_run = runs[0] if runs else None
     latest_run_summary = _latest_run_summary(latest_run)
     return ProjectDecisionSummaryPublic(
         project_id=project_id,
-        finding_count=len(findings),
+        finding_count=len(finding_views),
         open_finding_count=sum(
-            1 for finding in findings if str(finding.status) in OPEN_WORK_STATUSES
+            1 for finding in finding_views if str(finding.status) in OPEN_WORK_STATUSES
         ),
-        counts_by_priority=_counts_by_priority(findings),
-        counts_by_status=_counts_by_status(findings),
-        kev_hits=sum(1 for finding in findings if finding.in_kev),
-        epss_hits=sum(1 for finding in findings if finding.epss is not None),
-        cvss_known_count=sum(1 for finding in findings if finding.cvss_base_score is not None),
+        counts_by_priority=_counts_by_priority(finding_views),
+        counts_by_status=_counts_by_status(finding_views),
+        kev_hits=sum(1 for finding in finding_views if finding.in_kev),
+        epss_hits=sum(1 for finding in finding_views if finding.epss is not None),
+        cvss_known_count=sum(1 for finding in finding_views if finding.cvss_base_score is not None),
         provider_degraded=bool(latest_run_summary.get("provider_degraded", False)),
         latest_run_id=latest_run.id if latest_run is not None else None,
         latest_run_status=latest_run.status if latest_run is not None else None,
@@ -126,10 +131,7 @@ def build_project_summary_payload_from_counts(
 def _latest_run_summary(latest_run: AnalysisRun | None) -> dict[str, Any]:
     if latest_run is None:
         return {}
-    session = object_session(latest_run)
-    if not isinstance(session, Session):
-        return {}
-    evidence = EvidenceRepository(session).get_analysis_evidence(latest_run.id)
+    evidence = decision_run_view(latest_run).evidence
     if evidence is None:
         return {}
     return {
@@ -158,40 +160,41 @@ def build_cvss_only_comparison_payload(
 
 def prioritized_finding_from_workbench(finding: Finding) -> PrioritizedFinding:
     """Convert a stored Workbench finding back to the core decision model."""
-    evidence = _finding_evidence(finding)
+    view = latest_finding_decision_view(finding)
+    evidence = view.evidence
     explanation_json = evidence.priority_evidence.raw if evidence is not None else {}
-    if explanation_json.get("cve_id") == finding.cve_id:
+    if explanation_json.get("cve_id") == view.cve_id:
         try:
             return PrioritizedFinding.model_validate(explanation_json)
         except (TypeError, ValueError, ValidationError):
             pass
 
     return PrioritizedFinding(
-        cve_id=finding.cve_id,
+        cve_id=view.cve_id,
         description=getattr(finding.vulnerability, "description", None),
-        cvss_base_score=finding.cvss_base_score,
-        epss=finding.epss,
-        in_kev=finding.in_kev,
-        attack_mapped=finding.attack_mapped,
-        suppressed_by_vex=finding.suppressed_by_vex,
-        under_investigation=finding.under_investigation,
-        waived=finding.waived,
-        priority_label=_priority_label(str(finding.priority)),
-        priority_rank=finding.priority_rank,
-        priority_state=_priority_label(str(finding.priority)),
-        operational_rank=finding.operational_rank,
-        operational_score=int(finding.risk_score or 0),
-        rationale=finding.rationale or "Stored Workbench finding without raw rationale payload.",
-        recommended_action=finding.recommended_action or "Review the finding with the asset owner.",
+        cvss_base_score=view.cvss_base_score,
+        epss=view.epss,
+        in_kev=view.in_kev,
+        attack_mapped=view.attack_mapped,
+        suppressed_by_vex=view.suppressed_by_vex,
+        under_investigation=view.under_investigation,
+        waived=view.waived,
+        priority_label=view.priority_label,
+        priority_rank=view.priority_rank,
+        priority_state=view.priority_label,
+        operational_rank=view.operational_rank,
+        operational_score=int(view.risk_score or 0),
+        rationale=view.rationale or "Stored Workbench finding without raw rationale payload.",
+        recommended_action=view.recommended_action or "Review the finding with the asset owner.",
     )
 
 
-def _counts_by_priority(findings: Sequence[Finding]) -> dict[str, int]:
-    counts = Counter(_priority_label(str(finding.priority)) for finding in findings)
+def _counts_by_priority(findings: Sequence[DecisionFindingView]) -> dict[str, int]:
+    counts = Counter(finding.priority_label for finding in findings)
     return {priority: counts.get(priority, 0) for priority in PRIORITY_LABELS}
 
 
-def _counts_by_status(findings: Sequence[Finding]) -> dict[str, int]:
+def _counts_by_status(findings: Sequence[DecisionFindingView]) -> dict[str, int]:
     counts = Counter(str(finding.status) for finding in findings)
     return {status: counts.get(status, 0) for status in STATUS_LABELS}
 
@@ -222,18 +225,24 @@ def _data_quality_flags(evidence: FindingDecisionEvidenceV2) -> list[dict[str, A
     )
 
 
-def _required_finding_evidence(finding: Finding) -> FindingDecisionEvidenceV2:
-    evidence = _finding_evidence(finding)
+def _required_finding_evidence(view: DecisionFindingView) -> FindingDecisionEvidenceV2:
+    evidence = view.evidence
     if evidence is None:
         raise DecisionDataUnavailableError("Finding explanation is not available.")
     return evidence
 
 
-def _finding_evidence(finding: Finding) -> FindingDecisionEvidenceV2 | None:
-    session = object_session(finding)
-    if not isinstance(session, Session):
-        return None
-    return EvidenceRepository(session).latest_finding_decision_evidence(finding.id)
+def _decision_views(
+    findings: Sequence[Finding | DecisionFindingView],
+) -> list[DecisionFindingView]:
+    if not findings:
+        return []
+    first = findings[0]
+    if isinstance(first, DecisionFindingView):
+        return [finding for finding in findings if isinstance(finding, DecisionFindingView)]
+    return decision_views_for_findings(
+        [finding for finding in findings if isinstance(finding, Finding)]
+    )
 
 
 def _flag_items(value: Any) -> list[dict[str, Any]]:

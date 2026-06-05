@@ -32,7 +32,7 @@ from app.services import (
     build_project_attack_summary_payload_from_rows,
     build_project_dashboard_payload_from_repositories,
     build_project_governance_rollups_payload_from_repositories,
-    build_project_summary_payload_from_counts,
+    build_project_summary_payload,
 )
 from app.services.artifact_cleanup import cleanup_project_artifacts
 from app.services.audit import record_audit_event
@@ -99,10 +99,11 @@ def read_project_summary(
     require_project(session, project_id)
     finding_repository = FindingRepository(session)
     run_repository = RunRepository(session)
-    return build_project_summary_payload_from_counts(
+    runs, _run_count = run_repository.list_analysis_runs_page(project_id, limit=1, offset=0)
+    return build_project_summary_payload(
         project_id=project_id,
-        summary_counts=finding_repository.project_finding_summary_counts(project_id),
-        latest_run=run_repository.get_latest_analysis_run(project_id),
+        findings=finding_repository.list_project_findings(project_id),
+        runs=runs,
     )
 
 

@@ -6,7 +6,6 @@ import hashlib
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from pydantic import ValidationError
 from sqlmodel import Session
@@ -18,7 +17,6 @@ from vuln_prioritizer.inputs.loader import InputSpec
 from vuln_prioritizer.models import AnalysisContext, ParsedInput, PrioritizedFinding, PriorityPolicy
 from vuln_prioritizer.options import AttackSource, InputFormat, OutputFormat, SortBy
 from vuln_prioritizer.provider_snapshot import load_provider_snapshot
-from vuln_prioritizer.security_redaction import redact_value
 from vuln_prioritizer.services.analysis import (
     AnalysisInputError,
     AnalysisNoFindingsError,
@@ -27,7 +25,6 @@ from vuln_prioritizer.services.analysis import (
 )
 
 DEFAULT_WORKBENCH_PROVIDER_SNAPSHOT = "demo_provider_snapshot.json"
-PRIORITY_LABELS = ("Critical", "High", "Medium", "Low")
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -45,48 +42,6 @@ class WorkbenchAnalysisResult:
     provider_snapshot_hash: str | None
     provider_snapshot_file: str | None
     locked_provider_data: bool
-
-    @property
-    def result_json(self) -> dict[str, Any]:
-        """Return workflow result fields that prove enrichment, scoring, and explanation."""
-        result = {
-            "analysis_service": {
-                "pipeline": "parse-persist-enrich-score-explain",
-                "engine": "vuln_prioritizer.prepare_analysis",
-            },
-            "provider_snapshot_id": str(self.provider_snapshot_id)
-            if self.provider_snapshot_id is not None
-            else None,
-            "provider_snapshot_hash": self.provider_snapshot_hash,
-            "provider_snapshot_file": _public_path_label(self.provider_snapshot_file),
-            "locked_provider_data": self.locked_provider_data,
-            "findings_count": self.context.findings_count,
-            "counts_by_priority": _counts_by_priority(self.context.counts_by_priority),
-            "kev_hits": self.context.kev_hits,
-            "epss_hits": self.context.epss_hits,
-            "nvd_hits": self.context.nvd_hits,
-            "provider_degraded": self.context.provider_degraded,
-            "attack_enabled": self.context.attack_enabled,
-            "attack_source": self.context.attack_source,
-            "attack_mapped_cves": self.context.attack_hits,
-            "attack_mapping_file": _public_path_label(self.context.attack_mapping_file),
-            "attack_mapping_file_sha256": self.context.attack_mapping_file_sha256,
-            "attack_technique_metadata_file": _public_path_label(
-                self.context.attack_technique_metadata_file
-            ),
-            "attack_technique_metadata_file_sha256": (
-                self.context.attack_technique_metadata_file_sha256
-            ),
-            "provider_data_quality_flags": _provider_quality_flags(
-                self.context.provider_data_quality_flags
-            ),
-            "warnings": list(self.context.warnings),
-            "suppressed_by_vex": self.context.suppressed_by_vex,
-            "under_investigation_count": self.context.under_investigation_count,
-            "vex_conflict_count": self.context.vex_conflict_count,
-        }
-        redacted, _paths = redact_value(result)
-        return redacted if isinstance(redacted, dict) else result
 
 
 class AnalysisService:
@@ -265,27 +220,3 @@ class AnalysisService:
 
 def _file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def _public_path_label(value: str | Path | None) -> str | None:
-    if value is None:
-        return None
-    return Path(value).name
-
-
-def _counts_by_priority(raw_counts: dict[str, int]) -> dict[str, int]:
-    return {label: int(raw_counts.get(label, 0)) for label in PRIORITY_LABELS}
-
-
-def _provider_quality_flags(raw_flags: dict[str, list[Any]]) -> dict[str, list[dict[str, Any]]]:
-    def _serialize_flag(item: Any) -> dict[str, Any]:
-        if hasattr(item, "model_dump"):
-            dumped = item.model_dump()
-            return dict(dumped) if isinstance(dumped, dict) else {"value": dumped}
-        if isinstance(item, dict):
-            return dict(item)
-        return {"value": item}
-
-    return {
-        source: [_serialize_flag(item) for item in flags] for source, flags in raw_flags.items()
-    }

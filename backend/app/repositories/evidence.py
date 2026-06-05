@@ -182,6 +182,31 @@ class EvidenceRepository:
             .order_by(col(FindingDecisionEvidence.created_at).desc())
         ).first()
 
+    def latest_finding_decision_evidence_for_findings(
+        self,
+        finding_ids: Iterable[uuid.UUID],
+    ) -> dict[uuid.UUID, FindingDecisionEvidenceV2]:
+        """Return newest evidence contracts for findings keyed by finding id."""
+        ids = list(finding_ids)
+        if not ids:
+            return {}
+        rows = self.session.exec(
+            select(FindingDecisionEvidence)
+            .where(col(FindingDecisionEvidence.finding_id).in_(ids))
+            .order_by(
+                col(FindingDecisionEvidence.finding_id),
+                col(FindingDecisionEvidence.created_at).desc(),
+            )
+        ).all()
+        evidence_by_finding: dict[uuid.UUID, FindingDecisionEvidenceV2] = {}
+        for row in rows:
+            if row.finding_id in evidence_by_finding:
+                continue
+            evidence_by_finding[row.finding_id] = FindingDecisionEvidenceV2.model_validate(
+                row.payload_json
+            )
+        return evidence_by_finding
+
     def finding_decision_evidence_for_run(
         self,
         analysis_run_id: uuid.UUID,
