@@ -78,7 +78,7 @@ jobs:
               frontend/nginx.conf|frontend/nginx-backend-not-found.conf)
                 run_docker=true
                 ;;
-              frontend/vite.config.*|frontend/tsconfig*.json|.github/workflows/docker.yml)
+              frontend/vite.config.*|frontend/tsconfig*.json|.github/workflows/docker.yml|.grype.yaml)
                 run_docker=true
                 ;;
             esac
@@ -144,12 +144,16 @@ jobs:
           mkdir -p build/docker-sbom
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD/.grype.yaml:/grype.yaml:ro" \
             "$GRYPE_IMAGE" \
+            -c /grype.yaml \
             vuln-prioritizer-workbench-backend:local \
             -o json > build/docker-sbom/backend.grype.json
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD/.grype.yaml:/grype.yaml:ro" \
             "$GRYPE_IMAGE" \
+            -c /grype.yaml \
             vuln-prioritizer-workbench-frontend:local \
             -o json > build/docker-sbom/frontend.grype.json
 
@@ -164,7 +168,9 @@ jobs:
           do
             docker run --rm \
               -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "$PWD/.grype.yaml:/grype.yaml:ro" \
               "$GRYPE_IMAGE" \
+              -c /grype.yaml \
               "$image" --only-fixed --fail-on high
           done
 

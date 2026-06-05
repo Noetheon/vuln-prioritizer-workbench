@@ -1052,20 +1052,6 @@ def _seed_vpw042_findings(
             in_kev=True,
             epss=0.95,
             cvss_base_score=10.0,
-            explanation_json={
-                "priority_state": "Critical",
-                "explanation": {
-                    "reason_codes": ["kev_catalog_match"],
-                    "score_inputs": {"kev": True, "epss": 0.95, "cvss": 10.0},
-                },
-                "data_quality_flags": [
-                    {
-                        "source": "provider",
-                        "code": "provider_snapshot_stale",
-                        "severity": "info",
-                    }
-                ],
-            },
         )
         high = finding_repo.create_or_update_finding(
             project_id=project_id,

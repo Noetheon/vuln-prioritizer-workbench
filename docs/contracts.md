@@ -131,6 +131,11 @@ finding/run pair. These tables hold the active product truth used by run
 projection, finding detail, dashboard rollups, waiver/governance views, and
 report rendering.
 
+Read paths hydrate those tables through the central
+`backend/app/services/decision_projection.py` read model before mapping into
+stable public DTOs. Successful v2 imports must not rebuild decision facts from
+`workflow_run.result_json` or stale `finding` decision columns.
+
 The internal producer and projection rules are documented in
 [Decision/Evidence Kernel](architecture/decision-evidence-kernel.md).
 

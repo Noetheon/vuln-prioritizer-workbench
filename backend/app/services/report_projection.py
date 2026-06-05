@@ -7,6 +7,7 @@ from typing import Any
 
 from app.contracts.decision_evidence import FindingDecisionEvidenceV2
 from app.models import Finding, FindingOccurrence, ProviderSnapshot
+from app.services.decision_projection import DecisionFindingView, decision_finding_view
 from app.services.report_formatting import dict_value as _dict_value
 from app.services.report_formatting import iso_datetime as _iso_datetime
 from app.services.report_models import (
@@ -103,12 +104,21 @@ def _finding_payload(
     occurrences: list[FindingOccurrence],
     evidence: FindingDecisionEvidenceV2 | None = None,
 ) -> MarkdownReportFinding:
+    view = decision_finding_view(finding, evidence=evidence)
+    return _finding_payload_from_decision_view(view, occurrences=occurrences)
+
+
+def _finding_payload_from_decision_view(
+    view: DecisionFindingView,
+    *,
+    occurrences: list[FindingOccurrence],
+) -> MarkdownReportFinding:
+    finding = view.finding
+    evidence = view.evidence
     decision_guidance = _decision_guidance(finding, evidence=evidence)
     explanation = _finding_explanation(finding, evidence=evidence)
-    recommended_action = (
-        evidence.recommended_action if evidence is not None else finding.recommended_action
-    )
-    rationale = evidence.rationale if evidence is not None else finding.rationale
+    recommended_action = view.recommended_action
+    rationale = view.rationale
     base_decision_statement = _decision_text(
         decision_guidance,
         "decision_statement",
@@ -116,20 +126,16 @@ def _finding_payload(
     )
     return MarkdownReportFinding(
         id=evidence.finding_id if evidence is not None else str(finding.id),
-        dedup_key=evidence.dedup_key if evidence is not None else finding.dedup_key,
-        operational_rank=evidence.operational_rank
-        if evidence is not None
-        else finding.operational_rank,
-        cve_id=evidence.cve_id if evidence is not None else finding.cve_id,
-        priority=evidence.priority if evidence is not None else str(finding.priority),
-        status=evidence.status if evidence is not None else str(finding.status),
-        priority_rank=evidence.priority_rank if evidence is not None else finding.priority_rank,
-        risk_score=evidence.risk_score if evidence is not None else finding.risk_score,
-        epss=evidence.epss if evidence is not None else finding.epss,
-        cvss_base_score=evidence.cvss_base_score
-        if evidence is not None
-        else finding.cvss_base_score,
-        in_kev=evidence.in_kev if evidence is not None else finding.in_kev,
+        dedup_key=view.dedup_key,
+        operational_rank=view.operational_rank,
+        cve_id=view.cve_id,
+        priority=evidence.priority if evidence is not None else str(view.priority),
+        status=evidence.status if evidence is not None else str(view.status),
+        priority_rank=view.priority_rank,
+        risk_score=view.risk_score,
+        epss=view.epss,
+        cvss_base_score=view.cvss_base_score,
+        in_kev=view.in_kev,
         asset=_asset_label(finding),
         asset_key=finding.asset.asset_key if finding.asset is not None else None,
         owner=finding.asset.owner if finding.asset is not None else None,
@@ -139,14 +145,10 @@ def _finding_payload(
         criticality=str(finding.asset.criticality) if finding.asset is not None else None,
         component=_component_label(finding),
         component_purl=finding.component.purl if finding.component is not None else None,
-        attack_mapped=evidence.attack_mapped if evidence is not None else finding.attack_mapped,
-        suppressed_by_vex=evidence.suppressed_by_vex
-        if evidence is not None
-        else finding.suppressed_by_vex,
-        under_investigation=evidence.under_investigation
-        if evidence is not None
-        else finding.under_investigation,
-        waived=evidence.waived if evidence is not None else finding.waived,
+        attack_mapped=view.attack_mapped,
+        suppressed_by_vex=view.suppressed_by_vex,
+        under_investigation=view.under_investigation,
+        waived=view.waived,
         vulnerability=_vulnerability_payload(finding),
         rationale=rationale,
         recommended_action=recommended_action,
@@ -159,6 +161,9 @@ def _finding_payload(
             finding=finding,
             explanation=explanation,
             base_statement=base_decision_statement,
+            waived=view.waived,
+            suppressed_by_vex=view.suppressed_by_vex,
+            under_investigation=view.under_investigation,
         ),
         business_impact=_decision_text(decision_guidance, "business_impact"),
         decision_sla=_decision_sla(decision_guidance),
@@ -175,6 +180,9 @@ def _governance_decision_statement(
     finding: Finding,
     explanation: dict[str, Any],
     base_statement: str | None,
+    waived: bool | None = None,
+    suppressed_by_vex: bool | None = None,
+    under_investigation: bool | None = None,
 ) -> str | None:
     statement = base_statement
     additions: list[str] = []
@@ -182,7 +190,7 @@ def _governance_decision_statement(
     waiver_status = _string_from_mapping(waiver, "waiver_status") or _string_from_mapping(
         explanation, "waiver_status"
     )
-    if finding.waived or waiver_status:
+    if (finding.waived if waived is None else waived) or waiver_status:
         additions.append(
             "Accepted-risk governance remains visible"
             + _governance_detail_clause(
@@ -207,7 +215,10 @@ def _governance_decision_statement(
             )
             + "."
         )
-    if finding.suppressed_by_vex or finding.under_investigation:
+    has_vex_governance = (
+        finding.suppressed_by_vex if suppressed_by_vex is None else suppressed_by_vex
+    ) or (finding.under_investigation if under_investigation is None else under_investigation)
+    if has_vex_governance:
         vex_statuses = _vex_statuses_label_from_explanation(explanation)
         additions.append(
             "VEX governance applies"
@@ -447,6 +458,7 @@ __all__ = [
     "_decision_sla",
     "_decision_text",
     "_finding_payload",
+    "_finding_payload_from_decision_view",
     "_flag_items",
     "_governance_decision_statement",
     "_governance_detail_clause",
