@@ -10,6 +10,7 @@ from typing import Any
 
 from sqlmodel import Session, col, select
 
+from app.domain.engine.providers.attack_stix import AttackStixProvider
 from app.models import (
     AttackStixMitigation,
     AttackStixSnapshot,
@@ -19,7 +20,6 @@ from app.models import (
 )
 from app.models.base import get_datetime_utc
 from app.repositories import RunRepository
-from vuln_prioritizer.providers.attack_stix import AttackStixProvider
 
 
 @dataclass(frozen=True)

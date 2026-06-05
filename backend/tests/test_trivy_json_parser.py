@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from vuln_prioritizer.inputs.loader import InputLoader
-from vuln_prioritizer.inputs.parsers.scanner import parse_trivy_json
-from vuln_prioritizer.models import InputOccurrence
+from app.domain.engine.inputs.loader import InputLoader
+from app.domain.engine.inputs.parsers.scanner import parse_trivy_json
+from app.domain.engine.models import InputOccurrence
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DIR = PROJECT_ROOT / "data" / "input_fixtures"

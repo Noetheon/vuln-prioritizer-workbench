@@ -197,6 +197,7 @@ def test_report_renderer_boolish_and_vex_fallback_helpers() -> None:
             "vex_source_record_id": "record-1",
         },
         base_statement=None,
+        suppressed_by_vex=True,
     ) == (
         "Decision Statement: review finding governance. "
         "VEX governance applies (status under_investigation:1; source cyclonedx; record record-1)."

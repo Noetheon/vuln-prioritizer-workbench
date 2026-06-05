@@ -75,7 +75,7 @@ commit 13652b51ea0acca7dfe243ac25e2bbdc066f3c4f
 
 ## Workbench Replacement Inventory
 
-The retained `backend/src/vuln_prioritizer` package is shared domain source
+The retained `backend/app/domain/engine` package is shared domain source
 material. Active Workbench persistence, routes, and UI live under `backend/app`
 and `frontend`.
 
@@ -84,7 +84,7 @@ and `frontend`.
 | Project | `backend/app/models/projects.py`, `backend/app/repositories/projects.py`, `backend/app/api/routes/projects.py`, `frontend/src/components/projects/` | Active SQLModel, API, and UI flow. |
 | Finding | `backend/app/models/findings.py`, `backend/app/repositories/findings.py`, `backend/app/api/routes/findings.py`, `frontend/src/components/findings/` | Active finding persistence, list/detail, governance, and explanation flow. |
 | Analysis run and occurrence provenance | `backend/app/models/runs.py`, `backend/app/repositories/runs.py`, `backend/app/api/routes/imports.py`, `backend/app/api/routes/runs.py` | Active run provenance and import boundary while reusing core parser and prioritization services. |
-| Core parsing and prioritization | `backend/src/vuln_prioritizer/inputs/*`, `backend/src/vuln_prioritizer/providers/*`, `backend/src/vuln_prioritizer/services/prioritization.py`, `backend/src/vuln_prioritizer/services/contextualization.py` | Safe to call through adapter/service boundaries because these modules are framework-neutral domain logic. |
+| Core parsing and prioritization | `backend/app/domain/engine/inputs/*`, `backend/app/domain/engine/providers/*`, `backend/app/domain/engine/services/prioritization.py`, `backend/app/domain/engine/services/contextualization.py` | Safe to call through adapter/service boundaries because these modules are framework-neutral domain logic. |
 
 ## Template Shell Boundary
 
@@ -95,7 +95,7 @@ dependencies, utilities, domain Workbench routes, and the
 `backend/app/api/routes/workbench.py`.
 
 The template shell may import framework-neutral core modules such as
-`vuln_prioritizer.__version__`, parser services, providers, prioritization, and
+`app.domain.engine.__version__`, parser services, providers, prioritization, and
 contextualization helpers. It must not introduce a second web/API/database
 runtime alongside `backend/app`; shared behavior belongs in neutral core modules
 or active `backend/app` services.
@@ -113,7 +113,7 @@ historical artifacts remain for evidence only:
 | Compatibility aliases | `backend/app/services/analysis.py`, `backend/app/services/provider_updates.py`, and `backend/app/services/import_artifacts.py` expose only Workbench-named symbols. | Removed. New code should import Workbench-named symbols. |
 | Playwright starter | `scripts/start-workbench-playwright-backend.sh` is the active backend start script referenced by `frontend/playwright.config.ts`; Playwright defaults to backend port `18000` and frontend port `15173` to avoid Docker demo collisions, and its default SQLite/report paths are port-scoped so parallel local previews do not overwrite each other. | Use the Workbench-named script and the `VPW_PLAYWRIGHT_*` / `VPW_E2E_*` overrides when reusing existing servers. |
 | Generated historical artifacts | `docs/examples/vpw-054-workbench-*` and related evidence files preserve report snapshots. | Treat as immutable historical evidence, not active runtime naming. |
-| Domain package | `backend/src/vuln_prioritizer` keeps parsers, providers, scoring, SARIF contract helpers, redaction, and framework-neutral domain logic. | Keep framework-neutral domain logic. Typer command/support files and legacy report facades have been removed from the active product surface. |
+| Domain package | `backend/app/domain/engine` keeps parsers, providers, scoring, SARIF contract helpers, redaction, and framework-neutral domain logic. | Keep framework-neutral domain logic. Typer command/support files and legacy report facades have been removed from the active product surface. |
 
 New runtime code must not add additional `template_*`, `Template*`, or
 `template-*` names unless the change is explicitly historical documentation or

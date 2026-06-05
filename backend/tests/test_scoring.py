@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from vuln_prioritizer.explanations import build_priority_explanation
-from vuln_prioritizer.models import (
+from app.domain.engine.explanations import build_priority_explanation
+from app.domain.engine.models import (
     AttackData,
     AttackMapping,
     AttackTechnique,
@@ -18,7 +18,7 @@ from vuln_prioritizer.models import (
     ProviderDataQualityFlag,
     ProviderEvidence,
 )
-from vuln_prioritizer.scoring import (
+from app.domain.engine.scoring import (
     build_operational_score,
     build_priority_drivers,
     clamp_operational_score,
@@ -26,7 +26,7 @@ from vuln_prioritizer.scoring import (
     determine_priority,
     determine_priority_state,
 )
-from vuln_prioritizer.services.prioritization import PrioritizationService
+from app.domain.engine.services.prioritization import PrioritizationService
 
 
 @pytest.mark.parametrize(

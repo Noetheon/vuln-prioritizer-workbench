@@ -15,31 +15,31 @@ import yaml
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = BACKEND_ROOT.parent
 APP_ROOT = BACKEND_ROOT / "app"
-SRC_ROOT = BACKEND_ROOT / "src"
-SRC_PACKAGE_ROOT = SRC_ROOT / "vuln_prioritizer"
+ENGINE_ROOT = APP_ROOT / "domain" / "engine"
 
 REMOVED_LEGACY_RUNTIME_PATHS = (
-    SRC_PACKAGE_ROOT / "api",
-    SRC_PACKAGE_ROOT / "web",
-    SRC_PACKAGE_ROOT / "db",
-    SRC_PACKAGE_ROOT / "provider_scheduler.py",
-    SRC_PACKAGE_ROOT / "workbench_config.py",
-    SRC_PACKAGE_ROOT / "commands" / "db.py",
-    SRC_PACKAGE_ROOT / "commands" / "web.py",
+    BACKEND_ROOT / "src",
+    ENGINE_ROOT / "api",
+    ENGINE_ROOT / "web",
+    ENGINE_ROOT / "db",
+    ENGINE_ROOT / "provider_scheduler.py",
+    ENGINE_ROOT / "workbench_config.py",
+    ENGINE_ROOT / "commands" / "db.py",
+    ENGINE_ROOT / "commands" / "web.py",
     REPO_ROOT / "compose.legacy.yml",
 )
 LEGACY_RUNTIME_PREFIXES = (
-    "vuln_prioritizer.api",
-    "vuln_prioritizer.web",
-    "vuln_prioritizer.db",
-    "vuln_prioritizer.services.workbench_",
-    "vuln_prioritizer.provider_scheduler",
-    "vuln_prioritizer.workbench_config",
+    "app.domain.engine.api",
+    "app.domain.engine.web",
+    "app.domain.engine.db",
+    "app.domain.engine.services.workbench_",
+    "app.domain.engine.provider_scheduler",
+    "app.domain.engine.workbench_config",
 )
 LEGACY_RUNTIME_STARTERS = (
     "vuln-prioritizer web serve",
-    "vuln_prioritizer.api.app",
-    "vuln_prioritizer.provider_scheduler",
+    "app.domain.engine.api.app",
+    "app.domain.engine.provider_scheduler",
     "docker-postgres-migration-smoke",
     "compose.legacy.yml",
 )
@@ -49,7 +49,7 @@ def _module_name(path: Path) -> str:
     if path.is_relative_to(APP_ROOT):
         relative = path.relative_to(BACKEND_ROOT).with_suffix("")
     else:
-        relative = path.relative_to(SRC_ROOT).with_suffix("")
+        relative = path.relative_to(BACKEND_ROOT).with_suffix("")
     parts = list(relative.parts)
     if parts[-1] == "__init__":
         parts = parts[:-1]
@@ -57,7 +57,7 @@ def _module_name(path: Path) -> str:
 
 
 def _module_paths() -> dict[str, Path]:
-    paths = sorted(APP_ROOT.rglob("*.py")) + sorted(SRC_PACKAGE_ROOT.rglob("*.py"))
+    paths = sorted(APP_ROOT.rglob("*.py"))
     return {_module_name(path): path for path in paths}
 
 
@@ -94,7 +94,7 @@ def _raw_imports(path: Path) -> set[str]:
 
 
 def _nearest_known_module(imported: str, modules: dict[str, Path]) -> str | None:
-    if not (imported == "app" or imported.startswith(("app.", "vuln_prioritizer"))):
+    if not (imported == "app" or imported.startswith("app.")):
         return None
     parts = imported.split(".")
     while parts:
@@ -148,7 +148,7 @@ def _read_repo_toml(path: str) -> dict[str, Any]:
 
 def test_legacy_workbench_runtime_source_is_removed() -> None:
     remaining_paths = [path for path in REMOVED_LEGACY_RUNTIME_PATHS if path.exists()]
-    remaining_workbench_services = sorted(SRC_PACKAGE_ROOT.glob("services/workbench_*.py"))
+    remaining_workbench_services = sorted(ENGINE_ROOT.glob("services/workbench_*.py"))
 
     assert remaining_paths == []
     assert remaining_workbench_services == []
@@ -609,7 +609,7 @@ def test_generated_browser_api_client_is_built_from_active_backend_app() -> None
 
     assert "from app.main import app" in generate_client
     assert "app.openapi()" in generate_client
-    assert "vuln_prioritizer.api" not in generate_client
+    assert "app.domain.engine.api" not in generate_client
 
 
 def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:
@@ -670,7 +670,7 @@ def test_ci_frontend_gate_runs_coverage_and_full_playwright_suite() -> None:
     assert (
         "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test"
     ) in workflow
-    assert "frontend/*|backend/app/*|backend/src/*" in workflow
+    assert "frontend/*|backend/app/*" in workflow
     assert ".nvmrc|.npmrc|package.json" in workflow
 
 
@@ -683,7 +683,7 @@ def test_ci_docker_gate_runs_for_frontend_toolchain_policy_changes() -> None:
 
 
 def test_legacy_cli_entrypoint_is_removed() -> None:
-    assert not (REPO_ROOT / "backend/src/vuln_prioritizer/cli.py").exists()
+    assert not (REPO_ROOT / "backend/src").exists()
 
 
 def test_backend_package_boundary_matches_pytest_coverage_boundary() -> None:
@@ -691,15 +691,16 @@ def test_backend_package_boundary_matches_pytest_coverage_boundary() -> None:
     root_pyproject = _read_repo_toml("pyproject.toml")
 
     package_include = set(backend_pyproject["tool"]["setuptools"]["packages"]["find"]["include"])
-    assert {"app*", "vuln_prioritizer*"}.issubset(package_include)
+    assert package_include == {"app*"}
 
     for config, expected_pythonpath in (
-        (backend_pyproject, {".", "src"}),
-        (root_pyproject, {"backend", "backend/src"}),
+        (backend_pyproject, {"."}),
+        (root_pyproject, {"backend"}),
     ):
         pytest_options = config["tool"]["pytest"]["ini_options"]
         addopts = set(pytest_options["addopts"].split())
-        assert {"--cov=app", "--cov=vuln_prioritizer"}.issubset(addopts)
+        assert {"--cov=app"}.issubset(addopts)
+        assert "--cov=vuln_prioritizer" not in addopts
         assert not any(option.startswith("--cov-fail-under") for option in addopts)
         assert set(pytest_options["pythonpath"]) == expected_pythonpath
 

@@ -31,7 +31,6 @@ def raise_parse_failure(
     input_type: str,
     filename: str,
     exc: Exception,
-    execution_mode: str = "worker",
 ) -> NoReturn:
     """Raise parse failure function."""
     parse_errors = _parse_errors(exc, filename=filename, input_type=input_type)
@@ -43,7 +42,6 @@ def raise_parse_failure(
         ignored_lines=ignored_lines,
         parse_errors=parse_errors,
         exc=exc,
-        execution_mode=execution_mode,
     )
     _record_import_audit(
         session,
@@ -82,7 +80,6 @@ def raise_sidecar_parse_failure(
     filename: str | None,
     stage: str,
     exc: Exception,
-    execution_mode: str = "worker",
 ) -> NoReturn:
     """Raise sidecar parse failure function."""
     sidecar_error = _sidecar_error_payload(
@@ -99,7 +96,6 @@ def raise_sidecar_parse_failure(
         ignored_lines=ignored_lines,
         error_key=error_key,
         sidecar_error=sidecar_error,
-        execution_mode=execution_mode,
     )
     _record_import_audit(
         session,
@@ -130,10 +126,9 @@ def _finish_failed_parse_run(
     ignored_lines: int,
     parse_errors: list[dict[str, Any]],
     exc: Exception,
-    execution_mode: str,
 ) -> AnalysisRun:
     """Finish failed parse run function."""
-    _ = job_id, job_history, ignored_lines, parse_errors, execution_mode
+    _ = job_id, job_history, ignored_lines, parse_errors
     return run_repo.finish_analysis_run(
         run.id,
         status=AnalysisRunStatus.FAILED,
@@ -167,10 +162,9 @@ def _finish_failed_sidecar_run(
     ignored_lines: int,
     error_key: str,
     sidecar_error: dict[str, Any],
-    execution_mode: str,
 ) -> AnalysisRun:
     """Finish failed sidecar run function."""
-    _ = job_id, job_history, ignored_lines, error_key, execution_mode
+    _ = job_id, job_history, ignored_lines, error_key
     return run_repo.finish_analysis_run(
         run.id,
         status=AnalysisRunStatus.FAILED,

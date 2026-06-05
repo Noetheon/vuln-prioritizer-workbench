@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.core.config import Settings
+from app.domain.engine.security_redaction import redact_value
 from app.models import (
     AnalysisRun,
     AnalysisRunStatus,
@@ -17,7 +18,6 @@ from app.models import (
     WorkflowRunPublic,
 )
 from app.models.base import get_datetime_utc
-from vuln_prioritizer.security_redaction import redact_value
 
 PROVIDER_SOURCES = ("nvd", "epss", "kev")
 ATTACK_STIX_SOURCE = "attack_stix"

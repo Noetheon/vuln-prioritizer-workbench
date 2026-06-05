@@ -12,9 +12,9 @@ The Workbench migration restarted from the official
 `fastapi/full-stack-fastapi-template` baseline instead of continuing to reshape
 the previous second Workbench runtime in place.
 
-The retained repository domain engine remains valuable. The implemented runtime
-now reuses the existing `vuln_prioritizer` domain logic through the active
-`backend/app` backend and React frontend.
+The repository domain engine remains valuable. The implemented runtime now uses
+the internal `app.domain.engine` modules through the active `backend/app`
+backend and React frontend.
 
 ## Why This Direction
 
@@ -44,7 +44,7 @@ repo root
 |   |-- app/api/routes/       # Workbench API routes added incrementally
 |   |-- app/models.py         # SQLModel entities or re-exported model modules
 |   |-- app/alembic/          # Template Alembic migration path
-|   |-- src/vuln_prioritizer/ # Existing domain package during migration
+|   |-- app/domain/engine/ # Existing domain package during migration
 |   `-- tests/                # Template backend tests
 |-- frontend/                 # Template React/TanStack/shadcn frontend
 |   |-- src/client/           # Generated OpenAPI client
@@ -57,10 +57,9 @@ repo root
 `-- .copier/.copier-answers.yml
 ```
 
-The existing `vuln_prioritizer` code now lives under the backend workspace as
-`backend/src/vuln_prioritizer` so domain tests can keep working while the
-Workbench app is introduced. A later cleanup can split it into a
-separate `packages/vuln-prioritizer-core` package if that proves useful.
+The domain engine now lives under the backend workspace as
+`backend/app/domain/engine`. A later cleanup can split it into a separate
+`packages/vuln-prioritizer-workbench-core` package if that proves useful.
 
 Backend integration calls the core package through service boundaries and the
 active `backend/app` runtime.
@@ -69,14 +68,14 @@ active `backend/app` runtime.
 
 Safe core modules to reuse:
 
-- `vuln_prioritizer.inputs.*`
-- `vuln_prioritizer.providers.*`
-- `vuln_prioritizer.scoring`
-- `vuln_prioritizer.models*`
-- `vuln_prioritizer.services.analysis*`
-- `vuln_prioritizer.services.prioritization`
-- `vuln_prioritizer.services.contextualization`
-- `vuln_prioritizer.services.attack_enrichment`
+- `app.domain.engine.inputs.*`
+- `app.domain.engine.providers.*`
+- `app.domain.engine.scoring`
+- `app.domain.engine.models*`
+- `app.domain.engine.services.analysis*`
+- `app.domain.engine.services.prioritization`
+- `app.domain.engine.services.contextualization`
+- `app.domain.engine.services.attack_enrichment`
 - framework-neutral report payload and formatting helpers
 
 Runtime-specific web/API/database packages are not part of the retained core.

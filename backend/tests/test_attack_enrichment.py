@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from vuln_prioritizer.models import AttackData, AttackMapping, AttackTechnique
-from vuln_prioritizer.services.attack_enrichment import AttackEnrichmentService
+from app.domain.engine.models import AttackData, AttackMapping, AttackTechnique
+from app.domain.engine.services.attack_enrichment import AttackEnrichmentService
 
 
 def test_attack_enrichment_service_marks_high_relevance_for_exploitation_mappings() -> None:

@@ -108,10 +108,7 @@ function FindingOccurrencesMobileList({
             <div>
               <span>Asset / owner</span>
               <strong>
-                {optionalText(
-                  stringValue(occurrence.asset_ref) ??
-                    stringValue(occurrence.target_ref),
-                )}
+                {optionalText(stringValue(occurrence.target_ref))}
               </strong>
               <small>
                 {joinedValues([

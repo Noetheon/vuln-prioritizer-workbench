@@ -60,7 +60,6 @@ async def import_project_upload(
             settings=settings,
             upload=upload,
             defer_execution=True,
-            execution_mode="worker",
         )
         workflow = WorkflowRepository(session).get_latest_analysis_workflow(
             analysis_run_id=run.id,

@@ -6,8 +6,8 @@ import re
 from pathlib import Path
 
 from app.core.config import Settings
+from app.domain.engine.options import AttackSource
 from app.services.import_errors import ImportServiceError
-from vuln_prioritizer.options import AttackSource
 
 SAFE_ATTACK_FILENAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 SAFE_SNAPSHOT_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*[.]json$")

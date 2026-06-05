@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from vuln_prioritizer.inputs._vex_support import (
+from app.domain.engine.inputs._vex_support import (
     apply_vex_statements,
     match_vex_statement_details,
     parse_cyclonedx_vex_document,
     parse_openvex_document,
 )
-from vuln_prioritizer.models import InputOccurrence, VexStatement
+from app.domain.engine.models import InputOccurrence, VexStatement
 
 
 def _occurrence() -> InputOccurrence:

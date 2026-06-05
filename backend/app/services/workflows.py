@@ -7,6 +7,7 @@ from typing import Any
 
 from sqlmodel import Session
 
+from app.domain.engine.security_redaction import redact_value
 from app.models import (
     AnalysisRun,
     AnalysisRunStatus,
@@ -18,7 +19,6 @@ from app.models import (
     WorkflowRunStatus,
 )
 from app.repositories import RunRepository, WorkflowRepository
-from vuln_prioritizer.security_redaction import redact_value
 
 _TERMINAL_ANALYSIS_STATUSES = {
     AnalysisRunStatus.SUCCEEDED,

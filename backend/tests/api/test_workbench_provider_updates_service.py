@@ -11,6 +11,16 @@ import pytest
 from sqlmodel import Session
 from utils.workbench_env import WorkbenchApiEnv
 
+from app.domain.engine.cache import FileCache
+from app.domain.engine.models import (
+    EpssData,
+    KevData,
+    NvdData,
+    ProviderSnapshotItem,
+    ProviderSnapshotMetadata,
+    ProviderSnapshotReport,
+)
+from app.domain.engine.provider_snapshot import generate_provider_snapshot_json
 from app.models import AnalysisRunStatus, ProviderUpdateJobCreate
 from app.services import provider_update_locking as provider_update_locking_module
 from app.services import provider_update_snapshot as provider_update_snapshot_module
@@ -36,16 +46,6 @@ from app.services.provider_updates import (
     _workflow_status_for_run,
     create_provider_update_job,
 )
-from vuln_prioritizer.cache import FileCache
-from vuln_prioritizer.models import (
-    EpssData,
-    KevData,
-    NvdData,
-    ProviderSnapshotItem,
-    ProviderSnapshotMetadata,
-    ProviderSnapshotReport,
-)
-from vuln_prioritizer.provider_snapshot import generate_provider_snapshot_json
 
 
 def test_provider_update_source_normalization_deduplicates_valid_sources() -> None:
@@ -83,7 +83,7 @@ def test_provider_update_sync_service_executes_worker_workflow(
         )
         assert workflow is not None
         assert workflow.status == workbench_api_env.app_models.WorkflowRunStatus.SUCCEEDED
-        assert workflow.result_json["provider_snapshot_id"] == str(run.provider_snapshot_id)
+        assert workflow.result_ref_json["provider_snapshot_id"] == str(run.provider_snapshot_id)
 
 
 def test_provider_update_workflow_status_mapping_covers_terminal_states() -> None:

@@ -256,7 +256,7 @@ def _check_python_audit_lock(expected_requirements: list[str]) -> list[str]:
 
     lock = tomllib.loads(PYTHON_LOCK.read_text(encoding="utf-8"))
     members = set(lock.get("manifest", {}).get("members", []))
-    if {"vuln-prioritizer", "vuln-prioritizer-workbench-workspace"} - members:
+    if {"vuln-prioritizer-workbench", "vuln-prioritizer-workbench-workspace"} - members:
         failures.append("uv.lock does not describe the backend workspace members.")
 
     packages = {
@@ -271,9 +271,11 @@ def _check_python_audit_lock(expected_requirements: list[str]) -> list[str]:
             + ", ".join(missing_locked_packages)
         )
 
-    backend_package = packages.get("vuln-prioritizer")
+    backend_package = packages.get("vuln-prioritizer-workbench")
     if backend_package is None:
-        failures.append("uv.lock is missing the editable vuln-prioritizer backend package.")
+        failures.append(
+            "uv.lock is missing the editable vuln-prioritizer-workbench backend package."
+        )
     else:
         locked_keys = {
             _uv_requirement_key(requirement)
@@ -325,7 +327,7 @@ def _check_python_runtime_lock(
             "backend/requirements.runtime.lock.txt must be exported from uv.lock with uv export."
         )
     for expected_fragment in (
-        "--package vuln-prioritizer",
+        "--package vuln-prioritizer-workbench",
         "--no-dev",
         "--python 3.13",
         "backend/requirements.runtime.lock.txt",

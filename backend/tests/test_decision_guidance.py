@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from vuln_prioritizer.models import (
+from app.domain.engine.models import (
     FindingDecisionGuidance,
     FindingProvenance,
     InputOccurrence,
@@ -11,7 +11,7 @@ from vuln_prioritizer.models import (
     RemediationComponent,
     RemediationPlan,
 )
-from vuln_prioritizer.services.decision_guidance import DecisionGuidanceService
+from app.domain.engine.services.decision_guidance import DecisionGuidanceService
 
 DOCS_ROOT = Path(__file__).resolve().parents[2] / "docs"
 

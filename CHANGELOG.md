@@ -143,7 +143,7 @@ exact git tag output when release wording needs to be verified.
 
 ### Added
 
-- Initial `vuln-prioritizer` CLI with `analyze` and `explain` commands.
+- Initial legacy CLI with `analyze` and `explain` commands.
 - NVD, EPSS, and CISA KEV enrichment providers.
 - Fixed MVP priority rules with deterministic rationale and action guidance.
 - Markdown and JSON outputs plus checked-in example artifacts.

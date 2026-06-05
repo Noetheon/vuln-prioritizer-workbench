@@ -337,7 +337,7 @@ export async function routeWorkbenchShell(
       body: JSON.stringify({
         app: "Vuln Prioritizer Workbench",
         status: "ready",
-        core_package: "vuln_prioritizer",
+        core_package: "app.domain.engine",
         core_version: "demo",
         database_status: "ready",
         schema_status: "ready",
@@ -469,7 +469,6 @@ export async function routeWorkbenchShell(
             asset_business_service: finding.business_service,
             asset_exposure: finding.exposure,
             asset_owner: finding.owner,
-            asset_ref: finding.asset_key,
             component_name: finding.component_name,
             component_version: finding.component_version,
             created_at: finding.first_seen_at,

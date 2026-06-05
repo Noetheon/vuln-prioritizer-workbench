@@ -228,7 +228,7 @@ metadata SHA256 values so a run can identify the exact CTID/STIX artifacts used.
 
 ## Caching
 
-- optional file cache under `.cache/vuln-prioritizer`
+- optional file cache under `.cache/vuln-prioritizer-workbench`
 - NVD and EPSS are cached per CVE
 - the online KEV catalog is cached as an indexed dataset
 - ATT&CK local files are read directly from disk

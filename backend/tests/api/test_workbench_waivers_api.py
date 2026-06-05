@@ -32,6 +32,7 @@ def test_vpw064_workbench_waiver_lifecycle_and_report_visibility(
         workbench_api_env.app_models,
         workbench_api_env.repositories,
         project_id=uuid.UUID(project["id"]),
+        with_decision_evidence=True,
     )
     finding_id = str(seeded["finding_ids"][0])
     finding = workbench_api_env.client.get(f"/api/v1/findings/{finding_id}", headers=headers).json()
@@ -92,7 +93,7 @@ def test_vpw064_workbench_waiver_lifecycle_and_report_visibility(
     csv_download = workbench_api_env.client.get(report["download_url"], headers=headers)
     assert csv_download.status_code == 200
     assert "accepted" in csv_download.text
-    assert "Accepted-risk governance remains visible." in csv_download.text
+    assert "Accepted-risk governance remains visible" in csv_download.text
 
     updated = workbench_api_env.client.patch(
         f"/api/v1/waivers/{waiver['id']}",
@@ -139,6 +140,7 @@ def test_vpw064_workbench_waiver_scopes_match_finding_cve_asset_and_service(
         workbench_api_env.app_models,
         workbench_api_env.repositories,
         project_id=uuid.UUID(project["id"]),
+        with_decision_evidence=True,
     )
     finding_id = str(seeded["finding_ids"][0])
     finding = workbench_api_env.client.get(f"/api/v1/findings/{finding_id}", headers=headers).json()
@@ -200,6 +202,7 @@ def test_workbench_asset_context_changes_resync_waiver_state(
         workbench_api_env.app_models,
         workbench_api_env.repositories,
         project_id=uuid.UUID(project["id"]),
+        with_decision_evidence=True,
     )
     finding_id = str(seeded["finding_ids"][0])
     finding = workbench_api_env.client.get(f"/api/v1/findings/{finding_id}", headers=headers).json()
@@ -255,6 +258,7 @@ def test_workbench_asset_context_import_resyncs_waiver_state(
         workbench_api_env.app_models,
         workbench_api_env.repositories,
         project_id=uuid.UUID(project["id"]),
+        with_decision_evidence=True,
     )
     finding_id = str(seeded["finding_ids"][0])
     finding = workbench_api_env.client.get(f"/api/v1/findings/{finding_id}", headers=headers).json()
@@ -308,7 +312,7 @@ def test_workbench_expired_waiver_sync_updates_v2_evidence_with_string_status(
     project_id = uuid.UUID(project["id"])
     occurrence_csv = "\n".join(
         [
-            "cve_id,asset_ref,component,version,business_service",
+            "cve_id,target_ref,component_name,component_version,business_service",
             f"{DEMO_CVE_LOG4SHELL},identity-api,log4j,2.14.1,checkout",
             "",
         ]
@@ -420,7 +424,7 @@ def _seed_report_run(
             input_type="generic-occurrence-csv",
             filename="waiver-report.csv",
             status=workbench_api_env.app_models.AnalysisRunStatus.COMPLETED,
-            result_json={"parsed": 1, "findings": 1},
+            result_ref_json={"parsed": 1, "findings": 1},
         )
         finding = session.get(workbench_api_env.app_models.Finding, uuid.UUID(finding_id))
         assert finding is not None
@@ -430,6 +434,9 @@ def _seed_report_run(
             source="generic-occurrence-csv",
             raw_reference=DEMO_CVE_LOG4SHELL,
         )
+        evidence_repo = workbench_api_env.repositories.EvidenceRepository(session)
+        latest_evidence = evidence_repo.latest_finding_decision_evidence(uuid.UUID(finding_id))
+        assert latest_evidence is not None
         finding_evidence = _seed_finding_evidence(
             finding=finding,
             analysis_run_id=run.id,
@@ -442,17 +449,24 @@ def _seed_report_run(
             component_version=finding.component.version
             if finding.component is not None
             else "2.14.1",
-            priority=finding.priority,
-            priority_rank=finding.priority_rank,
-            risk_score=finding.risk_score or 0.0,
-            operational_rank=finding.operational_rank,
-            epss=finding.epss or 0.0,
-            cvss=finding.cvss_base_score or 0.0,
-            in_kev=finding.in_kev,
-            rationale=finding.rationale or "Accepted risk report seed.",
-            action=finding.recommended_action or "Review accepted risk.",
+            priority=latest_evidence.priority,
+            priority_rank=latest_evidence.priority_rank,
+            risk_score=latest_evidence.risk_score or 0.0,
+            operational_rank=latest_evidence.operational_rank,
+            epss=latest_evidence.epss or 0.0,
+            cvss=latest_evidence.cvss_base_score or 0.0,
+            in_kev=latest_evidence.in_kev,
+            rationale=latest_evidence.rationale or "Accepted risk report seed.",
+            action=latest_evidence.recommended_action or "Review accepted risk.",
             confidence="high",
             flags=[],
+        ).model_copy(
+            update={
+                "status": latest_evidence.status,
+                "waived": latest_evidence.waived,
+                "governance": latest_evidence.governance,
+                "priority_evidence": latest_evidence.priority_evidence,
+            }
         )
         finding_evidence.occurrences.append(
             OccurrenceEvidenceV2(
@@ -462,7 +476,6 @@ def _seed_report_run(
                 raw_reference=DEMO_CVE_LOG4SHELL,
             )
         )
-        evidence_repo = workbench_api_env.repositories.EvidenceRepository(session)
         analysis_evidence = evidence_repo.upsert_analysis_evidence(
             project_id=project_id,
             analysis_run_id=run.id,

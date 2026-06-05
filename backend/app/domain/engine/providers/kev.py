@@ -1,0 +1,212 @@
+"""CISA KEV provider with online and offline support."""
+
+from __future__ import annotations
+
+import csv
+import json
+from pathlib import Path
+
+import requests
+
+from app.domain.engine.cache import FileCache
+from app.domain.engine.config import HTTP_TIMEOUT_SECONDS, KEV_FEED_URL, KEV_MIRROR_URL
+from app.domain.engine.models import KevData, ProviderLookupDiagnostics
+from app.domain.engine.security_redaction import redact_error
+from app.domain.engine.utils import normalize_cve_id
+
+_ALLOWED_KEV_URLS = {KEV_FEED_URL, KEV_MIRROR_URL}
+
+
+class KevProvider:
+    """Client for the CISA KEV catalog."""
+
+    def __init__(
+        self,
+        session: requests.Session | None = None,
+        timeout_seconds: int = HTTP_TIMEOUT_SECONDS,
+        feed_url: str = KEV_FEED_URL,
+        mirror_url: str = KEV_MIRROR_URL,
+        cache: FileCache | None = None,
+    ) -> None:
+        """Initialize a new instance of KevProvider."""
+        _validate_kev_url(feed_url, label="KEV feed URL")
+        _validate_kev_url(mirror_url, label="KEV mirror URL")
+        self.session = session or requests.Session()
+        self.timeout_seconds = timeout_seconds
+        self.feed_url = feed_url
+        self.mirror_url = mirror_url
+        self.cache = cache
+        self.last_diagnostics = ProviderLookupDiagnostics()
+        self._last_catalog_mode = "unknown"
+
+    def fetch_many(
+        self,
+        cve_ids: list[str],
+        offline_file: Path | None = None,
+        *,
+        refresh: bool = False,
+    ) -> tuple[dict[str, KevData], list[str]]:
+        """Load KEV data and return membership metadata for the requested CVEs."""
+        warnings: list[str] = []
+        catalog_loaded = True
+
+        try:
+            index = self._load_index(offline_file, refresh=refresh)
+        except Exception as exc:  # noqa: BLE001
+            catalog_loaded = False
+            try:
+                stale = self._load_from_cache(allow_expired=True)
+            except Exception:  # noqa: BLE001 - invalid stale cache is not recoverable
+                stale = None
+            if stale is not None:
+                warnings.append(
+                    f"KEV catalog load failed; using expired cached catalog: {redact_error(exc)}"
+                )
+                index = stale
+                self._last_catalog_mode = "stale-cache"
+            else:
+                warnings.append(f"KEV catalog load failed: {redact_error(exc)}")
+                index = {}
+                self._last_catalog_mode = "failed"
+
+        results: dict[str, KevData] = {}
+        for cve_id in cve_ids:
+            results[cve_id] = index.get(cve_id, KevData(cve_id=cve_id, in_kev=False))
+        self.last_diagnostics = ProviderLookupDiagnostics(
+            requested=len(cve_ids),
+            cache_hits=len(cve_ids) if self._last_catalog_mode == "cache" else 0,
+            network_fetches=1 if self._last_catalog_mode == "live" else 0,
+            failures=0 if catalog_loaded else 1,
+            content_hits=sum(1 for item in results.values() if item.in_kev),
+            empty_records=(
+                0 if catalog_loaded or self._last_catalog_mode == "stale-cache" else len(cve_ids)
+            ),
+            stale_cache_hits=len(cve_ids) if self._last_catalog_mode == "stale-cache" else 0,
+            degraded=(not catalog_loaded) or self._last_catalog_mode == "stale-cache",
+        )
+        return results, warnings
+
+    def _load_index(
+        self, offline_file: Path | None, *, refresh: bool = False
+    ) -> dict[str, KevData]:
+        """Load index method for KevProvider."""
+        if offline_file is not None:
+            index = self._load_offline_file(offline_file)
+            if refresh:
+                self._store_in_cache(index)
+            self._last_catalog_mode = "offline"
+            return index
+
+        cached_index = None if refresh else self._load_from_cache()
+        if cached_index is not None:
+            self._last_catalog_mode = "cache"
+            return cached_index
+
+        try:
+            payload = self._download_json(self.feed_url)
+        except requests.RequestException:
+            payload = self._download_json(self.mirror_url)
+
+        index = self._index_vulnerabilities(payload.get("vulnerabilities") or [])
+        self._store_in_cache(index)
+        self._last_catalog_mode = "live"
+        return index
+
+    def _load_offline_file(self, path: Path) -> dict[str, KevData]:
+        """Load offline file method for KevProvider."""
+        if not path.exists() or not path.is_file():
+            raise FileNotFoundError(f"Offline KEV file not found: {path}")
+
+        if path.suffix.lower() == ".json":
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            vulnerabilities = payload.get("vulnerabilities") or []
+            return self._index_vulnerabilities(vulnerabilities)
+
+        if path.suffix.lower() == ".csv":
+            with path.open("r", encoding="utf-8", newline="") as handle:
+                reader = csv.DictReader(handle)
+                return self._index_vulnerabilities(list(reader))
+
+        raise ValueError("Offline KEV file must be .json or .csv")
+
+    def _download_json(self, url: str) -> dict:
+        """Download json method for KevProvider."""
+        response = self.session.get(url, timeout=self.timeout_seconds)
+        response.raise_for_status()
+        return response.json()
+
+    def _index_vulnerabilities(self, vulnerabilities: list[dict]) -> dict[str, KevData]:
+        """Index vulnerabilities method for KevProvider."""
+        index: dict[str, KevData] = {}
+        for vulnerability in vulnerabilities:
+            cve_id = normalize_cve_id(
+                vulnerability.get("cveID") or vulnerability.get("cveId") or vulnerability.get("cve")
+            )
+            if not cve_id:
+                continue
+            index[cve_id] = KevData(
+                cve_id=cve_id,
+                in_kev=True,
+                vendor_project=_first_present(vulnerability, "vendorProject", "vendor_project"),
+                product=_first_present(vulnerability, "product"),
+                vulnerability_name=_first_present(
+                    vulnerability,
+                    "vulnerabilityName",
+                    "vulnerability_name",
+                    "name",
+                ),
+                short_description=_first_present(
+                    vulnerability,
+                    "shortDescription",
+                    "short_description",
+                    "description",
+                ),
+                date_added=_first_present(vulnerability, "dateAdded", "date_added"),
+                required_action=_first_present(
+                    vulnerability,
+                    "requiredAction",
+                    "required_action",
+                ),
+                due_date=_first_present(vulnerability, "dueDate", "due_date"),
+                known_ransomware_campaign_use=_first_present(
+                    vulnerability,
+                    "knownRansomwareCampaignUse",
+                    "known_ransomware_campaign_use",
+                ),
+                notes=_first_present(vulnerability, "notes"),
+            )
+        return index
+
+    def _load_from_cache(self, *, allow_expired: bool = False) -> dict[str, KevData] | None:
+        """Load from cache method for KevProvider."""
+        if self.cache is None:
+            return None
+        cached_payload = self.cache.get_json("kev", "catalog", allow_expired=allow_expired)
+        if cached_payload is None:
+            return None
+        return {cve_id: KevData.model_validate(item) for cve_id, item in cached_payload.items()}
+
+    def _store_in_cache(self, index: dict[str, KevData]) -> None:
+        """Store in cache method for KevProvider."""
+        if self.cache is None:
+            return
+        self.cache.set_json(
+            "kev",
+            "catalog",
+            {cve_id: item.model_dump() for cve_id, item in index.items()},
+        )
+
+
+def _first_present(vulnerability: dict, *keys: str) -> str | None:
+    """First present function."""
+    for key in keys:
+        value = vulnerability.get(key)
+        if value is not None and str(value).strip():
+            return str(value)
+    return None
+
+
+def _validate_kev_url(value: str, *, label: str) -> None:
+    """Validate kev url function."""
+    if value not in _ALLOWED_KEV_URLS:
+        raise ValueError(f"{label} must use a pinned HTTPS public provider endpoint.")

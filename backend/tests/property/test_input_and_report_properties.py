@@ -8,17 +8,17 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from app.domain.engine.inputs.parsers.simple import (
+    parse_cve_list,
+    parse_generic_occurrence_csv,
+)
+from app.domain.engine.models import EvidenceBundleFile, EvidenceBundleManifest
+from app.domain.engine.utils import normalize_cve_id
 from app.services.report_bundle_archive_verification import (
     describe_evidence_bundle_mismatch,
     validate_evidence_manifest_structure,
 )
 from app.services.report_sarif_validation import validate_sarif_payload
-from vuln_prioritizer.inputs.parsers.simple import (
-    parse_cve_list,
-    parse_generic_occurrence_csv,
-)
-from vuln_prioritizer.models import EvidenceBundleFile, EvidenceBundleManifest
-from vuln_prioritizer.utils import normalize_cve_id
 
 PROPERTY_SETTINGS = settings(
     deadline=None,
@@ -74,7 +74,7 @@ def test_generic_occurrence_parser_accepts_generated_valid_csv(
 ) -> None:
     input_path = tmp_path / "occurrences.csv"
     rows = [
-        "cve_id,asset_ref,component,version,fix_versions,severity",
+        "cve_id,target_ref,component_name,component_version,fix_versions,severity",
         *(
             f"{cve_id},asset-{index},component-{index},1.{index}.0,2.{index}.0|2.{index}.1,HIGH"
             for index, cve_id in enumerate(raw_cves, start=1)

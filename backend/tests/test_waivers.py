@@ -4,13 +4,13 @@ from datetime import date
 
 import pytest
 
-from vuln_prioritizer.models import (
+from app.domain.engine.models import (
     FindingProvenance,
     InputOccurrence,
     PrioritizedFinding,
     WaiverRule,
 )
-from vuln_prioritizer.services.waivers import (
+from app.domain.engine.services.waivers import (
     _normalized_set,
     apply_waivers,
     load_waiver_rules,

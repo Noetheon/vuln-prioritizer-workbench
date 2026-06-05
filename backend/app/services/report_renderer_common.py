@@ -6,6 +6,7 @@ from collections import Counter
 from collections.abc import Sequence
 from typing import Any
 
+from app.domain.engine.security_redaction import redact_value
 from app.services.report_contracts import PRIORITY_LABELS
 from app.services.report_formatting import dict_value as _dict_value
 from app.services.report_models import (
@@ -14,7 +15,6 @@ from app.services.report_models import (
     ReportOccurrence,
     ReportVulnerability,
 )
-from vuln_prioritizer.security_redaction import redact_value
 
 
 def _redacted_bundle_payload(

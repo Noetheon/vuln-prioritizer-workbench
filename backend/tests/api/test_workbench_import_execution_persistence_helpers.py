@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from sqlmodel import Session, select
 from utils.workbench_env import WorkbenchApiEnv, create_project_via_api, local_api_headers
 
+from app.domain.engine.models import AnalysisContext, PrioritizedFinding
 from app.importers.contracts import NormalizedOccurrence
 from app.services import WorkbenchAnalysisResult
 from app.services.import_execution_dedup import _dedup_key_parts, _finding_dedup_key
@@ -25,7 +26,6 @@ from app.services.import_execution_persistence import (
     _technique_ids_from_context,
     _valid_attack_tactic_ids,
 )
-from vuln_prioritizer.models import AnalysisContext, PrioritizedFinding
 
 
 def _decision(**overrides: object) -> PrioritizedFinding:
@@ -44,10 +44,10 @@ def _decision(**overrides: object) -> PrioritizedFinding:
 
 def _occurrence(**overrides: object) -> NormalizedOccurrence:
     values = {
-        "cve": "CVE-2024-3094",
-        "component": "xz-utils",
-        "version": "5.6.0",
-        "asset_ref": "build-host-1",
+        "cve_id": "CVE-2024-3094",
+        "component_name": "xz-utils",
+        "component_version": "5.6.0",
+        "target_ref": "build-host-1",
         "source": "generic-occurrence-csv",
         "raw_evidence": {
             "source_id": "scanner-a",
@@ -65,13 +65,13 @@ def _occurrence(**overrides: object) -> NormalizedOccurrence:
 
 def test_import_persistence_dedup_key_uses_source_component_asset_scope() -> None:
     project_id = uuid.UUID("00000000-0000-4000-8000-000000000123")
-    parts = _dedup_key_parts(project_id, _occurrence(asset_ref=" build-host-1 "))
+    parts = _dedup_key_parts(project_id, _occurrence(target_ref=" build-host-1 "))
 
     assert parts == {
         "project_id": str(project_id),
         "source_id": "scanner-a",
         "component_identity": "pkg:rpm/xz-utils@5.6.0",
-        "asset_ref": "build-host-1",
+        "target_ref": "build-host-1",
     }
     assert _finding_dedup_key(parts).startswith("vpw019:")
     assert _finding_dedup_key(parts) == _finding_dedup_key(dict(reversed(parts.items())))
@@ -144,7 +144,7 @@ def test_import_persistence_payload_helpers_include_occurrence_scope_and_evidenc
 
 
 def test_import_persistence_summary_and_chunk_helpers_are_stable() -> None:
-    occurrences = [_occurrence(), _occurrence(cve="CVE-2021-44228")]
+    occurrences = [_occurrence(), _occurrence(cve_id="CVE-2021-44228")]
 
     assert (
         _analysis_semantics_summary(occurrences=occurrences, finding_count=2)[
@@ -199,14 +199,13 @@ def test_import_persistence_bulk_insert_fast_path_persists_large_new_import(
         cve = f"CVE-2099-{index + 1000:04d}"
         occurrences.append(
             NormalizedOccurrence(
-                cve=cve,
-                asset_ref=f"asset-{index}",
+                cve_id=cve,
+                target_ref=f"host-{index}",
                 source="bulk-test",
                 fix_version="2.0.0",
                 raw_evidence={
                     "source_id": f"scanner-{index}",
                     "source_record_id": f"row-{index}",
-                    "target_ref": f"host-{index}",
                     "owner": "platform",
                     "business_service": "identity",
                     "environment": "Production",

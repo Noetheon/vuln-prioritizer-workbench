@@ -38,7 +38,7 @@ def test_workbench_backend_status_uses_versioned_api_namespace(tmp_path) -> None
     payload = response.json()
     assert payload["status"] == "ready"
     assert payload["app"] == "Vuln Prioritizer Workbench"
-    assert payload["core_package"] == "vuln_prioritizer"
+    assert payload["core_package"] == "app.domain.engine"
     assert payload["database_status"] == "ready"
     assert payload["schema_status"] == "ready"
     assert payload["api_docs_enabled"] is True
@@ -301,7 +301,7 @@ def test_workbench_backend_settings_load_product_env_defaults(
     monkeypatch.setenv("API_V1_STR", "/api/custom")
     monkeypatch.setenv("SECRET_KEY", "workbench-shell-secret-0123456789abcdef")
     monkeypatch.setenv("FRONTEND_HOST", "https://workbench.example.com")
-    monkeypatch.setenv("VULN_PRIORITIZER_NVD_API_KEY_ENV", "CUSTOM_NVD_KEY")
+    monkeypatch.setenv("WORKBENCH_NVD_API_KEY_ENV", "CUSTOM_NVD_KEY")
 
     selected_settings = load_settings()
 
@@ -444,7 +444,7 @@ def test_workbench_backend_settings_reject_unknown_environment(monkeypatch) -> N
 def test_workbench_backend_settings_reject_unsafe_nvd_api_key_env_name(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("VULN_PRIORITIZER_NVD_API_KEY_ENV", "not-safe")
+    monkeypatch.setenv("WORKBENCH_NVD_API_KEY_ENV", "not-safe")
 
     with pytest.raises(ValueError, match="NVD API key environment variable name"):
         load_settings()
@@ -713,8 +713,8 @@ def test_workbench_backend_adapter_does_not_import_legacy_web_or_db_stack() -> N
 
     for module in modules:
         imports = set(getattr(module, "__dict__", {}))
-        assert "vuln_prioritizer.web" not in imports
-        assert "vuln_prioritizer.db" not in imports
+        assert "app.domain.engine.web" not in imports
+        assert "app.domain.engine.db" not in imports
 
 
 def test_workbench_operation_id_falls_back_to_route_name_without_tags() -> None:

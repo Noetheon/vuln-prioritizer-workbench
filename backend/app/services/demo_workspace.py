@@ -278,7 +278,6 @@ async def _run_seed_imports(
             attack_source="local-curated",
             attack_mapping_file=_ATTACK_MAPPING_FILENAME,
         ),
-        execution_mode="worker",
     )
 
 

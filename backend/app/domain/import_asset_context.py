@@ -6,19 +6,19 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
-from app.importers.contracts import NormalizedOccurrence
-from app.models import AssetCriticality, AssetEnvironment, AssetExposure
-from vuln_prioritizer.inputs.parsers.common import (
+from app.domain.engine.inputs.parsers.common import (
     normalize_asset_criticality as _core_normalize_asset_criticality,
 )
-from vuln_prioritizer.inputs.parsers.common import (
+from app.domain.engine.inputs.parsers.common import (
     normalize_asset_environment as _core_normalize_asset_environment,
 )
-from vuln_prioritizer.inputs.parsers.common import (
+from app.domain.engine.inputs.parsers.common import (
     normalize_asset_exposure as _core_normalize_asset_exposure,
 )
-from vuln_prioritizer.inputs.parsers.common import split_versions
-from vuln_prioritizer.models import InputOccurrence
+from app.domain.engine.inputs.parsers.common import split_versions
+from app.domain.engine.models import InputOccurrence
+from app.importers.contracts import NormalizedOccurrence
+from app.models import AssetCriticality, AssetEnvironment, AssetExposure
 
 _UNKNOWN = "unknown"
 
@@ -44,10 +44,10 @@ def canonicalize_occurrence_asset_context(
         canonicalize_asset_environment_value,
     )
     return NormalizedOccurrence(
-        cve=occurrence.cve,
-        component=occurrence.component,
-        version=occurrence.version,
-        asset_ref=occurrence.asset_ref,
+        cve_id=occurrence.cve_id,
+        component_name=occurrence.component_name,
+        component_version=occurrence.component_version,
+        target_ref=occurrence.target_ref,
         source=occurrence.source,
         fix_version=occurrence.fix_version,
         raw_evidence=evidence,
@@ -59,33 +59,31 @@ def input_occurrence_from_workbench_occurrence(
 ) -> InputOccurrence:
     """Map a Workbench importer occurrence back to the core occurrence model."""
     evidence = occurrence.raw_evidence
-    fix_versions = (
-        string_list_evidence(evidence, "fix_versions")
-        or string_list_evidence(evidence, "fixed_versions")
-        or string_list_evidence(evidence, "fix_version")
-        or ([occurrence.fix_version] if occurrence.fix_version else [])
+    fix_versions = string_list_evidence(evidence, "fix_versions") or (
+        [occurrence.fix_version] if occurrence.fix_version else []
     )
     return InputOccurrence(
-        cve_id=occurrence.cve,
+        cve_id=occurrence.cve_id,
         source_format=occurrence.source,
         source_id=string_evidence(evidence, "source_id"),
         source_record_id=string_evidence(evidence, "source_record_id"),
-        component_name=occurrence.component,
-        component_version=occurrence.version,
+        component_name=occurrence.component_name,
+        component_version=occurrence.component_version,
         purl=string_evidence(evidence, "purl"),
         package_type=string_evidence(evidence, "package_type"),
         file_path=string_evidence(evidence, "file_path"),
         dependency_path=string_evidence(evidence, "dependency_path"),
         fix_versions=fix_versions,
-        raw_severity=string_evidence(evidence, "raw_severity")
-        or string_evidence(evidence, "severity"),
+        raw_severity=string_evidence(evidence, "raw_severity"),
         target_kind=string_evidence(evidence, "target_kind") or "generic",
-        target_ref=string_evidence(evidence, "target_ref") or occurrence.asset_ref,
+        target_ref=string_evidence(evidence, "target_ref") or occurrence.target_ref,
         asset_id=string_evidence(evidence, "asset_id"),
-        asset_criticality=string_evidence(evidence, "asset_criticality"),
+        asset_criticality=string_evidence(evidence, "asset_criticality")
+        or string_evidence(evidence, "criticality"),
         asset_exposure=string_evidence(evidence, "asset_exposure")
         or string_evidence(evidence, "exposure"),
-        asset_environment=string_evidence(evidence, "asset_environment"),
+        asset_environment=string_evidence(evidence, "asset_environment")
+        or string_evidence(evidence, "environment"),
         asset_owner=string_evidence(evidence, "asset_owner") or string_evidence(evidence, "owner"),
         asset_business_service=string_evidence(evidence, "asset_business_service")
         or string_evidence(evidence, "business_service"),
@@ -132,10 +130,10 @@ def workbench_occurrence_with_asset_context(
     }
     evidence.update({key: value for key, value in updates.items() if value not in {None, ""}})
     return NormalizedOccurrence(
-        cve=occurrence.cve,
-        component=occurrence.component,
-        version=occurrence.version,
-        asset_ref=enriched.asset_id or occurrence.asset_ref or enriched.target_ref,
+        cve_id=occurrence.cve_id,
+        component_name=occurrence.component_name,
+        component_version=occurrence.component_version,
+        target_ref=enriched.asset_id or occurrence.target_ref or enriched.target_ref,
         source=occurrence.source,
         fix_version=occurrence.fix_version,
         raw_evidence=evidence,
@@ -162,10 +160,10 @@ def workbench_occurrence_with_vex(
     }
     evidence.update({key: value for key, value in updates.items() if value not in {None, ""}})
     return NormalizedOccurrence(
-        cve=occurrence.cve,
-        component=occurrence.component,
-        version=occurrence.version,
-        asset_ref=occurrence.asset_ref,
+        cve_id=occurrence.cve_id,
+        component_name=occurrence.component_name,
+        component_version=occurrence.component_version,
+        target_ref=occurrence.target_ref,
         source=occurrence.source,
         fix_version=occurrence.fix_version,
         raw_evidence=evidence,
@@ -174,7 +172,9 @@ def workbench_occurrence_with_vex(
 
 def asset_exposure_from_evidence(evidence: Mapping[str, Any]) -> AssetExposure:
     """Asset exposure from evidence function."""
-    canonical = canonicalize_asset_exposure_value(string_evidence(evidence, "asset_exposure"))
+    canonical = canonicalize_asset_exposure_value(
+        string_evidence(evidence, "asset_exposure") or string_evidence(evidence, "exposure")
+    )
     return {
         "internet-facing": AssetExposure.INTERNET_FACING,
         "internal": AssetExposure.INTERNAL,
@@ -184,7 +184,9 @@ def asset_exposure_from_evidence(evidence: Mapping[str, Any]) -> AssetExposure:
 
 def asset_environment_from_evidence(evidence: Mapping[str, Any]) -> AssetEnvironment:
     """Asset environment from evidence function."""
-    canonical = canonicalize_asset_environment_value(string_evidence(evidence, "asset_environment"))
+    canonical = canonicalize_asset_environment_value(
+        string_evidence(evidence, "asset_environment") or string_evidence(evidence, "environment")
+    )
     return {
         "prod": AssetEnvironment.PRODUCTION,
         "production": AssetEnvironment.PRODUCTION,
@@ -198,7 +200,9 @@ def asset_environment_from_evidence(evidence: Mapping[str, Any]) -> AssetEnviron
 
 def asset_criticality_from_evidence(evidence: Mapping[str, Any]) -> AssetCriticality:
     """Asset criticality from evidence function."""
-    canonical = canonicalize_asset_criticality_value(string_evidence(evidence, "asset_criticality"))
+    canonical = canonicalize_asset_criticality_value(
+        string_evidence(evidence, "asset_criticality") or string_evidence(evidence, "criticality")
+    )
     return {
         "critical": AssetCriticality.CRITICAL,
         "high": AssetCriticality.HIGH,

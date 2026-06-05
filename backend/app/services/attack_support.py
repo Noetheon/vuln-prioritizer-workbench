@@ -6,13 +6,46 @@ import uuid
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Protocol
 
-from app.models import Finding, FindingAttackContext
+from app.models import FindingAttackContext
 
 CONFIDENCE_BUCKETS = ("high", "medium", "low", "unknown")
 REVIEW_STATUS_BUCKETS = ("reviewed", "needs_review", "unreviewed", "stale", "rejected")
 ATTACK_NAVIGATOR_FILTERS = ("all", "critical-high", "kev", "no-coverage")
+
+
+class AttackSummaryFindingLike(Protocol):
+    """Minimal evidence-backed finding surface used by ATT&CK summaries."""
+
+    @property
+    def id(self) -> uuid.UUID:
+        """Finding identifier."""
+        raise NotImplementedError
+
+    @property
+    def risk_score(self) -> float | None:
+        """Evidence-backed risk score."""
+        raise NotImplementedError
+
+
+class AttackNavigatorFindingLike(AttackSummaryFindingLike, Protocol):
+    """Minimal evidence-backed finding surface used by ATT&CK Navigator exports."""
+
+    @property
+    def cve_id(self) -> str:
+        """CVE identifier."""
+        raise NotImplementedError
+
+    @property
+    def in_kev(self) -> bool:
+        """Whether the finding is listed in KEV."""
+        raise NotImplementedError
+
+    @property
+    def priority(self) -> object:
+        """Priority value or enum."""
+        raise NotImplementedError
 
 
 @dataclass
@@ -99,7 +132,10 @@ def navigator_filter_label(value: str) -> str:
     return normalized if normalized in ATTACK_NAVIGATOR_FILTERS else "all"
 
 
-def finding_matches_navigator_filter(finding: Finding, filter_value: str) -> bool:
+def finding_matches_navigator_filter(
+    finding: AttackNavigatorFindingLike,
+    filter_value: str,
+) -> bool:
     """Return whether a finding belongs in the requested Navigator filter."""
     if filter_value == "critical-high":
         return finding_priority_label(finding) in {"critical", "high"}
@@ -108,7 +144,7 @@ def finding_matches_navigator_filter(finding: Finding, filter_value: str) -> boo
     return True
 
 
-def finding_priority_label(finding: Finding) -> str:
+def finding_priority_label(finding: AttackNavigatorFindingLike) -> str:
     """Return the normalized priority label for a finding."""
     value = getattr(finding.priority, "value", finding.priority)
     return str(value).strip().lower()

@@ -29,7 +29,6 @@ def raise_analysis_failure(
     ignored_lines: int,
     input_type: str,
     exc: Exception,
-    execution_mode: str = "worker",
 ) -> NoReturn:
     """Raise analysis failure function."""
     analysis_error_message = _sanitize_parser_error_message(str(exc))
@@ -43,7 +42,7 @@ def raise_analysis_failure(
         status=AnalysisRunStatus.FAILED,
         error_message=analysis_error_message,
     )
-    _ = job_id, job_history, analysis_error, execution_mode
+    _ = job_id, job_history, analysis_error
     _record_import_audit(
         session,
         local_actor=local_actor,

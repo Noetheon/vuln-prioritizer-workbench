@@ -360,7 +360,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await importFileInput.setInputFiles({
     buffer: Buffer.from(
       [
-        "cve_id,asset_ref,component,version,purl",
+        "cve_id,target_ref,component_name,component_version,purl",
         "CVE-2024-3094,ui-sidecar,xz,5.6.0-r0,pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64",
       ].join("\n"),
     ),

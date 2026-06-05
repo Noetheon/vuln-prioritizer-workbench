@@ -15,14 +15,19 @@ REQUIRED_WHEEL_SUFFIXES = (
     "app/main.py",
     "app/api/main.py",
     "app/alembic/env.py",
+    "app/domain/engine/models.py",
+    "app/domain/engine/py.typed",
 )
 REQUIRED_SDIST_SUFFIXES = (
     "app/main.py",
     "app/api/main.py",
     "app/alembic/env.py",
+    "app/domain/engine/models.py",
+    "app/domain/engine/py.typed",
     "pyproject.toml",
 )
 FORBIDDEN_WHEEL_PREFIXES = (
+    "vuln_prioritizer/",
     "vuln_prioritizer/api/",
     "vuln_prioritizer/cli_support/",
     "vuln_prioritizer/commands/",
@@ -41,6 +46,7 @@ FORBIDDEN_WHEEL_FILES = (
     "vuln_prioritizer/state_store.py",
 )
 FORBIDDEN_SDIST_PARTS = (
+    "/src/vuln_prioritizer/",
     "/src/vuln_prioritizer/api/",
     "/src/vuln_prioritizer/cli_support/",
     "/src/vuln_prioritizer/commands/",
@@ -166,9 +172,9 @@ def main() -> None:
 
     report = {
         "boundary": (
-            "The backend distribution intentionally ships both the shared domain "
-            "package and the active Workbench FastAPI app package. It does not "
-            "publish the legacy CLI as a console entrypoint."
+            "The backend distribution ships the active Workbench FastAPI package "
+            "and its internal app.domain.engine decision domain. It does not "
+            "publish or include the removed legacy vuln_prioritizer package."
         ),
         "wheel": {
             "path": wheel.as_posix(),

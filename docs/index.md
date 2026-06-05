@@ -1,6 +1,6 @@
-# vuln-prioritizer
+# vuln-prioritizer-workbench
 
-`vuln-prioritizer` is a local-first Workbench for prioritizing known CVEs with
+`vuln-prioritizer-workbench` is a local-first Workbench for prioritizing known CVEs with
 transparent scoring from `CVSS + EPSS + KEV`, plus optional ATT&CK,
 asset-context, VEX, waiver, report, and evidence layers. New product work
 starts from the FastAPI/React Workbench.

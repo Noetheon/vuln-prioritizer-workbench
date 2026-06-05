@@ -80,7 +80,6 @@ def create_provider_update_job(
         cve_ids=cve_ids,
         cache_only=payload.cache_only,
         status=AnalysisRunStatus.RUNNING,
-        execution_mode="worker",
     )
     return _execute_provider_update_run(
         session=session,
@@ -90,7 +89,6 @@ def create_provider_update_job(
         selected_sources=selected_sources,
         cve_ids=cve_ids,
         cache_only=payload.cache_only,
-        execution_mode="worker",
         fail_conflicts=False,
     )
 
@@ -116,7 +114,6 @@ def enqueue_provider_update_job(
         cve_ids=cve_ids,
         cache_only=payload.cache_only,
         status=AnalysisRunStatus.PENDING,
-        execution_mode="worker",
     )
 
 
@@ -147,7 +144,6 @@ def resume_provider_update_job(
     settings: Settings,
     payload: ProviderUpdateJobCreate,
     run_id: uuid.UUID,
-    execution_mode: str = "worker",
     workflow_context: WorkflowExecutionContext | None = None,
 ) -> AnalysisRun | None:
     """Execute a pending provider update job in the current session."""
@@ -170,7 +166,6 @@ def resume_provider_update_job(
         selected_sources=selected_sources,
         cve_ids=cve_ids,
         cache_only=payload.cache_only,
-        execution_mode=execution_mode,
         fail_conflicts=True,
         workflow_context=workflow_context,
     )
@@ -223,7 +218,6 @@ def mark_provider_update_job_background_failed(
         selected_sources=_string_list(metadata.get("requested_sources") or metadata.get("sources")),
         requested_cves=_int_value(metadata.get("requested_cves")),
         cache_only=bool(metadata.get("cache_only", True)),
-        execution_mode="worker",
         error_message=error_message,
         detail="Provider refresh failed before replacing or mutating existing snapshots.",
     )
@@ -240,7 +234,6 @@ def _execute_provider_update_run(
     selected_sources: list[str],
     cve_ids: list[str],
     cache_only: bool,
-    execution_mode: str,
     fail_conflicts: bool,
     workflow_context: WorkflowExecutionContext | None = None,
 ) -> AnalysisRun:
@@ -252,7 +245,6 @@ def _execute_provider_update_run(
         title="Provider snapshot refresh",
         handler="app.services.provider_updates._execute_provider_update_run",
         status=WorkflowRunStatus.RUNNING,
-        execution_mode=execution_mode,
         current_stage="refresh_snapshot",
         metadata_json={
             "requested_sources": selected_sources,
@@ -305,7 +297,6 @@ def _execute_provider_update_run(
                 selected_sources=selected_sources,
                 requested_cves=len(cve_ids),
                 cache_only=cache_only,
-                execution_mode=execution_mode,
                 error_message=str(exc),
                 detail="Provider refresh did not start because another job was active.",
             )
@@ -325,7 +316,6 @@ def _execute_provider_update_run(
             selected_sources=selected_sources,
             requested_cves=len(cve_ids),
             cache_only=cache_only,
-            execution_mode=execution_mode,
             error_message=str(exc),
             detail="Provider refresh failed before replacing or mutating existing snapshots.",
         )
@@ -378,7 +368,6 @@ def _create_provider_update_run(
     cve_ids: list[str],
     cache_only: bool,
     status: AnalysisRunStatus,
-    execution_mode: str,
 ) -> AnalysisRun:
     project = _provider_update_project(session)
     run = repository.create_analysis_run(
@@ -398,7 +387,6 @@ def _create_provider_update_run(
             else "app.services.provider_updates._execute_provider_update_run"
         ),
         status=_workflow_status_for_run(status),
-        execution_mode="worker" if queued else execution_mode,
         current_stage="queued" if status == AnalysisRunStatus.PENDING else "created",
         metadata_json={
             "requested_sources": selected_sources,
@@ -426,7 +414,6 @@ def _mark_provider_update_run_failed(
     selected_sources: list[str],
     requested_cves: int,
     cache_only: bool,
-    execution_mode: str,
     error_message: str,
     detail: str,
 ) -> AnalysisRun:

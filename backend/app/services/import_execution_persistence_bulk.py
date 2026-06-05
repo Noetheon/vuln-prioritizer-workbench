@@ -68,7 +68,7 @@ def _persist_workbench_occurrences_bulk_insert(
     """Fast path for large all-new occurrence imports with no component rows."""
     if len(occurrences) < 1000:
         return None
-    if any(occurrence.component for occurrence in occurrences):
+    if any(occurrence.component_name for occurrence in occurrences):
         return None
     if any(
         _attack_context_enabled(analysis_result, _decision_for_occurrence(analysis_result, item))
@@ -90,7 +90,7 @@ def _persist_workbench_occurrences_bulk_insert(
 
     now = get_datetime_utc()
     asset_keys = sorted(
-        {occurrence.asset_ref for occurrence in occurrences if occurrence.asset_ref}
+        {occurrence.target_ref for occurrence in occurrences if occurrence.target_ref}
     )
     existing_assets = _existing_assets_by_key(
         session=session,
@@ -104,7 +104,7 @@ def _persist_workbench_occurrences_bulk_insert(
         asset_key: asset.id for asset_key, asset in existing_assets.items()
     }
     for occurrence in occurrences:
-        asset_key = occurrence.asset_ref
+        asset_key = occurrence.target_ref
         if not asset_key or asset_key in asset_ids_by_key:
             continue
         asset_id = uuid.uuid4()
@@ -129,7 +129,7 @@ def _persist_workbench_occurrences_bulk_insert(
             }
         )
 
-    cves = sorted({occurrence.cve for occurrence in occurrences})
+    cves = sorted({occurrence.cve_id for occurrence in occurrences})
     vulnerabilities_by_cve = _existing_vulnerabilities_by_cve(session=session, cves=cves)
     if vulnerabilities_by_cve:
         return None
@@ -141,7 +141,9 @@ def _persist_workbench_occurrences_bulk_insert(
         if cve in vulnerability_ids_by_cve:
             continue
         decision = analysis_result.findings_by_cve[cve]
-        source_occurrence = next(occurrence for occurrence in occurrences if occurrence.cve == cve)
+        source_occurrence = next(
+            occurrence for occurrence in occurrences if occurrence.cve_id == cve
+        )
         dedup_parts = _dedup_key_parts(project_id, source_occurrence)
         vulnerability_id = uuid.uuid4()
         vulnerability_ids_by_cve[cve] = vulnerability_id
@@ -183,11 +185,11 @@ def _persist_workbench_occurrences_bulk_insert(
         start=1,
     ):
         dedup_parts = _dedup_key_parts(project_id, occurrence)
-        decision = analysis_result.findings_by_cve[occurrence.cve]
-        compact_payload = compact_payload_by_cve.get(occurrence.cve)
+        decision = analysis_result.findings_by_cve[occurrence.cve_id]
+        compact_payload = compact_payload_by_cve.get(occurrence.cve_id)
         if compact_payload is None:
             compact_payload = _compact_decision_payload(decision)
-            compact_payload_by_cve[occurrence.cve] = compact_payload
+            compact_payload_by_cve[occurrence.cve_id] = compact_payload
         occurrence_scope = _occurrence_scope_payload(occurrence)
         decision_payload = _decision_payload_for_occurrence(
             decision,
@@ -196,15 +198,15 @@ def _persist_workbench_occurrences_bulk_insert(
             base_payload=compact_payload,
             occurrence_scope=occurrence_scope,
         )
-        data_quality_payload = data_quality_by_cve.get(occurrence.cve)
+        data_quality_payload = data_quality_by_cve.get(occurrence.cve_id)
         if data_quality_payload is None:
             data_quality_payload = _decision_data_quality_json(decision)
-            data_quality_by_cve[occurrence.cve] = data_quality_payload
+            data_quality_by_cve[occurrence.cve_id] = data_quality_payload
 
         finding_id = uuid.uuid4()
         occurrence_id = uuid.uuid4()
         finding_asset_id: uuid.UUID | None = (
-            asset_ids_by_key.get(occurrence.asset_ref) if occurrence.asset_ref else None
+            asset_ids_by_key.get(occurrence.target_ref) if occurrence.target_ref else None
         )
         evidence_payload = {
             "import": dict(occurrence.raw_evidence),
@@ -226,28 +228,12 @@ def _persist_workbench_occurrences_bulk_insert(
             {
                 "id": finding_id,
                 "project_id": project_id,
-                "vulnerability_id": vulnerability_ids_by_cve[occurrence.cve],
+                "vulnerability_id": vulnerability_ids_by_cve[occurrence.cve_id],
                 "component_id": None,
                 "asset_id": finding_asset_id,
-                "cve_id": occurrence.cve,
+                "cve_id": occurrence.cve_id,
                 "dedup_key": dedup_key,
                 "status": _finding_status_for_occurrence(decision, occurrence).value,
-                "priority": _decision_priority(decision).value,
-                "priority_rank": decision.priority_rank,
-                "risk_score": float(decision.operational_score),
-                "operational_rank": decision.operational_rank or index,
-                "in_kev": decision.in_kev,
-                "epss": decision.epss,
-                "cvss_base_score": decision.cvss_base_score,
-                "attack_mapped": decision.attack_mapped,
-                "suppressed_by_vex": _suppressed_by_vex_for_occurrence(
-                    decision,
-                    occurrence,
-                ),
-                "under_investigation": decision.under_investigation,
-                "waived": decision.waived,
-                "recommended_action": decision.recommended_action,
-                "rationale": decision.rationale,
                 "first_seen_at": now,
                 "last_seen_at": now,
                 "created_at": now,
@@ -279,9 +265,9 @@ def _persist_workbench_occurrences_bulk_insert(
             fix_version=occurrence.fix_version,
             raw_evidence={
                 **dict(occurrence.raw_evidence),
-                "component": occurrence.component,
-                "version": occurrence.version,
-                "asset_ref": occurrence.asset_ref,
+                "component_name": occurrence.component_name,
+                "component_version": occurrence.component_version,
+                "target_ref": occurrence.target_ref,
             },
             dedup=evidence_payload["dedup"],
         )
@@ -289,7 +275,7 @@ def _persist_workbench_occurrences_bulk_insert(
             project_id=project_id,
             run_id=run_id,
             finding_id=finding_id,
-            cve_id=occurrence.cve,
+            cve_id=occurrence.cve_id,
             dedup_key=dedup_key,
             status=_finding_status_for_occurrence(decision, occurrence).value,
             priority=_decision_priority(decision).value,
@@ -337,10 +323,10 @@ def _persist_workbench_occurrences_bulk_insert(
                     "action": "created",
                     "dedup_key": dedup_key,
                     "finding_id": str(finding_id),
-                    "cve": occurrence.cve,
+                    "cve_id": occurrence.cve_id,
                     "source_id": dedup_parts["source_id"],
                     "component_identity": dedup_parts["component_identity"],
-                    "asset_ref": dedup_parts["asset_ref"],
+                    "target_ref": dedup_parts["target_ref"],
                 }
             )
         if len(finding_batch) >= 250:

@@ -47,7 +47,7 @@ class CveListImporter:
             payload,
             default_suffix=".csv" if suffix == ".csv" else ".txt",
             filename=filename,
-            prefer_asset_id_as_asset_ref=False,
+            prefer_asset_id_as_target_ref=False,
             strict_invalid_cve_warnings=True,
         )
 

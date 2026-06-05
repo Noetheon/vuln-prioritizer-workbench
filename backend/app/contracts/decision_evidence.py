@@ -152,7 +152,6 @@ class OccurrenceEvidenceV2(EvidenceContractModel):
     fix_versions: list[str] | None = None
     target_kind: str | None = None
     target_ref: str | None = None
-    asset_ref: str | None = None
     asset_owner: str | None = None
     asset_business_service: str | None = None
     asset_exposure: str | None = None

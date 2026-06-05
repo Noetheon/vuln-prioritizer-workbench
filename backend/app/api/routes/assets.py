@@ -12,6 +12,7 @@ from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from app.api.deps import LocalActor, SessionDep
 from app.api.routes.workbench_access import require_project
 from app.core.app_state import workbench_settings
+from app.domain.engine.inputs.loader import load_asset_context_file
 from app.models import (
     Asset,
     AssetContextImportPublic,
@@ -23,7 +24,6 @@ from app.models import (
 )
 from app.repositories import AssetRepository, WaiverRepository
 from app.services.audit import record_audit_event
-from vuln_prioritizer.inputs.loader import load_asset_context_file
 
 router = APIRouter(tags=["assets"])
 

@@ -38,7 +38,7 @@ def test_workbench_factories_accept_overrides_without_mutating_later_instances()
         asset=asset,
         component=component,
         vulnerability=vulnerability,
-        priority_rank=2,
+        status="in_review",
     )
     snapshot = workbench_provider_snapshot(content_hash="sha256:custom")
     run = workbench_analysis_run(project=project, provider_snapshot=snapshot, filename="scan.json")
@@ -48,7 +48,7 @@ def test_workbench_factories_accept_overrides_without_mutating_later_instances()
     assert asset.asset_key == "edge-api"
     assert component.name == "openssl"
     assert vulnerability.cve_id == "CVE-2026-9999"
-    assert finding.priority_rank == 2
+    assert getattr(finding.status, "value", finding.status) == "in_review"
     assert snapshot.content_hash == "sha256:custom"
     assert run.filename == "scan.json"
     assert workbench_provider_snapshot().source_hashes_json["kev"] == "sha256:kev-feed-1"

@@ -9,9 +9,9 @@ dependencies = []
 members = ["backend"]
 
 [tool.pytest.ini_options]
-addopts = "-ra --cov=app --cov=vuln_prioritizer --cov-report=term-missing"
+addopts = "-ra --cov=app --cov-report=term-missing"
 testpaths = ["backend/tests"]
-pythonpath = ["backend", "backend/src"]
+pythonpath = ["backend"]
 filterwarnings = [
   "error::ResourceWarning",
   "error::pytest.PytestUnraisableExceptionWarning",
@@ -29,7 +29,7 @@ extend = "backend/pyproject.toml"
 
 [tool.mypy]
 python_version = "3.11"
-files = ["backend/app", "backend/src"]
+files = ["backend/app"]
 pretty = true
 show_error_codes = true
 warn_unused_ignores = true
@@ -43,6 +43,4 @@ disallow_untyped_defs = true
 omit = [
   "backend/app/alembic/env.py",
   "backend/app/alembic/versions/*.py",
-  "backend/src/vuln_prioritizer/db/alembic/env.py",
-  "backend/src/vuln_prioritizer/db/alembic/versions/*.py",
 ]

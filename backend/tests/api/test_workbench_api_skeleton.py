@@ -9,6 +9,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from sqlalchemy import event
 from sqlmodel import Session
+from utils.workbench_contracts import _seed_analysis_evidence, _seed_finding_evidence
 from utils.workbench_env import (
     DEMO_CVE_LOG4SHELL,
     DEMO_CVE_XZ,
@@ -181,7 +182,7 @@ def test_vpw011_domain_routes_do_not_require_auth_in_local_runtime(
         ("get", f"/api/v1/runs/{run_id}/summary", {}),
         ("get", f"/api/v1/runs/{run_id}/workflow-metadata", {}),
         ("get", f"/api/v1/runs/{run_id}/reports", {}),
-        ("post", f"/api/v1/runs/{run_id}/reports", {"json": {"format": "markdown"}}),
+        ("post", f"/api/v1/runs/{run_id}/report-jobs", {"json": {"format": "markdown"}}),
         ("get", f"/api/v1/reports/{run_id}/download", {}),
         (
             "get",
@@ -426,7 +427,7 @@ def test_run_workflow_metadata_endpoint_redacts_raw_diagnostics(
             kind=workbench_api_env.app_models.WorkflowRunKind.IMPORT,
         )
         assert workflow is not None
-        workflow.result_json = {
+        workflow.result_ref_json = {
             "created_findings": 0,
             "updated_findings": 0,
             "input_upload": {
@@ -490,6 +491,7 @@ def test_vpw011_finding_list_and_get_support_pagination(
         workbench_api_env.app_models,
         workbench_api_env.repositories,
         project_id=uuid.UUID(project["id"]),
+        with_decision_evidence=True,
     )
 
     list_response = workbench_api_env.client.get(
@@ -527,6 +529,7 @@ def test_vpw011_finding_public_payloads_redact_raw_json_fields(
         workbench_api_env.app_models,
         workbench_api_env.repositories,
         project_id=uuid.UUID(project["id"]),
+        with_decision_evidence=True,
     )
     finding_id = seeded["finding_ids"][0]
 
@@ -658,7 +661,6 @@ def test_vpw042_findings_list_filters_and_display_fields(
     assert occurrence["fix_versions"] == ["2.17.1", "2.17.2"]
     assert occurrence["target_kind"] == "container"
     assert occurrence["target_ref"] == "registry.example.test/payments-api:2026.04.28"
-    assert occurrence["asset_ref"] == "payments-api"
     assert occurrence["asset_owner"] == "platform"
     assert occurrence["asset_business_service"] == "payments"
     assert occurrence["asset_exposure"] == "internet-facing"
@@ -690,7 +692,11 @@ def test_vpw044_asset_edit_rescore_flag_is_merged_into_explain(
         f"/api/v1/findings/{seeded['critical']}/explain",
         headers=headers,
     )
-    assert explain_response.status_code == 422, explain_response.text
+    assert explain_response.status_code == 200, explain_response.text
+    assert any(
+        flag["code"] == "asset_context_rescore_needed"
+        for flag in explain_response.json()["data_quality_flags"]
+    )
 
 
 def test_asset_post_upsert_marks_existing_asset_findings_for_rescore(
@@ -718,7 +724,7 @@ def test_asset_post_upsert_marks_existing_asset_findings_for_rescore(
     assert response.status_code == 200, response.text
     payload = response.json()
     assert payload["id"] == str(seeded["critical_asset"])
-    assert payload["rescore_needed"] is False
+    assert payload["rescore_needed"] is True
 
 
 def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
@@ -752,7 +758,7 @@ def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
         json={"criticality": "high"},
     )
     assert update_response.status_code == 200, update_response.text
-    assert update_response.json()["rescore_needed"] is False
+    assert update_response.json()["rescore_needed"] is True
 
     recalculate_response = workbench_api_env.client.post(
         f"/api/v1/assets/{seeded['critical_asset']}/recalculate",
@@ -763,7 +769,7 @@ def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
     assert recalculated["asset_id"] == str(seeded["critical_asset"])
     assert recalculated["asset_key"] == "payments-api"
     assert recalculated["recalculated_findings"] == 1
-    assert recalculated["cleared_rescore_flags"] == 0
+    assert recalculated["cleared_rescore_flags"] == 1
     assert recalculated["operational_scores"] == [99]
     assert recalculated["rescore_needed"] is False
 
@@ -779,7 +785,11 @@ def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
         f"/api/v1/findings/{seeded['critical']}/explain",
         headers=headers,
     )
-    assert explain_response.status_code == 422, explain_response.text
+    assert explain_response.status_code == 200, explain_response.text
+    assert not any(
+        flag["code"] == "asset_context_rescore_needed"
+        for flag in explain_response.json()["data_quality_flags"]
+    )
 
 
 def test_vpw063_asset_context_import_endpoint_upserts_assets_and_marks_rescore(
@@ -835,13 +845,17 @@ def test_vpw063_asset_context_import_endpoint_upserts_assets_and_marks_rescore(
     )
     assert payments_asset["criticality"] == "high"
     assert payments_asset["exposure"] == "internal"
-    assert payments_asset["rescore_needed"] is False
+    assert payments_asset["rescore_needed"] is True
 
     explain_response = workbench_api_env.client.get(
         f"/api/v1/findings/{seeded['critical']}/explain",
         headers=headers,
     )
-    assert explain_response.status_code == 422, explain_response.text
+    assert explain_response.status_code == 200, explain_response.text
+    assert any(
+        flag["code"] == "asset_context_rescore_needed"
+        for flag in explain_response.json()["data_quality_flags"]
+    )
 
 
 def test_vpw042_findings_sort_direction_and_pagination(
@@ -1044,14 +1058,7 @@ def _seed_vpw042_findings(
             component_id=critical_component.id,
             asset_id=critical_asset.id,
             cve_id=DEMO_CVE_LOG4SHELL,
-            priority=app_models.FindingPriority.CRITICAL,
             status=app_models.FindingStatus.OPEN,
-            priority_rank=1,
-            risk_score=99.0,
-            operational_rank=1,
-            in_kev=True,
-            epss=0.95,
-            cvss_base_score=10.0,
         )
         high = finding_repo.create_or_update_finding(
             project_id=project_id,
@@ -1059,14 +1066,7 @@ def _seed_vpw042_findings(
             component_id=high_component.id,
             asset_id=high_asset.id,
             cve_id="CVE-2022-22965",
-            priority=app_models.FindingPriority.HIGH,
             status=app_models.FindingStatus.FIXED,
-            priority_rank=2,
-            risk_score=88.0,
-            operational_rank=2,
-            in_kev=False,
-            epss=0.23,
-            cvss_base_score=8.1,
         )
         medium = finding_repo.create_or_update_finding(
             project_id=project_id,
@@ -1074,22 +1074,115 @@ def _seed_vpw042_findings(
             component_id=medium_component.id,
             asset_id=medium_asset.id,
             cve_id="CVE-2024-4577",
-            priority=app_models.FindingPriority.MEDIUM,
             status=app_models.FindingStatus.SUPPRESSED,
-            priority_rank=3,
-            risk_score=42.0,
-            operational_rank=3,
-            in_kev=False,
-            epss=0.44,
-            cvss_base_score=6.1,
         )
-        run = repositories.RunRepository(session).create_analysis_run(
+        run_repo = repositories.RunRepository(session)
+        run = run_repo.create_analysis_run(
             project_id=project_id,
             input_type="generic-occurrence-csv",
             filename="occurrences.csv",
             status=app_models.AnalysisRunStatus.COMPLETED,
         )
-        repositories.RunRepository(session).add_finding_occurrence(
+        evidence_repo = repositories.EvidenceRepository(session)
+        analysis_evidence = evidence_repo.upsert_analysis_evidence(
+            project_id=project_id,
+            analysis_run_id=run.id,
+            provider_snapshot_id=None,
+            evidence=_seed_analysis_evidence(
+                project_id=project_id,
+                run=run,
+                provider_snapshot_id=None,
+                provider_snapshot_hash=None,
+                finding_count=0,
+                counts_by_priority={},
+                locked_provider_data=False,
+                findings=[],
+            ),
+        )
+        evidence_items = [
+            _seed_finding_evidence(
+                finding=critical,
+                analysis_run_id=run.id,
+                project_id=project_id,
+                asset_key=critical_asset.asset_key,
+                asset_name=critical_asset.name or critical_asset.asset_key,
+                component_name=critical_component.name,
+                component_version=critical_component.version or "",
+                priority=app_models.FindingPriority.CRITICAL,
+                priority_rank=1,
+                risk_score=99.0,
+                operational_rank=1,
+                epss=0.95,
+                cvss=10.0,
+                in_kev=True,
+                rationale="Critical internet-facing Log4Shell exposure.",
+                action="Upgrade log4j-core to a fixed version.",
+                confidence="high",
+                flags=[],
+            ),
+            _seed_finding_evidence(
+                finding=high,
+                analysis_run_id=run.id,
+                project_id=project_id,
+                asset_key=high_asset.asset_key,
+                asset_name=high_asset.name or high_asset.asset_key,
+                component_name=high_component.name,
+                component_version=high_component.version or "",
+                priority=app_models.FindingPriority.HIGH,
+                priority_rank=2,
+                risk_score=88.0,
+                operational_rank=2,
+                epss=0.23,
+                cvss=8.1,
+                in_kev=False,
+                rationale="High-priority Spring exposure on production identity service.",
+                action="Confirm fixed deployment and close after validation.",
+                confidence="medium",
+                flags=[],
+            ),
+            _seed_finding_evidence(
+                finding=medium,
+                analysis_run_id=run.id,
+                project_id=project_id,
+                asset_key=medium_asset.asset_key,
+                asset_name=medium_asset.name or medium_asset.asset_key,
+                component_name=medium_component.name,
+                component_version=medium_component.version or "",
+                priority=app_models.FindingPriority.MEDIUM,
+                priority_rank=3,
+                risk_score=42.0,
+                operational_rank=3,
+                epss=0.44,
+                cvss=6.1,
+                in_kev=False,
+                rationale="Medium-priority staged edge-worker finding.",
+                action="Track remediation through the next staging maintenance window.",
+                confidence="medium",
+                flags=[],
+            ),
+        ]
+        evidence_repo.replace_finding_decision_evidence(
+            analysis_evidence_id=analysis_evidence.id,
+            project_id=project_id,
+            analysis_run_id=run.id,
+            evidence_items=evidence_items,
+        )
+        evidence_repo.upsert_analysis_evidence(
+            project_id=project_id,
+            analysis_run_id=run.id,
+            provider_snapshot_id=None,
+            evidence=_seed_analysis_evidence(
+                project_id=project_id,
+                run=run,
+                provider_snapshot_id=None,
+                provider_snapshot_hash=None,
+                finding_count=3,
+                counts_by_priority={"Critical": 1, "High": 1, "Medium": 1},
+                locked_provider_data=False,
+                findings=evidence_items,
+            ),
+        )
+        run_repo.add_finding_occurrence(
             finding_id=critical.id,
             analysis_run_id=run.id,
             source="generic-occurrence-csv",
@@ -1106,7 +1199,6 @@ def _seed_vpw042_findings(
                 "fix_versions": ["2.17.1", "2.17.2"],
                 "target_kind": "container",
                 "target_ref": "registry.example.test/payments-api:2026.04.28",
-                "asset_ref": "payments-api",
                 "asset_owner": "platform",
                 "asset_business_service": "payments",
                 "asset_exposure": "internet-facing",
@@ -1307,7 +1399,7 @@ def test_vpw011_missing_and_secondary_project_resources_use_local_runtime_errors
         ("get", f"/api/v1/runs/{missing_id}/summary", {}),
         ("get", f"/api/v1/runs/{missing_id}/workflow-metadata", {}),
         ("get", f"/api/v1/runs/{missing_id}/reports", {}),
-        ("post", f"/api/v1/runs/{missing_id}/reports", {"json": {"format": "markdown"}}),
+        ("post", f"/api/v1/runs/{missing_id}/report-jobs", {"json": {"format": "markdown"}}),
         ("get", f"/api/v1/reports/{missing_id}/download", {}),
         ("get", f"/api/v1/findings/{missing_id}", {}),
         ("get", f"/api/v1/findings/{missing_id}/explain", {}),
@@ -1332,7 +1424,7 @@ def test_vpw011_missing_and_secondary_project_resources_use_local_runtime_errors
         ("get", f"/api/v1/runs/{secondary_project['run_id']}/reports", {}),
         (
             "post",
-            f"/api/v1/runs/{secondary_project['run_id']}/reports",
+            f"/api/v1/runs/{secondary_project['run_id']}/report-jobs",
             {"json": {"format": "markdown"}},
         ),
         ("get", f"/api/v1/findings/{secondary_project['finding_id']}", {}),

@@ -8,10 +8,10 @@ from typing import Any
 
 from sqlmodel import Session
 
+from app.domain.engine.models import PrioritizedFinding
 from app.domain.import_asset_context import string_evidence as _string_evidence
 from app.models import FindingAttackContext
 from app.services.analysis import WorkbenchAnalysisResult
-from vuln_prioritizer.models import PrioritizedFinding
 
 
 def _attack_context_enabled(

@@ -34,6 +34,10 @@ from utils.workbench_env import (
 )
 
 from app.core.config import Settings
+from app.domain.engine.sarif_contract import (
+    SARIF_FINGERPRINT_KEY,
+    SARIF_WORKBENCH_FINGERPRINT_KEY,
+)
 from app.main import app
 from app.models.reports import REPORT_FORMAT_VALUES
 from app.services import (
@@ -67,10 +71,6 @@ from app.services.report_contracts import (
 )
 from app.services.report_sarif_validation import validate_sarif_payload
 from app.services.workbench_capabilities import build_workbench_capabilities
-from vuln_prioritizer.sarif_contract import (
-    SARIF_FINGERPRINT_KEY,
-    SARIF_WORKBENCH_FINGERPRINT_KEY,
-)
 
 
 def test_vpw049_openapi_exposes_report_format_contract() -> None:
@@ -82,6 +82,7 @@ def test_vpw049_openapi_exposes_report_format_contract() -> None:
 
     assert response.status_code == 200
     payload = response.json()
+    assert "/api/v1/runs/{run_id}/report-jobs" in payload["paths"]
     assert "/api/v1/runs/{run_id}/reports" in payload["paths"]
     assert "/api/v1/reports/{report_id}/download" in payload["paths"]
     assert "/api/v1/reports/{report_id}/verify" in payload["paths"]
@@ -468,8 +469,8 @@ def test_vpw080_sarif_report_create_downloads_valid_results(
     results = run["results"]
     assert run["tool"]["driver"]["name"] == "vuln-prioritizer-workbench"
     assert [rule["id"] for rule in rules] == [
-        "vuln-prioritizer/cve-2024-3094",
-        "vuln-prioritizer/cve-2021-44228",
+        "vuln-prioritizer-workbench/cve-2024-3094",
+        "vuln-prioritizer-workbench/cve-2021-44228",
     ]
     assert [result["ruleId"] for result in results] == [rule["id"] for rule in rules]
     assert [result["level"] for result in results] == ["error", "error"]
@@ -547,7 +548,7 @@ def test_vpw103_workbench_sarif_uses_stable_fingerprint_contract() -> None:
     api_result = api_sarif["runs"][0]["results"][0]
     api_rule = api_sarif["runs"][0]["tool"]["driver"]["rules"][0]
 
-    assert api_result["ruleId"] == f"vuln-prioritizer/{cve_id.lower()}"
+    assert api_result["ruleId"] == f"vuln-prioritizer-workbench/{cve_id.lower()}"
     assert api_result["level"] == "error"
     assert api_result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] == artifact_uri
     assert api_rule["properties"]["security-severity"] == "10.0"

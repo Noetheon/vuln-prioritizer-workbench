@@ -19,7 +19,7 @@
 - KEV freshness: `2026-04-21T12:00:00+00:00`
 - Input files: `data/sample_cves.txt`
 - Source input: `data/sample_cves.txt` (cve-list, rows=4, occurrences=4, unique_cves=4)
-- Cache directory: `.cache/vuln-prioritizer`
+- Cache directory: `.cache/vuln-prioritizer-workbench`
 - NVD diagnostics: `requested=4, cache_hits=0, network_fetches=0, failures=0, content_hits=4, empty_records=0, stale_cache_hits=0`
 - EPSS diagnostics: `requested=4, cache_hits=0, network_fetches=0, failures=0, content_hits=4, empty_records=0, stale_cache_hits=0`
 - KEV diagnostics: `requested=4, cache_hits=0, network_fetches=0, failures=0, content_hits=3, empty_records=0, stale_cache_hits=0`

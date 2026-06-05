@@ -9,15 +9,15 @@ from typing import Any
 
 import pytest
 
-from vuln_prioritizer.inputs import loader
-from vuln_prioritizer.inputs.sdk import (
+from app.domain.engine.inputs import loader
+from app.domain.engine.inputs.sdk import (
     STATIC_EXTENSION_POLICY,
     InputParserDefinition,
     build_input_parser_registry,
     validate_input_parser_definition,
 )
-from vuln_prioritizer.providers import sdk as provider_sdk
-from vuln_prioritizer.providers.sdk import (
+from app.domain.engine.providers import sdk as provider_sdk
+from app.domain.engine.providers.sdk import (
     STATIC_PROVIDER_EXTENSION_POLICY,
     ProviderDefinition,
     build_provider_clients,

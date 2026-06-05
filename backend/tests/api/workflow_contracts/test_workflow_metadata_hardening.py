@@ -59,7 +59,7 @@ def test_workflow_public_projection_hides_internal_result_and_diagnostics(
             status=app_models.WorkflowRunStatus.FAILED,
             stage="parse_upload",
             message="Import failed.",
-            result_json={
+            result_ref_json={
                 "schema_version": "workflow-result-ref.v2",
                 "path": str(private_upload),
                 "token": "Bearer result-secret-token",
@@ -158,7 +158,7 @@ def test_workflow_execution_context_covers_v2_lifecycle_edges() -> None:
         diagnostics={"warning": "partial"},
         artifact_refs=[{"kind": "upload", "id": "upload-1"}],
         details={"checkpoint": "parsed"},
-    ).result_json == {"schema_version": "workflow-result-ref.v2"}
+    ).result_ref_json == {"schema_version": "workflow-result-ref.v2"}
     assert (
         context.artifact(
             artifact_kind="report",
@@ -308,13 +308,13 @@ class _FakeWorkflowRepository:
         self,
         workflow_id: uuid.UUID,
         *,
-        result_json: dict[str, Any] | None,
+        result_ref_json: dict[str, Any] | None,
         diagnostics_json: dict[str, Any] | None,
         artifact_refs_json: list[dict[str, Any]] | None,
         metadata_json: dict[str, Any] | None,
     ) -> app_models.WorkflowRun:
         assert workflow_id == self.workflow.id
-        self.workflow.result_json = result_json or {}
+        self.workflow.result_ref_json = result_ref_json or {}
         self.workflow.diagnostics_json = diagnostics_json or {}
         self.workflow.artifact_refs_json = artifact_refs_json or []
         self.workflow.metadata_json.update(metadata_json or {})
@@ -329,7 +329,7 @@ class _FakeWorkflowRepository:
         message: str | None,
         progress_current: int | None = None,
         progress_total: int | None = None,
-        result_json: dict[str, Any] | None = None,
+        result_ref_json: dict[str, Any] | None = None,
         diagnostics_json: dict[str, Any] | None = None,
         error_message: str | None = None,
         error_json: dict[str, Any] | None = None,
@@ -341,7 +341,7 @@ class _FakeWorkflowRepository:
         self.workflow.current_stage = stage
         self.workflow.progress_current = progress_current or self.workflow.progress_current
         self.workflow.progress_total = progress_total
-        self.workflow.result_json = result_json or self.workflow.result_json
+        self.workflow.result_ref_json = result_ref_json or self.workflow.result_ref_json
         self.workflow.diagnostics_json = (
             diagnostics_json or error_json or self.workflow.diagnostics_json
         )
