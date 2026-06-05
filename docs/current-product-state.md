@@ -28,7 +28,7 @@ hosted SaaS product.
 | Frontend runtime | `frontend` | React, Vite, TypeScript, TanStack Query, local route adapter, Playwright tests, and Workbench UI. |
 | Generated client | `frontend/src/client/**` | Generated from backend OpenAPI. Do not edit generated files manually. |
 | Frontend integration wrapper | `frontend/src/api-client.ts` | Handwritten wrapper over generated client code. Normal app code should use this boundary. |
-| Domain core | `backend/src/vuln_prioritizer` | Parsers, providers, scoring, SARIF contracts, and neutral vulnerability logic shared with Workbench services. Typer command modules, CLI entrypoints, and legacy report facades have been removed from the active package. |
+| Domain core | `backend/app/domain/engine` | Parsers, providers, scoring, SARIF contracts, and neutral vulnerability logic shared with Workbench services. Typer command modules, CLI entrypoints, and legacy report facades have been removed from the active package. |
 | Docs site | `mkdocs.yml` and `docs/**` | Public docs, contracts, examples, release notes, submission material, and historical references. |
 | Historical evidence | `archive/**` | Minimal historical issue proof, demo-flow summaries, presentation pointers, and archived validation notes. |
 

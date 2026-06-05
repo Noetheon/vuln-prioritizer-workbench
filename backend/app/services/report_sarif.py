@@ -5,9 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from app.services.report_contracts import ANALYSIS_RESULT_SCHEMA_VERSION
-from app.services.report_models import MarkdownReportFinding, MarkdownReportPayload
-from vuln_prioritizer.sarif_contract import (
+from app.domain.engine.sarif_contract import (
     sarif_artifact_uri,
     sarif_component_identities,
     sarif_level,
@@ -18,7 +16,9 @@ from vuln_prioritizer.sarif_contract import (
     sarif_rule_properties,
     sarif_target_identity,
 )
-from vuln_prioritizer.sarif_references import dedupe_defensive_http_urls
+from app.domain.engine.sarif_references import dedupe_defensive_http_urls
+from app.services.report_contracts import ANALYSIS_RESULT_SCHEMA_VERSION
+from app.services.report_models import MarkdownReportFinding, MarkdownReportPayload
 
 
 def render_sarif_report(payload: MarkdownReportPayload) -> dict[str, Any]:

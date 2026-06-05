@@ -19,7 +19,7 @@
 - KEV freshness: `2026-04-21T12:00:00+00:00`
 - Input files: `data/input_fixtures/trivy_report.json`
 - Source input: `data/input_fixtures/trivy_report.json` (trivy-json, rows=4, occurrences=3, unique_cves=3)
-- Cache directory: `.cache/vuln-prioritizer`
+- Cache directory: `.cache/vuln-prioritizer-workbench`
 - NVD diagnostics: `requested=3, cache_hits=0, network_fetches=0, failures=0, content_hits=3, empty_records=0, stale_cache_hits=0`
 - EPSS diagnostics: `requested=3, cache_hits=0, network_fetches=0, failures=0, content_hits=3, empty_records=0, stale_cache_hits=0`
 - KEV diagnostics: `requested=3, cache_hits=0, network_fetches=0, failures=0, content_hits=2, empty_records=0, stale_cache_hits=0`

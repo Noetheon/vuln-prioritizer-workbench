@@ -21,7 +21,7 @@ There are two parser-facing contracts:
 - Workbench upload importers implement
   `app.importers.contracts.Importer`.
 - Domain input-loader extensions use
-  `vuln_prioritizer.inputs.sdk.InputParserDefinition`.
+  `app.domain.engine.inputs.sdk.InputParserDefinition`.
 
 Workbench importers must expose:
 
@@ -46,7 +46,7 @@ enrichment, and HTTP error mapping remain outside the parser layer.
 
 ## Provider Contract
 
-Provider extensions use `vuln_prioritizer.providers.sdk.ProviderDefinition` and
+Provider extensions use `app.domain.engine.providers.sdk.ProviderDefinition` and
 a provider object implementing `fetch_many(cve_ids, **kwargs)`.
 
 A provider definition must declare:

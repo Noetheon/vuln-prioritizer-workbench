@@ -5,13 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from vuln_prioritizer.models import (
+from app.domain.engine.models import (
     NvdData,
     ProviderSnapshotItem,
     ProviderSnapshotMetadata,
     ProviderSnapshotReport,
 )
-from vuln_prioritizer.provider_snapshot import (
+from app.domain.engine.provider_snapshot import (
     generate_provider_snapshot_json,
     load_provider_snapshot,
     resolve_snapshot_provider_data,
@@ -66,7 +66,7 @@ def test_provider_snapshot_rejects_wrong_snapshot_format(tmp_path: Path) -> None
     snapshot_file = tmp_path / "provider-snapshot.json"
     metadata = {
         "artifact_kind": "provider-snapshot",
-        "cache_dir": ".cache/vuln-prioritizer",
+        "cache_dir": ".cache/vuln-prioritizer-workbench",
         "cache_enabled": True,
         "generated_at": "2026-04-21T12:00:00+00:00",
         "input_format": "cve-list",
@@ -247,7 +247,7 @@ def test_provider_snapshot_metadata_contract_covers_domain_and_workbench_exports
             output_path="provider-snapshot.json",
             cache_enabled=True,
             cache_only=False,
-            cache_dir=".cache/vuln-prioritizer",
+            cache_dir=".cache/vuln-prioritizer-workbench",
             source_hashes={"nvd": "sha256:nvd", "epss": "sha256:epss", "kev": "sha256:kev"},
             source_metadata={
                 "nvd": {"record_count": 2, "cache_only": False},

@@ -1,6 +1,28 @@
 from __future__ import annotations
 
+import ast
+
 from utils.hygiene import ROOT, SRC_ROOT, _imported_modules
+
+
+def test_legacy_import_namespace_cannot_return() -> None:
+    offenders: list[str] = []
+    for path in sorted((ROOT / "app").rglob("*.py")):
+        if "alembic/versions" in path.as_posix():
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name == "vuln_prioritizer" or alias.name.startswith(
+                        "vuln_prioritizer."
+                    ):
+                        offenders.append(f"{path.relative_to(ROOT)}:{node.lineno}")
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                if node.module == "vuln_prioritizer" or node.module.startswith("vuln_prioritizer."):
+                    offenders.append(f"{path.relative_to(ROOT)}:{node.lineno}")
+
+    assert offenders == []
 
 
 def test_legacy_workbench_runtime_modules_are_removed() -> None:
@@ -19,10 +41,10 @@ def test_legacy_workbench_runtime_modules_are_removed() -> None:
 
 
 def test_legacy_cli_adapter_modules_are_removed() -> None:
-    assert not (ROOT / "src/vuln_prioritizer/cli.py").exists()
-    assert not (ROOT / "src/vuln_prioritizer/cli_options.py").exists()
-    assert not (ROOT / "src/vuln_prioritizer/cli_support").exists()
-    assert not (ROOT / "src/vuln_prioritizer/commands").exists()
+    assert not (ROOT / "app/domain/engine/cli.py").exists()
+    assert not (ROOT / "app/domain/engine/cli_options.py").exists()
+    assert not (ROOT / "app/domain/engine/cli_support").exists()
+    assert not (ROOT / "app/domain/engine/commands").exists()
 
 
 def test_legacy_reporter_and_terminal_facades_are_removed() -> None:
@@ -42,7 +64,7 @@ def test_legacy_reporter_and_terminal_facades_are_removed() -> None:
     )
 
     for module in removed_modules:
-        assert not (ROOT / f"src/vuln_prioritizer/{module}").exists()
+        assert not (ROOT / f"app/domain/engine/{module}").exists()
 
 
 def test_legacy_cli_evidence_bundle_writer_modules_are_removed() -> None:
@@ -59,7 +81,7 @@ def test_legacy_cli_evidence_bundle_writer_modules_are_removed() -> None:
     )
 
     for module in removed_modules:
-        assert not (ROOT / f"src/vuln_prioritizer/{module}").exists()
+        assert not (ROOT / f"app/domain/engine/{module}").exists()
 
     imports = _imported_modules("app/services/report_bundle.py")
     assert "app.services.report_bundle_archive_verification" in imports
@@ -103,4 +125,4 @@ def test_legacy_domain_reporting_facades_are_removed() -> None:
     )
 
     for module in removed_modules:
-        assert not (ROOT / f"src/vuln_prioritizer/{module}").exists()
+        assert not (ROOT / f"app/domain/engine/{module}").exists()

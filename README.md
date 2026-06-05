@@ -98,7 +98,7 @@ for decisions.
   read model for API, dashboard, governance, GitHub preview, and report
   projections. Workflow rows hold lifecycle state and compact
   artifact/reference metadata.
-- Domain layer: retained under `backend/src/vuln_prioritizer/**` for parsers,
+- Domain layer: retained under `backend/app/domain/engine/**` for parsers,
   providers, scoring, SARIF contracts, and neutral vulnerability logic shared
   with the active backend. The old Typer CLI and legacy report facades have
   been removed from the active product surface.
@@ -244,7 +244,7 @@ Security reporting and deployment-scope caveats are in [SECURITY.md](SECURITY.md
 ## Project Status
 
 The current repository state includes the active `backend/app` Workbench
-runtime, React frontend, retained domain package, VPW design system,
+runtime, React frontend, internal engine namespace, VPW design system,
 evidence/reporting surfaces, public docs, CI cost controls, and Workbench
 package validation.
 

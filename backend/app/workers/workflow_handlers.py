@@ -119,7 +119,6 @@ def _execute_import_workflow(
                 settings=settings,
                 upload=upload,
                 existing_run_id=run.id,
-                execution_mode="worker",
                 workflow_context=context,
             )
         )
@@ -152,7 +151,6 @@ def _execute_provider_update_workflow(
         settings=settings,
         payload=job_payload,
         run_id=workflow.analysis_run_id,
-        execution_mode="worker",
         workflow_context=context,
     )
 
@@ -200,7 +198,7 @@ def _stored_import_upload_request(
     workflow: WorkflowRun | None = None,
     payload: dict[str, Any],
 ) -> ProjectImportUploadRequest:
-    summary = dict(workflow.result_json or {}) if workflow is not None else {}
+    summary = dict(workflow.result_ref_json or {}) if workflow is not None else {}
     input_upload = _dict_value(summary.get("input_upload"))
     if not input_upload:
         raise WorkflowHandlerError("Import run has no stored input upload.")

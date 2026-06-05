@@ -5,7 +5,7 @@ links the shortest practical path for a first run, the local Workbench demo, and
 the reference pages that explain architecture, data, scoring, providers,
 reports, ATT&CK, and security boundaries.
 
-`vuln-prioritizer` prioritizes known CVEs from existing inputs. It does not
+`vuln-prioritizer-workbench` prioritizes known CVEs from existing inputs. It does not
 scan systems, exploit vulnerabilities, patch software, or infer ATT&CK mappings
 from descriptions, keywords, or AI output.
 

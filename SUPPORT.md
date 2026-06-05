@@ -41,6 +41,6 @@ Use GitHub private vulnerability reporting for this public repository. If that f
 
 ## Scope Reminder
 
-`vuln-prioritizer` is a local single-user Workbench and shared domain package
+`vuln-prioritizer-workbench` is a local single-user Workbench and shared domain package
 for prioritizing known CVEs and existing findings. It is not a scanner, SaaS
 platform, exploit framework, autopatcher, or heuristic CVE-to-ATT&CK mapper.

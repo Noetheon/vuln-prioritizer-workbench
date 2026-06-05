@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any
 
 from sqlmodel import Session, col, select
 
 from app.models import (
     AttackSummaryContextRow,
-    AttackSummaryFindingRow,
     Finding,
     FindingAttackContext,
 )
@@ -29,53 +27,28 @@ def list_project_attack_contexts(
     return list(session.exec(statement).all())
 
 
-def list_project_attack_summary_inputs(
+def list_project_attack_summary_contexts(
     session: Session,
     project_id: uuid.UUID,
-) -> tuple[list[AttackSummaryFindingRow], list[AttackSummaryContextRow]]:
-    """Return lightweight rows needed for the ATT&CK dashboard summary."""
-    finding_columns: list[Any] = [Finding.id, Finding.risk_score]
-    finding_rows = [
-        AttackSummaryFindingRow(id=finding_id, risk_score=risk_score)
-        for finding_id, risk_score in session.exec(
-            select(*finding_columns).where(Finding.project_id == project_id)
-        ).all()
-    ]
-    context_columns: list[Any] = [
-        FindingAttackContext.finding_id,
-        FindingAttackContext.mapped,
-        FindingAttackContext.technique_ids_json,
-        FindingAttackContext.tactic_ids_json,
-        FindingAttackContext.mappings_json,
-        FindingAttackContext.review_status,
-        FindingAttackContext.source,
-        FindingAttackContext.created_at,
-    ]
+) -> list[AttackSummaryContextRow]:
+    """Return lightweight ATT&CK context rows needed for dashboard summaries."""
+    statement = (
+        select(FindingAttackContext)
+        .join(Finding, col(FindingAttackContext.finding_id) == col(Finding.id))
+        .where(Finding.project_id == project_id)
+        .order_by(col(FindingAttackContext.created_at).desc())
+    )
     context_rows = [
         AttackSummaryContextRow(
-            finding_id=finding_id,
-            mapped=bool(mapped),
-            technique_ids_json=list(technique_ids_json or []),
-            tactic_ids_json=list(tactic_ids_json or []),
-            mappings_json=list(mappings_json or []),
-            review_status=str(review_status),
-            source=source,
-            created_at=created_at,
+            finding_id=context.finding_id,
+            mapped=bool(context.mapped),
+            technique_ids_json=list(context.technique_ids_json or []),
+            tactic_ids_json=list(context.tactic_ids_json or []),
+            mappings_json=list(context.mappings_json or []),
+            review_status=str(context.review_status),
+            source=context.source,
+            created_at=context.created_at,
         )
-        for (
-            finding_id,
-            mapped,
-            technique_ids_json,
-            tactic_ids_json,
-            mappings_json,
-            review_status,
-            source,
-            created_at,
-        ) in session.exec(
-            select(*context_columns)
-            .join(Finding, col(FindingAttackContext.finding_id) == col(Finding.id))
-            .where(Finding.project_id == project_id)
-            .order_by(col(FindingAttackContext.created_at).desc())
-        ).all()
+        for context in session.exec(statement).all()
     ]
-    return finding_rows, context_rows
+    return context_rows

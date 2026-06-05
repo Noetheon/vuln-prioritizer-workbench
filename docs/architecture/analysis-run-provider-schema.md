@@ -200,7 +200,6 @@ Minimum fields:
 - `status`
 - `title`
 - `handler`
-- `execution_mode`
 - `project_id`
 - `analysis_run_id`
 - `report_id`
@@ -217,7 +216,7 @@ Minimum fields:
 - `queue_name`
 - `priority`
 - `payload_json`
-- `result_json`
+- `result_ref_json`
 - `diagnostics_json`
 - `artifact_refs_json`
 - `locked_by`
@@ -276,7 +275,7 @@ Constraints and indexes:
 
 Public workflow projections expose redacted `details`, `artifact_refs`,
 `error_message`, and lifecycle fields instead of raw JSON column names. They do
-not expose raw `result_json`, `diagnostics_json`, or `error_details_json`. The
+not expose raw `result_ref_json`, `diagnostics_json`, or `error_details_json`. The
 API routes
 `GET /api/v1/projects/{project_id}/workflows`,
 `GET /api/v1/workflows/{workflow_id}`, and
@@ -291,13 +290,13 @@ when WebSocket connectivity is unavailable.
 The queued workflow runner stores handler payload in `payload_json`, claims
 pending work by queue name, keeps `locked_by` and lease timestamps while a job is
 running, refreshes `last_heartbeat_at`, writes terminal output to
-`result_json`, `diagnostics_json`, and `artifact_refs_json`, and uses
+`result_ref_json`, `diagnostics_json`, and `artifact_refs_json`, and uses
 `next_retry_at`, `attempt_count`, and `max_attempts` for automatic retry
 scheduling. The default worker process is
 `python -m app.workers.workflow_worker`; it uses the Workbench database as the
 queue rather than Redis, Celery, or another broker.
 
-For successful imports, `result_json` is a small internal reference payload
+For successful imports, `result_ref_json` is a small internal reference payload
 only: `schema_version: workflow-result-ref.v2`, `analysis_evidence_id`, and
 `artifact_refs`. Counts, provider facts, sidecar summaries, dedup summaries, and
 finding semantics come from `AnalysisEvidenceV2` and
@@ -371,7 +370,7 @@ occurrence is attached to a run. The key material is:
   falling back to the normalized CVE
 - component identity, preferring PURL and falling back to
   component/version/package type
-- `asset_ref`, or an explicit empty marker when no asset is present
+- `target_ref`, or an explicit empty marker when no target is present
 
 The stored `finding.dedup_key` is a `vpw019:` SHA-256 digest of that canonical
 material. The import run records created/reused counts through

@@ -23,13 +23,16 @@ def test_generic_occurrence_csv_importer_accepts_demo_fixture() -> None:
         filename="generic_occurrences.csv",
     )
 
-    assert [(item.cve, item.asset_ref, item.component, item.version) for item in occurrences] == [
+    assert [
+        (item.cve_id, item.target_ref, item.component_name, item.component_version)
+        for item in occurrences
+    ] == [
         ("CVE-2024-3094", "build-host-1", "xz", "5.6.0"),
         ("CVE-2024-4577", "web-tier", "php-cgi", "8.3.7"),
     ]
     assert occurrences[0].fix_version == "5.6.1-r2"
-    assert occurrences[0].raw_evidence["scanner"] == "trivy"
-    assert occurrences[0].raw_evidence["severity"] == "CRITICAL"
+    assert occurrences[0].source == "trivy"
+    assert occurrences[0].raw_evidence["raw_severity"] == "CRITICAL"
     assert occurrences[0].raw_evidence["purl"] == "pkg:apk/alpine/xz@5.6.0-r0"
     assert occurrences[0].raw_evidence["owner"] == "team-platform"
     assert occurrences[0].raw_evidence["business_service"] == "payments"
@@ -47,35 +50,35 @@ def test_generic_occurrence_csv_importer_sniffs_semicolon_dialect() -> None:
         filename="generic_occurrences_semicolon.csv",
     )
 
-    assert [item.cve for item in occurrences] == ["CVE-2024-3094"]
-    assert occurrences[0].raw_evidence["scanner"] == "trivy"
+    assert [item.cve_id for item in occurrences] == ["CVE-2024-3094"]
+    assert occurrences[0].source == "trivy"
 
 
 def test_generic_occurrence_csv_importer_accepts_quoted_multiline_values() -> None:
     importer = GenericOccurrenceCsvImporter()
 
     occurrences = importer.parse(
-        'cve_id,asset_ref,notes\nCVE-2024-3094,build-host-1,"line one\nline two"\n',
+        'cve_id,target_ref,notes\nCVE-2024-3094,build-host-1,"line one\nline two"\n',
         filename="generic.csv",
     )
 
     assert len(occurrences) == 1
-    assert occurrences[0].asset_ref == "build-host-1"
+    assert occurrences[0].target_ref == "build-host-1"
     assert occurrences[0].raw_evidence["line_number"] == 2
     assert occurrences[0].raw_evidence["unknown_columns"] == {"notes": "line one\nline two"}
 
 
-def test_generic_occurrence_csv_importer_accepts_compatibility_aliases() -> None:
+def test_generic_occurrence_csv_importer_accepts_canonical_workbench_fields() -> None:
     importer = GenericOccurrenceCsvImporter()
     header = (
-        "vulnerability_id,target_ref,component,installed_version,fixed_versions,"
-        + "raw_severity,asset_owner,service,target_kind,asset_id,criticality,exposure,"
-        + "environment,ecosystem,path,dependency_path"
+        "cve_id,target_ref,component_name,component_version,fix_versions,"
+        + "raw_severity,owner,business_service,criticality,exposure,environment,"
+        + "purl,source"
     )
     row = (
         "CVE-2022-22965,checkout-api,spring-webmvc,5.3.17,5.3.18,HIGH,"
-        + "appsec,checkout,service,asset-1,critical,public,prod,maven,pom.xml,"
-        + "root > spring-webmvc"
+        + "appsec,checkout,critical,public,prod,pkg:maven/spring-webmvc@5.3.17,"
+        + "spreadsheet"
     )
 
     occurrences = importer.parse(
@@ -85,22 +88,31 @@ def test_generic_occurrence_csv_importer_accepts_compatibility_aliases() -> None
 
     assert len(occurrences) == 1
     occurrence = occurrences[0]
-    assert occurrence.cve == "CVE-2022-22965"
-    assert occurrence.asset_ref == "checkout-api"
-    assert occurrence.component == "spring-webmvc"
-    assert occurrence.version == "5.3.17"
+    assert occurrence.cve_id == "CVE-2022-22965"
+    assert occurrence.target_ref == "checkout-api"
+    assert occurrence.component_name == "spring-webmvc"
+    assert occurrence.component_version == "5.3.17"
     assert occurrence.fix_version == "5.3.18"
-    assert occurrence.raw_evidence["severity"] == "HIGH"
+    assert occurrence.raw_evidence["raw_severity"] == "HIGH"
     assert occurrence.raw_evidence["owner"] == "appsec"
     assert occurrence.raw_evidence["business_service"] == "checkout"
-    assert occurrence.raw_evidence["target_kind"] == "service"
-    assert occurrence.raw_evidence["asset_id"] == "asset-1"
-    assert occurrence.raw_evidence["asset_criticality"] == "critical"
-    assert occurrence.raw_evidence["asset_exposure"] == "public"
-    assert occurrence.raw_evidence["asset_environment"] == "prod"
-    assert occurrence.raw_evidence["package_type"] == "maven"
-    assert occurrence.raw_evidence["file_path"] == "pom.xml"
-    assert occurrence.raw_evidence["dependency_path"] == "root > spring-webmvc"
+    assert occurrence.raw_evidence["criticality"] == "critical"
+    assert occurrence.raw_evidence["exposure"] == "public"
+    assert occurrence.raw_evidence["environment"] == "prod"
+    assert occurrence.raw_evidence["purl"] == "pkg:maven/spring-webmvc@5.3.17"
+    assert occurrence.source == "spreadsheet"
+
+
+def test_generic_occurrence_csv_importer_rejects_removed_workbench_aliases() -> None:
+    importer = GenericOccurrenceCsvImporter()
+    header = (
+        "vulnerability_id,asset_ref,component,installed_version,fixed_versions,"
+        + "severity,asset_owner,service"
+    )
+    row = "CVE-2022-22965,checkout-api,spring-webmvc,5.3.17,5.3.18,HIGH,appsec,checkout"
+
+    with pytest.raises(ImporterParseError, match="cve_id"):
+        importer.parse("\n".join([header, row]), filename="generic.csv")
 
 
 def test_generic_occurrence_csv_importer_accepts_comments_blanks_and_pipe_fix_versions() -> None:
@@ -111,7 +123,7 @@ def test_generic_occurrence_csv_importer_accepts_comments_blanks_and_pipe_fix_ve
             [
                 "# generated by local scanner",
                 "",
-                "cve_id|asset_ref|fix_versions",
+                "cve_id|target_ref|fix_versions",
                 'CVE-2024-3094|build-host-1|"5.6.1-r2|5.6.2"',
             ]
         ),
@@ -119,7 +131,7 @@ def test_generic_occurrence_csv_importer_accepts_comments_blanks_and_pipe_fix_ve
     )
 
     assert len(occurrences) == 1
-    assert occurrences[0].cve == "CVE-2024-3094"
+    assert occurrences[0].cve_id == "CVE-2024-3094"
     assert occurrences[0].fix_version == "5.6.1-r2"
     assert occurrences[0].raw_evidence["fix_versions"] == ["5.6.1-r2", "5.6.2"]
 
@@ -143,7 +155,7 @@ def test_generic_occurrence_csv_importer_collects_row_specific_errors() -> None:
 def test_generic_occurrence_csv_importer_requires_cve_id_column() -> None:
     importer = GenericOccurrenceCsvImporter()
 
-    with pytest.raises(ImporterParseError, match="cve_id, cve, or vulnerability_id column"):
+    with pytest.raises(ImporterParseError, match="cve_id column"):
         importer.parse(
             (FIXTURE_DIR / "generic_occurrences_missing_cve.csv").read_text(encoding="utf-8"),
             filename="/private/tmp/generic_occurrences_missing_cve.csv",
@@ -174,10 +186,10 @@ def test_default_registry_uses_generic_occurrence_importer() -> None:
 
     assert isinstance(registry.get("generic-occurrence-csv"), GenericOccurrenceCsvImporter)
     assert [
-        item.cve
+        item.cve_id
         for item in registry.parse(
             "generic-occurrence-csv",
-            "cve_id,asset_ref\nCVE-2024-3094,build-host-1\n",
+            "cve_id,target_ref\nCVE-2024-3094,build-host-1\n",
             filename="generic.csv",
         )
     ] == ["CVE-2024-3094"]

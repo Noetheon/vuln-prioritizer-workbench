@@ -14,9 +14,9 @@ rm -rf "$report_dir"
 mkdir -p "$report_dir"
 
 if [[ -n "${PYTHONPATH:-}" ]]; then
-  export PYTHONPATH="$repo_root/backend:$repo_root/backend/src:$PYTHONPATH"
+  export PYTHONPATH="$repo_root/backend:$PYTHONPATH"
 else
-  export PYTHONPATH="$repo_root/backend:$repo_root/backend/src"
+  export PYTHONPATH="$repo_root/backend"
 fi
 export SQLALCHEMY_DATABASE_URI="sqlite:///$db_path"
 export REPORT_DIR="$report_dir"

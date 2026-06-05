@@ -1,6 +1,6 @@
 # Code of Conduct
 
-`vuln-prioritizer` is maintained as a professional, security-focused open source project.
+`vuln-prioritizer-workbench` is maintained as a professional, security-focused open source project.
 
 ## Expected Behavior
 

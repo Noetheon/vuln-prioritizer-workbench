@@ -25,7 +25,7 @@ class GitHubIssuePreviewCreate(SQLModel):
     finding_ids: list[uuid.UUID] = Field(default_factory=list, max_length=100)
     limit: int = Field(default=20, ge=1, le=100)
     priority: FindingPriority | None = None
-    label_prefix: str = Field(default="vuln-prioritizer", min_length=1, max_length=80)
+    label_prefix: str = Field(default="vuln-prioritizer-workbench", min_length=1, max_length=80)
     milestone: int | None = Field(default=None, ge=1)
     include_evidence_refs: bool = True
 

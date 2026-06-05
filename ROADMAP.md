@@ -9,7 +9,7 @@ those pages are reference material, not active acceptance evidence.
 
 ## Product Direction
 
-`vuln-prioritizer` is a local Workbench for prioritizing known CVEs from
+`vuln-prioritizer-workbench` is a local Workbench for prioritizing known CVEs from
 existing findings, scanner exports, SBOM exports, and advisory data. It enriches
 those inputs with transparent CVSS, EPSS, KEV, optional defensive ATT&CK, asset,
 VEX, waiver, and provider context so teams can move from technical findings to

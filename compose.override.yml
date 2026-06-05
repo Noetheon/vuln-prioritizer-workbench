@@ -22,9 +22,6 @@ services:
         - path: ./backend/app
           action: sync
           target: /app/backend/app
-        - path: ./backend/src
-          action: sync
-          target: /app/backend/src
         - path: ./backend/pyproject.toml
           action: rebuild
 
@@ -44,9 +41,6 @@ services:
         - path: ./backend/app
           action: sync
           target: /app/backend/app
-        - path: ./backend/src
-          action: sync
-          target: /app/backend/src
         - path: ./backend/pyproject.toml
           action: rebuild
 

@@ -117,7 +117,7 @@ def test_asset_context_import_flows_to_finding_context_and_csv_html_reports(
     context = configure_workflow_context(workbench_api_env, tmp_path)
     occurrence_csv = "\n".join(
         [
-            "cve_id,asset_ref,component,version,purl,severity",
+            "cve_id,target_ref,component_name,component_version,purl,raw_severity",
             "CVE-2024-3094,web-tier,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL",
             "",
         ]
@@ -196,7 +196,7 @@ def test_openvex_import_flows_to_fixed_status_and_json_markdown_reports(
     context = configure_workflow_context(workbench_api_env, tmp_path)
     occurrence_csv = "\n".join(
         [
-            "cve_id,asset_ref,component,version,purl,severity",
+            "cve_id,target_ref,component_name,component_version,purl,raw_severity",
             (
                 "CVE-2021-44228,log4j-service,log4j-core,2.14.1,"
                 "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1,CRITICAL"

@@ -6,9 +6,9 @@ from typing import Any
 
 import pytest
 
-from vuln_prioritizer.cache import FileCache
-from vuln_prioritizer.models import ProviderLookupDiagnostics
-from vuln_prioritizer.providers.sdk import (
+from app.domain.engine.cache import FileCache
+from app.domain.engine.models import ProviderLookupDiagnostics
+from app.domain.engine.providers.sdk import (
     ProviderClientAdapter,
     ProviderDefinition,
     build_provider_clients,

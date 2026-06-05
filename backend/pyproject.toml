@@ -3,13 +3,13 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vuln-prioritizer"
+name = "vuln-prioritizer-workbench"
 version = "1.1.0"
 description = "Local-first single-user Workbench for prioritizing known CVEs with NVD, EPSS, KEV, ATT&CK, asset context, and VEX."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
-authors = [{ name = "vuln-prioritizer contributors" }]
+authors = [{ name = "vuln-prioritizer-workbench contributors" }]
 keywords = ["cve", "cvss", "epss", "kev", "security", "vulnerability-management"]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -69,18 +69,17 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["src", "."]
-include = ["vuln_prioritizer*", "app*"]
+where = ["."]
+include = ["app*"]
 exclude = ["tests*"]
 
 [tool.setuptools.package-data]
-vuln_prioritizer = ["py.typed"]
-app = ["alembic/script.py.mako"]
+app = ["alembic/script.py.mako", "domain/engine/py.typed"]
 
 [tool.pytest.ini_options]
-addopts = "-ra --cov=app --cov=vuln_prioritizer --cov-report=term-missing"
+addopts = "-ra --cov=app --cov-report=term-missing"
 testpaths = ["tests"]
-pythonpath = [".", "src"]
+pythonpath = ["."]
 filterwarnings = [
   "error::ResourceWarning",
   "error::pytest.PytestUnraisableExceptionWarning",
@@ -107,7 +106,7 @@ extend-select = ["B018"]
 
 [tool.mypy]
 python_version = "3.11"
-files = ["app", "src"]
+files = ["app"]
 pretty = true
 show_error_codes = true
 warn_unused_ignores = true
@@ -128,11 +127,10 @@ paths_to_mutate = [
   "app/services/decision_evidence_builder.py",
   "app/services/report_bundle_archive_verification.py",
   "app/services/report_sarif_validation.py",
-  "src/vuln_prioritizer/services/analysis_pipeline.py",
+  "app/domain/engine/services/analysis_pipeline.py",
 ]
 also_copy = [
   "app",
-  "src",
   "tests",
 ]
 tests_dir = [

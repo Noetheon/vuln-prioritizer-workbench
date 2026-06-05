@@ -51,7 +51,7 @@ def test_kernel_first_import_uses_evidence_as_report_and_workflow_truth(
             kind=WorkflowRunKind.IMPORT,
         )
         assert workflow is not None
-        assert workflow.result_json == {
+        assert workflow.result_ref_json == {
             "schema_version": "workflow-result-ref.v2",
             "analysis_evidence_id": evidence["analysis_evidence_id"],
             "artifact_refs": [],

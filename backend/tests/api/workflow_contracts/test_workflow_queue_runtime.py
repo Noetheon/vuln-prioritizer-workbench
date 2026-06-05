@@ -135,7 +135,6 @@ def test_retry_runner_requeues_and_then_fails_exhausted_workflow(
             title="Generate broken report",
             handler="app.services.reports.ReportService.create_report_for_workflow",
             status=WorkflowRunStatus.PENDING,
-            execution_mode="worker",
             current_stage="queued",
             payload_json={},
             max_retries=1,
@@ -172,7 +171,6 @@ def test_cancel_retry_and_websocket_stream_routes_are_public_contracts(
             title="Queued report",
             handler="app.services.reports.ReportService.create_report_for_workflow",
             status=WorkflowRunStatus.PENDING,
-            execution_mode="worker",
             current_stage="queued",
             payload_json={},
             max_retries=1,
@@ -247,7 +245,6 @@ def test_cancel_retry_and_websocket_stream_routes_are_public_contracts(
             project_id=linked_run.project_id,
             analysis_run_id=linked_run.id,
             status=WorkflowRunStatus.PENDING,
-            execution_mode="worker",
             current_stage="queued",
         )
         linked_run_id = linked_run.id
@@ -309,7 +306,6 @@ def test_worker_cancellation_loop_and_cli_runtime_paths(
             project_id=run.project_id,
             analysis_run_id=run.id,
             status=WorkflowRunStatus.PENDING,
-            execution_mode="worker",
             current_stage="queued",
             payload_json={},
             max_retries=1,
@@ -346,7 +342,6 @@ def test_worker_cancellation_loop_and_cli_runtime_paths(
             title="Already claimed report",
             handler="app.services.reports.ReportService.create_report_for_workflow",
             status=WorkflowRunStatus.RUNNING,
-            execution_mode="worker",
             current_stage="running",
         )
         skipped_workflow.locked_by = "another-worker"
@@ -371,7 +366,6 @@ def test_worker_cancellation_loop_and_cli_runtime_paths(
             title="Deterministic failure report",
             handler="app.services.reports.ReportService.create_report_for_workflow",
             status=WorkflowRunStatus.PENDING,
-            execution_mode="worker",
             current_stage="queued",
         )
         deterministic_failure_id = deterministic_failure.id
@@ -401,7 +395,6 @@ def test_worker_cancellation_loop_and_cli_runtime_paths(
             title="Committed success report",
             handler="app.services.reports.ReportService.create_report_for_workflow",
             status=WorkflowRunStatus.PENDING,
-            execution_mode="worker",
             current_stage="queued",
         )
         committed_success_id = committed_success.id
@@ -519,14 +512,12 @@ def test_workflow_handler_validation_edges(
             title="Broken import",
             handler="app.services.import_execution.execute_project_import_upload",
             status=WorkflowRunStatus.RUNNING,
-            execution_mode="worker",
         )
         missing_run_import = repository.create_workflow_run(
             kind=WorkflowRunKind.IMPORT,
             title="Missing run import",
             handler="app.services.import_execution.execute_project_import_upload",
             status=WorkflowRunStatus.RUNNING,
-            execution_mode="worker",
             project_id=uuid.uuid4(),
             analysis_run_id=uuid.uuid4(),
         )
@@ -535,21 +526,18 @@ def test_workflow_handler_validation_edges(
             title="Broken provider update",
             handler="app.services.provider_updates.resume_provider_update_job",
             status=WorkflowRunStatus.RUNNING,
-            execution_mode="worker",
         )
         report_workflow = repository.create_workflow_run(
             kind=WorkflowRunKind.REPORT_GENERATION,
             title="Broken report",
             handler="app.services.reports.ReportService.create_report_for_workflow",
             status=WorkflowRunStatus.RUNNING,
-            execution_mode="worker",
         )
         missing_run_report = repository.create_workflow_run(
             kind=WorkflowRunKind.REPORT_GENERATION,
             title="Missing run report",
             handler="app.services.reports.ReportService.create_report_for_workflow",
             status=WorkflowRunStatus.RUNNING,
-            execution_mode="worker",
             payload_json={"run_id": str(uuid.uuid4())},
         )
         run_without_project = AnalysisRun(
@@ -565,7 +553,6 @@ def test_workflow_handler_validation_edges(
             title="Missing project report",
             handler="app.services.reports.ReportService.create_report_for_workflow",
             status=WorkflowRunStatus.RUNNING,
-            execution_mode="worker",
             payload_json={"run_id": str(run_without_project.id)},
         )
         cancellable = repository.create_workflow_run(
@@ -573,7 +560,6 @@ def test_workflow_handler_validation_edges(
             title="Cancelled report",
             handler="app.services.reports.ReportService.create_report_for_workflow",
             status=WorkflowRunStatus.RUNNING,
-            execution_mode="worker",
         )
         repository.request_cancel(cancellable.id)
 

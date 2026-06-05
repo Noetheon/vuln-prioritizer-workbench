@@ -11,18 +11,23 @@ from pydantic import ValidationError
 from sqlmodel import Session
 
 from app.core.config import Settings
-from app.repositories import RunRepository
-from vuln_prioritizer.config import DEFAULT_CACHE_TTL_HOURS
-from vuln_prioritizer.inputs.loader import InputSpec
-from vuln_prioritizer.models import AnalysisContext, ParsedInput, PrioritizedFinding, PriorityPolicy
-from vuln_prioritizer.options import AttackSource, InputFormat, OutputFormat, SortBy
-from vuln_prioritizer.provider_snapshot import load_provider_snapshot
-from vuln_prioritizer.services.analysis import (
+from app.domain.engine.config import DEFAULT_CACHE_TTL_HOURS
+from app.domain.engine.inputs.loader import InputSpec
+from app.domain.engine.models import (
+    AnalysisContext,
+    ParsedInput,
+    PrioritizedFinding,
+    PriorityPolicy,
+)
+from app.domain.engine.options import AttackSource, InputFormat, OutputFormat, SortBy
+from app.domain.engine.provider_snapshot import load_provider_snapshot
+from app.domain.engine.services.analysis import (
     AnalysisInputError,
     AnalysisNoFindingsError,
     AnalysisRequest,
     prepare_analysis,
 )
+from app.repositories import RunRepository
 
 DEFAULT_WORKBENCH_PROVIDER_SNAPSHOT = "demo_provider_snapshot.json"
 REPO_ROOT = Path(__file__).resolve().parents[3]

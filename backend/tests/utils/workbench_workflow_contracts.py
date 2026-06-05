@@ -180,7 +180,7 @@ def workflow_metadata(
 
 def persisted_workflow_summary(run: Any) -> dict[str, Any]:
     workflow = _latest_import_workflow(run)
-    return dict(workflow.result_json if workflow is not None else {})
+    return dict(workflow.result_ref_json if workflow is not None else {})
 
 
 def persisted_workflow_error(run: Any) -> dict[str, Any] | None:

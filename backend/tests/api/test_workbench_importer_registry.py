@@ -30,10 +30,10 @@ class FakeImporter:
             raise ImporterParseError("fake payload is not parseable")
         return [
             NormalizedOccurrence(
-                cve="cve-2026-12345",
-                component="openssl",
-                version="3.0.0",
-                asset_ref=filename,
+                cve_id="cve-2026-12345",
+                component_name="openssl",
+                component_version="3.0.0",
+                target_ref=filename,
                 source=self.input_type,
                 fix_version="3.0.8",
                 raw_evidence={"payload_type": type(payload).__name__},
@@ -92,10 +92,10 @@ def test_registry_parse_path_returns_normalized_occurrences() -> None:
 
     assert occurrences == [
         NormalizedOccurrence(
-            cve="CVE-2026-12345",
-            component="openssl",
-            version="3.0.0",
-            asset_ref="scan.json",
+            cve_id="CVE-2026-12345",
+            component_name="openssl",
+            component_version="3.0.0",
+            target_ref="scan.json",
             source="fake-json",
             fix_version="3.0.8",
             raw_evidence={"payload_type": "bytes"},
@@ -105,13 +105,13 @@ def test_registry_parse_path_returns_normalized_occurrences() -> None:
 
 def test_normalized_occurrence_rejects_invalid_cve() -> None:
     with pytest.raises(ImporterValidationError):
-        NormalizedOccurrence(cve="not-a-cve", source="fake-json")
+        NormalizedOccurrence(cve_id="not-a-cve", source="fake-json")
 
 
 @pytest.mark.parametrize(
     ("field_name", "value"),
     [
-        ("cve", None),
+        ("cve_id", None),
         ("source", None),
     ],
 )
@@ -119,7 +119,7 @@ def test_normalized_occurrence_rejects_non_string_identifiers(
     field_name: str,
     value: object,
 ) -> None:
-    payload = {"cve": "CVE-2026-12345", "source": "fake-json", field_name: value}
+    payload = {"cve_id": "CVE-2026-12345", "source": "fake-json", field_name: value}
 
     with pytest.raises(ImporterValidationError, match=field_name):
         NormalizedOccurrence(**payload)
@@ -128,7 +128,7 @@ def test_normalized_occurrence_rejects_non_string_identifiers(
 def test_normalized_occurrence_rejects_non_string_raw_evidence_keys() -> None:
     with pytest.raises(ImporterValidationError, match="keys must be strings"):
         NormalizedOccurrence(
-            cve="CVE-2026-12345",
+            cve_id="CVE-2026-12345",
             source="fake-json",
             raw_evidence={1: "non-string-key"},
         )
@@ -148,7 +148,7 @@ def test_default_registry_parses_cve_list_payload() -> None:
         filename="findings.txt",
     )
 
-    assert [item.cve for item in occurrences] == ["CVE-2026-12345", "CVE-2026-23456"]
+    assert [item.cve_id for item in occurrences] == ["CVE-2026-12345", "CVE-2026-23456"]
     assert [item.source for item in occurrences] == ["cve-list", "cve-list"]
 
 
@@ -168,8 +168,8 @@ def test_importer_layer_stays_framework_provider_and_db_free() -> None:
         "HTTPException",
         "sqlmodel",
         "app.repositories",
-        "vuln_prioritizer.db",
-        "vuln_prioritizer.providers",
+        "app.domain.engine.db",
+        "app.domain.engine.providers",
     ]
     for forbidden in forbidden_imports:
         assert forbidden not in source

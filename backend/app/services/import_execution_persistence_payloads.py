@@ -5,11 +5,11 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+from app.domain.engine.models import PrioritizedFinding
 from app.domain.import_asset_context import string_evidence as _string_evidence
 from app.importers.contracts import NormalizedOccurrence
 from app.models import FindingPriority, FindingStatus
 from app.services.analysis import WorkbenchAnalysisError, WorkbenchAnalysisResult
-from vuln_prioritizer.models import PrioritizedFinding
 
 
 def _analysis_semantics_summary(
@@ -27,7 +27,7 @@ def _analysis_semantics_summary(
             "vex_status",
         ],
         "finding_dedup_key_version": "vpw019-v1",
-        "cve_count": len({occurrence.cve for occurrence in occurrences}),
+        "cve_count": len({occurrence.cve_id for occurrence in occurrences}),
         "occurrence_count": len(occurrences),
         "finding_count": finding_count,
         "same_cve_can_create_distinct_asset_findings": True,
@@ -108,11 +108,11 @@ def _occurrence_scope_payload(occurrence: NormalizedOccurrence) -> dict[str, Any
         "source": occurrence.source,
         "source_id": _string_evidence(occurrence.raw_evidence, "source_id"),
         "source_record_id": _string_evidence(occurrence.raw_evidence, "source_record_id"),
-        "component": occurrence.component,
-        "version": occurrence.version,
+        "component_name": occurrence.component_name,
+        "component_version": occurrence.component_version,
         "purl": _string_evidence(occurrence.raw_evidence, "purl"),
-        "asset_ref": occurrence.asset_ref,
-        "target_ref": _string_evidence(occurrence.raw_evidence, "target_ref"),
+        "target_ref": occurrence.target_ref
+        or _string_evidence(occurrence.raw_evidence, "target_ref"),
         "asset_owner": _string_evidence(occurrence.raw_evidence, "owner"),
         "asset_business_service": _string_evidence(
             occurrence.raw_evidence,
@@ -187,9 +187,9 @@ def _decision_for_occurrence(
     analysis_result: WorkbenchAnalysisResult,
     occurrence: NormalizedOccurrence,
 ) -> PrioritizedFinding:
-    decision = analysis_result.findings_by_cve.get(occurrence.cve)
+    decision = analysis_result.findings_by_cve.get(occurrence.cve_id)
     if decision is None:
-        raise WorkbenchAnalysisError(f"Decision analysis did not produce {occurrence.cve}.")
+        raise WorkbenchAnalysisError(f"Decision analysis did not produce {occurrence.cve_id}.")
     return decision
 
 

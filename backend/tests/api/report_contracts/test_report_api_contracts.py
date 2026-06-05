@@ -44,7 +44,7 @@ def test_vpw048_report_local_project_visibility_and_invalid_run_state(
 
     assert (
         secondary_workbench_api_env.client.post(
-            f"/api/v1/runs/{missing_id}/reports",
+            f"/api/v1/runs/{missing_id}/report-jobs",
             headers=headers,
             json={"format": "markdown"},
         ).status_code
@@ -52,7 +52,7 @@ def test_vpw048_report_local_project_visibility_and_invalid_run_state(
     )
     assert (
         secondary_workbench_api_env.client.post(
-            f"/api/v1/runs/{secondary_project['run_id']}/reports",
+            f"/api/v1/runs/{secondary_project['run_id']}/report-jobs",
             headers=headers,
             json={"format": "markdown"},
         ).status_code
@@ -67,7 +67,7 @@ def test_vpw048_report_local_project_visibility_and_invalid_run_state(
     )
     for run_id in (pending_run_id, failed_run_id):
         response = secondary_workbench_api_env.client.post(
-            f"/api/v1/runs/{run_id}/reports",
+            f"/api/v1/runs/{run_id}/report-jobs",
             headers=headers,
             json={"format": "markdown"},
         )

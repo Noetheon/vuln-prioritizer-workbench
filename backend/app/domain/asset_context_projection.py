@@ -7,19 +7,12 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
+from app.domain.engine.inputs.loader import AssetContextRecord
 from app.models import (
     Asset,
     AssetCriticality,
     AssetEnvironment,
     AssetExposure,
-    Finding,
-)
-from vuln_prioritizer.inputs.loader import AssetContextRecord
-from vuln_prioritizer.models import (
-    ContextPolicyProfile,
-    FindingProvenance,
-    InputOccurrence,
-    PrioritizedFinding,
 )
 
 
@@ -150,200 +143,6 @@ def _with_rescore_evidence(
     return evidence
 
 
-def _finding_as_prioritized(finding: Finding) -> PrioritizedFinding:
-    """Finding as prioritized function."""
-    return PrioritizedFinding(
-        cve_id=finding.cve_id,
-        description=getattr(finding.vulnerability, "description", None),
-        cvss_base_score=finding.cvss_base_score,
-        epss=finding.epss,
-        in_kev=finding.in_kev,
-        attack_mapped=finding.attack_mapped,
-        suppressed_by_vex=finding.suppressed_by_vex,
-        under_investigation=finding.under_investigation,
-        waived=finding.waived,
-        priority_label=_priority_label(str(finding.priority)),
-        priority_rank=finding.priority_rank,
-        priority_state=_priority_label(str(finding.priority)),
-        operational_rank=finding.operational_rank,
-        operational_score=int(finding.risk_score or 0),
-        rationale=finding.rationale or "Stored Workbench finding without raw rationale payload.",
-        recommended_action=finding.recommended_action or "Review the finding with the asset owner.",
-        provenance=_provenance_from_finding(finding),
-    )
-
-
-def _with_current_asset_context(finding: PrioritizedFinding, asset: Asset) -> PrioritizedFinding:
-    """With current asset context function."""
-    target_ref = asset.target_ref or asset.asset_key
-    occurrence_updates = {
-        "target_ref": target_ref,
-        "asset_id": asset.asset_key,
-        "asset_criticality": asset.criticality,
-        "asset_exposure": asset.exposure,
-        "asset_environment": asset.environment,
-        "asset_owner": asset.owner,
-        "asset_business_service": asset.business_service,
-    }
-    occurrences = [
-        occurrence.model_copy(update=occurrence_updates)
-        for occurrence in finding.provenance.occurrences
-    ]
-    if not occurrences:
-        occurrences = [
-            InputOccurrence(
-                cve_id=finding.cve_id,
-                source_format="workbench-asset-context",
-                target_ref=target_ref,
-                asset_id=asset.asset_key,
-                asset_criticality=asset.criticality,
-                asset_exposure=asset.exposure,
-                asset_environment=asset.environment,
-                asset_owner=asset.owner,
-                asset_business_service=asset.business_service,
-            )
-        ]
-    provenance = finding.provenance.model_copy(
-        update={
-            "occurrences": occurrences,
-            "targets": _value_list(target_ref),
-            "asset_ids": _value_list(asset.asset_key),
-            "highest_asset_criticality": asset.criticality,
-            "highest_asset_exposure": asset.exposure,
-            "asset_environments": _value_list(asset.environment),
-            "asset_owners": _value_list(asset.owner),
-            "asset_business_services": _value_list(asset.business_service),
-            "asset_count": 1,
-        }
-    )
-    context_summary, context_recommendation = ContextPolicyProfile().describe(provenance)
-    return finding.model_copy(
-        update={
-            "provenance": provenance,
-            "context_summary": context_summary,
-            "context_recommendation": context_recommendation,
-            "highest_asset_criticality": asset.criticality,
-            "asset_count": 1,
-        }
-    )
-
-
-def _provenance_from_finding(finding: Finding) -> FindingProvenance:
-    """Provenance from finding function."""
-    asset = finding.asset
-    if asset is None:
-        return FindingProvenance()
-    target_ref = asset.target_ref or asset.asset_key
-    occurrence = InputOccurrence(
-        cve_id=finding.cve_id,
-        source_format="workbench-asset-context",
-        target_ref=target_ref,
-        asset_id=asset.asset_key,
-        asset_criticality=asset.criticality,
-        asset_exposure=asset.exposure,
-        asset_environment=asset.environment,
-        asset_owner=asset.owner,
-        asset_business_service=asset.business_service,
-    )
-    return FindingProvenance(
-        occurrence_count=1,
-        active_occurrence_count=1,
-        source_formats=["workbench-asset-context"],
-        targets=_value_list(target_ref),
-        asset_ids=_value_list(asset.asset_key),
-        highest_asset_criticality=asset.criticality,
-        highest_asset_exposure=asset.exposure,
-        asset_environments=_value_list(asset.environment),
-        asset_owners=_value_list(asset.owner),
-        asset_business_services=_value_list(asset.business_service),
-        asset_count=1,
-        occurrences=[occurrence],
-    )
-
-
-def _recalculated_explanation_json(
-    payload: dict[str, Any],
-    *,
-    prioritized: PrioritizedFinding,
-    priority_state: str,
-    score: int,
-    reasons: list[str],
-) -> dict[str, Any]:
-    """Recalculated explanation json function."""
-    updated = dict(payload or {})
-    updated["provenance"] = prioritized.provenance.model_dump()
-    updated["context_summary"] = prioritized.context_summary
-    updated["context_recommendation"] = prioritized.context_recommendation
-    updated["highest_asset_criticality"] = prioritized.highest_asset_criticality
-    updated["asset_count"] = prioritized.asset_count
-    updated["priority_state"] = priority_state
-    updated["operational_score"] = score
-    updated["operational_score_reasons"] = reasons
-    explanation = dict(updated.get("explanation") or {})
-    explanation["score_inputs"] = {
-        **dict(explanation.get("score_inputs") or {}),
-        "asset_context_recalculated": True,
-        "operational_score": score,
-    }
-    updated["explanation"] = explanation
-    return updated
-
-
-def _recalculated_evidence_json(
-    payload: dict[str, Any],
-    *,
-    asset: Asset,
-    recalculated_at: datetime,
-    score: int,
-    reasons: list[str],
-) -> dict[str, Any]:
-    """Recalculated evidence json function."""
-    evidence = dict(payload or {})
-    evidence["asset_context"] = {
-        "rescore_needed": False,
-        "asset_id": str(asset.id),
-        "asset_key": asset.asset_key,
-        "recalculated_at": recalculated_at.isoformat(),
-        "operational_score": score,
-        "operational_score_reasons": list(reasons),
-    }
-    return evidence
-
-
-def _without_rescore_flag(
-    payload: dict[str, Any],
-    *,
-    flags_key: str,
-    confidence_key: str,
-) -> tuple[dict[str, Any], int]:
-    """Without rescore flag function."""
-    updated = dict(payload or {})
-    raw_flags = updated.get(flags_key)
-    flags = (
-        [dict(flag) for flag in raw_flags if isinstance(flag, dict)]
-        if isinstance(raw_flags, list)
-        else []
-    )
-    kept = [flag for flag in flags if flag.get("code") != "asset_context_rescore_needed"]
-    removed = len(flags) - len(kept)
-    if flags or flags_key in updated:
-        updated[flags_key] = kept
-    if removed and not kept and updated.get(confidence_key) == "medium":
-        updated[confidence_key] = "high"
-    return updated, removed
-
-
-def _priority_label(value: str) -> str:
-    """Priority label function."""
-    normalized = value.split(".", maxsplit=1)[-1].strip().lower()
-    return {
-        "critical": "Critical",
-        "high": "High",
-        "medium": "Medium",
-        "low": "Low",
-    }.get(normalized, "Low")
-
-
 def _value_list(value: Any) -> list[str]:
     """Value list function."""
     if value is None:
@@ -361,12 +160,5 @@ __all__ = [
     "_asset_exposure",
     "_asset_criticality",
     "_with_rescore_evidence",
-    "_finding_as_prioritized",
-    "_with_current_asset_context",
-    "_provenance_from_finding",
-    "_recalculated_explanation_json",
-    "_recalculated_evidence_json",
-    "_without_rescore_flag",
-    "_priority_label",
     "_value_list",
 ]

@@ -12,9 +12,9 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from vuln_prioritizer.inputs.sdk import InputParserDefinition
-from vuln_prioritizer.models import InputOccurrence, InputSourceSummary, ParsedInput
-from vuln_prioritizer.providers.sdk import ProviderDefinition
+from app.domain.engine.inputs.sdk import InputParserDefinition
+from app.domain.engine.models import InputOccurrence, InputSourceSummary, ParsedInput
+from app.domain.engine.providers.sdk import ProviderDefinition
 
 
 def parse_acme_scan(path: Path) -> ParsedInput:

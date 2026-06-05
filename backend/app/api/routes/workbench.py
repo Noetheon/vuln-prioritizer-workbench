@@ -11,6 +11,7 @@ from app.api.deps import LocalActor, SessionDep
 from app.core.app_state import workbench_settings
 from app.core.config import Settings
 from app.core.migration_bootstrap import ALEMBIC_HEAD
+from app.domain.engine import __version__
 from app.models import (
     DemoWorkspaceCreate,
     DemoWorkspacePublic,
@@ -34,7 +35,6 @@ from app.services.report_models import ReportGenerationError
 from app.services.run_workflow_projection import analysis_run_public
 from app.services.workbench_capabilities import build_workbench_capabilities
 from app.services.workflows import latest_analysis_workflow_public, latest_report_workflow_public
-from vuln_prioritizer import __version__
 
 router = APIRouter(prefix="/workbench", tags=["workbench"])
 
@@ -61,7 +61,7 @@ def workbench_status(
     return WorkbenchStatus(
         status="ready" if database == "ready" and schema == "ready" else "not_ready",
         app=active_settings.PROJECT_NAME,
-        core_package="vuln_prioritizer",
+        core_package="app.domain.engine",
         core_version=__version__,
         database_status=database,
         schema_status=schema,

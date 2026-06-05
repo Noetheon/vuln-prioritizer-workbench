@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from vuln_prioritizer.models import FindingProvenance, InputOccurrence, KevData
-from vuln_prioritizer.services.remediation import (
+from app.domain.engine.models import FindingProvenance, InputOccurrence, KevData
+from app.domain.engine.services.remediation import (
     RemediationService,
     derive_remediation,
     render_recommended_action,

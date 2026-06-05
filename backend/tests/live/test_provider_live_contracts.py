@@ -4,9 +4,9 @@ import os
 
 import pytest
 
-from vuln_prioritizer.providers.epss import EpssProvider
-from vuln_prioritizer.providers.kev import KevProvider
-from vuln_prioritizer.providers.nvd import NvdProvider
+from app.domain.engine.providers.epss import EpssProvider
+from app.domain.engine.providers.kev import KevProvider
+from app.domain.engine.providers.nvd import NvdProvider
 
 pytestmark = pytest.mark.live_network
 

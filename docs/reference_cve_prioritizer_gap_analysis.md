@@ -1,6 +1,6 @@
 # Reference Gap Analysis
 
-This document compares `vuln-prioritizer` against the reference project `TURROKS/CVE_Prioritizer`.
+This document compares `vuln-prioritizer-workbench` against the reference project `TURROKS/CVE_Prioritizer`.
 
 Reference:
 
@@ -55,7 +55,7 @@ This project additionally answers:
 
 ## Conclusion
 
-The current product line positions `vuln-prioritizer` as a local
+The current product line positions `vuln-prioritizer-workbench` as a local
 FastAPI/React Workbench for CTID/ATT&CK-informed CVE prioritization. The old
 CLI/CI-oriented surfaces are historical context, not the current product
 identity, and the repository does not copy code from the reference project.

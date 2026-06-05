@@ -126,7 +126,7 @@ jobs:
           run_frontend=false
           while IFS= read -r path; do
             case "$path" in
-              frontend/*|backend/app/*|backend/src/*)
+              frontend/*|backend/app/*)
                 run_frontend=true
                 ;;
               .nvmrc|.npmrc|package.json)

@@ -10,14 +10,14 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from vuln_prioritizer.models import (
+from app.domain.engine.models import (
     EvidenceBundleFile,
     EvidenceBundleManifest,
     EvidenceBundleVerificationItem,
     EvidenceBundleVerificationMetadata,
     EvidenceBundleVerificationSummary,
 )
-from vuln_prioritizer.utils import iso_utc_now
+from app.domain.engine.utils import iso_utc_now
 
 DETERMINISTIC_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 DETERMINISTIC_ZIP_FILE_MODE = 0o644 << 16

@@ -1,5 +1,5 @@
 {
-  "description": "Navigator layer generated from local CTID ATT&CK mappings used by vuln-prioritizer.",
+  "description": "Navigator layer generated from local CTID ATT&CK mappings used by vuln-prioritizer-workbench.",
   "domain": "enterprise-attack",
   "gradient": {
     "colors": [
@@ -15,7 +15,7 @@
       "label": "Mapped technique"
     }
   ],
-  "name": "vuln-prioritizer ATT&CK coverage",
+  "name": "vuln-prioritizer-workbench ATT&CK coverage",
   "selectTechniquesAcrossTactics": true,
   "showTacticRowBackground": true,
   "techniques": [

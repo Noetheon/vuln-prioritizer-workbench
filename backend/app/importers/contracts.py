@@ -27,23 +27,23 @@ class ImporterValidationError(ImporterError, ValueError):
 class NormalizedOccurrence:
     """Provider-free occurrence DTO emitted by importers before persistence."""
 
-    cve: str
-    component: str | None = None
-    version: str | None = None
-    asset_ref: str | None = None
+    cve_id: str
+    component_name: str | None = None
+    component_version: str | None = None
+    target_ref: str | None = None
     source: str = "import"
     fix_version: str | None = None
     raw_evidence: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Post init   method for NormalizedOccurrence."""
-        if not isinstance(self.cve, str):
-            raise ImporterValidationError("Occurrence cve must be a string")
+        if not isinstance(self.cve_id, str):
+            raise ImporterValidationError("Occurrence cve_id must be a string")
         if not isinstance(self.source, str):
             raise ImporterValidationError("Occurrence source must be a string")
-        cve = self.cve.strip().upper()
+        cve = self.cve_id.strip().upper()
         if not CVE_PATTERN.fullmatch(cve):
-            raise ImporterValidationError(f"Invalid CVE identifier: {self.cve!r}")
+            raise ImporterValidationError(f"Invalid CVE identifier: {self.cve_id!r}")
         source = self.source.strip()
         if not source:
             raise ImporterValidationError("Occurrence source must not be blank")
@@ -53,7 +53,7 @@ class NormalizedOccurrence:
         if not all(isinstance(key, str) for key in raw_evidence):
             raise ImporterValidationError("Occurrence raw_evidence keys must be strings")
 
-        object.__setattr__(self, "cve", cve)
+        object.__setattr__(self, "cve_id", cve)
         object.__setattr__(self, "source", source)
         object.__setattr__(self, "raw_evidence", raw_evidence)
 

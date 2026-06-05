@@ -9,7 +9,6 @@ WORKDIR /app
 COPY README.md LICENSE ./
 COPY backend/pyproject.toml backend/requirements.runtime.lock.txt backend/MANIFEST.in backend/README.md backend/alembic.ini ./backend/
 COPY backend/app ./backend/app
-COPY backend/src ./backend/src
 
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends \
@@ -26,7 +25,7 @@ RUN apt-get update \
         /app/workbench-import-uploads \
         /app/workbench-reports \
         /app/workbench-provider-cache \
-        /app/.cache/vuln-prioritizer \
+        /app/.cache/vuln-prioritizer-workbench \
     && chown -R workbench:workbench /app
 
 USER workbench

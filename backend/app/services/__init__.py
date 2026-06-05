@@ -30,10 +30,8 @@ from app.services.github_issues import (
     github_export_token,
     github_repository_path,
 )
-from app.services.governance import (
-    build_project_governance_rollups_payload,
-    build_project_governance_rollups_payload_from_repositories,
-)
+from app.services.governance import build_project_governance_rollups_payload_from_repositories
+from app.services.governance_rollups import build_project_governance_rollups_payload
 from app.services.reports import (
     MarkdownProviderSnapshot,
     MarkdownReportFinding,

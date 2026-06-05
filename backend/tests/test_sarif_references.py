@@ -1,4 +1,4 @@
-from vuln_prioritizer.sarif_references import dedupe_defensive_http_urls
+from app.domain.engine.sarif_references import dedupe_defensive_http_urls
 
 
 def test_sarif_references_keep_defensive_urls_and_filter_direct_poc_links() -> None:

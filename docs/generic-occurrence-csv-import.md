@@ -13,7 +13,7 @@ See `examples/generic-occurrences.csv` for a checked-in sample.
 ## Example
 
 ```csv
-cve_id,asset_ref,component_name,component_version,purl,scanner,fix_version,severity,owner,business_service
+cve_id,target_ref,component_name,component_version,purl,source,fix_versions,raw_severity,owner,business_service
 CVE-2021-44228,web-prod-01,log4j-core,2.14.1,pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1,manual-backlog,2.17.1,critical,platform-team,checkout
 CVE-2022-22965,checkout-api,spring-webmvc,5.3.17,pkg:maven/org.springframework/spring-webmvc@5.3.17,manual-backlog,5.3.18,high,appsec,checkout
 ```
@@ -22,45 +22,40 @@ CVE-2022-22965,checkout-api,spring-webmvc,5.3.17,pkg:maven/org.springframework/s
 
 | Column | Required | Notes |
 | --- | --- | --- |
-| `cve_id` | yes | CVE identifier. `cve` and `vulnerability_id` are accepted as aliases. |
-| `asset_ref` | no | Local asset, host, workload, image, repository, or service reference. Used as `target_ref` when `target_ref` is not present. |
-| `component_name` | no | Affected component or package name. `component` is accepted as an alias. |
-| `component_version` | no | Installed or affected version. `version` and `installed_version` are accepted as aliases. |
+| `cve_id` | yes | CVE identifier. |
+| `target_ref` | no | Local target, host, workload, image, repository, or service reference. |
+| `component_name` | no | Affected component or package name. |
+| `component_version` | no | Installed or affected version. |
 | `purl` | no | Package URL for package-level matching and evidence. |
-| `scanner` | no | Source scanner or export name. The Workbench importer preserves it in raw evidence. |
-| `fix_version` | no | Fixed version. `fix_versions` and `fixed_versions` are accepted; multiple versions can be separated with commas or `|`. |
-| `severity` | no | Raw source severity. Preserved as source-provided severity context, not as a replacement for CVSS, EPSS, KEV, or policy scoring. `raw_severity` is accepted as an alias. |
-| `owner` | no | Asset or service owner. `asset_owner` is accepted as an alias. |
-| `business_service` | no | Business service. `service` and `asset_business_service` are accepted as aliases. |
+| `source` | no | Source scanner, backlog, or export name. |
+| `fix_versions` | no | Fixed versions. Multiple versions can be separated with commas or `|`. |
+| `raw_severity` | no | Raw source severity. Preserved as source-provided severity context, not as a replacement for CVSS, EPSS, KEV, or policy scoring. |
+| `owner` | no | Asset or service owner. |
+| `business_service` | no | Business service. |
 
-Additional supported columns include `target_kind`, `target_ref`, `target`,
-`asset_id`, `criticality`, `asset_criticality`, `exposure`, `asset_exposure`,
-`environment`, `asset_environment`, `package_type`, `ecosystem`, `file_path`,
-`path`, and `dependency_path`.
+Additional supported columns are `criticality`, `exposure`, and `environment`.
+Other columns are preserved as unknown raw provenance only; they do not affect
+prioritization, asset matching, or VEX matching.
 
 ## Required Fields
 
-The only required logical field is a CVE column:
+The only required logical field is `cve_id`:
 
 - Use `cve_id` for new files.
-- `cve` and `vulnerability_id` are accepted for compatibility.
 - Empty CVE cells are treated as invalid rows and skipped with a warning.
 
-All other columns are optional. Rows without `asset_ref`, `target_ref`, or
-`target` still import as generic occurrences, but asset-context and VEX matching
-will have less local context to match against.
+All other columns are optional. Rows without `target_ref` still import as generic
+occurrences, but asset-context and VEX matching will have less local context to
+match against.
 
 ## Normalization
 
 - The file suffix must be `.csv`.
 - CVE IDs are trimmed and normalized to uppercase.
-- `target_kind` defaults to `generic` when omitted.
-- `asset_ref` is used only as a fallback target reference when `target_ref` or
-  `target` is absent.
+- `target_ref` is the only Workbench occurrence target column.
 - `component_name`, `component_version`, `purl`, owner, service, raw severity,
   and fix-version data are preserved as occurrence provenance.
-- `fix_version`, `fix_versions`, and `fixed_versions` are split on commas and
-  `|` into normalized fix-version lists.
+- `fix_versions` is split on commas and `|` into normalized fix-version lists.
 - Asset criticality values accept `low`, `medium`, `high`, `critical`, plus
   `med` and `crit` aliases.
 - Asset exposure values accept `internal`, `dmz`, `internet-facing`, plus
@@ -84,7 +79,7 @@ ATT&CK data during import.
 
 - A non-CSV file is rejected.
 - A missing header row is an error.
-- A header without `cve_id`, `cve`, or `vulnerability_id` is an error.
+- A header without `cve_id` is an error.
 - Invalid CVE identifiers are skipped and reported as warnings with the source
   line number.
 - Unknown asset criticality, exposure, or environment values are ignored and

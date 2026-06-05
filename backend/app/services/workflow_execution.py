@@ -170,7 +170,7 @@ class WorkflowExecutionContext:
         self.heartbeat()
         workflow = self.repository.set_workflow_output(
             self.workflow_id,
-            result_json=result,
+            result_ref_json=result,
             diagnostics_json=diagnostics,
             artifact_refs_json=artifact_refs,
             metadata_json=details,
@@ -199,7 +199,7 @@ class WorkflowExecutionContext:
             message=message,
             progress_current=progress_current,
             progress_total=progress_total,
-            result_json=result,
+            result_ref_json=result,
             diagnostics_json=diagnostics,
             terminal_code=terminal_code,
             metadata_json=details,

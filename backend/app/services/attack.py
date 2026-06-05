@@ -10,7 +10,6 @@ from typing import cast
 from app.models import (
     AttackSummaryContextRow,
     AttackSummaryFindingRow,
-    Finding,
     FindingAttackContext,
     ProjectAttackSummaryPublic,
     ProjectAttackTacticSummaryPublic,
@@ -21,6 +20,7 @@ from app.services.attack_support import (
     ATTACK_NAVIGATOR_FILTERS,
     CONFIDENCE_BUCKETS,
     REVIEW_STATUS_BUCKETS,
+    AttackSummaryFindingLike,
 )
 from app.services.attack_support import (
     TacticSummaryAccumulator as _TacticSummaryAccumulator,
@@ -58,7 +58,7 @@ __all__ = [
 def build_project_attack_summary_payload(
     *,
     project_id: uuid.UUID,
-    findings: Sequence[Finding],
+    findings: Sequence[AttackSummaryFindingLike],
     attack_contexts: Sequence[FindingAttackContext],
     top_limit: int = 5,
 ) -> ProjectAttackSummaryPublic:
@@ -153,7 +153,7 @@ def build_project_attack_summary_payload_from_rows(
     """Build a defensive ATT&CK dashboard summary from lightweight SQL rows."""
     return build_project_attack_summary_payload(
         project_id=project_id,
-        findings=cast(Sequence[Finding], findings),
+        findings=cast(Sequence[AttackSummaryFindingLike], findings),
         attack_contexts=cast(Sequence[FindingAttackContext], attack_contexts),
         top_limit=top_limit,
     )

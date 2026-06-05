@@ -18,7 +18,7 @@ from app.domain.asset_context_projection import (
     _changed_asset_fields,
     _records_by_asset_key,
 )
-from app.domain.asset_rescore import recalculate_asset_finding
+from app.domain.engine.inputs.loader import AssetContextCatalog
 from app.models import (
     Asset,
     AssetCreate,
@@ -30,7 +30,6 @@ from app.models import (
     FindingDecisionEvidence,
 )
 from app.models.base import get_datetime_utc
-from vuln_prioritizer.inputs.loader import AssetContextCatalog
 
 ASSET_CONTEXT_RESCORE_FLAG = "asset_context_rescore_needed"
 
@@ -253,16 +252,10 @@ class AssetRepository:
         cleared_flags = 0
         scores: list[int] = []
         for finding in findings:
-            recalculation = recalculate_asset_finding(
-                finding,
-                asset=asset,
-                recalculated_at=timestamp,
-            )
-            finding.risk_score = recalculation.risk_score
             finding.updated_at = timestamp
             self.session.add(finding)
-            cleared_flags += recalculation.cleared_flags
             record = self._latest_finding_evidence_record(finding.id)
+            operational_score = 0
             if record is not None:
                 updated_payload, cleared = _clear_decision_evidence_rescore_needed(
                     record.payload_json,
@@ -273,7 +266,10 @@ class AssetRepository:
                 record.updated_at = timestamp
                 self.session.add(record)
                 cleared_flags += cleared
-            scores.append(recalculation.operational_score)
+                operational_score = int(
+                    float(_decision_payload(updated_payload).get("risk_score") or 0)
+                )
+            scores.append(operational_score)
         self.session.flush()
         return {
             "asset_id": asset.id,

@@ -7,7 +7,7 @@ from typing import Any, TypeAlias
 
 from pydantic import Field
 
-from vuln_prioritizer.model_base import StrictModel
+from app.domain.engine.model_base import StrictModel
 
 JsonObject: TypeAlias = dict[str, Any]
 

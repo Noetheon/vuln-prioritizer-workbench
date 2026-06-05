@@ -6,7 +6,7 @@ Security teams usually face more known vulnerabilities than they can remediate i
 
 ## Approach
 
-`vuln-prioritizer` combines four signals:
+`vuln-prioritizer-workbench` combines four signals:
 
 - technical severity from NVD/CVSS
 - exploitation probability from FIRST EPSS

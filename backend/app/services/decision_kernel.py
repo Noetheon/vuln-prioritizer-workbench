@@ -185,7 +185,7 @@ def build_run_result(
         parse_errors=[],
         analysis_service={
             "pipeline": "parse-persist-enrich-score-explain",
-            "engine": "vuln_prioritizer.prepare_analysis",
+            "engine": "app.domain.engine.prepare_analysis",
             "kernel": "app.services.decision_kernel",
         },
         analysis_semantics=dict(persistence_plan.analysis_semantics),

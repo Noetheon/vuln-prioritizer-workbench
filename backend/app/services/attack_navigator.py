@@ -7,8 +7,9 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
-from app.models import Finding, FindingAttackContext
+from app.models import FindingAttackContext
 from app.services.attack_support import (
+    AttackNavigatorFindingLike,
     NavigatorTechniqueAccumulator,
     confidence_label,
     counts_label,
@@ -28,7 +29,7 @@ def build_attack_navigator_layer_payload(
     project_id: uuid.UUID,
     project_name: str,
     run_id: uuid.UUID,
-    findings: Sequence[Finding],
+    findings: Sequence[AttackNavigatorFindingLike],
     attack_contexts: Sequence[FindingAttackContext],
     filter_value: str = "all",
     generated_at: datetime | None = None,

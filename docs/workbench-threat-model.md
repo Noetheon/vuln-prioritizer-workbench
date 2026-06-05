@@ -2,7 +2,7 @@
 
 Status: current local-first Workbench threat model. Last reviewed: 2026-05-30.
 
-This page defines the defensive threat model and operational readiness assumptions for the local Workbench. It keeps the same product boundaries as the rest of the project: `vuln-prioritizer` prioritizes known CVEs and existing findings. It is not a scanner, exploit tool, proof-of-concept generator, or general-purpose vulnerability-management platform.
+This page defines the defensive threat model and operational readiness assumptions for the local Workbench. It keeps the same product boundaries as the rest of the project: `vuln-prioritizer-workbench` prioritizes known CVEs and existing findings. It is not a scanner, exploit tool, proof-of-concept generator, or general-purpose vulnerability-management platform.
 
 ## Scope
 
@@ -10,7 +10,7 @@ The current local-first Workbench threat model covers:
 
 - active browser Workbench use through the backend runtime in `backend/app` and
   the React frontend
-- retained shared domain logic under `backend/src/vuln_prioritizer/**`
+- retained shared domain logic under `backend/app/domain/engine/**`
 - import of existing CVE lists and selected scanner export files
 - provider enrichment from NVD, FIRST EPSS, CISA KEV, local caches, and locked provider snapshots
 - optional ATT&CK context from local CTID Mappings Explorer JSON and local technique metadata
@@ -99,7 +99,7 @@ Primary boundaries:
 | SQLite corruption or single-node contention | Lost run history or failed imports | Document SQLite as default single-node storage, keep writes short, use migrations, and treat database backup/restore as an operator responsibility. |
 | PostgreSQL misconfiguration | Unauthorized database access, persistent data exposure, or unavailable Workbench state | Keep the Compose database bound to local/private use, avoid committing real credentials, prefer secret injection outside committed files, restrict database network reachability, use migrations consistently, and treat backups, retention, TLS, and role hardening as operator controls. |
 | Accidental local API exposure | Unauthorized state changes through local API routes | Active `/api/v1` routes run through `backend/app` with a local single-user principal. Keep the service bound to trusted local or private hosts, validate `ALLOWED_HOSTS`, keep docs disabled outside local development, and keep the Compose Traefik app/API routers behind the default-deny `TRAEFIK_APP_IP_ALLOWLIST` and `TRAEFIK_API_IP_ALLOWLIST` controls when route opt-in is enabled. Treat browser login, API tokens, or shared-user access as future reviewed security work rather than current protection. |
-| Unsafe secret source or environment-variable name | Credential leakage or accidental literal-token use | Read the NVD API key only from the variable name configured by `VULN_PRIORITIZER_NVD_API_KEY_ENV`, defaulting to `NVD_API_KEY`. Environment-variable name settings must match `^[A-Z_][A-Z0-9_]*$` and must never be interpreted as raw secret values. |
+| Unsafe secret source or environment-variable name | Credential leakage or accidental literal-token use | Read the NVD API key only from the variable name configured by `WORKBENCH_NVD_API_KEY_ENV`, defaulting to `NVD_API_KEY`. Environment-variable name settings must match `^[A-Z_][A-Z0-9_]*$` and must never be interpreted as raw secret values. |
 | Bootstrap default secrets used outside local/dev | Predictable signing keys or local runtime secrets in shared environments | Treat defaults such as `changethis` as local/dev bootstrap placeholders only. Staging and production must reject default `SECRET_KEY` and equivalent secret values before serving traffic. Unknown `ENVIRONMENT` values fail closed instead of silently selecting local mode. Local mode may use the placeholders only with local-only `ALLOWED_HOSTS`; public hostnames require real secrets even if `ENVIRONMENT=local`. |
 | Untrusted Host headers or accidental public routing | Host-header confusion, cache poisoning, or unintended exposure of a local-first service | Active `backend/app` deployments must configure `ALLOWED_HOSTS` for the exact local, TestClient, container, or operator hostnames that may reach the API. Defaults allow only local/demo hosts. Public or shared deployments must set `ALLOWED_HOSTS` to the expected domain names and use non-default secrets. Catch-all `*` host validation is rejected; wildcard entries must be scoped domain suffixes such as `*.example.com`. |
 | Public OpenAPI or interactive API docs in shared environments | API surface discovery or generated-client metadata exposed beyond local operators | OpenAPI and interactive docs are exposed by default only for local development and generated-client workflows. Staging or production deployments should leave `API_DOCS_ENABLED` unset or false unless the docs route is intentionally published behind the reviewed deployment boundary. |

@@ -4,8 +4,8 @@
 
 VPW consists of a FastAPI backend, a React/Vite frontend with a local route
 adapter, and a generated API client. The active Workbench is local-first and
-self-hosted. The domain implementation remains available for automation,
-compatible reports, and maintainer workflows through the Workbench backend.
+self-hosted. The internal engine remains available to Workbench services for
+parsing, provider enrichment, scoring, SARIF, and report helpers.
 
 | Area | Implementation |
 | --- | --- |
@@ -13,7 +13,7 @@ compatible reports, and maintainer workflows through the Workbench backend.
 | Frontend | React, Vite, TypeScript, local route adapter, VPW Design System. |
 | API Boundary | `frontend/src/client/**` is generated from OpenAPI. |
 | Product Logic | `frontend/src/api-client.ts` is manual wrapper code; components import services/types from the generated client but do not edit generated files manually. |
-| Package Boundary | The backend distribution intentionally ships both `app/**` and `src/vuln_prioritizer/**`. |
+| Package Boundary | The backend distribution intentionally ships both `app/**` and `app/domain/engine/**`. |
 | Evidence | Reports, evidence ZIP bundle, manifest, checksums, and contract artifacts. |
 
 Further details are available in [Product Architecture](../architecture.md).
@@ -26,9 +26,9 @@ Playwright backend startup, and OpenAPI client generation use `app.main:app` or
 `frontend/src/client/**` through manual frontend integration code such as
 `frontend/src/api-client.ts`.
 
-`backend/src/vuln_prioritizer/**` remains available for domain logic and
+`backend/app/domain/engine/**` remains available for internal engine logic and
 reports. Neutral modules such as input normalization, providers, scoring,
-reporting, and redaction may be shared.
+reporting, and redaction may be shared by Workbench services.
 
 The old second Workbench runtime with its own FastAPI stack, Workbench database
 package, scheduler, and `web`/`db` CLI entrypoints has been removed. The active

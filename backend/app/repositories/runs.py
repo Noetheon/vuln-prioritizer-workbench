@@ -8,6 +8,7 @@ from typing import Any
 
 from sqlmodel import Session, col, func, select
 
+from app.domain.engine.security_redaction import redact_value
 from app.models import (
     AnalysisRun,
     AnalysisRunStatus,
@@ -16,7 +17,6 @@ from app.models import (
     WorkflowRunStatus,
 )
 from app.models.base import get_datetime_utc
-from vuln_prioritizer.security_redaction import redact_value
 
 
 def _redacted_json_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -152,7 +152,7 @@ class RunRepository:
         filename: str | None = None,
         status: AnalysisRunStatus | str = AnalysisRunStatus.PENDING,
         provider_snapshot_id: uuid.UUID | None = None,
-        result_json: dict[str, Any] | None = None,
+        result_ref_json: dict[str, Any] | None = None,
         diagnostics_json: dict[str, Any] | None = None,
     ) -> AnalysisRun:
         """Create an analysis run without committing the transaction."""
@@ -167,7 +167,7 @@ class RunRepository:
         self.session.flush()
         self._project_workflow_payloads(
             run,
-            result_json=result_json,
+            result_ref_json=result_ref_json,
             diagnostics_json=diagnostics_json,
         )
         return run
@@ -179,7 +179,7 @@ class RunRepository:
         status: AnalysisRunStatus | str = AnalysisRunStatus.COMPLETED,
         finished_at: datetime | None = None,
         error_message: str | None = None,
-        result_json: dict[str, Any] | None = None,
+        result_ref_json: dict[str, Any] | None = None,
         diagnostics_json: dict[str, Any] | None = None,
     ) -> AnalysisRun:
         """Mark a run terminal and flush the transaction."""
@@ -193,7 +193,7 @@ class RunRepository:
         self.session.flush()
         self._project_workflow_payloads(
             run,
-            result_json=result_json,
+            result_ref_json=result_ref_json,
             diagnostics_json=diagnostics_json,
         )
         return run
@@ -202,11 +202,11 @@ class RunRepository:
         self,
         run: AnalysisRun,
         *,
-        result_json: dict[str, Any] | None = None,
+        result_ref_json: dict[str, Any] | None = None,
         diagnostics_json: dict[str, Any] | None = None,
     ) -> None:
         """Project repository payload arguments into workflow v2 fields."""
-        if result_json is None and diagnostics_json is None:
+        if result_ref_json is None and diagnostics_json is None:
             return
         from app.models import WorkflowRunKind, WorkflowRunStatus
         from app.repositories.workflows import WorkflowRepository
@@ -226,11 +226,10 @@ class RunRepository:
             else f"Import {run.input_type}",
             handler="app.repositories.runs.deprecated_payload_projection",
             status=_workflow_status_for_run(run.status),
-            execution_mode="worker",
             current_stage="projected",
         )
-        if result_json is not None:
-            workflow.result_json = dict(result_json)
+        if result_ref_json is not None:
+            workflow.result_ref_json = dict(result_ref_json)
         if diagnostics_json is not None:
             workflow.diagnostics_json = dict(diagnostics_json)
             workflow.error_details_json = dict(diagnostics_json)

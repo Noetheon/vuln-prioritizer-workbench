@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from vuln_prioritizer.inputs._occurrence_support import apply_asset_context
-from vuln_prioritizer.inputs.loader import load_asset_context_file
-from vuln_prioritizer.models import InputOccurrence, PrioritizedFinding
-from vuln_prioritizer.services.contextualization import aggregate_provenance
-from vuln_prioritizer.services.prioritization import PrioritizationService
+from app.domain.engine.inputs._occurrence_support import apply_asset_context
+from app.domain.engine.inputs.loader import load_asset_context_file
+from app.domain.engine.models import InputOccurrence, PrioritizedFinding
+from app.domain.engine.services.contextualization import aggregate_provenance
+from app.domain.engine.services.prioritization import PrioritizationService
 
 
 def _occurrence() -> InputOccurrence:
@@ -102,7 +102,7 @@ def test_asset_context_higher_precedence_wins_and_returns_load_diagnostics(
     assert diagnostics.basic_schema is False
 
 
-def test_asset_context_contains_rule_matches_asset_ref_alias_and_reports_invalid_enums(
+def test_asset_context_contains_rule_matches_target_ref_and_reports_invalid_enums(
     tmp_path: Path,
 ) -> None:
     asset_context_file = tmp_path / "assets.csv"
@@ -113,7 +113,7 @@ def test_asset_context_contains_rule_matches_asset_ref_alias_and_reports_invalid
                     [
                         "rule_id",
                         "target_kind",
-                        "asset_ref",
+                        "target_ref",
                         "asset_id",
                         "match_mode",
                         "precedence",

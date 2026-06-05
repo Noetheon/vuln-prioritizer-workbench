@@ -153,7 +153,7 @@ def validate_sarif_payload(payload: dict[str, Any]) -> list[str]:
         location = ".".join(str(part) for part in error.path) or "$"
         errors.append(f"{location}: {error.message}")
     errors.extend(_validate_rule_references(payload))
-    errors.extend(_validate_vuln_prioritizer_results(payload))
+    errors.extend(_validate_workbench_results(payload))
     return errors
 
 
@@ -183,7 +183,7 @@ def _validate_rule_references(payload: dict[str, Any]) -> list[str]:
     return errors
 
 
-def _validate_vuln_prioritizer_results(payload: dict[str, Any]) -> list[str]:
+def _validate_workbench_results(payload: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     for run_index, run in enumerate(payload.get("runs", [])):
         if not isinstance(run, dict):
@@ -193,7 +193,7 @@ def _validate_vuln_prioritizer_results(payload: dict[str, Any]) -> list[str]:
         raw_driver = tool.get("driver")
         driver = raw_driver if isinstance(raw_driver, dict) else {}
         tool_name = str(driver.get("name") or "")
-        if not tool_name.startswith("vuln-prioritizer"):
+        if not tool_name.startswith("vuln-prioritizer-workbench"):
             continue
         for result_index, result in enumerate(run.get("results", [])):
             if not isinstance(result, dict):
@@ -204,13 +204,14 @@ def _validate_vuln_prioritizer_results(payload: dict[str, Any]) -> list[str]:
             if not isinstance(cve, str) or not cve.startswith("CVE-"):
                 errors.append(
                     f"runs.{run_index}.results.{result_index}.properties.cve: "
-                    "vuln-prioritizer SARIF results must declare a CVE ID"
+                    "vuln-prioritizer-workbench SARIF results must declare a CVE ID"
                 )
             references = properties.get("references")
             if not isinstance(references, list) or not references:
                 errors.append(
                     f"runs.{run_index}.results.{result_index}.properties.references: "
-                    "vuln-prioritizer SARIF results must declare at least one reference URL"
+                    "vuln-prioritizer-workbench SARIF results must declare "
+                    "at least one reference URL"
                 )
                 continue
             for reference_index, reference in enumerate(references):

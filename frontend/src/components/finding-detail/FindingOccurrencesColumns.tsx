@@ -36,10 +36,7 @@ export function buildFindingOccurrenceColumns(): readonly VpwDataTableColumn<Fin
     {
       cell: (occurrence) => (
         <span className="font-medium">
-          {optionalText(
-            stringValue(occurrence.asset_ref) ??
-              stringValue(occurrence.target_ref),
-          )}
+          {optionalText(stringValue(occurrence.target_ref))}
         </span>
       ),
       header: "Asset",

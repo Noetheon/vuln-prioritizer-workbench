@@ -196,7 +196,9 @@ def _configure_workbench_runtime(workbench_api_env: WorkbenchApiEnv, tmp_path: P
 
 def _synthetic_occurrence_csv(row_count: int) -> bytes:
     cves = ("CVE-2021-44228", "CVE-2022-22965", "CVE-2023-44487", "CVE-2024-3094")
-    lines = ["cve_id,asset_ref,severity,owner,business_service,exposure,environment,criticality"]
+    lines = [
+        "cve_id,target_ref,raw_severity,owner,business_service,exposure,environment,criticality"
+    ]
     for index in range(row_count):
         lines.append(
             ",".join(

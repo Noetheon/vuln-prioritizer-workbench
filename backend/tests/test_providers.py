@@ -11,15 +11,15 @@ import pytest
 import requests
 from paths import DATA_ROOT
 
-from vuln_prioritizer.cache import FileCache
-from vuln_prioritizer.config import (
+from app.domain.engine.cache import FileCache
+from app.domain.engine.config import (
     EPSS_API_URL,
     KEV_FEED_URL,
     KEV_MIRROR_URL,
     NVD_API_URL,
     ProviderConfig,
 )
-from vuln_prioritizer.models import (
+from app.domain.engine.models import (
     AttackData,
     EpssData,
     KevData,
@@ -29,18 +29,18 @@ from vuln_prioritizer.models import (
     ProviderSnapshotMetadata,
     ProviderSnapshotReport,
 )
-from vuln_prioritizer.providers.attack import AttackProvider
-from vuln_prioritizer.providers.attack_metadata import AttackMetadataProvider
-from vuln_prioritizer.providers.attack_stix import AttackStixProvider
-from vuln_prioritizer.providers.ctid_mappings import CtidMappingsProvider
-from vuln_prioritizer.providers.curated_attack_mappings import (
+from app.domain.engine.providers.attack import AttackProvider
+from app.domain.engine.providers.attack_metadata import AttackMetadataProvider
+from app.domain.engine.providers.attack_stix import AttackStixProvider
+from app.domain.engine.providers.ctid_mappings import CtidMappingsProvider
+from app.domain.engine.providers.curated_attack_mappings import (
     CuratedAttackMappingProvider,
     CuratedAttackMappingValidationError,
 )
-from vuln_prioritizer.providers.epss import EpssProvider
-from vuln_prioritizer.providers.kev import KevProvider
-from vuln_prioritizer.providers.nvd import NvdFetchDiagnostics, NvdProvider
-from vuln_prioritizer.services.enrichment import EnrichmentService, _provider_data_quality_flags
+from app.domain.engine.providers.epss import EpssProvider
+from app.domain.engine.providers.kev import KevProvider
+from app.domain.engine.providers.nvd import NvdFetchDiagnostics, NvdProvider
+from app.domain.engine.services.enrichment import EnrichmentService, _provider_data_quality_flags
 
 
 class FakeResponse:
@@ -134,10 +134,6 @@ def test_provider_requests_ignore_endpoint_environment_overrides(
         "EPSS_API_URL",
         "KEV_FEED_URL",
         "KEV_MIRROR_URL",
-        "VULN_PRIORITIZER_NVD_API_URL",
-        "VULN_PRIORITIZER_EPSS_API_URL",
-        "VULN_PRIORITIZER_KEV_FEED_URL",
-        "VULN_PRIORITIZER_KEV_MIRROR_URL",
     ):
         monkeypatch.setenv(name, "http://127.0.0.1/unsafe")
 
@@ -519,7 +515,7 @@ def test_nvd_fetch_many_retries_rate_limited_response(monkeypatch) -> None:  # n
             )
 
     monkeypatch.setattr(
-        "vuln_prioritizer.providers.nvd.time.sleep",
+        "app.domain.engine.providers.nvd.time.sleep",
         lambda seconds: sleep_calls.append(seconds),
     )
     session = Session()
@@ -648,8 +644,8 @@ def test_nvd_request_handles_404_and_retryable_exceptions(monkeypatch) -> None: 
             return FakeResponse(status_code=404)
 
     sleep_calls: list[float] = []
-    monkeypatch.setattr("vuln_prioritizer.providers.nvd.time.sleep", sleep_calls.append)
-    monkeypatch.setattr("vuln_prioritizer.providers.nvd.random.uniform", lambda *_args: 0.0)
+    monkeypatch.setattr("app.domain.engine.providers.nvd.time.sleep", sleep_calls.append)
+    monkeypatch.setattr("app.domain.engine.providers.nvd.random.uniform", lambda *_args: 0.0)
 
     session = Session()
     provider = NvdProvider(session=session, max_retries=2)
@@ -1995,7 +1991,7 @@ def test_attack_metadata_provider_loads_subset_fixture() -> None:
     assert metadata["domain"] == "enterprise"
     assert results["T1059"].name == "Command and Scripting Interpreter"
     assert results["T1059"].tactics == ["execution"]
-    assert metadata["metadata_format"] == "vuln-prioritizer-technique-json"
+    assert metadata["metadata_format"] == "vuln-prioritizer-workbench-technique-json"
     assert len(metadata["metadata_file_sha256"] or "") == 64
 
 
@@ -2307,7 +2303,7 @@ def test_attack_provider_ctid_json_enriches_structured_attack_data() -> None:
     assert metadata["attack_version"] == "16.1"
     assert len(metadata["mapping_file_sha256"] or "") == 64
     assert len(metadata["technique_metadata_file_sha256"] or "") == 64
-    assert metadata["metadata_format"] == "vuln-prioritizer-technique-json"
+    assert metadata["metadata_format"] == "vuln-prioritizer-workbench-technique-json"
     assert metadata["mapping_created_at"] == "07/28/2025"
     assert metadata["mapping_updated_at"] == "08/28/2025"
     assert results["CVE-2023-34362"].mapped is True
@@ -2391,7 +2387,7 @@ def test_curated_attack_mapping_provider_reports_non_object_and_duplicate_mappin
     mapping_file.write_text(
         """
 metadata:
-  mapping_framework: vuln-prioritizer-curated-attack
+  mapping_framework: vuln-prioritizer-workbench-curated-attack
   mapping_framework_version: "1.0"
   attack_version: "16.1"
   technology_domain: enterprise-attack
@@ -2438,7 +2434,7 @@ def test_curated_attack_mapping_provider_rejects_missing_reviewer_for_reviewed(
     mapping_file.write_text(
         """
 metadata:
-  mapping_framework: vuln-prioritizer-curated-attack
+  mapping_framework: vuln-prioritizer-workbench-curated-attack
   mapping_framework_version: "1.0"
   attack_version: "16.1"
   technology_domain: enterprise-attack
@@ -2466,7 +2462,7 @@ def test_curated_attack_mapping_provider_rejects_numeric_confidence(tmp_path: Pa
     mapping_file.write_text(
         """
 metadata:
-  mapping_framework: vuln-prioritizer-curated-attack
+  mapping_framework: vuln-prioritizer-workbench-curated-attack
   mapping_framework_version: "1.0"
   attack_version: "16.1"
   technology_domain: enterprise-attack
@@ -2498,7 +2494,7 @@ def test_curated_attack_mapping_provider_rejects_invalid_cve_and_attack_ids(
     mapping_file.write_text(
         """
 metadata:
-  mapping_framework: vuln-prioritizer-curated-attack
+  mapping_framework: vuln-prioritizer-workbench-curated-attack
   mapping_framework_version: "1.0"
   attack_version: "16.1"
   technology_domain: enterprise-attack
@@ -2544,7 +2540,7 @@ def test_attack_provider_local_curated_enriches_structured_attack_data() -> None
     )
 
     assert metadata["source"] == "local-curated"
-    assert metadata["metadata_format"] == "vuln-prioritizer-curated-yml"
+    assert metadata["metadata_format"] == "vuln-prioritizer-workbench-curated-yml"
     assert len(metadata["mapping_file_sha256"] or "") == 64
     assert any("Low-confidence curated" in warning for warning in warnings)
     assert results["CVE-2023-34362"].mapped is True

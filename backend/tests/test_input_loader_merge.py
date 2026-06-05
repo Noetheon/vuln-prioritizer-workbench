@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from vuln_prioritizer.inputs import InputLoader, InputSpec
+from app.domain.engine.inputs import InputLoader, InputSpec
 
 
 def test_input_loader_load_many_applies_global_dedupe_and_max_cves(tmp_path: Path) -> None:

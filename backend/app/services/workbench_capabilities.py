@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.core.config import Settings
+from app.domain.engine.options import AttackSource, InputFormat
 from app.models.reports import REPORT_FORMAT_VALUES, ReportFormat
 from app.models.workbench import (
     AttackSourceCapabilityPublic,
@@ -34,7 +35,6 @@ from app.services.report_contracts import (
     REPORT_KIND_SARIF_RESULTS,
     REPORT_KIND_TECHNICAL_MARKDOWN,
 )
-from vuln_prioritizer.options import AttackSource, InputFormat
 
 IMPORT_REQUEST_OVERHEAD_BYTES = 64 * 1024
 

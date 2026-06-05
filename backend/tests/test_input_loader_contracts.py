@@ -49,7 +49,7 @@ def _project_occurrence(occurrence: object) -> dict[str, object]:
 
 
 def _load_loader_module():
-    return importlib.import_module("vuln_prioritizer.inputs.loader")
+    return importlib.import_module("app.domain.engine.inputs.loader")
 
 
 @pytest.mark.parametrize(("format_name", "contract"), list(_INPUT_CONTRACTS.items()))
@@ -185,20 +185,18 @@ def test_generic_occurrence_csv_preserves_component_target_and_asset_context(
             [
                 ",".join(
                     [
-                        "cve",
-                        "component",
-                        "version",
+                        "cve_id",
+                        "component_name",
+                        "component_version",
                         "purl",
-                        "fix_version",
-                        "target_kind",
-                        "target",
-                        "asset_id",
+                        "fix_versions",
+                        "target_ref",
                         "criticality",
                         "exposure",
                         "environment",
                         "owner",
-                        "service",
-                        "severity",
+                        "business_service",
+                        "raw_severity",
                     ]
                 ),
                 ",".join(
@@ -208,9 +206,7 @@ def test_generic_occurrence_csv_preserves_component_target_and_asset_context(
                         "4.2.0",
                         "pkg:pypi/django@4.2.0",
                         "4.2.8",
-                        "repository",
                         "backend/requirements.txt",
-                        "asset-api",
                         "Crit",
                         "public",
                         "production",
@@ -219,7 +215,7 @@ def test_generic_occurrence_csv_preserves_component_target_and_asset_context(
                         "HIGH",
                     ]
                 ),
-                "not-a-cve,ignored,,,,,,,,,,,",
+                ",".join(["not-a-cve", "ignored", "", "", "", "", "", "", "", "", "", ""]),
                 ",".join(
                     [
                         "CVE-2024-0002",
@@ -227,9 +223,7 @@ def test_generic_occurrence_csv_preserves_component_target_and_asset_context(
                         "3.0.0",
                         "",
                         "3.0.13",
-                        "host",
                         "app-01",
-                        "asset-host",
                         "urgent",
                         "edge",
                         "live",
@@ -255,9 +249,9 @@ def test_generic_occurrence_csv_preserves_component_target_and_asset_context(
     assert first.component_version == "4.2.0"
     assert first.purl == "pkg:pypi/django@4.2.0"
     assert first.fix_versions == ["4.2.8"]
-    assert first.target_kind == "repository"
+    assert first.target_kind == "generic"
     assert first.target_ref == "backend/requirements.txt"
-    assert first.asset_id == "asset-api"
+    assert first.asset_id is None
     assert first.asset_criticality == "critical"
     assert first.asset_exposure == "internet-facing"
     assert first.asset_environment == "prod"
@@ -282,7 +276,7 @@ def test_generic_occurrence_csv_auto_detection_sniffs_delimiters_and_comments(
         "\n".join(
             [
                 "# exported from scanner",
-                "cve_id;component;version;target_ref",
+                "cve_id;component_name;component_version;target_ref",
                 "CVE-2024-0101;openssl;3.0.0;host-01",
             ]
         )
@@ -307,7 +301,7 @@ def test_generic_occurrence_csv_sniffs_semicolon_dialect_and_warns_unknowns(
         "\n".join(
             [
                 "# comment before header",
-                "cve_id;asset_ref;component_name;component_version;scanner;ticket_url",
+                "cve_id;target_ref;component_name;component_version;source;ticket_url",
                 "CVE-2024-3094;build-host-1;xz;5.6.0;trivy;SEC-1001",
             ]
         ),
@@ -328,7 +322,7 @@ def test_generic_occurrence_csv_accepts_quoted_multiline_values(tmp_path: Path) 
     loader_module = _load_loader_module()
     input_file = tmp_path / "generic.csv"
     input_file.write_text(
-        "cve_id,asset_ref,component_name,notes\n"
+        "cve_id,target_ref,component_name,notes\n"
         'CVE-2024-3094,build-host-1,xz,"line one\nline two"\n',
         encoding="utf-8",
     )
@@ -362,7 +356,7 @@ def test_plain_cve_list_preserves_minimal_csv_context_and_deduplicates(tmp_path:
         "\n".join(
             [
                 "# comment before header",
-                "cve_id,asset_ref,component,version",
+                "cve_id,target_ref,component_name,component_version",
                 "CVE-2024-3094,build-host-1,xz,5.6.0",
                 "cve-2024-3094,build-host-1,xz,5.6.0",
                 "CVE-2024-4577,web-tier,php,8.3.7",

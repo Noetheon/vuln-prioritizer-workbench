@@ -21,7 +21,7 @@ The project exposes three active interface families:
 | Import upload | `POST /api/v1/projects/{project_id}/imports` with multipart local evidence files and explicit `input_type`. |
 | Durable workflows | `workflow_run` / `workflow_event` state exposed through workflow routes, WebSocket streaming, and embedded `workflow` objects on imports, provider jobs, and reports. |
 | Decision/Evidence Kernel v2 | Kernel-first `DecisionRunResult` production in `backend/app/services/decision_kernel.py`, exported as `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, and `RunDiagnosticsV2` from `backend/app/contracts/decision_evidence.py`, persisted through `analysis_evidence` and `finding_decision_evidence`. |
-| Report job creation | `POST /api/v1/runs/{run_id}/report-jobs` for queued report generation. Deprecated `POST /api/v1/runs/{run_id}/reports` queues the same workflow and returns a workflow object. |
+| Report job creation | `POST /api/v1/runs/{run_id}/report-jobs` for queued report generation. |
 | Report download | `GET /api/v1/reports/{report_id}/download`. |
 | Evidence verification | `POST /api/v1/reports/{report_id}/verify` for evidence ZIP reports. |
 | Analysis JSON | `analysis-result.v2.json`, validated by `docs/schemas/analysis-result.v2.schema.json`. |
@@ -91,13 +91,13 @@ Workflow kinds are `import`, `provider_update`, and `report_generation`.
 Workflow statuses are `pending`, `running`, `succeeded`,
 `completed_with_errors`, `failed`, and `cancelled`. Public workflow payloads use
 redacted `details`, `artifact_refs`, `error_message`, and terminal state fields;
-they do not expose raw `result_json`, `diagnostics_json`, `summary_json`,
+they do not expose raw `result_ref_json`, `diagnostics_json`, `summary_json`,
 `error_json`, or filesystem paths.
 
 Queued execution is the workflow contract. Import uploads, provider refreshes,
-and report generation all enqueue worker-owned workflows. Public
-`execution_mode` request fields are removed or ignored as deprecated input; the
-server always uses the worker path. The worker runtime is a separate process started with
+and report generation all enqueue worker-owned workflows. Public request and
+response contracts do not include `execution_mode`; the server always uses the
+worker path. The worker runtime is a separate process started with
 `python -m app.workers.workflow_worker`. It claims due workflows from the
 database, records leases and heartbeats, retries retryable failures up to the
 stored retry budget, and stops cooperatively when cancellation has been
@@ -134,7 +134,7 @@ report rendering.
 Read paths hydrate those tables through the central
 `backend/app/services/decision_projection.py` read model before mapping into
 stable public DTOs. Successful v2 imports must not rebuild decision facts from
-`workflow_run.result_json` or stale `finding` decision columns.
+`workflow_run.result_ref_json` or stale `finding` decision columns.
 
 The internal producer and projection rules are documented in
 [Decision/Evidence Kernel](architecture/decision-evidence-kernel.md).
@@ -170,7 +170,7 @@ Failed imports may expose typed `RunDiagnosticsV2` without creating an empty
 `workflow_run` is the active execution metadata store. Import, provider, and
 report handlers write terminal output to:
 
-- `workflow_run.result_json` for small internal ref payloads only. Successful
+- `workflow_run.result_ref_json` for small internal ref payloads only. Successful
   imports use `schema_version: workflow-result-ref.v2`,
   `analysis_evidence_id`, and `artifact_refs`.
 - `workflow_run.diagnostics_json` for parser, provider, report, and worker
@@ -179,7 +179,7 @@ report handlers write terminal output to:
   references
 
 Successful import workflows must not store counts, provider facts, finding
-semantics, dedup summaries, or sidecar summaries in `workflow_run.result_json`.
+semantics, dedup summaries, or sidecar summaries in `workflow_run.result_ref_json`.
 Those values belong to `AnalysisEvidenceV2` and `FindingDecisionEvidenceV2`.
 Normal run responses never expose `analysis_run.summary_json` or
 `analysis_run.error_json`, and `GET /api/v1/runs/{run_id}/workflow-metadata` has
@@ -217,8 +217,8 @@ Current guarantees:
 - rules are CVE-addressable
 - priority maps to SARIF levels
 - CVSS is emitted as `security-severity` when available
-- fingerprints use `vuln-prioritizer/v1`
-- Workbench aliases use `vuln-prioritizer-workbench/v1`
+- fingerprints use `vuln-prioritizer-workbench/v2`
+- rule IDs use `vuln-prioritizer-workbench/cve-*`
 - fingerprint material is based on CVE ID, artifact/target identity, component
   identity, and asset identity
 - priority, score, run IDs, report IDs, timestamps, and Workbench database
@@ -254,7 +254,7 @@ JSON or manifest schema changes.
 
 The following are intentionally no longer active contracts:
 
-- `vuln-prioritizer` console entrypoint
+- `vuln-prioritizer-workbench` console entrypoint
 - Typer command modules
 - `analyze`, `compare`, `explain`, `doctor`, `snapshot`, `state`, `rollup`,
   `data`, and `report` CLI commands

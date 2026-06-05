@@ -14,16 +14,16 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel
 
 from app.core.config import Settings
-from app.importers.generic_occurrence_csv import GenericOccurrenceCsvImporter
-from app.services import AnalysisService
-from app.services.import_execution_context import _parsed_input_from_workbench_occurrences
-from vuln_prioritizer.models import (
+from app.domain.engine.models import (
     KevData,
     ProviderSnapshotItem,
     ProviderSnapshotMetadata,
     ProviderSnapshotReport,
 )
-from vuln_prioritizer.provider_snapshot import generate_provider_snapshot_json
+from app.domain.engine.provider_snapshot import generate_provider_snapshot_json
+from app.importers.generic_occurrence_csv import GenericOccurrenceCsvImporter
+from app.services import AnalysisService
+from app.services.import_execution_context import _parsed_input_from_workbench_occurrences
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -138,7 +138,7 @@ def test_workbench_parsed_input_preserves_parser_metadata(tmp_path: Path) -> Non
     payload = "\n".join(
         [
             "# ignored before header",
-            "cve_id;asset_ref;component_name;fix_versions;ticket_url",
+            "cve_id;target_ref;component_name;fix_versions;ticket_url",
             'CVE-2024-3094;build-host-1;xz;"2.0.0|2.1.0";SEC-1001',
             "",
         ]
@@ -261,9 +261,6 @@ def test_asset_finding_and_run_repositories_persist_domain_graph(
         component_id=component.id,
         asset_id=asset.id,
         cve_id="CVE-2021-44228",
-        priority=app_models.FindingPriority.CRITICAL,
-        priority_rank=1,
-        in_kev=True,
     )
     snapshot = run_repository.get_or_create_provider_snapshot(
         content_hash="sha256:repo-contract",
@@ -298,7 +295,7 @@ def test_asset_finding_and_run_repositories_persist_domain_graph(
     finished = run_repository.finish_analysis_run(
         run.id,
         status=app_models.AnalysisRunStatus.COMPLETED_WITH_ERRORS,
-        result_json={"findings": 1, "degraded_providers": ["nvd"]},
+        result_ref_json={"findings": 1, "degraded_providers": ["nvd"]},
         diagnostics_json={"nvd": "cache replay used"},
     )
     session.commit()
@@ -313,7 +310,7 @@ def test_asset_finding_and_run_repositories_persist_domain_graph(
         kind=app_models.WorkflowRunKind.IMPORT,
     )
     assert workflow is not None
-    assert workflow.result_json["findings"] == 1
+    assert workflow.result_ref_json["findings"] == 1
     assert workflow.diagnostics_json["nvd"] == "cache replay used"
     assert [item.id for item in asset_repository.list_project_assets(project.id)] == [asset.id]
     assert [item.id for item in finding_repository.list_project_findings(project.id)] == [

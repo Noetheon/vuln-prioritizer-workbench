@@ -12,8 +12,8 @@ been removed from the active product surface.
 ## Current Local Workbench Track
 
 The active product track is summarized in the repository-root `ROADMAP.md`. It
-starts from the implemented `backend/app` FastAPI runtime, retained domain
-package, React frontend, generated-client boundary, and local self-hosted
+starts from the implemented `backend/app` FastAPI runtime, internal engine
+namespace, React frontend, generated-client boundary, and local self-hosted
 runtime. Current work should keep the single-user Workbench coherent and
 improve the main Import -> Findings -> Reports workflow.
 
@@ -56,7 +56,7 @@ superseded implementation plan was pruned from `archive/**` during the
 2026-05-25 archive trim. Current planning truth lives in this roadmap and the
 active issue/PR history, not in archived drafts.
 
-The current Workbench exposes the retained domain behavior as a local-first,
+The current Workbench exposes the internal engine behavior as a local-first,
 self-hosted vulnerability prioritization application. The product direction is
 API, database-backed imports, a browser UI, local project worklists, and report
 workflows around the same transparent prioritization model.
@@ -169,7 +169,7 @@ Status: implemented; release workflow is wired for tagged GitHub Releases and ga
 
 Status: published as `v1.1.0`; current `main` contains post-release documentation and security hygiene updates
 
-- Historical CLI runtime config discovery via `vuln-prioritizer.yml`, plus
+- Historical CLI runtime config discovery via `vuln-prioritizer-workbench.yml`, plus
   `--config` and `--no-config`.
 - Historical `doctor`, `snapshot create`, `snapshot diff`, and `rollup`
   commands.

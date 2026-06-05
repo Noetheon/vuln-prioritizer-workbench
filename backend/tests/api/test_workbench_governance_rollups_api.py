@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import Any
 
 from sqlmodel import Session
+from utils.workbench_contracts import _seed_analysis_evidence, _seed_finding_evidence
 from utils.workbench_env import (
     WorkbenchApiEnv,
     create_component,
@@ -40,7 +41,7 @@ def test_vpw067_governance_rollups_count_owner_service_environment_and_waiver_de
     assert checkout["high_count"] == 1
     assert checkout["accepted_count"] == 2
     assert checkout["suppressed_by_vex_count"] == 1
-    assert checkout["review_due_waiver_count"] == 0
+    assert checkout["review_due_waiver_count"] == 2
     assert checkout["risk_score_total"] == 180.0
     assert checkout["priority_counts"]["Critical"] == 1
     assert checkout["priority_counts"]["High"] == 1
@@ -56,8 +57,8 @@ def test_vpw067_governance_rollups_count_owner_service_environment_and_waiver_de
 
     production = next(item for item in payload["environments"] if item["label"] == "production")
     assert production["finding_count"] == 3
-    assert production["expired_waiver_count"] == 0
-    assert production["review_due_waiver_count"] == 0
+    assert production["expired_waiver_count"] == 1
+    assert production["review_due_waiver_count"] == 2
 
     platform = next(item for item in payload["owners"] if item["label"] == "platform")
     assert platform["finding_count"] == 2
@@ -70,8 +71,8 @@ def test_vpw067_governance_rollups_count_owner_service_environment_and_waiver_de
     assert waiver_debt["expiring_soon_count"] == 1
     assert waiver_debt["matched_finding_count"] == 3
     assert waiver_debt["accepted_finding_count"] == 2
-    assert waiver_debt["expired_finding_count"] == 0
-    assert waiver_debt["review_due_finding_count"] == 0
+    assert waiver_debt["expired_finding_count"] == 1
+    assert waiver_debt["review_due_finding_count"] == 2
     assert waiver_debt["owner_counts"] == {"legacy-risk": 1, "risk-team": 1}
     assert [item["status"] for item in waiver_debt["items"]] == ["expired", "review_due"]
     assert waiver_debt["items"][0]["matched_findings"] == 1
@@ -88,7 +89,21 @@ def _seed_vpw067_governance_graph(
     with Session(workbench_api_env.engine) as session:
         asset_repo = repositories.AssetRepository(session)
         finding_repo = repositories.FindingRepository(session)
+        run_repo = repositories.RunRepository(session)
+        evidence_repo = repositories.EvidenceRepository(session)
         waiver_repo = repositories.WaiverRepository(session)
+        snapshot = run_repo.get_or_create_provider_snapshot(
+            content_hash="sha256:vpw067-governance",
+            source_hashes_json={"provider_snapshot": "sha256:vpw067-governance"},
+            source_metadata_json={"locked_provider_data": True},
+        )
+        run = run_repo.create_analysis_run(
+            project_id=project_id,
+            provider_snapshot_id=snapshot.id,
+            input_type="generic-occurrence-csv",
+            filename="vpw067-governance.csv",
+            status=app_models.AnalysisRunStatus.COMPLETED,
+        )
         checkout_asset = asset_repo.upsert_asset(
             project_id=project_id,
             asset_key="payments-api",
@@ -110,7 +125,7 @@ def _seed_vpw067_governance_graph(
             criticality=app_models.AssetCriticality.HIGH,
         )
         component = create_component(session, repositories, name="openssl", version="3.0.0")
-        _create_rollup_finding(
+        first = _create_rollup_finding(
             app_models,
             finding_repo,
             project_id=project_id,
@@ -124,7 +139,7 @@ def _seed_vpw067_governance_graph(
             in_kev=True,
             attack_mapped=True,
         )
-        _create_rollup_finding(
+        second = _create_rollup_finding(
             app_models,
             finding_repo,
             project_id=project_id,
@@ -138,7 +153,7 @@ def _seed_vpw067_governance_graph(
             suppressed_by_vex=True,
             under_investigation=True,
         )
-        _create_rollup_finding(
+        third = _create_rollup_finding(
             app_models,
             finding_repo,
             project_id=project_id,
@@ -150,6 +165,80 @@ def _seed_vpw067_governance_graph(
             operational_rank=3,
             risk_score=30.0,
             status=app_models.FindingStatus.FIXED,
+        )
+        evidence_items = [
+            _rollup_finding_evidence(
+                app_models,
+                finding=first,
+                run_id=run.id,
+                project_id=project_id,
+                asset_key=checkout_asset.asset_key,
+                asset_name=checkout_asset.name or checkout_asset.asset_key,
+                component_name=component.name,
+                component_version=component.version or "",
+                priority=app_models.FindingPriority.CRITICAL,
+                priority_rank=1,
+                operational_rank=1,
+                risk_score=100.0,
+                status=app_models.FindingStatus.ACCEPTED,
+                in_kev=True,
+                attack_mapped=True,
+                waived=True,
+            ),
+            _rollup_finding_evidence(
+                app_models,
+                finding=second,
+                run_id=run.id,
+                project_id=project_id,
+                asset_key=checkout_asset.asset_key,
+                asset_name=checkout_asset.name or checkout_asset.asset_key,
+                component_name=component.name,
+                component_version=component.version or "",
+                priority=app_models.FindingPriority.HIGH,
+                priority_rank=2,
+                operational_rank=2,
+                risk_score=80.0,
+                status=app_models.FindingStatus.ACCEPTED,
+                suppressed_by_vex=True,
+                under_investigation=True,
+                waived=True,
+            ),
+            _rollup_finding_evidence(
+                app_models,
+                finding=third,
+                run_id=run.id,
+                project_id=project_id,
+                asset_key=identity_asset.asset_key,
+                asset_name=identity_asset.name or identity_asset.asset_key,
+                component_name=component.name,
+                component_version=component.version or "",
+                priority=app_models.FindingPriority.MEDIUM,
+                priority_rank=3,
+                operational_rank=3,
+                risk_score=30.0,
+                status=app_models.FindingStatus.FIXED,
+            ),
+        ]
+        analysis_evidence = evidence_repo.upsert_analysis_evidence(
+            project_id=project_id,
+            analysis_run_id=run.id,
+            provider_snapshot_id=snapshot.id,
+            evidence=_seed_analysis_evidence(
+                project_id=project_id,
+                run=run,
+                provider_snapshot_id=snapshot.id,
+                provider_snapshot_hash=snapshot.content_hash,
+                finding_count=len(evidence_items),
+                counts_by_priority={"Critical": 1, "High": 1, "Medium": 1},
+                locked_provider_data=True,
+                findings=evidence_items,
+            ),
+        )
+        evidence_repo.replace_finding_decision_evidence(
+            analysis_evidence_id=analysis_evidence.id,
+            project_id=project_id,
+            analysis_run_id=run.id,
+            evidence_items=evidence_items,
         )
         waiver_repo.create_project_waiver(
             project_id=project_id,
@@ -194,22 +283,75 @@ def _create_rollup_finding(
     attack_mapped: bool = False,
     suppressed_by_vex: bool = False,
     under_investigation: bool = False,
-) -> None:
+) -> Any:
     vulnerability = finding_repo.upsert_vulnerability(cve_id=cve_id, source_id=cve_id)
-    finding_repo.create_or_update_finding(
+    return finding_repo.create_or_update_finding(
         project_id=project_id,
         vulnerability_id=vulnerability.id,
         component_id=component_id,
         asset_id=asset_id,
         cve_id=cve_id,
         dedup_key=f"vpw067:{cve_id}",
+        status=status or app_models.FindingStatus.OPEN,
+    )
+
+
+def _rollup_finding_evidence(
+    app_models: Any,
+    *,
+    finding: Any,
+    run_id: uuid.UUID,
+    project_id: uuid.UUID,
+    asset_key: str,
+    asset_name: str,
+    component_name: str,
+    component_version: str,
+    priority: object,
+    priority_rank: int,
+    operational_rank: int,
+    risk_score: float,
+    status: object,
+    in_kev: bool = False,
+    attack_mapped: bool = False,
+    suppressed_by_vex: bool = False,
+    under_investigation: bool = False,
+    waived: bool = False,
+) -> Any:
+    evidence = _seed_finding_evidence(
+        finding=finding,
+        analysis_run_id=run_id,
+        project_id=project_id,
+        asset_key=asset_key,
+        asset_name=asset_name,
+        component_name=component_name,
+        component_version=component_version,
         priority=priority,
         priority_rank=priority_rank,
-        operational_rank=operational_rank,
         risk_score=risk_score,
-        status=status or app_models.FindingStatus.OPEN,
+        operational_rank=operational_rank,
+        epss=0.5,
+        cvss=8.0,
         in_kev=in_kev,
-        attack_mapped=attack_mapped,
-        suppressed_by_vex=suppressed_by_vex,
-        under_investigation=under_investigation,
+        rationale=f"{finding.cve_id} governance rollup fixture.",
+        action="Review governance evidence.",
+        confidence="high",
+        flags=[],
+    )
+    status_value = str(getattr(status, "value", status))
+    return evidence.model_copy(
+        update={
+            "status": status_value,
+            "attack_mapped": attack_mapped,
+            "suppressed_by_vex": suppressed_by_vex,
+            "under_investigation": under_investigation,
+            "waived": waived,
+            "governance": evidence.governance.model_copy(
+                update={
+                    "suppressed_by_vex": suppressed_by_vex,
+                    "under_investigation": under_investigation,
+                    "waived": waived,
+                }
+            ),
+            "attack": evidence.attack.model_copy(update={"mapped": attack_mapped}),
+        }
     )

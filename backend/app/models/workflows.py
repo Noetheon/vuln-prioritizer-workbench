@@ -66,7 +66,6 @@ class WorkflowRunBase(SQLModel):
     )
     title: str = Field(max_length=240)
     handler: str = Field(max_length=240)
-    execution_mode: str = Field(default="worker", max_length=40)
     idempotency_key: str | None = Field(default=None, max_length=160)
     queue_name: str = Field(default="default", max_length=80)
     priority: int = Field(default=0, sa_column=Column(Integer, nullable=False))
@@ -91,7 +90,7 @@ class WorkflowRunBase(SQLModel):
         default_factory=dict,
         sa_column=Column(JSON, nullable=False),
     )
-    result_json: dict[str, Any] = Field(
+    result_ref_json: dict[str, Any] = Field(
         default_factory=dict,
         sa_column=Column(JSON, nullable=False),
     )

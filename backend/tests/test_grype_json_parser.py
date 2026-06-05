@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
+from app.domain.engine.inputs.loader import InputLoader
+from app.domain.engine.inputs.parsers.scanner import parse_grype_json
 from app.importers import build_importer_registry
-from vuln_prioritizer.inputs.loader import InputLoader
-from vuln_prioritizer.inputs.parsers.scanner import parse_grype_json
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DIR = PROJECT_ROOT / "data" / "input_fixtures"

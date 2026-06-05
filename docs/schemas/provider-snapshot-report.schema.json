@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/provider-snapshot-report.schema.json",
+  "$id": "https://noetheon.github.io/vuln-prioritizer-workbench/schemas/provider-snapshot-report.schema.json",
   "title": "Workbench provider snapshot report",
   "description": "JSON contract for Workbench provider snapshot artifacts.",
   "type": "object",

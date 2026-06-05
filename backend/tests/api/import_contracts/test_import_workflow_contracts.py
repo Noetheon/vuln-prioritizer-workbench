@@ -133,7 +133,7 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     project_id = uuid.UUID(project["id"])
     content = "\n".join(
         [
-            "cve_id,asset_ref,component,version,purl,severity,owner,business_service,exposure",
+            "cve_id,target_ref,component_name,component_version,purl,raw_severity,owner,business_service,exposure",
             (
                 "CVE-2024-3094,build-host-1,xz,5.6.0,"
                 "pkg:apk/alpine/xz@5.6.0-r0,CRITICAL,team-platform,payments,public"
@@ -184,7 +184,7 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     assert {item["action"] for item in dedup_summary["decisions"]} == {"reused"}
     assert all(item["dedup_key"].startswith("vpw019:") for item in dedup_summary["decisions"])
     assert all(
-        item["asset_ref"] in {"build-host-1", "web-tier"} for item in dedup_summary["decisions"]
+        item["target_ref"] in {"build-host-1", "web-tier"} for item in dedup_summary["decisions"]
     )
 
     second_findings, second_occurrence_count = _finding_state(workbench_api_env, project_id)
@@ -247,7 +247,7 @@ def test_asset_rescore_marks_and_clears_decision_evidence_v2(
     project = create_project_via_api(workbench_api_env.client, headers)
     content = "\n".join(
         [
-            "cve_id,asset_ref,component,version,purl,severity,owner,business_service,exposure",
+            "cve_id,target_ref,component_name,component_version,purl,raw_severity,owner,business_service,exposure",
             (
                 "CVE-2024-3094,build-host-1,xz,5.6.0,"
                 "pkg:apk/alpine/xz@5.6.0-r0,CRITICAL,team-platform,payments,public"
@@ -329,7 +329,7 @@ def test_generic_import_persists_multi_fix_versions(
     project = create_project_via_api(workbench_api_env.client, headers)
     content = "\n".join(
         [
-            "cve_id,asset_ref,component,version,fix_versions",
+            "cve_id,target_ref,component_name,component_version,fix_versions",
             'CVE-2024-3094,build-host-1,xz,5.6.0,"5.6.1-r2|5.6.2"',
             "",
         ]
@@ -371,7 +371,7 @@ def test_same_batch_duplicate_bulk_import_reuses_finding_and_appends_occurrences
     ]
     content = "\n".join(
         [
-            "cve_id,asset_ref,severity,owner,business_service,exposure",
+            "cve_id,target_ref,raw_severity,owner,business_service,exposure",
             *duplicate_rows,
             "",
         ]
@@ -423,7 +423,7 @@ def test_same_cve_on_different_assets_creates_distinct_findings(
     project_id = uuid.UUID(project["id"])
     content = "\n".join(
         [
-            "cve_id,asset_ref,component,version,purl,severity",
+            "cve_id,target_ref,component_name,component_version,purl,raw_severity",
             "CVE-2024-3094,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL",
             "CVE-2024-3094,build-host-2,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL",
             "",
@@ -457,7 +457,7 @@ def test_same_cve_on_different_assets_creates_distinct_findings(
         "same_cve_can_create_distinct_asset_findings": True,
     }
     assert payload["dedup_summary"]["created_findings"] == 2
-    assert {item["asset_ref"] for item in payload["dedup_summary"]["decisions"]} == {
+    assert {item["target_ref"] for item in payload["dedup_summary"]["decisions"]} == {
         "build-host-1",
         "build-host-2",
     }
@@ -477,7 +477,7 @@ def test_same_cve_vex_status_remains_occurrence_scoped(
     project = create_project_via_api(workbench_api_env.client, headers)
     content = "\n".join(
         [
-            "cve_id,asset_ref,component,version,purl,severity",
+            "cve_id,target_ref,component_name,component_version,purl,raw_severity",
             (
                 "CVE-2021-44228,log4j-fixed,log4j-core,2.14.1,"
                 "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1,CRITICAL"
@@ -530,8 +530,8 @@ def test_same_cve_vex_status_remains_occurrence_scoped(
     assert by_asset["log4j-fixed"]["status"] == "fixed"
     assert by_asset["log4j-fixed"]["suppressed_by_vex"] is True
     assert by_asset["log4j-fixed"]["evidence"]["governance"]["vex_statuses"] == {"fixed": 1}
-    assert by_asset["log4j-fixed"]["evidence"]["occurrence_scope"]["asset_ref"] == ("log4j-fixed")
+    assert by_asset["log4j-fixed"]["evidence"]["occurrence_scope"]["target_ref"] == ("log4j-fixed")
     assert by_asset["log4j-open"]["status"] == "open"
     assert by_asset["log4j-open"]["suppressed_by_vex"] is False
     assert by_asset["log4j-open"]["evidence"]["governance"]["vex_statuses"] == {}
-    assert by_asset["log4j-open"]["evidence"]["occurrence_scope"]["asset_ref"] == ("log4j-open")
+    assert by_asset["log4j-open"]["evidence"]["occurrence_scope"]["target_ref"] == ("log4j-open")

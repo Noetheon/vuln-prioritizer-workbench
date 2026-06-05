@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import Settings
+from app.domain.engine.security_redaction import redact_value
 from app.models import Report, ReportPublic, WorkflowRunPublic
-from vuln_prioritizer.security_redaction import redact_value
 
 
 class ReportArtifactNotFoundError(RuntimeError):

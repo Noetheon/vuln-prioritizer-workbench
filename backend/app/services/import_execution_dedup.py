@@ -15,16 +15,16 @@ def _dedup_key_parts(project_id: uuid.UUID, occurrence: NormalizedOccurrence) ->
     source_id = _normalized_identity_value(
         _string_evidence(occurrence.raw_evidence, "source_id")
         or _string_evidence(occurrence.raw_evidence, "vulnerability_id")
-        or occurrence.cve
+        or occurrence.cve_id
     )
     purl = _normalized_identity_value(_string_evidence(occurrence.raw_evidence, "purl"))
     component_identity = purl
-    if component_identity == "__none__" and occurrence.component:
+    if component_identity == "__none__" and occurrence.component_name:
         component_identity = "|".join(
             [
                 "component",
-                _normalized_identity_value(occurrence.component),
-                _normalized_identity_value(occurrence.version),
+                _normalized_identity_value(occurrence.component_name),
+                _normalized_identity_value(occurrence.component_version),
                 _normalized_identity_value(
                     _string_evidence(occurrence.raw_evidence, "package_type")
                 ),
@@ -34,7 +34,7 @@ def _dedup_key_parts(project_id: uuid.UUID, occurrence: NormalizedOccurrence) ->
         "project_id": str(project_id),
         "source_id": source_id,
         "component_identity": component_identity,
-        "asset_ref": _normalized_identity_value(occurrence.asset_ref),
+        "target_ref": _normalized_identity_value(occurrence.target_ref),
     }
 
 

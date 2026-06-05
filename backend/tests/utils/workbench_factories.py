@@ -155,7 +155,7 @@ def workbench_finding(
     vulnerability_id: uuid.UUID | None = None,
     **overrides: Any,
 ) -> app_models.Finding:
-    """Build an unsaved prioritized finding."""
+    """Build an unsaved Workbench finding identity row."""
 
     resolved_project_id = project_id or (
         project.id if project is not None else workbench_id("project", index)
@@ -175,19 +175,6 @@ def workbench_finding(
         "cve_id": cve_id,
         "dedup_key": f"{resolved_project_id}:{cve_id}:{resolved_asset_id}:{resolved_component_id}",
         "status": app_models.FindingStatus.OPEN,
-        "priority": app_models.FindingPriority.CRITICAL,
-        "priority_rank": 1,
-        "risk_score": 99.0,
-        "operational_rank": 1,
-        "in_kev": True,
-        "epss": 0.9442,
-        "cvss_base_score": 10.0,
-        "attack_mapped": True,
-        "recommended_action": "Patch affected component.",
-        "rationale": "Fixture combines KEV, high EPSS, and internet-facing exposure.",
-        "explanation_json": {"signals": ["kev", "epss", "internet-facing"]},
-        "data_quality_json": {"fixture": True},
-        "evidence_json": {"input": "offline-fixture"},
         "first_seen_at": _time(index),
         "last_seen_at": _time(index),
         "created_at": _time(index),

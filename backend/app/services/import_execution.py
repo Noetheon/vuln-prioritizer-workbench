@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any
 
 from sqlmodel import Session
 
@@ -81,7 +81,6 @@ class _ImportFailureContext:
     job_history: list[dict[str, str]]
     ignored_lines: int
     input_type: str
-    execution_mode: str
 
 
 async def execute_project_import_upload(
@@ -93,7 +92,6 @@ async def execute_project_import_upload(
     upload: ProjectImportUploadRequest,
     defer_execution: bool = False,
     existing_run_id: uuid.UUID | None = None,
-    execution_mode: Literal["worker"] = "worker",
     workflow_context: WorkflowExecutionContext | None = None,
 ) -> AnalysisRun:
     """Securely upload, normalize, and persist one Workbench import file."""
@@ -105,7 +103,6 @@ async def execute_project_import_upload(
         project_id=project_id,
         prepared=prepared,
         existing_run_id=existing_run_id,
-        execution_mode=execution_mode,
     )
     run = resolved_run.run
     workflow = workflow_repo.ensure_analysis_workflow(
@@ -115,7 +112,6 @@ async def execute_project_import_upload(
         title=f"Import {prepared.input_type}",
         handler="app.services.import_execution.execute_project_import_upload",
         status=_workflow_status_for_run(run.status),
-        execution_mode=execution_mode,
         current_stage="queued",
         metadata_json={
             "input_type": prepared.input_type,
@@ -149,7 +145,6 @@ async def execute_project_import_upload(
         resolved_run=resolved_run,
         prepared=prepared,
         artifacts=artifacts,
-        execution_mode=execution_mode,
     )
     context.output(result=initial_result_payload)
     if defer_execution:
@@ -167,7 +162,6 @@ async def execute_project_import_upload(
         run,
         job_id=resolved_run.job_id,
         job_history=resolved_run.job_history,
-        execution_mode=execution_mode,
     )
     session.flush()
     failure_context = _ImportFailureContext(
@@ -180,7 +174,6 @@ async def execute_project_import_upload(
         job_history=job_history,
         ignored_lines=prepared.ignored_lines,
         input_type=prepared.input_type,
-        execution_mode=execution_mode,
     )
 
     try:
@@ -219,7 +212,6 @@ async def execute_project_import_upload(
                         *failure_context.job_history,
                         _job_status_entry("failed"),
                     ],
-                    execution_mode=failure_context.execution_mode,
                 ),
             },
             terminal_code="parse_failed",
@@ -236,7 +228,6 @@ async def execute_project_import_upload(
             input_type=failure_context.input_type,
             filename=prepared.stored_filename,
             exc=exc,
-            execution_mode=failure_context.execution_mode,
         )
 
     asset_context_summary: dict[str, Any] | None = None
@@ -279,7 +270,6 @@ async def execute_project_import_upload(
                             *failure_context.job_history,
                             _job_status_entry("failed"),
                         ],
-                        execution_mode=failure_context.execution_mode,
                     ),
                 },
                 terminal_code="sidecar_parse_failed",
@@ -299,7 +289,6 @@ async def execute_project_import_upload(
                 filename=prepared.asset_context.stored_filename,
                 stage="asset_context_parse",
                 exc=exc,
-                execution_mode=failure_context.execution_mode,
             )
 
     vex_summary: dict[str, Any] | None = None
@@ -342,7 +331,6 @@ async def execute_project_import_upload(
                             *failure_context.job_history,
                             _job_status_entry("failed"),
                         ],
-                        execution_mode=failure_context.execution_mode,
                     ),
                 },
                 terminal_code="sidecar_parse_failed",
@@ -362,7 +350,6 @@ async def execute_project_import_upload(
                 filename=prepared.vex.stored_filename,
                 stage="vex_parse",
                 exc=exc,
-                execution_mode=failure_context.execution_mode,
             )
 
     try:
@@ -419,7 +406,6 @@ async def execute_project_import_upload(
                         *failure_context.job_history,
                         _job_status_entry("failed"),
                     ],
-                    execution_mode=failure_context.execution_mode,
                 ),
             },
             terminal_code="analysis_failed",
@@ -435,7 +421,6 @@ async def execute_project_import_upload(
             ignored_lines=failure_context.ignored_lines,
             input_type=failure_context.input_type,
             exc=WorkbenchAnalysisError(str(exc)),
-            execution_mode=failure_context.execution_mode,
         )
     except WorkbenchAnalysisError as exc:
         analysis_error = {
@@ -463,7 +448,6 @@ async def execute_project_import_upload(
                         *failure_context.job_history,
                         _job_status_entry("failed"),
                     ],
-                    execution_mode=failure_context.execution_mode,
                 ),
             },
             terminal_code="analysis_failed",
@@ -479,7 +463,6 @@ async def execute_project_import_upload(
             ignored_lines=failure_context.ignored_lines,
             input_type=failure_context.input_type,
             exc=exc,
-            execution_mode=failure_context.execution_mode,
         )
 
     context.stage(

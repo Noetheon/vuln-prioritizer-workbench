@@ -71,7 +71,7 @@ material needed for explain/report projections.
 ## Workflow Result Boundary
 
 Successful import workflows write only a reference payload to
-`workflow_run.result_json`:
+`workflow_run.result_ref_json`:
 
 ```json
 {

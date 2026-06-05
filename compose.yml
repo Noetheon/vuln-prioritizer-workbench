@@ -65,7 +65,7 @@ services:
       DEMO_PROVIDER_SNAPSHOT_ENABLED: ${DEMO_PROVIDER_SNAPSHOT_ENABLED:-false}
       DEMO_WORKSPACE_ENABLED: ${DEMO_WORKSPACE_ENABLED:-false}
       NVD_API_KEY: ${NVD_API_KEY:-}
-      VULN_PRIORITIZER_NVD_API_KEY_ENV: ${VULN_PRIORITIZER_NVD_API_KEY_ENV:-NVD_API_KEY}
+      WORKBENCH_NVD_API_KEY_ENV: ${WORKBENCH_NVD_API_KEY_ENV:-NVD_API_KEY}
     volumes:
       - workbench-import-uploads:/app/workbench-import-uploads
       - workbench-reports:/app/workbench-reports
@@ -143,7 +143,7 @@ services:
       DEMO_PROVIDER_SNAPSHOT_ENABLED: ${DEMO_PROVIDER_SNAPSHOT_ENABLED:-false}
       DEMO_WORKSPACE_ENABLED: ${DEMO_WORKSPACE_ENABLED:-false}
       NVD_API_KEY: ${NVD_API_KEY:-}
-      VULN_PRIORITIZER_NVD_API_KEY_ENV: ${VULN_PRIORITIZER_NVD_API_KEY_ENV:-NVD_API_KEY}
+      WORKBENCH_NVD_API_KEY_ENV: ${WORKBENCH_NVD_API_KEY_ENV:-NVD_API_KEY}
     volumes:
       - workbench-import-uploads:/app/workbench-import-uploads
       - workbench-reports:/app/workbench-reports

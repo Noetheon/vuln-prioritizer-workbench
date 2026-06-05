@@ -59,43 +59,6 @@ def queue_run_report(
             attack_filter=payload.attack_filter,
         )
     except ReportGenerationError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    record_audit_event(
-        session,
-        action="report.job.create",
-        resource_type="analysis_run",
-        resource_id=run.id,
-        actor=local_actor,
-        project_id=run.project_id,
-        detail={"format": payload.format, "run_id": str(run.id)},
-    )
-    session.commit()
-    session.refresh(workflow)
-    repository = WorkflowRepository(session)
-    return workflow_run_public(workflow, latest_event=repository.latest_event(workflow.id))
-
-
-@router.post("/runs/{run_id}/reports", response_model=WorkflowRunPublic, deprecated=True)
-def create_run_report(
-    run_id: uuid.UUID,
-    payload: ReportCreate,
-    request: Request,
-    session: SessionDep,
-    local_actor: LocalActor,
-) -> WorkflowRunPublic:
-    """Deprecated compatibility route that queues the same worker-first report job."""
-    run = RunRepository(session).get_analysis_run(run_id)
-    if run is None:
-        raise HTTPException(status_code=404, detail="Analysis run not found")
-    project = require_project(session, run.project_id)
-    try:
-        workflow = ReportService(session, workbench_settings(request)).enqueue_report_generation(
-            run=run,
-            project=project,
-            report_format=payload.format,
-            attack_filter=payload.attack_filter,
-        )
-    except ReportGenerationError as exc:
         record_audit_event(
             session,
             action="report.job.create",
@@ -104,11 +67,7 @@ def create_run_report(
             status="failure",
             actor=local_actor,
             project_id=run.project_id,
-            detail={
-                "format": payload.format,
-                "run_id": str(run.id),
-                "reason": str(exc),
-            },
+            detail={"format": payload.format, "run_id": str(run.id), "error": str(exc)},
         )
         session.commit()
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -119,7 +78,7 @@ def create_run_report(
         resource_id=run.id,
         actor=local_actor,
         project_id=run.project_id,
-        detail={"format": payload.format, "run_id": str(run.id), "deprecated_route": True},
+        detail={"format": payload.format, "run_id": str(run.id)},
     )
     session.commit()
     session.refresh(workflow)

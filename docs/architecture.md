@@ -22,11 +22,11 @@ the active local product surface:
   manually edited.
 - `frontend/src/api-client.ts`: manual wrapper and integration layer over the
   generated client.
-- `backend/src/vuln_prioritizer/**`: retained domain implementation used by
-  shared parsing, provider, scoring, SARIF contract, and redaction logic.
-- Python package boundary: `backend/pyproject.toml` intentionally includes both
-  `vuln_prioritizer*` and `app*`, so the backend distribution ships the shared
-  domain package and the active Workbench FastAPI app.
+- `backend/app/domain/engine/**`: internal Workbench engine implementation used
+  by parsing, provider, scoring, SARIF contract, and redaction logic.
+- Python package boundary: `backend/pyproject.toml` intentionally includes only
+  `app*`, so the backend distribution ships one Workbench package with the
+  FastAPI app and internal engine in the same namespace.
 
 The frontend and backend communicate through the generated API client. UI
 component structure, route extraction, CSS organization, and VPW design-system
@@ -39,11 +39,11 @@ quickstart, Playwright backend startup, and OpenAPI client generation must point
 to `app.main:app` or import `app.main.app`. The generated browser API boundary is
 `frontend/src/client/**`; `frontend/src/api-client.ts` is manual wrapper code.
 
-`backend/src/vuln_prioritizer/**` remains the retained domain implementation.
-The active Workbench backend may import neutral, framework-light domain helpers
-from this package, such as input normalization, provider clients, scoring,
-SARIF contract helpers, and redaction. Workbench-specific report rendering and
-evidence bundle verification belong in `backend/app/services`.
+`backend/app/domain/engine/**` is the internal Workbench engine namespace. The
+active backend may import framework-light helpers from this package, such as
+input normalization, provider clients, scoring, SARIF contract helpers, and
+redaction. Workbench-specific report rendering and evidence bundle verification
+belong in `backend/app/services`.
 
 Backend modules should keep HTTP, orchestration, projection, and persistence
 separate. Findings and asset routes are thin HTTP boundaries over repository
@@ -52,17 +52,16 @@ input, locking, snapshot, and error modules behind a small orchestrator. Domain
 analysis keeps request orchestration in `analysis_pipeline`, finding construction
 in `analysis_findings`, explain builders in `analysis_explain`, provider
 data-quality projection in `analysis_quality`, and provider snapshot metadata
-helpers in `analysis_snapshot`, with compatibility facades kept for stable
-internal imports. Domain enrichment keeps provider orchestration in
+helpers in `analysis_snapshot`. Domain enrichment keeps provider orchestration in
 `enrichment`, while snapshot replay helpers, provider data-quality flags, and
 result/diagnostic merging live in focused enrichment helper modules. Domain
 prioritization keeps finding assembly in `prioritization`, with ATT&CK context
 projection, operational rank/reason logic, and sort keys in dedicated helper
 modules. Finding persistence keeps mutation and lookup methods in `findings`,
-while page filters, summary counts, governance rollups, and ATT&CK summary
-projections live in focused query helper modules. ATT&CK dashboard summary
-assembly and Navigator layer export are separate services behind stable service
-exports. ATT&CK models keep the `app.models.attack` facade stable while catalog,
+while page filters and ATT&CK summary projections live in focused query helpers;
+decision summaries and governance rollups come from the evidence-first read
+model. ATT&CK dashboard summary assembly and Navigator layer export are separate
+services behind stable service exports. ATT&CK models keep the `app.models.attack` facade stable while catalog,
 STIX snapshot, finding-context, and summary projection models live in dedicated
 modules. Import execution keeps its public stage facade stable while upload
 validation, run/job state transitions, and upload storage live in focused stage
@@ -89,7 +88,7 @@ reports and detail views hydrate those decisions from
 `finding_decision_evidence`. Run summaries, finding detail, dashboards, waiver
 rollups, governance views, GitHub issue previews, and report exports project
 through the central evidence-first read model in `decision_projection.py`.
-`workflow_run.result_json` remains an internal lifecycle/ref payload, not the
+`workflow_run.result_ref_json` remains an internal lifecycle/ref payload, not the
 source of product truth.
 
 See [Decision/Evidence Kernel](architecture/decision-evidence-kernel.md) for

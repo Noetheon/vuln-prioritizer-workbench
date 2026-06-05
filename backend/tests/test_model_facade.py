@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from vuln_prioritizer import (
+from app.domain.engine import (
     model_base,
     models,
     models_artifacts,

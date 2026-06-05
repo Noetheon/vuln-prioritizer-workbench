@@ -11,9 +11,9 @@ from fastapi.encoders import jsonable_encoder
 from sqlmodel import Session
 
 from app.core.local_actor import LocalWorkbenchActor
+from app.domain.engine.security_redaction import redact_value
 from app.models import AuditEvent, AuditEventStatus
 from app.repositories import AuditEventRepository
-from vuln_prioritizer.security_redaction import redact_value
 
 _MAX_AUDIT_DETAIL_JSON_BYTES = 4096
 _MAX_AUDIT_STRING_CHARS = 1024

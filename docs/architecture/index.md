@@ -2,10 +2,10 @@
 
 ## Scope
 
-`vuln-prioritizer` is a local Workbench for prioritizing known CVEs. It is not
+`vuln-prioritizer-workbench` is a local Workbench for prioritizing known CVEs. It is not
 a scanner, does not discover vulnerabilities on its own, and does not perform
 heuristic or LLM-generated CVE-to-ATT&CK mapping. Legacy CLI entrypoints and
-command modules have been removed; the retained `backend/src/vuln_prioritizer`
+command modules have been removed; the retained `backend/app/domain/engine`
 code is shared domain logic used by the Workbench.
 
 The current runtime architecture keeps one invariant across all supported inputs:
@@ -76,7 +76,7 @@ the current local-first active scope.
 
 ### Input normalization
 
-`backend/src/vuln_prioritizer/inputs/loader.py` is the canonical input entry point.
+`backend/app/domain/engine/inputs/loader.py` is the canonical input entry point.
 
 The Workbench import boundary is documented in
 [vpw-013-importer-contract.md](vpw-013-importer-contract.md). It defines the
@@ -96,19 +96,19 @@ Supported input families currently normalize into the same occurrence model:
 - SBOM JSON
 - advisory/export JSON
 
-The old `parser.py` compatibility facade under `backend/src/vuln_prioritizer`
+The old `parser.py` compatibility facade under `backend/app/domain/engine`
 has been removed. Active Workbench and domain code should use `InputLoader`, importer
 adapters, or the focused parser modules under
-`backend/src/vuln_prioritizer/inputs/parsers/`.
+`backend/app/domain/engine/inputs/parsers/`.
 
 ### Provenance, asset context, and VEX
 
-`backend/src/vuln_prioritizer/services/contextualization.py` aggregates occurrence-level data into per-CVE provenance and context.
+`backend/app/domain/engine/services/contextualization.py` aggregates occurrence-level data into per-CVE provenance and context.
 
 Important current rules:
 
 - asset context is occurrence-based, keeps `target_kind` exact, and supports deterministic
-  `target_ref`/`asset_ref` `exact`, `contains`, `regex`, and compatibility `glob`
+  `target_ref` `exact`, `contains`, `regex`, and compatibility `glob`
   rules with precedence; see [Asset Context CSV](../asset-context-csv.md)
 - VEX suppression is evaluated at occurrence level with deterministic specificity-based matching
 - `suppressed_by_vex` is true only when all known occurrences are suppressed
@@ -122,7 +122,7 @@ This layer produces:
 
 ### Enrichment providers
 
-`backend/src/vuln_prioritizer/services/enrichment.py` and the provider modules fetch external or local enrichment data.
+`backend/app/domain/engine/services/enrichment.py` and the provider modules fetch external or local enrichment data.
 
 Current data sources:
 
@@ -138,7 +138,7 @@ The parser/provider extension SDK is a static local contract. It documents typed
 
 ### Prioritization
 
-`backend/src/vuln_prioritizer/services/prioritization.py` builds the primary finding set.
+`backend/app/domain/engine/services/prioritization.py` builds the primary finding set.
 
 The base `priority_label` is intentionally rule-based and transparent:
 
@@ -157,10 +157,10 @@ Current architectural boundary:
 
 ### Reporting
 
-The old `reporter.py` facade under `backend/src/vuln_prioritizer` has been
+The old `reporter.py` facade under `backend/app/domain/engine` has been
 removed. Active report generation is owned by the Workbench services under
 `backend/app/services/report_*` plus framework-neutral renderers under
-`backend/src/vuln_prioritizer/reporting_*`.
+`backend/app/domain/engine/reporting_*`.
 
 Current output families:
 

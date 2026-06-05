@@ -421,19 +421,6 @@ def upgrade() -> None:
         sa.Column("cve_id", sqlmodel.sql.sqltypes.AutoString(length=64), nullable=False),
         sa.Column("dedup_key", sqlmodel.sql.sqltypes.AutoString(length=512), nullable=False),
         sa.Column("status", sa.String(length=40), nullable=False),
-        sa.Column("priority", sa.String(length=40), nullable=False),
-        sa.Column("priority_rank", sa.Integer(), nullable=False),
-        sa.Column("risk_score", sa.Float(), nullable=True),
-        sa.Column("operational_rank", sa.Integer(), nullable=False),
-        sa.Column("in_kev", sa.Boolean(), nullable=False),
-        sa.Column("epss", sa.Float(), nullable=True),
-        sa.Column("cvss_base_score", sa.Float(), nullable=True),
-        sa.Column("attack_mapped", sa.Boolean(), nullable=False),
-        sa.Column("suppressed_by_vex", sa.Boolean(), nullable=False),
-        sa.Column("under_investigation", sa.Boolean(), nullable=False),
-        sa.Column("waived", sa.Boolean(), nullable=False),
-        sa.Column("recommended_action", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-        sa.Column("rationale", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("project_id", sa.Uuid(), nullable=False),
         sa.Column("vulnerability_id", sa.Uuid(), nullable=False),
@@ -455,9 +442,6 @@ def upgrade() -> None:
     op.create_index("ix_finding_cve_id", "finding", ["cve_id"], unique=False)
     op.create_index("ix_finding_project_asset", "finding", ["project_id", "asset_id"], unique=False)
     op.create_index(op.f("ix_finding_project_id"), "finding", ["project_id"], unique=False)
-    op.create_index(
-        "ix_finding_project_priority", "finding", ["project_id", "priority_rank"], unique=False
-    )
     op.create_index("ix_finding_project_status", "finding", ["project_id", "status"], unique=False)
     op.create_index(
         "ix_finding_project_vulnerability",
@@ -612,7 +596,6 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=40), nullable=False),
         sa.Column("title", sqlmodel.sql.sqltypes.AutoString(length=240), nullable=False),
         sa.Column("handler", sqlmodel.sql.sqltypes.AutoString(length=240), nullable=False),
-        sa.Column("execution_mode", sqlmodel.sql.sqltypes.AutoString(length=40), nullable=False),
         sa.Column("idempotency_key", sqlmodel.sql.sqltypes.AutoString(length=160), nullable=True),
         sa.Column("queue_name", sqlmodel.sql.sqltypes.AutoString(length=80), nullable=False),
         sa.Column("priority", sa.Integer(), nullable=False),
@@ -628,7 +611,7 @@ def upgrade() -> None:
         sa.Column("error_details_json", sa.JSON(), nullable=False),
         sa.Column("metadata_json", sa.JSON(), nullable=False),
         sa.Column("payload_json", sa.JSON(), nullable=False),
-        sa.Column("result_json", sa.JSON(), nullable=False),
+        sa.Column("result_ref_json", sa.JSON(), nullable=False),
         sa.Column("diagnostics_json", sa.JSON(), nullable=False),
         sa.Column("artifact_refs_json", sa.JSON(), nullable=False),
         sa.Column("terminal_code", sqlmodel.sql.sqltypes.AutoString(length=80), nullable=True),
@@ -945,7 +928,6 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_finding_vulnerability_id"), table_name="finding")
     op.drop_index("ix_finding_project_vulnerability", table_name="finding")
     op.drop_index("ix_finding_project_status", table_name="finding")
-    op.drop_index("ix_finding_project_priority", table_name="finding")
     op.drop_index(op.f("ix_finding_project_id"), table_name="finding")
     op.drop_index("ix_finding_project_asset", table_name="finding")
     op.drop_index("ix_finding_cve_id", table_name="finding")

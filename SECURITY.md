@@ -2,7 +2,7 @@
 
 ## Supported Use
 
-`vuln-prioritizer` is a defensive local self-hosted Workbench for known CVEs
+`vuln-prioritizer-workbench` is a defensive local self-hosted Workbench for known CVEs
 and imported findings. It is not a scanning engine,
 exploit framework, or asset discovery platform.
 

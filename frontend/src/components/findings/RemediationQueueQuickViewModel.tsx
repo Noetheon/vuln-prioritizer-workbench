@@ -26,7 +26,6 @@ export function epssText(finding: FindingPublic | FindingDetailPublic) {
 
 export function occurrenceAssetLabel(occurrence: FindingOccurrenceRow) {
   return (
-    stringValue(occurrence.asset_ref) ??
     stringValue(occurrence.target_ref) ??
     stringValue(occurrence.raw_reference) ??
     "Affected occurrence"

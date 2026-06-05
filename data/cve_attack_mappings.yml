@@ -1,5 +1,5 @@
 metadata:
-  mapping_framework: vuln-prioritizer-curated-attack
+  mapping_framework: vuln-prioritizer-workbench-curated-attack
   mapping_framework_version: "1.0"
   mapping_version: "2026-04-29"
   attack_version: "16.1"

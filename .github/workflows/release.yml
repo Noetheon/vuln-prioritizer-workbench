@@ -234,7 +234,7 @@ jobs:
           mkdir -p "$artifact_root"
           python -m pip install --upgrade pip
           for attempt in 1 2 3 4 5; do
-            if python -m pip install --force-reinstall "vuln-prioritizer==${version}"; then
+            if python -m pip install --force-reinstall "vuln-prioritizer-workbench==${version}"; then
               python scripts/workbench_wheel_smoke.py "$artifact_root/workbench-pypi-smoke.json"
               exit 0
             fi

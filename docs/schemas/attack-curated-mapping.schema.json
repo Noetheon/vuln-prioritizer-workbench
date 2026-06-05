@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/attack-curated-mapping.schema.json",
-  "title": "vuln-prioritizer curated CVE-to-ATT&CK mapping artifact",
+  "$id": "https://noetheon.github.io/vuln-prioritizer-workbench/schemas/attack-curated-mapping.schema.json",
+  "title": "vuln-prioritizer-workbench curated CVE-to-ATT&CK mapping artifact",
   "description": "Schema for local curated ATT&CK mapping artifacts. These mappings are defensive review evidence only and must not contain exploit procedures.",
   "type": "object",
   "additionalProperties": true,

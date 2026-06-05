@@ -2,7 +2,7 @@
 
 ## Goal
 
-`vuln-prioritizer` prioritizes known CVEs for operational vulnerability
+`vuln-prioritizer-workbench` prioritizes known CVEs for operational vulnerability
 management. The current product is intentionally small, local-first, and
 explicit about methodology, with the FastAPI/React Workbench as the active user
 surface.

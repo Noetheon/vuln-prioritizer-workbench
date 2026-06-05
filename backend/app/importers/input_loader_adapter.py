@@ -8,15 +8,15 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+from app.domain.engine.inputs.loader import InputLoader
+from app.domain.engine.inputs.parsers import parse_cve_list, parse_generic_occurrence_csv
+from app.domain.engine.models_input import InputOccurrence, ParsedInput
 from app.importers.contracts import (
     ImporterParseError,
     ImporterValidationError,
     InputPayload,
     NormalizedOccurrence,
 )
-from vuln_prioritizer.inputs.loader import InputLoader
-from vuln_prioritizer.inputs.parsers import parse_cve_list, parse_generic_occurrence_csv
-from vuln_prioritizer.models_input import InputOccurrence, ParsedInput
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,7 +33,7 @@ def parse_payload_with_input_loader(
     *,
     default_suffix: str,
     filename: str | None = None,
-    prefer_asset_id_as_asset_ref: bool = True,
+    prefer_asset_id_as_target_ref: bool = True,
     strict_invalid_cve_warnings: bool = False,
 ) -> list[NormalizedOccurrence]:
     """Parse an upload payload through the core InputLoader parser registry."""
@@ -42,7 +42,7 @@ def parse_payload_with_input_loader(
         payload,
         default_suffix=default_suffix,
         filename=filename,
-        prefer_asset_id_as_asset_ref=prefer_asset_id_as_asset_ref,
+        prefer_asset_id_as_target_ref=prefer_asset_id_as_target_ref,
         strict_invalid_cve_warnings=strict_invalid_cve_warnings,
     ).occurrences
 
@@ -53,7 +53,7 @@ def parse_payload_with_input_loader_result(
     *,
     default_suffix: str,
     filename: str | None = None,
-    prefer_asset_id_as_asset_ref: bool = True,
+    prefer_asset_id_as_target_ref: bool = True,
     strict_invalid_cve_warnings: bool = False,
 ) -> ParsedWorkbenchInput:
     """Parse an upload once and keep both Workbench and core parsed forms."""
@@ -81,7 +81,7 @@ def parse_payload_with_input_loader_result(
             _normalize_occurrence(
                 item,
                 input_type=input_type,
-                prefer_asset_id_as_asset_ref=prefer_asset_id_as_asset_ref,
+                prefer_asset_id_as_target_ref=prefer_asset_id_as_target_ref,
             )
             for item in parsed_input.occurrences
         ],
@@ -138,7 +138,7 @@ def _raise_invalid_cve_warnings(input_type: str, warnings: list[str]) -> None:
 
 def _workbench_parse_error(input_type: str, message: str) -> str:
     """Workbench parse error function."""
-    if input_type == "cve-list" and "must contain a 'cve_id' or 'cve' column" in message:
+    if input_type == "cve-list" and "must contain a cve_id column" in message:
         return "cve-list CSV input must contain a cve_id column."
     row_shape = re.fullmatch(
         r"(?P<name>.+) row at line (?P<line>\d+) has (?P<got>\d+) columns; "
@@ -159,7 +159,7 @@ def _normalize_occurrence(
     occurrence: InputOccurrence,
     *,
     input_type: str,
-    prefer_asset_id_as_asset_ref: bool,
+    prefer_asset_id_as_target_ref: bool,
 ) -> NormalizedOccurrence:
     """Normalize occurrence function."""
     raw_evidence = dict(occurrence.raw_evidence)
@@ -168,12 +168,12 @@ def _normalize_occurrence(
     elif occurrence.fix_versions and not raw_evidence.get("fix_versions"):
         raw_evidence["fix_versions"] = list(occurrence.fix_versions)
     return NormalizedOccurrence(
-        cve=occurrence.cve_id,
-        component=occurrence.component_name,
-        version=occurrence.component_version,
-        asset_ref=_asset_ref(
+        cve_id=occurrence.cve_id,
+        component_name=occurrence.component_name,
+        component_version=occurrence.component_version,
+        target_ref=_target_ref(
             occurrence,
-            prefer_asset_id_as_asset_ref=prefer_asset_id_as_asset_ref,
+            prefer_asset_id_as_target_ref=prefer_asset_id_as_target_ref,
         ),
         source=occurrence.source_format,
         fix_version=occurrence.fix_versions[0] if occurrence.fix_versions else None,
@@ -181,13 +181,13 @@ def _normalize_occurrence(
     )
 
 
-def _asset_ref(
+def _target_ref(
     occurrence: InputOccurrence,
     *,
-    prefer_asset_id_as_asset_ref: bool,
+    prefer_asset_id_as_target_ref: bool,
 ) -> str | None:
-    """Asset ref function."""
-    if prefer_asset_id_as_asset_ref:
+    """Return the canonical target reference for importer DTOs."""
+    if prefer_asset_id_as_target_ref:
         return occurrence.asset_id or occurrence.target_ref
     return occurrence.target_ref
 

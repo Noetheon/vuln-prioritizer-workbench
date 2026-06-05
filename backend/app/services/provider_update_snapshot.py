@@ -10,12 +10,9 @@ from typing import Any
 from pydantic import ValidationError
 
 from app.core.config import Settings
-from app.repositories import RunRepository
-from app.services.provider_update_constants import VALID_PROVIDER_SOURCES
-from app.services.provider_update_errors import ProviderUpdateRefreshError
-from vuln_prioritizer.cache import FileCache
-from vuln_prioritizer.config import DEFAULT_CACHE_TTL_HOURS, DEFAULT_NVD_API_KEY_ENV
-from vuln_prioritizer.models import (
+from app.domain.engine.cache import FileCache
+from app.domain.engine.config import DEFAULT_CACHE_TTL_HOURS, DEFAULT_NVD_API_KEY_ENV
+from app.domain.engine.models import (
     EpssData,
     KevData,
     NvdData,
@@ -23,15 +20,18 @@ from vuln_prioritizer.models import (
     ProviderSnapshotMetadata,
     ProviderSnapshotReport,
 )
-from vuln_prioritizer.provider_snapshot import (
+from app.domain.engine.provider_snapshot import (
     generate_provider_snapshot_json,
     load_provider_snapshot,
     snapshot_items_by_cve,
 )
-from vuln_prioritizer.providers.epss import EpssProvider
-from vuln_prioritizer.providers.kev import KevProvider
-from vuln_prioritizer.providers.nvd import NvdProvider
-from vuln_prioritizer.utils import iso_utc_now
+from app.domain.engine.providers.epss import EpssProvider
+from app.domain.engine.providers.kev import KevProvider
+from app.domain.engine.providers.nvd import NvdProvider
+from app.domain.engine.utils import iso_utc_now
+from app.repositories import RunRepository
+from app.services.provider_update_constants import VALID_PROVIDER_SOURCES
+from app.services.provider_update_errors import ProviderUpdateRefreshError
 
 
 def _write_provider_snapshot(

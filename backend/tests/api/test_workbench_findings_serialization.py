@@ -99,7 +99,6 @@ def test_finding_occurrence_public_prefers_evidence_and_falls_back_to_model_cont
             "fix_versions": "5.6.3",
             "target_kind": "container",
             "target_ref": "image:demo",
-            "asset_ref": "asset-from-evidence",
             "asset_owner": "evidence-owner",
             "business_service": "payments",
             "asset_exposure": "internal",
@@ -125,7 +124,6 @@ def test_finding_occurrence_public_prefers_evidence_and_falls_back_to_model_cont
     assert row.purl == "pkg:deb/liblzma@5.6.1"
     assert row.fix_versions == ["5.6.3"]
     assert row.target_ref == "image:demo"
-    assert row.asset_ref == "asset-from-evidence"
     assert row.asset_owner == "evidence-owner"
     assert row.asset_business_service == "payments"
     assert row.asset_exposure == "internal"
@@ -149,7 +147,7 @@ def test_finding_occurrence_public_prefers_evidence_and_falls_back_to_model_cont
     assert fallback.component_version == "5.6.0"
     assert fallback.purl == "pkg:rpm/xz-utils@5.6.0"
     assert fallback.fix_versions == ["5.6.4"]
-    assert fallback.asset_ref == "asset-prod"
+    assert fallback.target_ref == "host-prod-1"
     assert fallback.asset_owner == "platform"
     assert fallback.asset_business_service == "identity"
     assert fallback.asset_exposure == "internet-facing"

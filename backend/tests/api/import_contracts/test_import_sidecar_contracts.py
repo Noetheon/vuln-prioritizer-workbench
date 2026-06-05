@@ -197,7 +197,7 @@ def test_import_upload_applies_asset_context_sidecar_to_workbench_findings(
     project = create_project_via_api(workbench_api_env.client, headers)
     occurrence_csv = "\n".join(
         [
-            "cve_id,asset_ref,component,version,purl,severity",
+            "cve_id,target_ref,component_name,component_version,purl,raw_severity",
             "CVE-2024-3094,web-tier,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL",
             "",
         ]
@@ -233,7 +233,7 @@ def test_import_upload_applies_asset_context_sidecar_to_workbench_findings(
     assert (upload_dir / sidecar_upload["path"]).read_bytes() == asset_context_csv
     assert payload["asset_context"]["loaded_rows"] == 1
     assert payload["asset_context"]["matched_occurrences"] == 1
-    assert payload["dedup_summary"]["decisions"][0]["asset_ref"] == "asset-web-1"
+    assert payload["dedup_summary"]["decisions"][0]["target_ref"] == "asset-web-1"
 
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -264,14 +264,13 @@ def test_import_upload_applies_asset_context_sidecar_to_workbench_findings(
     assert provenance["asset_owners"] == ["team-platform"]
     assert provenance["asset_business_services"] == ["payments"]
     occurrence = detail.json()["occurrences"][0]
-    assert occurrence["asset_ref"] == "asset-web-1"
-    assert occurrence["target_ref"] == "web-tier"
+    assert occurrence["target_ref"] == "asset-web-1"
     assert occurrence["asset_owner"] == "team-platform"
     assert occurrence["asset_business_service"] == "payments"
     assert occurrence["asset_exposure"] == "internet-facing"
 
 
-def test_generic_import_persists_core_canonical_asset_context_aliases(
+def test_generic_import_persists_core_canonical_asset_context_values(
     workbench_api_env: WorkbenchApiEnv,
     tmp_path: Path,
 ) -> None:
@@ -281,10 +280,12 @@ def test_generic_import_persists_core_canonical_asset_context_aliases(
     project_id = uuid.UUID(project["id"])
     occurrence_csv = "\n".join(
         [
-            ("cve_id,asset_ref,component,version,purl,severity,criticality,exposure,environment"),
+            (
+                "cve_id,target_ref,component_name,component_version,purl,raw_severity,criticality,exposure,environment"
+            ),
             (
                 "CVE-2024-3094,build-host-1,xz,5.6.0,"
-                "pkg:apk/alpine/xz@5.6.0-r0,CRITICAL,crit,private,qa"
+                "pkg:apk/alpine/xz@5.6.0-r0,CRITICAL,critical,internal,test"
             ),
             "",
         ]
@@ -294,7 +295,7 @@ def test_generic_import_persists_core_canonical_asset_context_aliases(
         f"/api/v1/projects/{project['id']}/imports",
         headers=headers,
         data={"input_type": "generic-occurrence-csv"},
-        files={"file": ("asset-aliases.csv", occurrence_csv, "text/csv")},
+        files={"file": ("asset-context-values.csv", occurrence_csv, "text/csv")},
     )
 
     assert response.status_code == 200, response.text
@@ -337,7 +338,7 @@ def test_import_upload_applies_openvex_sidecar_to_workbench_findings(
     project = create_project_via_api(workbench_api_env.client, headers)
     occurrence_csv = "\n".join(
         [
-            "cve_id,asset_ref,component,version,purl,severity",
+            "cve_id,target_ref,component_name,component_version,purl,raw_severity",
             (
                 "CVE-2021-44228,log4j-service,log4j-core,2.14.1,"
                 "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1,CRITICAL"
@@ -410,7 +411,7 @@ def test_import_upload_applies_cyclonedx_vex_sidecar_to_workbench_findings(
     project = create_project_via_api(workbench_api_env.client, headers)
     occurrence_csv = "\n".join(
         [
-            "cve_id,asset_ref,component,version,purl,severity",
+            "cve_id,target_ref,component_name,component_version,purl,raw_severity",
             (
                 "CVE-2023-34362,moveit-service,moveit-transfer,2023.0.0,"
                 "pkg:pypi/moveit-transfer@2023.0.0,HIGH"
@@ -480,7 +481,7 @@ def test_import_upload_rejects_invalid_vex_sidecar_with_clear_error(
         files={
             "file": (
                 "occurrences.csv",
-                b"cve_id,asset_ref\nCVE-2024-3094,web-tier\n",
+                b"cve_id,target_ref\nCVE-2024-3094,web-tier\n",
                 "text/csv",
             ),
             "vex_file": ("bad-openvex.json", b'{"statements": {}}', "application/json"),
@@ -540,7 +541,7 @@ def test_import_upload_rejects_invalid_asset_context_sidecar_with_clear_error(
         files={
             "file": (
                 "occurrences.csv",
-                b"cve_id,asset_ref\nCVE-2024-3094,web-tier\n",
+                b"cve_id,target_ref\nCVE-2024-3094,web-tier\n",
                 "text/csv",
             ),
             "asset_context_file": (
@@ -599,7 +600,7 @@ def test_import_upload_rejects_unsafe_asset_context_regex_sidecar(
         files={
             "file": (
                 "occurrences.csv",
-                b"cve_id,asset_ref\nCVE-2024-3094,aaaaaaaaaaaaaaaaaaaaX\n",
+                b"cve_id,target_ref\nCVE-2024-3094,aaaaaaaaaaaaaaaaaaaaX\n",
                 "text/csv",
             ),
             "asset_context_file": (

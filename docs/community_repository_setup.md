@@ -1,6 +1,6 @@
 # Community And Public Repository Setup
 
-This document is a maintainer checklist for running `vuln-prioritizer` as a
+This document is a maintainer checklist for running `vuln-prioritizer-workbench` as a
 public GitHub repository. It is intentionally scoped to a security-focused local
 Workbench for prioritizing known CVEs, not a general scanner, SaaS platform, or
 community program.

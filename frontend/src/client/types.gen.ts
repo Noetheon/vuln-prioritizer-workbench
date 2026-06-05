@@ -1528,10 +1528,6 @@ export type FindingOccurrencePublic = {
      */
     asset_owner?: string | null;
     /**
-     * Asset Ref
-     */
-    asset_ref?: string | null;
-    /**
      * Component Name
      */
     component_name?: string | null;
@@ -2378,10 +2374,6 @@ export type OccurrenceEvidenceV2 = {
      * Asset Owner
      */
     asset_owner?: string | null;
-    /**
-     * Asset Ref
-     */
-    asset_ref?: string | null;
     /**
      * Component Name
      */
@@ -5304,36 +5296,6 @@ export type GetApiV1RunsByRunIdReportsResponses = {
 };
 
 export type GetApiV1RunsByRunIdReportsResponse = GetApiV1RunsByRunIdReportsResponses[keyof GetApiV1RunsByRunIdReportsResponses];
-
-export type PostApiV1RunsByRunIdReportsData = {
-    body: ReportCreate;
-    path: {
-        /**
-         * Run Id
-         */
-        run_id: string;
-    };
-    query?: never;
-    url: '/api/v1/runs/{run_id}/reports';
-};
-
-export type PostApiV1RunsByRunIdReportsErrors = {
-    /**
-     * Validation Error
-     */
-    422: ApiErrorEnvelope;
-};
-
-export type PostApiV1RunsByRunIdReportsError = PostApiV1RunsByRunIdReportsErrors[keyof PostApiV1RunsByRunIdReportsErrors];
-
-export type PostApiV1RunsByRunIdReportsResponses = {
-    /**
-     * Successful Response
-     */
-    200: WorkflowRunPublic;
-};
-
-export type PostApiV1RunsByRunIdReportsResponse = PostApiV1RunsByRunIdReportsResponses[keyof PostApiV1RunsByRunIdReportsResponses];
 
 export type GetApiV1RunsByRunIdSummaryData = {
     body?: never;

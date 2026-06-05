@@ -190,7 +190,7 @@ def _governance_decision_statement(
     waiver_status = _string_from_mapping(waiver, "waiver_status") or _string_from_mapping(
         explanation, "waiver_status"
     )
-    if (finding.waived if waived is None else waived) or waiver_status:
+    if bool(waived) or waiver_status:
         additions.append(
             "Accepted-risk governance remains visible"
             + _governance_detail_clause(
@@ -215,9 +215,7 @@ def _governance_decision_statement(
             )
             + "."
         )
-    has_vex_governance = (
-        finding.suppressed_by_vex if suppressed_by_vex is None else suppressed_by_vex
-    ) or (finding.under_investigation if under_investigation is None else under_investigation)
+    has_vex_governance = bool(suppressed_by_vex) or bool(under_investigation)
     if has_vex_governance:
         vex_statuses = _vex_statuses_label_from_explanation(explanation)
         additions.append(

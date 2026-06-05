@@ -7,15 +7,15 @@ from xml.etree.ElementTree import Element, fromstring
 
 import pytest
 
-from vuln_prioritizer.inputs import _xml_support as xml_support
-from vuln_prioritizer.inputs._occurrence_support import (
+from app.domain.engine.inputs import _xml_support as xml_support
+from app.domain.engine.inputs._occurrence_support import (
     _asset_context_rule_matches,
     apply_asset_context,
     finalize_occurrences,
 )
-from vuln_prioritizer.inputs.loader import detect_input_format
-from vuln_prioritizer.inputs.parsers.sbom import parse_cyclonedx_json, parse_spdx_json
-from vuln_prioritizer.models import AssetContextRecord, InputOccurrence, InputSourceSummary
+from app.domain.engine.inputs.loader import detect_input_format
+from app.domain.engine.inputs.parsers.sbom import parse_cyclonedx_json, parse_spdx_json
+from app.domain.engine.models import AssetContextRecord, InputOccurrence, InputSourceSummary
 
 
 def _occurrence(target_ref: str | None, *, cve_id: str = "CVE-2024-0001") -> InputOccurrence:

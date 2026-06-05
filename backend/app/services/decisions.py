@@ -10,6 +10,10 @@ from typing import Any
 from pydantic import ValidationError
 
 from app.contracts.decision_evidence import FindingDecisionEvidenceV2
+from app.domain.engine.models import PrioritizedFinding
+from app.domain.engine.services.baseline_comparison import (
+    build_cvss_baseline_comparison_payload,
+)
 from app.models import (
     AnalysisRun,
     Finding,
@@ -23,10 +27,6 @@ from app.services.decision_projection import (
     decision_run_view,
     decision_views_for_findings,
     latest_finding_decision_view,
-)
-from vuln_prioritizer.models import PrioritizedFinding
-from vuln_prioritizer.services.baseline_comparison import (
-    build_cvss_baseline_comparison_payload,
 )
 
 PRIORITY_LABELS = ("Critical", "High", "Medium", "Low")

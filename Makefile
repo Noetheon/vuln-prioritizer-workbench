@@ -1,9 +1,8 @@
 PYTHON ?= python3
 MUTMUT ?= $(shell command -v mutmut 2>/dev/null || $(PYTHON) -c 'import os, shutil, site, sysconfig; paths=[sysconfig.get_path("scripts"), os.path.join(site.USER_BASE, "bin")]; print(shutil.which("mutmut") or next((os.path.join(path, "mutmut") for path in paths if os.path.exists(os.path.join(path, "mutmut"))), "mutmut"))')
 BACKEND_DIR := backend
-BACKEND_SRC := $(BACKEND_DIR)/src
 BACKEND_TESTS := $(BACKEND_DIR)/tests
-MUTATION_PATTERNS := "app.services.decision_evidence_builder.x_build_run_diagnostics*" "app.services.report_sarif_validation.x_validate_sarif_file*" "vuln_prioritizer.services.analysis_quality.x__finding_data_quality_confidence*" "vuln_prioritizer.services.analysis_snapshot.x__provider_snapshot_hash*" "vuln_prioritizer.services.analysis_snapshot.x__provider_snapshot_metadata_path*" "vuln_prioritizer.services.analysis_quality.x_attach_provider_data_quality_flags*"
+MUTATION_PATTERNS := "app.services.decision_evidence_builder.x_build_run_diagnostics*" "app.services.report_sarif_validation.x_validate_sarif_file*" "app.domain.engine.services.analysis_quality.x__finding_data_quality_confidence*" "app.domain.engine.services.analysis_snapshot.x__provider_snapshot_hash*" "app.domain.engine.services.analysis_snapshot.x__provider_snapshot_metadata_path*" "app.domain.engine.services.analysis_quality.x_attach_provider_data_quality_flags*"
 PYTHON_AUDIT_LOCK := $(BACKEND_DIR)/requirements.lock.txt
 PYTHON_RUNTIME_LOCK := $(BACKEND_DIR)/requirements.runtime.lock.txt
 COMPOSE := docker compose -f compose.yml -f compose.override.yml
@@ -39,12 +38,12 @@ fix:
 	$(PYTHON) -m ruff format $(BACKEND_DIR)
 
 typecheck:
-	cd $(BACKEND_DIR) && $(PYTHON) -m mypy app src
+	cd $(BACKEND_DIR) && $(PYTHON) -m mypy app
 
 check:
 	$(PYTHON) -m ruff format --check $(BACKEND_DIR)
 	$(PYTHON) -m ruff check $(BACKEND_DIR)
-	cd $(BACKEND_DIR) && $(PYTHON) -m mypy app src
+	cd $(BACKEND_DIR) && $(PYTHON) -m mypy app
 	$(PYTHON) -m pytest $(BACKEND_TESTS)
 	mkdir -p build
 	$(PYTHON) -m coverage json -o build/coverage-current.json
@@ -258,7 +257,7 @@ clean-local:
 	find . -name .DS_Store -not -path './.git/*' -delete
 	rm -rf .cache .hypothesis .mypy_cache .pytest_cache .ruff_cache .playwright-cli .playwright-mcp
 	rm -rf backend/.mypy_cache backend/.pytest_cache backend/.ruff_cache
-	rm -rf backend/*.egg-info backend/src/*.egg-info
+	rm -rf backend/*.egg-info
 	rm -rf build dist site htmlcov test-results frontend/test-results frontend/playwright-report frontend/dist
 	rm -rf .coverage .coverage.* backend/.coverage backend/.coverage.* coverage.xml backend-uvicorn.log frontend-vite.log
 	rm -rf frontend/openapi.json frontend/screenshot*.mjs

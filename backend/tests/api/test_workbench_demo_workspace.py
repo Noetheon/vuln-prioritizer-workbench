@@ -13,9 +13,9 @@ from typing import Any
 from sqlmodel import Session, select
 from utils.workbench_env import WorkbenchApiEnv, local_api_headers
 
+from app.domain.engine.providers.curated_attack_mappings import CuratedAttackMappingProvider
 from app.models.base import get_datetime_utc
 from app.services.demo_workspace import _demo_data_dir
-from vuln_prioritizer.providers.curated_attack_mappings import CuratedAttackMappingProvider
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEMO_PROJECT_NAME = "Online Shop Demo Workspace"

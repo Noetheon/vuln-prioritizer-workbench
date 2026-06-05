@@ -213,6 +213,10 @@ class DecisionFindingView:
         return self.finding.id
 
     @property
+    def id(self) -> uuid.UUID:
+        return self.finding.id
+
+    @property
     def cve_id(self) -> str:
         return self.evidence.cve_id if self.evidence is not None else self.finding.cve_id
 
@@ -229,7 +233,7 @@ class DecisionFindingView:
     @property
     def priority(self) -> FindingPriority:
         if self.evidence is None:
-            return self.finding.priority
+            return FindingPriority.MEDIUM
         return _priority_value(self.evidence.priority)
 
     @property
@@ -238,75 +242,51 @@ class DecisionFindingView:
 
     @property
     def priority_rank(self) -> int:
-        return (
-            self.evidence.priority_rank if self.evidence is not None else self.finding.priority_rank
-        )
+        return self.evidence.priority_rank if self.evidence is not None else 99
 
     @property
     def risk_score(self) -> float | None:
-        return self.evidence.risk_score if self.evidence is not None else self.finding.risk_score
+        return self.evidence.risk_score if self.evidence is not None else None
 
     @property
     def operational_rank(self) -> int:
-        return (
-            self.evidence.operational_rank
-            if self.evidence is not None
-            else self.finding.operational_rank
-        )
+        return self.evidence.operational_rank if self.evidence is not None else 0
 
     @property
     def in_kev(self) -> bool:
-        return self.evidence.in_kev if self.evidence is not None else self.finding.in_kev
+        return self.evidence.in_kev if self.evidence is not None else False
 
     @property
     def epss(self) -> float | None:
-        return self.evidence.epss if self.evidence is not None else self.finding.epss
+        return self.evidence.epss if self.evidence is not None else None
 
     @property
     def cvss_base_score(self) -> float | None:
-        return (
-            self.evidence.cvss_base_score
-            if self.evidence is not None
-            else self.finding.cvss_base_score
-        )
+        return self.evidence.cvss_base_score if self.evidence is not None else None
 
     @property
     def attack_mapped(self) -> bool:
-        return (
-            self.evidence.attack_mapped if self.evidence is not None else self.finding.attack_mapped
-        )
+        return self.evidence.attack_mapped if self.evidence is not None else False
 
     @property
     def suppressed_by_vex(self) -> bool:
-        return (
-            self.evidence.suppressed_by_vex
-            if self.evidence is not None
-            else self.finding.suppressed_by_vex
-        )
+        return self.evidence.suppressed_by_vex if self.evidence is not None else False
 
     @property
     def under_investigation(self) -> bool:
-        return (
-            self.evidence.under_investigation
-            if self.evidence is not None
-            else self.finding.under_investigation
-        )
+        return self.evidence.under_investigation if self.evidence is not None else False
 
     @property
     def waived(self) -> bool:
-        return self.evidence.waived if self.evidence is not None else self.finding.waived
+        return self.evidence.waived if self.evidence is not None else False
 
     @property
     def rationale(self) -> str | None:
-        return self.evidence.rationale if self.evidence is not None else self.finding.rationale
+        return self.evidence.rationale if self.evidence is not None else None
 
     @property
     def recommended_action(self) -> str | None:
-        return (
-            self.evidence.recommended_action
-            if self.evidence is not None
-            else self.finding.recommended_action
-        )
+        return self.evidence.recommended_action if self.evidence is not None else None
 
     @property
     def occurrence_views(self) -> list[DecisionOccurrenceView]:
@@ -392,14 +372,14 @@ def decision_run_view(
         analysis_run_id=run.id,
         kind=WorkflowRunKind.IMPORT,
     )
-    workflow_result = workflow.result_json if workflow is not None else None
+    workflow_result = workflow.result_ref_json if workflow is not None else None
     if evidence is None and _requires_success_evidence(run, workflow_result=workflow_result):
         raise DecisionEvidenceInvariantError(
             f"Successful v2 analysis run {run.id} is missing AnalysisEvidenceV2."
         )
     failure_result: dict[str, Any] | None = None
     if workflow is not None and run.status not in SUCCESSFUL_RUN_STATUSES:
-        failure_result = _dict_value(redact_public_payload(workflow.result_json))
+        failure_result = _dict_value(redact_public_payload(workflow.result_ref_json))
     if diagnostics is None and workflow is not None and workflow.diagnostics_json:
         diagnostics = build_run_diagnostics(redact_public_payload(workflow.diagnostics_json))
     return DecisionRunView(

@@ -55,7 +55,7 @@ Dependency audit disposition for the 2026-04-24 release pass: `make dependency-a
 
 ### Reproducible Demo Evidence Bundle
 
-The reproducible demo bundle is generated from a repository checkout, the checked-in Trivy fixture, the checked-in asset context and VEX fixtures, the checked-in ATT&CK subset, and locked replay from `data/demo_provider_snapshot.json`. The `Makefile` pins `VULN_PRIORITIZER_FIXED_NOW=2026-04-21T12:00:00+00:00` for this path so release reviewers can compare artifacts without feed drift or local clock drift.
+The reproducible demo bundle is generated from a repository checkout, the checked-in Trivy fixture, the checked-in asset context and VEX fixtures, the checked-in ATT&CK subset, and locked replay from `data/demo_provider_snapshot.json`. The `Makefile` pins `WORKBENCH_FIXED_NOW=2026-04-21T12:00:00+00:00` for this path so release reviewers can compare artifacts without feed drift or local clock drift.
 
 In the historical v1.0 release branch, reviewers generated and verified the
 bundle with:

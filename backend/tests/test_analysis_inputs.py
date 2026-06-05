@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from vuln_prioritizer.models import ProviderSnapshotReport
-from vuln_prioritizer.services import analysis_inputs
-from vuln_prioritizer.services.analysis_models import AnalysisInputError
+from app.domain.engine.models import ProviderSnapshotReport
+from app.domain.engine.services import analysis_inputs
+from app.domain.engine.services.analysis_models import AnalysisInputError
 
 
 @pytest.mark.parametrize(

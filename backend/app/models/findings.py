@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Column, DateTime, Float, Index, Integer, String, UniqueConstraint
+from sqlalchemy import Column, DateTime, Index, String, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.contracts.decision_evidence import FindingDecisionEvidenceV2
@@ -21,22 +21,6 @@ class FindingBase(SQLModel):
         default=FindingStatus.OPEN,
         sa_column=Column(String(40), nullable=False),
     )
-    priority: FindingPriority = Field(
-        default=FindingPriority.MEDIUM,
-        sa_column=Column(String(40), nullable=False),
-    )
-    priority_rank: int = Field(default=99, sa_column=Column(Integer, nullable=False))
-    risk_score: float | None = Field(default=None, sa_column=Column(Float, nullable=True))
-    operational_rank: int = Field(default=0, sa_column=Column(Integer, nullable=False))
-    in_kev: bool = False
-    epss: float | None = Field(default=None, sa_column=Column(Float, nullable=True))
-    cvss_base_score: float | None = Field(default=None, sa_column=Column(Float, nullable=True))
-    attack_mapped: bool = False
-    suppressed_by_vex: bool = False
-    under_investigation: bool = False
-    waived: bool = False
-    recommended_action: str | None = None
-    rationale: str | None = None
 
 
 class Finding(FindingBase, table=True):
@@ -46,7 +30,6 @@ class Finding(FindingBase, table=True):
     __table_args__ = (
         UniqueConstraint("project_id", "dedup_key", name="uq_finding_project_dedup_key"),
         Index("ix_finding_cve_id", "cve_id"),
-        Index("ix_finding_project_priority", "project_id", "priority_rank"),
         Index("ix_finding_project_status", "project_id", "status"),
         Index("ix_finding_project_asset", "project_id", "asset_id"),
         Index("ix_finding_project_vulnerability", "project_id", "vulnerability_id"),
@@ -115,6 +98,19 @@ class FindingPublic(FindingBase):
     last_seen_at: datetime
     created_at: datetime
     updated_at: datetime
+    priority: FindingPriority = FindingPriority.MEDIUM
+    priority_rank: int = 99
+    risk_score: float | None = None
+    operational_rank: int = 0
+    in_kev: bool = False
+    epss: float | None = None
+    cvss_base_score: float | None = None
+    attack_mapped: bool = False
+    suppressed_by_vex: bool = False
+    under_investigation: bool = False
+    waived: bool = False
+    recommended_action: str | None = None
+    rationale: str | None = None
     component_name: str | None = None
     component_version: str | None = None
     component_purl: str | None = None
@@ -147,7 +143,6 @@ class FindingOccurrencePublic(SQLModel):
     fix_versions: list[str] | None = None
     target_kind: str | None = None
     target_ref: str | None = None
-    asset_ref: str | None = None
     asset_owner: str | None = None
     asset_business_service: str | None = None
     asset_exposure: str | None = None

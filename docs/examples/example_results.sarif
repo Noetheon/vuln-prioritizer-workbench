@@ -18,7 +18,7 @@
             "text": "CVE-2024-4577: Critical priority based on CVSS/EPSS/KEV with contextual enrichment."
           },
           "partialFingerprints": {
-            "vuln-prioritizer/v1": "3606c7de6a1eb9d09a23b2b7fc57f1cf8158867cbcef0dc1819c1e09c856049b"
+            "vuln-prioritizer-workbench/v2": "3606c7de6a1eb9d09a23b2b7fc57f1cf8158867cbcef0dc1819c1e09c856049b"
           },
           "properties": {
             "attack_relevance": "Unmapped",
@@ -130,7 +130,7 @@
             "suppressed_by_vex": false,
             "under_investigation": true
           },
-          "ruleId": "vuln-prioritizer/cve-2024-4577"
+          "ruleId": "vuln-prioritizer-workbench/cve-2024-4577"
         },
         {
           "level": "error",
@@ -147,7 +147,7 @@
             "text": "CVE-2024-3094: Critical priority based on CVSS/EPSS/KEV with contextual enrichment."
           },
           "partialFingerprints": {
-            "vuln-prioritizer/v1": "8d524b230c12b8dbcfce51346e8c7bb54b509d697fabcd68a82f6129c17d4389"
+            "vuln-prioritizer-workbench/v2": "8d524b230c12b8dbcfce51346e8c7bb54b509d697fabcd68a82f6129c17d4389"
           },
           "properties": {
             "attack_relevance": "Unmapped",
@@ -296,12 +296,12 @@
             "suppressed_by_vex": false,
             "under_investigation": false
           },
-          "ruleId": "vuln-prioritizer/cve-2024-3094"
+          "ruleId": "vuln-prioritizer-workbench/cve-2024-3094"
         }
       ],
       "tool": {
         "driver": {
-          "name": "vuln-prioritizer",
+          "name": "vuln-prioritizer-workbench",
           "rules": [
             {
               "defaultConfiguration": {
@@ -314,7 +314,7 @@
                 "text": "Review the CVE, provider evidence, affected component or asset, and recommended remediation action. This tool prioritizes supplied findings and does not scan systems."
               },
               "helpUri": "https://nvd.nist.gov/vuln/detail/CVE-2024-4577",
-              "id": "vuln-prioritizer/cve-2024-4577",
+              "id": "vuln-prioritizer-workbench/cve-2024-4577",
               "name": "CVE-2024-4577 prioritized vulnerability",
               "properties": {
                 "cve": "CVE-2024-4577",
@@ -364,7 +364,7 @@
                 "text": "Review the CVE, provider evidence, affected component or asset, and recommended remediation action. This tool prioritizes supplied findings and does not scan systems."
               },
               "helpUri": "https://nvd.nist.gov/vuln/detail/CVE-2024-3094",
-              "id": "vuln-prioritizer/cve-2024-3094",
+              "id": "vuln-prioritizer-workbench/cve-2024-3094",
               "name": "CVE-2024-3094 prioritized vulnerability",
               "properties": {
                 "cve": "CVE-2024-3094",

@@ -5,9 +5,9 @@ repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
 if [[ -n "${PYTHONPATH:-}" ]]; then
-  export PYTHONPATH="$PYTHONPATH:$repo_root/backend:$repo_root/backend/src"
+  export PYTHONPATH="$PYTHONPATH:$repo_root/backend"
 else
-  export PYTHONPATH="$repo_root/backend:$repo_root/backend/src"
+  export PYTHONPATH="$repo_root/backend"
 fi
 
 python3 - <<'PY'

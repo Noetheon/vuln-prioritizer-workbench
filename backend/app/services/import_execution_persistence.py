@@ -130,20 +130,20 @@ def _persist_workbench_occurrences(
                 occurrence,
                 occurrence_scope=occurrence_scope,
             )
-            data_quality_payload = data_quality_by_cve.get(occurrence.cve)
+            data_quality_payload = data_quality_by_cve.get(occurrence.cve_id)
             if data_quality_payload is None:
                 data_quality_payload = _decision_data_quality_json(decision)
-                data_quality_by_cve[occurrence.cve] = data_quality_payload
+                data_quality_by_cve[occurrence.cve_id] = data_quality_payload
             dedup_parts = _dedup_key_parts(project_id, occurrence)
             dedup_key = _finding_dedup_key(dedup_parts)
             asset = None
-            if occurrence.asset_ref:
-                asset = assets_by_key.get(occurrence.asset_ref)
+            if occurrence.target_ref:
+                asset = assets_by_key.get(occurrence.target_ref)
                 if asset is None:
                     asset = asset_repo.upsert_asset(
                         project_id=project_id,
-                        asset_key=occurrence.asset_ref,
-                        name=occurrence.asset_ref,
+                        asset_key=occurrence.target_ref,
+                        name=occurrence.target_ref,
                         target_ref=_string_evidence(occurrence.raw_evidence, "target_ref"),
                         owner=_string_evidence(occurrence.raw_evidence, "owner"),
                         business_service=_string_evidence(
@@ -155,32 +155,32 @@ def _persist_workbench_occurrences(
                         criticality=_asset_criticality(occurrence.raw_evidence),
                         flush=False,
                     )
-                    assets_by_key[occurrence.asset_ref] = asset
+                    assets_by_key[occurrence.target_ref] = asset
             component = None
-            if occurrence.component:
+            if occurrence.component_name:
                 component_key = (
-                    occurrence.component,
-                    occurrence.version or "",
+                    occurrence.component_name,
+                    occurrence.component_version or "",
                     _string_evidence(occurrence.raw_evidence, "purl") or "",
                     _string_evidence(occurrence.raw_evidence, "package_type") or "",
                 )
                 component = components_by_key.get(component_key)
                 if component is None:
                     component = finding_repo.upsert_component(
-                        name=occurrence.component,
-                        version=occurrence.version,
+                        name=occurrence.component_name,
+                        version=occurrence.component_version,
                         purl=_string_evidence(occurrence.raw_evidence, "purl"),
                         ecosystem=_string_evidence(occurrence.raw_evidence, "package_type"),
                         package_type=_string_evidence(occurrence.raw_evidence, "package_type"),
                         flush=False,
                     )
                     components_by_key[component_key] = component
-            vulnerability = vulnerabilities_by_cve.get(occurrence.cve)
+            vulnerability = vulnerabilities_by_cve.get(occurrence.cve_id)
             if vulnerability is None:
                 vulnerability = finding_repo.upsert_vulnerability(
-                    cve_id=occurrence.cve,
+                    cve_id=occurrence.cve_id,
                     source_id=dedup_parts["source_id"],
-                    title=occurrence.cve,
+                    title=occurrence.cve_id,
                     description=decision.description,
                     cvss_score=decision.cvss_base_score,
                     cvss_vector=_decision_cvss_vector(decision),
@@ -194,7 +194,7 @@ def _persist_workbench_occurrences(
                     provider_json=_decision_provider_json(decision),
                     flush=False,
                 )
-                vulnerabilities_by_cve[occurrence.cve] = vulnerability
+                vulnerabilities_by_cve[occurrence.cve_id] = vulnerability
             existing_finding = findings_by_dedup_key.get(dedup_key)
             action = "reused" if existing_finding is not None else "created"
             evidence_payload = {
@@ -216,24 +216,11 @@ def _persist_workbench_occurrences(
             finding = finding_repo.create_or_update_finding(
                 project_id=project_id,
                 vulnerability_id=vulnerability.id,
-                cve_id=occurrence.cve,
+                cve_id=occurrence.cve_id,
                 dedup_key=dedup_key,
                 component_id=component.id if component else None,
                 asset_id=asset.id if asset else None,
                 status=_finding_status_for_occurrence(decision, occurrence),
-                priority=_decision_priority(decision),
-                priority_rank=decision.priority_rank,
-                risk_score=float(decision.operational_score),
-                operational_rank=decision.operational_rank or index,
-                in_kev=decision.in_kev,
-                epss=decision.epss,
-                cvss_base_score=decision.cvss_base_score,
-                attack_mapped=decision.attack_mapped,
-                suppressed_by_vex=_suppressed_by_vex_for_occurrence(decision, occurrence),
-                under_investigation=decision.under_investigation,
-                waived=decision.waived,
-                recommended_action=decision.recommended_action,
-                rationale=decision.rationale,
                 existing_finding=existing_finding,
                 lookup_existing=False,
                 flush=False,
@@ -279,9 +266,9 @@ def _persist_workbench_occurrences(
                 fix_version=occurrence.fix_version,
                 raw_evidence={
                     **dict(occurrence.raw_evidence),
-                    "component": occurrence.component,
-                    "version": occurrence.version,
-                    "asset_ref": occurrence.asset_ref,
+                    "component_name": occurrence.component_name,
+                    "component_version": occurrence.component_version,
+                    "target_ref": occurrence.target_ref,
                 },
                 dedup=evidence_payload["dedup"],
             )
@@ -291,22 +278,22 @@ def _persist_workbench_occurrences(
                     project_id=project_id,
                     run_id=run_id,
                     finding_id=finding.id,
-                    cve_id=occurrence.cve,
+                    cve_id=occurrence.cve_id,
                     dedup_key=dedup_key,
                     status=finding.status.value,
-                    priority=finding.priority.value,
-                    priority_rank=finding.priority_rank,
-                    risk_score=finding.risk_score,
-                    operational_rank=finding.operational_rank,
-                    in_kev=finding.in_kev,
-                    epss=finding.epss,
-                    cvss_base_score=finding.cvss_base_score,
-                    attack_mapped=finding.attack_mapped,
-                    suppressed_by_vex=finding.suppressed_by_vex,
-                    under_investigation=finding.under_investigation,
-                    waived=finding.waived,
-                    rationale=finding.rationale,
-                    recommended_action=finding.recommended_action,
+                    priority=_decision_priority(decision).value,
+                    priority_rank=decision.priority_rank,
+                    risk_score=float(decision.operational_score),
+                    operational_rank=decision.operational_rank or index,
+                    in_kev=decision.in_kev,
+                    epss=decision.epss,
+                    cvss_base_score=decision.cvss_base_score,
+                    attack_mapped=decision.attack_mapped,
+                    suppressed_by_vex=_suppressed_by_vex_for_occurrence(decision, occurrence),
+                    under_investigation=decision.under_investigation,
+                    waived=decision.waived,
+                    rationale=decision.rationale,
+                    recommended_action=decision.recommended_action,
                     decision_payload=decision_payload,
                     data_quality_payload=data_quality_payload,
                     provider_payload=_decision_provider_json(decision),
@@ -321,10 +308,10 @@ def _persist_workbench_occurrences(
                         "action": action,
                         "dedup_key": dedup_key,
                         "finding_id": str(finding.id),
-                        "cve": occurrence.cve,
+                        "cve_id": occurrence.cve_id,
                         "source_id": dedup_parts["source_id"],
                         "component_identity": dedup_parts["component_identity"],
-                        "asset_ref": dedup_parts["asset_ref"],
+                        "target_ref": dedup_parts["target_ref"],
                     }
                 )
     session.flush()

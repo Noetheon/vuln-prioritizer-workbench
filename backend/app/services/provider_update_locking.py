@@ -9,6 +9,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+from app.domain.engine.utils import iso_utc_now
 from app.services.provider_update_constants import (
     PROVIDER_UPDATE_LOCK_FILE,
     PROVIDER_UPDATE_LOCK_STALE_SECONDS,
@@ -17,7 +18,6 @@ from app.services.provider_update_errors import (
     ProviderUpdateConflict,
     ProviderUpdateValidationError,
 )
-from vuln_prioritizer.utils import iso_utc_now
 
 
 @contextmanager

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.api.errors import redact_request_safe_value
-from vuln_prioritizer.security_redaction import (
+from app.domain.engine.security_redaction import (
     redact_text,
     redact_value,
     redacted_database_url,

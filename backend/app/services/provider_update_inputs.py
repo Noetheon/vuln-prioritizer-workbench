@@ -7,6 +7,8 @@ from typing import Any
 
 from sqlmodel import Session, col, select
 
+from app.domain.engine.security_redaction import redact_value
+from app.domain.engine.utils import normalize_cve_id
 from app.models import AnalysisRun, Finding, Project, ProviderUpdateJobCreate
 from app.repositories import RunRepository
 from app.services.provider_update_constants import (
@@ -14,8 +16,6 @@ from app.services.provider_update_constants import (
     VALID_PROVIDER_SOURCES,
 )
 from app.services.provider_update_errors import ProviderUpdateValidationError
-from vuln_prioritizer.security_redaction import redact_value
-from vuln_prioritizer.utils import normalize_cve_id
 
 
 def _normalize_sources(raw_sources: list[str]) -> list[str]:

@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest a scoped improvement for vuln-prioritizer
+about: Suggest a scoped improvement for vuln-prioritizer-workbench
 title: "[Feature] "
 labels: type:feature,status:needs-review
 assignees: ""

@@ -1,0 +1,406 @@
+"""Deterministic remediation derivation from occurrence-level evidence."""
+
+from __future__ import annotations
+
+import re
+from collections.abc import Iterable
+from urllib.parse import unquote
+
+from app.domain.engine.config import PRIORITY_RECOMMENDATIONS
+from app.domain.engine.models import (
+    FindingProvenance,
+    InputOccurrence,
+    KevData,
+    RemediationComponent,
+    RemediationPlan,
+)
+
+DEFAULT_REMEDIATION_FALLBACK = "Review remediation options."
+SUPPRESSED_VEX_STATUSES = {"not_affected", "fixed"}
+
+_PURL_ECOSYSTEMS = {
+    "apk": "apk",
+    "cargo": "cargo",
+    "composer": "composer",
+    "deb": "deb",
+    "gem": "rubygems",
+    "generic": None,
+    "golang": "go",
+    "hex": "hex",
+    "maven": "maven",
+    "npm": "npm",
+    "nuget": "nuget",
+    "oci": "oci",
+    "pypi": "pypi",
+    "rpm": "rpm",
+}
+
+_PACKAGE_TYPE_ECOSYSTEMS = {
+    "apk": "apk",
+    "cargo": "cargo",
+    "composer": "composer",
+    "deb": "deb",
+    "gem": "rubygems",
+    "go": "go",
+    "golang": "go",
+    "jar": "maven",
+    "maven": "maven",
+    "nodejs": "npm",
+    "npm": "npm",
+    "nuget": "nuget",
+    "pip": "pypi",
+    "python": "pypi",
+    "rpm": "rpm",
+    "rubygems": "rubygems",
+}
+
+_ComponentKey = tuple[str | None, str | None, str | None, str | None, str | None]
+
+
+class RemediationService:
+    """Derive stable remediation hints from normalized occurrence evidence."""
+
+    def derive(
+        self,
+        evidence: FindingProvenance | Iterable[InputOccurrence],
+        *,
+        kev: KevData | None = None,
+    ) -> RemediationPlan:
+        """Derive method for RemediationService."""
+        occurrences = _coerce_occurrences(evidence)
+        suppressed_occurrence_count = sum(
+            1
+            for occurrence in occurrences
+            if (occurrence.vex_status or "").lower() in SUPPRESSED_VEX_STATUSES
+        )
+        active_occurrences = [
+            occurrence
+            for occurrence in occurrences
+            if (occurrence.vex_status or "").lower() not in SUPPRESSED_VEX_STATUSES
+        ]
+        if active_occurrences:
+            occurrences = active_occurrences
+        components = _collect_components(occurrences)
+        if not components:
+            return _apply_kev_evidence(
+                RemediationPlan(
+                    evidence_level="none",
+                    suppressed_occurrence_count=suppressed_occurrence_count,
+                ),
+                kev,
+            )
+
+        actionable_components = [component for component in components if component.fixed_versions]
+        if actionable_components:
+            return _apply_kev_evidence(
+                RemediationPlan(
+                    strategy="upgrade",
+                    ecosystem=_resolve_single_ecosystem(actionable_components),
+                    components=actionable_components,
+                    evidence_level="fixed_version",
+                    suppressed_occurrence_count=suppressed_occurrence_count,
+                ),
+                kev,
+            )
+
+        return _apply_kev_evidence(
+            RemediationPlan(
+                strategy="review-upgrade-options",
+                ecosystem=_resolve_single_ecosystem(components),
+                components=components,
+                evidence_level="component",
+                suppressed_occurrence_count=suppressed_occurrence_count,
+            ),
+            kev,
+        )
+
+    def build_action(
+        self,
+        evidence: FindingProvenance | Iterable[InputOccurrence],
+        *,
+        priority_label: str,
+        kev: KevData | None = None,
+    ) -> tuple[RemediationPlan, str]:
+        """Build action method for RemediationService."""
+        remediation = self.derive(evidence, kev=kev)
+        return remediation, render_recommended_action(remediation, priority_label=priority_label)
+
+
+def derive_remediation(
+    evidence: FindingProvenance | Iterable[InputOccurrence],
+    *,
+    kev: KevData | None = None,
+) -> RemediationPlan:
+    """Convenience wrapper around :class:`RemediationService`."""
+    return RemediationService().derive(evidence, kev=kev)
+
+
+def render_recommended_action(remediation: RemediationPlan, *, priority_label: str) -> str:
+    """Render a human-readable remediation action from the structured plan."""
+    generic_guidance = PRIORITY_RECOMMENDATIONS[priority_label]
+
+    if remediation.strategy == "upgrade" and remediation.components:
+        action = _render_upgrade_action(remediation, generic_guidance)
+    elif remediation.strategy == "review-upgrade-options" and remediation.components:
+        action = _render_review_action(remediation, generic_guidance)
+    else:
+        action = generic_guidance
+    if remediation.kev_required_action:
+        action = (
+            f"CISA KEV required action: {remediation.kev_required_action.rstrip('.')}. {action}"
+        )
+    if remediation.kev_due_date:
+        action = f"{action} KEV due date: {remediation.kev_due_date}."
+    return action
+
+
+def _apply_kev_evidence(remediation: RemediationPlan, kev: KevData | None) -> RemediationPlan:
+    """Apply kev evidence function."""
+    if kev is None or not kev.in_kev:
+        return remediation
+    evidence_level = remediation.evidence_level
+    if kev.required_action:
+        evidence_level = "kev_action"
+    return remediation.model_copy(
+        update={
+            "evidence_level": evidence_level,
+            "kev_required_action": kev.required_action,
+            "kev_due_date": kev.due_date,
+        }
+    )
+
+
+def _coerce_occurrences(
+    evidence: FindingProvenance | Iterable[InputOccurrence],
+) -> list[InputOccurrence]:
+    """Coerce occurrences function."""
+    if isinstance(evidence, FindingProvenance):
+        return list(evidence.occurrences)
+    return list(evidence)
+
+
+def _collect_components(occurrences: list[InputOccurrence]) -> list[RemediationComponent]:
+    """Collect components function."""
+    buckets: dict[_ComponentKey, RemediationComponent] = {}
+    fixed_version_sets: dict[_ComponentKey, set[str]] = {}
+    target_sets: dict[_ComponentKey, set[str]] = {}
+    asset_id_sets: dict[_ComponentKey, set[str]] = {}
+    service_sets: dict[_ComponentKey, set[str]] = {}
+    owner_sets: dict[_ComponentKey, set[str]] = {}
+    occurrence_counts: dict[_ComponentKey, int] = {}
+
+    for occurrence in occurrences:
+        component = _build_component_seed(occurrence)
+        if component is None:
+            continue
+
+        key = (
+            component.name,
+            component.current_version,
+            component.package_type,
+            component.purl,
+            component.path,
+        )
+        if key not in buckets:
+            buckets[key] = component
+            fixed_version_sets[key] = set(component.fixed_versions)
+            target_sets[key] = set(component.targets)
+            asset_id_sets[key] = set(component.asset_ids)
+            service_sets[key] = set(component.services)
+            owner_sets[key] = set(component.owners)
+            occurrence_counts[key] = component.occurrence_count
+            continue
+        fixed_version_sets[key].update(component.fixed_versions)
+        target_sets[key].update(component.targets)
+        asset_id_sets[key].update(component.asset_ids)
+        service_sets[key].update(component.services)
+        owner_sets[key].update(component.owners)
+        occurrence_counts[key] += max(component.occurrence_count, 1)
+
+    components: list[RemediationComponent] = []
+    for key, component in buckets.items():
+        fixed_versions = fixed_version_sets[key]
+        components.append(
+            component.model_copy(
+                update={
+                    "fixed_versions": sorted(fixed_versions, key=_natural_sort_key),
+                    "occurrence_count": occurrence_counts[key],
+                    "targets": sorted(target_sets[key]),
+                    "asset_ids": sorted(asset_id_sets[key]),
+                    "services": sorted(service_sets[key]),
+                    "owners": sorted(owner_sets[key]),
+                }
+            )
+        )
+
+    components.sort(key=_component_sort_key)
+    return components
+
+
+def _build_component_seed(occurrence: InputOccurrence) -> RemediationComponent | None:
+    """Build component seed function."""
+    path = _clean_text(occurrence.dependency_path) or _clean_text(occurrence.file_path)
+    purl = _clean_text(occurrence.purl)
+    name = _clean_text(occurrence.component_name) or _name_from_purl(purl)
+    current_version = _clean_text(occurrence.component_version)
+    package_type = _clean_text(occurrence.package_type)
+    fixed_versions = [
+        cleaned_version
+        for cleaned_version in (_clean_text(item) for item in occurrence.fix_versions)
+        if cleaned_version
+    ]
+
+    if not any([name, current_version, package_type, purl, path, fixed_versions]):
+        return None
+
+    return RemediationComponent(
+        name=name,
+        current_version=current_version,
+        fixed_versions=sorted(set(fixed_versions), key=_natural_sort_key),
+        package_type=package_type,
+        purl=purl,
+        path=path,
+        occurrence_count=1,
+        targets=_occurrence_targets(occurrence),
+        asset_ids=_single_value_list(occurrence.asset_id),
+        services=_single_value_list(occurrence.asset_business_service),
+        owners=_single_value_list(occurrence.asset_owner),
+    )
+
+
+def _resolve_single_ecosystem(components: list[RemediationComponent]) -> str | None:
+    """Resolve single ecosystem function."""
+    ecosystems = {
+        ecosystem
+        for ecosystem in (_resolve_ecosystem(component) for component in components)
+        if ecosystem
+    }
+    if len(ecosystems) == 1:
+        return next(iter(ecosystems))
+    return None
+
+
+def _resolve_ecosystem(component: RemediationComponent) -> str | None:
+    """Resolve ecosystem function."""
+    if component.purl:
+        purl_type = _purl_type(component.purl)
+        if purl_type:
+            return _PURL_ECOSYSTEMS.get(purl_type, purl_type)
+    if component.package_type:
+        return _PACKAGE_TYPE_ECOSYSTEMS.get(component.package_type.casefold())
+    return None
+
+
+def _purl_type(purl: str) -> str | None:
+    """Purl type function."""
+    if not purl.startswith("pkg:"):
+        return None
+    remainder = purl[4:]
+    if "/" not in remainder:
+        return remainder.casefold() or None
+    return remainder.split("/", 1)[0].casefold() or None
+
+
+def _name_from_purl(purl: str | None) -> str | None:
+    """Name from purl function."""
+    if not purl:
+        return None
+    normalized = purl.split("?", 1)[0].split("#", 1)[0]
+    if "/" not in normalized:
+        return None
+    tail = normalized.rsplit("/", 1)[-1]
+    return _clean_text(unquote(tail.split("@", 1)[0]))
+
+
+def _occurrence_targets(occurrence: InputOccurrence) -> list[str]:
+    """Occurrence targets function."""
+    if not occurrence.target_ref:
+        return []
+    return [f"{occurrence.target_kind}:{occurrence.target_ref}"]
+
+
+def _single_value_list(value: str | None) -> list[str]:
+    """Single value list function."""
+    cleaned = _clean_text(value)
+    return [] if cleaned is None else [cleaned]
+
+
+def _component_sort_key(component: RemediationComponent) -> tuple[object, ...]:
+    """Component sort key function."""
+    return (
+        0 if component.fixed_versions else 1,
+        _natural_sort_key(component.name or component.purl or component.package_type or ""),
+        _natural_sort_key(component.current_version or ""),
+        _natural_sort_key(component.path or ""),
+    )
+
+
+def _render_upgrade_action(remediation: RemediationPlan, generic_guidance: str) -> str:
+    """Render upgrade action function."""
+    component_snippets = [
+        _format_component_upgrade(component) for component in remediation.components[:2]
+    ]
+    if len(remediation.components) > 2:
+        component_snippets.append(f"and {len(remediation.components) - 2} more component(s)")
+
+    intro = "Upgrade affected components with known fixes"
+    if remediation.ecosystem:
+        intro += f" in {remediation.ecosystem}"
+    intro += ": " + "; ".join(component_snippets) + "."
+    return intro + " " + generic_guidance
+
+
+def _render_review_action(remediation: RemediationPlan, generic_guidance: str) -> str:
+    """Render review action function."""
+    component_snippets = [
+        _format_component_target(component) for component in remediation.components[:2]
+    ]
+    if len(remediation.components) > 2:
+        component_snippets.append(f"and {len(remediation.components) - 2} more component(s)")
+
+    intro = "Review available upgrade options"
+    if remediation.ecosystem:
+        intro += f" in {remediation.ecosystem}"
+    intro += " for " + ", ".join(component_snippets)
+    intro += "; no fixed version was captured in the input."
+    return intro + " " + generic_guidance
+
+
+def _format_component_upgrade(component: RemediationComponent) -> str:
+    """Format component upgrade function."""
+    target = _format_component_target(component)
+    fix_versions = component.fixed_versions[:3]
+    version_text = ", ".join(fix_versions)
+    if len(component.fixed_versions) > 3:
+        version_text += ", ..."
+    return f"{target} -> {version_text}"
+
+
+def _format_component_target(component: RemediationComponent) -> str:
+    """Format component target function."""
+    label = component.name or component.purl or component.package_type or "affected component"
+    if component.current_version:
+        label += f" {component.current_version}"
+    if component.path:
+        label += f" ({component.path})"
+    return label
+
+
+def _clean_text(value: str | None) -> str | None:
+    """Clean text function."""
+    if value is None:
+        return None
+    cleaned = value.strip()
+    return cleaned or None
+
+
+def _natural_sort_key(value: str) -> tuple[object, ...]:
+    """Natural sort key function."""
+    parts: list[object] = []
+    for chunk in re.findall(r"\d+|\D+", value.casefold()):
+        if chunk.isdigit():
+            normalized = chunk.lstrip("0") or "0"
+            parts.append((0, len(normalized), normalized))
+        else:
+            parts.append((1, chunk))
+    return tuple(parts)

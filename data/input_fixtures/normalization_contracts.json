@@ -43,17 +43,16 @@
       "fixture_format": "csv",
       "top_level_kind": "csv",
       "raw_header_keys": [
-        "asset_ref",
         "business_service",
         "component_name",
         "component_version",
         "cve_id",
-        "fix_version",
+        "fix_versions",
         "owner",
         "purl",
-        "scanner",
-        "severity",
-        "target_kind"
+        "raw_severity",
+        "source",
+        "target_ref"
       ],
       "expected_total_rows": 2,
       "expected_occurrence_count": 2,
@@ -65,7 +64,7 @@
       "expected_occurrences": [
         {
           "cve_id": "CVE-2024-3094",
-          "source_format": "generic-occurrence-csv",
+          "source_format": "trivy",
           "component_name": "xz",
           "component_version": "5.6.0-r0",
           "purl": "pkg:apk/alpine/xz@5.6.0-r0",
@@ -79,7 +78,7 @@
         },
         {
           "cve_id": "CVE-2024-4577",
-          "source_format": "generic-occurrence-csv",
+          "source_format": "manual",
           "component_name": "php-cgi",
           "component_version": "8.3.7",
           "purl": "pkg:generic/php-cgi@8.3.7",

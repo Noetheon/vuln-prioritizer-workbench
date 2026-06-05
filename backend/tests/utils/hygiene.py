@@ -5,7 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = ROOT.parent
-SRC_ROOT = ROOT / "src" / "vuln_prioritizer"
+SRC_ROOT = ROOT / "app" / "domain" / "engine"
 
 
 def _assert_metric_strip_adapter(source: str, label: str) -> None:
@@ -33,7 +33,7 @@ def _python_module_paths(*roots: str) -> list[Path]:
 
 
 def _module_name(path: Path) -> str:
-    relative = path.relative_to(ROOT / "src").with_suffix("")
+    relative = path.relative_to(ROOT).with_suffix("")
     parts = list(relative.parts)
     if parts[-1] == "__init__":
         parts = parts[:-1]
@@ -43,7 +43,7 @@ def _module_name(path: Path) -> str:
 def _normalized_internal_imports(path: Path, known_modules: set[str]) -> set[str]:
     imports: set[str] = set()
     for imported in _imported_modules(str(path.relative_to(ROOT))):
-        if not imported.startswith("vuln_prioritizer"):
+        if not imported.startswith("app.domain.engine"):
             continue
         parts = imported.split(".")
         while parts:

@@ -12,7 +12,7 @@ CRITICAL_MODULES = (
     "backend/app/services/decision_kernel.py",
     "backend/app/services/report_bundle_archive_verification.py",
     "backend/app/services/report_sarif_validation.py",
-    "backend/src/vuln_prioritizer/services/analysis_pipeline.py",
+    "backend/app/domain/engine/services/analysis_pipeline.py",
 )
 
 

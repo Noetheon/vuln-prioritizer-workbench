@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
 from sqlmodel import Session, col, select
 
-from app.models import AnalysisRun, Finding, FindingAttackContext, Project
+from app.models import AnalysisRun, FindingAttackContext, Project
 from app.services.attack import build_attack_navigator_layer_payload
+from app.services.decision_projection import DecisionFindingView
 
 
 def run_attack_contexts(
@@ -28,7 +30,7 @@ def attack_navigator_layer(
     *,
     run: AnalysisRun,
     project: Project,
-    findings: list[Finding],
+    findings: Sequence[DecisionFindingView],
     attack_contexts: list[FindingAttackContext],
     generated_at: datetime,
     filter_value: str,
