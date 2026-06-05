@@ -315,10 +315,6 @@ def create_finding(
         component_id=component_id,
         asset_id=asset_id,
         cve_id=cve_id,
-        priority=priority or app_models.FindingPriority.CRITICAL,
-        priority_rank=priority_rank,
-        operational_rank=operational_rank,
-        in_kev=True,
     )
 
 
@@ -356,7 +352,7 @@ def create_analysis_run(
         input_type=input_type,
         filename=filename,
         status=status or app_models.AnalysisRunStatus.COMPLETED,
-        result_json={"parsed": 2, "findings": 2},
+        result_ref_json={"parsed": 2, "findings": 2},
     )
 
 
@@ -439,6 +435,7 @@ def seed_finding_pair(
     repositories: Any,
     *,
     project_id: uuid.UUID,
+    with_decision_evidence: bool = False,
 ) -> dict[str, list[uuid.UUID]]:
     """Seed two deterministic demo-CVE findings for pagination tests."""
     with Session(engine) as session:
@@ -481,6 +478,104 @@ def seed_finding_pair(
             operational_rank=2,
         )
         finding_ids = [first_finding.id, second_finding.id]
+        if with_decision_evidence:
+            from utils.workbench_contracts import (  # noqa: PLC0415
+                _seed_analysis_evidence,
+                _seed_finding_evidence,
+            )
+
+            snapshot = create_provider_snapshot(
+                session,
+                repositories,
+                content_hash="sha256:github-issue-preview-snapshot",
+            )
+            run = create_analysis_run(
+                session,
+                app_models,
+                repositories,
+                project_id=project_id,
+                provider_snapshot_id=snapshot.id,
+                filename="github-issue-preview-cves.txt",
+            )
+            evidence_repo = repositories.EvidenceRepository(session)
+            analysis_evidence = evidence_repo.upsert_analysis_evidence(
+                project_id=project_id,
+                analysis_run_id=run.id,
+                provider_snapshot_id=snapshot.id,
+                evidence=_seed_analysis_evidence(
+                    project_id=project_id,
+                    run=run,
+                    provider_snapshot_id=snapshot.id,
+                    provider_snapshot_hash=snapshot.content_hash,
+                    finding_count=0,
+                    counts_by_priority={},
+                    locked_provider_data=True,
+                    findings=[],
+                ),
+            )
+            evidence_items = [
+                _seed_finding_evidence(
+                    finding=first_finding,
+                    analysis_run_id=run.id,
+                    project_id=project_id,
+                    asset_key=asset.asset_key,
+                    asset_name=asset.name or asset.asset_key,
+                    component_name=component.name,
+                    component_version=component.version or "",
+                    priority=app_models.FindingPriority.CRITICAL,
+                    priority_rank=1,
+                    risk_score=98.6,
+                    operational_rank=1,
+                    epss=0.9442,
+                    cvss=10.0,
+                    in_kev=True,
+                    rationale="EPSS and KEV make this urgent.",
+                    action="Upgrade log4j-core.",
+                    confidence="high",
+                    flags=[],
+                ),
+                _seed_finding_evidence(
+                    finding=second_finding,
+                    analysis_run_id=run.id,
+                    project_id=project_id,
+                    asset_key=asset.asset_key,
+                    asset_name=asset.name or asset.asset_key,
+                    component_name=component.name,
+                    component_version=component.version or "",
+                    priority=app_models.FindingPriority.HIGH,
+                    priority_rank=2,
+                    risk_score=72.4,
+                    operational_rank=2,
+                    epss=0.31,
+                    cvss=7.5,
+                    in_kev=False,
+                    rationale="Provider evidence indicates high remediation priority.",
+                    action="Review and patch affected package.",
+                    confidence="medium",
+                    flags=[],
+                ),
+            ]
+            evidence_repo.replace_finding_decision_evidence(
+                analysis_evidence_id=analysis_evidence.id,
+                project_id=project_id,
+                analysis_run_id=run.id,
+                evidence_items=evidence_items,
+            )
+            evidence_repo.upsert_analysis_evidence(
+                project_id=project_id,
+                analysis_run_id=run.id,
+                provider_snapshot_id=snapshot.id,
+                evidence=_seed_analysis_evidence(
+                    project_id=project_id,
+                    run=run,
+                    provider_snapshot_id=snapshot.id,
+                    provider_snapshot_hash=snapshot.content_hash,
+                    finding_count=2,
+                    counts_by_priority={"Critical": 1, "High": 1},
+                    locked_provider_data=True,
+                    findings=evidence_items,
+                ),
+            )
         session.commit()
         return {"finding_ids": finding_ids}
 

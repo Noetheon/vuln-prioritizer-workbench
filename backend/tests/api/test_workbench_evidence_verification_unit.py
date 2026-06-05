@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from app.domain.engine.models import EvidenceBundleFile, EvidenceBundleManifest
 from app.services import report_bundle_archive_verification as bundle_verification
 from app.services import report_sarif_validation as sarif_validation
 from app.services.report_bundle_archive_verification import (
@@ -19,7 +20,6 @@ from app.services.report_sarif_validation import (
     validate_sarif_file,
     validate_sarif_payload,
 )
-from vuln_prioritizer.models import EvidenceBundleFile, EvidenceBundleManifest
 
 
 def test_verify_evidence_bundle_reports_missing_manifest(tmp_path: Path) -> None:

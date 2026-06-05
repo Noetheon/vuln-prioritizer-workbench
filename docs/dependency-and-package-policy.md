@@ -5,10 +5,11 @@ for release and security hygiene work.
 
 ## Backend Package Boundary
 
-The `vuln-prioritizer` backend distribution intentionally ships both:
+The `vuln-prioritizer-workbench` backend distribution intentionally ships one
+Workbench namespace:
 
-- the shared domain package under `backend/src/vuln_prioritizer/**`
-- the active Workbench FastAPI runtime under `backend/app/**`
+- the active FastAPI runtime, SQL models, services, migrations, and internal
+  engine under `backend/app/**`
 
 This is the selected package story for the current tree. The package is
 Workbench-first, and README/release wording should not imply that `app/*` is an
@@ -23,7 +24,7 @@ handoff.
 The package boundary is enforced by:
 
 - `backend/pyproject.toml`, where `tool.setuptools.packages.find.include`
-  includes both `vuln_prioritizer*` and `app*`
+  includes only `app*`
 - `make package-check`, which builds the backend distributions, validates that
   their content includes every tracked Workbench Alembic migration through
   `scripts/check_package_contents.py`, runs `twine check`, installs the built
@@ -31,27 +32,26 @@ The package boundary is enforced by:
   a temporary Workbench database through Alembic head
 - `build/package-contents.json`, generated locally by the package-content check
 
-The sdist and wheel must contain `app/main.py`, `app/api/main.py`, the shared
-`vuln_prioritizer` domain package, and the active Workbench Alembic migration
-tree. They do not publish the old Typer CLI as a console entrypoint. They must
-not include the backend test tree. They also must not reintroduce removed legacy
-Workbench runtime packages under
-`vuln_prioritizer/api`, `vuln_prioritizer/db`, or `vuln_prioritizer/web`.
+The sdist and wheel must contain `app/main.py`, `app/api/main.py`,
+`app/domain/engine/**`, and the active Workbench Alembic migration tree. They do
+not publish the old Typer CLI as a console entrypoint. They must not include the
+backend test tree. They also must not reintroduce removed legacy Workbench
+runtime packages under
+`app/domain/engine/api`, `app/domain/engine/db`, or `app/domain/engine/web`.
 
 ## Coverage Boundary
 
 The current backend pytest coverage configuration in `backend/pyproject.toml`
-measures both `vuln_prioritizer` and the active FastAPI Workbench package under
-`backend/app`. `pytest-cov` owns measurement and the terminal report, while the
-enforced backend gate is `make critical-coverage-check` over the generated
-coverage JSON. This avoids a misleading total-project fail-under message while
-still protecting the critical Workbench modules.
+measures the active Workbench package under `backend/app`. `pytest-cov` owns
+measurement and the terminal report, while the enforced backend gate is
+`make critical-coverage-check` over the generated coverage JSON. This avoids a
+misleading total-project fail-under message while still protecting the critical
+Workbench modules.
 
 Coverage configuration must stay aligned with the package boundary when modules
 move. Package inclusion of `app*` is not coverage proof by itself; pytest must
-continue to measure both `app` and `vuln_prioritizer`, and `make check` must
-continue to generate `build/coverage-current.json` before running the critical
-coverage gate.
+continue to measure `app`, and `make check` must continue to generate
+`build/coverage-current.json` before running the critical coverage gate.
 
 ## Python Dependencies
 
@@ -95,7 +95,7 @@ uv lock --python 3.11
 uv export --format requirements.txt --all-packages --all-extras \
   --no-emit-project --no-emit-workspace --locked \
   --python 3.11 --output-file backend/requirements.lock.txt --no-progress
-uv export --format requirements.txt --package vuln-prioritizer --no-dev \
+uv export --format requirements.txt --package vuln-prioritizer-workbench --no-dev \
   --no-emit-project --no-emit-workspace --locked \
   --python 3.13 --output-file backend/requirements.runtime.lock.txt --no-progress
 ```

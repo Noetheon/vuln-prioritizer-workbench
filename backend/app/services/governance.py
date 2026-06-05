@@ -22,7 +22,11 @@ from app.repositories.waivers import (
     waiver_lifecycle_status,
     waiver_scope_label,
 )
-from app.services.decision_projection import DecisionFindingView, decision_views_for_findings
+from app.services.decision_projection import (
+    DecisionFindingView,
+    decision_views_for_findings,
+    project_finding_decision_views,
+)
 
 PRIORITY_LABELS = ("Critical", "High", "Medium", "Low")
 STATUS_LABELS = ("open", "in_review", "remediating", "fixed", "accepted", "suppressed")
@@ -105,9 +109,10 @@ def build_project_governance_rollups_payload_from_repositories(
     """Build governance rollups from bounded SQL-backed repository queries."""
     bounded_limit = max(1, min(limit, 50))
     findings = finding_repository.list_project_findings(project_id)
+    finding_views = project_finding_decision_views(finding_repository.session, findings)
     return build_project_governance_rollups_payload(
         project_id=project_id,
-        findings=findings,
+        findings=finding_views,
         waivers=waiver_repository.list_project_waivers(project_id),
         waiver_repository=waiver_repository,
         limit=bounded_limit,
@@ -290,7 +295,7 @@ def _asset_label(finding: DecisionFindingView) -> str:
     return _clean_label(
         asset_key
         or asset_name
-        or _record_string(finding, ("asset_key", "asset_ref", "target_ref"))
+        or _record_string(finding, ("asset_key", "target_ref"))
         or UNKNOWN_LABEL
     )
 

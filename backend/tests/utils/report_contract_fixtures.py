@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from dataclasses import replace as dataclass_replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -37,6 +38,15 @@ VPW054_SECRET_MARKERS = (
 _T = TypeVar("_T")
 
 
+@dataclass(frozen=True)
+class _AttackLayerFinding:
+    id: uuid.UUID
+    cve_id: str
+    priority: app_models.FindingPriority
+    risk_score: float
+    in_kev: bool
+
+
 def replace(instance: _T, /, **changes: Any) -> _T:
     """Copy either a Pydantic report model or a legacy dataclass fixture."""
     model_copy = getattr(instance, "model_copy", None)
@@ -49,33 +59,20 @@ def _vpw060_snapshot_layer() -> dict[str, Any]:
     project_id = uuid.UUID("00000000-0000-4000-8000-000000000060")
     run_id = uuid.UUID("00000000-0000-4000-8000-000000000061")
     finding_id = uuid.UUID("00000000-0000-4000-8000-000000000062")
-    vulnerability_id = uuid.UUID("00000000-0000-4000-8000-000000000063")
     generated_at = datetime(2026, 4, 29, 12, 0, tzinfo=UTC)
-    finding = app_models.Finding(
+    finding = _AttackLayerFinding(
         id=finding_id,
-        project_id=project_id,
-        vulnerability_id=vulnerability_id,
         cve_id=DEMO_CVE_LOG4SHELL,
-        dedup_key="vpw060-log4shell",
         priority=app_models.FindingPriority.HIGH,
-        priority_rank=2,
-        operational_rank=1,
         risk_score=94.2,
         in_kev=True,
-        attack_mapped=True,
     )
-    unmapped = app_models.Finding(
+    unmapped = _AttackLayerFinding(
         id=uuid.UUID("00000000-0000-4000-8000-000000000064"),
-        project_id=project_id,
-        vulnerability_id=uuid.UUID("00000000-0000-4000-8000-000000000065"),
         cve_id=DEMO_CVE_XZ,
-        dedup_key="vpw060-xz",
         priority=app_models.FindingPriority.CRITICAL,
-        priority_rank=1,
-        operational_rank=2,
         risk_score=100.0,
         in_kev=False,
-        attack_mapped=False,
     )
     context = app_models.FindingAttackContext(
         id=uuid.UUID("00000000-0000-4000-8000-000000000066"),

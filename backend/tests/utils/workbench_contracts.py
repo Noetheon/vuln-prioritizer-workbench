@@ -199,8 +199,8 @@ def _add_vpw051_bundle_metadata(
             .where(app_models.Finding.cve_id == DEMO_CVE_XZ)
         ).first()
         assert finding is not None
-        finding.recommended_action = "Patch after using super-secret-token in the approval system."
-        finding.rationale = f"Review local evidence from {tmp_path}/private/vpw-051-input.txt."
+        recommended_action = "Patch after using super-secret-token in the approval system."
+        rationale = f"Review local evidence from {tmp_path}/private/vpw-051-input.txt."
         finding_evidence = evidence_repo.latest_finding_decision_evidence(finding.id)
         assert finding_evidence is not None
         evidence_record = evidence_repo.get_analysis_evidence_record(run.id)
@@ -212,12 +212,12 @@ def _add_vpw051_bundle_metadata(
             evidence_items=[
                 finding_evidence.model_copy(
                     update={
-                        "rationale": finding.rationale,
-                        "recommended_action": finding.recommended_action,
+                        "rationale": rationale,
+                        "recommended_action": recommended_action,
                         "remediation": finding_evidence.remediation.model_copy(
                             update={
-                                "recommended_action": finding.recommended_action,
-                                "recommendation": finding.recommended_action,
+                                "recommended_action": recommended_action,
+                                "recommendation": recommended_action,
                                 "raw": {
                                     **finding_evidence.remediation.raw,
                                     "authorization": "Bearer super-secret-token",
@@ -271,8 +271,6 @@ def _add_vpw060_attack_contexts(
                 "needs_review",
             ),
         ):
-            finding.attack_mapped = True
-            session.add(finding)
             session.add(
                 app_models_for_env.FindingAttackContext(
                     finding_id=finding.id,
@@ -302,6 +300,46 @@ def _add_vpw060_attack_contexts(
                     ],
                 )
             )
+            evidence_repo = workbench_api_env.repositories.EvidenceRepository(session)
+            evidence_record = evidence_repo.get_finding_decision_evidence_record(
+                finding_id=finding.id,
+                analysis_run_id=run.id,
+            )
+            assert evidence_record is not None
+            evidence = FindingDecisionEvidenceV2.model_validate(evidence_record.payload_json)
+            evidence_record.payload_json = evidence.model_copy(
+                update={
+                    "attack_mapped": True,
+                    "attack": AttackEvidenceV2(
+                        mapped=True,
+                        source="local-curated",
+                        review_status=review_status,
+                        defensive_note="Defensive triage context only; validate before action.",
+                        rationale="Reviewed local ATT&CK mapping for defensive prioritization.",
+                        confidence=confidence,
+                        technique_ids=[technique_id],
+                        tactic_ids=[tactic],
+                        mappings=[
+                            {
+                                "technique_id": technique_id,
+                                "technique_name": technique_name,
+                                "attack_object_id": technique_id,
+                                "attack_object_name": technique_name,
+                                "tactics": [tactic],
+                                "confidence": confidence,
+                                "review_status": review_status,
+                                "source": "local-curated",
+                                "mapping_type": "exploitation",
+                                "defensive_note": "Use for defensive triage and coverage review.",
+                                "rationale": (
+                                    "Reviewed local mapping; no procedural detail included."
+                                ),
+                            }
+                        ],
+                    ),
+                }
+            ).to_jsonable()
+            session.add(evidence_record)
         session.commit()
 
 
@@ -573,13 +611,6 @@ def _seed_finding(
         priority_rank=priority_rank,
         operational_rank=operational_rank,
     )
-    finding.risk_score = risk_score
-    finding.epss = epss
-    finding.cvss_base_score = cvss
-    finding.in_kev = in_kev
-    finding.rationale = rationale
-    finding.recommended_action = action
-    session.flush()
     evidence = _seed_finding_evidence(
         finding=finding,
         analysis_run_id=analysis_run_id,
@@ -705,7 +736,7 @@ def _seed_finding_evidence(
         waived=bool(getattr(finding, "waived", False)),
         rationale=rationale,
         recommended_action=action,
-        occurrence_scope={"asset_ref": asset_key},
+        occurrence_scope={"target_ref": asset_key},
         priority_evidence=PriorityEvidenceV2(
             priority_label=priority_label,
             priority_rank=priority_rank,

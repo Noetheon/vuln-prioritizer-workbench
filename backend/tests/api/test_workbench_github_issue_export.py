@@ -17,6 +17,7 @@ from utils.workbench_env import (
 )
 
 from app import models as app_models
+from app.contracts.decision_evidence import FindingDecisionEvidenceV2
 
 
 def test_workbench_github_issue_preview_selected_findings_markdown_redacts_secrets(
@@ -30,21 +31,28 @@ def test_workbench_github_issue_preview_selected_findings_markdown_redacts_secre
         workbench_api_env.app_models,
         workbench_api_env.repositories,
         project_id=UUID(project["id"]),
+        with_decision_evidence=True,
     )
     selected_id = seeded["finding_ids"][0]
     unselected_id = seeded["finding_ids"][1]
 
     with Session(workbench_api_env.engine) as session:
-        finding = session.get(app_models.Finding, selected_id)
-        assert finding is not None
-        finding.rationale = (
-            "EPSS and KEV make this urgent. token=ghp_secretshouldnotleak "
-            "and source /Users/alice/private/sbom.json"
-        )
-        finding.recommended_action = "Upgrade log4j-core and rotate api_key=super-secret-value."
-        finding.risk_score = 98.6
-        finding.epss = 0.9442
-        session.add(finding)
+        evidence_repo = workbench_api_env.repositories.EvidenceRepository(session)
+        evidence_record = evidence_repo.latest_finding_decision_evidence_record(selected_id)
+        assert evidence_record is not None
+        evidence = FindingDecisionEvidenceV2.model_validate(evidence_record.payload_json)
+        evidence_record.payload_json = evidence.model_copy(
+            update={
+                "rationale": (
+                    "EPSS and KEV make this urgent. token=ghp_secretshouldnotleak "
+                    "and source /Users/alice/private/sbom.json"
+                ),
+                "recommended_action": ("Upgrade log4j-core and rotate api_key=super-secret-value."),
+                "risk_score": 98.6,
+                "epss": 0.9442,
+            }
+        ).to_jsonable()
+        session.add(evidence_record)
         session.commit()
 
     response = client.post(
@@ -81,7 +89,7 @@ def test_workbench_github_issue_preview_selected_findings_markdown_redacts_secre
     assert "super-secret-value" not in body
     assert "/Users/alice/private/sbom.json" not in body
     assert "[REDACTED-PATH]" in body
-    assert "vuln-prioritizer duplicate_key" in body
+    assert "vuln-prioritizer-workbench duplicate_key" in body
     audit_events = _audit_payloads(workbench_api_env, action="github_issue.preview")
     assert audit_events[-1]["status"] == "success"
     assert audit_events[-1]["detail"]["count"] == 2
@@ -105,6 +113,7 @@ def test_workbench_github_issue_export_requires_explicit_token_and_skips_duplica
         workbench_api_env.app_models,
         workbench_api_env.repositories,
         project_id=UUID(project["id"]),
+        with_decision_evidence=True,
     )
     selected_id = seeded["finding_ids"][0]
 
@@ -158,7 +167,7 @@ def test_workbench_github_issue_export_requires_explicit_token_and_skips_duplica
         assert args == ("https://api.github.com/repos/acme/workbench-triage/issues",)
         assert kwargs["headers"]["Authorization"] == "Bearer ghp_test_value"
         assert "ghp_test_value" not in kwargs["json"]["body"]
-        assert "vuln-prioritizer duplicate_key" in kwargs["json"]["body"]
+        assert "vuln-prioritizer-workbench duplicate_key" in kwargs["json"]["body"]
         posted_payloads.append(kwargs["json"])
         return FakeGitHubResponse()
 
@@ -232,6 +241,7 @@ def test_workbench_github_issue_export_audits_partial_network_failure_and_retry(
         workbench_api_env.app_models,
         workbench_api_env.repositories,
         project_id=UUID(project["id"]),
+        with_decision_evidence=True,
     )
     first_id, second_id = seeded["finding_ids"]
 
@@ -332,6 +342,7 @@ def test_workbench_github_issue_export_audits_upstream_status_failure(
         workbench_api_env.app_models,
         workbench_api_env.repositories,
         project_id=UUID(project["id"]),
+        with_decision_evidence=True,
     )
     selected_id = seeded["finding_ids"][0]
 
@@ -386,6 +397,7 @@ def test_workbench_github_issue_export_retries_past_stale_empty_reservation(
         workbench_api_env.app_models,
         workbench_api_env.repositories,
         project_id=UUID(project["id"]),
+        with_decision_evidence=True,
     )
     selected_id = seeded["finding_ids"][0]
     preview = client.post(
@@ -457,6 +469,7 @@ def test_workbench_github_issue_preview_and_export_use_local_single_user_access(
         workbench_api_env.app_models,
         workbench_api_env.repositories,
         project_id=UUID(project["id"]),
+        with_decision_evidence=True,
     )
 
     allowed = client.post(
@@ -539,6 +552,7 @@ def test_workbench_github_issue_export_audits_generic_token_http_failure(
         workbench_api_env.app_models,
         workbench_api_env.repositories,
         project_id=UUID(project["id"]),
+        with_decision_evidence=True,
     )
 
     def fake_github_export_token(token_env: str | None) -> str:
@@ -580,6 +594,7 @@ def test_workbench_github_issue_export_skips_integrity_race_duplicate(
         workbench_api_env.app_models,
         workbench_api_env.repositories,
         project_id=UUID(project["id"]),
+        with_decision_evidence=True,
     )
 
     class RacingExportRepository:
@@ -653,6 +668,7 @@ def test_workbench_github_issue_export_audits_generic_create_http_failure(
         workbench_api_env.app_models,
         workbench_api_env.repositories,
         project_id=UUID(project["id"]),
+        with_decision_evidence=True,
     )
 
     def fake_create_github_issue(*args: Any, **kwargs: Any) -> dict[str, Any]:

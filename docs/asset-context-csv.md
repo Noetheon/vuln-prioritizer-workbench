@@ -13,11 +13,10 @@ rule-oriented starting point. The older minimal fixture at
 | Column | Required | Description |
 | --- | --- | --- |
 | `target_kind` | yes | Normalized occurrence target kind, such as `host`, `image`, `repository`, `package`, or `generic`. Matching requires the rule and occurrence `target_kind` to be equal after lowercasing. |
-| `target_ref` | conditionally | Pattern or exact reference matched against the occurrence `target_ref`. Required unless `asset_ref` is present. |
-| `asset_ref` | alias | Backward-compatible alias for `target_ref`. Use it when exporting from older spreadsheets or CVE-list files. If both `target_ref` and `asset_ref` are present, `target_ref` wins. |
+| `target_ref` | yes | Pattern or exact reference matched against the occurrence `target_ref`. |
 | `asset_id` | yes | Stable local asset identifier surfaced in explanations, reports, and Workbench findings. |
 
-Rows missing `target_kind`, a target reference, or `asset_id` are skipped. A file
+Rows missing `target_kind`, `target_ref`, or `asset_id` are skipped. A file
 missing the required header columns fails validation.
 
 ## Optional Columns
@@ -95,8 +94,8 @@ owner or service, edit asset rows, and recalculate linked findings after an edit
 ## Example
 
 ```csv
-rule_id,target_kind,target_ref,asset_ref,asset_id,match_mode,precedence,criticality,exposure,environment,owner,business_service
-host-prod-01,host,app-01.example.internal,,app-01,exact,100,critical,internet-facing,prod,platform-team,customer-login
+rule_id,target_kind,target_ref,asset_id,match_mode,precedence,criticality,exposure,environment,owner,business_service
+host-prod-01,host,app-01.example.internal,app-01,exact,100,critical,internet-facing,prod,platform-team,customer-login
 host-prod-fleet,host,web-*.example.internal,,web-fleet,glob,40,high,dmz,prod,edge-team,public-web
 repo-payments,repository,,github.com/acme/payments,payments-repo,exact,80,high,internal,prod,payments-team,payments
 image-demo,image,ghcr.io/acme/demo-app:1.0.0 (alpine 3.19),,api-gateway,exact,90,critical,internet-facing,prod,platform-team,customer-login

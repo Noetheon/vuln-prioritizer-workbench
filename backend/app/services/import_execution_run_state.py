@@ -29,7 +29,6 @@ def resolve_import_run(
     project_id: uuid.UUID,
     prepared: PreparedImportUpload,
     existing_run_id: uuid.UUID | None,
-    execution_mode: str,
 ) -> ResolvedImportRun:
     """Create a pending run or recover existing run state for a retry."""
     if existing_run_id is not None:
@@ -65,7 +64,6 @@ def apply_stored_upload_summaries(
     resolved_run: ResolvedImportRun,
     prepared: PreparedImportUpload,
     artifacts: StoredImportArtifacts,
-    execution_mode: str,
 ) -> dict[str, Any]:
     """Return v2 result refs for persisted upload artifacts."""
     _ = run
@@ -73,7 +71,6 @@ def apply_stored_upload_summaries(
         prepared,
         job_id=resolved_run.job_id,
         job_history=resolved_run.job_history,
-        execution_mode=execution_mode,
     )
     input_upload = summary.get("input_upload")
     return merge_summary_payload(
@@ -82,7 +79,6 @@ def apply_stored_upload_summaries(
             job_id=resolved_run.job_id,
             status="pending",
             status_history=resolved_run.job_history,
-            execution_mode=execution_mode,
         ),
         input_upload={
             **(input_upload if isinstance(input_upload, dict) else {}),
@@ -105,11 +101,10 @@ def mark_import_run_running(
     *,
     job_id: str,
     job_history: list[dict[str, str]],
-    execution_mode: str,
 ) -> list[dict[str, str]]:
     """Mark a pending import run as actively running."""
     run.status = AnalysisRunStatus.RUNNING
-    _ = job_id, execution_mode
+    _ = job_id
     return _append_job_status(job_history, "running")
 
 
@@ -127,7 +122,6 @@ def _initial_run_summary(
     *,
     job_id: str,
     job_history: list[dict[str, str]],
-    execution_mode: str,
 ) -> dict[str, Any]:
     upload_summary = initial_upload_summary(prepared)
     return merge_summary_payload(
@@ -136,7 +130,6 @@ def _initial_run_summary(
             job_id=job_id,
             status="pending",
             status_history=job_history,
-            execution_mode=execution_mode,
         ),
         **upload_summary,
         created_findings=0,

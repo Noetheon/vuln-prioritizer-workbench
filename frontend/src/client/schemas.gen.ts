@@ -2875,17 +2875,6 @@ export const FindingOccurrencePublicSchema = {
             ],
             title: 'Asset Owner'
         },
-        asset_ref: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Asset Ref'
-        },
         component_name: {
             anyOf: [
                 {
@@ -3542,7 +3531,7 @@ export const GitHubIssueExportCreateSchema = {
             type: 'boolean'
         },
         label_prefix: {
-            default: 'vuln-prioritizer',
+            default: 'vuln-prioritizer-workbench',
             maxLength: 80,
             minLength: 1,
             title: 'Label Prefix',
@@ -3752,7 +3741,7 @@ export const GitHubIssuePreviewCreateSchema = {
             type: 'boolean'
         },
         label_prefix: {
-            default: 'vuln-prioritizer',
+            default: 'vuln-prioritizer-workbench',
             maxLength: 80,
             minLength: 1,
             title: 'Label Prefix',
@@ -4414,17 +4403,6 @@ export const OccurrenceEvidenceV2Schema = {
                 }
             ],
             title: 'Asset Owner'
-        },
-        asset_ref: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Asset Ref'
         },
         component_name: {
             anyOf: [

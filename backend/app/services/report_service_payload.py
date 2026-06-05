@@ -54,7 +54,15 @@ def build_report_payload(
         raise ReportGenerationError("Analysis evidence v2 is required before reporting.")
     findings = run_findings(session, run)
     run_occurrences = run_occurrences_by_finding(session, run)
-    finding_views = run_finding_decision_views(session, run=run, findings=findings)
+    finding_views = sorted(
+        run_finding_decision_views(session, run=run, findings=findings),
+        key=lambda view: (
+            view.operational_rank or 999_999,
+            view.priority_rank,
+            view.cve_id,
+            str(view.finding.id),
+        ),
+    )
     attack_contexts = run_attack_contexts_by_finding(session, run)
     report_findings = [
         merge_attack_context(
@@ -105,7 +113,7 @@ def run_findings(session: Session, run: AnalysisRun) -> list[Finding]:
         select(Finding)
         .join(FindingOccurrence)
         .where(FindingOccurrence.analysis_run_id == run.id)
-        .order_by(col(Finding.operational_rank), col(Finding.priority_rank), Finding.cve_id)
+        .order_by(Finding.cve_id, col(Finding.id))
     )
     findings: list[Finding] = []
     seen_ids: set[uuid.UUID] = set()

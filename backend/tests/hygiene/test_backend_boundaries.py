@@ -12,10 +12,10 @@ from utils.hygiene import (
 
 
 def test_core_analysis_service_is_focused_facade() -> None:
-    import vuln_prioritizer.services.analysis as service_analysis
+    import app.domain.engine.services.analysis as service_analysis
 
-    imports = _imported_modules("src/vuln_prioritizer/services/analysis.py")
-    source = (ROOT / "src/vuln_prioritizer/services/analysis.py").read_text(encoding="utf-8")
+    imports = _imported_modules("app/domain/engine/services/analysis.py")
+    source = (ROOT / "app/domain/engine/services/analysis.py").read_text(encoding="utf-8")
     expected_exports = {
         "AnalysisInputError",
         "AnalysisNoFindingsError",
@@ -49,14 +49,14 @@ def test_core_analysis_service_is_focused_facade() -> None:
     }
 
     assert {
-        "vuln_prioritizer.services.analysis_attack",
-        "vuln_prioritizer.services.analysis_explain",
-        "vuln_prioritizer.services.analysis_findings",
-        "vuln_prioritizer.services.analysis_filters",
-        "vuln_prioritizer.services.analysis_inputs",
-        "vuln_prioritizer.services.analysis_models",
-        "vuln_prioritizer.services.analysis_pipeline",
-        "vuln_prioritizer.services.analysis_provider",
+        "app.domain.engine.services.analysis_attack",
+        "app.domain.engine.services.analysis_explain",
+        "app.domain.engine.services.analysis_findings",
+        "app.domain.engine.services.analysis_filters",
+        "app.domain.engine.services.analysis_inputs",
+        "app.domain.engine.services.analysis_models",
+        "app.domain.engine.services.analysis_pipeline",
+        "app.domain.engine.services.analysis_provider",
     }.issubset(imports)
     assert "def prepare_analysis" not in source
     assert "class AnalysisRequest" not in source
@@ -65,28 +65,28 @@ def test_core_analysis_service_is_focused_facade() -> None:
 
 
 def test_analysis_pipeline_delegates_quality_and_explain_helpers() -> None:
-    pipeline_source = (ROOT / "src/vuln_prioritizer/services/analysis_pipeline.py").read_text(
+    pipeline_source = (ROOT / "app/domain/engine/services/analysis_pipeline.py").read_text(
         encoding="utf-8"
     )
-    findings_source = (ROOT / "src/vuln_prioritizer/services/analysis_findings.py").read_text(
+    findings_source = (ROOT / "app/domain/engine/services/analysis_findings.py").read_text(
         encoding="utf-8"
     )
-    quality_source = (ROOT / "src/vuln_prioritizer/services/analysis_quality.py").read_text(
+    quality_source = (ROOT / "app/domain/engine/services/analysis_quality.py").read_text(
         encoding="utf-8"
     )
-    explain_source = (ROOT / "src/vuln_prioritizer/services/analysis_explain.py").read_text(
+    explain_source = (ROOT / "app/domain/engine/services/analysis_explain.py").read_text(
         encoding="utf-8"
     )
 
-    assert "vuln_prioritizer.services.analysis_findings" in pipeline_source
-    assert "vuln_prioritizer.services.analysis_quality" in findings_source
+    assert "app.domain.engine.services.analysis_findings" in pipeline_source
+    assert "app.domain.engine.services.analysis_quality" in findings_source
     assert "def build_findings" not in pipeline_source
     assert "def build_findings" in findings_source
     assert "def attach_provider_data_quality_flags" not in pipeline_source
     assert "def _finding_data_quality_confidence" not in pipeline_source
     assert "def attach_provider_data_quality_flags" in quality_source
     assert "def _finding_data_quality_confidence" in quality_source
-    assert "vuln_prioritizer.services.analysis_explain" in pipeline_source
+    assert "app.domain.engine.services.analysis_explain" in pipeline_source
     assert "Compatibility wrapper for the focused explain module." in pipeline_source
     assert "Compatibility wrapper for saved-analysis explain results." in pipeline_source
     assert "build_inline_input" not in pipeline_source
@@ -95,20 +95,20 @@ def test_analysis_pipeline_delegates_quality_and_explain_helpers() -> None:
 
 
 def test_enrichment_service_delegates_snapshot_quality_and_result_helpers() -> None:
-    source = (ROOT / "src/vuln_prioritizer/services/enrichment.py").read_text(encoding="utf-8")
-    snapshot_source = (ROOT / "src/vuln_prioritizer/services/enrichment_snapshot.py").read_text(
+    source = (ROOT / "app/domain/engine/services/enrichment.py").read_text(encoding="utf-8")
+    snapshot_source = (ROOT / "app/domain/engine/services/enrichment_snapshot.py").read_text(
         encoding="utf-8"
     )
-    quality_source = (ROOT / "src/vuln_prioritizer/services/enrichment_quality.py").read_text(
+    quality_source = (ROOT / "app/domain/engine/services/enrichment_quality.py").read_text(
         encoding="utf-8"
     )
-    results_source = (ROOT / "src/vuln_prioritizer/services/enrichment_results.py").read_text(
+    results_source = (ROOT / "app/domain/engine/services/enrichment_results.py").read_text(
         encoding="utf-8"
     )
 
-    assert "vuln_prioritizer.services.enrichment_snapshot" in source
-    assert "vuln_prioritizer.services.enrichment_quality" in source
-    assert "vuln_prioritizer.services.enrichment_results" in source
+    assert "app.domain.engine.services.enrichment_snapshot" in source
+    assert "app.domain.engine.services.enrichment_quality" in source
+    assert "app.domain.engine.services.enrichment_results" in source
     assert "class EnrichmentService" in source
     assert "def _provider_data_quality_flags" not in source
     assert "def _append_provider_error_flag" not in source
@@ -121,20 +121,20 @@ def test_enrichment_service_delegates_snapshot_quality_and_result_helpers() -> N
 
 
 def test_prioritization_service_delegates_sorting_ranking_and_attack_helpers() -> None:
-    source = (ROOT / "src/vuln_prioritizer/services/prioritization.py").read_text(encoding="utf-8")
-    sorting_source = (ROOT / "src/vuln_prioritizer/services/prioritization_sorting.py").read_text(
+    source = (ROOT / "app/domain/engine/services/prioritization.py").read_text(encoding="utf-8")
+    sorting_source = (ROOT / "app/domain/engine/services/prioritization_sorting.py").read_text(
         encoding="utf-8"
     )
-    ranking_source = (ROOT / "src/vuln_prioritizer/services/prioritization_ranking.py").read_text(
+    ranking_source = (ROOT / "app/domain/engine/services/prioritization_ranking.py").read_text(
         encoding="utf-8"
     )
-    attack_source = (ROOT / "src/vuln_prioritizer/services/prioritization_attack.py").read_text(
+    attack_source = (ROOT / "app/domain/engine/services/prioritization_attack.py").read_text(
         encoding="utf-8"
     )
 
-    assert "vuln_prioritizer.services.prioritization_sorting" in source
-    assert "vuln_prioritizer.services.prioritization_ranking" in source
-    assert "vuln_prioritizer.services.prioritization_attack" in source
+    assert "app.domain.engine.services.prioritization_sorting" in source
+    assert "app.domain.engine.services.prioritization_ranking" in source
+    assert "app.domain.engine.services.prioritization_attack" in source
     assert "class PrioritizationService" in source
     assert "def _finding_sort_key" not in source
     assert "def _comparison_sort_key" not in source
@@ -153,7 +153,7 @@ def test_service_modules_do_not_import_cli_adapter_modules() -> None:
         imports = _imported_modules(str(path.relative_to(ROOT)))
 
         assert not {
-            module for module in imports if module.startswith("vuln_prioritizer.cli_support")
+            module for module in imports if module.startswith("app.domain.engine.cli_support")
         }, path
 
 
@@ -179,7 +179,7 @@ def test_workbench_app_imports_domain_options_not_cli_options() -> None:
     violations: list[str] = []
     for path in sorted((ROOT / "app").rglob("*.py")):
         imports = _imported_modules(str(path.relative_to(ROOT)))
-        if "vuln_prioritizer.cli_options" in imports:
+        if "app.domain.engine.cli_options" in imports:
             violations.append(str(path.relative_to(ROOT)))
 
     assert violations == []
@@ -188,10 +188,10 @@ def test_workbench_app_imports_domain_options_not_cli_options() -> None:
 def test_workbench_backend_does_not_import_legacy_layers() -> None:
     backend_app_root = ROOT / "app"
     blocked_prefixes = (
-        "vuln_prioritizer.api",
-        "vuln_prioritizer.db",
-        "vuln_prioritizer.web",
-        "vuln_prioritizer.services.workbench_",
+        "app.domain.engine.api",
+        "app.domain.engine.db",
+        "app.domain.engine.web",
+        "app.domain.engine.services.workbench_",
     )
 
     violations = {
@@ -337,7 +337,7 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
     assert "def persist_text_report" in service_persistence_source
     assert "def persist_binary_report" in service_persistence_source
     assert "class MarkdownReportPayload" not in source
-    assert "import vuln_prioritizer.workbench_report_contracts" in contracts_source
+    assert "import app.domain.engine.workbench_report_contracts" in contracts_source
     assert "CSV_FINDINGS_COLUMNS = _workbench_report_contracts.CSV_FINDINGS_COLUMNS" in (
         contracts_source
     )
@@ -353,7 +353,7 @@ def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
         "from app.services.report_contracts import CSV_FINDINGS_COLUMNS" in api_reports_test_source
     )
     assert "REPORT_FILENAME_EVIDENCE_BUNDLE" in contracts_source
-    assert "from vuln_prioritizer.model_base import StrictModel" in models_source
+    assert "from app.domain.engine.model_base import StrictModel" in models_source
     assert "class ReportPayload(StrictModel)" in models_source
     assert "class ReportFinding(StrictModel)" in models_source
     assert "class ReportProviderSnapshot(StrictModel)" in models_source
@@ -655,7 +655,7 @@ def test_run_workflow_metadata_uses_decision_evidence_v2_projection() -> None:
     for path in failure_paths:
         source = (ROOT / path).read_text(encoding="utf-8")
         assert "finish_analysis_run(" in source, path
-        assert "result_json=" not in source
+        assert "result_ref_json=" not in source
         assert "diagnostics_json=" not in source
 
 
@@ -737,8 +737,8 @@ def test_findings_page_uses_internal_query_object() -> None:
 
     assert "app.repositories.finding_page_query" in repository_source
     assert "class FindingPageQuery" in query_source
-    assert "def finding_page_filters" in query_source
-    assert "def finding_page_order_by" in query_source
+    assert "def finding_page_filters" not in query_source
+    assert "def finding_page_order_by" not in query_source
     assert "def list_project_findings_query" in repository_source
     assert "FindingPageQuery(" in route_source
     assert "list_project_findings_query" in route_source
@@ -748,27 +748,19 @@ def test_findings_page_uses_internal_query_object() -> None:
 def test_findings_repository_delegates_aggregate_query_helpers() -> None:
     repository_source = (ROOT / "app/repositories/findings.py").read_text(encoding="utf-8")
     repository_imports = _imported_modules("app/repositories/findings.py")
-    summary_source = (ROOT / "app/repositories/finding_summary_query.py").read_text(
-        encoding="utf-8"
-    )
-    governance_source = (ROOT / "app/repositories/finding_governance_query.py").read_text(
-        encoding="utf-8"
-    )
     attack_source = (ROOT / "app/repositories/finding_attack_query.py").read_text(encoding="utf-8")
 
-    assert "app.repositories.finding_summary_query" in repository_imports
-    assert "app.repositories.finding_governance_query" in repository_imports
     assert "app.repositories.finding_attack_query" in repository_imports
+    assert "app.services.decision_projection" in repository_imports
+    assert not (ROOT / "app/repositories/finding_summary_query.py").exists()
+    assert not (ROOT / "app/repositories/finding_governance_query.py").exists()
     assert "def project_finding_summary_counts" in repository_source
     assert "def project_governance_rollups" in repository_source
     assert "def list_project_attack_summary_inputs" in repository_source
+    assert "project_finding_decision_views" in repository_source
     assert "func.sum(_case_int" not in repository_source
     assert "def _governance_rollup_from_row" not in repository_source
-    assert "def project_dashboard_signal_counts" in summary_source
-    assert "def project_waiver_finding_counts" in summary_source
-    assert "def _governance_rollup_from_row" in governance_source
-    assert "def top_cves_for_governance_label" in governance_source
-    assert "def list_project_attack_summary_inputs" in attack_source
+    assert "def list_project_attack_summary_contexts" in attack_source
 
 
 def test_findings_route_delegates_public_projection() -> None:
@@ -794,31 +786,27 @@ def test_asset_repository_delegates_projection_and_rescore_rules() -> None:
     projection_source = (ROOT / "app/domain/asset_context_projection.py").read_text(
         encoding="utf-8"
     )
-    rescore_source = (ROOT / "app/domain/asset_rescore.py").read_text(encoding="utf-8")
 
     assert "app.domain.asset_context_projection" in repository_imports
-    assert "app.domain.asset_rescore" in repository_imports
-    assert "vuln_prioritizer.scoring" not in repository_imports
-    assert "vuln_prioritizer.models" not in repository_imports
+    assert "app.domain.asset_rescore" not in repository_imports
+    assert not (ROOT / "app/domain/asset_rescore.py").exists()
+    assert "app.domain.engine.scoring" not in repository_imports
+    assert "app.domain.engine.models" not in repository_imports
     assert "PriorityPolicy" not in repository_source
     assert "build_operational_score" not in repository_source
     assert "def _with_rescore_flag" in projection_source
-    assert "def mark_finding_rescore_needed" in rescore_source
-    assert "def recalculate_asset_finding" in rescore_source
-    assert "build_operational_score" not in rescore_source
+    assert "asset_context_rescore_needed" in repository_source
 
 
 def test_scoring_operational_rules_are_split_from_priority_facade() -> None:
-    scoring_source = (ROOT / "src/vuln_prioritizer/scoring.py").read_text(encoding="utf-8")
-    operational_source = (ROOT / "src/vuln_prioritizer/scoring_operational.py").read_text(
+    scoring_source = (ROOT / "app/domain/engine/scoring.py").read_text(encoding="utf-8")
+    operational_source = (ROOT / "app/domain/engine/scoring_operational.py").read_text(
         encoding="utf-8"
     )
-    rationale_source = (ROOT / "src/vuln_prioritizer/scoring_rationale.py").read_text(
-        encoding="utf-8"
-    )
+    rationale_source = (ROOT / "app/domain/engine/scoring_rationale.py").read_text(encoding="utf-8")
 
-    assert "vuln_prioritizer.scoring_operational" in scoring_source
-    assert "vuln_prioritizer.scoring_rationale" in scoring_source
+    assert "app.domain.engine.scoring_operational" in scoring_source
+    assert "app.domain.engine.scoring_rationale" in scoring_source
     assert "def determine_priority(" in scoring_source
     assert "def build_rationale(" not in scoring_source
     assert "def build_comparison_reason(" not in scoring_source
@@ -837,21 +825,21 @@ def test_provider_modules_do_not_import_service_layer_modules() -> None:
         imports = _imported_modules(str(path.relative_to(ROOT)))
 
         assert not {
-            module for module in imports if module.startswith("vuln_prioritizer.services")
+            module for module in imports if module.startswith("app.domain.engine.services")
         }, path
 
 
 def test_input_loader_uses_focused_parser_package() -> None:
-    imports = _imported_modules("src/vuln_prioritizer/inputs/loader.py")
-    registry_imports = _imported_modules("src/vuln_prioritizer/inputs/parser_registry.py")
-    asset_context_source = (ROOT / "src/vuln_prioritizer/inputs/asset_context_loader.py").read_text(
+    imports = _imported_modules("app/domain/engine/inputs/loader.py")
+    registry_imports = _imported_modules("app/domain/engine/inputs/parser_registry.py")
+    asset_context_source = (ROOT / "app/domain/engine/inputs/asset_context_loader.py").read_text(
         encoding="utf-8"
     )
-    vex_source = (ROOT / "src/vuln_prioritizer/inputs/vex_loader.py").read_text(encoding="utf-8")
-    format_source = (ROOT / "src/vuln_prioritizer/inputs/format_detection.py").read_text(
+    vex_source = (ROOT / "app/domain/engine/inputs/vex_loader.py").read_text(encoding="utf-8")
+    format_source = (ROOT / "app/domain/engine/inputs/format_detection.py").read_text(
         encoding="utf-8"
     )
-    tree = ast.parse((ROOT / "src/vuln_prioritizer/inputs/loader.py").read_text())
+    tree = ast.parse((ROOT / "app/domain/engine/inputs/loader.py").read_text())
     parse_functions = [
         node.name
         for node in tree.body
@@ -869,9 +857,9 @@ def test_input_loader_uses_focused_parser_package() -> None:
     assert "def load_vex_files" in vex_source
     assert "def detect_input_format" in format_source
     assert "def load_asset_context_file" not in (
-        ROOT / "src/vuln_prioritizer/inputs/loader.py"
+        ROOT / "app/domain/engine/inputs/loader.py"
     ).read_text(encoding="utf-8")
-    assert "def load_vex_files" not in (ROOT / "src/vuln_prioritizer/inputs/loader.py").read_text(
+    assert "def load_vex_files" not in (ROOT / "app/domain/engine/inputs/loader.py").read_text(
         encoding="utf-8"
     )
     assert parse_functions == []
@@ -911,15 +899,15 @@ def test_internal_package_import_graph_has_no_module_cycles() -> None:
 
 
 def test_models_facade_reexports_focused_model_modules() -> None:
-    imports = _imported_modules("src/vuln_prioritizer/models.py")
+    imports = _imported_modules("app/domain/engine/models.py")
 
-    assert "vuln_prioritizer.model_base" in imports
-    assert "vuln_prioritizer.models_artifacts" in imports
-    assert "vuln_prioritizer.models_attack" in imports
-    assert "vuln_prioritizer.models_input" in imports
-    assert "vuln_prioritizer.models_provider" in imports
-    assert "vuln_prioritizer.models_remediation" in imports
-    assert "vuln_prioritizer.models_waivers" in imports
+    assert "app.domain.engine.model_base" in imports
+    assert "app.domain.engine.models_artifacts" in imports
+    assert "app.domain.engine.models_attack" in imports
+    assert "app.domain.engine.models_input" in imports
+    assert "app.domain.engine.models_provider" in imports
+    assert "app.domain.engine.models_remediation" in imports
+    assert "app.domain.engine.models_waivers" in imports
 
 
 def test_import_execution_is_split_into_stage_services_with_guardrails() -> None:

@@ -9,6 +9,16 @@ from sqlmodel import Session
 from utils.import_contracts import drain_workflow_queue
 from utils.workbench_env import WorkbenchApiEnv, local_api_headers
 
+from app.domain.engine.models import (
+    KevData,
+    ProviderSnapshotItem,
+    ProviderSnapshotMetadata,
+    ProviderSnapshotReport,
+)
+from app.domain.engine.provider_snapshot import (
+    generate_provider_snapshot_json,
+    load_provider_snapshot,
+)
 from app.models.base import get_datetime_utc
 from app.services import provider_update_snapshot as provider_update_snapshot_module
 from app.services.provider_status import provider_status_payload
@@ -17,16 +27,6 @@ from app.services.provider_updates import (
     reconcile_stale_provider_update_runs,
 )
 from app.workers.workflow_worker import run_worker_once
-from vuln_prioritizer.models import (
-    KevData,
-    ProviderSnapshotItem,
-    ProviderSnapshotMetadata,
-    ProviderSnapshotReport,
-)
-from vuln_prioritizer.provider_snapshot import (
-    generate_provider_snapshot_json,
-    load_provider_snapshot,
-)
 
 
 def _completed_provider_job(
@@ -65,7 +65,6 @@ def _seed_provider_update_workflow(
         title="Provider snapshot refresh",
         handler="test.provider_update",
         status=status,
-        execution_mode="worker",
         current_stage="seeded",
         metadata_json=metadata,
     )
@@ -595,7 +594,8 @@ def test_workbench_provider_update_job_runs_from_worker_queue(
         assert run is not None
         assert run.status == workbench_api_env.app_models.AnalysisRunStatus.PENDING
         assert workflow is not None
-        assert workflow.execution_mode == "worker"
+        assert workflow.queue_name == "default"
+        assert workflow.handler == "app.services.provider_updates.resume_provider_update_job"
 
         result = run_worker_once(
             engine=workbench_api_env.engine,
@@ -620,7 +620,7 @@ def test_workbench_provider_update_job_runs_from_worker_queue(
         assert completed_run is not None
         assert completed_run.status == workbench_api_env.app_models.AnalysisRunStatus.COMPLETED
         assert completed_workflow is not None
-        assert completed_workflow.result_json["snapshot_created"] is True
+        assert completed_workflow.result_ref_json["snapshot_created"] is True
     finally:
         workbench_api_env.client.app.state.workbench_settings = active_settings
 

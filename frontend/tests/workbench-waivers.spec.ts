@@ -5,14 +5,14 @@ import { localApiHeaders } from "./workbench-runtime-helpers"
 
 const validOccurrenceCsv = Buffer.from(
   [
-    "cve_id,asset_ref,component,version,purl,severity,owner,business_service,exposure",
+    "cve_id,target_ref,component_name,component_version,purl,raw_severity,owner,business_service,exposure",
     "CVE-2024-3094,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL,team-platform,payments,public",
   ].join("\n"),
 )
 
 const governanceOccurrenceCsv = Buffer.from(
   [
-    "cve_id,asset_ref,component,version,purl,severity,owner,business_service,exposure,environment",
+    "cve_id,target_ref,component_name,component_version,purl,raw_severity,owner,business_service,exposure,environment",
     "CVE-2024-3094,payments-api,xz,5.6.0,pkg:apk/alpine/xz@5.6.0,CRITICAL,platform,checkout,public,production",
     "CVE-2024-4577,payments-worker,php-cgi,8.3.7,pkg:deb/debian/php-cgi@8.3.7,HIGH,platform,checkout,internal,production",
     "CVE-2024-3094,identity-api,xz,5.6.0-r1,pkg:apk/alpine/xz@5.6.0-r1,CRITICAL,appsec,identity,internal,production",

@@ -13,7 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse
 
 from app.core.config import Settings
-from vuln_prioritizer.security_redaction import redact_text, redact_value
+from app.domain.engine.security_redaction import redact_text, redact_value
 
 DEFAULT_ERROR_MESSAGES = {
     400: "Bad request.",

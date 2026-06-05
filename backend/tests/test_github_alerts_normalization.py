@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from vuln_prioritizer.inputs.loader import InputLoader
+from app.domain.engine.inputs.loader import InputLoader
 
 
 def _write_github_alerts_export(tmp_path: Path, alerts: list[dict[str, object]]) -> Path:

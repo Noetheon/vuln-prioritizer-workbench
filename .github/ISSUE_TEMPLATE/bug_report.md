@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a defect or behavioral regression in vuln-prioritizer
+about: Report a defect or behavioral regression in vuln-prioritizer-workbench
 title: "[Bug] "
 labels: bug,status:needs-revalidation
 assignees: ""
@@ -48,7 +48,7 @@ What should have happened instead?
 
 - Python version:
 - OS:
-- `vuln-prioritizer` version/tag:
+- `vuln-prioritizer-workbench` version/tag:
 
 ## Tests
 

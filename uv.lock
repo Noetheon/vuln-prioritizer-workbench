@@ -10,7 +10,7 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "vuln-prioritizer",
+    "vuln-prioritizer-workbench",
     "vuln-prioritizer-workbench-workspace",
 ]
 
@@ -2545,7 +2545,7 @@ wheels = [
 ]
 
 [[package]]
-name = "vuln-prioritizer"
+name = "vuln-prioritizer-workbench"
 version = "1.1.0"
 source = { editable = "backend" }
 dependencies = [

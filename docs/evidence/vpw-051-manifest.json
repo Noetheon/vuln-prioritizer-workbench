@@ -1,10 +1,10 @@
 {
   "artifact_hashes": {
     "analysis.json": "1dcfd60ab3b9c3cdb64851a02255630af132439125ada32526a0085112af473f",
-    "executive.html": "d5cb9e56a0e129fdeff403bece8ca5aeea820db2c5c534287039778eb71cb00c",
+    "executive.html": "67fb875983be58e1f3639611d1cf138a9d0146a6518fa5787db6e0ac113b38e5",
     "findings.csv": "3901094bf4ec701b7ffdb53394590980732adf806ffbb65618d11114e8c26d60",
     "provider-snapshot.json": "f5dab115122d78f3ac437386b83f2b5341e2694f0db909ca8cac111cdb57fea0",
-    "results.sarif": "f866b2119aabef1f041b0171a5cd4b693d513f76bbed8a89217adc5197d6cc25",
+    "results.sarif": "52b86b87ed3e2dbb5899a571aeb60b07be10e70cf4722733a5c7628bdd55d642",
     "technical.md": "997cdc9b938916a44711bc247ddf977af1e79bfb902cda10a6a59a5074307da5"
   },
   "attack_mapped_cves": 1,
@@ -25,7 +25,7 @@
     {
       "kind": "executive-html",
       "path": "executive.html",
-      "sha256": "d5cb9e56a0e129fdeff403bece8ca5aeea820db2c5c534287039778eb71cb00c",
+      "sha256": "67fb875983be58e1f3639611d1cf138a9d0146a6518fa5787db6e0ac113b38e5",
       "size_bytes": 29655
     },
     {
@@ -43,8 +43,8 @@
     {
       "kind": "sarif-results",
       "path": "results.sarif",
-      "sha256": "f866b2119aabef1f041b0171a5cd4b693d513f76bbed8a89217adc5197d6cc25",
-      "size_bytes": 7130
+      "sha256": "52b86b87ed3e2dbb5899a571aeb60b07be10e70cf4722733a5c7628bdd55d642",
+      "size_bytes": 6964
     }
   ],
   "findings_count": 2,

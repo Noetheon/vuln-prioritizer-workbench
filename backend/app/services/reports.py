@@ -11,6 +11,7 @@ from sqlmodel import Session
 from app.core.config import Settings
 from app.models import AnalysisRun, Project, Report, WorkflowRun, WorkflowRunKind, WorkflowRunStatus
 from app.repositories import WorkflowRepository
+from app.services.decision_projection import run_finding_decision_views
 from app.services.report_contracts import (
     EVIDENCE_BUNDLE_MANIFEST_SCHEMA_VERSION,
     REPORT_CONTENT_TYPE_CSV,
@@ -255,10 +256,11 @@ class ReportService:
             run=run,
             project=project,
         )
+        finding_views = run_finding_decision_views(self.session, run=run, findings=findings)
         layer = attack_navigator_layer(
             run=run,
             project=project,
-            findings=findings,
+            findings=finding_views,
             attack_contexts=run_attack_contexts(self.session, run),
             generated_at=generated_at,
             filter_value=filter_value,
@@ -371,7 +373,6 @@ class ReportService:
             project_id=project.id,
             analysis_run_id=run.id,
             status=WorkflowRunStatus.PENDING,
-            execution_mode="worker",
             current_stage="queued",
             progress_current=0,
             progress_total=3,
@@ -409,7 +410,6 @@ class ReportService:
             create_report=create_report,
             attack_filter=attack_filter if report_format == "attack-navigator" else None,
             workflow_id=workflow_id,
-            execution_mode="worker",
             workflow_context=workflow_context,
         )
 
@@ -420,10 +420,11 @@ class ReportService:
             run=run,
             project=project,
         )
+        finding_views = run_finding_decision_views(self.session, run=run, findings=findings)
         attack_layer = attack_navigator_layer(
             run=run,
             project=project,
-            findings=findings,
+            findings=finding_views,
             attack_contexts=run_attack_contexts(self.session, run),
             generated_at=generated_at,
             filter_value="all",
@@ -462,7 +463,6 @@ class ReportService:
         create_report: Callable[[], Report],
         attack_filter: str | None = None,
         workflow_id: uuid.UUID | None = None,
-        execution_mode: str = "worker",
         workflow_context: WorkflowExecutionContext | None = None,
     ) -> Report:
         """Persist durable workflow state around one report generation."""
@@ -482,7 +482,6 @@ class ReportService:
                 project_id=project.id,
                 analysis_run_id=run.id,
                 status=WorkflowRunStatus.PENDING,
-                execution_mode=execution_mode,
                 current_stage="queued",
                 progress_current=0,
                 progress_total=3,

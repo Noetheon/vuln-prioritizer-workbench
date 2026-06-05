@@ -9,7 +9,7 @@ export const cyclonedxVex = readFileSync(
 
 export const validOccurrenceCsv = Buffer.from(
   [
-    "cve_id,asset_ref,component,version,purl,severity,owner,business_service,exposure",
+    "cve_id,target_ref,component_name,component_version,purl,raw_severity,owner,business_service,exposure",
     "CVE-2024-3094,build-host-1,xz <img src=x onerror=window.__vpwXss=1>,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL,team-platform <img src=x onerror=window.__vpwXss=1>,payments <script>window.__vpwXss=1</script>,public",
     "CVE-2024-4577,web-tier,php-cgi,8.3.7,pkg:deb/debian/php-cgi@8.3.7,HIGH,team-web,checkout,internal",
   ].join("\n"),
@@ -43,14 +43,14 @@ export const importWizardOpenVex = Buffer.from(
 
 export const invalidOccurrenceCsv = Buffer.from(
   [
-    "cve_id,asset_ref,component_name,component_version,purl,scanner,fix_version,severity,owner,business_service,exposure",
+    "cve_id,target_ref,component_name,component_version,purl,source,fix_versions,raw_severity,owner,business_service,exposure",
     "not-a-cve,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,trivy,5.6.1-r2,CRITICAL,team-platform,payments,public",
   ].join("\n"),
 )
 
 export const cyclonedxVexOccurrenceCsv = Buffer.from(
   [
-    "cve_id,asset_ref,component,version,purl,severity",
+    "cve_id,target_ref,component_name,component_version,purl,raw_severity",
     "CVE-2023-34362,moveit-service,moveit-transfer,2023.0.0,pkg:pypi/moveit-transfer@2023.0.0,HIGH",
   ].join("\n"),
 )

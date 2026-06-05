@@ -6,12 +6,12 @@ from typing import Any
 import pytest
 from _input_fixture_contracts import load_input_fixture_contracts
 
+from app.domain.engine.inputs.loader import InputLoader
+from app.domain.engine.options import InputFormat
 from app.importers import ImporterParseError, build_importer_registry
 from app.importers.contracts import NormalizedOccurrence
 from app.importers.offline_loader import DEFAULT_IMPORT_INPUT_TYPES
 from app.services.workbench_capabilities import IMPORT_FORMAT_CAPABILITIES
-from vuln_prioritizer.inputs.loader import InputLoader
-from vuln_prioritizer.options import InputFormat
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 MATRIX_DIR = PROJECT_ROOT / "data" / "input_fixtures" / "parser_matrix"
@@ -68,16 +68,16 @@ def _project_importer_occurrence(occurrence: NormalizedOccurrence) -> dict[str, 
     if not isinstance(fix_versions, list):
         fix_versions = [occurrence.fix_version] if occurrence.fix_version else []
     return {
-        "cve_id": occurrence.cve,
+        "cve_id": occurrence.cve_id,
         "source_format": occurrence.source,
-        "component_name": occurrence.component,
-        "component_version": occurrence.version,
+        "component_name": occurrence.component_name,
+        "component_version": occurrence.component_version,
         "purl": _raw_evidence_value(occurrence, "purl"),
         "package_type": _raw_evidence_value(occurrence, "package_type"),
         "file_path": _raw_evidence_value(occurrence, "file_path"),
         "dependency_path": _raw_evidence_value(occurrence, "dependency_path"),
         "fix_versions": fix_versions,
-        "raw_severity": _raw_evidence_value(occurrence, "raw_severity", "severity"),
+        "raw_severity": _raw_evidence_value(occurrence, "raw_severity"),
     }
 
 
@@ -112,7 +112,9 @@ def test_workbench_importers_match_shared_normalization_contracts(
 
     assert fixture.is_file()
     assert len(occurrences) == contract["expected_occurrence_count"]
-    assert list(dict.fromkeys(item.cve for item in occurrences)) == contract["expected_unique_cves"]
+    assert (
+        list(dict.fromkeys(item.cve_id for item in occurrences)) == contract["expected_unique_cves"]
+    )
     assert [_project_importer_occurrence(item) for item in occurrences] == contract[
         "expected_occurrences"
     ]

@@ -206,7 +206,7 @@ def test_provider_snapshot_can_be_linked_to_analysis_run(migrated_engine: Engine
                 status=app_models.AnalysisRunStatus.COMPLETED,
                 started_at=FIXED_STARTED_AT,
                 finished_at=FIXED_FINISHED_AT,
-                result_json={"parsed": 1, "findings": 1},
+                result_ref_json={"parsed": 1, "findings": 1},
             )
         )
         session.commit()

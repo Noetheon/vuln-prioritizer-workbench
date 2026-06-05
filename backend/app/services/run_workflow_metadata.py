@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from vuln_prioritizer.security_redaction import redact_value
+from app.domain.engine.security_redaction import redact_value
 
 
 def merge_summary_payload(

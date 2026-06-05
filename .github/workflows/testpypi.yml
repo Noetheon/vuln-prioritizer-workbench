@@ -151,12 +151,12 @@ jobs:
               --no-deps \
               --index-url https://test.pypi.org/simple/ \
               --dest "$wheel_root" \
-              "vuln-prioritizer==${version}"; then
+              "vuln-prioritizer-workbench==${version}"; then
               python -m pip --isolated install \
                 --no-cache-dir \
                 --force-reinstall \
                 --index-url https://pypi.org/simple/ \
-                "$wheel_root"/vuln_prioritizer-"${version}"-*.whl
+                "$wheel_root"/vuln_prioritizer_workbench-"${version}"-*.whl
               python -m pip check
               python scripts/workbench_wheel_smoke.py "$artifact_root/workbench-wheel-smoke.json"
               exit 0

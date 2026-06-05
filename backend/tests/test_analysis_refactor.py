@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from vuln_prioritizer.models import (
+from app.domain.engine.models import (
     ContextPolicyProfile,
     EnrichmentResult,
     InputOccurrence,
@@ -16,16 +16,16 @@ from vuln_prioritizer.models import (
     ProviderDataQualityFlag,
     ProviderLookupDiagnostics,
 )
-from vuln_prioritizer.options import PriorityFilter
-from vuln_prioritizer.services import analysis as service_analysis
-from vuln_prioritizer.services import (
+from app.domain.engine.options import PriorityFilter
+from app.domain.engine.services import analysis as service_analysis
+from app.domain.engine.services import (
     analysis_explain,
     analysis_findings,
     analysis_pipeline,
     analysis_provider,
 )
-from vuln_prioritizer.services.analysis_quality import attach_provider_data_quality_flags
-from vuln_prioritizer.services.analysis_snapshot import (
+from app.domain.engine.services.analysis_quality import attach_provider_data_quality_flags
+from app.domain.engine.services.analysis_snapshot import (
     _provider_snapshot_hash,
     _provider_snapshot_metadata_path,
 )

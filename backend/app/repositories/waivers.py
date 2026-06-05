@@ -199,7 +199,7 @@ class WaiverRepository:
         statement = (
             select(Finding)
             .where(Finding.project_id == project_id)
-            .order_by(col(Finding.operational_rank), col(Finding.priority_rank), Finding.cve_id)
+            .order_by(Finding.cve_id, col(Finding.id))
         )
         return list(self.session.exec(statement).all())
 
@@ -215,7 +215,7 @@ class WaiverRepository:
         explanation = _object_value(priority_evidence.get("raw"))
         governance = _object_value(payload.get("governance"))
         waiver_record = _object_value(governance.get("waiver") or explanation.get("waiver"))
-        if waiver_record.get("source") != "workbench-api" and not finding.waived:
+        if waiver_record.get("source") != "workbench-api":
             return
 
         for key in (
@@ -233,7 +233,6 @@ class WaiverRepository:
         governance["waived"] = False
         if finding.status == FindingStatus.ACCEPTED:
             finding.status = FindingStatus.OPEN
-        finding.waived = False
         if evidence_record is not None:
             priority_evidence["raw"] = explanation
             payload["priority_evidence"] = priority_evidence
@@ -251,8 +250,8 @@ class WaiverRepository:
         """Apply waiver to finding method for WaiverRepository."""
         status, days_remaining = waiver_lifecycle_status(waiver)
         scope = waiver_scope_label(waiver)
-        finding.waived = status in {"active", "review_due"}
-        if finding.waived:
+        waived = status in {"active", "review_due"}
+        if waived:
             finding.status = FindingStatus.ACCEPTED
         elif finding.status == FindingStatus.ACCEPTED:
             finding.status = FindingStatus.OPEN
@@ -288,12 +287,12 @@ class WaiverRepository:
         explanation["waiver_approval_ref"] = waiver.approval_ref
         explanation["waiver_scope"] = scope
         governance["waiver"] = waiver_payload
-        governance["waived"] = finding.waived
+        governance["waived"] = waived
         if evidence_record is not None:
             priority_evidence["raw"] = explanation
             payload["priority_evidence"] = priority_evidence
             payload["governance"] = governance
-            payload["waived"] = finding.waived
+            payload["waived"] = waived
             payload["status"] = _finding_status_value(finding.status)
             evidence_record.payload_json = payload
             evidence_record.status = _finding_status_value(finding.status)

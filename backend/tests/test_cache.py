@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from vuln_prioritizer.cache import FileCache
+from app.domain.engine.cache import FileCache
 
 
 def test_file_cache_round_trip(tmp_path: Path) -> None:
@@ -52,7 +52,7 @@ def test_file_cache_keeps_existing_document_when_atomic_replace_fails(
     def fail_replace(_source: Path, _target: Path) -> None:
         raise OSError("replace failed")
 
-    monkeypatch.setattr("vuln_prioritizer.cache.os.replace", fail_replace)
+    monkeypatch.setattr("app.domain.engine.cache.os.replace", fail_replace)
 
     with pytest.raises(OSError, match="replace failed"):
         cache.set_json("nvd", "CVE-2026-0001", {"value": "new"})

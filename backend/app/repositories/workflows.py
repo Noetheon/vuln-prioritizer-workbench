@@ -9,6 +9,7 @@ from typing import Any
 
 from sqlmodel import Session, col, func, select
 
+from app.domain.engine.security_redaction import redact_value
 from app.models import (
     WorkflowEvent,
     WorkflowEventType,
@@ -17,7 +18,6 @@ from app.models import (
     WorkflowRunStatus,
 )
 from app.models.base import get_datetime_utc
-from vuln_prioritizer.security_redaction import redact_value
 
 
 def _public_payload(payload: dict[str, Any] | None) -> dict[str, Any]:
@@ -74,7 +74,6 @@ class WorkflowRepository:
         report_id: uuid.UUID | None = None,
         parent_workflow_run_id: uuid.UUID | None = None,
         status: WorkflowRunStatus | str = WorkflowRunStatus.PENDING,
-        execution_mode: str = "worker",
         idempotency_key: str | None = None,
         queue_name: str = "default",
         priority: int = 0,
@@ -94,7 +93,6 @@ class WorkflowRepository:
             status=_workflow_status(status),
             title=title,
             handler=handler,
-            execution_mode=execution_mode,
             project_id=project_id,
             analysis_run_id=analysis_run_id,
             report_id=report_id,
@@ -133,7 +131,6 @@ class WorkflowRepository:
         handler: str,
         project_id: uuid.UUID | None,
         status: WorkflowRunStatus | str,
-        execution_mode: str,
         current_stage: str | None = None,
         metadata_json: dict[str, Any] | None = None,
         payload_json: dict[str, Any] | None = None,
@@ -150,7 +147,6 @@ class WorkflowRepository:
             changed = False
             for attr, value in (
                 ("project_id", project_id),
-                ("execution_mode", execution_mode),
                 ("handler", handler),
             ):
                 if getattr(existing, attr) != value:
@@ -192,7 +188,6 @@ class WorkflowRepository:
             project_id=project_id,
             analysis_run_id=analysis_run_id,
             status=status,
-            execution_mode=execution_mode,
             current_stage=current_stage,
             metadata_json=metadata_json,
             payload_json=payload_json,
@@ -316,7 +311,7 @@ class WorkflowRepository:
         error_message: str | None = None,
         error_json: dict[str, Any] | None = None,
         diagnostics_json: dict[str, Any] | None = None,
-        result_json: dict[str, Any] | None = None,
+        result_ref_json: dict[str, Any] | None = None,
         artifact_refs_json: list[dict[str, Any]] | None = None,
         terminal_code: str | None = None,
         metadata_json: dict[str, Any] | None = None,
@@ -347,8 +342,8 @@ class WorkflowRepository:
             workflow.diagnostics_json = _public_payload(diagnostics_json)
         elif error_json is not None and terminal_status == WorkflowRunStatus.FAILED:
             workflow.diagnostics_json = _public_payload(error_json)
-        if result_json is not None:
-            workflow.result_json = _public_payload(result_json)
+        if result_ref_json is not None:
+            workflow.result_ref_json = _public_payload(result_ref_json)
         if artifact_refs_json is not None:
             workflow.artifact_refs_json = _public_artifacts(artifact_refs_json)
         if terminal_code is not None:
@@ -438,15 +433,15 @@ class WorkflowRepository:
         self,
         workflow_id: uuid.UUID,
         *,
-        result_json: dict[str, Any] | None = None,
+        result_ref_json: dict[str, Any] | None = None,
         diagnostics_json: dict[str, Any] | None = None,
         artifact_refs_json: list[dict[str, Any]] | None = None,
         metadata_json: dict[str, Any] | None = None,
     ) -> WorkflowRun:
         """Update v2 workflow output fields without changing lifecycle status."""
         workflow = self.require_workflow(workflow_id)
-        if result_json is not None:
-            workflow.result_json = _public_payload(result_json)
+        if result_ref_json is not None:
+            workflow.result_ref_json = _public_payload(result_ref_json)
         if diagnostics_json is not None:
             workflow.diagnostics_json = _public_payload(diagnostics_json)
         if artifact_refs_json is not None:
@@ -696,7 +691,6 @@ class WorkflowRepository:
             analysis_run_id=workflow.analysis_run_id,
             parent_workflow_run_id=workflow.id,
             status=WorkflowRunStatus.PENDING,
-            execution_mode="worker",
             idempotency_key=idempotency_key,
             queue_name=workflow.queue_name,
             priority=workflow.priority,

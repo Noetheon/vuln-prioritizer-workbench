@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from vuln_prioritizer.models_attack import (
+from app.domain.engine.models_attack import (
     ATTACK_MAPPING_TYPES as CORE_ATTACK_MAPPING_TYPES,
 )
-from vuln_prioritizer.models_attack import (
+from app.domain.engine.models_attack import (
     ATTACK_REVIEW_STATUSES as CORE_ATTACK_REVIEW_STATUSES,
 )
-from vuln_prioritizer.models_attack import (
+from app.domain.engine.models_attack import (
     require_attack_non_empty_text,
     validate_attack_tactic_id,
     validate_attack_technique_id,

@@ -31,7 +31,7 @@ Fields:
 - `cve`: required CVE identifier, normalized to uppercase
 - `component`: optional affected component or package name
 - `version`: optional affected component version
-- `asset_ref`: optional source asset reference
+- `target_ref`: optional source target reference
 - `source`: required non-blank occurrence source, defaulting to `import`
 - `fix_version`: optional fixed version
 - `raw_evidence`: mapping with source-specific evidence, copied to a plain dict

@@ -22,6 +22,7 @@ from app.core import rate_limit as rate_limit_module
 from app.core import retention as retention_module
 from app.core.config import Settings, settings
 from app.core.local_actor import configured_local_actor, local_actor_id
+from app.domain.engine.options import AttackSource
 from app.models import AuditEvent
 from app.repositories.reports import ReportRepository
 from app.services.analysis import AnalysisService, WorkbenchAnalysisError
@@ -31,7 +32,6 @@ from app.services.import_artifacts import (
     validate_attack_import_options,
 )
 from app.services.import_errors import ImportServiceError
-from vuln_prioritizer.options import AttackSource
 
 
 def _request(

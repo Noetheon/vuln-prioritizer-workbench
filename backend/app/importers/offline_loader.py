@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.domain.engine.options import InputFormat
 from app.importers.contracts import (
     Importer,
     ImporterValidationError,
@@ -20,7 +21,6 @@ from app.services.workbench_capabilities import (
     default_import_suffix_by_input_type,
     supported_import_input_types,
 )
-from vuln_prioritizer.options import InputFormat
 
 DEFAULT_IMPORT_INPUT_TYPES = supported_import_input_types()
 _DEFAULT_SUFFIX_BY_INPUT_TYPE = default_import_suffix_by_input_type()
@@ -55,7 +55,7 @@ class OfflineInputLoaderImporter:
             payload,
             default_suffix=_DEFAULT_SUFFIX_BY_INPUT_TYPE[self.input_type],
             filename=filename,
-            prefer_asset_id_as_asset_ref=True,
+            prefer_asset_id_as_target_ref=True,
         )
 
 

@@ -46,7 +46,7 @@ class GenericOccurrenceCsvImporter:
             payload,
             default_suffix=".csv",
             filename=filename,
-            prefer_asset_id_as_asset_ref=False,
+            prefer_asset_id_as_target_ref=False,
             strict_invalid_cve_warnings=True,
         )
 

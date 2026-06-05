@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Literal, cast
 from urllib.parse import quote_plus, urlparse
 
-from vuln_prioritizer.config import DEFAULT_NVD_API_KEY_ENV, validate_env_var_name
+from app.domain.engine.config import DEFAULT_NVD_API_KEY_ENV, validate_env_var_name
 
 EnvironmentName = Literal["local", "staging", "production"]
 VALID_ENVIRONMENTS: set[str] = {"local", "staging", "production"}
@@ -210,7 +210,7 @@ def load_settings() -> Settings:
         PROVIDER_SNAPSHOT_DIR=environ.get("PROVIDER_SNAPSHOT_DIR", "data"),
         PROVIDER_CACHE_DIR=environ.get("PROVIDER_CACHE_DIR", DEFAULT_PROVIDER_CACHE_DIR),
         NVD_API_KEY_ENV=environ.get(
-            "VULN_PRIORITIZER_NVD_API_KEY_ENV",
+            "WORKBENCH_NVD_API_KEY_ENV",
             DEFAULT_NVD_API_KEY_ENV,
         ),
         ATTACK_ARTIFACT_DIR=environ.get("ATTACK_ARTIFACT_DIR", "data/attack"),
@@ -275,8 +275,6 @@ def _bool_from_env(name: str, default: bool) -> bool:
 
 def _allowed_hosts_from_env() -> tuple[str, ...]:
     raw_hosts = environ.get("ALLOWED_HOSTS")
-    if raw_hosts is None:
-        raw_hosts = environ.get("VULN_PRIORITIZER_ALLOWED_HOSTS")
     if raw_hosts is None or raw_hosts.strip() == "":
         return DEFAULT_ALLOWED_HOSTS
     return parse_allowed_hosts(raw_hosts)

@@ -186,7 +186,6 @@ def build_occurrence_evidence(
         fix_versions=[str(item) for item in _list_value(raw.get("fix_versions"))] or None,
         target_kind=_str_value(raw.get("target_kind")),
         target_ref=_str_value(raw.get("target_ref")),
-        asset_ref=_str_value(raw.get("asset_ref")),
         asset_owner=_str_value(raw.get("owner")),
         asset_business_service=_str_value(raw.get("business_service")),
         asset_exposure=_str_value(raw.get("exposure")),

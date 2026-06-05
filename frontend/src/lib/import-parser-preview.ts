@@ -67,9 +67,7 @@ export async function buildParserPreview(
       .split(",")
       .map((header) => header.trim().toLowerCase())
       .filter(Boolean)
-    const hasCveHeader = headers.some((header) =>
-      ["cve", "cve_id", "cveid", "vulnerability_id"].includes(header),
-    )
+    const hasCveHeader = headers.includes("cve_id")
     return {
       ...base,
       candidateRows: rows.filter((row) => row.trim()).length,

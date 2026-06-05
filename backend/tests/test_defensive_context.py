@@ -6,8 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from vuln_prioritizer.models import EpssData, KevData, NvdData, PrioritizedFinding, ProviderEvidence
-from vuln_prioritizer.services.defensive_context import (
+from app.domain.engine.models import (
+    EpssData,
+    KevData,
+    NvdData,
+    PrioritizedFinding,
+    ProviderEvidence,
+)
+from app.domain.engine.services.defensive_context import (
     attach_defensive_contexts,
     defensive_context_hit_count,
     defensive_context_sources,

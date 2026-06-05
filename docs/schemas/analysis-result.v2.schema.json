@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://noetheon.github.io/vuln-prioritizer-workbench/schemas/analysis-result.v2.schema.json",
-  "title": "vuln-prioritizer Workbench analysis result v2",
+  "title": "vuln-prioritizer-workbench analysis result v2",
   "type": "object",
   "additionalProperties": false,
   "required": [

@@ -44,7 +44,7 @@
   ],
   "metadata": {
     "artifact_kind": "provider-snapshot",
-    "cache_dir": ".cache/vuln-prioritizer",
+    "cache_dir": ".cache/vuln-prioritizer-workbench",
     "cache_enabled": true,
     "cache_only": true,
     "generated_at": "2026-04-29T12:00:00+00:00",

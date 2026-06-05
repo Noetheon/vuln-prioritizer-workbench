@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from vuln_prioritizer.models import PrioritizedFinding
-from vuln_prioritizer.services.baseline_comparison import (
+from app.domain.engine.models import PrioritizedFinding
+from app.domain.engine.services.baseline_comparison import (
     build_cvss_baseline_comparison_payload,
 )
 

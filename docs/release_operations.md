@@ -167,7 +167,7 @@ When configuring the trusted publisher on PyPI, match these repository values:
 
 ### Setup Steps
 
-1. Decide whether the target PyPI project will be the current distribution name `vuln-prioritizer`.
+1. Decide whether the target PyPI project will be the current distribution name `vuln-prioritizer-workbench`.
 2. On PyPI, configure a Trusted Publisher for this repository and workflow.
 3. Keep the GitHub environment name as `pypi` so the workflow and PyPI configuration stay aligned.
 4. Set the repository variable `PYPI_PUBLISH_ENABLED=true` only after the trusted publisher is configured correctly.
@@ -203,7 +203,7 @@ operator-level confirmation rather than the only verification step.
 ```bash
 tmpdir="$(mktemp -d)"
 python3 -m venv "$tmpdir/venv"
-"$tmpdir/venv/bin/python" -m pip install "vuln-prioritizer==X.Y.Z"
+"$tmpdir/venv/bin/python" -m pip install "vuln-prioritizer-workbench==X.Y.Z"
 "$tmpdir/venv/bin/python" scripts/workbench_wheel_smoke.py \
   "$tmpdir/workbench-pypi-smoke.json"
 ```
@@ -222,8 +222,8 @@ python3 -m venv "$tmpdir/venv"
   --only-binary=:all: \
   --index-url https://test.pypi.org/simple/ \
   --dest "$tmpdir" \
-  "vuln-prioritizer==X.Y.Z"
-"$tmpdir/venv/bin/python" -m pip install "$tmpdir"/vuln_prioritizer-X.Y.Z-*.whl
+  "vuln-prioritizer-workbench==X.Y.Z"
+"$tmpdir/venv/bin/python" -m pip install "$tmpdir"/vuln_prioritizer_workbench-X.Y.Z-*.whl
 "$tmpdir/venv/bin/python" scripts/workbench_wheel_smoke.py \
   "$tmpdir/workbench-testpypi-smoke.json"
 ```

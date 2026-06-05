@@ -26,7 +26,7 @@ linked from an issue or PR.
 
 - The active browser Workbench runtime is `backend/app`.
 - The Python distribution intentionally ships both `backend/app/**` and
-  `backend/src/vuln_prioritizer/**`.
+  `backend/app/domain/engine/**`.
 - The current package maturity classifier is `Development Status :: 4 - Beta`.
   This means local-first self-hosted Workbench readiness, with shared domain
   code in the package; it is not a public-production certification.

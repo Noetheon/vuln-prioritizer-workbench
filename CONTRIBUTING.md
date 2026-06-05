@@ -46,7 +46,7 @@ This runs:
 
 - `ruff format --check`
 - `ruff check`
-- `mypy backend/app backend/src`
+- `mypy backend/app`
 - `pytest`
 - documentation hygiene and MkDocs build
 

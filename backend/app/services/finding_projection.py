@@ -7,6 +7,7 @@ import uuid
 from sqlmodel import Session, col, select
 
 from app.contracts.decision_evidence import FindingDecisionEvidenceV2, OccurrenceEvidenceV2
+from app.domain.engine.security_redaction import redact_value
 from app.models import (
     Finding,
     FindingAttackContext,
@@ -22,7 +23,6 @@ from app.services.decision_projection import (
     DecisionFindingView,
     latest_finding_decision_view,
 )
-from vuln_prioritizer.security_redaction import redact_value
 
 
 def _finding_public(
@@ -353,12 +353,10 @@ def _finding_occurrence_public(
         source_record_id=_string_evidence(evidence, "source_record_id") or occurrence.raw_reference,
         component_name=(
             _string_evidence(evidence, "component_name")
-            or _string_evidence(evidence, "component")
             or (finding.component.name if finding.component else None)
         ),
         component_version=(
             _string_evidence(evidence, "component_version")
-            or _string_evidence(evidence, "version")
             or (finding.component.version if finding.component else None)
         ),
         purl=_string_evidence(evidence, "purl")
@@ -366,12 +364,8 @@ def _finding_occurrence_public(
         fix_versions=_string_list_evidence(evidence, "fix_versions")
         or ([occurrence.fix_version] if occurrence.fix_version else None),
         target_kind=_string_evidence(evidence, "target_kind"),
-        target_ref=_string_evidence(evidence, "target_ref"),
-        asset_ref=(
-            _string_evidence(evidence, "asset_ref")
-            or _string_evidence(evidence, "asset_id")
-            or (finding.asset.asset_key if finding.asset else None)
-        ),
+        target_ref=_string_evidence(evidence, "target_ref")
+        or (finding.asset.target_ref if finding.asset else None),
         asset_owner=(
             _string_evidence(evidence, "asset_owner")
             or _string_evidence(evidence, "owner")
@@ -387,8 +381,7 @@ def _finding_occurrence_public(
             or _string_evidence(evidence, "exposure")
             or (finding.asset.exposure if finding.asset else None)
         ),
-        raw_severity=_string_evidence(evidence, "raw_severity")
-        or _string_evidence(evidence, "severity"),
+        raw_severity=_string_evidence(evidence, "raw_severity"),
         vex_status=_string_evidence(evidence, "vex_status"),
         vex_justification=_string_evidence(evidence, "vex_justification"),
         vex_action_statement=_string_evidence(evidence, "vex_action_statement"),
@@ -444,8 +437,7 @@ def _evidence_occurrence_public(
         purl=occurrence.purl,
         fix_versions=occurrence.fix_versions,
         target_kind=occurrence.target_kind,
-        target_ref=occurrence.target_ref,
-        asset_ref=occurrence.asset_ref,
+        target_ref=occurrence.target_ref or (finding.asset.target_ref if finding.asset else None),
         asset_owner=occurrence.asset_owner
         or _string_evidence(import_evidence, "asset_owner")
         or _string_evidence(import_evidence, "owner")

@@ -13,9 +13,12 @@ from starlette.responses import Response
 from app import models as app_models
 from app.core.config import Settings
 from app.main import _upload_size_guard
+from app.services.decision_projection import project_finding_decision_views
 from app.workers.workflow_worker import run_worker_once
 from utils.import_contract_fixtures import PROJECT_ROOT
 from utils.workbench_env import WorkbenchApiEnv
+
+_LATEST_DECISION_STATE_BY_FINDING_ID: dict[uuid.UUID, dict[str, object]] = {}
 
 
 def configure_upload_dir(
@@ -245,18 +248,21 @@ def finding_state(
                 .where(app_models.Finding.project_id == project_id)
             ).all()
         )
+        _LATEST_DECISION_STATE_BY_FINDING_ID.clear()
+        for view in project_finding_decision_views(session, findings):
+            _LATEST_DECISION_STATE_BY_FINDING_ID[view.finding.id] = {
+                "priority": view.priority.value,
+                "priority_rank": view.priority_rank,
+                "risk_score": view.risk_score,
+                "operational_rank": view.operational_rank,
+                "rationale": view.rationale,
+                "recommended_action": view.recommended_action,
+            }
         return findings, occurrence_count
 
 
 def decision_state(findings: list[app_models.Finding]) -> dict[str, dict[str, object]]:
     values: dict[str, dict[str, object]] = {}
     for finding in findings:
-        values[finding.cve_id] = {
-            "priority": str(finding.priority),
-            "priority_rank": finding.priority_rank,
-            "risk_score": finding.risk_score,
-            "operational_rank": finding.operational_rank,
-            "rationale": finding.rationale,
-            "recommended_action": finding.recommended_action,
-        }
+        values[finding.cve_id] = _LATEST_DECISION_STATE_BY_FINDING_ID[finding.id]
     return values

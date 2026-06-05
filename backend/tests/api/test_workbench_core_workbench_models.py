@@ -137,9 +137,6 @@ def test_project_can_persist_core_workbench_graph(app_models: Any, migrated_engi
                 vulnerability_id=vulnerability_id,
                 cve_id="CVE-2021-44228",
                 status=_enum_or_string(app_models, "FindingStatus", "open"),
-                priority=_enum_or_string(app_models, "FindingPriority", "critical"),
-                priority_rank=1,
-                in_kev=True,
             )
         )
         session.commit()
@@ -154,7 +151,6 @@ def test_project_can_persist_core_workbench_graph(app_models: Any, migrated_engi
         assert finding.vulnerability_id == vulnerability_id
         assert finding.cve_id == "CVE-2021-44228"
         assert _value(finding.status) == "open"
-        assert _value(finding.priority) == "critical"
 
 
 def test_core_workbench_enum_values_serialize_as_stable_strings(app_models: Any) -> None:
@@ -171,8 +167,6 @@ def test_core_workbench_enum_values_serialize_as_stable_strings(app_models: Any)
         vulnerability_id=uuid.uuid4(),
         cve_id="CVE-2024-0001",
         status=_enum_or_string(app_models, "FindingStatus", "open"),
-        priority=_enum_or_string(app_models, "FindingPriority", "high"),
-        priority_rank=2,
     )
 
     asset_payload = asset.model_dump(mode="json")
@@ -182,7 +176,7 @@ def test_core_workbench_enum_values_serialize_as_stable_strings(app_models: Any)
     assert asset_payload["exposure"] == "internet-facing"
     assert asset_payload["criticality"] == "critical"
     assert finding_payload["status"] == "open"
-    assert finding_payload["priority"] == "high"
+    assert "priority" not in finding_payload
 
 
 def test_core_workbench_dedup_constraints_and_indexes_exist(migrated_engine: Engine) -> None:
@@ -202,7 +196,6 @@ def test_core_workbench_dedup_constraints_and_indexes_exist(migrated_engine: Eng
     )
 
     assert _has_index(inspector, "asset", ("project_id",))
-    assert _has_index(inspector, "finding", ("project_id", "priority_rank"))
     assert _has_index(inspector, "finding", ("project_id", "status"))
     assert _has_index(inspector, "finding", ("cve_id",))
 

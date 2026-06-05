@@ -97,7 +97,7 @@ def test_successful_v2_run_without_analysis_evidence_raises_invariant(
             status=app_models.WorkflowRunStatus.SUCCEEDED,
             stage="succeeded",
             message="Done.",
-            result_json={
+            result_ref_json={
                 "schema_version": "workflow-result-ref.v2",
                 "analysis_evidence_id": str(uuid.uuid4()),
                 "artifact_refs": [],
@@ -135,7 +135,7 @@ def test_failed_run_keeps_failure_upload_metadata_without_decision_evidence(
             status=app_models.WorkflowRunStatus.FAILED,
             stage="parse_upload",
             message="Import failed.",
-            result_json={
+            result_ref_json={
                 "input_upload": {
                     "input_type": "cve-list",
                     "sha256": "sha256:failed-upload",

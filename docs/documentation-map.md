@@ -78,7 +78,7 @@ Use this wording for active docs:
 - "active Workbench runtime"
 - "FastAPI backend under `backend/app`"
 - "React/TanStack frontend under `frontend`"
-- "retained domain package under `backend/src/vuln_prioritizer`"
+- "internal engine namespace under `backend/app/domain/engine`"
 - "historical evidence" or "demo snapshot" for archive references
 
 Avoid this wording in active docs unless the sentence explicitly describes

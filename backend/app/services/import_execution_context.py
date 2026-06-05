@@ -6,6 +6,10 @@ import re
 from pathlib import Path
 from typing import Any
 
+from app.domain.engine.inputs._occurrence_support import apply_asset_context, finalize_occurrences
+from app.domain.engine.inputs._vex_support import apply_vex_statements
+from app.domain.engine.inputs.loader import load_asset_context_file, load_vex_files
+from app.domain.engine.models import InputSourceSummary, ParsedInput
 from app.domain.import_asset_context import (
     input_occurrence_from_workbench_occurrence as _input_occurrence_from_workbench_occurrence,
 )
@@ -20,10 +24,6 @@ from app.services.import_execution_parsing import summary_warnings as _summary_w
 from app.services.import_uploads import (
     sanitize_parser_error_message as _sanitize_parser_error_message,
 )
-from vuln_prioritizer.inputs._occurrence_support import apply_asset_context, finalize_occurrences
-from vuln_prioritizer.inputs._vex_support import apply_vex_statements
-from vuln_prioritizer.inputs.loader import load_asset_context_file, load_vex_files
-from vuln_prioritizer.models import InputSourceSummary, ParsedInput
 
 
 def _apply_workbench_asset_context(

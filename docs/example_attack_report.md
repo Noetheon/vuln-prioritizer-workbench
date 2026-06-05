@@ -19,7 +19,7 @@
 - KEV freshness: `2026-04-21T12:00:00+00:00`
 - Input files: `data/sample_cves_mixed.txt`
 - Source input: `data/sample_cves_mixed.txt` (cve-list, rows=5, occurrences=5, unique_cves=5)
-- Cache directory: `.cache/vuln-prioritizer`
+- Cache directory: `.cache/vuln-prioritizer-workbench`
 - NVD diagnostics: `requested=5, cache_hits=0, network_fetches=0, failures=0, content_hits=5, empty_records=0, stale_cache_hits=0`
 - EPSS diagnostics: `requested=5, cache_hits=0, network_fetches=0, failures=0, content_hits=5, empty_records=0, stale_cache_hits=0`
 - KEV diagnostics: `requested=5, cache_hits=0, network_fetches=0, failures=0, content_hits=4, empty_records=0, stale_cache_hits=0`
@@ -28,7 +28,7 @@
 - ATT&CK mapping file SHA256: `f604e08bd6370c2356a60c01963a9bc5c88f92fac0b2ee20102c0159d4a2c865`
 - ATT&CK technique metadata file: `data/attack/attack_techniques_enterprise_16.1_subset.json`
 - ATT&CK technique metadata file SHA256: `486d0aa3aacf5c86cf5b8f9dd597210bcfd9d36cbd1331c1c303865dbd6c5c78`
-- ATT&CK metadata format: `vuln-prioritizer-technique-json`
+- ATT&CK metadata format: `vuln-prioritizer-workbench-technique-json`
 - ATT&CK metadata source: `local-technique-metadata`
 - ATT&CK mapping framework: `kev`
 - ATT&CK mapping framework version: `07/28/2025`
