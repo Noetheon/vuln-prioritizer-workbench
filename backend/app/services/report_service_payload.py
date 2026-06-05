@@ -17,7 +17,7 @@ from app.models import (
 from app.models.base import get_datetime_utc
 from app.repositories import WaiverRepository
 from app.services.decision_projection import decision_run_view, run_finding_decision_views
-from app.services.governance import build_project_governance_rollups_payload
+from app.services.governance_rollups import build_project_governance_rollups_payload
 from app.services.report_models import MarkdownReportPayload, ReportGenerationError
 from app.services.report_projection import (
     _finding_payload_from_decision_view,

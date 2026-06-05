@@ -21,12 +21,12 @@ class AttackSummaryFindingLike(Protocol):
     @property
     def id(self) -> uuid.UUID:
         """Finding identifier."""
-        ...
+        raise NotImplementedError
 
     @property
     def risk_score(self) -> float | None:
         """Evidence-backed risk score."""
-        ...
+        raise NotImplementedError
 
 
 class AttackNavigatorFindingLike(AttackSummaryFindingLike, Protocol):
@@ -35,17 +35,17 @@ class AttackNavigatorFindingLike(AttackSummaryFindingLike, Protocol):
     @property
     def cve_id(self) -> str:
         """CVE identifier."""
-        ...
+        raise NotImplementedError
 
     @property
     def in_kev(self) -> bool:
         """Whether the finding is listed in KEV."""
-        ...
+        raise NotImplementedError
 
     @property
     def priority(self) -> object:
         """Priority value or enum."""
-        ...
+        raise NotImplementedError
 
 
 @dataclass

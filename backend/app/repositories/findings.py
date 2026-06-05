@@ -255,7 +255,7 @@ class FindingRepository:
 
     def project_dashboard_signal_counts(self, project_id: uuid.UUID) -> dict[str, Any]:
         """Return dashboard signal counts from evidence-backed decision views."""
-        from app.services.dashboard import dashboard_signal_counts  # noqa: PLC0415
+        from app.services.dashboard_counts import dashboard_signal_counts  # noqa: PLC0415
         from app.services.decision_projection import project_finding_decision_views  # noqa: PLC0415
 
         counts = dashboard_signal_counts(
@@ -272,7 +272,7 @@ class FindingRepository:
     ) -> list[GovernanceRollupPublic]:
         """Return evidence-backed governance rollups for one project dimension."""
         from app.services.decision_projection import project_finding_decision_views  # noqa: PLC0415
-        from app.services.governance import (
+        from app.services.governance_rollups import (
             build_project_governance_rollups_payload,  # noqa: PLC0415
         )
 

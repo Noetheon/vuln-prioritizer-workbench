@@ -479,7 +479,7 @@ def seed_finding_pair(
         )
         finding_ids = [first_finding.id, second_finding.id]
         if with_decision_evidence:
-            from utils.workbench_contracts import (  # noqa: PLC0415
+            from utils.workbench_evidence_seed import (  # noqa: PLC0415
                 _seed_analysis_evidence,
                 _seed_finding_evidence,
             )
