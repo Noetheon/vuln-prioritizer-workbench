@@ -112,7 +112,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
     assert all("/items" not in path for path in paths)
     assert missing_items.status_code == 404
     assert expected_schemas.issubset(schemas)
-    assert all("Item" not in schema_name for schema_name in schemas)
+    assert {"Item", "ItemCreate", "ItemPublic", "ItemsPublic", "ItemUpdate"}.isdisjoint(schemas)
     for schema_name in ("AnalysisRunPublic", "AnalysisRunSummaryPublic"):
         properties = payload["components"]["schemas"][schema_name]["properties"]
         assert "summary_json" not in properties

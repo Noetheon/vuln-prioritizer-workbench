@@ -949,6 +949,46 @@ test("app shell owns page scrolling in the content region", () => {
   assert.doesNotMatch(scrollOwner, /requestAnimationFrame/)
 })
 
+test("Workbench feedback states use VPW primitives instead of generic cards", () => {
+  const retiredStateFiles = [
+    "src/components/states/EmptyState.tsx",
+    "src/components/states/ErrorState.tsx",
+    "src/components/states/LoadingSkeleton.tsx",
+  ]
+  const feedbackFiles = [
+    "src/components/vpw/VpwEmptyState.tsx",
+    "src/components/vpw/VpwSkeletonStack.tsx",
+    "src/components/vpw/VpwStatusBanner.tsx",
+    "src/components/vpw/WorkbenchFeedback.tsx",
+  ]
+
+  for (const path of retiredStateFiles) {
+    assert.equal(
+      existsSync(join(frontendRoot, path)),
+      false,
+      `${path} should stay retired`,
+    )
+  }
+  for (const path of feedbackFiles) {
+    assert.doesNotMatch(
+      readProjectFile(path),
+      /@\/components\/ui\/card|components\/ui\/card/,
+      `${path} should not depend on generic Card primitives`,
+    )
+  }
+
+  const sourceFiles = walk(srcRoot).filter((path) => /\.(?:ts|tsx)$/.test(path))
+  const legacyStateImports = sourceFiles.flatMap((path) => {
+    const source = readProjectFile(path)
+    return /from\s+["'][^"']*(?:components\/states|\.\.?\/states)["']/.test(
+      source,
+    )
+      ? [path]
+      : []
+  })
+  assert.deepEqual(legacyStateImports, [])
+})
+
 test("VPW design audit stays exposed as a named local and CI gate", () => {
   const packageJson = JSON.parse(readProjectFile("package.json")) as {
     scripts: Record<string, string>
@@ -974,7 +1014,15 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
     ci.indexOf("Run VPW design audit screenshots") <
       ci.indexOf("Run full frontend Playwright suite"),
   )
-  assert.match(auditSpec, /expect\(manifest\)\.toHaveLength\(36\)/)
+  assert.match(
+    auditSpec,
+    /design audit captures unique VPW route section screenshots/,
+  )
+  assert.match(auditSpec, /expectRouteCoverage\(auditRoutes, manifest\)/)
+  assert.match(auditSpec, /expectNoDuplicateAuditSegments\(manifest\)/)
+  assert.match(auditSpec, /screenshotSha256\(file\)/)
+  assert.doesNotMatch(auditSpec, /expect\(manifest\)\.toHaveLength\(\d+\)/)
+  assert.doesNotMatch(auditSpec, /\bsegments:\s*\d/)
 })
 
 test("Playwright npm scripts keep inherited NO_COLOR logs deterministic", () => {

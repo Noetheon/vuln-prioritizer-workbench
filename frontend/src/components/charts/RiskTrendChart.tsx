@@ -1,5 +1,5 @@
+import { EmptyState } from "@/components/vpw"
 import type { ChartDatum } from "../../lib/chart-data"
-import { EmptyState } from "../states"
 import { ChartFrame } from "./ChartFrame"
 
 type RiskTrendChartProps = {
@@ -15,8 +15,8 @@ export function RiskTrendChart({ items }: RiskTrendChartProps) {
       >
         <EmptyState
           ariaLabel="Run activity empty state"
-          compact
-          detail="Upload supported data to create run history."
+          className="min-h-0 py-4"
+          description="Upload supported data to create run history."
           title="No run history yet"
         />
       </ChartFrame>

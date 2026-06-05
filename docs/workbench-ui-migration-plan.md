@@ -60,9 +60,10 @@ reviewers recognize regressions.
   posture and the "evidence first, decoration last" design target.
 - `frontend/VPW_PAGE_PATTERNS.md` turns that direction into concrete page
   archetypes and a component decision matrix.
-- `frontend/tests/workbench-design-audit.spec.ts` captures 36 route-section
-  screenshots and asserts no oversized route-local `h2`/`h3` headings, no
-  horizontal page overflow, and no raised content shadows.
+- `frontend/tests/workbench-design-audit.spec.ts` captures adaptive, unique
+  route-section screenshots and asserts no oversized route-local `h2`/`h3`
+  headings, no horizontal page overflow, no raised content shadows, and no
+  duplicate audit segments by scroll position or screenshot hash.
 - `make frontend-design-audit` and the frontend CI job run the screenshot audit
   as a named gate before the full Playwright suite.
 - Projects, settings, imports, providers, assets, waivers, and reports now use
@@ -109,7 +110,7 @@ Status: completed. Dashboard, Findings Quick View, Finding Detail, drawers, and
 the residual route context/metric surfaces now use shared VPW command, metric,
 definition-list, detail-drawer, and evidence-row primitives. At the recorded
 completion point, the batch was locked by lint, typecheck, unit tests, full
-Playwright, and the 36-section design audit.
+Playwright, and the adaptive unique-section design audit.
 
 ### Batch definition of done
 
@@ -117,7 +118,7 @@ Each batch is complete only when all of these are true:
 
 - Route behavior, loading, filters, tabs, drawers, forms, and navigation are
   unchanged.
-- Changed route sections pass the 36-screenshot design audit.
+- Changed route sections pass the adaptive screenshot design audit.
 - No new raw `Card`, local hero, route-local heading scale, non-overlay
   content shadow, or route-local radius pattern is introduced.
 - Primary repeated information is table/list/row based; object facts use

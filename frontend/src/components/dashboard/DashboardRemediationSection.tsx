@@ -4,16 +4,17 @@ import type { FindingPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
+  Callout,
+  EmptyState,
   VpwDataTable,
+  VpwSearchInput,
   VpwSurface,
   VpwSurfaceBody,
   VpwSurfaceDescription,
   VpwSurfaceHeader,
-  VpwSearchInput,
   VpwSurfaceTitle,
 } from "@/components/vpw"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
-import { EmptyState, ErrorState } from "../states"
 import { buildDashboardRemediationColumns } from "./DashboardRemediationColumns"
 
 type DashboardRemediationSectionProps = {
@@ -74,14 +75,16 @@ export function DashboardRemediationSection({
           </div>
         ) : findingsError ? (
           <div>
-            <ErrorState message={findingsError} />
+            <Callout severity="critical" title="Remediation queue unavailable">
+              {findingsError}
+            </Callout>
           </div>
         ) : previewFindings.length === 0 ? (
           <div>
             <EmptyState
               ariaLabel="No remediation queue items"
-              compact
-              detail={
+              className="min-h-0 py-4"
+              description={
                 queueSearch
                   ? "No rows match the current filter."
                   : "No items are currently available for remediation from this project."
