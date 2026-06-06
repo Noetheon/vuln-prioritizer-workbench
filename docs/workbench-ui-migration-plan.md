@@ -61,14 +61,44 @@ reviewers recognize regressions.
 - `frontend/VPW_PAGE_PATTERNS.md` turns that direction into concrete page
   archetypes and a component decision matrix.
 - `frontend/tests/workbench-design-audit.spec.ts` captures adaptive, unique
-  route-section screenshots and asserts no oversized route-local `h2`/`h3`
+  route-section screenshots, matches each segment against tracked Playwright
+  `toHaveScreenshot` baselines, and asserts no oversized route-local `h2`/`h3`
   headings, no horizontal page overflow, no raised content shadows, and no
   duplicate audit segments by scroll position or screenshot hash.
 - `make frontend-design-audit` and the frontend CI job run the screenshot audit
   as a named gate before the full Playwright suite.
+- `make frontend-design-audit-update` is the explicit maintainer command for
+  intentional visual baseline updates.
 - Projects, settings, imports, providers, assets, waivers, and reports now use
   shared VPW primitives for the main command, metric, table, key-value, and
   section surfaces.
+
+### Visual regression baselines
+
+Visual regression baselines are tracked source artifacts, not transient
+evidence. Canonical CI baselines live under
+`frontend/tests/__screenshots__/linux/chromium/design-audit/*.png`. This repo
+also tracks `frontend/tests/__screenshots__/darwin/chromium/design-audit/*.png`
+for local macOS review; do not add more `{platform}/chromium` baselines unless
+that platform is intentionally supported for visual review.
+
+Use `make frontend-design-audit` for normal verification. It must fail when a
+route segment no longer matches the accepted baseline and Playwright writes the
+actual, expected, and diff images into `frontend/test-results/**`. The GitHub
+workflow uploads those files only on failure.
+
+Use `make frontend-design-audit-update` only after an intentional UI change has
+already been reviewed. Review the Playwright diff artifacts first, then commit
+the changed screenshot baselines in the same change as the UI or token update.
+Do not update baselines to hide flaky data, loading states, scroll ownership
+bugs, text overflow, or unintended route-local layout drift.
+
+Dynamic visual data should be stabilized at the source. The Playwright backend
+sets `WORKBENCH_FIXED_NOW` and `TZ=UTC`, and Playwright runs the audit with a
+fixed locale, timezone, color scheme, device scale, disabled animations, and
+hidden carets. Mask only narrow elements explicitly marked with
+`data-vpw-visual-mask`; broad container masks are not allowed because they hide
+real regressions.
 
 ### Executed route phases
 

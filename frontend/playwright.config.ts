@@ -28,9 +28,21 @@ export default defineConfig({
   workers: 1,
   expect: {
     timeout: 5_000,
+    toHaveScreenshot: {
+      animations: "disabled",
+      caret: "hide",
+      maxDiffPixelRatio: 0.001,
+      pathTemplate:
+        "{testDir}/__screenshots__/{platform}/{projectName}/{arg}{ext}",
+      threshold: 0.2,
+    },
   },
   use: {
     baseURL: frontendBaseUrl,
+    colorScheme: "light",
+    deviceScaleFactor: 1,
+    locale: "en-US",
+    timezoneId: "UTC",
     trace: "on-first-retry",
   },
   webServer: [

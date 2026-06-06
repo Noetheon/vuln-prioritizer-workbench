@@ -996,33 +996,61 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   const makefile = readRepoFile("Makefile")
   const ci = readRepoFile(".github/workflows/ci.yml")
   const auditSpec = readProjectFile("tests/workbench-design-audit.spec.ts")
+  const playwrightConfig = readProjectFile("playwright.config.ts")
+  const migrationPlan = readRepoFile("docs/workbench-ui-migration-plan.md")
 
   assert.equal(
     packageJson.scripts["test:design-audit"],
     "env -u NO_COLOR FORCE_COLOR=0 DEBUG_COLORS=0 playwright test tests/workbench-design-audit.spec.ts --project=chromium",
   )
+  assert.equal(
+    packageJson.scripts["test:design-audit:update"],
+    "env -u NO_COLOR FORCE_COLOR=0 DEBUG_COLORS=0 playwright test tests/workbench-design-audit.spec.ts --project=chromium --update-snapshots",
+  )
   assert.match(makefile, /\.PHONY:.*frontend-design-audit/)
+  assert.match(makefile, /\.PHONY:.*frontend-design-audit-update/)
   assert.match(
     makefile,
     /frontend-design-audit:\n\t\$\(FRONTEND_NPM\) run test:design-audit/,
   )
   assert.match(
+    makefile,
+    /frontend-design-audit-update:\n\t\$\(FRONTEND_NPM\) run test:design-audit:update/,
+  )
+  assert.match(
     ci,
-    /Run VPW design audit screenshots[\s\S]{0,180}make frontend-design-audit/,
+    /Run VPW visual regression baseline[\s\S]{0,180}make frontend-design-audit/,
   )
   assert.ok(
-    ci.indexOf("Run VPW design audit screenshots") <
+    ci.indexOf("Run VPW visual regression baseline") <
       ci.indexOf("Run full frontend Playwright suite"),
   )
   assert.match(
     auditSpec,
-    /design audit captures unique VPW route section screenshots/,
+    /design audit matches VPW visual regression baselines/,
   )
+  assert.match(auditSpec, /toHaveScreenshot\(\["design-audit", fileName\]/)
+  assert.match(auditSpec, /\[data-vpw-visual-mask\]/)
+  assert.match(auditSpec, /clearWorkbenchProjects\(page\)/)
+  assert.match(auditSpec, /\/api\/v1\/projects\/\?limit=500/)
+  assert.match(auditSpec, /page\.request\.delete/)
   assert.match(auditSpec, /expectRouteCoverage\(auditRoutes, manifest\)/)
   assert.match(auditSpec, /expectNoDuplicateAuditSegments\(manifest\)/)
   assert.match(auditSpec, /screenshotSha256\(file\)/)
   assert.doesNotMatch(auditSpec, /expect\(manifest\)\.toHaveLength\(\d+\)/)
   assert.doesNotMatch(auditSpec, /\bsegments:\s*\d/)
+  assert.match(playwrightConfig, /toHaveScreenshot:\s*\{/)
+  assert.match(
+    playwrightConfig,
+    /__screenshots__\/\{platform\}\/\{projectName\}\/\{arg\}\{ext\}/,
+  )
+  assert.match(playwrightConfig, /maxDiffPixelRatio:\s*0\.001/)
+  assert.match(playwrightConfig, /colorScheme:\s*"light"/)
+  assert.match(playwrightConfig, /locale:\s*"en-US"/)
+  assert.match(playwrightConfig, /timezoneId:\s*"UTC"/)
+  assert.match(migrationPlan, /Visual regression baselines/)
+  assert.match(migrationPlan, /darwin\/chromium\/design-audit/)
+  assert.match(migrationPlan, /frontend-design-audit-update/)
 })
 
 test("Playwright npm scripts keep inherited NO_COLOR logs deterministic", () => {
@@ -1030,7 +1058,12 @@ test("Playwright npm scripts keep inherited NO_COLOR logs deterministic", () => 
     scripts: Record<string, string>
   }
 
-  for (const scriptName of ["test", "test:design-audit", "test:ui"]) {
+  for (const scriptName of [
+    "test",
+    "test:design-audit",
+    "test:design-audit:update",
+    "test:ui",
+  ]) {
     assert.match(
       packageJson.scripts[scriptName],
       /^env -u NO_COLOR FORCE_COLOR=0 DEBUG_COLORS=0 playwright test\b/,

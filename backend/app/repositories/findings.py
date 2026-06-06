@@ -494,24 +494,25 @@ def _finding_page_sort_key(view: DecisionFindingView, query: FindingPageQuery) -
     finding = view.finding
     asset = finding.asset
     component = finding.component
+    stable_tie = _finding_page_stable_tie_key(view)
     if query.sort == "operational":
-        return (view.operational_rank or 999_999, view.priority_rank, view.cve_id, str(finding.id))
+        return (view.operational_rank or 999_999, view.priority_rank, *stable_tie)
     if query.sort == "priority":
-        return (view.priority_rank, view.cve_id, str(finding.id))
+        return (view.priority_rank, *stable_tie)
     if query.sort == "score":
-        return (_none_last_number(view.risk_score), view.priority_rank, view.cve_id)
+        return (_none_last_number(view.risk_score), view.priority_rank, *stable_tie)
     if query.sort == "cve":
-        return (view.cve_id, str(finding.id))
+        return stable_tie
     if query.sort == "status":
-        return (view.status.value, view.cve_id, str(finding.id))
+        return (view.status.value, *stable_tie)
     if query.sort == "epss":
-        return (_none_last_number(view.epss), view.priority_rank, view.cve_id)
+        return (_none_last_number(view.epss), view.priority_rank, *stable_tie)
     if query.sort == "cvss":
-        return (_none_last_number(view.cvss_base_score), view.priority_rank, view.cve_id)
+        return (_none_last_number(view.cvss_base_score), view.priority_rank, *stable_tie)
     if query.sort == "kev":
-        return (1 if view.in_kev else 0, view.priority_rank, view.cve_id)
+        return (1 if view.in_kev else 0, view.priority_rank, *stable_tie)
     if query.sort == "last_seen":
-        return (finding.last_seen_at, view.priority_rank, view.cve_id)
+        return (finding.last_seen_at, view.priority_rank, *stable_tie)
     if query.sort == "component":
         return (
             str(component.name if component else ""),
@@ -528,6 +529,21 @@ def _finding_page_sort_key(view: DecisionFindingView, query: FindingPageQuery) -
             view.cve_id,
         )
     raise ValueError(f"Unsupported findings sort field: {query.sort}.")
+
+
+def _finding_page_stable_tie_key(view: DecisionFindingView) -> tuple[str, ...]:
+    finding = view.finding
+    asset = finding.asset
+    component = finding.component
+    return (
+        str(view.cve_id or "").casefold(),
+        str(component.name if component else "").casefold(),
+        str(component.version if component else "").casefold(),
+        str(asset.business_service if asset else "").casefold(),
+        str(asset.owner if asset else "").casefold(),
+        str(asset.asset_key if asset else "").casefold(),
+        str(finding.id),
+    )
 
 
 def _none_last_number(value: float | int | None) -> tuple[int, float]:

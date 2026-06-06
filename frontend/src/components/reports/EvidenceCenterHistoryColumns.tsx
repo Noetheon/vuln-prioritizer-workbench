@@ -100,7 +100,10 @@ export function buildReportHistoryColumns({
       },
       {
         cell: (report) => (
-          <span className="font-mono text-xs text-[var(--vpw-text-secondary)]">
+          <span
+            className="font-mono text-xs text-[var(--vpw-text-secondary)]"
+            data-vpw-visual-mask="true"
+          >
             {reportRunLabel(report)}
           </span>
         ),

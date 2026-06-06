@@ -7,10 +7,16 @@ import { backendBaseUrl, localApiHeaders } from "./workbench-runtime-helpers"
 const screenshotViewport = { height: 900, width: 1440 }
 const screenshotStepRatio = 0.78
 const duplicateScrollTolerancePx = 8
+const visualMaskSelector = "[data-vpw-visual-mask]"
+const visualMaskColor = "#f3f4f6"
 
 type DemoWorkspace = {
   latest_run_id: string
   project_id: string
+}
+
+type ProjectList = {
+  data: Array<{ id: string }>
 }
 
 type FindingPage = {
@@ -139,7 +145,7 @@ const auditRoutes: AuditRoute[] = [
   },
 ]
 
-test("design audit captures unique VPW route section screenshots", async ({
+test("design audit matches VPW visual regression baselines", async ({
   page,
 }) => {
   test.setTimeout(180_000)
@@ -171,7 +177,18 @@ test("design audit captures unique VPW route section screenshots", async ({
       const scroll = await scrollRouteSegment(content, scrollTarget)
       const fileName = `${route.slug}-${String(segment).padStart(2, "0")}.png`
       const file = evidenceScreenshotPath("design-audit", fileName)
-      await content.screenshot({ path: file })
+      const mask = visualMaskLocators(content)
+      await content.screenshot({
+        animations: "disabled",
+        caret: "hide",
+        mask,
+        maskColor: visualMaskColor,
+        path: file,
+      })
+      await expect(content).toHaveScreenshot(["design-audit", fileName], {
+        mask,
+        maskColor: visualMaskColor,
+      })
       routeEntries.push({
         file,
         maxScroll: scroll.maxScroll,
@@ -195,6 +212,7 @@ test("design audit captures unique VPW route section screenshots", async ({
 })
 
 async function seedDemoWorkspace(page: Page): Promise<DemoWorkspace> {
+  await clearWorkbenchProjects(page)
   const response = await page.request.post(
     `${backendBaseUrl}/api/v1/workbench/demo`,
     {
@@ -209,6 +227,23 @@ async function seedDemoWorkspace(page: Page): Promise<DemoWorkspace> {
   return {
     latest_run_id: payload.latest_run_id ?? "",
     project_id: payload.project_id ?? "",
+  }
+}
+
+async function clearWorkbenchProjects(page: Page): Promise<void> {
+  const response = await page.request.get(
+    `${backendBaseUrl}/api/v1/projects/?limit=500`,
+    { headers: localApiHeaders() },
+  )
+  expect(response.ok()).toBeTruthy()
+  const payload = (await response.json()) as ProjectList
+
+  for (const project of payload.data) {
+    const deleteResponse = await page.request.delete(
+      `${backendBaseUrl}/api/v1/projects/${project.id}`,
+      { headers: localApiHeaders() },
+    )
+    expect(deleteResponse.ok()).toBeTruthy()
   }
 }
 
@@ -365,6 +400,10 @@ async function scrollRouteSegment(content: Locator, scrollTop: number) {
     },
     { scrollTop },
   )
+}
+
+function visualMaskLocators(content: Locator) {
+  return [content.locator(visualMaskSelector)]
 }
 
 function screenshotSha256(file: string) {

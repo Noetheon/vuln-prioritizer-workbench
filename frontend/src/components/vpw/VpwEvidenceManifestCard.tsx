@@ -49,7 +49,10 @@ export function VpwEvidenceManifestCard({
   const checksumValue = checksumStatus ?? "Not available"
   const rows = [
     { label: "Project", value: project },
-    { label: "Run ID", value: runId },
+    {
+      label: "Run ID",
+      value: <span data-vpw-visual-mask="true">{runId}</span>,
+    },
     { label: "Generated at", value: generatedAt },
     { label: "Provider sources", value: providerSources },
     { label: "Verification", value: verificationStatus },
@@ -65,6 +68,7 @@ export function VpwEvidenceManifestCard({
         <VpwKeyValueList columns={2} items={rows} />
         <VpwChecksum
           value={checksumValue}
+          visualMaskValue={checksumStatus !== undefined}
           verified={verificationStatus.toLowerCase().includes("verified")}
         />
         <div>
@@ -76,7 +80,10 @@ export function VpwEvidenceManifestCard({
                   className="flex items-center justify-between gap-2"
                   key={file.path}
                 >
-                  <span className="truncate font-mono text-xs">
+                  <span
+                    className="truncate font-mono text-xs"
+                    data-vpw-visual-mask="true"
+                  >
                     {file.path}
                   </span>
                   {file.label ? <VpwBadge>{file.label}</VpwBadge> : null}

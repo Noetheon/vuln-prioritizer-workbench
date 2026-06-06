@@ -14,6 +14,7 @@ import type {
 } from "../vpw"
 import { objectRecord } from "../../lib/app-errors.ts"
 import {
+  compareReportsByNewest,
   formatReportDateTime,
   reportFormatLabel,
   type ReportFormat,
@@ -36,11 +37,7 @@ export function newestReport(reports: readonly ReportPublic[]) {
   return (
     reports
       .slice()
-      .sort(
-        (left, right) =>
-          new Date(right.created_at).getTime() -
-          new Date(left.created_at).getTime(),
-      )[0] ?? null
+      .sort(compareReportsByNewest)[0] ?? null
   )
 }
 

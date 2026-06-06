@@ -122,6 +122,7 @@ export function DiagnosticsTab({
                   <CopyableValue
                     label="Copy provider snapshot ID"
                     value={summary.provider_snapshot_id}
+                    visualMask
                   />
                 ) : (
                   "Not recorded"

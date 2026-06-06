@@ -210,7 +210,7 @@ jobs:
         if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true exec -- playwright install --with-deps chromium firefox webkit
 
-      - name: Run VPW design audit screenshots
+      - name: Run VPW visual regression baseline
         if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: make frontend-design-audit
 

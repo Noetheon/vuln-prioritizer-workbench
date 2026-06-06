@@ -74,6 +74,7 @@ export function OverviewTab({
                 <CopyableValue
                   label="Copy provider snapshot ID"
                   value={summary.provider_snapshot_id}
+                  visualMask
                 />
               ) : (
                 "Not recorded"
@@ -81,7 +82,10 @@ export function OverviewTab({
             },
             { label: "Started", value: formatDateTime(summary.started_at) },
             { label: "Finished", value: formatDateTime(summary.finished_at) },
-            { label: "Run ID", value: <CopyableValue label="Copy run ID" value={summary.id} /> },
+            {
+              label: "Run ID",
+              value: <CopyableValue label="Copy run ID" value={summary.id} visualMask />,
+            },
           ]}
         />
       </VpwPanel>
@@ -128,25 +132,35 @@ export function OverviewTab({
         <VpwSectionHeader title="What happened" />
         {timelineItems.length > 0 ? (
           <ol className="grid gap-3 text-sm">
-            {timelineItems.map((item) => (
-              <li className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-start gap-3" key={item}>
-                <CheckCircle2
-                  aria-hidden="true"
-                  className="mt-0.5 size-4 text-[var(--vpw-green)]"
-                />
-                <span className="min-w-0">
-                  <span className="block font-semibold text-[var(--vpw-text-primary)]">
-                    {item}
+            {timelineItems.map((item) => {
+              const maskTimelineDetail =
+                item === "Provider data applied" && Boolean(summary.provider_snapshot_id)
+              return (
+                <li
+                  className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-start gap-3"
+                  key={item}
+                >
+                  <CheckCircle2
+                    aria-hidden="true"
+                    className="mt-0.5 size-4 text-[var(--vpw-green)]"
+                  />
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-[var(--vpw-text-primary)]">
+                      {item}
+                    </span>
+                    <span
+                      className="block text-sm text-[var(--vpw-text-secondary)]"
+                      data-vpw-visual-mask={maskTimelineDetail ? "true" : undefined}
+                    >
+                      {timelineDetail(item, summary)}
+                    </span>
                   </span>
-                  <span className="block text-sm text-[var(--vpw-text-secondary)]">
-                    {timelineDetail(item, summary)}
+                  <span className="text-sm text-[var(--vpw-text-secondary)]">
+                    {timelineTime(item, summary)}
                   </span>
-                </span>
-                <span className="text-sm text-[var(--vpw-text-secondary)]">
-                  {timelineTime(item, summary)}
-                </span>
-              </li>
-            ))}
+                </li>
+              )
+            })}
           </ol>
         ) : (
           <VpwEmptyState title="No timeline metadata recorded" />

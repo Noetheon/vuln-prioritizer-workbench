@@ -54,6 +54,7 @@ export function ImportDiagnosticsDrawerTabs({
         <CopyableValue
           label="Copy provider snapshot ID"
           value={summary.provider_snapshot_id}
+          visualMask
         />
       ) : (
         "Not recorded"
@@ -96,7 +97,7 @@ export function ImportDiagnosticsDrawerTabs({
             items={[
               {
                 label: "Run ID",
-                value: <CopyableValue label="Copy run ID" value={summary.id} />,
+                value: <CopyableValue label="Copy run ID" value={summary.id} visualMask />,
               },
               {
                 label: "Status",
