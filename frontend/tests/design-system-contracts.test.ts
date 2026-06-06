@@ -998,6 +998,10 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   const auditSpec = readProjectFile("tests/workbench-design-audit.spec.ts")
   const playwrightConfig = readProjectFile("playwright.config.ts")
   const migrationPlan = readRepoFile("docs/workbench-ui-migration-plan.md")
+  const dockerRunner = readRepoFile(
+    "scripts/frontend-design-audit-linux-docker.sh",
+  )
+  const playwrightDockerfile = readProjectFile("Dockerfile.playwright")
 
   assert.equal(
     packageJson.scripts["test:design-audit"],
@@ -1009,6 +1013,11 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   )
   assert.match(makefile, /\.PHONY:.*frontend-design-audit/)
   assert.match(makefile, /\.PHONY:.*frontend-design-audit-update/)
+  assert.match(makefile, /\.PHONY:.*frontend-design-audit-linux-docker/)
+  assert.match(
+    makefile,
+    /\.PHONY:.*frontend-design-audit-linux-docker-update/,
+  )
   assert.match(
     makefile,
     /frontend-design-audit:\n\t\$\(FRONTEND_NPM\) run test:design-audit/,
@@ -1016,6 +1025,14 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   assert.match(
     makefile,
     /frontend-design-audit-update:\n\t\$\(FRONTEND_NPM\) run test:design-audit:update/,
+  )
+  assert.match(
+    makefile,
+    /frontend-design-audit-linux-docker:\n\tbash scripts\/frontend-design-audit-linux-docker\.sh verify/,
+  )
+  assert.match(
+    makefile,
+    /frontend-design-audit-linux-docker-update:\n\tbash scripts\/frontend-design-audit-linux-docker\.sh update/,
   )
   assert.match(
     ci,
@@ -1051,6 +1068,19 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   assert.match(migrationPlan, /Visual regression baselines/)
   assert.match(migrationPlan, /darwin\/chromium\/design-audit/)
   assert.match(migrationPlan, /frontend-design-audit-update/)
+  assert.match(migrationPlan, /frontend-design-audit-linux-docker/)
+  assert.match(migrationPlan, /DOCKER_DEFAULT_PLATFORM=linux\/amd64/)
+  assert.match(
+    playwrightDockerfile,
+    /mcr\.microsoft\.com\/playwright:v1\.60\.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948/,
+  )
+  assert.match(dockerRunner, /DOCKER_DEFAULT_PLATFORM/)
+  assert.match(dockerRunner, /linux\/amd64/)
+  assert.match(dockerRunner, /docker version --format '\{\{\.Server\.Arch\}\}'/)
+  assert.match(dockerRunner, /container-arch=/)
+  assert.match(dockerRunner, /vpw_frontend_node_modules_\$\{docker_server_os\}_\$\{docker_server_arch\}/)
+  assert.match(dockerRunner, /npm_config_engine_strict=false npm ci --workspaces=false/)
+  assert.match(dockerRunner, /npm_config_engine_strict=false npm run/)
 })
 
 test("Playwright npm scripts keep inherited NO_COLOR logs deterministic", () => {

@@ -87,6 +87,14 @@ route segment no longer matches the accepted baseline and Playwright writes the
 actual, expected, and diff images into `frontend/test-results/**`. The GitHub
 workflow uploads those files only on failure.
 
+On Apple Silicon, use `make frontend-design-audit-linux-docker` when you need to
+reproduce the canonical Linux screenshots locally. The runner uses Docker's
+native platform selection, rejects `DOCKER_DEFAULT_PLATFORM=linux/amd64` unless
+`ALLOW_EMULATED_PLAYWRIGHT=1` is explicitly set, and keeps Linux `node_modules`,
+npm cache, and pip cache in architecture-specific Docker volumes. This preserves
+native ARM execution while avoiding cross-platform dependency churn between
+macOS and Linux.
+
 Use `make frontend-design-audit-update` only after an intentional UI change has
 already been reviewed. Review the Playwright diff artifacts first, then commit
 the changed screenshot baselines in the same change as the UI or token update.
