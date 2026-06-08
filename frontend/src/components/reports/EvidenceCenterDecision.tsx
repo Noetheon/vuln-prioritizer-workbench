@@ -82,14 +82,7 @@ export function ExecutiveDecision({
   const priorityTone: VpwBadgeTone =
     critical > 0 ? "critical" : high > 0 ? "warning" : "success"
   const runId = selectedReportRun?.id.slice(0, 8) ?? "not selected"
-  const decisionStatement = `${openFindings} open findings require remediation owner assignment. Evidence artifacts for run ${runId} are available for audit review.`
-  const evidenceBasis = [
-    `Run ${runId}`,
-    `Provider snapshot ${providerSnapshotShortId(selectedReportRun, null)}`,
-    "CVSS/EPSS/KEV",
-    "Asset context when supplied",
-    "VEX/accepted-risk where available",
-  ].join(" · ")
+  const providerSnapshotId = providerSnapshotShortId(selectedReportRun, null)
 
   return (
     <VpwPanel className="flex flex-col gap-5 p-5">
@@ -116,13 +109,24 @@ export function ExecutiveDecision({
         />
       </VpwGrid>
       <VpwStatusBanner title="Decision statement" tone="info">
-        {decisionStatement}
+        {openFindings} open findings require remediation owner assignment.
+        Evidence artifacts for run{" "}
+        <span data-vpw-visual-mask="true">{runId}</span> are available for
+        audit review.
       </VpwStatusBanner>
       <VpwKeyValueList
         items={[
           {
             label: "Evidence basis",
-            value: evidenceBasis,
+            value: (
+              <>
+                Run <span data-vpw-visual-mask="true">{runId}</span> ·
+                Provider snapshot{" "}
+                <span data-vpw-visual-mask="true">{providerSnapshotId}</span> ·
+                CVSS/EPSS/KEV · Asset context when supplied ·
+                VEX/accepted-risk where available
+              </>
+            ),
           },
         ]}
       />
@@ -222,6 +226,10 @@ export function QualityFacts({
   const coverage = contextCoverageFacts(selectedRunSummary, selectedReportRun)
   const htmlReport = reportForFormat(effectiveReports, "html")
   const markdownReport = reportForFormat(effectiveReports, "markdown")
+  const providerSnapshotDescription =
+    providerStatus?.snapshot.id ??
+    selectedReportRun?.provider_snapshot_id ??
+    "No snapshot ID recorded"
   const verificationLabel = artifactVerificationLabel({
     report: bundle,
     verificationLoading,
@@ -240,10 +248,17 @@ export function QualityFacts({
               label: "Freshness",
               tone: providerStatus?.status === "ok" ? "success" : "warning",
               value: providerStatus?.status ?? "Unavailable",
-              description:
-                providerStatus?.snapshot.id ??
-                selectedReportRun?.provider_snapshot_id ??
-                "No snapshot ID recorded",
+              description: (
+                <span
+                  data-vpw-visual-mask={
+                    providerSnapshotDescription === "No snapshot ID recorded"
+                      ? undefined
+                      : "true"
+                  }
+                >
+                  {providerSnapshotDescription}
+                </span>
+              ),
             },
           ]}
         />
@@ -276,9 +291,11 @@ export function QualityFacts({
               label: "Evidence ZIP",
               tone: bundle ? "success" : "warning",
               value: bundle ? "Bundle checksum recorded" : "Not built",
-              description:
-                bundle?.sha256 ??
-                "Build the bundle to record checksum evidence.",
+              description: bundle?.sha256 ? (
+                <span data-vpw-visual-mask="true">{bundle.sha256}</span>
+              ) : (
+                "Build the bundle to record checksum evidence."
+              ),
             },
             {
               label: "Verification",

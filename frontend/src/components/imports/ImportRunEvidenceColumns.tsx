@@ -34,7 +34,10 @@ export function buildImportRunEvidenceColumns({
       id: "filename",
       header: "Filename",
       cell: (report) => (
-        <span className="block max-w-[16rem] [overflow-wrap:anywhere]">
+        <span
+          className="block max-w-[16rem] [overflow-wrap:anywhere]"
+          data-vpw-visual-mask="true"
+        >
           {report.filename}
         </span>
       ),

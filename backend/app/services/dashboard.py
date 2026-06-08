@@ -5,6 +5,11 @@ from __future__ import annotations
 import uuid
 from collections.abc import Sequence
 
+from app.decision_core.readmodels import (
+    DecisionFindingView,
+    decision_views_for_findings,
+    latest_finding_decision_view,
+)
 from app.models import (
     AnalysisRun,
     AnalysisRunsPublic,
@@ -21,11 +26,6 @@ from app.repositories.runs import RunRepository
 from app.repositories.waivers import WaiverRepository
 from app.services.dashboard_counts import (
     dashboard_signal_counts,
-)
-from app.services.decision_projection import (
-    DecisionFindingView,
-    decision_views_for_findings,
-    latest_finding_decision_view,
 )
 from app.services.decisions import (
     build_project_summary_payload,
@@ -49,7 +49,9 @@ def build_project_dashboard_payload(
     """Build the one-call project dashboard aggregate from loaded domain rows."""
     bounded_remediation_limit = max(1, min(remediation_limit, 50))
     finding_views = decision_views_for_findings(list(findings))
-    remediation_findings = list(finding_views[:bounded_remediation_limit])
+    remediation_findings = sorted(finding_views, key=_remediation_queue_sort_key)[
+        :bounded_remediation_limit
+    ]
     return ProjectDashboardPublic(
         project_id=project_id,
         generated_at=get_datetime_utc(),
@@ -125,3 +127,30 @@ def finding_public(finding: Finding | DecisionFindingView) -> FindingPublic:
         else latest_finding_decision_view(finding)
     )
     return FindingPublic.model_validate(view.finding).model_copy(update=view.public_update())
+
+
+def _remediation_queue_sort_key(view: DecisionFindingView) -> tuple[object, ...]:
+    finding = view.finding
+    asset = finding.asset
+    component = finding.component
+    return (
+        view.operational_rank or 999_999,
+        view.priority_rank,
+        _none_last_desc_number(view.risk_score),
+        _stable_text(view.cve_id),
+        _stable_text(component.name if component is not None else None),
+        _stable_text(asset.business_service if asset is not None else None),
+        _stable_text(asset.owner if asset is not None else None),
+        _stable_text(asset.asset_key if asset is not None else None),
+        str(finding.id),
+    )
+
+
+def _none_last_desc_number(value: float | None) -> tuple[bool, float]:
+    if value is None:
+        return (True, 0.0)
+    return (False, -float(value))
+
+
+def _stable_text(value: object | None) -> str:
+    return str(value or "").casefold()

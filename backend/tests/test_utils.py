@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC
+
 from app.domain.engine.utils import (
     chunk_cve_ids,
     comma_join,
@@ -7,12 +9,22 @@ from app.domain.engine.utils import (
     normalize_cve_id,
     safe_float,
 )
+from app.models.base import get_datetime_utc
 
 
 def test_iso_utc_now_uses_fixed_environment_override(monkeypatch) -> None:
     monkeypatch.setenv("WORKBENCH_FIXED_NOW", "2026-04-21T12:00:00+00:00")
 
     assert iso_utc_now() == "2026-04-21T12:00:00+00:00"
+
+
+def test_get_datetime_utc_uses_fixed_environment_override(monkeypatch) -> None:
+    monkeypatch.setenv("WORKBENCH_FIXED_NOW", "2026-04-21T12:00:00+00:00")
+
+    fixed_now = get_datetime_utc()
+
+    assert fixed_now.isoformat() == "2026-04-21T12:00:00+00:00"
+    assert fixed_now.tzinfo is UTC
 
 
 def test_common_utils_cover_normalization_conversion_and_chunking_edges() -> None:

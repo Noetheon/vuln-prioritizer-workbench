@@ -15,7 +15,7 @@ from utils.workbench_env import (
     local_api_headers,
 )
 
-from app.contracts.decision_evidence import FINDING_DECISION_EVIDENCE_SCHEMA_VERSION
+from app.decision_core.contracts import FINDING_DECISION_EVIDENCE_SCHEMA_VERSION
 from app.models import AnalysisRun, Project, WorkflowRunKind
 from app.repositories import WorkflowRepository
 from app.services.report_exports import render_analysis_result_json
@@ -39,7 +39,7 @@ def test_kernel_first_import_uses_evidence_as_report_and_workflow_truth(
     run_payload = completed_run_payload(workbench_api_env, response, headers=headers)
     evidence = run_payload["evidence"]
     assert evidence["analysis_evidence_id"]
-    assert evidence["analysis_service"]["kernel"] == "app.services.decision_kernel"
+    assert evidence["analysis_service"]["kernel"] == "app.decision_core.producer"
 
     with Session(workbench_api_env.engine) as session:
         run = session.get(AnalysisRun, uuid.UUID(str(run_payload["id"])))

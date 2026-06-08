@@ -11,7 +11,7 @@ SQLite state commands are no longer supported product paths.
 | React Workbench | active | Project selection, imports, findings, finding detail, assets, waivers, providers, reports, evidence center, and settings. |
 | FastAPI `/api/v1` | active | Local single-user API used by the Workbench. Routes do not require login, sessions, RBAC, API tokens, or CSRF headers. |
 | Docker Compose | active | Local self-hosted runtime for the backend, durable workflow worker, frontend, PostgreSQL, uploads, reports, cache, and provider snapshots. |
-| Decision/Evidence Kernel v2 | active | Kernel-first `DecisionRunResult` production backed by typed `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, and `RunDiagnosticsV2` contracts in `analysis_evidence` and `finding_decision_evidence`; successful read paths use the central `decision_projection.py` read model. |
+| Decision/Evidence Kernel v2 | active | Kernel-first `DecisionRunResult` production backed by typed `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, and `RunDiagnosticsV2` contracts in `analysis_evidence` and `finding_decision_evidence`; successful read paths use the central `decision_core/readmodels.py` read model. |
 | Domain package | active | Parser, provider, scoring, enrichment, ATT&CK, SARIF, Markdown, HTML, and evidence helpers used by the Workbench services. |
 | Legacy CLI entrypoint | removed | No console script, Typer command modules, GitHub composite Action, or CLI smoke contract remains active. |
 

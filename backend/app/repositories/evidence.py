@@ -7,7 +7,7 @@ from collections.abc import Iterable
 
 from sqlmodel import Session, col, select
 
-from app.contracts.decision_evidence import (
+from app.decision_core.contracts import (
     ANALYSIS_EVIDENCE_SCHEMA_VERSION,
     FINDING_DECISION_EVIDENCE_SCHEMA_VERSION,
     AnalysisEvidenceV2,

@@ -7,6 +7,10 @@ from collections import Counter
 from collections.abc import Callable, Sequence
 from typing import Any
 
+from app.decision_core.readmodels import (
+    DecisionFindingView,
+    decision_views_for_findings,
+)
 from app.models import (
     Finding,
     GovernanceRollupPublic,
@@ -20,10 +24,6 @@ from app.repositories.waivers import (
     WaiverRepository,
     waiver_lifecycle_status,
     waiver_scope_label,
-)
-from app.services.decision_projection import (
-    DecisionFindingView,
-    decision_views_for_findings,
 )
 
 PRIORITY_LABELS = ("Critical", "High", "Medium", "Low")

@@ -8,6 +8,7 @@ export type VpwChecksumProps = {
   value: string
   className?: string
   label?: string
+  visualMaskValue?: boolean
   verified?: boolean
 }
 
@@ -15,6 +16,7 @@ export function VpwChecksum({
   className,
   label = "SHA256",
   value,
+  visualMaskValue = false,
   verified = false,
 }: VpwChecksumProps) {
   return (
@@ -26,7 +28,10 @@ export function VpwChecksum({
     >
       <div className="min-w-0">
         <p className="vpw-label">{label}</p>
-        <p className="mt-1 truncate font-mono text-xs text-[var(--vpw-text-primary)]">
+        <p
+          className="mt-1 truncate font-mono text-xs text-[var(--vpw-text-primary)]"
+          data-vpw-visual-mask={visualMaskValue ? "true" : undefined}
+        >
           {value}
         </p>
       </div>

@@ -42,7 +42,13 @@ export function ProjectMetrics({
       value: selectedProject ? "Selected" : "Required",
     },
     {
-      description: latestRunLabel(projectSummary),
+      description: projectSummary?.latest_run_id ? (
+        <span className="inline-block w-[5.75rem]" data-vpw-visual-mask="true">
+          {latestRunLabel(projectSummary)}
+        </span>
+      ) : (
+        latestRunLabel(projectSummary)
+      ),
       icon: <Clock3 aria-hidden="true" className="h-5 w-5" />,
       label: "Latest import run",
       tone: runTone(projectSummary?.latest_run_status),

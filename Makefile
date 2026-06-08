@@ -2,7 +2,7 @@ PYTHON ?= python3
 MUTMUT ?= $(shell command -v mutmut 2>/dev/null || $(PYTHON) -c 'import os, shutil, site, sysconfig; paths=[sysconfig.get_path("scripts"), os.path.join(site.USER_BASE, "bin")]; print(shutil.which("mutmut") or next((os.path.join(path, "mutmut") for path in paths if os.path.exists(os.path.join(path, "mutmut"))), "mutmut"))')
 BACKEND_DIR := backend
 BACKEND_TESTS := $(BACKEND_DIR)/tests
-MUTATION_PATTERNS := "app.services.decision_evidence_builder.x_build_run_diagnostics*" "app.services.report_sarif_validation.x_validate_sarif_file*" "app.domain.engine.services.analysis_quality.x__finding_data_quality_confidence*" "app.domain.engine.services.analysis_snapshot.x__provider_snapshot_hash*" "app.domain.engine.services.analysis_snapshot.x__provider_snapshot_metadata_path*" "app.domain.engine.services.analysis_quality.x_attach_provider_data_quality_flags*"
+MUTATION_PATTERNS := "app.decision_core.builders.x_build_run_diagnostics*" "app.services.report_sarif_validation.x_validate_sarif_file*" "app.domain.engine.services.analysis_quality.x__finding_data_quality_confidence*" "app.domain.engine.services.analysis_snapshot.x__provider_snapshot_hash*" "app.domain.engine.services.analysis_snapshot.x__provider_snapshot_metadata_path*" "app.domain.engine.services.analysis_quality.x_attach_provider_data_quality_flags*"
 PYTHON_AUDIT_LOCK := $(BACKEND_DIR)/requirements.lock.txt
 PYTHON_RUNTIME_LOCK := $(BACKEND_DIR)/requirements.runtime.lock.txt
 COMPOSE := docker compose -f compose.yml -f compose.override.yml
@@ -19,10 +19,28 @@ NPM ?= scripts/frontend-npm.sh
 FRONTEND_NPM_ENGINE_STRICT ?= true
 FRONTEND_NPM := $(NPM) --prefix frontend --workspaces=false --engine-strict=$(FRONTEND_NPM_ENGINE_STRICT)
 
-.PHONY: install test lint format fix typecheck check critical-coverage-check property-check mutation-check quality-10-check local-workbench-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-design-audit frontend-audit frontend-check python-lock-check docker-base-image-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
+.PHONY: install launch workbench-status workbench-stop workbench-reset workbench-update workbench-diagnostics test lint format fix typecheck check critical-coverage-check property-check mutation-check quality-10-check local-workbench-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-design-audit frontend-design-audit-update frontend-design-audit-linux-docker frontend-design-audit-linux-docker-update demo-screenshot frontend-audit frontend-check python-lock-check docker-base-image-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package release-bundle package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
+
+launch:
+	bash scripts/launch-workbench.sh start
+
+workbench-status:
+	bash scripts/launch-workbench.sh status
+
+workbench-stop:
+	bash scripts/launch-workbench.sh stop
+
+workbench-reset:
+	bash scripts/launch-workbench.sh reset
+
+workbench-update:
+	bash scripts/launch-workbench.sh update
+
+workbench-diagnostics:
+	bash scripts/launch-workbench.sh diagnostics
 
 test:
 	$(PYTHON) -m pytest $(BACKEND_TESTS)
@@ -97,6 +115,18 @@ frontend-generate-client:
 
 frontend-design-audit:
 	$(FRONTEND_NPM) run test:design-audit
+
+frontend-design-audit-update:
+	$(FRONTEND_NPM) run test:design-audit:update
+
+frontend-design-audit-linux-docker:
+	bash scripts/frontend-design-audit-linux-docker.sh verify
+
+frontend-design-audit-linux-docker-update:
+	bash scripts/frontend-design-audit-linux-docker.sh update
+
+demo-screenshot: playwright-install
+	VPW_UPDATE_DOCS_EVIDENCE=1 $(FRONTEND_NPM) run test -- tests/ui-evidence-screenshots.spec.ts --project=chromium
 
 api-client-drift-check:
 	before=$$(mktemp); after=$$(mktemp); \
@@ -176,6 +206,7 @@ docker-demo-smoke:
 	done; \
 	on_exit() { status=$$?; if [ "$$status" != "0" ]; then $(COMPOSE) ps || true; $(COMPOSE) logs --no-color || true; fi; $(COMPOSE) down -v --remove-orphans; exit "$$status"; }; \
 	trap on_exit EXIT; \
+	bash scripts/docker_compose_pull_with_retry.sh -f compose.yml -f compose.override.yml -- db; \
 	$(COMPOSE) up -d --build backend frontend worker; \
 	backend_ready=0; \
 		for attempt in $$(seq 1 30); do \
@@ -228,6 +259,7 @@ docker-production-smoke:
 	$(PYTHON) -c "import socket, sys; port=int(sys.argv[1]); sock=socket.socket(); sock.settimeout(0.2); in_use=sock.connect_ex(('127.0.0.1', port)) == 0; sock.close(); sys.exit(f'Port {port} is already in use before docker-production-smoke.' if in_use else 0)" "$$PRODUCTION_SMOKE_FRONTEND_PORT"; \
 	on_exit() { status=$$?; if [ "$$status" != "0" ]; then $(PRODUCTION_SMOKE_COMPOSE) ps || true; $(PRODUCTION_SMOKE_COMPOSE) logs --no-color || true; fi; $(PRODUCTION_SMOKE_COMPOSE) down -v --remove-orphans; exit "$$status"; }; \
 	trap on_exit EXIT; \
+	bash scripts/docker_compose_pull_with_retry.sh -f compose.yml -f compose.production-smoke.yml -- db; \
 	$(PRODUCTION_SMOKE_COMPOSE) up -d --build backend frontend worker; \
 	frontend_ready=0; \
 	for attempt in $$(seq 1 45); do \
@@ -258,7 +290,7 @@ clean-local:
 	rm -rf .cache .hypothesis .mypy_cache .pytest_cache .ruff_cache .playwright-cli .playwright-mcp
 	rm -rf backend/.mypy_cache backend/.pytest_cache backend/.ruff_cache
 	rm -rf backend/*.egg-info
-	rm -rf build dist site htmlcov test-results frontend/test-results frontend/playwright-report frontend/dist
+	rm -rf build dist diagnostics site htmlcov test-results frontend/test-results frontend/playwright-report frontend/dist
 	rm -rf .coverage .coverage.* backend/.coverage backend/.coverage.* coverage.xml backend-uvicorn.log frontend-vite.log
 	rm -rf frontend/openapi.json frontend/screenshot*.mjs
 	find . -name __pycache__ -type d -not -path './.git/*' -prune -exec rm -rf {} +
@@ -270,6 +302,9 @@ clean-deps: clean-local
 package:
 	rm -rf dist
 	$(PYTHON) -m build $(BACKEND_DIR) --outdir dist
+
+release-bundle:
+	$(PYTHON) scripts/build_release_bundle.py --output dist
 
 package-contents-check: package
 	$(PYTHON) scripts/check_package_contents.py dist

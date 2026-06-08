@@ -8,7 +8,7 @@ export type EmptyMediaVariant = "default" | "icon"
 export type VpwEmptyStateProps = {
   title: string
   ariaLabel?: string
-  description?: string
+  description?: ReactNode
   action?: ReactNode
   className?: string
   icon?: ReactNode
@@ -88,9 +88,9 @@ export function EmptyTitle({
 export function EmptyDescription({
   className,
   ...props
-}: ComponentPropsWithoutRef<"p">) {
+}: ComponentPropsWithoutRef<"div">) {
   return (
-    <p
+    <div
       data-slot="empty-description"
       className={cn(
         "text-sm leading-6 text-[var(--vpw-text-secondary)]",
@@ -129,7 +129,7 @@ export function VpwEmptyState({
           {icon ?? <Search className="size-5" aria-hidden="true" />}
         </EmptyMedia>
         <EmptyTitle>{title}</EmptyTitle>
-        {description ? (
+        {description !== undefined && description !== null ? (
           <EmptyDescription>{description}</EmptyDescription>
         ) : null}
       </EmptyHeader>

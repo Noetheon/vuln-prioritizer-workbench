@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from "react"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { Callout } from "@/components/vpw"
 import {
   epssBucketChartData,
   findingsByPriorityChartData,
@@ -7,7 +8,6 @@ import {
   topServicesByRiskChartData,
 } from "@/lib/chart-data"
 import { formatProviderFreshness } from "@/lib/provider-format"
-import { ErrorState } from "../states"
 import {
   DashboardDemoBanner,
   DashboardSetupEmptyState,
@@ -185,17 +185,15 @@ export function RiskOperationsDashboard({
       findingsError ||
       demoWorkspaceError ||
       governanceError ? (
-        <ErrorState
-          message={
-            dashboardError ||
+        <Callout severity="critical" title="Dashboard unavailable">
+          {dashboardError ||
             signalError ||
             providerStatusError ||
             findingsError ||
             demoWorkspaceError ||
             governanceError ||
-            "Dashboard is currently unavailable"
-          }
-        />
+            "Dashboard is currently unavailable"}
+        </Callout>
       ) : null}
 
       {staleProvider ? <DashboardProviderWarning /> : null}

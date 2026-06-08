@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 from fastapi import APIRouter, HTTPException, Request, Response
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -21,6 +23,8 @@ from app.models import (
     WorkbenchStatus,
     WorkflowRunKind,
 )
+from app.models.base import get_datetime_utc
+from app.repositories import RuntimeHeartbeatRepository
 from app.services.audit import record_audit_event
 from app.services.demo_workspace import (
     DemoWorkspaceSnapshot,
@@ -42,6 +46,8 @@ REQUIRED_SCHEMA_TABLES = frozenset(
     table_name for table_name in SQLModel.metadata.tables if table_name != "alembic_version"
 )
 REQUIRED_ALEMBIC_TABLE = "alembic_version"
+WORKFLOW_WORKER_SERVICE_NAME = "workflow-worker"
+WORKFLOW_WORKER_HEARTBEAT_TTL_SECONDS = 300
 
 
 @router.get("/health", response_model=WorkbenchHealth)
@@ -58,13 +64,20 @@ def workbench_status(
     """Return local Workbench readiness and version status."""
     active_settings = _request_settings(request)
     database, schema = _database_readiness(session)
+    worker_status, worker_last_seen_at = _worker_readiness(session)
     return WorkbenchStatus(
         status="ready" if database == "ready" and schema == "ready" else "not_ready",
         app=active_settings.PROJECT_NAME,
         core_package="app.domain.engine",
         core_version=__version__,
+        environment=active_settings.ENVIRONMENT,
+        runtime_mode=_runtime_mode(active_settings),
         database_status=database,
         schema_status=schema,
+        demo_workspace_enabled=demo_workspace_enabled(active_settings),
+        alembic_head=ALEMBIC_HEAD,
+        worker_status=worker_status,
+        worker_last_seen_at=worker_last_seen_at,
         api_docs_enabled=active_settings.api_docs_enabled,
         api_docs_path="/docs" if active_settings.api_docs_enabled else None,
     )
@@ -239,3 +252,32 @@ def _alembic_head_is_current(session: Session) -> bool:
     rows = session.execute(text("SELECT version_num FROM alembic_version")).all()
     versions = {str(row[0]) for row in rows}
     return ALEMBIC_HEAD in versions
+
+
+def _runtime_mode(settings: Settings) -> str:
+    if settings.ENVIRONMENT == "local":
+        return "local-single-user"
+    return f"{settings.ENVIRONMENT}-single-user"
+
+
+def _worker_readiness(session: Session) -> tuple[str, datetime | None]:
+    try:
+        heartbeat = RuntimeHeartbeatRepository(session).latest_for_service(
+            WORKFLOW_WORKER_SERVICE_NAME,
+        )
+    except SQLAlchemyError:
+        return "unknown", None
+    if heartbeat is None:
+        return "not_ready", None
+
+    last_seen_at = _ensure_utc(heartbeat.last_seen_at)
+    stale_after = get_datetime_utc() - timedelta(seconds=WORKFLOW_WORKER_HEARTBEAT_TTL_SECONDS)
+    if last_seen_at >= stale_after:
+        return "ready", last_seen_at
+    return "not_ready", last_seen_at
+
+
+def _ensure_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)

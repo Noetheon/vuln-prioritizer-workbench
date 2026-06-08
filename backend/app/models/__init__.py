@@ -145,7 +145,7 @@ from app.models.runs import (
     ProviderSnapshot,
     ProviderSnapshotBase,
 )
-from app.models.runtime import RateLimitBucket
+from app.models.runtime import RateLimitBucket, RuntimeServiceHeartbeat
 from app.models.vulnerabilities import Vulnerability, VulnerabilityBase
 from app.models.waivers import (
     Waiver,
@@ -301,6 +301,7 @@ __all__ = [
     "ReportVerificationPublic",
     "ReportsPublic",
     "RateLimitBucket",
+    "RuntimeServiceHeartbeat",
     "SidecarUploadCapabilityPublic",
     "UploadPolicyPublic",
     "Vulnerability",

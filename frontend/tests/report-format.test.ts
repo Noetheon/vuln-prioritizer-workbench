@@ -2,6 +2,8 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  compareReportsByNewest,
+  compareReportsForDisplay,
   formatReportDateTime,
   isReportableRunStatus,
   reportFormatLabel,
@@ -116,6 +118,25 @@ test("report size labels handle byte, kilobyte, and megabyte boundaries", () => 
   assert.equal(reportSizeLabel(1024 * 1024), "1.0 MB")
 })
 
+test("report display sorting uses deterministic format and created-at ties", () => {
+  const reports = [
+    reportFixture("report-csv", "csv", "same-time-c.csv", "2026-06-06T10:00:00Z"),
+    reportFixture("report-zip-b", "zip", "same-time-b.zip", "2026-06-06T10:00:00Z"),
+    reportFixture("report-html", "html", "same-time.html", "2026-06-06T10:00:00Z"),
+    reportFixture("report-zip-a", "zip", "same-time-a.zip", "2026-06-06T10:00:00Z"),
+    reportFixture("report-json", "json", "newer.json", "2026-06-06T10:05:00Z"),
+  ]
+
+  assert.deepEqual(
+    reports.slice().sort(compareReportsForDisplay).map((report) => report.id),
+    ["report-zip-a", "report-zip-b", "report-html", "report-csv", "report-json"],
+  )
+  assert.deepEqual(
+    reports.slice().sort(compareReportsByNewest).map((report) => report.id),
+    ["report-json", "report-zip-a", "report-zip-b", "report-html", "report-csv"],
+  )
+})
+
 test("report date labels hide missing and invalid timestamps", () => {
   assert.equal(formatReportDateTime(null), "Not recorded")
   assert.equal(formatReportDateTime(undefined), "Not recorded")
@@ -138,3 +159,17 @@ test("reportable run statuses are limited to backend completed states", () => {
   assert.equal(isReportableRunStatus(undefined), false)
   assert.equal(isReportableRunStatus(""), false)
 })
+
+function reportFixture(
+  id: string,
+  format: ReportFormat,
+  filename: string,
+  createdAt: string,
+) {
+  return {
+    created_at: createdAt,
+    filename,
+    format,
+    id,
+  }
+}

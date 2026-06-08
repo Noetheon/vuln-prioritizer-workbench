@@ -1,4 +1,5 @@
 declare const __VPW_API_URL__: string | undefined
+declare const __VPW_FRONTEND_VERSION__: string | undefined
 
 const LOCAL_API_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"])
 
@@ -49,3 +50,8 @@ export const API_BASE_URL =
   typeof __VPW_API_URL__ === "string"
     ? normalizeApiBaseUrl(__VPW_API_URL__)
     : ""
+
+export const FRONTEND_VERSION =
+  typeof __VPW_FRONTEND_VERSION__ === "string"
+    ? __VPW_FRONTEND_VERSION__
+    : "unavailable"

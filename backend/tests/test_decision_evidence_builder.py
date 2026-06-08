@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from app.services.decision_evidence_builder import build_occurrence_evidence
+from app.decision_core.builders import build_occurrence_evidence
 
 
 def test_occurrence_evidence_uses_canonical_workbench_v3_fields_only() -> None:
@@ -34,6 +34,7 @@ def test_occurrence_evidence_uses_canonical_workbench_v3_fields_only() -> None:
     assert occurrence.raw_severity == "CRITICAL"
     assert occurrence.purl == "pkg:apk/alpine/xz@5.6.0-r0"
     assert occurrence.target_ref == "build-host-1"
+    assert occurrence.dedup.key == "canonical"
 
     legacy_only = build_occurrence_evidence(
         analysis_run_id=run_id,

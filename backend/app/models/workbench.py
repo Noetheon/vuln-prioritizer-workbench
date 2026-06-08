@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Literal
 
 from sqlmodel import Field, SQLModel
@@ -15,12 +16,19 @@ from app.models.runs import AnalysisRunPublic
 class WorkbenchStatus(SQLModel):
     """Status response returned by the active Workbench runtime."""
 
+    schema_version: Literal["workbench-status.v1"] = "workbench-status.v1"
     status: str
     app: str
     core_package: str
     core_version: str
+    environment: str
+    runtime_mode: str
     database_status: str
     schema_status: str
+    demo_workspace_enabled: bool
+    alembic_head: str
+    worker_status: Literal["ready", "not_ready", "unknown"]
+    worker_last_seen_at: datetime | None = None
     api_docs_enabled: bool
     api_docs_path: str | None = None
 

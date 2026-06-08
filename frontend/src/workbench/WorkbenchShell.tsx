@@ -1,6 +1,6 @@
 import { type ReactNode, Suspense } from "react"
+import { VpwSkeletonStack } from "@/components/vpw"
 import { useLocation } from "@/lib/router"
-import { LoadingSkeleton } from "../components/states"
 import {
   routeDetailFromPathname,
   workbenchPathFromPathname,
@@ -27,6 +27,13 @@ function WorkbenchShellFrame({ children, routePath }: WorkbenchShellProps) {
     location.pathname,
     activeRoutePath,
   )
+  const routeFallback = (
+    <VpwSkeletonStack
+      className="vpw-panel border-dashed p-6"
+      label="Loading Workbench route"
+      rows={2}
+    />
+  )
 
   return (
     <ProductAppShell
@@ -44,7 +51,7 @@ function WorkbenchShellFrame({ children, routePath }: WorkbenchShellProps) {
         key={location.pathname}
         resetKey={`${location.pathname}${location.searchStr}`}
       >
-        <Suspense fallback={<LoadingSkeleton label="Loading Workbench route" />}>
+        <Suspense fallback={routeFallback}>
           {children}
         </Suspense>
       </RouteErrorBoundary>

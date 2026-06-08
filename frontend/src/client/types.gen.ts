@@ -29,18 +29,8 @@ export type AnalysisEvidenceV2 = {
      * Analysis Run Id
      */
     analysis_run_id: string;
-    /**
-     * Analysis Semantics
-     */
-    analysis_semantics?: {
-        [key: string]: unknown;
-    };
-    /**
-     * Analysis Service
-     */
-    analysis_service?: {
-        [key: string]: unknown;
-    };
+    analysis_semantics: AnalysisSemanticsV2;
+    analysis_service: AnalysisServiceEvidenceV2;
     /**
      * Asset Context
      */
@@ -49,12 +39,7 @@ export type AnalysisEvidenceV2 = {
     } | null;
     attack?: AttackEvidenceV2;
     counts?: RunCountsV2;
-    /**
-     * Dedup Summary
-     */
-    dedup_summary?: {
-        [key: string]: unknown;
-    } | null;
+    dedup_summary?: DedupSummaryV2 | null;
     diagnostics?: RunDiagnosticsV2 | null;
     /**
      * Filename
@@ -374,6 +359,66 @@ export type AnalysisRunsPublic = {
      * Data
      */
     data: Array<AnalysisRunPublic>;
+};
+
+/**
+ * AnalysisSemanticsV2
+ *
+ * Typed explanation of how run-wide decisions were scoped.
+ */
+export type AnalysisSemanticsV2 = {
+    /**
+     * Analysis Decision Scope
+     */
+    analysis_decision_scope: string;
+    /**
+     * Cve Count
+     */
+    cve_count?: number;
+    /**
+     * Finding Count
+     */
+    finding_count?: number;
+    /**
+     * Finding Dedup Key Version
+     */
+    finding_dedup_key_version: string;
+    /**
+     * Occurrence Count
+     */
+    occurrence_count?: number;
+    /**
+     * Occurrence Overlay Fields
+     */
+    occurrence_overlay_fields?: Array<string>;
+    /**
+     * Persistence Scope
+     */
+    persistence_scope: string;
+    /**
+     * Same Cve Can Create Distinct Asset Findings
+     */
+    same_cve_can_create_distinct_asset_findings?: boolean;
+};
+
+/**
+ * AnalysisServiceEvidenceV2
+ *
+ * Stable producer metadata for a decision run.
+ */
+export type AnalysisServiceEvidenceV2 = {
+    /**
+     * Engine
+     */
+    engine: string;
+    /**
+     * Kernel
+     */
+    kernel: string;
+    /**
+     * Pipeline
+     */
+    pipeline: string;
 };
 
 /**
@@ -870,6 +915,106 @@ export type DashboardSignalCountsPublic = {
 };
 
 /**
+ * DedupDecisionV2
+ *
+ * Sampled dedup decision retained for audit and report summaries.
+ */
+export type DedupDecisionV2 = {
+    /**
+     * Action
+     */
+    action: string;
+    /**
+     * Component Identity
+     */
+    component_identity?: string | null;
+    /**
+     * Cve Id
+     */
+    cve_id: string;
+    /**
+     * Dedup Key
+     */
+    dedup_key: string;
+    /**
+     * Finding Id
+     */
+    finding_id: string;
+    /**
+     * Source Id
+     */
+    source_id?: string | null;
+    /**
+     * Target Ref
+     */
+    target_ref?: string | null;
+};
+
+/**
+ * DedupKeyPartsV2
+ *
+ * Dedup key material used to form one finding identity.
+ */
+export type DedupKeyPartsV2 = {
+    /**
+     * Component Identity
+     */
+    component_identity?: string | null;
+    /**
+     * Project Id
+     */
+    project_id?: string | null;
+    /**
+     * Source Id
+     */
+    source_id?: string | null;
+    /**
+     * Target Ref
+     */
+    target_ref?: string | null;
+};
+
+/**
+ * DedupSummaryV2
+ *
+ * Run-level finding deduplication summary.
+ */
+export type DedupSummaryV2 = {
+    /**
+     * Created Findings
+     */
+    created_findings?: number;
+    /**
+     * Decision Count
+     */
+    decision_count?: number;
+    /**
+     * Decision Sample Limit
+     */
+    decision_sample_limit?: number;
+    /**
+     * Decisions
+     */
+    decisions?: Array<DedupDecisionV2>;
+    /**
+     * Key Version
+     */
+    key_version: string;
+    /**
+     * Omitted Decisions
+     */
+    omitted_decisions?: number;
+    /**
+     * Reused Findings
+     */
+    reused_findings?: number;
+    /**
+     * Updated Findings
+     */
+    updated_findings?: number;
+};
+
+/**
  * DemoWorkspaceCreate
  *
  * Request payload for creating or resetting the local demo workspace.
@@ -1211,12 +1356,7 @@ export type FindingDecisionEvidenceV2 = {
      * In Kev
      */
     in_kev?: boolean;
-    /**
-     * Occurrence Scope
-     */
-    occurrence_scope?: {
-        [key: string]: unknown;
-    };
+    occurrence_scope?: OccurrenceScopeV2;
     /**
      * Occurrences
      */
@@ -2353,6 +2493,27 @@ export type ImportFormatCapabilityPublic = {
 };
 
 /**
+ * OccurrenceDedupEvidenceV2
+ *
+ * Typed dedup evidence attached to a persisted occurrence.
+ */
+export type OccurrenceDedupEvidenceV2 = {
+    /**
+     * Action
+     */
+    action?: string | null;
+    /**
+     * Key
+     */
+    key?: string | null;
+    /**
+     * Key Version
+     */
+    key_version?: string | null;
+    parts?: DedupKeyPartsV2 | null;
+};
+
+/**
  * OccurrenceEvidenceV2
  *
  * One source/scanner occurrence that contributed to a finding decision.
@@ -2382,12 +2543,7 @@ export type OccurrenceEvidenceV2 = {
      * Component Version
      */
     component_version?: string | null;
-    /**
-     * Dedup
-     */
-    dedup?: {
-        [key: string]: unknown;
-    };
+    dedup?: OccurrenceDedupEvidenceV2;
     /**
      * Fix Version
      */
@@ -2481,6 +2637,74 @@ export type OccurrenceEvidenceV2 = {
 };
 
 /**
+ * OccurrenceScopeV2
+ *
+ * Typed scope overlay for one finding occurrence.
+ */
+export type OccurrenceScopeV2 = {
+    /**
+     * Asset Business Service
+     */
+    asset_business_service?: string | null;
+    /**
+     * Asset Criticality
+     */
+    asset_criticality?: string | null;
+    /**
+     * Asset Environment
+     */
+    asset_environment?: string | null;
+    /**
+     * Asset Exposure
+     */
+    asset_exposure?: string | null;
+    /**
+     * Asset Owner
+     */
+    asset_owner?: string | null;
+    /**
+     * Component Name
+     */
+    component_name?: string | null;
+    /**
+     * Component Version
+     */
+    component_version?: string | null;
+    /**
+     * Purl
+     */
+    purl?: string | null;
+    /**
+     * Source
+     */
+    source?: string | null;
+    /**
+     * Source Id
+     */
+    source_id?: string | null;
+    /**
+     * Source Record Id
+     */
+    source_record_id?: string | null;
+    /**
+     * Target Ref
+     */
+    target_ref?: string | null;
+    /**
+     * Vex Match Type
+     */
+    vex_match_type?: string | null;
+    /**
+     * Vex Source Path
+     */
+    vex_source_path?: string | null;
+    /**
+     * Vex Status
+     */
+    vex_status?: string | null;
+};
+
+/**
  * PriorityEvidenceV2
  *
  * Priority and scoring explanation for one finding decision.
@@ -2493,15 +2717,8 @@ export type PriorityEvidenceV2 = {
     /**
      * Data Quality Flags
      */
-    data_quality_flags?: Array<{
-        [key: string]: unknown;
-    }>;
-    /**
-     * Explanation
-     */
-    explanation?: {
-        [key: string]: unknown;
-    };
+    data_quality_flags?: Array<ProviderDataQualityFlagEvidenceV2>;
+    explanation?: PriorityExplanationV2;
     /**
      * Operational Score
      */
@@ -2532,6 +2749,118 @@ export type PriorityEvidenceV2 = {
     raw?: {
         [key: string]: unknown;
     };
+};
+
+/**
+ * PriorityExplanationNoteV2
+ *
+ * One note in a priority explanation.
+ */
+export type PriorityExplanationNoteV2 = {
+    /**
+     * Code
+     */
+    code?: string | null;
+    /**
+     * Message
+     */
+    message?: string | null;
+    /**
+     * Severity
+     */
+    severity?: string;
+    /**
+     * Source
+     */
+    source?: string | null;
+};
+
+/**
+ * PriorityExplanationReasonV2
+ *
+ * One reason in a priority explanation.
+ */
+export type PriorityExplanationReasonV2 = {
+    /**
+     * Code
+     */
+    code?: string | null;
+    /**
+     * Matched
+     */
+    matched?: boolean;
+    /**
+     * Message
+     */
+    message?: string | null;
+    /**
+     * Signal
+     */
+    signal?: string | null;
+    /**
+     * Source
+     */
+    source?: string | null;
+    /**
+     * Threshold
+     */
+    threshold?: string | null;
+    /**
+     * Value
+     */
+    value?: string | null;
+};
+
+/**
+ * PriorityExplanationV2
+ *
+ * Structured priority explanation projected from the analysis engine.
+ */
+export type PriorityExplanationV2 = {
+    /**
+     * Cve Id
+     */
+    cve_id?: string | null;
+    /**
+     * Data Quality Confidence
+     */
+    data_quality_confidence?: string | null;
+    /**
+     * Human Readable
+     */
+    human_readable?: string | null;
+    /**
+     * Notes
+     */
+    notes?: Array<PriorityExplanationNoteV2>;
+    /**
+     * Operational Score
+     */
+    operational_score?: number | null;
+    /**
+     * Priority Label
+     */
+    priority_label?: string | null;
+    /**
+     * Priority State
+     */
+    priority_state?: string | null;
+    /**
+     * Reason Codes
+     */
+    reason_codes?: Array<string>;
+    /**
+     * Reasons
+     */
+    reasons?: Array<PriorityExplanationReasonV2>;
+    /**
+     * Recommended Action
+     */
+    recommended_action?: string | null;
+    /**
+     * Summary
+     */
+    summary?: string | null;
 };
 
 /**
@@ -2917,6 +3246,46 @@ export type ProjectsPublic = {
 };
 
 /**
+ * ProviderDataQualityFlagEvidenceV2
+ *
+ * Provider quality flag preserved in the decision evidence contract.
+ */
+export type ProviderDataQualityFlagEvidenceV2 = {
+    /**
+     * Asset Id
+     */
+    asset_id?: string | null;
+    /**
+     * Changed At
+     */
+    changed_at?: string | null;
+    /**
+     * Changed Fields
+     */
+    changed_fields?: Array<string>;
+    /**
+     * Code
+     */
+    code: string;
+    /**
+     * Cve Id
+     */
+    cve_id?: string | null;
+    /**
+     * Message
+     */
+    message: string;
+    /**
+     * Severity
+     */
+    severity?: 'info' | 'warning' | 'error';
+    /**
+     * Source
+     */
+    source: string;
+};
+
+/**
  * ProviderEvidenceV2
  *
  * Provider snapshot and provider-quality evidence for a run or finding.
@@ -2942,7 +3311,7 @@ export type ProviderEvidenceV2 = {
      * Provider Data Quality Flags
      */
     provider_data_quality_flags?: {
-        [key: string]: unknown;
+        [key: string]: Array<ProviderDataQualityFlagEvidenceV2>;
     };
     /**
      * Provider Degraded
@@ -3906,6 +4275,10 @@ export type WorkbenchHealth = {
  */
 export type WorkbenchStatus = {
     /**
+     * Alembic Head
+     */
+    alembic_head: string;
+    /**
      * Api Docs Enabled
      */
     api_docs_enabled: boolean;
@@ -3930,13 +4303,37 @@ export type WorkbenchStatus = {
      */
     database_status: string;
     /**
+     * Demo Workspace Enabled
+     */
+    demo_workspace_enabled: boolean;
+    /**
+     * Environment
+     */
+    environment: string;
+    /**
+     * Runtime Mode
+     */
+    runtime_mode: string;
+    /**
      * Schema Status
      */
     schema_status: string;
     /**
+     * Schema Version
+     */
+    schema_version?: 'workbench-status.v1';
+    /**
      * Status
      */
     status: string;
+    /**
+     * Worker Last Seen At
+     */
+    worker_last_seen_at?: string | null;
+    /**
+     * Worker Status
+     */
+    worker_status: 'ready' | 'not_ready' | 'unknown';
 };
 
 /**

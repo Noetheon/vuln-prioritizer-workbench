@@ -17,7 +17,7 @@ from utils.workbench_env import (
 )
 
 from app import models as app_models
-from app.contracts.decision_evidence import FindingDecisionEvidenceV2
+from app.decision_core.contracts import FindingDecisionEvidenceV2
 
 
 def test_workbench_github_issue_preview_selected_findings_markdown_redacts_secrets(

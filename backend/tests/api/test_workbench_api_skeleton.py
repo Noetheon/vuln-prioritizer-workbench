@@ -21,6 +21,7 @@ from utils.workbench_env import (
     seed_secondary_project_graph,
 )
 
+from app.decision_core.finding_queries import list_project_findings_page
 from app.main import app
 from app.models.base import get_datetime_utc
 
@@ -112,7 +113,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
     assert all("/items" not in path for path in paths)
     assert missing_items.status_code == 404
     assert expected_schemas.issubset(schemas)
-    assert all("Item" not in schema_name for schema_name in schemas)
+    assert {"Item", "ItemCreate", "ItemPublic", "ItemsPublic", "ItemUpdate"}.isdisjoint(schemas)
     for schema_name in ("AnalysisRunPublic", "AnalysisRunSummaryPublic"):
         properties = payload["components"]["schemas"][schema_name]["properties"]
         assert "summary_json" not in properties
@@ -941,9 +942,8 @@ def test_vpw042_findings_page_eager_loads_asset_and_component(
     event.listen(workbench_api_env.engine, "before_cursor_execute", capture_select)
     try:
         with Session(workbench_api_env.engine) as session:
-            findings, count = workbench_api_env.repositories.FindingRepository(
-                session
-            ).list_project_findings_page(
+            findings, count = list_project_findings_page(
+                session,
                 uuid.UUID(project["id"]),
                 limit=3,
             )

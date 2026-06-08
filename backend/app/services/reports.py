@@ -9,9 +9,9 @@ from collections.abc import Callable
 from sqlmodel import Session
 
 from app.core.config import Settings
+from app.decision_core.readmodels import run_finding_decision_views
 from app.models import AnalysisRun, Project, Report, WorkflowRun, WorkflowRunKind, WorkflowRunStatus
 from app.repositories import WorkflowRepository
-from app.services.decision_projection import run_finding_decision_views
 from app.services.report_contracts import (
     EVIDENCE_BUNDLE_MANIFEST_SCHEMA_VERSION,
     REPORT_CONTENT_TYPE_CSV,

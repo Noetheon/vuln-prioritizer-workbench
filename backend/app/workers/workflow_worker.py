@@ -10,18 +10,21 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
 from app.core.config import Settings, load_settings
 from app.core.db import create_db_engine
 from app.models import WorkflowRunStatus
-from app.repositories import WorkflowRepository
+from app.repositories import RuntimeHeartbeatRepository, WorkflowRepository
 from app.services.workflows import finish_cancelled_workflow
 from app.workers.workflow_handlers import (
     WorkflowCancelled,
     WorkflowNonRetryableError,
     execute_workflow_handler,
 )
+
+WORKFLOW_WORKER_SERVICE_NAME = "workflow-worker"
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +49,12 @@ def run_worker_once(
 ) -> WorkerTickResult:
     """Claim and execute at most ``limit`` due workflow jobs."""
     with Session(engine) as session:
+        _record_worker_service_heartbeat_in_session(
+            session,
+            worker_id=worker_id,
+            queue_names=queue_names,
+            lease_seconds=lease_seconds,
+        )
         repository = WorkflowRepository(session)
         repository.release_expired_leases(delay_seconds=retry_delay_seconds)
         workflows = repository.claim_due_workflows(
@@ -75,6 +84,13 @@ def run_worker_once(
             cancelled += 1
         elif outcome == "retried_or_failed":
             retried_or_failed += 1
+    if workflow_ids:
+        _record_worker_service_heartbeat(
+            engine=engine,
+            worker_id=worker_id,
+            queue_names=queue_names,
+            lease_seconds=lease_seconds,
+        )
     return WorkerTickResult(
         claimed=len(workflow_ids),
         completed=completed,
@@ -197,6 +213,49 @@ def _execute_claimed_workflow(
             )
             session.commit()
         return "retried_or_failed"
+
+
+def _record_worker_service_heartbeat(
+    *,
+    engine: Engine,
+    worker_id: str,
+    queue_names: Sequence[str],
+    lease_seconds: int,
+) -> None:
+    with Session(engine) as session:
+        if _record_worker_service_heartbeat_in_session(
+            session,
+            worker_id=worker_id,
+            queue_names=queue_names,
+            lease_seconds=lease_seconds,
+        ):
+            try:
+                session.commit()
+            except SQLAlchemyError:
+                session.rollback()
+
+
+def _record_worker_service_heartbeat_in_session(
+    session: Session,
+    *,
+    worker_id: str,
+    queue_names: Sequence[str],
+    lease_seconds: int,
+) -> bool:
+    try:
+        RuntimeHeartbeatRepository(session).record_heartbeat(
+            service_name=WORKFLOW_WORKER_SERVICE_NAME,
+            instance_id=worker_id,
+            metadata_json={
+                "queue_names": list(queue_names),
+                "lease_seconds": lease_seconds,
+                "poller": "workflow_worker",
+            },
+        )
+    except SQLAlchemyError:
+        session.rollback()
+        return False
+    return True
 
 
 def main(argv: Sequence[str] | None = None) -> int:

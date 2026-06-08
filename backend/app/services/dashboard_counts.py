@@ -5,15 +5,15 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
+from app.decision_core.readmodels import (
+    DecisionFindingView,
+    decision_views_for_findings,
+    finding_is_internet_facing_critical,
+)
 from app.models import (
     DashboardEpssBucketsPublic,
     DashboardSignalCountsPublic,
     Finding,
-)
-from app.services.decision_projection import (
-    DecisionFindingView,
-    decision_views_for_findings,
-    finding_is_internet_facing_critical,
 )
 
 

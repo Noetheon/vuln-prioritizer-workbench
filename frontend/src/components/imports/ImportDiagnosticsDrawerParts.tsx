@@ -3,10 +3,26 @@ import { Clipboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { objectRecord } from "./imports-workbench-model"
 
-export function CopyableValue({ label, value }: { label: string; value: string }) {
+export function CopyableValue({
+  label,
+  value,
+  visualMask = false,
+}: {
+  label: string
+  value: string
+  visualMask?: boolean
+}) {
   return (
     <span className="inline-flex max-w-full items-center gap-2">
-      <span className="min-w-0 truncate" title={value}>
+      <span
+        className={
+          visualMask
+            ? "inline-block w-[18rem] max-w-full truncate"
+            : "min-w-0 truncate"
+        }
+        data-vpw-visual-mask={visualMask ? "true" : undefined}
+        title={value}
+      >
         {value}
       </span>
       <CopyButton label={label} value={value} />

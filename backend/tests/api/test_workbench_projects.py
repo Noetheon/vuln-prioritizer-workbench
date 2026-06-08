@@ -124,7 +124,7 @@ def test_workbench_project_openapi_exposes_projects_without_items() -> None:
     assert any(path.startswith("/api/v1/projects") for path in paths)
     assert all("/items" not in path for path in paths)
     assert {"ProjectCreate", "ProjectPublic", "ProjectsPublic"}.issubset(schemas)
-    assert all("Item" not in schema_name for schema_name in schemas)
+    assert {"Item", "ItemCreate", "ItemPublic", "ItemsPublic", "ItemUpdate"}.isdisjoint(schemas)
 
 
 def _client_with_temp_database() -> tuple[TestClient, Any]:

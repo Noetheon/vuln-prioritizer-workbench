@@ -6,7 +6,11 @@ import uuid
 
 from sqlmodel import Session, col, select
 
-from app.contracts.decision_evidence import FindingDecisionEvidenceV2, OccurrenceEvidenceV2
+from app.decision_core.contracts import FindingDecisionEvidenceV2, OccurrenceEvidenceV2
+from app.decision_core.readmodels import (
+    DecisionFindingView,
+    latest_finding_decision_view,
+)
 from app.domain.engine.security_redaction import redact_value
 from app.models import (
     Finding,
@@ -18,10 +22,6 @@ from app.models import (
     FindingOccurrence,
     FindingOccurrencePublic,
     FindingPublic,
-)
-from app.services.decision_projection import (
-    DecisionFindingView,
-    latest_finding_decision_view,
 )
 
 

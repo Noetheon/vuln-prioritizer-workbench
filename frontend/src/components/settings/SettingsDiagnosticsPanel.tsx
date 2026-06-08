@@ -9,9 +9,11 @@ import { providerSnapshotSummary } from "@/lib/provider-format"
 import {
   type evidenceReadiness,
   safeDiagnosticsCode,
+  workerHealth,
 } from "./settings-workbench-model"
 import { SettingsFactRows } from "./SettingsFactRows"
 import { Button } from "@/components/ui/button"
+import { FRONTEND_VERSION } from "@/lib/runtime-config"
 import { Download } from "lucide-react"
 
 type SettingsDiagnosticsPanelProps = {
@@ -32,6 +34,7 @@ export function SettingsDiagnosticsPanel({
     status,
     statusError,
   })
+  const worker = workerHealth(status)
 
   const handleDownload = () => {
     const blob = new Blob([diagnosticsCode], { type: "application/json" })
@@ -66,9 +69,30 @@ export function SettingsDiagnosticsPanel({
       <SettingsFactRows
         items={[
           { label: "Frontend", value: "Vite app" },
+          { label: "Frontend version", value: FRONTEND_VERSION },
           {
             label: "Backend version",
             value: status?.core_version ?? "Not reported",
+          },
+          {
+            label: "Runtime mode",
+            value: status?.runtime_mode ?? "Not reported",
+          },
+          {
+            label: "Database / schema",
+            value: `${status?.database_status ?? "Not reported"} / ${
+              status?.schema_status ?? "Not reported"
+            }`,
+          },
+          {
+            label: "Worker",
+            value: worker.label,
+            tone: worker.tone,
+          },
+          {
+            label: "Demo workspace",
+            value: status?.demo_workspace_enabled ? "Enabled" : "Disabled",
+            tone: status?.demo_workspace_enabled ? "success" : "neutral",
           },
           {
             label: "Provider freshness",
@@ -79,8 +103,23 @@ export function SettingsDiagnosticsPanel({
             value: evidence.label,
             tone: evidence.tone,
           },
+          {
+            label: "Diagnostics bundle",
+            value: "scripts/launch-workbench.sh diagnostics",
+          },
         ]}
       />
+
+      <div className="mt-4">
+        <VpwCodeBlock
+          code={`# macOS / Linux
+scripts/launch-workbench.sh diagnostics
+
+# Windows PowerShell
+powershell -ExecutionPolicy Bypass -File scripts\\launch-workbench.ps1 diagnostics`}
+          label="Launcher diagnostics"
+        />
+      </div>
 
       <details className="group rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] mt-4">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-[var(--vpw-text-primary)] marker:hidden">

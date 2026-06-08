@@ -15,15 +15,15 @@ payloads.
 
 | Layer | Owner | Responsibility |
 | --- | --- | --- |
-| Kernel producer | `backend/app/services/decision_kernel.py` | Build `DecisionRunResult` from typed import, persistence, sidecar, provider, and analysis inputs. |
-| Public contracts | `backend/app/contracts/decision_evidence.py` | Validate `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, `OccurrenceEvidenceV2`, and `RunDiagnosticsV2`. |
+| Kernel producer | `backend/app/decision_core/producer.py` | Build `DecisionRunResult` from typed import, persistence, sidecar, provider, and analysis inputs. |
+| Public contracts | `backend/app/decision_core/contracts.py` | Validate `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, `OccurrenceEvidenceV2`, and `RunDiagnosticsV2`. |
 | Import orchestration | `backend/app/services/import_execution.py` | Store uploads, run parser/enrichment, persist findings/occurrences, call the kernel, persist evidence, and close the workflow. |
 | Persistence summary adapters | `backend/app/services/import_execution_persistence.py`, `backend/app/services/import_execution_persistence_bulk.py` | Persist relational records and return the typed summary consumed by `DecisionPersistencePlan`. |
 | Evidence repository | `backend/app/repositories/evidence.py` | Upsert run-wide evidence and replace per-finding decision evidence. |
-| Evidence read model | `backend/app/services/decision_projection.py` | Centralize evidence-first run, finding, occurrence, report, dashboard, governance, and GitHub issue read views. |
+| Evidence read model | `backend/app/decision_core/readmodels.py` | Centralize evidence-first run, finding, occurrence, report, dashboard, governance, and GitHub issue read views. |
 | Public projections | `backend/app/services/run_workflow_projection.py`, `backend/app/services/finding_projection.py`, `backend/app/services/dashboard.py`, `backend/app/services/governance.py`, `backend/app/services/decisions.py`, `backend/app/services/github_issues.py`, `backend/app/services/report_projection.py`, `backend/app/services/report_service_payload.py` | Map central decision views into stable API, finding detail, dashboard, waiver/governance, GitHub issue preview, and report payloads. |
 
-`backend/app/services/decision_evidence_builder.py` remains an adapter module for
+`backend/app/decision_core/builders.py` remains an adapter module for
 diagnostics, finding-level builders, and public payload-boundary helpers. It is
 not the product kernel for successful imports.
 
@@ -36,13 +36,13 @@ flowchart LR
   C --> D["Finding, occurrence, asset, component, vulnerability persistence"]
   D --> E["DecisionPersistencePlan"]
   C --> F["DecisionKernelInput"]
-  E --> G["decision_kernel.build_run_result"]
+  E --> G["producer.build_run_result"]
   F --> G
   G --> H["AnalysisEvidenceV2"]
   G --> I["FindingDecisionEvidenceV2 rows"]
   G --> J["workflow-result-ref.v2"]
-  H --> K["decision_projection.DecisionRunView"]
-  I --> L["decision_projection.DecisionFindingView"]
+  H --> K["readmodels.DecisionRunView"]
+  I --> L["readmodels.DecisionFindingView"]
   K --> M["Run API and summaries"]
   L --> N["Finding detail, governance, reports, GitHub export"]
 ```
@@ -114,7 +114,7 @@ The kernel-first path is protected by:
 - `backend/tests/api/import_contracts/`
 - `backend/tests/api/report_contracts/`
 - `backend/tests/api/workflow_contracts/`
-- `backend/tests/test_decision_projection.py`
+- `backend/tests/test_decision_core/readmodels.py`
 - `backend/tests/test_docs_hygiene.py`
 
 Run the focused documentation and contract checks after changing this page or

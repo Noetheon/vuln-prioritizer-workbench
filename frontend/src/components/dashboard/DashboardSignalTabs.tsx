@@ -11,9 +11,9 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { EmptyState } from "@/components/vpw"
 import type { ChartDatum } from "@/lib/chart-data"
 import type { ProjectUrlSearch } from "@/workbench/selected-project-search"
-import { EmptyState } from "../states"
 import type { DashboardRunRange } from "./dashboard-model"
 
 export type SignalTab = "priority" | "epss" | "services" | "trend"
@@ -96,8 +96,8 @@ export function DashboardSignalTabs({
                 </Button>
               }
               ariaLabel="No priority data"
-              compact
-              detail="Import findings to populate priority distribution."
+              className="min-h-0 py-4"
+              description="Import findings to populate priority distribution."
               title="No findings yet"
             />
           ) : (
@@ -128,8 +128,8 @@ export function DashboardSignalTabs({
                 </Button>
               }
               ariaLabel="No EPSS data"
-              compact
-              detail="EPSS signals need a provider-enriched import to display buckets."
+              className="min-h-0 py-4"
+              description="EPSS signals need a provider-enriched import to display buckets."
               title="No EPSS data"
             />
           ) : (
@@ -167,8 +167,8 @@ export function DashboardSignalTabs({
                 </Button>
               }
               ariaLabel="No service risk data"
-              compact
-              detail="Add ownership or component labels and rerun analysis to build entity rankings."
+              className="min-h-0 py-4"
+              description="Add ownership or component labels and rerun analysis to build entity rankings."
               title="No rollup data"
             />
           ) : (
@@ -216,8 +216,8 @@ export function DashboardSignalTabs({
                 </Button>
               }
               ariaLabel="No trend data"
-              compact
-              detail="Run at least one import to generate trend history."
+              className="min-h-0 py-4"
+              description="Run at least one import to generate trend history."
               title="No trend data"
             />
           ) : (

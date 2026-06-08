@@ -19,7 +19,7 @@ from utils.workbench_env import (
     seed_finding_pair,
 )
 
-from app.contracts.decision_evidence import OccurrenceEvidenceV2
+from app.decision_core.contracts import OccurrenceEvidenceV2
 
 
 def test_vpw064_workbench_waiver_lifecycle_and_report_visibility(

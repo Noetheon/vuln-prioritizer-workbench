@@ -8,9 +8,9 @@ from typing import Any
 
 from sqlmodel import Session, col, select
 
+from app.decision_core.readmodels import DecisionFindingView
 from app.models import AnalysisRun, FindingAttackContext, Project
 from app.services.attack import build_attack_navigator_layer_payload
-from app.services.decision_projection import DecisionFindingView
 
 
 def run_attack_contexts(

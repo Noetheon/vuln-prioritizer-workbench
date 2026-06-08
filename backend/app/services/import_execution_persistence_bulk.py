@@ -8,7 +8,11 @@ from typing import Any
 from sqlalchemy import insert
 from sqlmodel import Session
 
-from app.contracts.decision_evidence import (
+from app.decision_core.builders import (
+    build_finding_decision_evidence,
+    build_occurrence_evidence,
+)
+from app.decision_core.contracts import (
     FINDING_DECISION_EVIDENCE_SCHEMA_VERSION,
     FindingDecisionEvidenceV2,
 )
@@ -24,10 +28,6 @@ from app.importers.contracts import NormalizedOccurrence
 from app.models import Asset, Finding, FindingDecisionEvidence, FindingOccurrence, Vulnerability
 from app.models.base import get_datetime_utc
 from app.services.analysis import WorkbenchAnalysisResult
-from app.services.decision_evidence_builder import (
-    build_finding_decision_evidence,
-    build_occurrence_evidence,
-)
 from app.services.import_execution_dedup import _dedup_key_parts, _finding_dedup_key
 from app.services.import_execution_persistence_attack import _attack_context_enabled
 from app.services.import_execution_persistence_common import DEDUP_DECISION_SAMPLE_LIMIT

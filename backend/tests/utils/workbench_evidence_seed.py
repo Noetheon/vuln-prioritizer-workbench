@@ -3,9 +3,11 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from app.contracts.decision_evidence import (
+from app.decision_core.contracts import (
     AnalysisEvidenceUploadsV2,
     AnalysisEvidenceV2,
+    AnalysisSemanticsV2,
+    AnalysisServiceEvidenceV2,
     AttackEvidenceV2,
     EvidenceUploadRef,
     FindingDecisionEvidenceV2,
@@ -58,6 +60,19 @@ def _seed_analysis_evidence(
             kev_hits=sum(1 for finding in findings if finding.in_kev),
             epss_hits=sum(1 for finding in findings if finding.epss is not None),
             nvd_hits=sum(1 for finding in findings if finding.cvss_base_score is not None),
+        ),
+        analysis_service=AnalysisServiceEvidenceV2(
+            pipeline="seeded-contract-fixture",
+            engine="backend.tests.utils.workbench_evidence_seed",
+            kernel="app.decision_core.producer",
+        ),
+        analysis_semantics=AnalysisSemanticsV2(
+            analysis_decision_scope="seeded_decision_scope",
+            persistence_scope="seeded_finding_scope",
+            finding_dedup_key_version="seed-v1",
+            cve_count=finding_count,
+            occurrence_count=finding_count,
+            finding_count=finding_count,
         ),
     )
 
@@ -125,7 +140,7 @@ def _seed_finding_evidence(
             },
             rationale=rationale,
             data_quality_confidence=confidence,
-            data_quality_flags=list(flags),
+            data_quality_flags=_quality_flags(flags),
             raw={
                 "data_quality_confidence": confidence,
                 "data_quality_flags": flags,
@@ -166,3 +181,16 @@ def _seed_finding_evidence(
             },
         ),
     )
+
+
+def _quality_flags(flags: list[dict[str, str]]) -> list[dict[str, str]]:
+    return [
+        {
+            "source": flag.get("source") or "seed",
+            "code": flag.get("code") or "seed_flag",
+            "message": flag.get("message") or "",
+            "severity": flag.get("severity") or "warning",
+            **({"cve_id": flag["cve_id"]} if flag.get("cve_id") else {}),
+        }
+        for flag in flags
+    ]

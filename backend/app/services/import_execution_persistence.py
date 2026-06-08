@@ -8,7 +8,11 @@ from typing import Any
 
 from sqlmodel import Session
 
-from app.contracts.decision_evidence import FindingDecisionEvidenceV2
+from app.decision_core.builders import (
+    build_finding_decision_evidence,
+    build_occurrence_evidence,
+)
+from app.decision_core.contracts import FindingDecisionEvidenceV2
 from app.domain.import_asset_context import (
     asset_criticality_from_evidence as _asset_criticality,
 )
@@ -20,10 +24,6 @@ from app.domain.import_asset_context import string_evidence as _string_evidence
 from app.importers.contracts import NormalizedOccurrence
 from app.repositories import AssetRepository, FindingRepository, RunRepository
 from app.services.analysis import WorkbenchAnalysisResult
-from app.services.decision_evidence_builder import (
-    build_finding_decision_evidence,
-    build_occurrence_evidence,
-)
 from app.services.import_execution_dedup import _dedup_key_parts, _finding_dedup_key
 from app.services.import_execution_persistence_attack import (
     _attack_context_defensive_note,

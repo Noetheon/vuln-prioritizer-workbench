@@ -60,6 +60,7 @@ export function buildImportHistoryColumns({
         <div className="min-w-0">
           <Button
             className="h-auto p-0 font-mono text-sm"
+            data-vpw-visual-mask="true"
             onClick={() => onSelectRun(run.id)}
             type="button"
             variant="link"
@@ -120,7 +121,7 @@ export function buildImportHistoryColumns({
       header: "Provider",
       cell: (run) =>
         run.provider_snapshot_id ? (
-          <span title={run.provider_snapshot_id}>
+          <span data-vpw-visual-mask="true" title={run.provider_snapshot_id}>
             <SourceMark
               label={shortSnapshotLabel(run.provider_snapshot_id)}
               source="provider"

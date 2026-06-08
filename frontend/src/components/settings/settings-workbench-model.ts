@@ -5,6 +5,7 @@ import type {
 } from "@/api-client"
 import type { VpwBadgeTone } from "@/components/vpw"
 import { formatCacheAge, providerSnapshotSummary } from "@/lib/provider-format"
+import { FRONTEND_VERSION } from "@/lib/runtime-config"
 import { formatDateTime as formatWorkbenchDateTime } from "../../lib/date-format.ts"
 
 export type SettingsWorkbenchProps = {
@@ -104,6 +105,20 @@ export function evidenceReadiness(
     : { label: "Partial", tone: "warning" as VpwBadgeTone }
 }
 
+export function workerHealth(status: WorkbenchStatus | null) {
+  const workerStatus = status?.worker_status
+  if (!workerStatus) {
+    return { label: "Checking", tone: "info" as VpwBadgeTone }
+  }
+  if (workerStatus === "ready") {
+    return { label: "Ready", tone: "success" as VpwBadgeTone }
+  }
+  if (workerStatus === "unknown") {
+    return { label: "Unknown", tone: "warning" as VpwBadgeTone }
+  }
+  return { label: "Not ready", tone: "warning" as VpwBadgeTone }
+}
+
 export function safeDiagnosticsCode({
   providerStatus,
   status,
@@ -116,11 +131,19 @@ export function safeDiagnosticsCode({
   return JSON.stringify(
     {
       app: status?.app ?? "unavailable",
+      schemaVersion: status?.schema_version ?? "unavailable",
+      environment: status?.environment ?? "unavailable",
+      runtimeMode: status?.runtime_mode ?? "unavailable",
+      frontendVersion: FRONTEND_VERSION,
       backendStatus: status?.status ?? "unavailable",
       corePackage: status?.core_package ?? "unavailable",
       coreVersion: status?.core_version ?? "unavailable",
       databaseStatus: status?.database_status ?? "unavailable",
       schemaStatus: status?.schema_status ?? "unavailable",
+      alembicHead: status?.alembic_head ?? "unavailable",
+      demoWorkspaceEnabled: status?.demo_workspace_enabled ?? false,
+      workerStatus: status?.worker_status ?? "unavailable",
+      workerLastSeenAt: status?.worker_last_seen_at ?? null,
       apiDocsEnabled: status?.api_docs_enabled ?? false,
       apiDocsPath: status?.api_docs_path ?? null,
       providerStatus: providerStatus?.status ?? "unavailable",

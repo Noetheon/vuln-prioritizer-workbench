@@ -10,6 +10,7 @@ import {
   VpwSkeletonStack,
   VpwStatusBanner,
 } from "@/components/vpw"
+import { compareReportsForDisplay } from "@/lib/report-format"
 import { fetchReportDownload, startReportDownload } from "@/workbench/report-download"
 import { workbenchQueryKeys } from "@/workbench/workbench-query-keys"
 import {
@@ -55,7 +56,9 @@ export function EvidenceTab({
       await queryClient.invalidateQueries({ queryKey: workbenchQueryKeys.reports(runId) })
     },
   })
-  const reports = reportsQuery.data?.data ?? []
+  const reports = (reportsQuery.data?.data ?? [])
+    .slice()
+    .sort(compareReportsForDisplay)
   const columns = buildImportRunEvidenceColumns({
     downloadPending: downloadMutation.isPending,
     onDownloadReport: (report) => downloadMutation.mutate(report),
@@ -108,7 +111,10 @@ export function EvidenceTab({
             },
             { label: "Started", value: formatDateTime(summary.started_at) },
             { label: "Finished", value: formatDateTime(summary.finished_at) },
-            { label: "Run ID", value: <CopyableValue label="Copy run ID" value={run.id} /> },
+            {
+              label: "Run ID",
+              value: <CopyableValue label="Copy run ID" value={run.id} visualMask />,
+            },
           ]}
         />
         <p className="text-sm leading-6 text-[var(--vpw-text-secondary)]">

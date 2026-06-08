@@ -1,5 +1,5 @@
+import { EmptyState } from "@/components/vpw"
 import type { ChartDatum } from "../../lib/chart-data"
-import { EmptyState } from "../states"
 
 type HorizontalBarChartProps = {
   emptyLabel: string
@@ -17,8 +17,8 @@ export function HorizontalBarChart({
     return (
       <EmptyState
         ariaLabel={`${emptyLabel} empty state`}
-        compact
-        detail={
+        className="min-h-0 py-4"
+        description={
           emptyDetail ?? "Import project data to populate this chart."
         }
         title={emptyLabel}
