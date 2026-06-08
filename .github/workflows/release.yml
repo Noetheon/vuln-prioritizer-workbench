@@ -78,6 +78,9 @@ jobs:
       - name: Validate built distributions
         run: python -m twine check dist/*
 
+      - name: Build local Workbench release bundle
+        run: make release-bundle
+
       - name: Record release artifact hashes
         shell: bash
         run: |

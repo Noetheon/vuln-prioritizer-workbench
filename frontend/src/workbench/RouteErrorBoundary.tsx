@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react"
-import { ErrorState } from "../components/states"
+import { Callout } from "@/components/vpw"
 
 type RouteErrorBoundaryProps = {
   children: ReactNode
@@ -35,7 +35,11 @@ export class RouteErrorBoundary extends Component<
 
   render() {
     if (this.state.hasError) {
-      return <ErrorState message="Workbench route failed to render." />
+      return (
+        <Callout severity="critical" title="Workbench route error">
+          Workbench route failed to render.
+        </Callout>
+      )
     }
     return this.props.children
   }

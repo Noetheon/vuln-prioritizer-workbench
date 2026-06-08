@@ -193,7 +193,8 @@ Use these as implementation starting points:
 Components to narrow or retire from Workbench route use:
 
 - Generic `Card` route wrappers from `frontend/src/components/ui/card.tsx`.
-- Card-based state wrappers in `frontend/src/components/states/EmptyState.tsx`, `LoadingSkeleton.tsx`, and `ErrorState.tsx`.
+- Card-based state wrappers; Workbench empty/error/loading states should use
+  `EmptyState`, `Callout`, and `VpwSkeletonStack` from the VPW feedback layer.
 - Former route-local metric-card implementations.
 - Direct route composition with `VpwMetricStrip` and `VpwCompactMetric`; route
   code should use the canonical `MetricStrip` adapter, while VPW primitives and

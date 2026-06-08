@@ -11,12 +11,14 @@ from typing import Any
 from sqlalchemy.orm import object_session
 from sqlmodel import Session
 
-from app.contracts.decision_evidence import (
+from app.decision_core.builders import build_run_diagnostics
+from app.decision_core.contracts import (
     AnalysisEvidenceV2,
     FindingDecisionEvidenceV2,
     OccurrenceEvidenceV2,
     RunDiagnosticsV2,
 )
+from app.domain.engine.security_redaction import redact_value
 from app.models import (
     AnalysisRun,
     AnalysisRunCountsPublic,
@@ -29,9 +31,8 @@ from app.models import (
     FindingStatus,
     WorkflowRunKind,
 )
-from app.repositories import EvidenceRepository, WorkflowRepository
-from app.services.decision_evidence_builder import build_run_diagnostics
-from app.services.run_workflow_metadata import redact_public_payload
+from app.repositories.evidence import EvidenceRepository
+from app.repositories.workflows import WorkflowRepository
 
 SUCCESSFUL_RUN_STATUSES = {
     AnalysisRunStatus.SUCCEEDED,
@@ -147,13 +148,13 @@ class DecisionRunView:
     def analysis_decision_scope(self) -> str | None:
         if self.evidence is None:
             return None
-        return _str_value(self.evidence.analysis_semantics.get("analysis_decision_scope"))
+        return self.evidence.analysis_semantics.analysis_decision_scope
 
     @property
     def persistence_scope(self) -> str | None:
         if self.evidence is None:
             return None
-        return _str_value(self.evidence.analysis_semantics.get("persistence_scope"))
+        return self.evidence.analysis_semantics.persistence_scope
 
     @property
     def summary_payload(self) -> dict[str, object]:
@@ -379,9 +380,9 @@ def decision_run_view(
         )
     failure_result: dict[str, Any] | None = None
     if workflow is not None and run.status not in SUCCESSFUL_RUN_STATUSES:
-        failure_result = _dict_value(redact_public_payload(workflow.result_ref_json))
+        failure_result = _dict_value(_redact_public_payload(workflow.result_ref_json))
     if diagnostics is None and workflow is not None and workflow.diagnostics_json:
-        diagnostics = build_run_diagnostics(redact_public_payload(workflow.diagnostics_json))
+        diagnostics = build_run_diagnostics(_redact_public_payload(workflow.diagnostics_json))
     return DecisionRunView(
         run=run,
         evidence=evidence,
@@ -514,6 +515,11 @@ def _dict_value(value: Any) -> dict[str, Any]:
 def _dict_or_none(value: Any) -> dict[str, Any] | None:
     payload = _dict_value(value)
     return payload or None
+
+
+def _redact_public_payload(value: Any) -> Any:
+    redacted, _paths = redact_value(value)
+    return redacted
 
 
 def _bool_value(value: Any) -> bool:

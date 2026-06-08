@@ -181,6 +181,7 @@ export type MetricStripMetric = {
   description?: ReactNode
   icon?: ReactNode
   tone?: VpwCompactTone
+  visualMaskValue?: boolean
 }
 
 export type MetricStripProps = Omit<
@@ -236,6 +237,7 @@ export function MetricStrip({
               label={metric.label}
               tone={metric.tone}
               value={metric.value}
+              visualMaskValue={metric.visualMaskValue}
             />
           ))}
     </VpwMetricStrip>

@@ -27,6 +27,7 @@ and residual-risk decision used for the public-production release ledger.
 The workflow already does the important trusted-publishing pieces:
 
 - it builds source and wheel distributions
+- it builds the local end-user Workbench ZIP through `make release-bundle`
 - it validates them with `twine check`
 - it publishes a GitHub Release from the checked-in notes when present
 - it uses `pypa/gh-action-pypi-publish@release/v1`
@@ -112,7 +113,7 @@ git push origin vX.Y.Z
 8. Download or link the `release-readiness-evidence` workflow artifact. It must
    include the release-readiness command log, commit metadata, evidence-bundle
    verification JSON when generated, and the SHA-256 list for built release
-   artifacts.
+   artifacts, including the local Workbench ZIP.
 9. If PyPI publishing is enabled for the repository, verify that the package appeared on PyPI.
 10. Confirm that the workflow's hosted-index install verification step completed successfully.
 
@@ -178,8 +179,22 @@ When configuring the trusted publisher on PyPI, match these repository values:
 
 After each public release:
 
-1. Confirm the GitHub Release page exists and contains the built `sdist` and `wheel`.
-2. Verify the documented GitHub tag install path:
+1. Confirm the GitHub Release page exists and contains the built `sdist`,
+   `wheel`, `vuln-prioritizer-workbench-local-X.Y.Z.zip`, and ZIP SHA-256 file.
+2. Verify the release bundle locally:
+
+```bash
+tmpdir="$(mktemp -d)"
+unzip vuln-prioritizer-workbench-local-X.Y.Z.zip -d "$tmpdir"
+cd "$tmpdir"/vuln-prioritizer-workbench-local-X.Y.Z
+bash scripts/launch-workbench.sh status
+```
+
+This validates that the release asset contains the launchers, Compose files,
+source tree, and `BUNDLE-MANIFEST.json`. Run `bash scripts/launch-workbench.sh
+start` for a full Docker launch verification when Docker is available.
+
+3. Verify the documented GitHub tag install path:
 
 ```bash
 tmpdir="$(mktemp -d)"
@@ -198,7 +213,7 @@ The tag-push release workflow performs the same source-at-tag Workbench smoke
 automatically before publication. Keep the manual check here as an
 operator-level confirmation rather than the only verification step.
 
-3. If PyPI is enabled, install from PyPI too:
+4. If PyPI is enabled, install from PyPI too:
 
 ```bash
 tmpdir="$(mktemp -d)"
@@ -208,9 +223,9 @@ python3 -m venv "$tmpdir/venv"
   "$tmpdir/workbench-pypi-smoke.json"
 ```
 
-4. Confirm the README install instructions still match reality.
-5. Confirm the release notes, tag, and GitHub Release object all use the same version string.
-6. If the workflow already performed hosted-index verification, treat the manual install checks here as a second-line confirmation rather than the only release proof.
+5. Confirm the README, `INSTALL.md`, and `TROUBLESHOOTING.md` instructions still match reality.
+6. Confirm the release notes, tag, and GitHub Release object all use the same version string.
+7. If the workflow already performed hosted-index verification, treat the manual install checks here as a second-line confirmation rather than the only release proof.
 
 If TestPyPI is enabled, also verify the staging index first:
 

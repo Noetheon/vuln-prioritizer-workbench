@@ -79,7 +79,18 @@ export function buildProjectDirectoryColumns({
         const summary = projectSummaryById[project.id] ?? null
         return (
           <div className="flex flex-col gap-1">
-            <p className="font-medium">{latestRunLabel(summary)}</p>
+            <p className="font-medium">
+              {summary?.latest_run_id ? (
+                <span
+                  className="inline-block w-[5.75rem]"
+                  data-vpw-visual-mask="true"
+                >
+                  {latestRunLabel(summary)}
+                </span>
+              ) : (
+                latestRunLabel(summary)
+              )}
+            </p>
             <VpwBadge tone={runTone(summary?.latest_run_status)}>
               {latestRunStatus(summary)}
             </VpwBadge>

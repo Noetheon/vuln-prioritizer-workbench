@@ -33,7 +33,7 @@ current acceptance source.
   score.
 - The active analysis JSON export is `analysis-result.v2.json`.
 - The active decision/evidence source is Decision/Evidence Kernel v2:
-  `backend/app/services/decision_kernel.py`, `AnalysisEvidenceV2`,
+  `backend/app/decision_core/producer.py`, `AnalysisEvidenceV2`,
   `FindingDecisionEvidenceV2`, `RunDiagnosticsV2`, `analysis_evidence`, and
   `finding_decision_evidence`.
 - Default prioritization stays grounded in `CVSS + EPSS + KEV`.

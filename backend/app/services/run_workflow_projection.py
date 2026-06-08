@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
+from app.decision_core.readmodels import decision_run_view
 from app.models import (
     AnalysisRun,
     AnalysisRunPublic,
     AnalysisRunSummaryPublic,
     WorkflowRunPublic,
 )
-from app.services.decision_projection import decision_run_view
 from app.services.run_workflow_metadata import redact_public_payload
 
 

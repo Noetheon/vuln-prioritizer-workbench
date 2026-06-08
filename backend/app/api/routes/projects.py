@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 from app.api.deps import LocalActor, SessionDep
 from app.api.routes.workbench_access import require_project
 from app.core.app_state import workbench_settings
+from app.decision_core.finding_queries import list_project_attack_summary_inputs
 from app.models import (
     Project,
     ProjectAttackSummaryPublic,
@@ -135,8 +136,7 @@ def read_project_attack_summary(
 ) -> ProjectAttackSummaryPublic:
     """Read top ATT&CK techniques, tactics, and confidence distribution."""
     require_project(session, project_id)
-    finding_repo = FindingRepository(session)
-    findings, attack_contexts = finding_repo.list_project_attack_summary_inputs(project_id)
+    findings, attack_contexts = list_project_attack_summary_inputs(session, project_id)
     return build_project_attack_summary_payload_from_rows(
         project_id=project_id,
         findings=findings,

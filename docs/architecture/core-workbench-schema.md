@@ -159,7 +159,7 @@ Finding-level explanation, data-quality, provider, ATT&CK, governance, waiver,
 occurrence, and remediation evidence lives in `finding_decision_evidence` as
 typed `FindingDecisionEvidenceV2`. `finding` intentionally keeps only indexed
 working fields and links so triage queries stay bounded. Successful v2 read
-paths project product facts from `decision_projection.py`, not from stale
+paths project product facts from `decision_core/readmodels.py`, not from stale
 finding decision columns.
 
 ## Persistence Contract

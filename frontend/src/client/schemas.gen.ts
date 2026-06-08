@@ -59,14 +59,10 @@ export const AnalysisEvidenceV2Schema = {
             type: 'string'
         },
         analysis_semantics: {
-            additionalProperties: true,
-            title: 'Analysis Semantics',
-            type: 'object'
+            $ref: '#/components/schemas/AnalysisSemanticsV2'
         },
         analysis_service: {
-            additionalProperties: true,
-            title: 'Analysis Service',
-            type: 'object'
+            $ref: '#/components/schemas/AnalysisServiceEvidenceV2'
         },
         asset_context: {
             anyOf: [
@@ -89,14 +85,12 @@ export const AnalysisEvidenceV2Schema = {
         dedup_summary: {
             anyOf: [
                 {
-                    additionalProperties: true,
-                    type: 'object'
+                    $ref: '#/components/schemas/DedupSummaryV2'
                 },
                 {
                     type: 'null'
                 }
-            ],
-            title: 'Dedup Summary'
+            ]
         },
         diagnostics: {
             anyOf: [
@@ -185,7 +179,9 @@ export const AnalysisEvidenceV2Schema = {
         'analysis_run_id',
         'project_id',
         'input_type',
-        'status'
+        'status',
+        'analysis_service',
+        'analysis_semantics'
     ],
     title: 'AnalysisEvidenceV2',
     type: 'object'
@@ -728,6 +724,85 @@ export const AnalysisRunsPublicSchema = {
         'count'
     ],
     title: 'AnalysisRunsPublic',
+    type: 'object'
+} as const;
+
+export const AnalysisSemanticsV2Schema = {
+    additionalProperties: false,
+    description: 'Typed explanation of how run-wide decisions were scoped.',
+    properties: {
+        analysis_decision_scope: {
+            title: 'Analysis Decision Scope',
+            type: 'string'
+        },
+        cve_count: {
+            default: 0,
+            title: 'Cve Count',
+            type: 'integer'
+        },
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
+        finding_dedup_key_version: {
+            title: 'Finding Dedup Key Version',
+            type: 'string'
+        },
+        occurrence_count: {
+            default: 0,
+            title: 'Occurrence Count',
+            type: 'integer'
+        },
+        occurrence_overlay_fields: {
+            items: {
+                type: 'string'
+            },
+            title: 'Occurrence Overlay Fields',
+            type: 'array'
+        },
+        persistence_scope: {
+            title: 'Persistence Scope',
+            type: 'string'
+        },
+        same_cve_can_create_distinct_asset_findings: {
+            default: true,
+            title: 'Same Cve Can Create Distinct Asset Findings',
+            type: 'boolean'
+        }
+    },
+    required: [
+        'analysis_decision_scope',
+        'persistence_scope',
+        'finding_dedup_key_version'
+    ],
+    title: 'AnalysisSemanticsV2',
+    type: 'object'
+} as const;
+
+export const AnalysisServiceEvidenceV2Schema = {
+    additionalProperties: false,
+    description: 'Stable producer metadata for a decision run.',
+    properties: {
+        engine: {
+            title: 'Engine',
+            type: 'string'
+        },
+        kernel: {
+            title: 'Kernel',
+            type: 'string'
+        },
+        pipeline: {
+            title: 'Pipeline',
+            type: 'string'
+        }
+    },
+    required: [
+        'pipeline',
+        'engine',
+        'kernel'
+    ],
+    title: 'AnalysisServiceEvidenceV2',
     type: 'object'
 } as const;
 
@@ -1593,6 +1668,176 @@ export const DashboardSignalCountsPublicSchema = {
     type: 'object'
 } as const;
 
+export const DedupDecisionV2Schema = {
+    additionalProperties: false,
+    description: 'Sampled dedup decision retained for audit and report summaries.',
+    properties: {
+        action: {
+            title: 'Action',
+            type: 'string'
+        },
+        component_identity: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Identity'
+        },
+        cve_id: {
+            title: 'Cve Id',
+            type: 'string'
+        },
+        dedup_key: {
+            title: 'Dedup Key',
+            type: 'string'
+        },
+        finding_id: {
+            title: 'Finding Id',
+            type: 'string'
+        },
+        source_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Id'
+        },
+        target_ref: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target Ref'
+        }
+    },
+    required: [
+        'action',
+        'dedup_key',
+        'finding_id',
+        'cve_id'
+    ],
+    title: 'DedupDecisionV2',
+    type: 'object'
+} as const;
+
+export const DedupKeyPartsV2Schema = {
+    additionalProperties: false,
+    description: 'Dedup key material used to form one finding identity.',
+    properties: {
+        component_identity: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Identity'
+        },
+        project_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Project Id'
+        },
+        source_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Id'
+        },
+        target_ref: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target Ref'
+        }
+    },
+    title: 'DedupKeyPartsV2',
+    type: 'object'
+} as const;
+
+export const DedupSummaryV2Schema = {
+    additionalProperties: false,
+    description: 'Run-level finding deduplication summary.',
+    properties: {
+        created_findings: {
+            default: 0,
+            title: 'Created Findings',
+            type: 'integer'
+        },
+        decision_count: {
+            default: 0,
+            title: 'Decision Count',
+            type: 'integer'
+        },
+        decision_sample_limit: {
+            default: 0,
+            title: 'Decision Sample Limit',
+            type: 'integer'
+        },
+        decisions: {
+            items: {
+                $ref: '#/components/schemas/DedupDecisionV2'
+            },
+            title: 'Decisions',
+            type: 'array'
+        },
+        key_version: {
+            title: 'Key Version',
+            type: 'string'
+        },
+        omitted_decisions: {
+            default: 0,
+            title: 'Omitted Decisions',
+            type: 'integer'
+        },
+        reused_findings: {
+            default: 0,
+            title: 'Reused Findings',
+            type: 'integer'
+        },
+        updated_findings: {
+            default: 0,
+            title: 'Updated Findings',
+            type: 'integer'
+        }
+    },
+    required: [
+        'key_version'
+    ],
+    title: 'DedupSummaryV2',
+    type: 'object'
+} as const;
+
 export const DemoWorkspaceCreateSchema = {
     description: 'Request payload for creating or resetting the local demo workspace.',
     properties: {
@@ -2248,9 +2493,7 @@ export const FindingDecisionEvidenceV2Schema = {
             type: 'boolean'
         },
         occurrence_scope: {
-            additionalProperties: true,
-            title: 'Occurrence Scope',
-            type: 'object'
+            $ref: '#/components/schemas/OccurrenceScopeV2'
         },
         occurrences: {
             items: {
@@ -4363,6 +4606,58 @@ export const ImportFormatCapabilityPublicSchema = {
     type: 'object'
 } as const;
 
+export const OccurrenceDedupEvidenceV2Schema = {
+    additionalProperties: false,
+    description: 'Typed dedup evidence attached to a persisted occurrence.',
+    properties: {
+        action: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Action'
+        },
+        key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Key'
+        },
+        key_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Key Version'
+        },
+        parts: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/DedupKeyPartsV2'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    title: 'OccurrenceDedupEvidenceV2',
+    type: 'object'
+} as const;
+
 export const OccurrenceEvidenceV2Schema = {
     additionalProperties: false,
     description: 'One source/scanner occurrence that contributed to a finding decision.',
@@ -4427,9 +4722,7 @@ export const OccurrenceEvidenceV2Schema = {
             title: 'Component Version'
         },
         dedup: {
-            additionalProperties: true,
-            title: 'Dedup',
-            type: 'object'
+            $ref: '#/components/schemas/OccurrenceDedupEvidenceV2'
         },
         fix_version: {
             anyOf: [
@@ -4672,6 +4965,180 @@ export const OccurrenceEvidenceV2Schema = {
     type: 'object'
 } as const;
 
+export const OccurrenceScopeV2Schema = {
+    additionalProperties: false,
+    description: 'Typed scope overlay for one finding occurrence.',
+    properties: {
+        asset_business_service: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Business Service'
+        },
+        asset_criticality: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Criticality'
+        },
+        asset_environment: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Environment'
+        },
+        asset_exposure: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Exposure'
+        },
+        asset_owner: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Owner'
+        },
+        component_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Name'
+        },
+        component_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Version'
+        },
+        purl: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Purl'
+        },
+        source: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source'
+        },
+        source_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Id'
+        },
+        source_record_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Record Id'
+        },
+        target_ref: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target Ref'
+        },
+        vex_match_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Match Type'
+        },
+        vex_source_path: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Source Path'
+        },
+        vex_status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Status'
+        }
+    },
+    title: 'OccurrenceScopeV2',
+    type: 'object'
+} as const;
+
 export const PriorityEvidenceV2Schema = {
     additionalProperties: false,
     description: 'Priority and scoring explanation for one finding decision.',
@@ -4689,16 +5156,13 @@ export const PriorityEvidenceV2Schema = {
         },
         data_quality_flags: {
             items: {
-                additionalProperties: true,
-                type: 'object'
+                $ref: '#/components/schemas/ProviderDataQualityFlagEvidenceV2'
             },
             title: 'Data Quality Flags',
             type: 'array'
         },
         explanation: {
-            additionalProperties: true,
-            title: 'Explanation',
-            type: 'object'
+            $ref: '#/components/schemas/PriorityExplanationV2'
         },
         operational_score: {
             anyOf: [
@@ -4759,6 +5223,251 @@ export const PriorityEvidenceV2Schema = {
         'priority_rank'
     ],
     title: 'PriorityEvidenceV2',
+    type: 'object'
+} as const;
+
+export const PriorityExplanationNoteV2Schema = {
+    additionalProperties: false,
+    description: 'One note in a priority explanation.',
+    properties: {
+        code: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Code'
+        },
+        message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Message'
+        },
+        severity: {
+            default: 'info',
+            title: 'Severity',
+            type: 'string'
+        },
+        source: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source'
+        }
+    },
+    title: 'PriorityExplanationNoteV2',
+    type: 'object'
+} as const;
+
+export const PriorityExplanationReasonV2Schema = {
+    additionalProperties: false,
+    description: 'One reason in a priority explanation.',
+    properties: {
+        code: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Code'
+        },
+        matched: {
+            default: true,
+            title: 'Matched',
+            type: 'boolean'
+        },
+        message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Message'
+        },
+        signal: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Signal'
+        },
+        source: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source'
+        },
+        threshold: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Threshold'
+        },
+        value: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Value'
+        }
+    },
+    title: 'PriorityExplanationReasonV2',
+    type: 'object'
+} as const;
+
+export const PriorityExplanationV2Schema = {
+    additionalProperties: false,
+    description: 'Structured priority explanation projected from the analysis engine.',
+    properties: {
+        cve_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cve Id'
+        },
+        data_quality_confidence: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Data Quality Confidence'
+        },
+        human_readable: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Human Readable'
+        },
+        notes: {
+            items: {
+                $ref: '#/components/schemas/PriorityExplanationNoteV2'
+            },
+            title: 'Notes',
+            type: 'array'
+        },
+        operational_score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Operational Score'
+        },
+        priority_label: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Priority Label'
+        },
+        priority_state: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Priority State'
+        },
+        reason_codes: {
+            items: {
+                type: 'string'
+            },
+            title: 'Reason Codes',
+            type: 'array'
+        },
+        reasons: {
+            items: {
+                $ref: '#/components/schemas/PriorityExplanationReasonV2'
+            },
+            title: 'Reasons',
+            type: 'array'
+        },
+        recommended_action: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Recommended Action'
+        },
+        summary: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Summary'
+        }
+    },
+    title: 'PriorityExplanationV2',
     type: 'object'
 } as const;
 
@@ -5336,6 +6045,82 @@ export const ProjectsPublicSchema = {
     type: 'object'
 } as const;
 
+export const ProviderDataQualityFlagEvidenceV2Schema = {
+    additionalProperties: false,
+    description: 'Provider quality flag preserved in the decision evidence contract.',
+    properties: {
+        asset_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Id'
+        },
+        changed_at: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Changed At'
+        },
+        changed_fields: {
+            items: {
+                type: 'string'
+            },
+            title: 'Changed Fields',
+            type: 'array'
+        },
+        code: {
+            title: 'Code',
+            type: 'string'
+        },
+        cve_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cve Id'
+        },
+        message: {
+            title: 'Message',
+            type: 'string'
+        },
+        severity: {
+            default: 'warning',
+            enum: [
+                'info',
+                'warning',
+                'error'
+            ],
+            title: 'Severity',
+            type: 'string'
+        },
+        source: {
+            title: 'Source',
+            type: 'string'
+        }
+    },
+    required: [
+        'source',
+        'code',
+        'message'
+    ],
+    title: 'ProviderDataQualityFlagEvidenceV2',
+    type: 'object'
+} as const;
+
 export const ProviderEvidenceV2Schema = {
     additionalProperties: false,
     description: 'Provider snapshot and provider-quality evidence for a run or finding.',
@@ -5361,7 +6146,12 @@ export const ProviderEvidenceV2Schema = {
             type: 'integer'
         },
         provider_data_quality_flags: {
-            additionalProperties: true,
+            additionalProperties: {
+                items: {
+                    $ref: '#/components/schemas/ProviderDataQualityFlagEvidenceV2'
+                },
+                type: 'array'
+            },
             title: 'Provider Data Quality Flags',
             type: 'object'
         },
@@ -7113,6 +7903,10 @@ export const WorkbenchHealthSchema = {
 export const WorkbenchStatusSchema = {
     description: 'Status response returned by the active Workbench runtime.',
     properties: {
+        alembic_head: {
+            title: 'Alembic Head',
+            type: 'string'
+        },
         api_docs_enabled: {
             title: 'Api Docs Enabled',
             type: 'boolean'
@@ -7144,12 +7938,51 @@ export const WorkbenchStatusSchema = {
             title: 'Database Status',
             type: 'string'
         },
+        demo_workspace_enabled: {
+            title: 'Demo Workspace Enabled',
+            type: 'boolean'
+        },
+        environment: {
+            title: 'Environment',
+            type: 'string'
+        },
+        runtime_mode: {
+            title: 'Runtime Mode',
+            type: 'string'
+        },
         schema_status: {
             title: 'Schema Status',
             type: 'string'
         },
+        schema_version: {
+            const: 'workbench-status.v1',
+            default: 'workbench-status.v1',
+            title: 'Schema Version',
+            type: 'string'
+        },
         status: {
             title: 'Status',
+            type: 'string'
+        },
+        worker_last_seen_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Worker Last Seen At'
+        },
+        worker_status: {
+            enum: [
+                'ready',
+                'not_ready',
+                'unknown'
+            ],
+            title: 'Worker Status',
             type: 'string'
         }
     },
@@ -7158,8 +7991,13 @@ export const WorkbenchStatusSchema = {
         'app',
         'core_package',
         'core_version',
+        'environment',
+        'runtime_mode',
         'database_status',
         'schema_status',
+        'demo_workspace_enabled',
+        'alembic_head',
+        'worker_status',
         'api_docs_enabled'
     ],
     title: 'WorkbenchStatus',

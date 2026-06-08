@@ -13,7 +13,10 @@ export function ReportArtifactCell({ report }: { report: ReportPublic }) {
   return (
     <div className="min-w-0">
       <div className="flex min-w-0 items-center gap-2">
-        <span className="truncate font-mono text-xs font-medium">
+        <span
+          className="truncate font-mono text-xs font-medium"
+          data-vpw-visual-mask="true"
+        >
           {report.filename}
         </span>
       </div>
@@ -80,7 +83,10 @@ export function ReportChecksumCell({ report }: { report: ReportPublic }) {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className="cursor-default font-mono text-xs text-[var(--vpw-text-secondary)]">
+          <span
+            className="cursor-default font-mono text-xs text-[var(--vpw-text-secondary)]"
+            data-vpw-visual-mask="true"
+          >
             {checksum}
           </span>
         </TooltipTrigger>

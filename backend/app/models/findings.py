@@ -7,7 +7,7 @@ from typing import Optional
 from sqlalchemy import Column, DateTime, Index, String, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
-from app.contracts.decision_evidence import FindingDecisionEvidenceV2
+from app.decision_core.contracts import FindingDecisionEvidenceV2
 from app.models.base import get_datetime_utc
 from app.models.enums import FindingPriority, FindingStatus
 

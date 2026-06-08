@@ -9,7 +9,7 @@ from typing import Any
 
 from sqlmodel import Session, col, func, select
 
-from app.contracts.decision_evidence import FindingDecisionEvidenceV2
+from app.decision_core.contracts import FindingDecisionEvidenceV2
 from app.domain.asset_context_projection import (
     _asset_criticality,
     _asset_environment,

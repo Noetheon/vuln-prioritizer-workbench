@@ -2,6 +2,10 @@ import { FileText } from "lucide-react"
 import type { ReportPublic, ReportVerificationPublic } from "@/api-client"
 import { Skeleton } from "@/components/ui/skeleton"
 import { VpwDataTable, VpwEmptyState, VpwTableCard } from "@/components/vpw"
+import {
+  compareReportsByNewest,
+  compareReportsForDisplay,
+} from "@/lib/report-format"
 import { buildReportHistoryColumns } from "./EvidenceCenterHistoryColumns"
 
 type HistoryProps = {
@@ -34,6 +38,8 @@ export function ReportHistory({
   panelTitle = "Report History",
 }: HistoryProps) {
   const rows = reports
+    .slice()
+    .sort(mode === "history" ? compareReportsByNewest : compareReportsForDisplay)
   const columns = buildReportHistoryColumns({
     mode,
     onDownload,

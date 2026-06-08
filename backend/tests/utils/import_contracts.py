@@ -12,8 +12,8 @@ from starlette.responses import Response
 
 from app import models as app_models
 from app.core.config import Settings
+from app.decision_core.readmodels import project_finding_decision_views
 from app.main import _upload_size_guard
-from app.services.decision_projection import project_finding_decision_views
 from app.workers.workflow_worker import run_worker_once
 from utils.import_contract_fixtures import PROJECT_ROOT
 from utils.workbench_env import WorkbenchApiEnv

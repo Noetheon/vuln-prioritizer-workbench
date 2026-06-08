@@ -10,7 +10,7 @@ from typing import Any
 
 from sqlmodel import Session, select
 
-from app.contracts.decision_evidence import (
+from app.decision_core.contracts import (
     AnalysisEvidenceUploadsV2,
     AttackEvidenceV2,
     EvidenceUploadRef,

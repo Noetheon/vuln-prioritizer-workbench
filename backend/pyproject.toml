@@ -124,7 +124,7 @@ omit = [
 
 [tool.mutmut]
 paths_to_mutate = [
-  "app/services/decision_evidence_builder.py",
+  "app/decision_core/builders.py",
   "app/services/report_bundle_archive_verification.py",
   "app/services/report_sarif_validation.py",
   "app/domain/engine/services/analysis_pipeline.py",

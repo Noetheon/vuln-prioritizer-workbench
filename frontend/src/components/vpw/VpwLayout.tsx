@@ -56,6 +56,7 @@ export type VpwCompactMetricProps = ComponentPropsWithoutRef<"div"> & {
   label: string
   tone?: VpwCompactTone
   value: ReactNode
+  visualMaskValue?: boolean
 }
 
 const gridClass: Record<NonNullable<VpwGridProps["columns"]>, string> = {
@@ -276,6 +277,7 @@ export function VpwCompactMetric({
   label,
   tone = "neutral",
   value,
+  visualMaskValue = false,
   ...props
 }: VpwCompactMetricProps) {
   return (
@@ -291,7 +293,12 @@ export function VpwCompactMetric({
       {icon ? <span className="vpw-compact-metric__icon">{icon}</span> : null}
       <div className="vpw-compact-metric__body">
         <span className="vpw-label">{label}</span>
-        <strong>{value}</strong>
+        <strong
+          className={visualMaskValue ? "inline-block min-w-[7.5rem]" : undefined}
+          data-vpw-visual-mask={visualMaskValue ? "true" : undefined}
+        >
+          {value}
+        </strong>
         {description ? <small>{description}</small> : null}
       </div>
     </div>

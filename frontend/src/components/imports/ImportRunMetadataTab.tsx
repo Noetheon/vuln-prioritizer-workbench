@@ -33,7 +33,10 @@ export function MetadataTab({
       <VpwSectionHeader title="Run metadata" />
       <RunDetailRows
         items={[
-          { label: "Run ID", value: <CopyableValue label="Copy run ID" value={summary.id} /> },
+          {
+            label: "Run ID",
+            value: <CopyableValue label="Copy run ID" value={summary.id} visualMask />,
+          },
           { label: "Input type", value: summary.input_type },
           {
             label: "Provider snapshot ID",
@@ -41,6 +44,7 @@ export function MetadataTab({
               <CopyableValue
                 label="Copy provider snapshot ID"
                 value={summary.provider_snapshot_id}
+                visualMask
               />
             ) : (
               "Not recorded"

@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from app.contracts.decision_evidence import FindingDecisionEvidenceV2
+from app.decision_core.contracts import FindingDecisionEvidenceV2
+from app.decision_core.readmodels import DecisionFindingView, decision_finding_view
 from app.models import Finding, FindingOccurrence, ProviderSnapshot
-from app.services.decision_projection import DecisionFindingView, decision_finding_view
 from app.services.report_formatting import dict_value as _dict_value
 from app.services.report_formatting import iso_datetime as _iso_datetime
 from app.services.report_models import (
@@ -434,6 +434,9 @@ def _flag_items(value: Any) -> list[str]:
         return []
     flags: list[str] = []
     for item in value:
+        if hasattr(item, "model_dump"):
+            dumped = item.model_dump(mode="json", exclude_none=True)
+            item = dumped if isinstance(dumped, dict) else {"message": str(dumped)}
         if isinstance(item, dict):
             parts = [
                 str(item[key]) for key in ("code", "label", "message", "detail") if item.get(key)

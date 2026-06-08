@@ -1,14 +1,28 @@
-import { writeFileSync } from "node:fs"
+import { createHash } from "node:crypto"
+import { readFileSync, writeFileSync } from "node:fs"
 import { expect, type Locator, type Page, test } from "@playwright/test"
 import { evidenceScreenshotPath } from "./evidence-paths"
 import { backendBaseUrl, localApiHeaders } from "./workbench-runtime-helpers"
 
 const screenshotViewport = { height: 900, width: 1440 }
 const screenshotStepRatio = 0.78
+const duplicateScrollTolerancePx = 8
+const visualMaskSelector = "[data-vpw-visual-mask]"
+const visualMaskColor = "#f3f4f6"
+const routeFilter = new Set(
+  (process.env.VPW_DESIGN_AUDIT_ROUTE ?? "")
+    .split(",")
+    .map((slug) => slug.trim())
+    .filter(Boolean),
+)
 
 type DemoWorkspace = {
   latest_run_id: string
   project_id: string
+}
+
+type ProjectList = {
+  data: Array<{ id: string }>
 }
 
 type FindingPage = {
@@ -19,30 +33,33 @@ type AuditRoute = {
   name: string
   path: (workspace: DemoWorkspace, findingId: string) => string
   readyText: RegExp | string
-  segments: number
   slug: string
   stableText?: RegExp | string
 }
 
 type ScreenshotManifestEntry = {
   file: string
+  maxScroll: number
   route: string
-  scroll: {
-    clientHeight: number
-    maxScroll: number
-    scrollHeight: number
-    scrollTop: number
-  }
+  scroll: ScrollMetrics
   segment: number
+  sha256: string
   slug: string
+  scrollTop: number
 }
 
-const auditRoutes: AuditRoute[] = [
+type ScrollMetrics = {
+  clientHeight: number
+  maxScroll: number
+  scrollHeight: number
+  scrollTop: number
+}
+
+const allAuditRoutes: AuditRoute[] = [
   {
     name: "Overview",
     path: ({ project_id }) => `/?projectId=${project_id}`,
     readyText: /Critical Priority|Priority distribution/i,
-    segments: 3,
     slug: "overview",
     stableText: "Top Remediation Queue",
   },
@@ -50,7 +67,6 @@ const auditRoutes: AuditRoute[] = [
     name: "Triage",
     path: ({ project_id }) => `/findings?projectId=${project_id}`,
     readyText: /Prioritized findings|Findings queue/i,
-    segments: 3,
     slug: "triage",
     stableText: /Showing|CVE-/,
   },
@@ -59,7 +75,6 @@ const auditRoutes: AuditRoute[] = [
     path: ({ project_id }, findingId) =>
       `/findings/${findingId}?projectId=${project_id}`,
     readyText: /Why this priority\?|Decision core/i,
-    segments: 3,
     slug: "finding-detail",
     stableText: "Recommended action:",
   },
@@ -67,7 +82,6 @@ const auditRoutes: AuditRoute[] = [
     name: "Imports",
     path: ({ project_id }) => `/imports?projectId=${project_id}`,
     readyText: /Recent Imports|Quick start/i,
-    segments: 2,
     slug: "imports",
     stableText: /Recent Imports|Import history/i,
   },
@@ -75,7 +89,6 @@ const auditRoutes: AuditRoute[] = [
     name: "New Import",
     path: ({ project_id }) => `/imports/new?projectId=${project_id}`,
     readyText: "Choose source",
-    segments: 3,
     slug: "imports-new",
     stableText: "CVE list",
   },
@@ -83,7 +96,6 @@ const auditRoutes: AuditRoute[] = [
     name: "Supported Formats",
     path: ({ project_id }) => `/imports/formats?projectId=${project_id}`,
     readyText: "CVE list",
-    segments: 2,
     slug: "imports-formats",
     stableText: "Trivy JSON",
   },
@@ -92,7 +104,6 @@ const auditRoutes: AuditRoute[] = [
     path: ({ latest_run_id, project_id }) =>
       `/imports/runs/${latest_run_id}?projectId=${project_id}`,
     readyText: "Source details",
-    segments: 2,
     slug: "imports-run",
     stableText: /Review findings|Diagnostics/,
   },
@@ -100,7 +111,6 @@ const auditRoutes: AuditRoute[] = [
     name: "Assets",
     path: ({ project_id }) => `/assets?projectId=${project_id}`,
     readyText: /Asset inventory|Asset register/i,
-    segments: 4,
     slug: "assets",
     stableText: /Asset register|analytics-etl-01/,
   },
@@ -108,7 +118,6 @@ const auditRoutes: AuditRoute[] = [
     name: "Data Sources",
     path: ({ project_id }) => `/providers?projectId=${project_id}`,
     readyText: /Provider status|Source inventory/i,
-    segments: 2,
     slug: "providers",
     stableText: /Source inventory|Provider diagnostics/,
   },
@@ -116,7 +125,6 @@ const auditRoutes: AuditRoute[] = [
     name: "Risk Acceptance",
     path: ({ project_id }) => `/waivers?projectId=${project_id}`,
     readyText: /Decision register|Accepted risk control center/i,
-    segments: 4,
     slug: "waivers",
     stableText: /DEMO-RISK|No accepted-risk lifecycle debt/,
   },
@@ -124,7 +132,6 @@ const auditRoutes: AuditRoute[] = [
     name: "Evidence Center",
     path: ({ project_id }) => `/reports?projectId=${project_id}`,
     readyText: /Evidence summary|Generated artifacts/i,
-    segments: 3,
     slug: "reports",
     stableText: /Generated artifacts|evidence-bundle\.zip/,
   },
@@ -132,7 +139,6 @@ const auditRoutes: AuditRoute[] = [
     name: "Workspace Settings",
     path: ({ project_id }) => `/settings?projectId=${project_id}`,
     readyText: "Workspace state",
-    segments: 1,
     slug: "settings",
     stableText: "Credentials are never displayed",
   },
@@ -140,16 +146,27 @@ const auditRoutes: AuditRoute[] = [
     name: "Projects",
     path: ({ project_id }) => `/projects?projectId=${project_id}`,
     readyText: /Workspace projects|Projects directory/i,
-    segments: 4,
     slug: "projects",
     stableText: /Projects directory|Online Shop Demo Workspace/,
   },
 ]
+const auditRoutes =
+  routeFilter.size > 0
+    ? allAuditRoutes.filter((route) => routeFilter.has(route.slug))
+    : allAuditRoutes
+const missingRouteFilters = [...routeFilter].filter(
+  (slug) => !allAuditRoutes.some((route) => route.slug === slug),
+)
+if (missingRouteFilters.length > 0) {
+  throw new Error(
+    `Unknown VPW_DESIGN_AUDIT_ROUTE value(s): ${missingRouteFilters.join(", ")}`,
+  )
+}
 
-test("design audit captures the 36 VPW route section screenshots", async ({
+test("design audit matches VPW visual regression baselines", async ({
   page,
 }) => {
-  test.setTimeout(180_000)
+  test.setTimeout(routeFilter.size > 0 ? 300_000 : 240_000)
   await page.setViewportSize(screenshotViewport)
 
   const workspace = await seedDemoWorkspace(page)
@@ -169,22 +186,43 @@ test("design audit captures the 36 VPW route section screenshots", async ({
     await expect(content).toBeVisible()
     await assertRouteDesignContract(page, route)
 
-    for (let segment = 1; segment <= route.segments; segment += 1) {
-      const scroll = await scrollRouteSegment(content, route.segments, segment)
+    const scrollMetrics = await measureRouteScroll(content)
+    const scrollTargets = uniqueScrollTargets(scrollMetrics)
+    const routeEntries: ScreenshotManifestEntry[] = []
+
+    for (const [index, scrollTarget] of scrollTargets.entries()) {
+      const segment = index + 1
+      const scroll = await scrollRouteSegment(content, scrollTarget)
       const fileName = `${route.slug}-${String(segment).padStart(2, "0")}.png`
       const file = evidenceScreenshotPath("design-audit", fileName)
-      await content.screenshot({ path: file })
-      manifest.push({
+      const mask = visualMaskLocators(content)
+      await content.screenshot({
+        animations: "disabled",
+        caret: "hide",
+        mask,
+        maskColor: visualMaskColor,
+        path: file,
+      })
+      await expect(content).toHaveScreenshot(["design-audit", fileName], {
+        mask,
+        maskColor: visualMaskColor,
+      })
+      routeEntries.push({
         file,
+        maxScroll: scroll.maxScroll,
         route: route.name,
         scroll,
         segment,
+        sha256: screenshotSha256(file),
         slug: route.slug,
+        scrollTop: scroll.scrollTop,
       })
     }
+    manifest.push(...routeEntries)
   }
 
-  expect(manifest).toHaveLength(36)
+  expectRouteCoverage(auditRoutes, manifest)
+  expectNoDuplicateAuditSegments(manifest)
   writeFileSync(
     evidenceScreenshotPath("design-audit", "manifest.json"),
     `${JSON.stringify(manifest, null, 2)}\n`,
@@ -192,6 +230,7 @@ test("design audit captures the 36 VPW route section screenshots", async ({
 })
 
 async function seedDemoWorkspace(page: Page): Promise<DemoWorkspace> {
+  await clearWorkbenchProjects(page)
   const response = await page.request.post(
     `${backendBaseUrl}/api/v1/workbench/demo`,
     {
@@ -206,6 +245,23 @@ async function seedDemoWorkspace(page: Page): Promise<DemoWorkspace> {
   return {
     latest_run_id: payload.latest_run_id ?? "",
     project_id: payload.project_id ?? "",
+  }
+}
+
+async function clearWorkbenchProjects(page: Page): Promise<void> {
+  const response = await page.request.get(
+    `${backendBaseUrl}/api/v1/projects/?limit=500`,
+    { headers: localApiHeaders() },
+  )
+  expect(response.ok()).toBeTruthy()
+  const payload = (await response.json()) as ProjectList
+
+  for (const project of payload.data) {
+    const deleteResponse = await page.request.delete(
+      `${backendBaseUrl}/api/v1/projects/${project.id}`,
+      { headers: localApiHeaders() },
+    )
+    expect(deleteResponse.ok()).toBeTruthy()
   }
 }
 
@@ -303,23 +359,55 @@ async function waitForStableRouteContent(page: Page, route: AuditRoute) {
   )
 }
 
-async function scrollRouteSegment(
-  content: Locator,
-  totalSegments: number,
-  segment: number,
-) {
+async function measureRouteScroll(content: Locator) {
+  return await content.evaluate((element) => {
+    const maxScroll = Math.max(0, element.scrollHeight - element.clientHeight)
+    return {
+      clientHeight: element.clientHeight,
+      maxScroll,
+      scrollHeight: element.scrollHeight,
+      scrollTop: element.scrollTop,
+    }
+  })
+}
+
+function uniqueScrollTargets(metrics: ScrollMetrics) {
+  if (metrics.maxScroll <= duplicateScrollTolerancePx) {
+    return [0]
+  }
+
+  const step = Math.max(
+    1,
+    Math.round(metrics.clientHeight * screenshotStepRatio),
+  )
+  const candidates = [0]
+  for (
+    let target = step;
+    target < metrics.maxScroll;
+    target += step
+  ) {
+    candidates.push(target)
+  }
+  candidates.push(metrics.maxScroll)
+
+  return candidates.reduce<number[]>((targets, candidate) => {
+    const clamped = Math.min(metrics.maxScroll, Math.max(0, candidate))
+    const previous = targets.at(-1)
+    if (
+      previous === undefined ||
+      Math.abs(clamped - previous) > duplicateScrollTolerancePx
+    ) {
+      targets.push(clamped)
+    }
+    return targets
+  }, [])
+}
+
+async function scrollRouteSegment(content: Locator, scrollTop: number) {
   return await content.evaluate(
     (element, args) => {
       const maxScroll = Math.max(0, element.scrollHeight - element.clientHeight)
-      const target =
-        args.totalSegments === 1
-          ? 0
-          : Math.min(
-              maxScroll,
-              Math.round(
-                element.clientHeight * args.stepRatio * (args.segment - 1),
-              ),
-            )
+      const target = Math.min(maxScroll, Math.max(0, args.scrollTop))
       element.scrollTop = target
       return {
         clientHeight: element.clientHeight,
@@ -328,8 +416,74 @@ async function scrollRouteSegment(
         scrollTop: element.scrollTop,
       }
     },
-    { segment, stepRatio: screenshotStepRatio, totalSegments },
+    { scrollTop },
   )
+}
+
+function visualMaskLocators(content: Locator) {
+  return [content.locator(visualMaskSelector)]
+}
+
+function screenshotSha256(file: string) {
+  return createHash("sha256").update(readFileSync(file)).digest("hex")
+}
+
+function expectRouteCoverage(
+  routes: readonly AuditRoute[],
+  manifest: readonly ScreenshotManifestEntry[],
+) {
+  for (const route of routes) {
+    const routeEntries = manifest.filter((entry) => entry.slug === route.slug)
+    expect(
+      routeEntries.length,
+      `${route.name} should capture at least one design-audit segment`,
+    ).toBeGreaterThan(0)
+    expect(
+      routeEntries[0]?.scrollTop,
+      `${route.name} should begin at the top of the scroll container`,
+    ).toBe(0)
+
+    const maxScroll = Math.max(...routeEntries.map((entry) => entry.maxScroll))
+    if (maxScroll > duplicateScrollTolerancePx) {
+      expect(
+        routeEntries.some(
+          (entry) =>
+            Math.abs(entry.scrollTop - maxScroll) <=
+            duplicateScrollTolerancePx,
+        ),
+        `${route.name} should include the terminal scroll position`,
+      ).toBeTruthy()
+    }
+  }
+}
+
+function expectNoDuplicateAuditSegments(
+  manifest: readonly ScreenshotManifestEntry[],
+) {
+  const slugs = new Set(manifest.map((entry) => entry.slug))
+  for (const slug of slugs) {
+    const routeEntries = manifest.filter((entry) => entry.slug === slug)
+    const seenScrollTops: number[] = []
+    const seenHashes = new Set<string>()
+
+    for (const entry of routeEntries) {
+      expect(
+        seenScrollTops.some(
+          (scrollTop) =>
+            Math.abs(scrollTop - entry.scrollTop) <=
+            duplicateScrollTolerancePx,
+        ),
+        `${entry.route} has a duplicate scroll segment at ${entry.scrollTop}px`,
+      ).toBe(false)
+      seenScrollTops.push(entry.scrollTop)
+
+      expect(
+        seenHashes.has(entry.sha256),
+        `${entry.route} has duplicate screenshot content at segment ${entry.segment}`,
+      ).toBe(false)
+      seenHashes.add(entry.sha256)
+    }
+  }
 }
 
 async function assertRouteDesignContract(page: Page, route: AuditRoute) {

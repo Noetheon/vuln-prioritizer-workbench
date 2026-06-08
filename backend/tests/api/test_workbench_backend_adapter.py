@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -23,6 +24,7 @@ from app.core.config import (
 )
 from app.core.migration_bootstrap import ALEMBIC_HEAD
 from app.main import app, create_app, custom_generate_unique_id
+from app.repositories import RuntimeHeartbeatRepository
 
 
 def test_workbench_backend_status_uses_versioned_api_namespace(tmp_path) -> None:
@@ -38,21 +40,76 @@ def test_workbench_backend_status_uses_versioned_api_namespace(tmp_path) -> None
     payload = response.json()
     assert payload["status"] == "ready"
     assert payload["app"] == "Vuln Prioritizer Workbench"
+    assert payload["schema_version"] == "workbench-status.v1"
     assert payload["core_package"] == "app.domain.engine"
+    assert payload["environment"] == "local"
+    assert payload["runtime_mode"] == "local-single-user"
     assert payload["database_status"] == "ready"
     assert payload["schema_status"] == "ready"
+    assert payload["demo_workspace_enabled"] is False
+    assert payload["alembic_head"] == ALEMBIC_HEAD
+    assert payload["worker_status"] == "not_ready"
+    assert payload["worker_last_seen_at"] is None
     assert payload["api_docs_enabled"] is True
     assert payload["api_docs_path"] == "/docs"
     assert set(payload) == {
+        "schema_version",
         "status",
         "app",
         "core_package",
         "core_version",
+        "environment",
+        "runtime_mode",
         "database_status",
         "schema_status",
+        "demo_workspace_enabled",
+        "alembic_head",
+        "worker_status",
+        "worker_last_seen_at",
         "api_docs_enabled",
         "api_docs_path",
     }
+
+
+@pytest.mark.parametrize(
+    ("last_seen_at", "expected_status"),
+    [
+        (datetime(2026, 6, 8, 10, 0, 0, tzinfo=UTC), "ready"),
+        (datetime(2026, 6, 8, 9, 54, 0, tzinfo=UTC), "not_ready"),
+    ],
+)
+def test_workbench_backend_status_reports_worker_heartbeat(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    last_seen_at: datetime,
+    expected_status: str,
+) -> None:
+    monkeypatch.setenv("WORKBENCH_FIXED_NOW", "2026-06-08T10:00:20+00:00")
+    selected_app = create_app(
+        Settings(
+            SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'status-worker.db'}",
+            DEMO_WORKSPACE_ENABLED=True,
+        )
+    )
+    SQLModel.metadata.create_all(selected_app.state.workbench_engine)
+    _stamp_alembic_head(selected_app.state.workbench_engine)
+    with Session(selected_app.state.workbench_engine) as session:
+        RuntimeHeartbeatRepository(session).record_heartbeat(
+            service_name="workflow-worker",
+            instance_id="pytest-worker",
+            metadata_json={"queue_names": ["default"]},
+            now=last_seen_at,
+        )
+        session.commit()
+
+    with TestClient(selected_app) as client:
+        response = client.get("/api/v1/workbench/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["demo_workspace_enabled"] is True
+    assert payload["worker_status"] == expected_status
+    assert payload["worker_last_seen_at"].startswith(last_seen_at.isoformat().replace("+00:00", ""))
 
 
 def test_workbench_backend_openapi_uses_stable_operation_ids() -> None:

@@ -12,6 +12,8 @@ import requests
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.decision_core.finding_queries import list_project_findings_query
+from app.decision_core.readmodels import DecisionFindingView, project_finding_decision_views
 from app.domain.engine.security_redaction import redact_text, redact_value
 from app.models.findings import Finding
 from app.models.github_issues import (
@@ -21,7 +23,6 @@ from app.models.github_issues import (
     GitHubIssuePreviewRecord,
 )
 from app.repositories import FindingPageQuery, FindingRepository
-from app.services.decision_projection import DecisionFindingView, project_finding_decision_views
 
 GITHUB_SECRET_PATTERN = re.compile(
     r"(?i)\b("
@@ -155,7 +156,8 @@ def _selected_findings(
             findings.append(finding)
         return findings
 
-    findings, _count = repo.list_project_findings_query(
+    findings, _count = list_project_findings_query(
+        session,
         FindingPageQuery(
             project_id=project_id,
             limit=payload.limit,
@@ -164,7 +166,7 @@ def _selected_findings(
             direction="asc",
             priority=payload.priority,
             status=None,
-        )
+        ),
     )
     return findings
 

@@ -5,23 +5,191 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
-from app.contracts.decision_evidence import (
+from app.decision_core.builders import workflow_ref_payload
+from app.decision_core.contracts import (
     AnalysisEvidenceUploadsV2,
     AnalysisEvidenceV2,
+    AnalysisSemanticsV2,
+    AnalysisServiceEvidenceV2,
     AttackEvidenceV2,
+    DedupSummaryV2,
     EvidenceUploadRef,
     FindingDecisionEvidenceV2,
+    ProviderDataQualityFlagEvidenceV2,
     ProviderEvidenceV2,
     RunCountsV2,
+    WorkflowArtifactRefV2,
+    WorkflowResultRefV2,
 )
 from app.models import AnalysisRun
-from app.services.analysis import WorkbenchAnalysisResult
-from app.services.decision_evidence_builder import workflow_ref_payload
-from app.services.import_execution_types import PreparedImportUpload, StoredImportArtifacts
 
 PRIORITY_LABELS = ("Critical", "High", "Medium", "Low")
+
+
+class _DecisionUploadPayload(Protocol):  # pragma: no cover
+    """Upload payload shape consumed by the decision core."""
+
+    @property
+    def content_type(self) -> str | None:
+        raise NotImplementedError
+
+
+class _DecisionSidecarUpload(Protocol):  # pragma: no cover
+    """Sidecar upload shape consumed by the decision core."""
+
+    @property
+    def payload(self) -> _DecisionUploadPayload | None:
+        raise NotImplementedError
+
+    @property
+    def original_filename(self) -> str | None:
+        raise NotImplementedError
+
+    @property
+    def stored_filename(self) -> str | None:
+        raise NotImplementedError
+
+    @property
+    def content(self) -> bytes | None:
+        raise NotImplementedError
+
+    @property
+    def sha256(self) -> str | None:
+        raise NotImplementedError
+
+    @property
+    def summary_input_type(self) -> str:
+        raise NotImplementedError
+
+
+class _DecisionPreparedImportUpload(Protocol):  # pragma: no cover
+    """Prepared import upload shape consumed by the decision core."""
+
+    @property
+    def input_type(self) -> str:
+        raise NotImplementedError
+
+    @property
+    def file(self) -> _DecisionUploadPayload:
+        raise NotImplementedError
+
+    @property
+    def original_filename(self) -> str:
+        raise NotImplementedError
+
+    @property
+    def stored_filename(self) -> str:
+        raise NotImplementedError
+
+    @property
+    def upload_bytes(self) -> bytes:
+        raise NotImplementedError
+
+    @property
+    def upload_sha256(self) -> str:
+        raise NotImplementedError
+
+    @property
+    def asset_context(self) -> _DecisionSidecarUpload:
+        raise NotImplementedError
+
+    @property
+    def vex(self) -> _DecisionSidecarUpload:
+        raise NotImplementedError
+
+
+class _DecisionStoredImportArtifacts(Protocol):  # pragma: no cover
+    """Stored import artifact refs consumed by the decision core."""
+
+    @property
+    def upload_ref(self) -> str:
+        raise NotImplementedError
+
+    @property
+    def asset_context_ref(self) -> str | None:
+        raise NotImplementedError
+
+    @property
+    def vex_ref(self) -> str | None:
+        raise NotImplementedError
+
+
+class _DecisionAnalysisContext(Protocol):  # pragma: no cover
+    """Analysis context shape consumed by the decision core."""
+
+    @property
+    def counts_by_priority(self) -> dict[str, int]:
+        raise NotImplementedError
+
+    @property
+    def kev_hits(self) -> int:
+        raise NotImplementedError
+
+    @property
+    def epss_hits(self) -> int:
+        raise NotImplementedError
+
+    @property
+    def nvd_hits(self) -> int:
+        raise NotImplementedError
+
+    @property
+    def suppressed_by_vex(self) -> int:
+        raise NotImplementedError
+
+    @property
+    def under_investigation_count(self) -> int:
+        raise NotImplementedError
+
+    @property
+    def vex_conflict_count(self) -> int:
+        raise NotImplementedError
+
+    @property
+    def attack_hits(self) -> int:
+        raise NotImplementedError
+
+    @property
+    def provider_degraded(self) -> bool:
+        raise NotImplementedError
+
+    @property
+    def provider_data_quality_flags(self) -> dict[str, list[Any]]:
+        raise NotImplementedError
+
+    @property
+    def warnings(self) -> list[str]:
+        raise NotImplementedError
+
+    @property
+    def attack_source(self) -> Any:
+        raise NotImplementedError
+
+
+class _DecisionAnalysisResult(Protocol):  # pragma: no cover
+    """Analysis result shape consumed by the decision core."""
+
+    @property
+    def context(self) -> _DecisionAnalysisContext:
+        raise NotImplementedError
+
+    @property
+    def provider_snapshot_id(self) -> uuid.UUID | None:
+        raise NotImplementedError
+
+    @property
+    def provider_snapshot_hash(self) -> str | None:
+        raise NotImplementedError
+
+    @property
+    def provider_snapshot_file(self) -> str | None:
+        raise NotImplementedError
+
+    @property
+    def locked_provider_data(self) -> bool:
+        raise NotImplementedError
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,8 +246,8 @@ class DecisionPersistencePlan:
 
     analysis_evidence_id: uuid.UUID
     counts: DecisionSummaryCounts
-    analysis_semantics: dict[str, Any]
-    dedup_summary: dict[str, Any]
+    analysis_semantics: AnalysisSemanticsV2
+    dedup_summary: DedupSummaryV2
     finding_evidence: list[FindingDecisionEvidenceV2]
 
     @classmethod
@@ -88,7 +256,7 @@ class DecisionPersistencePlan:
         *,
         analysis_evidence_id: uuid.UUID,
         ignored_lines: int,
-        analysis_result: WorkbenchAnalysisResult,
+        analysis_result: _DecisionAnalysisResult,
         summary: dict[str, Any],
     ) -> DecisionPersistencePlan:
         """Validate and type the persistence summary produced by repositories."""
@@ -117,8 +285,10 @@ class DecisionPersistencePlan:
         return cls(
             analysis_evidence_id=analysis_evidence_id,
             counts=counts,
-            analysis_semantics=_dict_value(summary.get("analysis_semantics")),
-            dedup_summary=_dict_value(summary.get("dedup_summary")),
+            analysis_semantics=AnalysisSemanticsV2.model_validate(
+                _dict_value(summary.get("analysis_semantics"))
+            ),
+            dedup_summary=DedupSummaryV2.model_validate(_dict_value(summary.get("dedup_summary"))),
             finding_evidence=finding_evidence,
         )
 
@@ -129,9 +299,9 @@ class DecisionKernelInput:
 
     project_id: uuid.UUID
     run: AnalysisRun
-    prepared: PreparedImportUpload
-    artifacts: StoredImportArtifacts
-    analysis_result: WorkbenchAnalysisResult
+    prepared: _DecisionPreparedImportUpload
+    artifacts: _DecisionStoredImportArtifacts
+    analysis_result: _DecisionAnalysisResult
     asset_context_summary: dict[str, Any] | None = None
     vex_summary: dict[str, Any] | None = None
 
@@ -143,9 +313,9 @@ class DecisionRunResult:
     analysis_evidence: AnalysisEvidenceV2
     finding_evidence: list[FindingDecisionEvidenceV2]
     summary_counts: DecisionSummaryCounts
-    workflow_result: dict[str, Any]
+    workflow_result: WorkflowResultRefV2
     workflow_details: dict[str, int]
-    artifact_refs: list[dict[str, Any]]
+    artifact_refs: list[WorkflowArtifactRefV2]
 
 
 def build_run_result(
@@ -183,22 +353,22 @@ def build_run_result(
         ),
         warnings=list(analysis_result.context.warnings),
         parse_errors=[],
-        analysis_service={
-            "pipeline": "parse-persist-enrich-score-explain",
-            "engine": "app.domain.engine.prepare_analysis",
-            "kernel": "app.services.decision_kernel",
-        },
-        analysis_semantics=dict(persistence_plan.analysis_semantics),
+        analysis_service=AnalysisServiceEvidenceV2(
+            pipeline="parse-persist-enrich-score-explain",
+            engine="app.domain.engine.prepare_analysis",
+            kernel="app.decision_core.producer",
+        ),
+        analysis_semantics=persistence_plan.analysis_semantics,
         asset_context=_dict_or_none(kernel_input.asset_context_summary),
         vex=_dict_or_none(kernel_input.vex_summary),
-        dedup_summary=_dict_or_none(persistence_plan.dedup_summary),
+        dedup_summary=persistence_plan.dedup_summary,
         attack=AttackEvidenceV2(
             mapped=counts.attack_mapped_cves > 0,
             source=str(analysis_result.context.attack_source or "none"),
             technique_ids=_finding_technique_ids(persistence_plan.finding_evidence),
         ),
     )
-    artifact_refs: list[dict[str, Any]] = []
+    artifact_refs: list[WorkflowArtifactRefV2] = []
     return DecisionRunResult(
         analysis_evidence=evidence,
         finding_evidence=list(persistence_plan.finding_evidence),
@@ -213,8 +383,8 @@ def build_run_result(
 
 
 def _uploads(
-    prepared: PreparedImportUpload,
-    artifacts: StoredImportArtifacts,
+    prepared: _DecisionPreparedImportUpload,
+    artifacts: _DecisionStoredImportArtifacts,
 ) -> AnalysisEvidenceUploadsV2:
     return AnalysisEvidenceUploadsV2(
         input=EvidenceUploadRef(
@@ -291,14 +461,22 @@ def _counts_by_priority(raw_counts: dict[str, int]) -> dict[str, int]:
     return {label: int(raw_counts.get(label, 0)) for label in PRIORITY_LABELS}
 
 
-def _provider_quality_flags(raw_flags: dict[str, list[Any]]) -> dict[str, list[dict[str, Any]]]:
-    def serialize_flag(item: Any) -> dict[str, Any]:
+def _provider_quality_flags(
+    raw_flags: dict[str, list[Any]],
+) -> dict[str, list[ProviderDataQualityFlagEvidenceV2]]:
+    def serialize_flag(item: Any) -> ProviderDataQualityFlagEvidenceV2:
         if hasattr(item, "model_dump"):
             dumped = item.model_dump()
-            return dict(dumped) if isinstance(dumped, dict) else {"value": dumped}
+            if isinstance(dumped, dict):
+                return ProviderDataQualityFlagEvidenceV2.model_validate(dumped)
         if isinstance(item, dict):
-            return dict(item)
-        return {"value": item}
+            return ProviderDataQualityFlagEvidenceV2.model_validate(item)
+        return ProviderDataQualityFlagEvidenceV2(
+            source="unknown",
+            code="unstructured_provider_flag",
+            message=str(item),
+            severity="warning",
+        )
 
     return {source: [serialize_flag(item) for item in flags] for source, flags in raw_flags.items()}
 

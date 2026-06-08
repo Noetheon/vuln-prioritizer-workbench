@@ -949,6 +949,46 @@ test("app shell owns page scrolling in the content region", () => {
   assert.doesNotMatch(scrollOwner, /requestAnimationFrame/)
 })
 
+test("Workbench feedback states use VPW primitives instead of generic cards", () => {
+  const retiredStateFiles = [
+    "src/components/states/EmptyState.tsx",
+    "src/components/states/ErrorState.tsx",
+    "src/components/states/LoadingSkeleton.tsx",
+  ]
+  const feedbackFiles = [
+    "src/components/vpw/VpwEmptyState.tsx",
+    "src/components/vpw/VpwSkeletonStack.tsx",
+    "src/components/vpw/VpwStatusBanner.tsx",
+    "src/components/vpw/WorkbenchFeedback.tsx",
+  ]
+
+  for (const path of retiredStateFiles) {
+    assert.equal(
+      existsSync(join(frontendRoot, path)),
+      false,
+      `${path} should stay retired`,
+    )
+  }
+  for (const path of feedbackFiles) {
+    assert.doesNotMatch(
+      readProjectFile(path),
+      /@\/components\/ui\/card|components\/ui\/card/,
+      `${path} should not depend on generic Card primitives`,
+    )
+  }
+
+  const sourceFiles = walk(srcRoot).filter((path) => /\.(?:ts|tsx)$/.test(path))
+  const legacyStateImports = sourceFiles.flatMap((path) => {
+    const source = readProjectFile(path)
+    return /from\s+["'][^"']*(?:components\/states|\.\.?\/states)["']/.test(
+      source,
+    )
+      ? [path]
+      : []
+  })
+  assert.deepEqual(legacyStateImports, [])
+})
+
 test("VPW design audit stays exposed as a named local and CI gate", () => {
   const packageJson = JSON.parse(readProjectFile("package.json")) as {
     scripts: Record<string, string>
@@ -956,25 +996,110 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   const makefile = readRepoFile("Makefile")
   const ci = readRepoFile(".github/workflows/ci.yml")
   const auditSpec = readProjectFile("tests/workbench-design-audit.spec.ts")
+  const playwrightConfig = readProjectFile("playwright.config.ts")
+  const migrationPlan = readRepoFile("docs/workbench-ui-migration-plan.md")
+  const dockerRunner = readRepoFile(
+    "scripts/frontend-design-audit-linux-docker.sh",
+  )
+  const playwrightDockerfile = readProjectFile("Dockerfile.playwright")
 
   assert.equal(
     packageJson.scripts["test:design-audit"],
     "env -u NO_COLOR FORCE_COLOR=0 DEBUG_COLORS=0 playwright test tests/workbench-design-audit.spec.ts --project=chromium",
   )
+  assert.equal(
+    packageJson.scripts["test:design-audit:update"],
+    "env -u NO_COLOR FORCE_COLOR=0 DEBUG_COLORS=0 playwright test tests/workbench-design-audit.spec.ts --project=chromium --update-snapshots",
+  )
   assert.match(makefile, /\.PHONY:.*frontend-design-audit/)
+  assert.match(makefile, /\.PHONY:.*frontend-design-audit-update/)
+  assert.match(makefile, /\.PHONY:.*frontend-design-audit-linux-docker/)
+  assert.match(
+    makefile,
+    /\.PHONY:.*frontend-design-audit-linux-docker-update/,
+  )
   assert.match(
     makefile,
     /frontend-design-audit:\n\t\$\(FRONTEND_NPM\) run test:design-audit/,
   )
   assert.match(
+    makefile,
+    /frontend-design-audit-update:\n\t\$\(FRONTEND_NPM\) run test:design-audit:update/,
+  )
+  assert.match(
+    makefile,
+    /frontend-design-audit-linux-docker:\n\tbash scripts\/frontend-design-audit-linux-docker\.sh verify/,
+  )
+  assert.match(
+    makefile,
+    /frontend-design-audit-linux-docker-update:\n\tbash scripts\/frontend-design-audit-linux-docker\.sh update/,
+  )
+  assert.match(
     ci,
-    /Run VPW design audit screenshots[\s\S]{0,180}make frontend-design-audit/,
+    /Run VPW visual regression baseline[\s\S]{0,180}make frontend-design-audit-linux-docker/,
   )
   assert.ok(
-    ci.indexOf("Run VPW design audit screenshots") <
+    ci.indexOf("Run VPW visual regression baseline") <
       ci.indexOf("Run full frontend Playwright suite"),
   )
-  assert.match(auditSpec, /expect\(manifest\)\.toHaveLength\(36\)/)
+  assert.match(
+    ci,
+    /Run full frontend Playwright suite[\s\S]{0,240}--grep-invert "design audit matches VPW visual regression baselines"/,
+  )
+  assert.match(
+    auditSpec,
+    /design audit matches VPW visual regression baselines/,
+  )
+  assert.match(auditSpec, /toHaveScreenshot\(\["design-audit", fileName\]/)
+  assert.match(auditSpec, /\[data-vpw-visual-mask\]/)
+  assert.match(auditSpec, /clearWorkbenchProjects\(page\)/)
+  assert.match(auditSpec, /\/api\/v1\/projects\/\?limit=500/)
+  assert.match(auditSpec, /page\.request\.delete/)
+  assert.match(auditSpec, /expectRouteCoverage\(auditRoutes, manifest\)/)
+  assert.match(auditSpec, /expectNoDuplicateAuditSegments\(manifest\)/)
+  assert.match(auditSpec, /screenshotSha256\(file\)/)
+  assert.doesNotMatch(auditSpec, /expect\(manifest\)\.toHaveLength\(\d+\)/)
+  assert.doesNotMatch(auditSpec, /\bsegments:\s*\d/)
+  assert.match(playwrightConfig, /toHaveScreenshot:\s*\{/)
+  assert.match(
+    playwrightConfig,
+    /__screenshots__\/\{platform\}\/\{projectName\}\/\{arg\}\{ext\}/,
+  )
+  assert.match(playwrightConfig, /maxDiffPixelRatio:\s*0\.001/)
+  assert.match(playwrightConfig, /colorScheme:\s*"light"/)
+  assert.match(playwrightConfig, /locale:\s*"en-US"/)
+  assert.match(playwrightConfig, /timezoneId:\s*"UTC"/)
+  assert.match(migrationPlan, /Visual regression baselines/)
+  assert.match(migrationPlan, /darwin\/chromium\/design-audit/)
+  assert.match(migrationPlan, /frontend-design-audit-update/)
+  assert.match(migrationPlan, /frontend-design-audit-linux-docker/)
+  assert.match(migrationPlan, /DOCKER_DEFAULT_PLATFORM=linux\/amd64/)
+  assert.match(
+    playwrightDockerfile,
+    /mcr\.microsoft\.com\/playwright:v1\.60\.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948/,
+  )
+  assert.match(dockerRunner, /DOCKER_DEFAULT_PLATFORM/)
+  assert.match(dockerRunner, /linux\/amd64/)
+  assert.match(dockerRunner, /--ipc=host/)
+  assert.match(dockerRunner, /--shm-size=2g/)
+  assert.match(dockerRunner, /docker version --format '\{\{\.Server\.Arch\}\}'/)
+  assert.match(dockerRunner, /container-arch=/)
+  assert.match(dockerRunner, /HOST_UID/)
+  assert.match(dockerRunner, /HOST_GID/)
+  assert.match(dockerRunner, /trap cleanup_ownership EXIT/)
+  assert.match(dockerRunner, /\/work\/build/)
+  assert.match(dockerRunner, /\/work\/build\/frontend-playwright-workbench-\*\.db/)
+  assert.match(dockerRunner, /\/work\/build\/frontend-playwright-workbench-\*-reports/)
+  assert.match(dockerRunner, /\/work\/data\/workbench-import-uploads/)
+  assert.match(dockerRunner, /\/work\/data\/workbench-reports/)
+  assert.match(dockerRunner, /\/work\/data\/workbench-provider-cache/)
+  assert.match(dockerRunner, /\/work\/data\/provider-snapshots/)
+  assert.match(dockerRunner, /\/work\/frontend\/test-results/)
+  assert.match(dockerRunner, /\/work\/frontend\/playwright-report/)
+  assert.match(dockerRunner, /chown -R "\$\{HOST_UID\}:\$\{HOST_GID\}"/)
+  assert.match(dockerRunner, /vpw_frontend_node_modules_\$\{docker_server_os\}_\$\{docker_server_arch\}/)
+  assert.match(dockerRunner, /npm_config_engine_strict=false npm ci --workspaces=false/)
+  assert.match(dockerRunner, /npm_config_engine_strict=false npm run/)
 })
 
 test("Playwright npm scripts keep inherited NO_COLOR logs deterministic", () => {
@@ -982,7 +1107,12 @@ test("Playwright npm scripts keep inherited NO_COLOR logs deterministic", () => 
     scripts: Record<string, string>
   }
 
-  for (const scriptName of ["test", "test:design-audit", "test:ui"]) {
+  for (const scriptName of [
+    "test",
+    "test:design-audit",
+    "test:design-audit:update",
+    "test:ui",
+  ]) {
     assert.match(
       packageJson.scripts[scriptName],
       /^env -u NO_COLOR FORCE_COLOR=0 DEBUG_COLORS=0 playwright test\b/,

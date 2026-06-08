@@ -48,7 +48,7 @@ Route-adjacent surfaces that should be migrated with the same system:
 | Tables | `VpwTableCard` and `VpwDataTable` are established for findings, assets, waivers, imports history, projects, reports history, and provider sources. Inconsistent alternatives remain as mobile cards, quick-start card lists, panel lists, service rollup cards, and drawer panel stacks. | Keep `VpwDataTable` as the registry/queue default. Use a shared data table frame for title, description, actions, loading, empty, pagination, and mobile fallback. |
 | Detail drawers | Different drawer structures existed in `RemediationQueueQuickViewSheet.tsx`, `AssetDrawer.tsx`, `ImportDiagnosticsDrawer.tsx`, `EvidenceGenerateDrawer.tsx`, and waiver drawer/form components. Widths, header hierarchy, footer/actions, panel usage, and metadata layout differed. | Create a canonical detail drawer with standardized header, object summary, body sections, evidence/definition rows, and sticky action area. |
 | Right rails | Route-local rails included the former dashboard side panel, `FindingDetailActionRail` inside `FindingDetailRoute.tsx`, `NewImportSummaryRail`, `EvidenceCenterRunContext.tsx`, and asset/finding drawer side summaries. | Use one right-rail summary pattern for current context, decision state, data freshness, and next action. |
-| Empty states | Shared `VpwEmptyState` and `VpwStateBlock` exist, but `components/states/EmptyState.tsx`, `LoadingSkeleton.tsx`, and `ErrorState.tsx` still use generic `Card`; several route components define their own empty/callout blocks. | Standardize on a single empty state component for table, panel, drawer, and page-empty contexts. Remove generic Card-based state wrappers from Workbench routes. |
+| Empty states | Workbench empty, loading, and error states now route through `VpwEmptyState`, `VpwSkeletonStack`, and `Callout`; the former generic `components/states` Card wrappers are retired. | Keep table, panel, drawer, and page-empty contexts on the VPW feedback primitives. Do not reintroduce Card-based state wrappers in Workbench routes. |
 | Alert/callout blocks | `VpwStatusBanner` exists, but dashboard demo/provider warnings, provider alerts, waiver alerts, settings alerts, evidence action status, and import diagnostics use local severity layouts. | Use a canonical status/callout block with severity, title, body, metadata, and action slot. |
 | Tabs | Tabs are route-local in finding detail, providers, settings, evidence center, and import run detail. Each has its own shell/list/trigger classes and spacing. | Use one Workbench tab component with compact density, consistent active state, overflow behavior, and section relationship. |
 | Typography | Route CSS defined separate heading scales and labels. Former route-local hero blocks included page-specific typography and local negative tracking. | Route content should use shared typography tokens/classes for section titles, labels, metadata, table text, and body copy. No page-specific type scales. |
@@ -102,7 +102,7 @@ Shared guidance already exists and should be preserved:
 | `frontend/src/components/reports/EvidenceCenterDecision.tsx`, `QualityFacts` in `EvidenceCenterDecision.tsx`, `EvidenceGenerateDrawer.tsx` | Decision, quality, and generate workflows as panel stacks. | Decision summary, evidence rows, definition lists, and canonical drawer. | Evidence center should read as proof/provenance and report artifacts, not dashboard cards. |
 | `frontend/src/components/projects/ProjectMetrics.tsx` and the former project selection-strip implementation | Metric cards and selection strip blocks. | Metric strip, registry table rows, and context bar. | Projects is a registry/context route; project facts should not become page-level cards. |
 | `frontend/src/components/settings/SettingsWorkbenchOverview.tsx` and the former settings hero implementation | Hero and many settings panels. | Definition/status rows inside settings sections. | Settings should be compact configuration facts and diagnostics, not a dashboard. |
-| `frontend/src/components/states/EmptyState.tsx`, `LoadingSkeleton.tsx`, `ErrorState.tsx` | Generic Card-based state wrappers. | Canonical Workbench empty/loading/error states. | Workbench states should follow the same thin-border, compact system as route content. |
+| `frontend/src/components/vpw/WorkbenchFeedback.tsx`, `VpwEmptyState.tsx`, `VpwSkeletonStack.tsx`, `VpwStatusBanner.tsx` | Canonical Workbench empty/loading/error primitives. | Keep as canonical Workbench feedback states. | Workbench states should follow the same thin-border, compact system as route content. |
 
 ## 4. Information Architecture Problems
 
@@ -143,7 +143,7 @@ Build these as shared Workbench/VPW components or adapters over existing VPW pri
 | `WorkbenchEvidenceRow` and `WorkbenchEvidenceList` | Provenance-first row pattern for source, timestamp, parser/provider, confidence, artifact link, and caveat. | Evidence cards, report artifact cards where row comparison matters, finding evidence snapshots, import diagnostics, TTP context cards. |
 | `WorkbenchDetailDrawer` | Standard drawer shell with object header, status/metadata summary, sections, evidence rows, and sticky actions. | `RemediationQueueQuickViewSheet`, `AssetDrawer`, `ImportDiagnosticsDrawer`, `EvidenceGenerateDrawer`, and waiver drawers/forms. |
 | `WorkbenchRightRail` | Optional route/detail side rail for bounded context, next action, summary metrics, and status rows. | Former dashboard side panel, `FindingDetailActionRail`, import summary rail, evidence run context panel, and asset/finding drawer side summaries. |
-| `WorkbenchEmptyState` | Unified empty, loading, and error state pattern with compact copy and optional action. | Generic Card-based `EmptyState`, `LoadingSkeleton`, `ErrorState`, and route-local empty panels. |
+| `WorkbenchEmptyState` | Unified empty, loading, and error state pattern with compact copy and optional action. | Retired generic Card-based state wrappers and route-local empty panels. |
 
 Implementation rule for these components:
 
@@ -260,9 +260,10 @@ Shared components, styling, docs, and tests:
 - `frontend/src/components/ui/card.tsx`
 - `frontend/src/components/ui/tabs.tsx`
 - `frontend/src/components/ui/sheet.tsx`
-- `frontend/src/components/states/EmptyState.tsx`
-- `frontend/src/components/states/LoadingSkeleton.tsx`
-- `frontend/src/components/states/ErrorState.tsx`
+- `frontend/src/components/vpw/WorkbenchFeedback.tsx`
+- `frontend/src/components/vpw/VpwEmptyState.tsx`
+- `frontend/src/components/vpw/VpwSkeletonStack.tsx`
+- `frontend/src/components/vpw/VpwStatusBanner.tsx`
 - `frontend/src/styles/tokens.css`
 - `frontend/src/styles/vpw-components.css`
 - `frontend/src/styles/layout-tokens.css`

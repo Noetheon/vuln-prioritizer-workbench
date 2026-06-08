@@ -11,7 +11,11 @@ import {
   VpwSection,
   VpwStatusBanner,
 } from "@/components/vpw"
-import { formatReportDateTime, reportFormatLabel } from "@/lib/report-format"
+import {
+  compareReportsForDisplay,
+  formatReportDateTime,
+  reportFormatLabel,
+} from "@/lib/report-format"
 import {
   evidenceBundleReport,
   verificationSummary,
@@ -42,7 +46,7 @@ export function ManifestPreview({
 }: ManifestProps) {
   const project = selectedProject
   const run = selectedReportRun
-  const effectiveReports = reports
+  const effectiveReports = reports.slice().sort(compareReportsForDisplay)
   const zipReport = evidenceBundleReport(effectiveReports)
   const providerSources =
     providerStatus?.snapshot.selected_sources?.join(", ") ?? "Unavailable"

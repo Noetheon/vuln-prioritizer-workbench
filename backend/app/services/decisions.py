@@ -9,7 +9,13 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from app.contracts.decision_evidence import FindingDecisionEvidenceV2
+from app.decision_core.contracts import FindingDecisionEvidenceV2
+from app.decision_core.readmodels import (
+    DecisionFindingView,
+    decision_run_view,
+    decision_views_for_findings,
+    latest_finding_decision_view,
+)
 from app.domain.engine.models import PrioritizedFinding
 from app.domain.engine.services.baseline_comparison import (
     build_cvss_baseline_comparison_payload,
@@ -21,12 +27,6 @@ from app.models import (
     FindingStatus,
     ProjectCvssOnlyComparisonPublic,
     ProjectDecisionSummaryPublic,
-)
-from app.services.decision_projection import (
-    DecisionFindingView,
-    decision_run_view,
-    decision_views_for_findings,
-    latest_finding_decision_view,
 )
 
 PRIORITY_LABELS = ("Critical", "High", "Medium", "Low")
@@ -47,9 +47,11 @@ def build_finding_explanation_payload(finding: Finding) -> FindingExplanationPub
     view = latest_finding_decision_view(finding)
     evidence = _required_finding_evidence(view)
     explanation_json = evidence.priority_evidence.raw
-    decision_explanation = evidence.priority_evidence.explanation or _dict_or_none(
-        explanation_json.get("explanation")
+    decision_explanation: dict[str, Any] | None = (
+        evidence.priority_evidence.explanation.to_jsonable()
     )
+    if not decision_explanation:
+        decision_explanation = _dict_or_none(explanation_json.get("explanation"))
     if decision_explanation is None:
         raise DecisionDataUnavailableError("Finding explanation is not available.")
 
@@ -220,9 +222,18 @@ def _ordered_status_counts(value: Any) -> dict[str, int]:
 
 
 def _data_quality_flags(evidence: FindingDecisionEvidenceV2) -> list[dict[str, Any]]:
-    return list(evidence.priority_evidence.data_quality_flags) + _flag_items(
-        evidence.governance.data_quality.get("flags")
-    )
+    flags = [
+        flag.to_jsonable() for flag in evidence.priority_evidence.data_quality_flags
+    ] + _flag_items(evidence.governance.data_quality.get("flags"))
+    deduped: list[dict[str, Any]] = []
+    seen: set[tuple[tuple[str, str], ...]] = set()
+    for flag in flags:
+        key = tuple(sorted((str(name), str(value)) for name, value in flag.items()))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(flag)
+    return deduped
 
 
 def _required_finding_evidence(view: DecisionFindingView) -> FindingDecisionEvidenceV2:

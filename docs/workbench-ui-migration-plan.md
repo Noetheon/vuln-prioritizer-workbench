@@ -60,14 +60,53 @@ reviewers recognize regressions.
   posture and the "evidence first, decoration last" design target.
 - `frontend/VPW_PAGE_PATTERNS.md` turns that direction into concrete page
   archetypes and a component decision matrix.
-- `frontend/tests/workbench-design-audit.spec.ts` captures 36 route-section
-  screenshots and asserts no oversized route-local `h2`/`h3` headings, no
-  horizontal page overflow, and no raised content shadows.
+- `frontend/tests/workbench-design-audit.spec.ts` captures adaptive, unique
+  route-section screenshots, matches each segment against tracked Playwright
+  `toHaveScreenshot` baselines, and asserts no oversized route-local `h2`/`h3`
+  headings, no horizontal page overflow, no raised content shadows, and no
+  duplicate audit segments by scroll position or screenshot hash.
 - `make frontend-design-audit` and the frontend CI job run the screenshot audit
   as a named gate before the full Playwright suite.
+- `make frontend-design-audit-update` is the explicit maintainer command for
+  intentional visual baseline updates.
 - Projects, settings, imports, providers, assets, waivers, and reports now use
   shared VPW primitives for the main command, metric, table, key-value, and
   section surfaces.
+
+### Visual regression baselines
+
+Visual regression baselines are tracked source artifacts, not transient
+evidence. Canonical CI baselines live under
+`frontend/tests/__screenshots__/linux/chromium/design-audit/*.png`. This repo
+also tracks `frontend/tests/__screenshots__/darwin/chromium/design-audit/*.png`
+for local macOS review; do not add more `{platform}/chromium` baselines unless
+that platform is intentionally supported for visual review.
+
+Use `make frontend-design-audit` for normal verification. It must fail when a
+route segment no longer matches the accepted baseline and Playwright writes the
+actual, expected, and diff images into `frontend/test-results/**`. The GitHub
+workflow uploads those files only on failure.
+
+On Apple Silicon, use `make frontend-design-audit-linux-docker` when you need to
+reproduce the canonical Linux screenshots locally. The runner uses Docker's
+native platform selection, rejects `DOCKER_DEFAULT_PLATFORM=linux/amd64` unless
+`ALLOW_EMULATED_PLAYWRIGHT=1` is explicitly set, and keeps Linux `node_modules`,
+npm cache, and pip cache in architecture-specific Docker volumes. This preserves
+native ARM execution while avoiding cross-platform dependency churn between
+macOS and Linux.
+
+Use `make frontend-design-audit-update` only after an intentional UI change has
+already been reviewed. Review the Playwright diff artifacts first, then commit
+the changed screenshot baselines in the same change as the UI or token update.
+Do not update baselines to hide flaky data, loading states, scroll ownership
+bugs, text overflow, or unintended route-local layout drift.
+
+Dynamic visual data should be stabilized at the source. The Playwright backend
+sets `WORKBENCH_FIXED_NOW` and `TZ=UTC`, and Playwright runs the audit with a
+fixed locale, timezone, color scheme, device scale, disabled animations, and
+hidden carets. Mask only narrow elements explicitly marked with
+`data-vpw-visual-mask`; broad container masks are not allowed because they hide
+real regressions.
 
 ### Executed route phases
 
@@ -109,7 +148,7 @@ Status: completed. Dashboard, Findings Quick View, Finding Detail, drawers, and
 the residual route context/metric surfaces now use shared VPW command, metric,
 definition-list, detail-drawer, and evidence-row primitives. At the recorded
 completion point, the batch was locked by lint, typecheck, unit tests, full
-Playwright, and the 36-section design audit.
+Playwright, and the adaptive unique-section design audit.
 
 ### Batch definition of done
 
@@ -117,7 +156,7 @@ Each batch is complete only when all of these are true:
 
 - Route behavior, loading, filters, tabs, drawers, forms, and navigation are
   unchanged.
-- Changed route sections pass the 36-screenshot design audit.
+- Changed route sections pass the adaptive screenshot design audit.
 - No new raw `Card`, local hero, route-local heading scale, non-overlay
   content shadow, or route-local radius pattern is introduced.
 - Primary repeated information is table/list/row based; object facts use

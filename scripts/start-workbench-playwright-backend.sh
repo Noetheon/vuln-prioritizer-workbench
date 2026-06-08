@@ -25,6 +25,8 @@ export DEMO_PROVIDER_SNAPSHOT_ENABLED=true
 export DEMO_WORKSPACE_ENABLED=true
 export RATE_LIMIT_ENABLED=false
 export SECRET_KEY="${SECRET_KEY:-local-workbench-dev-secret}"
+export WORKBENCH_FIXED_NOW="${WORKBENCH_FIXED_NOW:-2026-06-06T10:00:00+00:00}"
+export TZ="${TZ:-UTC}"
 
 python3 -m alembic -c backend/alembic.ini upgrade head
 

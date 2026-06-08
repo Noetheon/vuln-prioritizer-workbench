@@ -3,11 +3,13 @@ import { cn } from "@/lib/utils"
 
 export type VpwSkeletonStackProps = {
   className?: string
+  label?: string
   rows?: number
 }
 
 export function VpwSkeletonStack({
   className,
+  label = "Loading",
   rows = 4,
 }: VpwSkeletonStackProps) {
   const rowKeys = Array.from(
@@ -17,7 +19,7 @@ export function VpwSkeletonStack({
 
   return (
     <div
-      aria-label="Loading"
+      aria-label={label}
       className={cn("flex flex-col gap-3", className)}
       role="status"
     >

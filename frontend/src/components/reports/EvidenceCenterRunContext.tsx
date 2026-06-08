@@ -86,6 +86,7 @@ export function RunContext({
       label: "Analysis run",
       tone: runTone,
       value: run ? runShortId(run) : runStatus,
+      visualMaskValue: Boolean(run),
     },
     {
       description: "Provider replay basis",
@@ -93,6 +94,7 @@ export function RunContext({
       label: "Provider snapshot",
       tone: "support",
       value: snapshotLabel,
+      visualMaskValue: Boolean(run?.provider_snapshot_id ?? providerStatus?.snapshot.id),
     },
     {
       description: "Generation readiness",
