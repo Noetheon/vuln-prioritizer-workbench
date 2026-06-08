@@ -52,7 +52,12 @@ docker run --rm \
     cleanup_ownership() {
       status=$?
       if [[ -n "${HOST_UID:-}" && -n "${HOST_GID:-}" ]]; then
+        if [[ -d /work/build ]]; then
+          chown "${HOST_UID}:${HOST_GID}" /work/build 2>/dev/null || true
+        fi
         for artifact_path in \
+          /work/build/frontend-playwright-workbench-*.db \
+          /work/build/frontend-playwright-workbench-*-reports \
           /work/frontend/test-results \
           /work/frontend/playwright-report \
           /work/frontend/blob-report; do
