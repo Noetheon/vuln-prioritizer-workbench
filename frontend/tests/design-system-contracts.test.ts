@@ -1087,6 +1087,8 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   assert.match(dockerRunner, /HOST_UID/)
   assert.match(dockerRunner, /HOST_GID/)
   assert.match(dockerRunner, /trap cleanup_ownership EXIT/)
+  assert.match(dockerRunner, /\/work\/frontend\/test-results/)
+  assert.match(dockerRunner, /\/work\/frontend\/playwright-report/)
   assert.match(dockerRunner, /chown -R "\$\{HOST_UID\}:\$\{HOST_GID\}"/)
   assert.match(dockerRunner, /vpw_frontend_node_modules_\$\{docker_server_os\}_\$\{docker_server_arch\}/)
   assert.match(dockerRunner, /npm_config_engine_strict=false npm ci --workspaces=false/)

@@ -52,11 +52,14 @@ docker run --rm \
     cleanup_ownership() {
       status=$?
       if [[ -n "${HOST_UID:-}" && -n "${HOST_GID:-}" ]]; then
-        chown -R "${HOST_UID}:${HOST_GID}" \
-          frontend/test-results \
-          frontend/playwright-report \
-          frontend/blob-report \
-          2>/dev/null || true
+        for artifact_path in \
+          /work/frontend/test-results \
+          /work/frontend/playwright-report \
+          /work/frontend/blob-report; do
+          if [[ -e "${artifact_path}" ]]; then
+            chown -R "${HOST_UID}:${HOST_GID}" "${artifact_path}" 2>/dev/null || true
+          fi
+        done
       fi
       exit "$status"
     }
