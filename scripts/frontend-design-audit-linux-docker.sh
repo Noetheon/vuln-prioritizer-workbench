@@ -35,7 +35,11 @@ echo "host-arch=${host_arch} docker-server=${docker_server_os}/${docker_server_a
 echo "playwright-image=${playwright_image}"
 
 docker run --rm \
+  --ipc=host \
+  --shm-size=2g \
   -e HOST_ARCH="${host_arch}" \
+  -e HOST_GID="$(id -g)" \
+  -e HOST_UID="$(id -u)" \
   -e VPW_DESIGN_AUDIT_ROUTE="${VPW_DESIGN_AUDIT_ROUTE:-}" \
   -v "${repo_root}:/work" \
   -v "${node_modules_volume}:/work/frontend/node_modules" \
@@ -45,6 +49,19 @@ docker run --rm \
   "${playwright_image}" \
   bash -lc '
     set -euo pipefail
+    cleanup_ownership() {
+      status=$?
+      if [[ -n "${HOST_UID:-}" && -n "${HOST_GID:-}" ]]; then
+        chown -R "${HOST_UID}:${HOST_GID}" \
+          frontend/test-results \
+          frontend/playwright-report \
+          frontend/blob-report \
+          2>/dev/null || true
+      fi
+      exit "$status"
+    }
+    trap cleanup_ownership EXIT
+
     container_arch="$(uname -m)"
     echo "container-arch=${container_arch}"
 
