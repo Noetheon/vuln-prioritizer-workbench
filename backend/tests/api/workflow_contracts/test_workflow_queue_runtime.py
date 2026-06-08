@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 from utils.import_contract_fixtures import SAMPLE_CVES
 from utils.workbench_env import WorkbenchApiEnv, create_project_via_api, local_api_headers
@@ -20,6 +21,30 @@ from app.models import AnalysisRun, AnalysisRunStatus, WorkflowRunKind, Workflow
 from app.repositories import WorkflowRepository
 from app.workers import workflow_handlers, workflow_worker
 from app.workers.workflow_worker import run_worker_once
+
+
+def test_worker_service_heartbeat_lock_is_best_effort(
+    monkeypatch: pytest.MonkeyPatch,
+    workbench_api_env: WorkbenchApiEnv,
+) -> None:
+    """A transient SQLite lock must not crash an otherwise idle worker tick."""
+
+    def raise_locked_heartbeat(*_args: Any, **_kwargs: Any) -> None:
+        raise SQLAlchemyError("database is locked")
+
+    monkeypatch.setattr(
+        workflow_worker.RuntimeHeartbeatRepository,
+        "record_heartbeat",
+        raise_locked_heartbeat,
+    )
+
+    result = run_worker_once(
+        engine=workbench_api_env.engine,
+        settings=workbench_api_env.client.app.state.workbench_settings,
+        worker_id="locked-heartbeat-worker",
+    )
+
+    assert result == workflow_worker.WorkerTickResult()
 
 
 def test_worker_executes_queued_import_provider_and_report_jobs(

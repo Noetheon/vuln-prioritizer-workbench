@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
 from app.core.config import Settings, load_settings
@@ -48,14 +49,11 @@ def run_worker_once(
 ) -> WorkerTickResult:
     """Claim and execute at most ``limit`` due workflow jobs."""
     with Session(engine) as session:
-        RuntimeHeartbeatRepository(session).record_heartbeat(
-            service_name=WORKFLOW_WORKER_SERVICE_NAME,
-            instance_id=worker_id,
-            metadata_json={
-                "queue_names": list(queue_names),
-                "lease_seconds": lease_seconds,
-                "poller": "workflow_worker",
-            },
+        _record_worker_service_heartbeat_in_session(
+            session,
+            worker_id=worker_id,
+            queue_names=queue_names,
+            lease_seconds=lease_seconds,
         )
         repository = WorkflowRepository(session)
         repository.release_expired_leases(delay_seconds=retry_delay_seconds)
@@ -225,6 +223,26 @@ def _record_worker_service_heartbeat(
     lease_seconds: int,
 ) -> None:
     with Session(engine) as session:
+        if _record_worker_service_heartbeat_in_session(
+            session,
+            worker_id=worker_id,
+            queue_names=queue_names,
+            lease_seconds=lease_seconds,
+        ):
+            try:
+                session.commit()
+            except SQLAlchemyError:
+                session.rollback()
+
+
+def _record_worker_service_heartbeat_in_session(
+    session: Session,
+    *,
+    worker_id: str,
+    queue_names: Sequence[str],
+    lease_seconds: int,
+) -> bool:
+    try:
         RuntimeHeartbeatRepository(session).record_heartbeat(
             service_name=WORKFLOW_WORKER_SERVICE_NAME,
             instance_id=worker_id,
@@ -234,7 +252,10 @@ def _record_worker_service_heartbeat(
                 "poller": "workflow_worker",
             },
         )
-        session.commit()
+    except SQLAlchemyError:
+        session.rollback()
+        return False
+    return True
 
 
 def main(argv: Sequence[str] | None = None) -> int:
