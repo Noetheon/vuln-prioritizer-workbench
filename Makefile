@@ -2,7 +2,7 @@ PYTHON ?= python3
 MUTMUT ?= $(shell command -v mutmut 2>/dev/null || $(PYTHON) -c 'import os, shutil, site, sysconfig; paths=[sysconfig.get_path("scripts"), os.path.join(site.USER_BASE, "bin")]; print(shutil.which("mutmut") or next((os.path.join(path, "mutmut") for path in paths if os.path.exists(os.path.join(path, "mutmut"))), "mutmut"))')
 BACKEND_DIR := backend
 BACKEND_TESTS := $(BACKEND_DIR)/tests
-MUTATION_PATTERNS := "app.services.decision_evidence_builder.x_build_run_diagnostics*" "app.services.report_sarif_validation.x_validate_sarif_file*" "app.domain.engine.services.analysis_quality.x__finding_data_quality_confidence*" "app.domain.engine.services.analysis_snapshot.x__provider_snapshot_hash*" "app.domain.engine.services.analysis_snapshot.x__provider_snapshot_metadata_path*" "app.domain.engine.services.analysis_quality.x_attach_provider_data_quality_flags*"
+MUTATION_PATTERNS := "app.decision_core.builders.x_build_run_diagnostics*" "app.services.report_sarif_validation.x_validate_sarif_file*" "app.domain.engine.services.analysis_quality.x__finding_data_quality_confidence*" "app.domain.engine.services.analysis_snapshot.x__provider_snapshot_hash*" "app.domain.engine.services.analysis_snapshot.x__provider_snapshot_metadata_path*" "app.domain.engine.services.analysis_quality.x_attach_provider_data_quality_flags*"
 PYTHON_AUDIT_LOCK := $(BACKEND_DIR)/requirements.lock.txt
 PYTHON_RUNTIME_LOCK := $(BACKEND_DIR)/requirements.runtime.lock.txt
 COMPOSE := docker compose -f compose.yml -f compose.override.yml

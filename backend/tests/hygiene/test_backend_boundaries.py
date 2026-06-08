@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+from pathlib import Path
 
 from utils.hygiene import (
     ROOT,
@@ -9,6 +10,60 @@ from utils.hygiene import (
     _normalized_internal_imports,
     _python_module_paths,
 )
+
+
+def _normalized_app_imports(path: Path, known_modules: set[str]) -> set[str]:
+    imports: set[str] = set()
+    for imported in _imported_modules(str(path.relative_to(ROOT))):
+        if not imported.startswith("app."):
+            continue
+        parts = imported.split(".")
+        while parts:
+            candidate = ".".join(parts)
+            if candidate in known_modules:
+                imports.add(candidate)
+                break
+            parts.pop()
+    return imports
+
+
+def _strongly_connected_components(graph: dict[str, set[str]]) -> list[list[str]]:
+    index = 0
+    stack: list[str] = []
+    on_stack: set[str] = set()
+    indexes: dict[str, int] = {}
+    lowlinks: dict[str, int] = {}
+    components: list[list[str]] = []
+
+    def visit(module: str) -> None:
+        nonlocal index
+        indexes[module] = index
+        lowlinks[module] = index
+        index += 1
+        stack.append(module)
+        on_stack.add(module)
+        for imported in graph.get(module, set()):
+            if imported not in indexes:
+                visit(imported)
+                lowlinks[module] = min(lowlinks[module], lowlinks[imported])
+            elif imported in on_stack:
+                lowlinks[module] = min(lowlinks[module], indexes[imported])
+        if lowlinks[module] != indexes[module]:
+            return
+        component: list[str] = []
+        while True:
+            imported = stack.pop()
+            on_stack.remove(imported)
+            component.append(imported)
+            if imported == module:
+                break
+        if len(component) > 1:
+            components.append(sorted(component))
+
+    for module in sorted(graph):
+        if module not in indexes:
+            visit(module)
+    return sorted(components)
 
 
 def test_core_analysis_service_is_focused_facade() -> None:
@@ -602,10 +657,9 @@ def test_workbench_import_validation_and_storage_are_split_from_route_facade() -
 
 
 def test_run_workflow_metadata_uses_decision_evidence_v2_projection() -> None:
-    contract_source = (ROOT / "app/contracts/decision_evidence.py").read_text(encoding="utf-8")
-    decision_projection_source = (ROOT / "app/services/decision_projection.py").read_text(
-        encoding="utf-8"
-    )
+    contract_source = (ROOT / "app/decision_core/contracts.py").read_text(encoding="utf-8")
+    producer_source = (ROOT / "app/decision_core/producer.py").read_text(encoding="utf-8")
+    readmodel_source = (ROOT / "app/decision_core/readmodels.py").read_text(encoding="utf-8")
     metadata_source = (ROOT / "app/services/run_workflow_metadata.py").read_text(encoding="utf-8")
     projection_source = (ROOT / "app/services/run_workflow_projection.py").read_text(
         encoding="utf-8"
@@ -626,16 +680,31 @@ def test_run_workflow_metadata_uses_decision_evidence_v2_projection() -> None:
     assert "class AnalysisEvidenceV2" in contract_source
     assert "class FindingDecisionEvidenceV2" in contract_source
     assert "class RunDiagnosticsV2" in contract_source
+    assert "class WorkflowResultRefV2" in contract_source
+    assert "class AnalysisSemanticsV2" in contract_source
+    assert "class DedupSummaryV2" in contract_source
+    assert "class DecisionRunResult" in producer_source
     assert "analysis-evidence.v2" in contract_source
     assert "finding-decision-evidence.v2" in contract_source
+    assert not (ROOT / "app/contracts/decision_evidence.py").exists()
+    assert not (ROOT / "app/services/decision_kernel.py").exists()
+    assert not (ROOT / "app/services/decision_projection.py").exists()
+    assert not (ROOT / "app/services/decision_evidence_builder.py").exists()
     assert "app.contracts.run_workflow" not in model_source
     assert "app.services.run_workflow_projection" in run_route_imports
     assert "app.services.run_workflow_projection" in import_route_imports
     assert "def redacted_workflow_summary_payload" in metadata_source
-    assert "DecisionRunView" in decision_projection_source
-    assert "DecisionFindingView" in decision_projection_source
-    assert "AnalysisEvidenceV2" in decision_projection_source
-    assert "RunDiagnosticsV2" in decision_projection_source
+    assert "DecisionRunView" in readmodel_source
+    assert "DecisionFindingView" in readmodel_source
+    assert "AnalysisEvidenceV2" in readmodel_source
+    assert "RunDiagnosticsV2" in readmodel_source
+    decision_core_service_imports = {
+        imported
+        for path in (ROOT / "app/decision_core").glob("*.py")
+        for imported in _imported_modules(str(path.relative_to(ROOT)))
+        if imported.startswith("app.services.")
+    }
+    assert not decision_core_service_imports
     assert "decision_run_view(" in projection_source
     assert "raw_result" not in projection_source
     assert "analysis_run_workflow_metadata_public" not in projection_source
@@ -659,10 +728,8 @@ def test_run_workflow_metadata_uses_decision_evidence_v2_projection() -> None:
         assert "diagnostics_json=" not in source
 
 
-def test_successful_decision_read_paths_use_central_decision_projection() -> None:
-    decision_projection_source = (ROOT / "app/services/decision_projection.py").read_text(
-        encoding="utf-8"
-    )
+def test_successful_decision_read_paths_use_central_decision_core_readmodels() -> None:
+    readmodel_source = (ROOT / "app/decision_core/readmodels.py").read_text(encoding="utf-8")
     projection_paths = (
         "app/services/run_workflow_projection.py",
         "app/services/finding_projection.py",
@@ -680,14 +747,29 @@ def test_successful_decision_read_paths_use_central_decision_projection() -> Non
         "finding_decision_evidence_for_run(",
     )
 
-    assert "class DecisionEvidenceInvariantError" in decision_projection_source
-    assert "def decision_run_view" in decision_projection_source
-    assert "def run_finding_decision_views" in decision_projection_source
+    assert "class DecisionEvidenceInvariantError" in readmodel_source
+    assert "def decision_run_view" in readmodel_source
+    assert "def run_finding_decision_views" in readmodel_source
     for path in projection_paths:
         source = (ROOT / path).read_text(encoding="utf-8")
-        assert "app.services.decision_projection" in source, path
+        assert "app.decision_core.readmodels" in source, path
         for forbidden in forbidden_direct_reads:
             assert forbidden not in source, path
+
+
+def test_backend_app_import_graph_has_no_cycles() -> None:
+    paths = [path for path in sorted((ROOT / "app").rglob("*.py")) if "alembic" not in path.parts]
+    modules = {_module_name(path): path for path in paths}
+    graph = {
+        module: {
+            imported
+            for imported in _normalized_app_imports(path, set(modules))
+            if imported != module
+        }
+        for module, path in modules.items()
+    }
+
+    assert _strongly_connected_components(graph) == []
 
 
 def test_run_workflow_raw_metadata_access_stays_behind_service_boundary() -> None:
@@ -732,32 +814,42 @@ def test_run_workflow_contract_suites_do_not_read_raw_db_metadata() -> None:
 def test_findings_page_uses_internal_query_object() -> None:
     repository_source = (ROOT / "app/repositories/findings.py").read_text(encoding="utf-8")
     query_source = (ROOT / "app/repositories/finding_page_query.py").read_text(encoding="utf-8")
+    core_query_source = (ROOT / "app/decision_core/finding_queries.py").read_text(encoding="utf-8")
     route_source = (ROOT / "app/api/routes/findings.py").read_text(encoding="utf-8")
     github_issue_source = (ROOT / "app/services/github_issues.py").read_text(encoding="utf-8")
+    route_imports = _imported_modules("app/api/routes/findings.py")
+    github_issue_imports = _imported_modules("app/services/github_issues.py")
 
-    assert "app.repositories.finding_page_query" in repository_source
     assert "class FindingPageQuery" in query_source
     assert "def finding_page_filters" not in query_source
     assert "def finding_page_order_by" not in query_source
-    assert "def list_project_findings_query" in repository_source
+    assert "def list_project_findings_query" in core_query_source
+    assert "project_finding_decision_views" in core_query_source
+    assert "def list_project_findings_query" not in repository_source
+    assert "app.decision_core.finding_queries" in route_imports
+    assert "app.decision_core.finding_queries" in github_issue_imports
     assert "FindingPageQuery(" in route_source
     assert "list_project_findings_query" in route_source
     assert "FindingPageQuery(" in github_issue_source
 
 
-def test_findings_repository_delegates_aggregate_query_helpers() -> None:
+def test_findings_repository_stays_row_only_for_decision_queries() -> None:
     repository_source = (ROOT / "app/repositories/findings.py").read_text(encoding="utf-8")
     repository_imports = _imported_modules("app/repositories/findings.py")
     attack_source = (ROOT / "app/repositories/finding_attack_query.py").read_text(encoding="utf-8")
+    core_query_imports = _imported_modules("app/decision_core/finding_queries.py")
 
     assert "app.repositories.finding_attack_query" in repository_imports
-    assert "app.services.decision_projection" in repository_imports
+    assert "app.services" not in "\n".join(sorted(repository_imports))
+    assert "app.decision_core.readmodels" not in repository_imports
+    assert "app.decision_core.readmodels" in core_query_imports
+    assert "app.repositories.finding_attack_query" in core_query_imports
     assert not (ROOT / "app/repositories/finding_summary_query.py").exists()
     assert not (ROOT / "app/repositories/finding_governance_query.py").exists()
-    assert "def project_finding_summary_counts" in repository_source
-    assert "def project_governance_rollups" in repository_source
-    assert "def list_project_attack_summary_inputs" in repository_source
-    assert "project_finding_decision_views" in repository_source
+    assert "def project_finding_summary_counts" not in repository_source
+    assert "def project_governance_rollups" not in repository_source
+    assert "def list_project_attack_summary_inputs" not in repository_source
+    assert "project_finding_decision_views" not in repository_source
     assert "func.sum(_case_int" not in repository_source
     assert "def _governance_rollup_from_row" not in repository_source
     assert "def list_project_attack_summary_contexts" in attack_source

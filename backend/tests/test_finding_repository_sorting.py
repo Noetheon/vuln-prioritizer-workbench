@@ -3,7 +3,8 @@ from __future__ import annotations
 import uuid
 from types import SimpleNamespace
 
-from app.repositories.findings import _finding_page_sort_key
+from app.decision_core.finding_queries import _can_use_database_cve_page, _finding_page_sort_key
+from app.repositories import FindingPageQuery
 
 
 def test_finding_page_operational_sort_key_stabilizes_equal_rank_ties() -> None:
@@ -21,6 +22,18 @@ def test_finding_page_operational_sort_key_stabilizes_equal_rank_ties() -> None:
         "identity",
         "payments",
     ]
+
+
+def test_unfiltered_cve_sort_can_use_database_pagination_without_evidence_filters() -> None:
+    project_id = uuid.uuid4()
+
+    assert _can_use_database_cve_page(FindingPageQuery(project_id=project_id, sort="cve"))
+    assert not _can_use_database_cve_page(
+        FindingPageQuery(project_id=project_id, sort="cve", priority="High")
+    )
+    assert not _can_use_database_cve_page(
+        FindingPageQuery(project_id=project_id, sort="operational")
+    )
 
 
 def _view(business_service: str, owner: str, asset_key: str) -> SimpleNamespace:

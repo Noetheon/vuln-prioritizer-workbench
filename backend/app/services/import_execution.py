@@ -10,15 +10,15 @@ from sqlmodel import Session
 
 from app.core.config import Settings
 from app.core.local_actor import LocalWorkbenchActor
-from app.importers import ImporterParseError, ImporterValidationError
-from app.models import AnalysisRun, AnalysisRunStatus, WorkflowRunKind, WorkflowRunStatus
-from app.repositories import EvidenceRepository, RunRepository, WorkflowRepository
-from app.services.analysis import AnalysisService, WorkbenchAnalysisError
-from app.services.decision_kernel import (
+from app.decision_core.producer import (
     DecisionKernelInput,
     DecisionPersistencePlan,
     build_run_result,
 )
+from app.importers import ImporterParseError, ImporterValidationError
+from app.models import AnalysisRun, AnalysisRunStatus, WorkflowRunKind, WorkflowRunStatus
+from app.repositories import EvidenceRepository, RunRepository, WorkflowRepository
+from app.services.analysis import AnalysisService, WorkbenchAnalysisError
 from app.services.import_execution_context import (
     _apply_workbench_asset_context,
     _apply_workbench_vex,
@@ -527,7 +527,7 @@ async def execute_project_import_upload(
         message="Import workflow succeeded.",
         progress_current=6,
         progress_total=6,
-        result=decision_result.workflow_result,
+        result=decision_result.workflow_result.to_jsonable(),
         diagnostics={},
         details=decision_result.workflow_details,
     )

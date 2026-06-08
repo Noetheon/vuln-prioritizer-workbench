@@ -6,11 +6,11 @@ import pytest
 from sqlmodel import Session
 from utils.workbench_env import WorkbenchApiEnv, create_project_via_api, local_api_headers
 
-from app.contracts.decision_evidence import (
+from app.decision_core.contracts import (
     FindingDecisionEvidenceV2,
     PriorityEvidenceV2,
 )
-from app.services.decision_projection import (
+from app.decision_core.readmodels import (
     DecisionEvidenceInvariantError,
     decision_finding_view,
     decision_run_view,

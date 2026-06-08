@@ -23,7 +23,7 @@ def test_import_contract_harness_owns_upload_and_parser_workflow_contracts() -> 
     )
     assert (ROOT / "tests/utils/import_contract_fixtures.py").exists()
     assert (ROOT / "tests/utils/import_contracts.py").exists()
-    assert (ROOT / "app/contracts/decision_evidence.py").exists()
+    assert (ROOT / "app/decision_core/contracts.py").exists()
     assert not (ROOT / "app/contracts/run_workflow.py").exists()
 
 

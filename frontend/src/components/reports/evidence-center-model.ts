@@ -240,6 +240,9 @@ function workflowRecord(
     "attack_mapped_cves" in source ? source.attack_mapped_cves : undefined
   const summarySuppressedByVex =
     "suppressed_by_vex" in source ? source.suppressed_by_vex : undefined
+  const legacyAnalysisSemantics = source.evidence?.analysis_semantics as
+    | Record<string, unknown>
+    | undefined
 
   setDefined(record, "input_upload", source.uploads?.input)
   setDefined(record, "asset_context_upload", source.uploads?.asset_context)
@@ -252,7 +255,7 @@ function workflowRecord(
   setDefined(
     record,
     "attack_mapping_file",
-    source.evidence?.analysis_semantics?.attack_mapping_file,
+    legacyAnalysisSemantics?.attack_mapping_file,
   )
   setDefined(record, "attack_source", source.evidence?.attack?.source)
   setDefined(record, "asset_context", source.evidence?.asset_context)

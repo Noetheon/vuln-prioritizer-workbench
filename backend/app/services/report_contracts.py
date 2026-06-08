@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import app.domain.engine.workbench_report_contracts as _workbench_report_contracts
-from app.contracts.decision_evidence import (
+from app.decision_core.contracts import (
     ANALYSIS_RESULT_SCHEMA_V2,
     ANALYSIS_RESULT_SCHEMA_VERSION_V2,
 )

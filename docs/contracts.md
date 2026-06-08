@@ -20,7 +20,7 @@ The project exposes three active interface families:
 | Workbench OpenAPI | `/api/v1/openapi.json` generated from the active FastAPI app. |
 | Import upload | `POST /api/v1/projects/{project_id}/imports` with multipart local evidence files and explicit `input_type`. |
 | Durable workflows | `workflow_run` / `workflow_event` state exposed through workflow routes, WebSocket streaming, and embedded `workflow` objects on imports, provider jobs, and reports. |
-| Decision/Evidence Kernel v2 | Kernel-first `DecisionRunResult` production in `backend/app/services/decision_kernel.py`, exported as `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, and `RunDiagnosticsV2` from `backend/app/contracts/decision_evidence.py`, persisted through `analysis_evidence` and `finding_decision_evidence`. |
+| Decision/Evidence Kernel v2 | Kernel-first `DecisionRunResult` production in `backend/app/decision_core/producer.py`, exported as `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, and `RunDiagnosticsV2` from `backend/app/decision_core/contracts.py`, persisted through `analysis_evidence` and `finding_decision_evidence`. |
 | Report job creation | `POST /api/v1/runs/{run_id}/report-jobs` for queued report generation. |
 | Report download | `GET /api/v1/reports/{report_id}/download`. |
 | Evidence verification | `POST /api/v1/reports/{report_id}/verify` for evidence ZIP reports. |
@@ -132,7 +132,7 @@ projection, finding detail, dashboard rollups, waiver/governance views, and
 report rendering.
 
 Read paths hydrate those tables through the central
-`backend/app/services/decision_projection.py` read model before mapping into
+`backend/app/decision_core/readmodels.py` read model before mapping into
 stable public DTOs. Successful v2 imports must not rebuild decision facts from
 `workflow_run.result_ref_json` or stale `finding` decision columns.
 

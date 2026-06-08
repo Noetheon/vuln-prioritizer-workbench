@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from app.contracts.decision_evidence import (
+from app.decision_core.contracts import (
     ANALYSIS_EVIDENCE_SCHEMA_VERSION,
     FINDING_DECISION_EVIDENCE_SCHEMA_VERSION,
     RUN_DIAGNOSTICS_SCHEMA_VERSION,
@@ -72,6 +72,36 @@ def test_decision_evidence_contract_validates_run_and_finding_graph() -> None:
                 "provider_snapshot_hash": "abc123",
                 "kev_hits": 1,
             },
+            "analysis_service": {
+                "pipeline": "parse-persist-enrich-score-explain",
+                "engine": "app.domain.engine.prepare_analysis",
+                "kernel": "app.decision_core.producer",
+            },
+            "analysis_semantics": {
+                "analysis_decision_scope": "cve_baseline_with_occurrence_overlays",
+                "persistence_scope": "asset_component_occurrence",
+                "occurrence_overlay_fields": [
+                    "asset_context",
+                    "component_identity",
+                    "source_identity",
+                    "vex_status",
+                ],
+                "finding_dedup_key_version": "vpw019-v1",
+                "cve_count": 1,
+                "occurrence_count": 1,
+                "finding_count": 1,
+                "same_cve_can_create_distinct_asset_findings": True,
+            },
+            "dedup_summary": {
+                "key_version": "vpw019-v1",
+                "created_findings": 1,
+                "updated_findings": 0,
+                "reused_findings": 0,
+                "decision_count": 1,
+                "decisions": [],
+                "decision_sample_limit": 500,
+                "omitted_decisions": 0,
+            },
         }
     )
 
@@ -79,6 +109,10 @@ def test_decision_evidence_contract_validates_run_and_finding_graph() -> None:
     assert evidence.analysis_evidence_id == "evidence-1"
     assert evidence.counts.finding_count == 1
     assert evidence.provider.provider_snapshot_hash == "abc123"
+    assert evidence.analysis_service.kernel == "app.decision_core.producer"
+    assert evidence.analysis_semantics.finding_dedup_key_version == "vpw019-v1"
+    assert evidence.dedup_summary is not None
+    assert evidence.dedup_summary.created_findings == 1
     assert finding.schema_version == FINDING_DECISION_EVIDENCE_SCHEMA_VERSION
     assert finding.priority_evidence.data_quality_confidence == "high"
     assert finding.attack.technique_ids == ["T1190"]

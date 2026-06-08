@@ -2,27 +2,33 @@
 Adapter builders for Decision/Evidence v2 payload boundaries.
 
 Successful Workbench imports build product evidence through
-``app.services.decision_kernel``. This module remains for typed diagnostics,
+``app.decision_core.producer``. This module remains for typed diagnostics,
 finding-level adapter helpers, and historical payload-boundary tests.
 """
 
 from __future__ import annotations
 
 import uuid
-from collections.abc import Mapping
-from typing import Any
+from collections.abc import Mapping, Sequence
+from typing import Any, Literal
 
-from app.contracts.decision_evidence import (
+from app.decision_core.contracts import (
     AttackEvidenceV2,
     FindingDecisionEvidenceV2,
     GovernanceEvidenceV2,
+    OccurrenceDedupEvidenceV2,
     OccurrenceEvidenceV2,
+    OccurrenceScopeV2,
     PriorityEvidenceV2,
+    PriorityExplanationV2,
+    ProviderDataQualityFlagEvidenceV2,
     ProviderEvidenceV2,
     RemediationEvidenceV2,
     RunDiagnosticsV2,
     RunFailureV2,
     RunParseErrorV2,
+    WorkflowArtifactRefV2,
+    WorkflowResultRefV2,
 )
 
 
@@ -99,19 +105,23 @@ def build_finding_decision_evidence(
         waived=waived,
         rationale=rationale,
         recommended_action=recommended_action,
-        occurrence_scope=_dict_value(occurrence_scope),
+        occurrence_scope=OccurrenceScopeV2.model_validate(_dict_value(occurrence_scope)),
         priority_evidence=PriorityEvidenceV2(
             priority_label=_str_value(decision.get("priority_label")) or priority.title(),
             priority_rank=priority_rank,
             priority_state=_str_value(decision.get("priority_state")),
             operational_score=_float_value(decision.get("operational_score")),
             operational_score_reasons=_string_list(decision.get("operational_score_reasons")),
-            explanation=_dict_value(decision.get("explanation")),
+            explanation=PriorityExplanationV2.model_validate(
+                _dict_value(decision.get("explanation"))
+            ),
             rationale=rationale,
             data_quality_confidence=_str_value(decision.get("data_quality_confidence"))
             or _str_value(_dict_value(data_quality_payload).get("confidence")),
-            data_quality_flags=_dict_list(decision.get("data_quality_flags"))
-            or _dict_list(_dict_value(data_quality_payload).get("flags")),
+            data_quality_flags=_provider_quality_flags(
+                _dict_list(decision.get("data_quality_flags"))
+                or _dict_list(_dict_value(data_quality_payload).get("flags"))
+            ),
             raw=decision,
         ),
         provider=ProviderEvidenceV2(
@@ -199,26 +209,37 @@ def build_occurrence_evidence(
         vex_source_path=_str_value(raw.get("vex_source_path")),
         vex_candidate_count=_int_value(raw.get("vex_candidate_count")),
         import_evidence=raw,
-        dedup=_dict_value(dedup),
+        dedup=_occurrence_dedup(dedup),
     )
 
 
 def workflow_ref_payload(
     *,
     analysis_evidence_id: uuid.UUID,
-    artifact_refs: list[dict[str, Any]] | None = None,
-) -> dict[str, Any]:
+    artifact_refs: Sequence[WorkflowArtifactRefV2 | Mapping[str, Any]] | None = None,
+) -> WorkflowResultRefV2:
     """Return the compact workflow result payload for a terminal import."""
-    return {
-        "schema_version": "workflow-result-ref.v2",
-        "analysis_evidence_id": str(analysis_evidence_id),
-        "artifact_refs": artifact_refs or [],
-    }
+    return WorkflowResultRefV2(
+        analysis_evidence_id=str(analysis_evidence_id),
+        artifact_refs=[
+            item
+            if isinstance(item, WorkflowArtifactRefV2)
+            else WorkflowArtifactRefV2.model_validate(item)
+            for item in artifact_refs or []
+        ],
+    )
 
 
 def _failure(value: Any) -> RunFailureV2 | None:
     payload = _dict_value(value)
     return RunFailureV2.model_validate(payload) if payload else None
+
+
+def _occurrence_dedup(value: Mapping[str, Any]) -> OccurrenceDedupEvidenceV2:
+    payload = _dict_value(value)
+    if "dedup_key" in payload and "key" not in payload:
+        payload["key"] = payload.pop("dedup_key")
+    return OccurrenceDedupEvidenceV2.model_validate(payload)
 
 
 def _dict_value(value: Any) -> dict[str, Any]:
@@ -241,8 +262,27 @@ def _string_list(value: Any) -> list[str]:
     return [item for item in value if isinstance(item, str) and item]
 
 
+def _provider_quality_flags(
+    flags: list[dict[str, Any]],
+) -> list[ProviderDataQualityFlagEvidenceV2]:
+    return [
+        ProviderDataQualityFlagEvidenceV2(
+            source=_str_value(flag.get("source")) or "analysis",
+            code=_str_value(flag.get("code")) or "unclassified",
+            message=_str_value(flag.get("message")) or "",
+            severity=_severity_value(flag.get("severity")),
+            cve_id=_str_value(flag.get("cve_id")),
+        )
+        for flag in flags
+    ]
+
+
 def _str_value(value: Any) -> str | None:
     return value if isinstance(value, str) and value else None
+
+
+def _severity_value(value: Any) -> Literal["info", "warning", "error"]:
+    return value if value in {"info", "warning", "error"} else "warning"
 
 
 def _int_value(value: Any) -> int:

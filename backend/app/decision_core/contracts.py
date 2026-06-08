@@ -14,7 +14,8 @@ RUN_DIAGNOSTICS_SCHEMA_VERSION: Literal["run-diagnostics.v2"] = "run-diagnostics
 ANALYSIS_RESULT_SCHEMA_V2: Literal["analysis-result.v2"] = "analysis-result.v2"
 ANALYSIS_RESULT_SCHEMA_VERSION_V2 = "2.0.0"
 
-JsonObject = dict[str, Any]
+RawEvidenceObject = dict[str, Any]
+JsonObject = RawEvidenceObject
 
 
 class EvidenceContractModel(BaseModel):
@@ -67,6 +68,158 @@ class RunCountsV2(EvidenceContractModel):
     attack_mapped_cves: int = 0
 
 
+class AnalysisServiceEvidenceV2(EvidenceContractModel):
+    """Stable producer metadata for a decision run."""
+
+    pipeline: str
+    engine: str
+    kernel: str
+
+
+class AnalysisSemanticsV2(EvidenceContractModel):
+    """Typed explanation of how run-wide decisions were scoped."""
+
+    analysis_decision_scope: str
+    persistence_scope: str
+    occurrence_overlay_fields: list[str] = Field(default_factory=list)
+    finding_dedup_key_version: str
+    cve_count: int = 0
+    occurrence_count: int = 0
+    finding_count: int = 0
+    same_cve_can_create_distinct_asset_findings: bool = True
+
+
+class DedupKeyPartsV2(EvidenceContractModel):
+    """Dedup key material used to form one finding identity."""
+
+    project_id: str | None = None
+    source_id: str | None = None
+    component_identity: str | None = None
+    target_ref: str | None = None
+
+
+class DedupDecisionV2(EvidenceContractModel):
+    """Sampled dedup decision retained for audit and report summaries."""
+
+    action: str
+    dedup_key: str
+    finding_id: str
+    cve_id: str
+    source_id: str | None = None
+    component_identity: str | None = None
+    target_ref: str | None = None
+
+
+class DedupSummaryV2(EvidenceContractModel):
+    """Run-level finding deduplication summary."""
+
+    key_version: str
+    created_findings: int = 0
+    updated_findings: int = 0
+    reused_findings: int = 0
+    decision_count: int = 0
+    decisions: list[DedupDecisionV2] = Field(default_factory=list)
+    decision_sample_limit: int = 0
+    omitted_decisions: int = 0
+
+
+class ProviderDataQualityFlagEvidenceV2(EvidenceContractModel):
+    """Provider quality flag preserved in the decision evidence contract."""
+
+    source: str
+    code: str
+    message: str
+    severity: Literal["info", "warning", "error"] = "warning"
+    cve_id: str | None = None
+    asset_id: str | None = None
+    changed_fields: list[str] = Field(default_factory=list)
+    changed_at: str | None = None
+
+
+class PriorityExplanationReasonV2(EvidenceContractModel):
+    """One reason in a priority explanation."""
+
+    code: str | None = None
+    source: str | None = None
+    signal: str | None = None
+    value: str | None = None
+    threshold: str | None = None
+    matched: bool = True
+    message: str | None = None
+
+
+class PriorityExplanationNoteV2(EvidenceContractModel):
+    """One note in a priority explanation."""
+
+    code: str | None = None
+    source: str | None = None
+    severity: str = "info"
+    message: str | None = None
+
+
+class PriorityExplanationV2(EvidenceContractModel):
+    """Structured priority explanation projected from the analysis engine."""
+
+    cve_id: str | None = None
+    priority_label: str | None = None
+    priority_state: str | None = None
+    operational_score: float | None = None
+    data_quality_confidence: str | None = None
+    summary: str | None = None
+    human_readable: str | None = None
+    reason_codes: list[str] = Field(default_factory=list)
+    reasons: list[PriorityExplanationReasonV2] = Field(default_factory=list)
+    notes: list[PriorityExplanationNoteV2] = Field(default_factory=list)
+    recommended_action: str | None = None
+
+
+class OccurrenceScopeV2(EvidenceContractModel):
+    """Typed scope overlay for one finding occurrence."""
+
+    source: str | None = None
+    source_id: str | None = None
+    source_record_id: str | None = None
+    component_name: str | None = None
+    component_version: str | None = None
+    purl: str | None = None
+    target_ref: str | None = None
+    asset_owner: str | None = None
+    asset_business_service: str | None = None
+    asset_exposure: str | None = None
+    asset_environment: str | None = None
+    asset_criticality: str | None = None
+    vex_status: str | None = None
+    vex_match_type: str | None = None
+    vex_source_path: str | None = None
+
+
+class OccurrenceDedupEvidenceV2(EvidenceContractModel):
+    """Typed dedup evidence attached to a persisted occurrence."""
+
+    key: str | None = None
+    key_version: str | None = None
+    action: str | None = None
+    parts: DedupKeyPartsV2 | None = None
+
+
+class WorkflowArtifactRefV2(EvidenceContractModel):
+    """Compact workflow artifact reference."""
+
+    kind: str
+    id: str | None = None
+    report_id: str | None = None
+    path: str | None = None
+    name: str | None = None
+
+
+class WorkflowResultRefV2(EvidenceContractModel):
+    """Terminal workflow result reference for successful import runs."""
+
+    schema_version: Literal["workflow-result-ref.v2"] = "workflow-result-ref.v2"
+    analysis_evidence_id: str
+    artifact_refs: list[WorkflowArtifactRefV2] = Field(default_factory=list)
+
+
 class ProviderEvidenceV2(EvidenceContractModel):
     """Provider snapshot and provider-quality evidence for a run or finding."""
 
@@ -75,8 +228,10 @@ class ProviderEvidenceV2(EvidenceContractModel):
     provider_snapshot_file: str | None = None
     locked_provider_data: bool = False
     provider_degraded: bool = False
-    provider_data_quality_flags: JsonObject = Field(default_factory=dict)
-    provider_evidence: JsonObject = Field(default_factory=dict)
+    provider_data_quality_flags: dict[str, list[ProviderDataQualityFlagEvidenceV2]] = Field(
+        default_factory=dict
+    )
+    provider_evidence: RawEvidenceObject = Field(default_factory=dict)
     nvd_hits: int = 0
     epss_hits: int = 0
     kev_hits: int = 0
@@ -90,11 +245,11 @@ class PriorityEvidenceV2(EvidenceContractModel):
     priority_state: str | None = None
     operational_score: float | None = None
     operational_score_reasons: list[str] = Field(default_factory=list)
-    explanation: JsonObject = Field(default_factory=dict)
+    explanation: PriorityExplanationV2 = Field(default_factory=PriorityExplanationV2)
     rationale: str | None = None
     data_quality_confidence: str | None = None
-    data_quality_flags: list[JsonObject] = Field(default_factory=list)
-    raw: JsonObject = Field(default_factory=dict)
+    data_quality_flags: list[ProviderDataQualityFlagEvidenceV2] = Field(default_factory=list)
+    raw: RawEvidenceObject = Field(default_factory=dict)
 
 
 class GovernanceEvidenceV2(EvidenceContractModel):
@@ -104,8 +259,8 @@ class GovernanceEvidenceV2(EvidenceContractModel):
     under_investigation: bool = False
     waived: bool = False
     vex_statuses: dict[str, int] = Field(default_factory=dict)
-    waiver: JsonObject = Field(default_factory=dict)
-    data_quality: JsonObject = Field(default_factory=dict)
+    waiver: RawEvidenceObject = Field(default_factory=dict)
+    data_quality: RawEvidenceObject = Field(default_factory=dict)
 
 
 class AttackEvidenceV2(EvidenceContractModel):
@@ -119,7 +274,7 @@ class AttackEvidenceV2(EvidenceContractModel):
     confidence: str | None = None
     technique_ids: list[str] = Field(default_factory=list)
     tactic_ids: list[str] = Field(default_factory=list)
-    mappings: list[JsonObject] = Field(default_factory=list)
+    mappings: list[RawEvidenceObject] = Field(default_factory=list)
 
 
 class RemediationEvidenceV2(EvidenceContractModel):
@@ -130,8 +285,8 @@ class RemediationEvidenceV2(EvidenceContractModel):
     recommendation: str | None = None
     recommendation_label: str | None = None
     business_impact: str | None = None
-    sla: JsonObject = Field(default_factory=dict)
-    raw: JsonObject = Field(default_factory=dict)
+    sla: RawEvidenceObject = Field(default_factory=dict)
+    raw: RawEvidenceObject = Field(default_factory=dict)
 
 
 class OccurrenceEvidenceV2(EvidenceContractModel):
@@ -164,8 +319,8 @@ class OccurrenceEvidenceV2(EvidenceContractModel):
     vex_source_record_id: str | None = None
     vex_source_path: str | None = None
     vex_candidate_count: int = 0
-    import_evidence: JsonObject = Field(default_factory=dict)
-    dedup: JsonObject = Field(default_factory=dict)
+    import_evidence: RawEvidenceObject = Field(default_factory=dict)
+    dedup: OccurrenceDedupEvidenceV2 = Field(default_factory=OccurrenceDedupEvidenceV2)
 
 
 class FindingDecisionEvidenceV2(EvidenceContractModel):
@@ -193,7 +348,7 @@ class FindingDecisionEvidenceV2(EvidenceContractModel):
     waived: bool = False
     rationale: str | None = None
     recommended_action: str | None = None
-    occurrence_scope: JsonObject = Field(default_factory=dict)
+    occurrence_scope: OccurrenceScopeV2 = Field(default_factory=OccurrenceScopeV2)
     priority_evidence: PriorityEvidenceV2
     provider: ProviderEvidenceV2 = Field(default_factory=ProviderEvidenceV2)
     governance: GovernanceEvidenceV2 = Field(default_factory=GovernanceEvidenceV2)
@@ -253,10 +408,10 @@ class AnalysisEvidenceV2(EvidenceContractModel):
     provider: ProviderEvidenceV2 = Field(default_factory=ProviderEvidenceV2)
     warnings: list[str] = Field(default_factory=list)
     parse_errors: list[RunParseErrorV2] = Field(default_factory=list)
-    analysis_service: JsonObject = Field(default_factory=dict)
-    analysis_semantics: JsonObject = Field(default_factory=dict)
-    asset_context: JsonObject | None = None
-    vex: JsonObject | None = None
-    dedup_summary: JsonObject | None = None
+    analysis_service: AnalysisServiceEvidenceV2
+    analysis_semantics: AnalysisSemanticsV2
+    asset_context: RawEvidenceObject | None = None
+    vex: RawEvidenceObject | None = None
+    dedup_summary: DedupSummaryV2 | None = None
     attack: AttackEvidenceV2 = Field(default_factory=AttackEvidenceV2)
     diagnostics: RunDiagnosticsV2 | None = None

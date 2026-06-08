@@ -5,6 +5,11 @@ from __future__ import annotations
 import uuid
 from collections.abc import Sequence
 
+from app.decision_core.readmodels import (
+    DecisionFindingView,
+    decision_views_for_findings,
+    latest_finding_decision_view,
+)
 from app.models import (
     AnalysisRun,
     AnalysisRunsPublic,
@@ -21,11 +26,6 @@ from app.repositories.runs import RunRepository
 from app.repositories.waivers import WaiverRepository
 from app.services.dashboard_counts import (
     dashboard_signal_counts,
-)
-from app.services.decision_projection import (
-    DecisionFindingView,
-    decision_views_for_findings,
-    latest_finding_decision_view,
 )
 from app.services.decisions import (
     build_project_summary_payload,

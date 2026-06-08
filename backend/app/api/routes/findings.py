@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.api.deps import LocalActor, SessionDep
 from app.api.routes.workbench_access import require_project
+from app.decision_core.finding_queries import list_project_findings_query
 from app.models import (
     AssetExposure,
     FindingDetailPublic,
@@ -67,7 +68,8 @@ def read_project_findings(
 ) -> FindingsPublic:
     """List a paginated page of findings for a visible project."""
     require_project(session, project_id)
-    findings, count = FindingRepository(session).list_project_findings_query(
+    findings, count = list_project_findings_query(
+        session,
         FindingPageQuery(
             project_id=project_id,
             limit=limit,
@@ -87,7 +89,7 @@ def read_project_findings(
             epss_max=epss_max,
             cvss_min=cvss_min,
             cvss_max=cvss_max,
-        )
+        ),
     )
     return FindingsPublic(
         data=[_finding_public(finding, session=session) for finding in findings],

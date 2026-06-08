@@ -19,9 +19,12 @@ const governanceOccurrenceCsv = Buffer.from(
   ].join("\n"),
 )
 
+const backendFixedToday =
+  process.env.WORKBENCH_FIXED_NOW?.slice(0, 10) ?? "2026-06-06"
+
 function dateValueFromOffset(days: number) {
-  const date = new Date()
-  date.setDate(date.getDate() + days)
+  const date = new Date(`${backendFixedToday}T00:00:00.000Z`)
+  date.setUTCDate(date.getUTCDate() + days)
   return date.toISOString().slice(0, 10)
 }
 

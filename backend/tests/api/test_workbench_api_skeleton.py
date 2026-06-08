@@ -21,6 +21,7 @@ from utils.workbench_env import (
     seed_secondary_project_graph,
 )
 
+from app.decision_core.finding_queries import list_project_findings_page
 from app.main import app
 from app.models.base import get_datetime_utc
 
@@ -941,9 +942,8 @@ def test_vpw042_findings_page_eager_loads_asset_and_component(
     event.listen(workbench_api_env.engine, "before_cursor_execute", capture_select)
     try:
         with Session(workbench_api_env.engine) as session:
-            findings, count = workbench_api_env.repositories.FindingRepository(
-                session
-            ).list_project_findings_page(
+            findings, count = list_project_findings_page(
+                session,
                 uuid.UUID(project["id"]),
                 limit=3,
             )

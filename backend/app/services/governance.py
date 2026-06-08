@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import uuid
 
+from app.decision_core.readmodels import project_finding_decision_views
 from app.models import ProjectGovernanceRollupsPublic
 from app.repositories.findings import FindingRepository
 from app.repositories.waivers import WaiverRepository
-from app.services.decision_projection import project_finding_decision_views
 from app.services.governance_rollups import build_project_governance_rollups_payload
 
 

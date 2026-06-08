@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import JSON, Column, DateTime, Index, String, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
-from app.contracts.decision_evidence import (
+from app.decision_core.contracts import (
     ANALYSIS_EVIDENCE_SCHEMA_VERSION,
     FINDING_DECISION_EVIDENCE_SCHEMA_VERSION,
 )

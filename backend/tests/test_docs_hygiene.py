@@ -520,13 +520,13 @@ def test_documentation_evidence_matrix_records_current_hygiene_baseline() -> Non
 
     assert "Workflow v2 documentation was checked" in evidence_matrix
     assert "evidence-first read-model consolidation" in evidence_matrix
-    assert "backend/app/services/decision_projection.py" in evidence_matrix
+    assert "backend/app/decision_core/readmodels.py" in evidence_matrix
     assert "Relational finding columns remain identity/join/index context" in evidence_matrix
     assert "provider/version wording baseline was refreshed" in current_state
     assert "MkDocs navigation covers 84 public pages" in evidence_matrix
     assert "Supported Workbench import types" in evidence_matrix
     assert "Supported Workbench report formats" in evidence_matrix
-    assert "backend/app/services/decision_kernel.py" in evidence_matrix
+    assert "backend/app/decision_core/producer.py" in evidence_matrix
     assert "workflow-result-ref.v2" in evidence_matrix
     assert "NVD CVE API 2.0 uses `cveIds`" in evidence_matrix
     assert "FIRST EPSS exposes `/data/v1/epss`" in evidence_matrix
