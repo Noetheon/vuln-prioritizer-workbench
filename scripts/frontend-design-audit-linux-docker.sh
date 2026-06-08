@@ -58,6 +58,10 @@ docker run --rm \
         for artifact_path in \
           /work/build/frontend-playwright-workbench-*.db \
           /work/build/frontend-playwright-workbench-*-reports \
+          /work/data/workbench-import-uploads \
+          /work/data/workbench-reports \
+          /work/data/workbench-provider-cache \
+          /work/data/provider-snapshots \
           /work/frontend/test-results \
           /work/frontend/playwright-report \
           /work/frontend/blob-report; do
