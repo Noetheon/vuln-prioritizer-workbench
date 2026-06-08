@@ -4275,6 +4275,10 @@ export type WorkbenchHealth = {
  */
 export type WorkbenchStatus = {
     /**
+     * Alembic Head
+     */
+    alembic_head: string;
+    /**
      * Api Docs Enabled
      */
     api_docs_enabled: boolean;
@@ -4299,13 +4303,37 @@ export type WorkbenchStatus = {
      */
     database_status: string;
     /**
+     * Demo Workspace Enabled
+     */
+    demo_workspace_enabled: boolean;
+    /**
+     * Environment
+     */
+    environment: string;
+    /**
+     * Runtime Mode
+     */
+    runtime_mode: string;
+    /**
      * Schema Status
      */
     schema_status: string;
     /**
+     * Schema Version
+     */
+    schema_version?: 'workbench-status.v1';
+    /**
      * Status
      */
     status: string;
+    /**
+     * Worker Last Seen At
+     */
+    worker_last_seen_at?: string | null;
+    /**
+     * Worker Status
+     */
+    worker_status: 'ready' | 'not_ready' | 'unknown';
 };
 
 /**

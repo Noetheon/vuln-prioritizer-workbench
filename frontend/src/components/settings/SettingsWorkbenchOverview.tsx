@@ -8,10 +8,12 @@ import {
   type VpwDataTableColumn,
 } from "@/components/vpw"
 import { formatCacheAge, providerSnapshotSummary } from "@/lib/provider-format"
+import { FRONTEND_VERSION } from "@/lib/runtime-config"
 import {
   evidenceReadiness,
   formatDateTime,
   providerHealth,
+  workerHealth,
   type SettingsWorkbenchProps,
 } from "./settings-workbench-model"
 
@@ -129,6 +131,7 @@ function settingsStateRows({
   "providerStatus" | "providerStatusError" | "status" | "statusError"
 >): SettingsStateRow[] {
   const provider = providerHealth(providerStatus)
+  const worker = workerHealth(status)
   const evidence = evidenceReadiness(
     providerStatus,
     providerStatusError,
@@ -141,16 +144,23 @@ function settingsStateRows({
   return [
     {
       description: "Local operator scope",
-      detail: "This browser is connected directly to the local Workbench.",
+      detail: `Frontend ${FRONTEND_VERSION}; backend ${
+        status?.core_version ?? "not reported"
+      }.`,
       id: "workspace-profile",
       label: "Workspace profile",
-      signal: "No remote tenancy configured",
-      state: "Local workspace",
+      signal: status?.schema_version ?? "Status schema not reported",
+      state:
+        status?.runtime_mode === "local-single-user"
+          ? "Local workspace"
+          : status?.runtime_mode ?? "Local workspace",
       tone: "success",
     },
     {
       description: "Operator mode",
-      detail: "The local operator can manage imports, evidence, and settings.",
+      detail: `Environment ${status?.environment ?? "not reported"}; demo workspace ${
+        status?.demo_workspace_enabled ? "enabled" : "disabled"
+      }.`,
       id: "access-model",
       label: "Access model",
       signal: "Role switching unavailable",
@@ -169,6 +179,17 @@ function settingsStateRows({
         : "Core version not reported",
       state: backend.label,
       tone: backend.tone,
+    },
+    {
+      description: "Background workflow processor",
+      detail: status?.worker_last_seen_at
+        ? `Last heartbeat ${formatDateTime(status.worker_last_seen_at)}.`
+        : "No worker heartbeat has been reported yet.",
+      id: "workflow-worker",
+      label: "Workflow worker",
+      signal: "Service workflow-worker",
+      state: worker.label,
+      tone: worker.tone,
     },
     {
       description: "NVD, EPSS, KEV readiness",

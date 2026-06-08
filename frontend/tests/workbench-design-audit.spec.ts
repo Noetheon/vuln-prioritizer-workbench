@@ -9,6 +9,12 @@ const screenshotStepRatio = 0.78
 const duplicateScrollTolerancePx = 8
 const visualMaskSelector = "[data-vpw-visual-mask]"
 const visualMaskColor = "#f3f4f6"
+const routeFilter = new Set(
+  (process.env.VPW_DESIGN_AUDIT_ROUTE ?? "")
+    .split(",")
+    .map((slug) => slug.trim())
+    .filter(Boolean),
+)
 
 type DemoWorkspace = {
   latest_run_id: string
@@ -49,7 +55,7 @@ type ScrollMetrics = {
   scrollTop: number
 }
 
-const auditRoutes: AuditRoute[] = [
+const allAuditRoutes: AuditRoute[] = [
   {
     name: "Overview",
     path: ({ project_id }) => `/?projectId=${project_id}`,
@@ -144,11 +150,23 @@ const auditRoutes: AuditRoute[] = [
     stableText: /Projects directory|Online Shop Demo Workspace/,
   },
 ]
+const auditRoutes =
+  routeFilter.size > 0
+    ? allAuditRoutes.filter((route) => routeFilter.has(route.slug))
+    : allAuditRoutes
+const missingRouteFilters = [...routeFilter].filter(
+  (slug) => !allAuditRoutes.some((route) => route.slug === slug),
+)
+if (missingRouteFilters.length > 0) {
+  throw new Error(
+    `Unknown VPW_DESIGN_AUDIT_ROUTE value(s): ${missingRouteFilters.join(", ")}`,
+  )
+}
 
 test("design audit matches VPW visual regression baselines", async ({
   page,
 }) => {
-  test.setTimeout(180_000)
+  test.setTimeout(routeFilter.size > 0 ? 300_000 : 240_000)
   await page.setViewportSize(screenshotViewport)
 
   const workspace = await seedDemoWorkspace(page)

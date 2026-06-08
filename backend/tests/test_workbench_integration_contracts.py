@@ -149,6 +149,67 @@ def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
     assert "providers/update-jobs" in script
 
 
+def test_end_user_launchers_expose_safe_maintenance_commands() -> None:
+    bash_launcher = Path("scripts/launch-workbench.sh").read_text(encoding="utf-8")
+    powershell_launcher = Path("scripts/launch-workbench.ps1").read_text(encoding="utf-8")
+    bat_launcher = Path("launch-workbench.bat").read_text(encoding="utf-8")
+    mac_launcher = Path("launch-workbench.command").read_text(encoding="utf-8")
+
+    for command in ("reset", "update", "diagnostics"):
+        assert command in bash_launcher
+        assert command in powershell_launcher
+
+    assert "VPW_ASSUME_YES=1" in bash_launcher
+    assert '$env:VPW_ASSUME_YES = "1"' in powershell_launcher
+    assert "compose down -v --remove-orphans" in bash_launcher
+    assert 'Invoke-Compose -ComposeArgs @("down", "-v", "--remove-orphans")' in (
+        powershell_launcher
+    )
+    assert "git pull --ff-only" in bash_launcher
+    assert "git pull --ff-only" in powershell_launcher
+    assert "git reset" not in bash_launcher
+    assert "git reset" not in powershell_launcher
+    assert 'Set-Content -Path ".env"' in powershell_launcher
+    assert "set -- start" in mac_launcher
+    assert 'scripts/launch-workbench.sh "$@"' in mac_launcher
+    assert "launch-workbench.ps1" in bat_launcher
+
+
+def test_end_user_diagnostics_do_not_collect_secret_or_runtime_payload_files() -> None:
+    bash_launcher = Path("scripts/launch-workbench.sh").read_text(encoding="utf-8")
+    powershell_launcher = Path("scripts/launch-workbench.ps1").read_text(encoding="utf-8")
+
+    for launcher in (bash_launcher, powershell_launcher):
+        diagnostics_section = _diagnostics_section(launcher)
+        assert "cat .env" not in diagnostics_section
+        assert 'Get-Content ".env"' not in diagnostics_section
+        assert "Get-Content '.env'" not in diagnostics_section
+        assert "workbench-import-uploads" not in diagnostics_section
+        assert "workbench-reports" not in diagnostics_section
+        assert "provider cache contents" in launcher
+        assert "backend-workbench-status.json" in launcher
+        assert "backend-provider-status.json" in launcher
+        assert "backend-demo-status.json" in launcher
+        assert "compose-logs.txt" in launcher
+        assert "[REDACTED]" in launcher
+
+
+def test_release_workflow_publishes_local_workbench_bundle() -> None:
+    workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+    makefile = Path("Makefile").read_text(encoding="utf-8")
+    bundle_script = Path("scripts/build_release_bundle.py").read_text(encoding="utf-8")
+
+    assert "Build local Workbench release bundle" in workflow
+    assert "make release-bundle" in workflow
+    assert "release-bundle:" in makefile
+    assert "scripts/build_release_bundle.py --output dist" in makefile
+    assert "vuln-prioritizer-workbench-local-" in bundle_script
+    assert "BUNDLE-MANIFEST.json" in bundle_script
+    assert "data/workbench-import-uploads" in bundle_script
+    assert "data/workbench-reports" in bundle_script
+    assert "data/workbench-provider-cache" in bundle_script
+
+
 def test_ci_compose_smoke_uses_public_health_not_auth_readiness() -> None:
     workflow = Path(".github/workflows/docker.yml").read_text(encoding="utf-8")
     makefile = Path("Makefile").read_text(encoding="utf-8")
@@ -159,6 +220,18 @@ def test_ci_compose_smoke_uses_public_health_not_auth_readiness() -> None:
     assert "/api/v1/utils/health-check/" in makefile
     assert "workbench/status" in script
     assert "/api/v1/workbench/status" not in workflow
+
+
+def _diagnostics_section(source: str) -> str:
+    if "diagnostics_workbench()" in source:
+        return source.split("diagnostics_workbench()", maxsplit=1)[1].split(
+            "smoke_workbench()",
+            maxsplit=1,
+        )[0]
+    return source.split("function Invoke-Diagnostics", maxsplit=1)[1].split(
+        "switch ($Command)",
+        maxsplit=1,
+    )[0]
 
 
 def test_production_smoke_overlay_uses_same_origin_public_contract() -> None:

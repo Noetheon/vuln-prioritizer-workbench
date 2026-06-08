@@ -7903,6 +7903,10 @@ export const WorkbenchHealthSchema = {
 export const WorkbenchStatusSchema = {
     description: 'Status response returned by the active Workbench runtime.',
     properties: {
+        alembic_head: {
+            title: 'Alembic Head',
+            type: 'string'
+        },
         api_docs_enabled: {
             title: 'Api Docs Enabled',
             type: 'boolean'
@@ -7934,12 +7938,51 @@ export const WorkbenchStatusSchema = {
             title: 'Database Status',
             type: 'string'
         },
+        demo_workspace_enabled: {
+            title: 'Demo Workspace Enabled',
+            type: 'boolean'
+        },
+        environment: {
+            title: 'Environment',
+            type: 'string'
+        },
+        runtime_mode: {
+            title: 'Runtime Mode',
+            type: 'string'
+        },
         schema_status: {
             title: 'Schema Status',
             type: 'string'
         },
+        schema_version: {
+            const: 'workbench-status.v1',
+            default: 'workbench-status.v1',
+            title: 'Schema Version',
+            type: 'string'
+        },
         status: {
             title: 'Status',
+            type: 'string'
+        },
+        worker_last_seen_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Worker Last Seen At'
+        },
+        worker_status: {
+            enum: [
+                'ready',
+                'not_ready',
+                'unknown'
+            ],
+            title: 'Worker Status',
             type: 'string'
         }
     },
@@ -7948,8 +7991,13 @@ export const WorkbenchStatusSchema = {
         'app',
         'core_package',
         'core_version',
+        'environment',
+        'runtime_mode',
         'database_status',
         'schema_status',
+        'demo_workspace_enabled',
+        'alembic_head',
+        'worker_status',
         'api_docs_enabled'
     ],
     title: 'WorkbenchStatus',

@@ -19,10 +19,28 @@ NPM ?= scripts/frontend-npm.sh
 FRONTEND_NPM_ENGINE_STRICT ?= true
 FRONTEND_NPM := $(NPM) --prefix frontend --workspaces=false --engine-strict=$(FRONTEND_NPM_ENGINE_STRICT)
 
-.PHONY: install test lint format fix typecheck check critical-coverage-check property-check mutation-check quality-10-check local-workbench-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-design-audit frontend-design-audit-update frontend-design-audit-linux-docker frontend-design-audit-linux-docker-update frontend-audit frontend-check python-lock-check docker-base-image-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
+.PHONY: install launch workbench-status workbench-stop workbench-reset workbench-update workbench-diagnostics test lint format fix typecheck check critical-coverage-check property-check mutation-check quality-10-check local-workbench-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-design-audit frontend-design-audit-update frontend-design-audit-linux-docker frontend-design-audit-linux-docker-update demo-screenshot frontend-audit frontend-check python-lock-check docker-base-image-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package release-bundle package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
+
+launch:
+	bash scripts/launch-workbench.sh start
+
+workbench-status:
+	bash scripts/launch-workbench.sh status
+
+workbench-stop:
+	bash scripts/launch-workbench.sh stop
+
+workbench-reset:
+	bash scripts/launch-workbench.sh reset
+
+workbench-update:
+	bash scripts/launch-workbench.sh update
+
+workbench-diagnostics:
+	bash scripts/launch-workbench.sh diagnostics
 
 test:
 	$(PYTHON) -m pytest $(BACKEND_TESTS)
@@ -106,6 +124,9 @@ frontend-design-audit-linux-docker:
 
 frontend-design-audit-linux-docker-update:
 	bash scripts/frontend-design-audit-linux-docker.sh update
+
+demo-screenshot: playwright-install
+	VPW_UPDATE_DOCS_EVIDENCE=1 $(FRONTEND_NPM) run test -- tests/ui-evidence-screenshots.spec.ts --project=chromium
 
 api-client-drift-check:
 	before=$$(mktemp); after=$$(mktemp); \
@@ -267,7 +288,7 @@ clean-local:
 	rm -rf .cache .hypothesis .mypy_cache .pytest_cache .ruff_cache .playwright-cli .playwright-mcp
 	rm -rf backend/.mypy_cache backend/.pytest_cache backend/.ruff_cache
 	rm -rf backend/*.egg-info
-	rm -rf build dist site htmlcov test-results frontend/test-results frontend/playwright-report frontend/dist
+	rm -rf build dist diagnostics site htmlcov test-results frontend/test-results frontend/playwright-report frontend/dist
 	rm -rf .coverage .coverage.* backend/.coverage backend/.coverage.* coverage.xml backend-uvicorn.log frontend-vite.log
 	rm -rf frontend/openapi.json frontend/screenshot*.mjs
 	find . -name __pycache__ -type d -not -path './.git/*' -prune -exec rm -rf {} +
@@ -279,6 +300,9 @@ clean-deps: clean-local
 package:
 	rm -rf dist
 	$(PYTHON) -m build $(BACKEND_DIR) --outdir dist
+
+release-bundle:
+	$(PYTHON) scripts/build_release_bundle.py --output dist
 
 package-contents-check: package
 	$(PYTHON) scripts/check_package_contents.py dist

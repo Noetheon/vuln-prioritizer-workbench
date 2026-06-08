@@ -1,7 +1,12 @@
+import { readFileSync } from "node:fs"
 import path from "node:path"
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig, loadEnv } from "vite"
+
+const packageJson = JSON.parse(
+  readFileSync(new URL("./package.json", import.meta.url), "utf-8"),
+) as { version?: string }
 
 function normalizedApiUrl(value: string | undefined) {
   const trimmed = value?.trim().replace(/\/+$/, "") ?? ""
@@ -28,6 +33,7 @@ export default defineConfig(({ mode }) => {
   return {
     define: {
       __VPW_API_URL__: JSON.stringify(bundledApiUrl),
+      __VPW_FRONTEND_VERSION__: JSON.stringify(packageJson.version ?? "0.0.0"),
     },
     resolve: {
       alias: {

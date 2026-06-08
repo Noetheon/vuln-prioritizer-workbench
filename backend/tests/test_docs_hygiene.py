@@ -322,6 +322,7 @@ def test_gitignore_covers_workbench_runtime_artifacts() -> None:
         "data/workbench-reports/",
         "data/workbench-provider-cache/",
         "data/provider-snapshots/",
+        "diagnostics/",
     }
 
     assert {path for path in required_runtime_roots if path not in gitignore} == set()

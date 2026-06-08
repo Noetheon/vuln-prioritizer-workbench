@@ -36,6 +36,7 @@ echo "playwright-image=${playwright_image}"
 
 docker run --rm \
   -e HOST_ARCH="${host_arch}" \
+  -e VPW_DESIGN_AUDIT_ROUTE="${VPW_DESIGN_AUDIT_ROUTE:-}" \
   -v "${repo_root}:/work" \
   -v "${node_modules_volume}:/work/frontend/node_modules" \
   -v "${npm_cache_volume}:/root/.npm" \
@@ -61,8 +62,8 @@ docker run --rm \
       apt-get install -y python3-pip >/dev/null
     fi
 
-    python3 -m pip install --break-system-packages -e "backend[dev]"
+    python3 -m pip install --break-system-packages -e "backend"
     cd frontend
-    npm_config_engine_strict=false npm ci --workspaces=false
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm_config_engine_strict=false npm ci --workspaces=false --no-audit --no-fund --prefer-offline
     npm_config_engine_strict=false npm run '"${npm_script}"'
   '
