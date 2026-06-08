@@ -1036,11 +1036,15 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   )
   assert.match(
     ci,
-    /Run VPW visual regression baseline[\s\S]{0,180}make frontend-design-audit/,
+    /Run VPW visual regression baseline[\s\S]{0,180}make frontend-design-audit-linux-docker/,
   )
   assert.ok(
     ci.indexOf("Run VPW visual regression baseline") <
       ci.indexOf("Run full frontend Playwright suite"),
+  )
+  assert.match(
+    ci,
+    /Run full frontend Playwright suite[\s\S]{0,240}--grep-invert "design audit matches VPW visual regression baselines"/,
   )
   assert.match(
     auditSpec,

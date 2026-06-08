@@ -212,11 +212,11 @@ jobs:
 
       - name: Run VPW visual regression baseline
         if: steps.frontend-scope.outputs.run-frontend == 'true'
-        run: make frontend-design-audit
+        run: make frontend-design-audit-linux-docker
 
       - name: Run full frontend Playwright suite
         if: steps.frontend-scope.outputs.run-frontend == 'true'
-        run: scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test
+        run: scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test -- --grep-invert "design audit matches VPW visual regression baselines"
 
       - name: Upload frontend Playwright failure evidence
         if: failure()
