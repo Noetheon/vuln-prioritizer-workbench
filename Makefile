@@ -206,6 +206,7 @@ docker-demo-smoke:
 	done; \
 	on_exit() { status=$$?; if [ "$$status" != "0" ]; then $(COMPOSE) ps || true; $(COMPOSE) logs --no-color || true; fi; $(COMPOSE) down -v --remove-orphans; exit "$$status"; }; \
 	trap on_exit EXIT; \
+	bash scripts/docker_compose_pull_with_retry.sh -f compose.yml -f compose.override.yml -- db; \
 	$(COMPOSE) up -d --build backend frontend worker; \
 	backend_ready=0; \
 		for attempt in $$(seq 1 30); do \
@@ -258,6 +259,7 @@ docker-production-smoke:
 	$(PYTHON) -c "import socket, sys; port=int(sys.argv[1]); sock=socket.socket(); sock.settimeout(0.2); in_use=sock.connect_ex(('127.0.0.1', port)) == 0; sock.close(); sys.exit(f'Port {port} is already in use before docker-production-smoke.' if in_use else 0)" "$$PRODUCTION_SMOKE_FRONTEND_PORT"; \
 	on_exit() { status=$$?; if [ "$$status" != "0" ]; then $(PRODUCTION_SMOKE_COMPOSE) ps || true; $(PRODUCTION_SMOKE_COMPOSE) logs --no-color || true; fi; $(PRODUCTION_SMOKE_COMPOSE) down -v --remove-orphans; exit "$$status"; }; \
 	trap on_exit EXIT; \
+	bash scripts/docker_compose_pull_with_retry.sh -f compose.yml -f compose.production-smoke.yml -- db; \
 	$(PRODUCTION_SMOKE_COMPOSE) up -d --build backend frontend worker; \
 	frontend_ready=0; \
 	for attempt in $$(seq 1 45); do \

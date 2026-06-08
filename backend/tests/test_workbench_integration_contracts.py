@@ -127,6 +127,11 @@ def test_compose_override_exposes_workbench_shell_and_frontend_ports() -> None:
 def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
     makefile = Path("Makefile").read_text(encoding="utf-8")
     script = Path("scripts/docker_quickstart_api_smoke.py").read_text(encoding="utf-8")
+    retry_script = Path("scripts/docker_compose_pull_with_retry.sh").read_text(encoding="utf-8")
+    retry_command = (
+        "bash scripts/docker_compose_pull_with_retry.sh "
+        "-f compose.yml -f compose.override.yml -- db"
+    )
 
     docker_smoke_block = makefile.split("docker-demo-smoke:", 1)[1].split("dependency-audit:", 1)[0]
     assert "DOCKER_DEMO_BACKEND_PORT ?= 18080" in makefile
@@ -135,9 +140,12 @@ def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
     assert 'export DOCKER_DEMO_FRONTEND_PORT="$(DOCKER_DEMO_FRONTEND_PORT)"' in docker_smoke_block
     assert "DOCKER_QUICKSTART_API_BASE_URL=" in docker_smoke_block
     assert "$(PYTHON) scripts/docker_quickstart_api_smoke.py" in docker_smoke_block
+    assert retry_command in docker_smoke_block
     assert "$(COMPOSE) up -d --build backend frontend worker" in docker_smoke_block
     assert "$(COMPOSE) exec -T backend python -m app.core.schema_smoke" in docker_smoke_block
     assert 'export POSTGRES_PASSWORD="$(DOCKER_DEMO_POSTGRES_PASSWORD)"' in docker_smoke_block
+    assert "VPW_DOCKER_PULL_ATTEMPTS" in retry_script
+    assert 'docker compose "${compose_args[@]}" pull "${services[@]}"' in retry_script
     assert "login/access-token" not in script
     assert "Authorization" not in script
     assert 'run.get("summary_json")' not in script
@@ -238,6 +246,10 @@ def test_production_smoke_overlay_uses_same_origin_public_contract() -> None:
     compose = yaml.safe_load(Path("compose.production-smoke.yml").read_text(encoding="utf-8"))
     makefile = Path("Makefile").read_text(encoding="utf-8")
     script = Path("scripts/production_readiness_smoke.py").read_text(encoding="utf-8")
+    retry_command = (
+        "bash scripts/docker_compose_pull_with_retry.sh "
+        "-f compose.yml -f compose.production-smoke.yml -- db"
+    )
 
     backend_env = compose["services"]["backend"]["environment"]
     frontend_args = compose["services"]["frontend"]["build"]["args"]
@@ -266,6 +278,7 @@ def test_production_smoke_overlay_uses_same_origin_public_contract() -> None:
     assert 'VPW_PRODUCTION_SMOKE_BASE_URL="http://127.0.0.1:$$PRODUCTION_SMOKE_FRONTEND_PORT"' in (
         makefile
     )
+    assert retry_command in makefile
     assert "$(PYTHON) scripts/production_readiness_smoke.py" in makefile
     assert "connect-src 'self'" in script
     assert "/api/v1/workbench/health" in script
