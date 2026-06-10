@@ -10,7 +10,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 from utils.workbench_env import WorkbenchApiEnv, local_api_headers
 
 from app.domain.engine.providers.curated_attack_mappings import CuratedAttackMappingProvider
@@ -343,6 +343,40 @@ def test_demo_workspace_load_repairs_missing_report_artifact(
     )
 
 
+def test_demo_workspace_load_repairs_missing_decision_evidence(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    _enable_demo_workspace(workbench_api_env, tmp_path)
+    headers = local_api_headers(workbench_api_env.client)
+
+    first_response = workbench_api_env.client.post(
+        "/api/v1/workbench/demo",
+        headers=headers,
+        json={"reset": True},
+    )
+    assert first_response.status_code == 200
+    first_payload = first_response.json()
+    project_id = first_payload["project"]["id"]
+    first_run_id = first_payload["latest_run"]["id"]
+
+    _delete_demo_decision_evidence(workbench_api_env, project_id)
+
+    repaired_response = workbench_api_env.client.post(
+        "/api/v1/workbench/demo",
+        headers=headers,
+        json={"reset": False},
+    )
+
+    assert repaired_response.status_code == 200
+    repaired_payload = repaired_response.json()
+    assert repaired_payload["project"]["id"] == project_id
+    assert repaired_payload["latest_run"]["id"] != first_run_id
+    assert repaired_payload["latest_run"]["evidence"]["schema_version"] == "analysis-evidence.v2"
+    assert repaired_payload["latest_run"]["workflow"]["status"] == "succeeded"
+    assert repaired_payload["finding_count"] == 24
+
+
 def test_demo_workspace_seed_stays_disabled_outside_local(
     workbench_api_env: WorkbenchApiEnv,
     tmp_path: Path,
@@ -430,6 +464,38 @@ def _delete_one_demo_report_artifact(
     assert artifact_path.is_file()
     artifact_path.unlink()
     return artifact_path
+
+
+def _delete_demo_decision_evidence(
+    workbench_api_env: WorkbenchApiEnv,
+    project_id: str,
+) -> None:
+    project_uuid = uuid.UUID(project_id)
+    models = workbench_api_env.app_models
+    with Session(workbench_api_env.engine) as session:
+        workflow_ids = [
+            workflow.id
+            for workflow in session.exec(
+                select(models.WorkflowRun).where(models.WorkflowRun.project_id == project_uuid)
+            ).all()
+        ]
+        if workflow_ids:
+            events = session.exec(
+                select(models.WorkflowEvent).where(
+                    col(models.WorkflowEvent.workflow_run_id).in_(workflow_ids)
+                )
+            ).all()
+            for event in events:
+                session.delete(event)
+        for model in (
+            models.FindingDecisionEvidence,
+            models.AnalysisEvidence,
+            models.WorkflowRun,
+        ):
+            rows = session.exec(select(model).where(model.project_id == project_uuid)).all()
+            for row in rows:
+                session.delete(row)
+        session.commit()
 
 
 def _all_demo_report_artifacts_exist(

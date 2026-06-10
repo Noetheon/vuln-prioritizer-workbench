@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -24,7 +25,8 @@ from app.core.config import (
 )
 from app.core.migration_bootstrap import ALEMBIC_HEAD
 from app.main import app, create_app, custom_generate_unique_id
-from app.repositories import RuntimeHeartbeatRepository
+from app.models import AnalysisRunStatus, ProjectCreate
+from app.repositories import ProjectRepository, RunRepository, RuntimeHeartbeatRepository
 
 
 def test_workbench_backend_status_uses_versioned_api_namespace(tmp_path) -> None:
@@ -715,7 +717,8 @@ def test_workbench_backend_local_startup_repairs_head_stamped_missing_tables(
 
     with TestClient(selected_app) as client:
         status = client.get("/api/v1/workbench/status")
-        table_names = set(inspect(selected_app.state.workbench_engine).get_table_names())
+        with selected_app.state.workbench_engine.connect() as connection:
+            table_names = set(inspect(connection).get_table_names())
 
     assert status.status_code == 200
     assert status.json()["schema_status"] == "ready"
@@ -725,6 +728,92 @@ def test_workbench_backend_local_startup_repairs_head_stamped_missing_tables(
         "workflow_event",
         "workflow_run",
     }.issubset(table_names)
+    selected_app.state.workbench_engine.dispose()
+
+
+def test_workbench_backend_local_startup_repairs_legacy_analysis_run_columns(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "legacy-analysis-run-columns.db"
+    legacy_project_id = uuid.uuid4()
+    legacy_run_id = uuid.uuid4()
+    engine = create_engine(f"sqlite:///{database_path}")
+    try:
+        SQLModel.metadata.create_all(engine)
+        _stamp_alembic_head(engine)
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE analysis_run ADD COLUMN error_json JSON NOT NULL"))
+            connection.execute(
+                text("ALTER TABLE analysis_run ADD COLUMN summary_json JSON NOT NULL")
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO project (name, description, id, created_at, updated_at) "
+                    "VALUES (:name, :description, :id, :created_at, :updated_at)"
+                ),
+                {
+                    "name": "Legacy project",
+                    "description": None,
+                    "id": legacy_project_id.hex,
+                    "created_at": "2026-06-10 00:00:00",
+                    "updated_at": "2026-06-10 00:00:00",
+                },
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO analysis_run ("
+                    "input_type, filename, status, started_at, finished_at, error_message, "
+                    "error_json, summary_json, id, project_id, provider_snapshot_id"
+                    ") VALUES ("
+                    ":input_type, :filename, :status, :started_at, :finished_at, "
+                    ":error_message, :error_json, :summary_json, :id, :project_id, "
+                    ":provider_snapshot_id"
+                    ")"
+                ),
+                {
+                    "input_type": "legacy-cve-list",
+                    "filename": "legacy.txt",
+                    "status": AnalysisRunStatus.SUCCEEDED.value,
+                    "started_at": "2026-06-10 00:00:00",
+                    "finished_at": "2026-06-10 00:01:00",
+                    "error_message": None,
+                    "error_json": "{}",
+                    "summary_json": "{}",
+                    "id": legacy_run_id.hex,
+                    "project_id": legacy_project_id.hex,
+                    "provider_snapshot_id": None,
+                },
+            )
+    finally:
+        engine.dispose()
+
+    selected_app = create_app(Settings(SQLALCHEMY_DATABASE_URI=f"sqlite:///{database_path}"))
+
+    with TestClient(selected_app) as client:
+        status = client.get("/api/v1/workbench/status")
+
+    assert status.status_code == 200
+    assert status.json()["schema_status"] == "ready"
+    assert "error_json" not in _column_names(selected_app.state.workbench_engine, "analysis_run")
+    assert "summary_json" not in _column_names(selected_app.state.workbench_engine, "analysis_run")
+
+    with Session(selected_app.state.workbench_engine) as session:
+        assert RunRepository(session).get_analysis_run(legacy_run_id) is not None
+        project = ProjectRepository(session).create_project(
+            ProjectCreate(name="Import smoke", description=None)
+        )
+        session.commit()
+        run = RunRepository(session).create_analysis_run(
+            project_id=project.id,
+            input_type="cve-list",
+            filename="smoke.txt",
+            status=AnalysisRunStatus.PENDING,
+        )
+        run_id = run.id
+        session.commit()
+
+    assert run_id is not None
+    selected_app.state.workbench_engine.dispose()
 
 
 def test_workbench_backend_disposes_engine_on_shutdown(
@@ -782,6 +871,11 @@ def _stamp_alembic_head(engine: Engine) -> None:
             text("INSERT INTO alembic_version (version_num) VALUES (:version_num)"),
             {"version_num": ALEMBIC_HEAD},
         )
+
+
+def _column_names(engine: Engine, table_name: str) -> set[str]:
+    with engine.connect() as connection:
+        return {column["name"] for column in inspect(connection).get_columns(table_name)}
 
 
 def _route_dependency_names(route: APIRoute) -> set[str]:
