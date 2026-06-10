@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
@@ -689,6 +689,42 @@ def test_workbench_backend_local_startup_tolerates_first_run_missing_schema(
 
     with TestClient(selected_app) as client:
         assert client.get("/api/v1/utils/health-check/").status_code == 200
+        status = client.get("/api/v1/workbench/status")
+
+    assert status.status_code == 200
+    assert status.json()["schema_status"] == "ready"
+
+
+def test_workbench_backend_local_startup_repairs_head_stamped_missing_tables(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "head-stamped-missing-tables.db"
+    engine = create_engine(f"sqlite:///{database_path}")
+    try:
+        SQLModel.metadata.create_all(engine)
+        _stamp_alembic_head(engine)
+        with engine.begin() as connection:
+            connection.execute(text("DROP TABLE finding_decision_evidence"))
+            connection.execute(text("DROP TABLE analysis_evidence"))
+            connection.execute(text("DROP TABLE workflow_event"))
+            connection.execute(text("DROP TABLE workflow_run"))
+    finally:
+        engine.dispose()
+
+    selected_app = create_app(Settings(SQLALCHEMY_DATABASE_URI=f"sqlite:///{database_path}"))
+
+    with TestClient(selected_app) as client:
+        status = client.get("/api/v1/workbench/status")
+        table_names = set(inspect(selected_app.state.workbench_engine).get_table_names())
+
+    assert status.status_code == 200
+    assert status.json()["schema_status"] == "ready"
+    assert {
+        "finding_decision_evidence",
+        "analysis_evidence",
+        "workflow_event",
+        "workflow_run",
+    }.issubset(table_names)
 
 
 def test_workbench_backend_disposes_engine_on_shutdown(
