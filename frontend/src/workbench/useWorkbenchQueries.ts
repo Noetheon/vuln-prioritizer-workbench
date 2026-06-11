@@ -84,6 +84,20 @@ export function useProjectDashboardQuery(projectId: string, enabled: boolean) {
   })
 }
 
+export function useProjectRiskInsightsQuery(projectId: string, enabled: boolean) {
+  return useQuery({
+    enabled: enabled && Boolean(projectId),
+    queryFn: ({ signal }) =>
+      ProjectsService.readProjectRiskInsights(
+        { project_id: projectId, runs: 30 },
+        { signal },
+      ),
+    queryKey: workbenchQueryKeys.projectRiskInsights(projectId),
+    retry: false,
+    staleTime: 10_000,
+  })
+}
+
 export function useProjectAttackSummaryQuery(projectId: string) {
   return useQuery({
     enabled: Boolean(projectId),

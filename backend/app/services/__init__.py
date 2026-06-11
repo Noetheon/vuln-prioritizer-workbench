@@ -47,6 +47,10 @@ from app.services.reports import (
     render_sarif_report,
     verify_evidence_bundle_zip,
 )
+from app.services.risk_insights import (
+    build_project_risk_insights_payload,
+    build_project_risk_insights_payload_from_repositories,
+)
 
 __all__ = [
     "AnalysisService",
@@ -71,6 +75,8 @@ __all__ = [
     "build_github_issue_preview_items",
     "build_project_governance_rollups_payload",
     "build_project_governance_rollups_payload_from_repositories",
+    "build_project_risk_insights_payload",
+    "build_project_risk_insights_payload_from_repositories",
     "build_project_summary_payload",
     "build_project_summary_payload_from_counts",
     "dashboard_signal_counts",

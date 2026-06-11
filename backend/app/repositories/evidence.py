@@ -221,3 +221,34 @@ class EvidenceRepository:
             row.finding_id: FindingDecisionEvidenceV2.model_validate(row.payload_json)
             for row in rows
         }
+
+    def finding_decision_evidence_rows_for_runs(
+        self,
+        analysis_run_ids: Iterable[uuid.UUID],
+    ) -> list[FindingDecisionEvidence]:
+        """Return raw finding evidence rows for several runs in one query."""
+        ids = list(analysis_run_ids)
+        if not ids:
+            return []
+        return list(
+            self.session.exec(
+                select(FindingDecisionEvidence).where(
+                    col(FindingDecisionEvidence.analysis_run_id).in_(ids)
+                )
+            ).all()
+        )
+
+    def analysis_evidence_run_ids(
+        self,
+        analysis_run_ids: Iterable[uuid.UUID],
+    ) -> set[uuid.UUID]:
+        """Return the subset of run ids that have persisted run-wide evidence."""
+        ids = list(analysis_run_ids)
+        if not ids:
+            return set()
+        rows = self.session.exec(
+            select(AnalysisEvidence.analysis_run_id).where(
+                col(AnalysisEvidence.analysis_run_id).in_(ids)
+            )
+        ).all()
+        return set(rows)

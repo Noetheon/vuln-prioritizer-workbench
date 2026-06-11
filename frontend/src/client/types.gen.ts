@@ -2493,6 +2493,114 @@ export type ImportFormatCapabilityPublic = {
 };
 
 /**
+ * MitigationAttackTechniquePublic
+ *
+ * Reviewed ATT&CK technique context covered by a mitigation lever.
+ */
+export type MitigationAttackTechniquePublic = {
+    /**
+     * Finding Count
+     */
+    finding_count?: number;
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Tactics
+     */
+    tactics?: Array<string>;
+    /**
+     * Technique Id
+     */
+    technique_id: string;
+};
+
+/**
+ * MitigationLeverPublic
+ *
+ * One remediation action ranked by the total open risk it would remove.
+ */
+export type MitigationLeverPublic = {
+    /**
+     * Action Label
+     */
+    action_label: string;
+    /**
+     * Attack Tactics
+     */
+    attack_tactics?: Array<string>;
+    /**
+     * Attack Techniques
+     */
+    attack_techniques?: Array<MitigationAttackTechniquePublic>;
+    /**
+     * Average Delta
+     */
+    average_delta?: number | null;
+    /**
+     * Component Name
+     */
+    component_name?: string | null;
+    /**
+     * Component Version
+     */
+    component_version?: string | null;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Lever Id
+     */
+    lever_id: string;
+    /**
+     * Nist Csf Function
+     */
+    nist_csf_function?: string;
+    /**
+     * Nist Csf Reason
+     */
+    nist_csf_reason?: string;
+    /**
+     * Projected Average Risk Score
+     */
+    projected_average_risk_score?: number | null;
+    /**
+     * Resolved Finding Count
+     */
+    resolved_finding_count?: number;
+    /**
+     * Resolved Kev Count
+     */
+    resolved_kev_count?: number;
+    /**
+     * Risk Score Share Percent
+     */
+    risk_score_share_percent?: number;
+    /**
+     * Risk Score Sum
+     */
+    risk_score_sum?: number;
+    /**
+     * Roadmap Lane
+     */
+    roadmap_lane?: string;
+    /**
+     * Roadmap Reason
+     */
+    roadmap_reason?: string;
+    /**
+     * Target Version
+     */
+    target_version?: string | null;
+    /**
+     * Top Cve Ids
+     */
+    top_cve_ids?: Array<string>;
+};
+
+/**
  * OccurrenceDedupEvidenceV2
  *
  * Typed dedup evidence attached to a persisted occurrence.
@@ -3214,6 +3322,51 @@ export type ProjectPublic = {
 };
 
 /**
+ * ProjectRiskInsightsPublic
+ *
+ * One-call aggregate for the dashboard risk posture views.
+ */
+export type ProjectRiskInsightsPublic = {
+    /**
+     * Baseline Average Risk Score
+     */
+    baseline_average_risk_score?: number | null;
+    /**
+     * Baseline Open Finding Count
+     */
+    baseline_open_finding_count?: number;
+    /**
+     * Baseline Total Risk Score
+     */
+    baseline_total_risk_score?: number;
+    /**
+     * Generated At
+     */
+    generated_at: string;
+    /**
+     * Mitigation Levers
+     */
+    mitigation_levers?: Array<MitigationLeverPublic>;
+    /**
+     * Project Id
+     */
+    project_id: string;
+    /**
+     * Recommended Lever Id
+     */
+    recommended_lever_id?: string | null;
+    /**
+     * Risk Target Score
+     */
+    risk_target_score?: number;
+    top_driver?: RiskTopDriverPublic | null;
+    /**
+     * Trend
+     */
+    trend?: Array<RiskTrendPointPublic>;
+};
+
+/**
  * ProjectUpdate
  *
  * Project update payload reserved for the next domain slice.
@@ -3777,6 +3930,97 @@ export type ReportsPublic = {
      * Data
      */
     data: Array<ReportPublic>;
+};
+
+/**
+ * RiskTopDriverPublic
+ *
+ * The finding that currently contributes the most operational risk.
+ */
+export type RiskTopDriverPublic = {
+    /**
+     * Asset Label
+     */
+    asset_label?: string | null;
+    /**
+     * Component Label
+     */
+    component_label?: string | null;
+    /**
+     * Cve Id
+     */
+    cve_id: string;
+    /**
+     * Epss
+     */
+    epss?: number | null;
+    /**
+     * Finding Id
+     */
+    finding_id: string;
+    /**
+     * In Kev
+     */
+    in_kev?: boolean;
+    /**
+     * Priority
+     */
+    priority: string;
+    /**
+     * Recommended Action
+     */
+    recommended_action?: string | null;
+    /**
+     * Risk Score
+     */
+    risk_score?: number | null;
+    /**
+     * Score Reasons
+     */
+    score_reasons?: Array<string>;
+};
+
+/**
+ * RiskTrendPointPublic
+ *
+ * Aggregate open-risk level observed by one analysis run.
+ */
+export type RiskTrendPointPublic = {
+    /**
+     * Average Risk Score
+     */
+    average_risk_score?: number | null;
+    /**
+     * Counts By Priority
+     */
+    counts_by_priority?: {
+        [key: string]: number;
+    };
+    /**
+     * Finished At
+     */
+    finished_at?: string | null;
+    /**
+     * Kev Count
+     */
+    kev_count?: number;
+    /**
+     * Max Risk Score
+     */
+    max_risk_score?: number | null;
+    /**
+     * Open Finding Count
+     */
+    open_finding_count?: number;
+    /**
+     * Run Id
+     */
+    run_id: string;
+    /**
+     * Started At
+     */
+    started_at: string;
+    status: AnalysisRunStatus;
 };
 
 /**
@@ -5309,6 +5553,45 @@ export type PostApiV1ProjectsByProjectIdImportsResponses = {
 };
 
 export type PostApiV1ProjectsByProjectIdImportsResponse = PostApiV1ProjectsByProjectIdImportsResponses[keyof PostApiV1ProjectsByProjectIdImportsResponses];
+
+export type GetApiV1ProjectsByProjectIdRiskInsightsData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: {
+        /**
+         * Runs
+         */
+        runs?: number;
+        /**
+         * Levers
+         */
+        levers?: number;
+    };
+    url: '/api/v1/projects/{project_id}/risk-insights';
+};
+
+export type GetApiV1ProjectsByProjectIdRiskInsightsErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1ProjectsByProjectIdRiskInsightsError = GetApiV1ProjectsByProjectIdRiskInsightsErrors[keyof GetApiV1ProjectsByProjectIdRiskInsightsErrors];
+
+export type GetApiV1ProjectsByProjectIdRiskInsightsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectRiskInsightsPublic;
+};
+
+export type GetApiV1ProjectsByProjectIdRiskInsightsResponse = GetApiV1ProjectsByProjectIdRiskInsightsResponses[keyof GetApiV1ProjectsByProjectIdRiskInsightsResponses];
 
 export type GetApiV1ProjectsByProjectIdRunsData = {
     body?: never;

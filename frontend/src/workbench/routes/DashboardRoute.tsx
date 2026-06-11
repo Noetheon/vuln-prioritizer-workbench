@@ -13,6 +13,7 @@ import {
   dashboardSignalCountsFromApi,
   emptyDashboardSignalCounts,
   useProjectDashboardQuery,
+  useProjectRiskInsightsQuery,
 } from "../useWorkbenchQueries"
 import { workbenchQueryKeys } from "../workbench-query-keys"
 
@@ -34,6 +35,10 @@ function DashboardRouteContainer() {
   } = useWorkbenchContext()
   const [demoWorkspaceActionError, setDemoWorkspaceActionError] = useState("")
   const projectDashboardQuery = useProjectDashboardQuery(
+    selectedProjectId,
+    true,
+  )
+  const projectRiskInsightsQuery = useProjectRiskInsightsQuery(
     selectedProjectId,
     true,
   )
@@ -60,6 +65,9 @@ function DashboardRouteContainer() {
     if (selectedProjectId) {
       void queryClient.invalidateQueries({
         queryKey: workbenchQueryKeys.projectDashboard(selectedProjectId),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: workbenchQueryKeys.projectRiskInsights(selectedProjectId),
       })
     }
   }
@@ -121,6 +129,19 @@ function DashboardRouteContainer() {
       providerStatus={providerStatus}
       providerStatusError={providerStatusError || statusError}
       providerStatusLoading={providerStatusLoading}
+      riskInsights={projectRiskInsightsQuery.data ?? null}
+      riskInsightsError={
+        projectRiskInsightsQuery.isError
+          ? apiErrorMessage(
+              "The risk insights request failed",
+              projectRiskInsightsQuery.error,
+            )
+          : ""
+      }
+      riskInsightsLoading={
+        projectRiskInsightsQuery.isLoading ||
+        projectRiskInsightsQuery.isFetching
+      }
       runsLoading={
         projectDashboardQuery.isLoading || projectDashboardQuery.isFetching
       }

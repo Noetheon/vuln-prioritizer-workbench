@@ -6,6 +6,7 @@ import type {
   GovernanceRollupPublic,
   ProjectDecisionSummaryPublic,
   ProjectPublic,
+  ProjectRiskInsightsPublic,
   ProviderStatusPublic,
 } from "@/api-client"
 import type { ChartDatum, EpssBucketCounts } from "@/lib/chart-data"
@@ -20,6 +21,27 @@ export type DashboardSignalCounts = {
 }
 
 export type DashboardRunRange = "10" | "30"
+
+export type RiskLayoutMode = "spotlight" | "compact"
+
+export const RISK_LAYOUT_STORAGE_KEY = "vpw-risk-layout"
+
+export function readStoredRiskLayout(): RiskLayoutMode {
+  try {
+    const stored = window.localStorage.getItem(RISK_LAYOUT_STORAGE_KEY)
+    return stored === "compact" ? "compact" : "spotlight"
+  } catch {
+    return "spotlight"
+  }
+}
+
+export function storeRiskLayout(mode: RiskLayoutMode) {
+  try {
+    window.localStorage.setItem(RISK_LAYOUT_STORAGE_KEY, mode)
+  } catch {
+    // Layout preference is cosmetic; ignore storage failures.
+  }
+}
 
 export type RiskOperationsDashboardProps = {
   dashboardError?: string
@@ -42,6 +64,9 @@ export type RiskOperationsDashboardProps = {
   providerStatus: ProviderStatusPublic | null
   providerStatusError: string
   providerStatusLoading: boolean
+  riskInsights: ProjectRiskInsightsPublic | null
+  riskInsightsError: string
+  riskInsightsLoading: boolean
   runsLoading: boolean
   selectedProject: ProjectPublic | null
   selectedProjectId: string

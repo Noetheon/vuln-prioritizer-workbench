@@ -1,6 +1,6 @@
 import { Link } from "@/lib/router"
 import { ArrowUpRight } from "lucide-react"
-import type { FindingPublic } from "@/api-client"
+import type { FindingPublic, RiskTopDriverPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -16,6 +16,7 @@ import {
 } from "@/components/vpw"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import { buildDashboardRemediationColumns } from "./DashboardRemediationColumns"
+import { DashboardTopDriverStrip } from "./DashboardTopDriverStrip"
 
 type DashboardRemediationSectionProps = {
   findingsError: string
@@ -24,6 +25,7 @@ type DashboardRemediationSectionProps = {
   queueFindings: readonly FindingPublic[]
   queueSearch: string
   selectedProjectId: string
+  topDriver?: RiskTopDriverPublic | null
 }
 
 export function DashboardRemediationSection({
@@ -33,6 +35,7 @@ export function DashboardRemediationSection({
   queueFindings,
   queueSearch,
   selectedProjectId,
+  topDriver = null,
 }: DashboardRemediationSectionProps) {
   const previewFindings = queueFindings.slice(0, 5)
   const queueProjectId = selectedProjectId || queueFindings[0]?.project_id || ""
@@ -69,6 +72,14 @@ export function DashboardRemediationSection({
         </div>
       </VpwSurfaceHeader>
       <VpwSurfaceBody className="pb-4">
+        {topDriver ? (
+          <div className="mb-3">
+            <DashboardTopDriverStrip
+              driver={topDriver}
+              selectedProjectId={selectedProjectId}
+            />
+          </div>
+        ) : null}
         {findingsLoading ? (
           <div>
             <Skeleton className="h-64" />

@@ -1,9 +1,12 @@
 import { lazy, Suspense, useMemo, useState } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Callout } from "@/components/vpw"
 import {
   epssBucketChartData,
   findingsByPriorityChartData,
+  riskAverageTrendData,
   runActivityTrendData,
   topServicesByRiskChartData,
 } from "@/lib/chart-data"
@@ -20,8 +23,11 @@ import { DashboardRemediationSection } from "./DashboardRemediationSection"
 import { DashboardSignalOverviewFallback } from "./DashboardSignalOverviewFallback"
 import {
   latestRunFacts,
+  readStoredRiskLayout,
+  storeRiskLayout,
   type DashboardRunRange,
   type QueueFilterState,
+  type RiskLayoutMode,
   type RiskOperationsDashboardProps,
 } from "./dashboard-model"
 import {
@@ -34,6 +40,12 @@ import {
 const DashboardSignalOverview = lazy(() =>
   import("./DashboardSignalOverview").then((module) => ({
     default: module.DashboardSignalOverview,
+  })),
+)
+
+const DashboardRiskPostureSection = lazy(() =>
+  import("./DashboardRiskPostureSection").then((module) => ({
+    default: module.DashboardRiskPostureSection,
   })),
 )
 
@@ -59,6 +71,9 @@ export function RiskOperationsDashboard({
   providerStatus,
   providerStatusError,
   providerStatusLoading,
+  riskInsights,
+  riskInsightsError,
+  riskInsightsLoading,
   runsLoading,
   selectedProject,
   selectedProjectId,
@@ -74,6 +89,17 @@ export function RiskOperationsDashboard({
     queueSearch: "",
     selectedRunRange: "10",
   })
+  const [riskLayout, setRiskLayout] = useState<RiskLayoutMode>(() =>
+    readStoredRiskLayout(),
+  )
+  const changeRiskLayout = (value: string) => {
+    if (value !== "spotlight" && value !== "compact") {
+      return
+    }
+    setRiskLayout(value)
+    storeRiskLayout(value)
+  }
+  const compactRiskLayout = riskLayout === "compact"
 
   const isLoading =
     projectListLoading ||
@@ -99,6 +125,24 @@ export function RiskOperationsDashboard({
       ),
     [projectRuns, filters.selectedRunRange],
   )
+  const riskTrendItems = useMemo(
+    () =>
+      riskAverageTrendData(
+        riskInsights?.trend ?? [],
+        Number.parseInt(filters.selectedRunRange, 10),
+      ),
+    [riskInsights?.trend, filters.selectedRunRange],
+  )
+  const mitigationLevers = riskInsights?.mitigation_levers ?? []
+  const openRiskTotal =
+    riskInsights?.baseline_total_risk_score ??
+    (riskInsights?.baseline_average_risk_score !== null &&
+    riskInsights?.baseline_average_risk_score !== undefined
+      ? Math.round(
+          riskInsights.baseline_average_risk_score *
+            (riskInsights.baseline_open_finding_count ?? 0),
+        )
+      : null)
 
   const epssItems = useMemo(() => {
     if (epssBuckets.length > 0) return epssBuckets
@@ -210,6 +254,41 @@ export function RiskOperationsDashboard({
             isLoading={isLoading}
             metrics={summaryMetrics}
           />
+          <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+            <span id="risk-layout-label">Risk layout</span>
+            <ToggleGroup
+              aria-labelledby="risk-layout-label"
+              onValueChange={changeRiskLayout}
+              size="sm"
+              type="single"
+              value={riskLayout}
+              variant="outline"
+            >
+              <ToggleGroupItem className="px-3" value="spotlight">
+                Spotlight
+              </ToggleGroupItem>
+              <ToggleGroupItem className="px-3" value="compact">
+                Compact
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          {!compactRiskLayout ? (
+            <Suspense fallback={<Skeleton className="h-72" />}>
+              <DashboardRiskPostureSection
+                onRunRangeChange={(value: DashboardRunRange) =>
+                  setFilters((current) => ({
+                    ...current,
+                    selectedRunRange: value,
+                  }))
+                }
+                riskInsights={riskInsights}
+                riskInsightsError={riskInsightsError}
+                riskInsightsLoading={riskInsightsLoading}
+                selectedProjectId={selectedProjectId}
+                selectedRunRange={filters.selectedRunRange}
+              />
+            </Suspense>
+          ) : null}
           <DashboardRemediationSection
             findingsError={findingsError}
             findingsLoading={findingsLoading}
@@ -222,23 +301,32 @@ export function RiskOperationsDashboard({
             queueFindings={queueFindings}
             queueSearch={filters.queueSearch}
             selectedProjectId={selectedProjectId}
+            topDriver={
+              compactRiskLayout ? (riskInsights?.top_driver ?? null) : null
+            }
           />
           <Suspense fallback={<DashboardSignalOverviewFallback />}>
             <DashboardSignalOverview
               epssItems={epssItems}
               governanceLoading={governanceLoading}
               keyTakeaways={signalTakeaways}
+              mitigationLevers={mitigationLevers}
               onRunRangeChange={(value: DashboardRunRange) =>
                 setFilters((current) => ({
                   ...current,
                   selectedRunRange: value,
                 }))
               }
+              openRiskTotal={openRiskTotal}
               priorityItems={priorityItems}
+              riskInsightsError={riskInsightsError}
+              riskInsightsLoading={riskInsightsLoading}
+              riskTrendItems={riskTrendItems}
               runsLoading={runsLoading}
               selectedProjectId={selectedProjectId}
               selectedRunRange={filters.selectedRunRange}
               serviceItems={serviceItems}
+              showRiskInsights={compactRiskLayout}
               summaryLoading={summaryLoading}
               topServiceSource={topServiceSource}
               trendItems={trendItems}

@@ -19,20 +19,24 @@ from app.models import (
     ProjectDecisionSummaryPublic,
     ProjectGovernanceRollupsPublic,
     ProjectPublic,
+    ProjectRiskInsightsPublic,
     ProjectsPublic,
     ProjectUpdate,
 )
 from app.repositories import (
+    EvidenceRepository,
     FindingRepository,
     ProjectRepository,
     RunRepository,
     WaiverRepository,
 )
+from app.repositories.finding_attack_query import list_project_attack_contexts
 from app.services import (
     build_cvss_only_comparison_payload,
     build_project_attack_summary_payload_from_rows,
     build_project_dashboard_payload_from_repositories,
     build_project_governance_rollups_payload_from_repositories,
+    build_project_risk_insights_payload_from_repositories,
     build_project_summary_payload,
 )
 from app.services.artifact_cleanup import cleanup_project_artifacts
@@ -124,6 +128,27 @@ def read_project_dashboard(
         finding_repository=finding_repository,
         run_repository=run_repository,
         waiver_repository=waiver_repository,
+    )
+
+
+@router.get("/{project_id}/risk-insights", response_model=ProjectRiskInsightsPublic)
+def read_project_risk_insights(
+    project_id: uuid.UUID,
+    session: SessionDep,
+    local_actor: LocalActor,
+    runs: int = Query(default=30, ge=1, le=30),
+    levers: int = Query(default=6, ge=1, le=10),
+) -> ProjectRiskInsightsPublic:
+    """Read the risk posture aggregate: per-run trend, top driver, mitigation levers."""
+    require_project(session, project_id)
+    return build_project_risk_insights_payload_from_repositories(
+        project_id=project_id,
+        finding_repository=FindingRepository(session),
+        run_repository=RunRepository(session),
+        evidence_repository=EvidenceRepository(session),
+        attack_contexts=list_project_attack_contexts(session, project_id),
+        run_limit=runs,
+        lever_limit=levers,
     )
 
 

@@ -1,11 +1,14 @@
 import type {
   AnalysisRunPublic,
   GovernanceRollupPublic,
+  MitigationLeverPublic,
   ProjectDecisionSummaryPublic,
+  RiskTrendPointPublic,
 } from "../api-client"
 
 export type ChartDatum = {
   detail?: string
+  id?: string
   label: string
   tone?: string
   value: number
@@ -97,6 +100,94 @@ export function runActivityTrendData(
       tone: run.status ?? "pending",
       value: index + 1,
     }))
+}
+
+// Score bands mirror the operational base scores in
+// backend/app/domain/engine/scoring_operational.py (Critical 70 / High 50 / Medium 30).
+export const RISK_SCORE_BANDS = [
+  { label: "Critical", min: 70, tone: "critical" },
+  { label: "High", min: 50, tone: "high" },
+  { label: "Medium", min: 30, tone: "medium" },
+  { label: "Low", min: 0, tone: "low" },
+] as const
+
+export const RISK_TARGET_SCORE = 30
+
+export function riskScoreBand(score: number): string {
+  for (const band of RISK_SCORE_BANDS) {
+    if (score >= band.min) {
+      return band.tone
+    }
+  }
+  return "low"
+}
+
+export function riskAverageTrendData(
+  points: readonly RiskTrendPointPublic[],
+  limit = 10,
+): ChartDatum[] {
+  return points.slice(-Math.max(1, limit)).map((point, index) => {
+    const average = point.average_risk_score ?? null
+    return {
+      detail: riskTrendPointDetail(point),
+      id: point.run_id,
+      label: point.started_at
+        ? new Intl.DateTimeFormat(undefined, {
+            month: "short",
+            day: "numeric",
+          }).format(new Date(point.started_at))
+        : `Run ${index + 1}`,
+      tone: average === null ? "standard" : riskScoreBand(average),
+      value: average ?? 0,
+    }
+  })
+}
+
+function riskTrendPointDetail(point: RiskTrendPointPublic): string {
+  const openCount = point.open_finding_count ?? 0
+  if (openCount === 0) {
+    return "No open findings"
+  }
+  const max = point.max_risk_score ?? null
+  const kev = point.kev_count ?? 0
+  return `${openCount} open · max ${max ?? "—"} · ${kev} KEV`
+}
+
+export function mitigationLeverChartData(
+  levers: readonly MitigationLeverPublic[],
+): ChartDatum[] {
+  return levers.map((lever) => {
+    const count = lever.resolved_finding_count ?? 0
+    const sum = lever.risk_score_sum ?? 0
+    return {
+      detail: mitigationLeverDetail(lever),
+      id: lever.lever_id,
+      label: lever.action_label,
+      tone: riskScoreBand(count > 0 ? sum / count : sum),
+      value: Math.round(sum),
+    }
+  })
+}
+
+function mitigationLeverDetail(lever: MitigationLeverPublic): string {
+  const count = lever.resolved_finding_count ?? 0
+  const kev = lever.resolved_kev_count ?? 0
+  const projected = lever.projected_average_risk_score ?? null
+  const delta = lever.average_delta ?? null
+  const parts = [
+    `Resolves ${count} ${count === 1 ? "finding" : "findings"}${
+      kev > 0 ? ` (${kev} KEV)` : ""
+    }`,
+  ]
+  if (projected === null) {
+    parts.push("clears all open findings")
+  } else if (delta !== null && Math.abs(delta) >= 0.5) {
+    // A near-zero average shift is noise (saturated scores) — stay quiet.
+    parts.push(
+      `projected avg ${projected} (${delta > 0 ? "−" : "+"}${Math.abs(delta)} avg)`,
+    )
+  }
+  return parts.join(" · ")
 }
 
 export function epssBucketChartData(

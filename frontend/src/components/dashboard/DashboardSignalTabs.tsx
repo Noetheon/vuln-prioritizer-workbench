@@ -11,29 +11,40 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { EmptyState } from "@/components/vpw"
+import { Callout, EmptyState } from "@/components/vpw"
+import type { MitigationLeverPublic } from "@/api-client"
 import type { ChartDatum } from "@/lib/chart-data"
 import type { ProjectUrlSearch } from "@/workbench/selected-project-search"
 import type { DashboardRunRange } from "./dashboard-model"
 
-export type SignalTab = "priority" | "epss" | "services" | "trend"
+export type SignalTab = "priority" | "epss" | "services" | "trend" | "impact"
 
 const DashboardPriorityChart = lazy(() => import("./DashboardPriorityChart"))
 const DashboardEpssChart = lazy(() => import("./DashboardEpssChart"))
 const DashboardServicesChart = lazy(() => import("./DashboardServicesChart"))
 const DashboardTrendChart = lazy(() => import("./DashboardTrendChart"))
+const DashboardRiskAverageChart = lazy(
+  () => import("./DashboardRiskAverageChart"),
+)
+const DashboardImpactChart = lazy(() => import("./DashboardImpactChart"))
 
 type DashboardSignalTabsProps = {
   activeSignalTab: SignalTab
   epssItems: readonly ChartDatum[]
   governanceLoading: boolean
+  mitigationLevers: readonly MitigationLeverPublic[]
   onActiveSignalTabChange: (value: SignalTab) => void
   onRunRangeChange: (value: DashboardRunRange) => void
+  openRiskTotal: number | null
   priorityItems: readonly ChartDatum[]
   projectSearch: ProjectUrlSearch
+  riskInsightsError: string
+  riskInsightsLoading: boolean
+  riskTrendItems: readonly ChartDatum[]
   runsLoading: boolean
   selectedRunRange: DashboardRunRange
   serviceItems: readonly ChartDatum[]
+  showRiskInsights: boolean
   summaryLoading: boolean
   topServiceSource: "assets" | "services"
   trendItems: readonly ChartDatum[]
@@ -43,13 +54,19 @@ export function DashboardSignalTabs({
   activeSignalTab,
   epssItems,
   governanceLoading,
+  mitigationLevers,
   onActiveSignalTabChange,
   onRunRangeChange,
+  openRiskTotal,
   priorityItems,
   projectSearch,
+  riskInsightsError,
+  riskInsightsLoading,
+  riskTrendItems,
   runsLoading,
   selectedRunRange,
   serviceItems,
+  showRiskInsights,
   summaryLoading,
   topServiceSource,
   trendItems,
@@ -60,7 +77,11 @@ export function DashboardSignalTabs({
       onValueChange={(value) => onActiveSignalTabChange(value as SignalTab)}
       value={activeSignalTab}
     >
-      <TabsList className="mb-3 grid h-auto w-full grid-cols-2 gap-1 text-xs sm:h-8 sm:grid-cols-4 2xl:inline-flex 2xl:w-auto 2xl:grid-cols-none">
+      <TabsList
+        className={`mb-3 grid h-auto w-full grid-cols-2 gap-1 text-xs sm:h-8 ${
+          showRiskInsights ? "sm:grid-cols-5" : "sm:grid-cols-4"
+        } 2xl:inline-flex 2xl:w-auto 2xl:grid-cols-none`}
+      >
         <TabsTrigger className="min-w-0 px-2" value="priority">
           <span className="hidden sm:inline">Findings by Priority</span>
           <span className="sm:hidden">Priority</span>
@@ -77,6 +98,12 @@ export function DashboardSignalTabs({
           <span className="hidden sm:inline">Risk Trend</span>
           <span className="sm:hidden">Trend</span>
         </TabsTrigger>
+        {showRiskInsights ? (
+          <TabsTrigger className="min-w-0 px-2" value="impact">
+            <span className="hidden sm:inline">Mitigation Impact</span>
+            <span className="sm:hidden">Impact</span>
+          </TabsTrigger>
+        ) : null}
       </TabsList>
 
       <TabsContent className="mt-4" value="priority">
@@ -201,10 +228,42 @@ export function DashboardSignalTabs({
               </SelectContent>
             </Select>
           }
-          description="Imported run cadence and trend signal over time"
+          description={
+            showRiskInsights
+              ? "Average operational risk per analysis run with severity bands"
+              : "Imported run cadence and trend signal over time"
+          }
           title="Risk trend"
         >
-          {runsLoading ? (
+          {showRiskInsights ? (
+            riskInsightsLoading ? (
+              <Skeleton className="h-72" />
+            ) : riskInsightsError ? (
+              <Callout severity="critical" title="Risk trend unavailable">
+                {riskInsightsError}
+              </Callout>
+            ) : riskTrendItems.length === 0 ? (
+              <EmptyState
+                action={
+                  <Button asChild size="sm" variant="outline">
+                    <Link search={projectSearch} to="/imports">
+                      Create first import
+                    </Link>
+                  </Button>
+                }
+                ariaLabel="No trend data"
+                className="min-h-0 py-4"
+                description="Run at least one import to generate trend history."
+                title="No trend data"
+              />
+            ) : (
+              activeSignalTab === "trend" && (
+                <Suspense fallback={<Skeleton className="h-72" />}>
+                  <DashboardRiskAverageChart items={riskTrendItems} />
+                </Suspense>
+              )
+            )
+          ) : runsLoading ? (
             <Skeleton className="h-72" />
           ) : trendItems.length === 0 ? (
             <EmptyState
@@ -229,6 +288,46 @@ export function DashboardSignalTabs({
           )}
         </ChartCard>
       </TabsContent>
+
+      {showRiskInsights ? (
+        <TabsContent className="mt-4" value="impact">
+          <ChartCard
+            description="Actions ranked by total risk eliminated across open findings"
+            title="Biggest mitigation levers"
+          >
+            {riskInsightsLoading ? (
+              <Skeleton className="h-72" />
+            ) : riskInsightsError ? (
+              <Callout severity="critical" title="Mitigation impact unavailable">
+                {riskInsightsError}
+              </Callout>
+            ) : mitigationLevers.length === 0 ? (
+              <EmptyState
+                action={
+                  <Button asChild size="sm" variant="outline">
+                    <Link search={projectSearch} to="/imports">
+                      Import scan results
+                    </Link>
+                  </Button>
+                }
+                ariaLabel="No mitigation lever data"
+                className="min-h-0 py-4"
+                description="Open findings with component or action data are required."
+                title="No mitigation levers yet"
+              />
+            ) : (
+              activeSignalTab === "impact" && (
+                <Suspense fallback={<Skeleton className="h-72" />}>
+                  <DashboardImpactChart
+                    levers={mitigationLevers}
+                    totalOpenRiskScore={openRiskTotal}
+                  />
+                </Suspense>
+              )
+            )}
+          </ChartCard>
+        </TabsContent>
+      ) : null}
     </Tabs>
   )
 }

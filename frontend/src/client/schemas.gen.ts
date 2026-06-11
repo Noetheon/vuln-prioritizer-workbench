@@ -4606,6 +4606,185 @@ export const ImportFormatCapabilityPublicSchema = {
     type: 'object'
 } as const;
 
+export const MitigationAttackTechniquePublicSchema = {
+    description: 'Reviewed ATT&CK technique context covered by a mitigation lever.',
+    properties: {
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        tactics: {
+            items: {
+                type: 'string'
+            },
+            title: 'Tactics',
+            type: 'array'
+        },
+        technique_id: {
+            title: 'Technique Id',
+            type: 'string'
+        }
+    },
+    required: [
+        'technique_id'
+    ],
+    title: 'MitigationAttackTechniquePublic',
+    type: 'object'
+} as const;
+
+export const MitigationLeverPublicSchema = {
+    description: 'One remediation action ranked by the total open risk it would remove.',
+    properties: {
+        action_label: {
+            title: 'Action Label',
+            type: 'string'
+        },
+        attack_tactics: {
+            items: {
+                type: 'string'
+            },
+            title: 'Attack Tactics',
+            type: 'array'
+        },
+        attack_techniques: {
+            items: {
+                $ref: '#/components/schemas/MitigationAttackTechniquePublic'
+            },
+            title: 'Attack Techniques',
+            type: 'array'
+        },
+        average_delta: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Average Delta'
+        },
+        component_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Name'
+        },
+        component_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Version'
+        },
+        kind: {
+            title: 'Kind',
+            type: 'string'
+        },
+        lever_id: {
+            title: 'Lever Id',
+            type: 'string'
+        },
+        nist_csf_function: {
+            default: 'Unclassified',
+            title: 'Nist Csf Function',
+            type: 'string'
+        },
+        nist_csf_reason: {
+            default: 'No clear control category from current evidence.',
+            title: 'Nist Csf Reason',
+            type: 'string'
+        },
+        projected_average_risk_score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Projected Average Risk Score'
+        },
+        resolved_finding_count: {
+            default: 0,
+            title: 'Resolved Finding Count',
+            type: 'integer'
+        },
+        resolved_kev_count: {
+            default: 0,
+            title: 'Resolved Kev Count',
+            type: 'integer'
+        },
+        risk_score_share_percent: {
+            default: 0,
+            title: 'Risk Score Share Percent',
+            type: 'integer'
+        },
+        risk_score_sum: {
+            default: 0,
+            title: 'Risk Score Sum',
+            type: 'number'
+        },
+        roadmap_lane: {
+            default: 'later',
+            title: 'Roadmap Lane',
+            type: 'string'
+        },
+        roadmap_reason: {
+            default: '',
+            title: 'Roadmap Reason',
+            type: 'string'
+        },
+        target_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target Version'
+        },
+        top_cve_ids: {
+            items: {
+                type: 'string'
+            },
+            title: 'Top Cve Ids',
+            type: 'array'
+        }
+    },
+    required: [
+        'lever_id',
+        'action_label',
+        'kind'
+    ],
+    title: 'MitigationLeverPublic',
+    type: 'object'
+} as const;
+
 export const OccurrenceDedupEvidenceV2Schema = {
     additionalProperties: false,
     description: 'Typed dedup evidence attached to a persisted occurrence.',
@@ -5989,6 +6168,89 @@ export const ProjectPublicSchema = {
     type: 'object'
 } as const;
 
+export const ProjectRiskInsightsPublicSchema = {
+    description: 'One-call aggregate for the dashboard risk posture views.',
+    properties: {
+        baseline_average_risk_score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Baseline Average Risk Score'
+        },
+        baseline_open_finding_count: {
+            default: 0,
+            title: 'Baseline Open Finding Count',
+            type: 'integer'
+        },
+        baseline_total_risk_score: {
+            default: 0,
+            title: 'Baseline Total Risk Score',
+            type: 'number'
+        },
+        generated_at: {
+            format: 'date-time',
+            title: 'Generated At',
+            type: 'string'
+        },
+        mitigation_levers: {
+            items: {
+                $ref: '#/components/schemas/MitigationLeverPublic'
+            },
+            title: 'Mitigation Levers',
+            type: 'array'
+        },
+        project_id: {
+            format: 'uuid',
+            title: 'Project Id',
+            type: 'string'
+        },
+        recommended_lever_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Recommended Lever Id'
+        },
+        risk_target_score: {
+            default: 30,
+            title: 'Risk Target Score',
+            type: 'number'
+        },
+        top_driver: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RiskTopDriverPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        trend: {
+            items: {
+                $ref: '#/components/schemas/RiskTrendPointPublic'
+            },
+            title: 'Trend',
+            type: 'array'
+        }
+    },
+    required: [
+        'project_id',
+        'generated_at'
+    ],
+    title: 'ProjectRiskInsightsPublic',
+    type: 'object'
+} as const;
+
 export const ProjectUpdateSchema = {
     description: 'Project update payload reserved for the next domain slice.',
     properties: {
@@ -6959,6 +7221,176 @@ export const ReportsPublicSchema = {
         'count'
     ],
     title: 'ReportsPublic',
+    type: 'object'
+} as const;
+
+export const RiskTopDriverPublicSchema = {
+    description: 'The finding that currently contributes the most operational risk.',
+    properties: {
+        asset_label: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Label'
+        },
+        component_label: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Label'
+        },
+        cve_id: {
+            title: 'Cve Id',
+            type: 'string'
+        },
+        epss: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Epss'
+        },
+        finding_id: {
+            format: 'uuid',
+            title: 'Finding Id',
+            type: 'string'
+        },
+        in_kev: {
+            default: false,
+            title: 'In Kev',
+            type: 'boolean'
+        },
+        priority: {
+            title: 'Priority',
+            type: 'string'
+        },
+        recommended_action: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Recommended Action'
+        },
+        risk_score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Risk Score'
+        },
+        score_reasons: {
+            items: {
+                type: 'string'
+            },
+            title: 'Score Reasons',
+            type: 'array'
+        }
+    },
+    required: [
+        'finding_id',
+        'cve_id',
+        'priority'
+    ],
+    title: 'RiskTopDriverPublic',
+    type: 'object'
+} as const;
+
+export const RiskTrendPointPublicSchema = {
+    description: 'Aggregate open-risk level observed by one analysis run.',
+    properties: {
+        average_risk_score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Average Risk Score'
+        },
+        counts_by_priority: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Counts By Priority',
+            type: 'object'
+        },
+        finished_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Finished At'
+        },
+        kev_count: {
+            default: 0,
+            title: 'Kev Count',
+            type: 'integer'
+        },
+        max_risk_score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Risk Score'
+        },
+        open_finding_count: {
+            default: 0,
+            title: 'Open Finding Count',
+            type: 'integer'
+        },
+        run_id: {
+            format: 'uuid',
+            title: 'Run Id',
+            type: 'string'
+        },
+        started_at: {
+            format: 'date-time',
+            title: 'Started At',
+            type: 'string'
+        },
+        status: {
+            $ref: '#/components/schemas/AnalysisRunStatus'
+        }
+    },
+    required: [
+        'run_id',
+        'started_at',
+        'status'
+    ],
+    title: 'RiskTrendPointPublic',
     type: 'object'
 } as const;
 

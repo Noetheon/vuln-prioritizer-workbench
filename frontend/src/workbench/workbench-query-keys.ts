@@ -38,6 +38,8 @@ export const workbenchQueryKeys = {
     [...workbenchQueryKeys.all, "project-governance-rollups", projectId] as const,
   projectSummariesRoot: () =>
     [...workbenchQueryKeys.all, "project-summaries"] as const,
+  projectRiskInsights: (projectId: string) =>
+    [...workbenchQueryKeys.all, "project-risk-insights", projectId] as const,
   projectRuns: (projectId: string) =>
     [...workbenchQueryKeys.all, "project-runs", projectId] as const,
   projectSummaries: (projectIds: readonly string[]) =>
@@ -90,6 +92,9 @@ export async function invalidateProjectScopedWorkbenchQueries(
     }),
     queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.projectDashboard(projectId),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: workbenchQueryKeys.projectRiskInsights(projectId),
     }),
     queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.projectSummariesRoot(),
