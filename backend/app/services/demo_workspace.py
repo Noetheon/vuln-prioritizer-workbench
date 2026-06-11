@@ -14,13 +14,16 @@ from sqlmodel import Session, col, func, select
 from app.core.config import Settings
 from app.core.local_actor import LocalWorkbenchActor
 from app.models import (
+    AnalysisEvidence,
     AnalysisRun,
     Asset,
     Finding,
+    FindingDecisionEvidence,
     Project,
     Report,
     Waiver,
     WaiverCreate,
+    WorkflowRun,
 )
 from app.models.base import get_datetime_utc
 from app.repositories import RunRepository, WaiverRepository
@@ -89,6 +92,9 @@ class DemoWorkspaceSnapshot:
     asset_count: int
     waiver_count: int
     report_count: int
+    analysis_evidence_count: int
+    finding_decision_evidence_count: int
+    workflow_count: int
     waiver_status_counts: dict[str, int]
 
     @property
@@ -108,6 +114,9 @@ class DemoWorkspaceSnapshot:
             and self.asset_count == EXPECTED_ASSET_COUNT
             and self.waiver_count == EXPECTED_WAIVER_COUNT
             and self.report_count == len(EXPECTED_REPORT_FORMATS)
+            and self.analysis_evidence_count > 0
+            and self.finding_decision_evidence_count >= self.finding_count
+            and self.workflow_count > 0
             and {report.filename for report in self.reports} == EXPECTED_REPORT_FILENAMES
             and {
                 status: self.waiver_status_counts.get(status, 0)
@@ -134,6 +143,9 @@ def read_demo_workspace_snapshot(session: Session) -> DemoWorkspaceSnapshot:
             asset_count=0,
             waiver_count=0,
             report_count=0,
+            analysis_evidence_count=0,
+            finding_decision_evidence_count=0,
+            workflow_count=0,
             waiver_status_counts={},
         )
 
@@ -147,6 +159,13 @@ def read_demo_workspace_snapshot(session: Session) -> DemoWorkspaceSnapshot:
         asset_count=_count_for_project(session, "asset", project.id),
         waiver_count=_count_for_project(session, "waiver", project.id),
         report_count=_count_for_project(session, "report", project.id),
+        analysis_evidence_count=_count_for_project(session, "analysis_evidence", project.id),
+        finding_decision_evidence_count=_count_for_project(
+            session,
+            "finding_decision_evidence",
+            project.id,
+        ),
+        workflow_count=_count_for_project(session, "workflow_run", project.id),
         waiver_status_counts=_waiver_status_counts(session, project.id),
     )
 
@@ -391,10 +410,13 @@ def _upload_content(path: Path, *, content_type: str) -> ImportUploadContent:
 def _count_for_project(session: Session, table: str, project_id: uuid.UUID) -> int:
     """Count for project function."""
     model_by_table: dict[str, Any] = {
+        "analysis_evidence": AnalysisEvidence,
         "asset": Asset,
         "finding": Finding,
+        "finding_decision_evidence": FindingDecisionEvidence,
         "report": Report,
         "waiver": Waiver,
+        "workflow_run": WorkflowRun,
     }
     model = model_by_table[table]
     statement = select(func.count()).select_from(model).where(model.project_id == project_id)
