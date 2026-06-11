@@ -25,6 +25,7 @@ from app.api.main import api_router, assert_api_local_actor_policy
 from app.core.app_state import configure_workbench_state, workbench_settings
 from app.core.config import Settings, settings
 from app.core.db import create_db_engine
+from app.core.local_schema_bootstrap import bootstrap_local_sqlite_schema
 from app.core.rate_limit import RateLimiter, create_rate_limiter, rate_limit_key
 from app.core.schema_smoke import assert_migrated_schema
 from app.services.provider_updates import reconcile_stale_provider_update_runs
@@ -73,7 +74,11 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
         active_engine=active_engine,
     )
     app.state.rate_limiter = create_rate_limiter(selected_settings, active_engine)
-    if selected_settings.ENVIRONMENT != "local":
+    if selected_settings.ENVIRONMENT == "local":
+        app.router.on_startup.append(
+            lambda: bootstrap_local_sqlite_schema(active_engine, selected_settings)
+        )
+    else:
         app.router.on_startup.append(lambda: assert_migrated_schema(active_engine))
     app.router.on_startup.append(
         lambda: _reconcile_stale_import_runs_on_startup(active_engine, selected_settings)

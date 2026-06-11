@@ -43,17 +43,16 @@ def assert_postgres_engine(active_engine: Engine) -> str:
 
 def assert_migrated_schema(active_engine: Engine) -> SchemaSmokeResult:
     """Validate Alembic head and model tables on the active database."""
-    inspector = inspect(active_engine)
-    table_names = set(inspector.get_table_names())
-    missing_tables = sorted(required_model_tables() - table_names)
-    if missing_tables:
-        raise RuntimeError(
-            "Database schema is missing model tables: " + ", ".join(missing_tables[:20])
-        )
-    if "alembic_version" not in table_names:
-        raise RuntimeError("Database schema is missing alembic_version.")
-
     with active_engine.connect() as connection:
+        table_names = set(inspect(connection).get_table_names())
+        missing_tables = sorted(required_model_tables() - table_names)
+        if missing_tables:
+            raise RuntimeError(
+                "Database schema is missing model tables: " + ", ".join(missing_tables[:20])
+            )
+        if "alembic_version" not in table_names:
+            raise RuntimeError("Database schema is missing alembic_version.")
+
         versions = tuple(
             sorted(
                 str(row[0])
