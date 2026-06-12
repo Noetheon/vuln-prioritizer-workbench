@@ -52,7 +52,6 @@ const rawControlAllowlist = new Set([
 const rawTableAllowlist = new Set([
   "src/components/ui/table.tsx",
   "src/components/vpw/VpwDataTable.tsx",
-  "src/components/dashboard/DashboardSignalOverview.tsx",
 ])
 
 const rowActionContractFiles = [
@@ -1014,10 +1013,7 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   assert.match(makefile, /\.PHONY:.*frontend-design-audit/)
   assert.match(makefile, /\.PHONY:.*frontend-design-audit-update/)
   assert.match(makefile, /\.PHONY:.*frontend-design-audit-linux-docker/)
-  assert.match(
-    makefile,
-    /\.PHONY:.*frontend-design-audit-linux-docker-update/,
-  )
+  assert.match(makefile, /\.PHONY:.*frontend-design-audit-linux-docker-update/)
   assert.match(
     makefile,
     /frontend-design-audit:\n\t\$\(FRONTEND_NPM\) run test:design-audit/,
@@ -1088,8 +1084,14 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   assert.match(dockerRunner, /HOST_GID/)
   assert.match(dockerRunner, /trap cleanup_ownership EXIT/)
   assert.match(dockerRunner, /\/work\/build/)
-  assert.match(dockerRunner, /\/work\/build\/frontend-playwright-workbench-\*\.db/)
-  assert.match(dockerRunner, /\/work\/build\/frontend-playwright-workbench-\*-reports/)
+  assert.match(
+    dockerRunner,
+    /\/work\/build\/frontend-playwright-workbench-\*\.db/,
+  )
+  assert.match(
+    dockerRunner,
+    /\/work\/build\/frontend-playwright-workbench-\*-reports/,
+  )
   assert.match(dockerRunner, /\/work\/data\/workbench-import-uploads/)
   assert.match(dockerRunner, /\/work\/data\/workbench-reports/)
   assert.match(dockerRunner, /\/work\/data\/workbench-provider-cache/)
@@ -1097,8 +1099,14 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   assert.match(dockerRunner, /\/work\/frontend\/test-results/)
   assert.match(dockerRunner, /\/work\/frontend\/playwright-report/)
   assert.match(dockerRunner, /chown -R "\$\{HOST_UID\}:\$\{HOST_GID\}"/)
-  assert.match(dockerRunner, /vpw_frontend_node_modules_\$\{docker_server_os\}_\$\{docker_server_arch\}/)
-  assert.match(dockerRunner, /npm_config_engine_strict=false npm ci --workspaces=false/)
+  assert.match(
+    dockerRunner,
+    /vpw_frontend_node_modules_\$\{docker_server_os\}_\$\{docker_server_arch\}/,
+  )
+  assert.match(
+    dockerRunner,
+    /npm_config_engine_strict=false npm ci --workspaces=false/,
+  )
   assert.match(dockerRunner, /npm_config_engine_strict=false npm run/)
 })
 

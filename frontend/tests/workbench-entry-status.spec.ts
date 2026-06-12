@@ -80,13 +80,16 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
 
   await page.reload()
   await selectDashboardProject(page, project.name)
+  await expect(
+    page.getByRole("button", { name: /Reset demo(?: workspace)?/ }),
+  ).toHaveCount(0)
   await expect(page.getByLabel("No remediation queue items")).toContainText(
     "No findings",
   )
   await expect(page.getByLabel("Critical Priority summary card")).toContainText(
     "0",
   )
-  await expect(page.getByText("No runs yet").first()).toBeVisible()
+  await expect(page.getByText("No open reduction opportunities")).toBeVisible()
 
   const importResponse = await page.request.post(
     `${backendBaseUrl}/api/v1/projects/${project.id}/imports`,
@@ -117,8 +120,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page.getByLabel("KEV Exposed summary card")).toContainText(
     /[1-9]/,
   )
-  await expect(page.getByText("succeeded").first()).toBeVisible()
-  await expect(page.getByText("Top Remediation Queue")).toBeVisible()
+  await expect(page.getByText("Remediation queue")).toBeVisible()
   await expect(
     page.getByRole("link", { name: "CVE-2024-3094" }).first(),
   ).toBeVisible()

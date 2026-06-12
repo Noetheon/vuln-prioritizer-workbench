@@ -103,7 +103,7 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
     assert payload["enabled"] is True
     assert payload["seeded"] is True
     assert payload["project"]["name"] == "Online Shop Demo Workspace"
-    assert payload["finding_count"] == 24
+    assert payload["finding_count"] == 32
     assert payload["asset_count"] == 21
     assert payload["waiver_count"] == 4
     assert payload["report_count"] == 7
@@ -158,14 +158,16 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
     assert projects_response.status_code == 200
     assert projects_response.json()["count"] == 1
     assert findings_response.status_code == 200
-    assert findings_response.json()["count"] == 24
+    assert findings_response.json()["count"] == 32
     findings = findings_response.json()["data"]
     assert sum(1 for finding in findings if finding["waived"]) == 4
     assert sum(1 for finding in findings if finding["suppressed_by_vex"]) == 2
     assert {finding["status"] for finding in findings} >= {
         "accepted",
         "fixed",
+        "in_review",
         "open",
+        "remediating",
         "suppressed",
     }
     assert assets_response.status_code == 200
@@ -203,7 +205,7 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
         reports=reports_response.json()["data"],
     )
     assert attack_response.json()["mapped_finding_count"] == 21
-    assert attack_response.json()["mapped_coverage_percent"] == 87.5
+    assert attack_response.json()["mapped_coverage_percent"] == 65.6
     assert (tmp_path / "uploads" / project_id).exists()
     assert (tmp_path / "reports" / project_id).exists()
 
@@ -224,7 +226,7 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
     assert reset_response.status_code == 200
     assert reset_response.json()["project"]["id"] == project_id
     assert reset_response.json()["latest_run"]["id"] != first_run_id
-    assert reset_response.json()["finding_count"] == 24
+    assert reset_response.json()["finding_count"] == 32
     assert reset_response.json()["asset_count"] == 21
     assert reset_response.json()["waiver_count"] == 4
     assert reset_response.json()["report_count"] == 7
@@ -246,7 +248,7 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
     )
     assert recreated_response.status_code == 200
     assert recreated_response.json()["project"]["id"] == project_id
-    assert recreated_response.json()["finding_count"] == 24
+    assert recreated_response.json()["finding_count"] == 32
     assert recreated_response.json()["asset_count"] == 21
     assert recreated_response.json()["waiver_count"] == 4
     assert recreated_response.json()["report_count"] == 7
@@ -282,7 +284,7 @@ def test_demo_workspace_load_self_heals_mutated_state(
     assert repaired_payload["project"]["id"] == project_id
     assert repaired_payload["project"]["name"] == DEMO_PROJECT_NAME
     assert repaired_payload["latest_run"]["id"] != first_run_id
-    assert repaired_payload["finding_count"] == 24
+    assert repaired_payload["finding_count"] == 32
     assert repaired_payload["asset_count"] == 21
     assert repaired_payload["waiver_count"] == 4
     assert repaired_payload["report_count"] == 7
@@ -332,7 +334,7 @@ def test_demo_workspace_load_repairs_missing_report_artifact(
     repaired_payload = repaired_response.json()
     assert repaired_payload["project"]["id"] == project_id
     assert repaired_payload["latest_run"]["id"] != first_run_id
-    assert repaired_payload["finding_count"] == 24
+    assert repaired_payload["finding_count"] == 32
     assert repaired_payload["asset_count"] == 21
     assert repaired_payload["waiver_count"] == 4
     assert repaired_payload["report_count"] == 7
@@ -374,7 +376,7 @@ def test_demo_workspace_load_repairs_missing_decision_evidence(
     assert repaired_payload["latest_run"]["id"] != first_run_id
     assert repaired_payload["latest_run"]["evidence"]["schema_version"] == "analysis-evidence.v2"
     assert repaired_payload["latest_run"]["workflow"]["status"] == "succeeded"
-    assert repaired_payload["finding_count"] == 24
+    assert repaired_payload["finding_count"] == 32
 
 
 def test_demo_workspace_seed_stays_disabled_outside_local(
@@ -529,7 +531,7 @@ def _assert_demo_totals_are_coherent(
     summary = dashboard["summary"]
     signal_counts = dashboard["findings"]["signal_counts"]
 
-    assert summary["finding_count"] == len(findings) == 24
+    assert summary["finding_count"] == len(findings) == 32
     assert summary["open_finding_count"] == sum(
         1 for finding in findings if finding["status"] in {"open", "in_review", "remediating"}
     )

@@ -20,6 +20,11 @@ from app.repositories.finding_attack_query import (
     list_project_attack_contexts as _list_project_attack_contexts,
 )
 
+_MANUAL_WORKFLOW_STATUSES = {
+    FindingStatus.IN_REVIEW,
+    FindingStatus.REMEDIATING,
+}
+
 
 class FindingRepository:
     """Finding, component, and vulnerability persistence helpers."""
@@ -142,7 +147,10 @@ class FindingRepository:
         if dedup_key is not None:
             finding.dedup_key = dedup_key
         finding.cve_id = cve_id
-        finding.status = FindingStatus(status)
+        finding.status = _import_status_for_finding(
+            current=FindingStatus(finding.status),
+            imported=FindingStatus(status),
+        )
         finding.last_seen_at = get_datetime_utc()
         if flush:
             self.session.flush()
@@ -216,3 +224,14 @@ class FindingRepository:
     def list_project_attack_contexts(self, project_id: uuid.UUID) -> list[FindingAttackContext]:
         """Return ATT&CK contexts for findings in one project, newest rows first."""
         return _list_project_attack_contexts(self.session, project_id)
+
+
+def _import_status_for_finding(
+    *,
+    current: FindingStatus,
+    imported: FindingStatus,
+) -> FindingStatus:
+    """Keep analyst workflow status unless import evidence moves the finding elsewhere."""
+    if imported == FindingStatus.OPEN and current in _MANUAL_WORKFLOW_STATUSES:
+        return current
+    return imported

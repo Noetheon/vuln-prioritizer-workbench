@@ -145,13 +145,20 @@ export function sourceRows(
     return []
   }
 
+  const lockedReplay = Boolean(providerStatus.snapshot?.locked_provider_data)
   const rows = (providerStatus.sources ?? []).map((source) => {
     const status = sourceStatus(source)
+    const isKevSource = sourceDisplayName(source.name) === "CISA KEV"
     return {
-      age: formatCacheAge(source.cache_age_seconds),
+      age: lockedReplay
+        ? "Replay (locked)"
+        : formatCacheAge(source.cache_age_seconds),
       evidenceUse: evidenceUse(source),
       id: source.name,
-      lastUpdated: formatDateTime(source.last_sync),
+      lastUpdated:
+        isKevSource && source.last_sync
+          ? `${formatDateTime(source.last_sync)} (newest KEV entry)`
+          : formatDateTime(source.last_sync),
       name: sourceDisplayName(source.name),
       notes: providerSourceDetail(source),
       purpose: sourcePurpose(source.name),
@@ -164,7 +171,9 @@ export function sourceRows(
   })
 
   rows.push({
-    age: formatCacheAge(providerStatus.cache_age_seconds),
+    age: lockedReplay
+      ? "Replay (locked)"
+      : formatCacheAge(providerStatus.cache_age_seconds),
     evidenceUse: providerStatus.snapshot.selected_sources?.length
       ? "Included"
       : "Recorded",

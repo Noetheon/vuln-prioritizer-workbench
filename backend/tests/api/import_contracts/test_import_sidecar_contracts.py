@@ -247,16 +247,16 @@ def test_import_upload_applies_asset_context_sidecar_to_workbench_findings(
     assert finding["asset_environment"] == "production"
     assert finding["asset_criticality"] == "critical"
     assert finding["exposure"] == "internet-facing"
-    assert finding["risk_score"] == 100.0
+    assert finding["risk_score"] == 87.0
 
     detail = workbench_api_env.client.get(f"/api/v1/findings/{finding['id']}", headers=headers)
     assert detail.status_code == 200
     evidence = detail.json()["evidence"]
     explanation = evidence["priority_evidence"]
     provenance = explanation["raw"]["provenance"]
-    assert explanation["operational_score"] == 100
+    assert explanation["operational_score"] == 87
     assert "internet-facing asset context: +8" in explanation["operational_score_reasons"]
-    assert "production asset context: +5" in explanation["operational_score_reasons"]
+    assert "production asset context: +4" in explanation["operational_score_reasons"]
     assert "critical asset criticality: +7" in explanation["operational_score_reasons"]
     assert explanation["raw"]["highest_asset_criticality"] == "critical"
     assert provenance["asset_ids"] == ["asset-web-1"]

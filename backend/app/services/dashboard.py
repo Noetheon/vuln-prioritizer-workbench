@@ -33,6 +33,7 @@ from app.services.decisions import (
 from app.services.governance_rollups import (
     build_project_governance_rollups_payload,
 )
+from app.services.risk_reduction import build_project_risk_reduction_payload
 from app.services.run_workflow_projection import analysis_run_public
 
 
@@ -78,6 +79,7 @@ def build_project_dashboard_payload(
             ),
             signal_counts=dashboard_signal_counts(finding_views),
         ),
+        risk_reduction=build_project_risk_reduction_payload(finding_views, runs=runs),
     )
 
 

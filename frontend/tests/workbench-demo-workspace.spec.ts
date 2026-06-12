@@ -31,27 +31,17 @@ test("workbench demo workspace seeds persisted dashboard and reports", async ({
   await expect(
     page.getByText("Online Shop Demo Workspace").first(),
   ).toBeVisible({ timeout: 60_000 })
-  await expect(page.getByText("Demo workspace").first()).toBeVisible()
+  await expect(page.getByText("Persisted local demo data")).toHaveCount(0)
   await expect(page.getByLabel("Critical Priority summary card")).toContainText(
-    "24",
+    "19",
   )
-  await expect(page.getByLabel("High EPSS summary card")).toContainText("24")
+  await expect(page.getByLabel("High EPSS summary card")).toContainText("19")
   await expect(
-    page.getByRole("table", { name: "Findings by priority chart data" }),
-  ).toContainText("Critical")
+    page.getByRole("region", { name: "Risk posture" }),
+  ).toContainText("Top risk reducers")
   await expect(
-    page.getByRole("table", { name: "Findings by priority chart data" }),
-  ).toContainText("24")
-  await expect(
-    page.getByRole("table", { name: "Findings by priority chart data" }),
-  ).not.toContainText("Accepted")
-  await page.getByRole("tab", { name: "EPSS Distribution" }).click()
-  await expect(
-    page.getByRole("table", { name: "EPSS distribution chart data" }),
-  ).toContainText("Critical Exposure")
-  await expect(
-    page.getByRole("table", { name: "EPSS distribution chart data" }),
-  ).toContainText("24")
+    page.getByRole("region", { name: "Top remediation queue" }),
+  ).toContainText("CVE-2021-44228")
   await expect(
     page.getByRole("link", { name: "CVE-2021-44228" }).first(),
   ).toBeVisible()

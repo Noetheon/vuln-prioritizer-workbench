@@ -16,7 +16,11 @@ import { optionalText } from "@/lib/ui-copy"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import { RiskScore } from "../risk/RiskScore"
 import { SeverityBadge } from "../risk/SeverityBadge"
-import { findingWhyNow } from "./dashboard-model"
+import {
+  findingAssetServiceLabel,
+  findingPlannedAction,
+  findingWhyNow,
+} from "./dashboard-model"
 
 export function buildDashboardRemediationColumns(): readonly VpwDataTableColumn<FindingPublic>[] {
   return [
@@ -35,8 +39,8 @@ export function buildDashboardRemediationColumns(): readonly VpwDataTableColumn<
             Risk Score
           </TooltipTrigger>
           <TooltipContent className="max-w-56 text-xs" side="top">
-            Composite score (0-10) combining CVSS severity, EPSS exploitation
-            probability, KEV status, and asset exposure.
+            Composite score (0-100) combining CVSS severity, EPSS exploitation
+            probability, KEV status, and the asset context of this occurrence.
           </TooltipContent>
         </Tooltip>
       ),
@@ -67,19 +71,19 @@ export function buildDashboardRemediationColumns(): readonly VpwDataTableColumn<
     },
     {
       id: "component",
-      header: "Component / Service",
+      header: "Component / Asset",
       cell: (finding) => (
-        <div className="max-w-[140px] min-w-0">
+        <div className="max-w-[180px] min-w-0">
           <p className="truncate text-sm font-medium">
             {optionalText(finding.component_name)}
           </p>
           <p className="truncate text-xs text-muted-foreground">
-            {optionalText(finding.business_service)}
+            {findingAssetServiceLabel(finding)}
           </p>
         </div>
       ),
-      className: "w-36",
-      headerClassName: "w-36",
+      className: "w-44",
+      headerClassName: "w-44",
     },
     {
       id: "owner",
@@ -89,11 +93,14 @@ export function buildDashboardRemediationColumns(): readonly VpwDataTableColumn<
       headerClassName: "w-24",
     },
     {
-      id: "why",
-      header: "Why now",
+      id: "action",
+      header: "Planned action",
       cell: (finding) => (
-        <span className="dashboard-queue-why" title={findingWhyNow(finding)}>
-          {findingWhyNow(finding)}
+        <span
+          className="dashboard-queue-why"
+          title={findingPlannedAction(finding)}
+        >
+          {findingPlannedAction(finding)}
         </span>
       ),
       className: "w-52",
@@ -145,12 +152,20 @@ export function buildDashboardRemediationColumns(): readonly VpwDataTableColumn<
                   value: finding.component_name ?? "-",
                 },
                 {
+                  label: "Asset",
+                  value: finding.asset_name ?? finding.asset_key ?? "-",
+                },
+                {
                   label: "Service",
                   value: finding.business_service ?? "-",
                 },
                 {
                   label: "Owner",
                   value: finding.owner ?? "-",
+                },
+                {
+                  label: "Planned action",
+                  value: findingPlannedAction(finding),
                 },
                 {
                   label: "Why now",

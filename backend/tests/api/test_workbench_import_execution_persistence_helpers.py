@@ -185,6 +185,88 @@ def test_import_persistence_jsonable_model_recurses_through_model_lists() -> Non
     assert _jsonable_model((model,)) == [_jsonable_model(model)]
 
 
+def test_import_persistence_preserves_manual_workflow_status_until_evidence_changes(
+    workbench_api_env: WorkbenchApiEnv,
+) -> None:
+    headers = local_api_headers(workbench_api_env.client)
+    project = create_project_via_api(workbench_api_env.client, headers, name="Workflow status")
+    project_id = uuid.UUID(project["id"])
+    app_models = workbench_api_env.app_models
+    repositories = workbench_api_env.repositories
+    decision = _decision()
+    occurrence = _occurrence()
+    analysis_result = WorkbenchAnalysisResult(
+        findings_by_cve={decision.cve_id: decision},
+        context=AnalysisContext(
+            input_path="occurrences.csv",
+            output_format="json",
+            generated_at="2026-05-08T00:00:00Z",
+        ),
+        provider_snapshot_id=None,
+        provider_snapshot_hash=None,
+        provider_snapshot_file=None,
+        locked_provider_data=False,
+    )
+
+    with Session(workbench_api_env.engine) as session:
+        run_repo = repositories.RunRepository(session)
+        first_run = run_repo.create_analysis_run(
+            project_id=project_id,
+            input_type="generic-occurrence-csv",
+            filename="first.csv",
+        )
+        first_summary = _persist_workbench_occurrences(
+            session=session,
+            project_id=project_id,
+            run_id=first_run.id,
+            occurrences=[occurrence],
+            analysis_result=analysis_result,
+        )
+        finding_id = uuid.UUID(first_summary["dedup_summary"]["decisions"][0]["finding_id"])
+        finding = session.get(app_models.Finding, finding_id)
+        assert finding is not None
+        assert finding.status == app_models.FindingStatus.OPEN
+
+        finding.status = app_models.FindingStatus.REMEDIATING
+        session.add(finding)
+        second_run = run_repo.create_analysis_run(
+            project_id=project_id,
+            input_type="generic-occurrence-csv",
+            filename="second.csv",
+        )
+        second_summary = _persist_workbench_occurrences(
+            session=session,
+            project_id=project_id,
+            run_id=second_run.id,
+            occurrences=[occurrence],
+            analysis_result=analysis_result,
+        )
+        session.refresh(finding)
+        assert second_summary["updated_findings"] == 1
+        assert finding.status == app_models.FindingStatus.REMEDIATING
+        assert second_summary["finding_evidence"][0].status == "remediating"
+
+        fixed_run = run_repo.create_analysis_run(
+            project_id=project_id,
+            input_type="generic-occurrence-csv",
+            filename="fixed.csv",
+        )
+        fixed_summary = _persist_workbench_occurrences(
+            session=session,
+            project_id=project_id,
+            run_id=fixed_run.id,
+            occurrences=[
+                _occurrence(
+                    raw_evidence={**occurrence.raw_evidence, "vex_status": "fixed"},
+                )
+            ],
+            analysis_result=analysis_result,
+        )
+        session.refresh(finding)
+        assert finding.status == app_models.FindingStatus.FIXED
+        assert fixed_summary["finding_evidence"][0].status == "fixed"
+
+
 def test_import_persistence_bulk_insert_fast_path_persists_large_new_import(
     workbench_api_env: WorkbenchApiEnv,
 ) -> None:

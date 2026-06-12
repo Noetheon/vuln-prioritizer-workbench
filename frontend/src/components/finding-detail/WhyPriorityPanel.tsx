@@ -8,10 +8,25 @@ import type { FindingDecisionReason } from "./finding-detail-model"
 import { FindingRationaleLedger } from "./FindingRationaleLedger"
 import {
   compactFindingText,
+  findingGovernanceActionNote,
+  findingGovernanceStatus,
   findingRecommendedAction,
   findingRecommendedActionParts,
   findingWhyText,
 } from "./finding-detail-model"
+
+function governanceStateTitle(finding: FindingDetailPublic) {
+  switch (findingGovernanceStatus(finding)) {
+    case "suppressed":
+      return "Suppressed by VEX statement"
+    case "accepted":
+      return "Accepted risk under waiver"
+    case "fixed":
+      return "Confirmed fixed"
+    default:
+      return "Owner action"
+  }
+}
 
 export type WhyPriorityPanelProps = {
   decisionReasons: readonly FindingDecisionReason[]
@@ -68,6 +83,7 @@ export function WhyPriorityPanel({
   const whyText = findingWhyText(finding, explanation)
   const recommendedAction = findingRecommendedAction(finding, explanation)
   const action = findingRecommendedActionParts(recommendedAction)
+  const governanceNote = findingGovernanceActionNote(finding)
   const scoreInputs = countProviderReasons(
     reasonRows,
     /score|priority|threshold|escalation|operational/i,
@@ -133,9 +149,13 @@ export function WhyPriorityPanel({
         aria-label="Owner action summary"
         className="finding-decision-owner-summary"
       >
-        <span>Owner action</span>
-        <strong>{action.title}</strong>
-        <p title={recommendedAction}>{action.detail}</p>
+        <span>{governanceNote ? "Governance state" : "Owner action"}</span>
+        <strong>
+          {governanceNote ? governanceStateTitle(finding) : action.title}
+        </strong>
+        <p title={governanceNote ?? recommendedAction}>
+          {governanceNote ?? action.detail}
+        </p>
       </section>
 
       <div className="finding-decision-reasons-heading">

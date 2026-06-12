@@ -5,6 +5,7 @@ import type {
   AssetCreate,
   AssetPublic,
   AssetUpdate,
+  ProjectRiskReductionPublic,
   ProjectGovernanceRollupsPublic,
   ProviderStatusPublic,
   WaiverCreate,
@@ -568,6 +569,7 @@ export async function routeWorkbenchShell(
             top_services_by_risk: [],
           },
           project_id: project.id,
+          risk_reduction: mockRiskReduction(findings),
           runs: { data: projectRuns, count: projectRuns.length },
           summary: projectSummary,
         }),
@@ -886,6 +888,97 @@ export async function routeWorkbenchShell(
     }
     return route.fallback()
   })
+}
+
+function mockRiskReduction(findings: MockFinding[]): ProjectRiskReductionPublic {
+  const actionable = findings.filter(
+    (finding) =>
+      ["open", "in_review", "remediating"].includes(finding.status) &&
+      finding.risk_score > 0,
+  )
+  const currentRisk = actionable.reduce(
+    (total, finding) => total + finding.risk_score,
+    0,
+  )
+  const opportunities = actionable.slice(0, 5).map((finding) => ({
+    affected_assets: [finding.asset_name || finding.asset_key].filter(Boolean),
+    business_services: [finding.business_service].filter(Boolean),
+    component: finding.component_version
+      ? `${finding.component_name} ${finding.component_version}`
+      : finding.component_name,
+    cve_id: finding.cve_id,
+    expected_reduction: finding.risk_score,
+    finding_count: 1,
+    id: `${finding.cve_id}-${finding.id}`,
+    in_kev: finding.in_kev,
+    label: `${finding.cve_id} on ${finding.component_name}`,
+    max_cvss: finding.cvss_base_score,
+    max_epss: finding.epss,
+    owners: [finding.owner].filter(Boolean),
+    recommended_action: finding.recommended_action,
+    residual_after: Math.max(currentRisk - finding.risk_score, 0),
+    search_query: finding.cve_id,
+  }))
+  const first = opportunities[0]
+  const firstThreeReduction = opportunities
+    .slice(0, 3)
+    .reduce((total, opportunity) => total + (opportunity.expected_reduction ?? 0), 0)
+  const displayedReduction = opportunities.reduce(
+    (total, opportunity) => total + (opportunity.expected_reduction ?? 0),
+    0,
+  )
+  const currentIndex =
+    actionable.length > 0 ? Math.min(currentRisk / actionable.length, 100) : 0
+  const historyFactors = [1.16, 1.13, 1.1, 1.07, 1.04, 1.02, 1]
+  const history = historyFactors.map((factor, index) => {
+    const finishedAt = new Date("2025-01-02T12:00:00Z")
+    finishedAt.setUTCDate(finishedAt.getUTCDate() - (historyFactors.length - 1 - index) * 14)
+    return {
+      finished_at: finishedAt.toISOString(),
+      risk_index: Math.round(Math.min(currentIndex * factor, 100) * 10) / 10,
+      run_id: `00000000-0000-4000-8000-00000000a10${index}`,
+    }
+  })
+  return {
+    actionable_finding_count: actionable.length,
+    current_actionable_risk: currentRisk,
+    governance_debt_risk: findings
+      .filter((finding) => finding.status === "accepted")
+      .reduce((total, finding) => total + finding.risk_score, 0),
+    largest_driver: first
+      ? {
+          critical_count: first.in_kev ? 1 : 0,
+          dimension: "service",
+          finding_count: 1,
+          high_count: 0,
+          kev_count: first.in_kev ? 1 : 0,
+          label: first.business_services?.[0] ?? "Unassigned",
+          risk_score_total: first.expected_reduction,
+        }
+      : null,
+    methodology:
+      "Simulates score reduction by removing open actionable findings when their remediation opportunity is completed.",
+    residual_steps: [
+      { label: "Current", reduction: 0, risk_score: currentRisk },
+      {
+        label: "After top 1",
+        reduction: first?.expected_reduction ?? 0,
+        risk_score: Math.max(currentRisk - (first?.expected_reduction ?? 0), 0),
+      },
+      {
+        label: "After top 3",
+        reduction: firstThreeReduction,
+        risk_score: Math.max(currentRisk - firstThreeReduction, 0),
+      },
+      {
+        label: "Remaining",
+        reduction: displayedReduction,
+        risk_score: Math.max(currentRisk - displayedReduction, 0),
+      },
+    ],
+    history,
+    top_opportunities: opportunities,
+  }
 }
 
 function fulfillAssets(route: Route, assets: AssetPublic[], projectId: string) {

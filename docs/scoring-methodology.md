@@ -60,6 +60,37 @@ Asset context and waivers are governance context, not hidden scoring magic.
 These signals can change operational ordering and decision language, but the
 base CVSS/EPSS/KEV priority remains explainable.
 
+## Operational Score Composition
+
+The 0-100 operational score is additive and fully explainable. Every applied
+rule emits one reason line that is persisted in decision evidence:
+
+| Component | Points |
+| --- | --- |
+| Base priority | Critical +55, High +40, Medium +25, Low +10, Accepted +20 |
+| CISA KEV listed | +12 |
+| EPSS/CVSS signals | critical pair +8, high EPSS +5, high CVSS +5, medium tiers +2 |
+| Internet-facing asset | +8 |
+| Production environment | +4 |
+| Asset criticality | critical +7, high +4, medium +2 |
+| Spread across assets | up to +5 for additional active occurrences |
+| Accepted-risk waiver | -20 active, -5 review due |
+
+The weights are deliberately balanced so that vulnerability signals alone do
+not saturate the scale: only the combination of a critical vulnerability with
+exposed, business-critical context reaches 100. This keeps asset context a
+visible differentiator instead of dead weight behind a clamp.
+
+### Per-Asset Scope
+
+Vulnerability analysis runs once per CVE, but the persisted risk score of each
+finding is computed against its own occurrence scope (exposure, environment,
+criticality of that asset). The same CVE therefore ranks differently on an
+internet-facing payment API than on an internal batch worker, while base
+signals, the spread bonus, and the recommended action stay CVE-wide. Context
+delivered out-of-band (asset-context sidecars) falls back to the CVE-wide
+aggregate per field.
+
 ## Data Quality and Gaps
 
 VPW treats missing data as uncertainty:

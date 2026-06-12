@@ -12,11 +12,11 @@ from app.domain.engine.models import (
 OPERATIONAL_SCORE_MIN = 0
 OPERATIONAL_SCORE_MAX = 100
 OPERATIONAL_BASE_SCORES = {
-    PriorityLabel.CRITICAL: 70,
-    PriorityLabel.HIGH: 50,
-    PriorityLabel.MEDIUM: 30,
+    PriorityLabel.CRITICAL: 55,
+    PriorityLabel.HIGH: 40,
+    PriorityLabel.MEDIUM: 25,
     PriorityLabel.LOW: 10,
-    PriorityLabel.ACCEPTED: 25,
+    PriorityLabel.ACCEPTED: 20,
 }
 
 
@@ -71,6 +71,84 @@ def build_operational_score(
     return clamped_score, reasons
 
 
+def build_scoped_operational_score(
+    finding: PrioritizedFinding,
+    *,
+    asset_exposure: str | None,
+    asset_environment: str | None,
+    asset_criticality: str | None,
+    policy: PriorityPolicy | None = None,
+) -> tuple[int, list[str]]:
+    """
+    Build the operational score for one occurrence scope.
+
+    Vulnerability signals (priority, KEV, EPSS, CVSS) and the spread bonus stay
+    CVE-wide, while the asset context portion reflects only the scoped asset so
+    the same CVE can rank differently across assets.
+    """
+    priority_state = determine_priority_state(finding)
+    if terminal_score := _terminal_vex_operational_score(priority_state):
+        return terminal_score
+
+    active_policy = policy or PriorityPolicy()
+    score, reasons = _base_priority_adjustment(priority_state)
+
+    for points, reason in _signal_score_adjustments(finding, active_policy):
+        score += points
+        reasons.append(reason)
+
+    context_score, context_reasons = _scoped_context_adjustments(
+        asset_exposure=asset_exposure,
+        asset_environment=asset_environment,
+        asset_criticality=asset_criticality,
+    )
+    score += context_score
+    reasons.extend(context_reasons)
+
+    occurrence_points, occurrence_reason = _occurrence_adjustment(finding)
+    if occurrence_reason is not None:
+        score += occurrence_points
+        reasons.append(occurrence_reason)
+
+    accepted_points, accepted_reason = _accepted_risk_adjustment(finding, priority_state)
+    if accepted_reason is not None:
+        score += accepted_points
+        reasons.append(accepted_reason)
+
+    clamped_score = clamp_operational_score(score)
+    if clamped_score != score:
+        reasons.append(f"clamped to {clamped_score}")
+    return clamped_score, reasons
+
+
+def _scoped_context_adjustments(
+    *,
+    asset_exposure: str | None,
+    asset_environment: str | None,
+    asset_criticality: str | None,
+) -> tuple[int, list[str]]:
+    """Asset context adjustments for one explicit occurrence scope."""
+    score = 0
+    reasons: list[str] = []
+    if (asset_exposure or "").lower() == "internet-facing":
+        score += 8
+        reasons.append("internet-facing asset context: +8")
+    if (asset_environment or "").lower() in {"prod", "production"}:
+        score += 4
+        reasons.append("production asset context: +4")
+    criticality_points = {
+        "critical": 7,
+        "high": 4,
+        "medium": 2,
+    }.get((asset_criticality or "").lower(), 0)
+    if criticality_points:
+        score += criticality_points
+        reasons.append(f"{asset_criticality} asset criticality: +{criticality_points}")
+    if not (asset_exposure or asset_environment or asset_criticality):
+        reasons.append("asset context unknown: +0, not treated as safe")
+    return score, reasons
+
+
 def clamp_operational_score(score: int) -> int:
     """Clamp operational score function."""
     return max(OPERATIONAL_SCORE_MIN, min(OPERATIONAL_SCORE_MAX, score))
@@ -103,7 +181,7 @@ def _signal_score_adjustments(
     """Signal score adjustments function."""
     adjustments: list[tuple[int, str]] = []
     if finding.in_kev:
-        adjustments.append((15, "CISA KEV-listed: +15"))
+        adjustments.append((12, "CISA KEV-listed: +12"))
     if epss_adjustment := _epss_score_adjustment(finding, policy):
         adjustments.append(epss_adjustment)
     if cvss_adjustment := _cvss_score_adjustment(finding, policy):
@@ -156,8 +234,8 @@ def _asset_context_adjustments(finding: PrioritizedFinding) -> tuple[int, list[s
         score += 8
         reasons.append("internet-facing asset context: +8")
     if _is_production(finding.provenance):
-        score += 5
-        reasons.append("production asset context: +5")
+        score += 4
+        reasons.append("production asset context: +4")
 
     criticality_points = _asset_criticality_points(finding)
     if criticality_points:

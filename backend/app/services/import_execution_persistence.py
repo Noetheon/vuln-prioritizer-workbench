@@ -53,6 +53,7 @@ from app.services.import_execution_persistence_payloads import (
     _jsonable_model,
     _occurrence_scope_payload,
     _priority_state_for_occurrence,
+    _scoped_operational_score_for_occurrence,
     _suppressed_by_vex_for_occurrence,
 )
 from app.services.import_execution_persistence_queries import (
@@ -125,10 +126,12 @@ def _persist_workbench_occurrences(
         for index, occurrence in enumerate(occurrences, start=1):
             decision = _decision_for_occurrence(analysis_result, occurrence)
             occurrence_scope = _occurrence_scope_payload(occurrence)
+            scoped_score = _scoped_operational_score_for_occurrence(decision, occurrence)
             decision_payload = _decision_payload_for_occurrence(
                 decision,
                 occurrence,
                 occurrence_scope=occurrence_scope,
+                scoped_score=scoped_score,
             )
             data_quality_payload = data_quality_by_cve.get(occurrence.cve_id)
             if data_quality_payload is None:
@@ -205,6 +208,7 @@ def _persist_workbench_occurrences(
                     occurrence,
                     priority_state=decision_payload.get("priority_state"),
                     occurrence_scope=occurrence_scope,
+                    operational_score=scoped_score[0],
                 ),
                 "dedup": {
                     "key": dedup_key,
@@ -283,7 +287,7 @@ def _persist_workbench_occurrences(
                     status=finding.status.value,
                     priority=_decision_priority(decision).value,
                     priority_rank=decision.priority_rank,
-                    risk_score=float(decision.operational_score),
+                    risk_score=float(scoped_score[0]),
                     operational_rank=decision.operational_rank or index,
                     in_kev=decision.in_kev,
                     epss=decision.epss,

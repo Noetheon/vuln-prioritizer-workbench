@@ -21,6 +21,7 @@ from app.domain.engine.models import (
 from app.domain.engine.scoring import (
     build_operational_score,
     build_priority_drivers,
+    build_scoped_operational_score,
     clamp_operational_score,
     determine_cvss_only_priority,
     determine_priority,
@@ -195,8 +196,8 @@ def test_operational_score_is_explainable_and_clamped() -> None:
     score, reasons = build_operational_score(finding)
 
     assert score == 100
-    assert "base Critical priority: +70" in reasons
-    assert "CISA KEV-listed: +15" in reasons
+    assert "base Critical priority: +55" in reasons
+    assert "CISA KEV-listed: +12" in reasons
     assert "internet-facing asset context: +8" in reasons
     assert "clamped to 100" in reasons
 
@@ -258,9 +259,9 @@ def test_asset_context_modifiers_cover_score_rank_and_explanation() -> None:
 
     assert [finding.cve_id for finding in ordered] == ["CVE-2024-0101", "CVE-2024-0102"]
     assert enriched.priority_label == "High"
-    assert enriched.operational_score == 72
+    assert enriched.operational_score == 61
     assert "internet-facing asset context: +8" in enriched.operational_score_reasons
-    assert "production asset context: +5" in enriched.operational_score_reasons
+    assert "production asset context: +4" in enriched.operational_score_reasons
     assert "critical asset criticality: +7" in enriched.operational_score_reasons
     assert "business service customer-login routing context: +0" in (
         enriched.operational_score_reasons
@@ -323,7 +324,7 @@ def test_priority_explanation_has_reason_codes_sources_and_thresholds() -> None:
             "priority_state": "Critical",
             "priority_drivers": ["kev", "critical-epss-cvss", "high-epss", "high-cvss"],
             "operational_score": 100,
-            "operational_score_reasons": ["base Critical priority: +70", "clamped to 100"],
+            "operational_score_reasons": ["base Critical priority: +55", "clamped to 100"],
             "data_quality_flags": [
                 ProviderDataQualityFlag(
                     source="nvd",
@@ -458,7 +459,68 @@ def test_priority_state_maps_suppressed_fixed_and_accepted_findings() -> None:
         ["fixed VEX state clamps operational score to 0"],
     )
     assert determine_priority_state(accepted) == PriorityLabel.ACCEPTED
-    assert build_operational_score(accepted)[0] == 12
+    assert build_operational_score(accepted)[0] == 7
+
+
+def test_scoped_operational_score_differentiates_asset_context() -> None:
+    finding = _finding(
+        cve_id="CVE-2024-0002",
+        priority_label="Critical",
+        priority_rank=1,
+        cvss=10.0,
+        epss=0.95,
+        in_kev=True,
+    ).model_copy(
+        update={
+            "highest_asset_criticality": "critical",
+            "provenance": FindingProvenance(
+                occurrence_count=2,
+                active_occurrence_count=2,
+                highest_asset_exposure="internet-facing",
+            ),
+        }
+    )
+
+    exposed_score, exposed_reasons = build_scoped_operational_score(
+        finding,
+        asset_exposure="internet-facing",
+        asset_environment="production",
+        asset_criticality="critical",
+    )
+    internal_score, internal_reasons = build_scoped_operational_score(
+        finding,
+        asset_exposure="internal",
+        asset_environment="staging",
+        asset_criticality="medium",
+    )
+
+    # base 55 + KEV 12 + EPSS/CVSS 8 + CVSS 5 + spread 1 = 81 before context.
+    assert exposed_score == 100
+    assert "internet-facing asset context: +8" in exposed_reasons
+    assert internal_score == 83
+    assert "medium asset criticality: +2" in internal_reasons
+    assert "internet-facing asset context: +8" not in internal_reasons
+
+
+def test_scoped_operational_score_keeps_unknown_context_visible() -> None:
+    finding = _finding(
+        cve_id="CVE-2024-0003",
+        priority_label="Low",
+        priority_rank=4,
+        cvss=None,
+        epss=None,
+        in_kev=False,
+    )
+
+    score, reasons = build_scoped_operational_score(
+        finding,
+        asset_exposure=None,
+        asset_environment=None,
+        asset_criticality=None,
+    )
+
+    assert score == 10
+    assert "asset context unknown: +0, not treated as safe" in reasons
 
 
 def test_clamp_operational_score_bounds_values() -> None:

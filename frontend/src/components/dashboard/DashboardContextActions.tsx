@@ -1,5 +1,5 @@
 import { Link } from "@/lib/router"
-import { BellRing, DatabaseZap, Import, RefreshCw } from "lucide-react"
+import { BellRing, DatabaseZap, Import, RefreshCw, RotateCcw } from "lucide-react"
 import type { ProviderStatusPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
@@ -32,6 +32,8 @@ export function DashboardContextActions({
   selectedProjectId,
 }: DashboardContextActionsProps) {
   const projectSearch = selectedProjectRouteSearch(selectedProjectId)
+  const canLoadDemoWorkspace =
+    demoWorkspaceEnabled && !isManagedDemoWorkspace && selectedProjectId !== ""
 
   return (
     <div className="dashboard-context-actions flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -71,24 +73,28 @@ export function DashboardContextActions({
             Generate evidence
           </Link>
         </Button>
-        {demoWorkspaceEnabled ? (
+        {isManagedDemoWorkspace ? (
           <Button
             className="w-full justify-center sm:w-auto"
             disabled={demoWorkspacePending}
-            onClick={
-              isManagedDemoWorkspace
-                ? onResetDemoWorkspace
-                : onLoadDemoWorkspace
-            }
+            onClick={onResetDemoWorkspace}
+            type="button"
+            variant="outline"
+          >
+            <RotateCcw aria-hidden="true" data-icon="inline-start" />
+            {demoWorkspacePending ? "Preparing demo" : "Reset demo"}
+          </Button>
+        ) : null}
+        {canLoadDemoWorkspace ? (
+          <Button
+            className="w-full justify-center sm:w-auto"
+            disabled={demoWorkspacePending}
+            onClick={onLoadDemoWorkspace}
             type="button"
             variant="outline"
           >
             <DatabaseZap aria-hidden="true" data-icon="inline-start" />
-            {demoWorkspacePending
-              ? "Preparing demo"
-              : isManagedDemoWorkspace
-                ? "Reset demo"
-                : "Load demo workspace"}
+            {demoWorkspacePending ? "Preparing demo" : "Load demo workspace"}
           </Button>
         ) : null}
         <Button
