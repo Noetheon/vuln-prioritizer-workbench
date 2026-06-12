@@ -166,8 +166,8 @@ export function findingHistoryRows(
 }
 
 function formatSourceRecordRef(value: string | null | undefined) {
-  if (!value) {
-    return value ?? null
+  if (value === null || value === undefined || value.trim() === "") {
+    return null
   }
   const rowMatch = value.match(/^row:(\d+)$/i)
   if (rowMatch) {
