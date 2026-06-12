@@ -17,6 +17,7 @@ OPERATIONAL_BASE_SCORES = _operational.OPERATIONAL_BASE_SCORES
 OPERATIONAL_SCORE_MAX = _operational.OPERATIONAL_SCORE_MAX
 OPERATIONAL_SCORE_MIN = _operational.OPERATIONAL_SCORE_MIN
 build_operational_score = _operational.build_operational_score
+build_scoped_operational_score = _operational.build_scoped_operational_score
 clamp_operational_score = _operational.clamp_operational_score
 determine_priority_state = _operational.determine_priority_state
 build_comparison_reason = _rationale.build_comparison_reason

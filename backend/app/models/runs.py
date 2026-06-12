@@ -62,6 +62,7 @@ class AnalysisRunBase(SQLModel):
         sa_column=Column(DateTime(timezone=True), nullable=True),
     )
     error_message: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    risk_index: float | None = Field(default=None, ge=0.0, le=100.0)
 
 
 class AnalysisRun(AnalysisRunBase, table=True):

@@ -1,64 +1,11 @@
 import { Link } from "@/lib/router"
-import { DatabaseZap, Import, RotateCcw, ShieldCheck } from "lucide-react"
+import { DatabaseZap, Import, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { VpwStatusBanner, VpwSurface } from "@/components/vpw"
+import { VpwSurface } from "@/components/vpw"
 
 type DemoWorkspaceActionProps = {
   demoWorkspacePending: boolean
   onLoadDemoWorkspace: () => void
-}
-
-type DashboardDemoBannerProps = DemoWorkspaceActionProps & {
-  demoWorkspaceEnabled: boolean
-  isManagedDemoWorkspace: boolean
-  onResetDemoWorkspace: () => void
-}
-
-export function DashboardDemoBanner({
-  demoWorkspaceEnabled,
-  demoWorkspacePending,
-  isManagedDemoWorkspace,
-  onLoadDemoWorkspace,
-  onResetDemoWorkspace,
-}: DashboardDemoBannerProps) {
-  return (
-    <VpwStatusBanner
-      action={
-        demoWorkspaceEnabled ? (
-          <Button
-            disabled={demoWorkspacePending}
-            onClick={
-              isManagedDemoWorkspace
-                ? onResetDemoWorkspace
-                : onLoadDemoWorkspace
-            }
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            {isManagedDemoWorkspace ? (
-              <RotateCcw aria-hidden="true" className="size-4" />
-            ) : (
-              <DatabaseZap aria-hidden="true" className="size-4" />
-            )}
-            {demoWorkspacePending
-              ? "Preparing demo"
-              : isManagedDemoWorkspace
-                ? "Reset demo workspace"
-                : "Load demo workspace"}
-          </Button>
-        ) : null
-      }
-      title="Demo workspace"
-      tone="warning"
-    >
-      <p>
-        {isManagedDemoWorkspace
-          ? "Persisted local demo data from a fictional online shop. Reset it any time to return to the canonical walkthrough state."
-          : "Load the backend demo workspace to explore persisted routes, reports, downloads, and waivers."}
-      </p>
-    </VpwStatusBanner>
-  )
 }
 
 type DashboardSetupEmptyStateProps = DemoWorkspaceActionProps & {

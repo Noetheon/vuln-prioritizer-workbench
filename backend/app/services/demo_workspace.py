@@ -19,6 +19,7 @@ from app.models import (
     Asset,
     Finding,
     FindingDecisionEvidence,
+    FindingOccurrence,
     Project,
     Report,
     Waiver,
@@ -26,9 +27,11 @@ from app.models import (
     WorkflowRun,
 )
 from app.models.base import get_datetime_utc
+from app.models.enums import FindingStatus
 from app.repositories import RunRepository, WaiverRepository
 from app.repositories.waivers import waiver_lifecycle_status
 from app.services.artifact_cleanup import cleanup_project_artifacts
+from app.services.finding_status import update_finding_workflow_status
 from app.services.import_execution import (
     ImportUploadContent,
     ProjectImportUploadRequest,
@@ -65,7 +68,7 @@ EXPECTED_REPORT_FILENAMES = frozenset(
         "evidence-bundle.zip",
     }
 )
-EXPECTED_FINDING_COUNT = 24
+EXPECTED_FINDING_COUNT = 32
 EXPECTED_ASSET_COUNT = 21
 EXPECTED_WAIVER_COUNT = 4
 EXPECTED_WAIVER_STATUS_COUNTS = {
@@ -79,6 +82,17 @@ _DATA_DIR = _REPO_ROOT / "data"
 _DEMO_OCCURRENCES_FILENAME = "demo_workspace_occurrences.csv"
 _DEMO_OPENVEX_FILENAME = "demo_workspace_openvex.json"
 _ATTACK_MAPPING_FILENAME = "local_curated_demo_mappings.yml"
+# Older scan snapshots (subsets of the canonical occurrences) seeded as
+# backdated analysis runs so the dashboard shows a deterministic risk
+# index timeline. The final import is always the canonical file at age 0.
+_DEMO_HISTORY_IMPORTS: tuple[tuple[str, int], ...] = (
+    ("demo_workspace_occurrences_history_01.csv", 77),
+    ("demo_workspace_occurrences_history_02.csv", 63),
+    ("demo_workspace_occurrences_history_03.csv", 49),
+    ("demo_workspace_occurrences_history_04.csv", 35),
+    ("demo_workspace_occurrences_history_05.csv", 21),
+    ("demo_workspace_occurrences_history_06.csv", 10),
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -199,6 +213,11 @@ async def seed_demo_workspace(
         raise RuntimeError("Demo workspace project disappeared during seed.")
 
     _create_demo_waivers(session, project_id=seeded_project.id)
+    _apply_demo_workflow_statuses(
+        session,
+        project_id=seeded_project.id,
+        local_actor=local_actor,
+    )
     _create_demo_reports(
         session=session,
         settings=settings,
@@ -277,27 +296,84 @@ async def _run_seed_imports(
 ) -> None:
     """Run seed imports function."""
     demo_data_dir = _demo_data_dir(settings)
-    await execute_project_import_upload(
-        project_id=DEMO_PROJECT_ID,
-        session=session,
-        local_actor=local_actor,
-        settings=settings,
-        upload=ProjectImportUploadRequest(
-            input_type="generic-occurrence-csv",
-            file=_upload_content(
-                demo_data_dir / "input_fixtures" / _DEMO_OCCURRENCES_FILENAME,
-                content_type="text/csv",
+    for occurrences_filename, age_days in _demo_import_plan(demo_data_dir):
+        await execute_project_import_upload(
+            project_id=DEMO_PROJECT_ID,
+            session=session,
+            local_actor=local_actor,
+            settings=settings,
+            upload=ProjectImportUploadRequest(
+                input_type="generic-occurrence-csv",
+                file=_upload_content(
+                    demo_data_dir / "input_fixtures" / occurrences_filename,
+                    content_type="text/csv",
+                ),
+                vex_file=_upload_content(
+                    demo_data_dir / "input_fixtures" / _DEMO_OPENVEX_FILENAME,
+                    content_type="application/json",
+                ),
+                provider_snapshot_file=DEMO_PROVIDER_SNAPSHOT,
+                locked_provider_data=True,
+                attack_source="local-curated",
+                attack_mapping_file=_ATTACK_MAPPING_FILENAME,
             ),
-            vex_file=_upload_content(
-                demo_data_dir / "input_fixtures" / _DEMO_OPENVEX_FILENAME,
-                content_type="application/json",
-            ),
-            provider_snapshot_file=DEMO_PROVIDER_SNAPSHOT,
-            locked_provider_data=True,
-            attack_source="local-curated",
-            attack_mapping_file=_ATTACK_MAPPING_FILENAME,
-        ),
+        )
+        if age_days > 0:
+            _backdate_latest_demo_run(session, age_days=age_days)
+
+
+def _demo_import_plan(demo_data_dir: Path) -> tuple[tuple[str, int], ...]:
+    """Return seed imports oldest-first, ending with the canonical snapshot."""
+    fixtures_dir = demo_data_dir / "input_fixtures"
+    history = tuple(
+        (filename, age_days)
+        for filename, age_days in _DEMO_HISTORY_IMPORTS
+        if (fixtures_dir / filename).is_file()
     )
+    return (*history, (_DEMO_OCCURRENCES_FILENAME, 0))
+
+
+def _backdate_latest_demo_run(session: Session, *, age_days: int) -> None:
+    """Shift the freshly imported demo run into the past for the timeline."""
+    run = RunRepository(session).get_latest_analysis_run(DEMO_PROJECT_ID)
+    if run is None:
+        return
+    backdated_finish = get_datetime_utc() - timedelta(days=age_days)
+    duration = (
+        run.finished_at - run.started_at if run.finished_at is not None else timedelta(seconds=30)
+    )
+    run.finished_at = backdated_finish
+    run.started_at = backdated_finish - duration
+    session.add(run)
+    # Backdate the run's evidence rows as well so "latest evidence" stays
+    # deterministic even when the workbench clock is frozen for demos.
+    for evidence in session.exec(
+        select(AnalysisEvidence).where(AnalysisEvidence.analysis_run_id == run.id)
+    ):
+        evidence.created_at = backdated_finish
+        session.add(evidence)
+    for finding_evidence in session.exec(
+        select(FindingDecisionEvidence).where(FindingDecisionEvidence.analysis_run_id == run.id)
+    ):
+        finding_evidence.created_at = backdated_finish
+        finding_evidence.updated_at = backdated_finish
+        session.add(finding_evidence)
+    # Keep finding lifecycle timestamps consistent with the backdated run so
+    # the history tab tells the same story as the risk index timeline.
+    finding_ids = session.exec(
+        select(FindingOccurrence.finding_id).where(FindingOccurrence.analysis_run_id == run.id)
+    ).all()
+    if finding_ids:
+        for finding in session.exec(
+            select(Finding).where(col(Finding.id).in_(list(set(finding_ids))))
+        ):
+            existing_first_seen = finding.first_seen_at
+            if existing_first_seen is not None and existing_first_seen.tzinfo is None:
+                existing_first_seen = existing_first_seen.replace(tzinfo=backdated_finish.tzinfo)
+            if existing_first_seen is None or existing_first_seen > backdated_finish:
+                finding.first_seen_at = backdated_finish
+                session.add(finding)
+    session.commit()
 
 
 def _demo_data_dir(settings: Settings) -> Path:
@@ -315,6 +391,40 @@ def _demo_data_dir(settings: Settings) -> Path:
         ).is_file():
             return candidate
     return _DATA_DIR
+
+
+# Findings shown mid-workflow so the demo exercises every analyst status.
+_DEMO_WORKFLOW_STATUSES: tuple[tuple[str, str, FindingStatus], ...] = (
+    ("CVE-2016-1000027", "order-api-01", FindingStatus.REMEDIATING),
+    ("CVE-2024-5806", "vendor-portal-01", FindingStatus.IN_REVIEW),
+)
+
+
+def _apply_demo_workflow_statuses(
+    session: Session,
+    *,
+    project_id: uuid.UUID,
+    local_actor: LocalWorkbenchActor,
+) -> None:
+    """Move a couple of seeded findings into analyst workflow states."""
+    for cve_id, asset_key, status in _DEMO_WORKFLOW_STATUSES:
+        finding = session.exec(
+            select(Finding)
+            .join(Asset, col(Finding.asset_id) == col(Asset.id))
+            .where(
+                Finding.project_id == project_id,
+                Finding.cve_id == cve_id,
+                Asset.asset_key == asset_key,
+            )
+        ).first()
+        if finding is None or finding.status == status:
+            continue
+        update_finding_workflow_status(
+            session,
+            finding=finding,
+            status=status,
+            local_actor=local_actor,
+        )
 
 
 def _create_demo_waivers(session: Session, *, project_id: uuid.UUID) -> None:

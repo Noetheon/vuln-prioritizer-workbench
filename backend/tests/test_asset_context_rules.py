@@ -306,9 +306,9 @@ def test_asset_context_application_recomputes_operational_score(
     scored = PrioritizationService().assign_operational_ranks([finding])[0]
 
     assert scored.priority_label == "High"
-    assert scored.operational_score == 72
+    assert scored.operational_score == 61
     assert "internet-facing asset context: +8" in scored.operational_score_reasons
-    assert "production asset context: +5" in scored.operational_score_reasons
+    assert "production asset context: +4" in scored.operational_score_reasons
     assert "critical asset criticality: +7" in scored.operational_score_reasons
     assert "business service checkout routing context: +0" in scored.operational_score_reasons
     assert "owner platform-team routing context: +0" in scored.operational_score_reasons

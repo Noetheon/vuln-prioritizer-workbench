@@ -5,9 +5,7 @@ import { useState } from "react"
 import { WorkbenchService } from "../../api-client"
 import { RiskOperationsDashboard } from "../../components/dashboard/RiskOperationsDashboard"
 import { apiErrorMessage } from "../../lib/app-errors"
-import { epssBucketChartData } from "../../lib/chart-data"
 import { useWorkbenchContext } from "../WorkbenchContext"
-import { governanceServiceRows } from "../route-utils"
 import { useWorkbenchDemoWorkspaceQuery } from "../useWorkbenchRuntimeQueries"
 import {
   dashboardSignalCountsFromApi,
@@ -46,11 +44,9 @@ function DashboardRouteContainer() {
   })
   const projectDashboard = projectDashboardQuery.data ?? null
   const projectSummary = projectDashboard?.summary ?? null
-  const projectGovernanceRollups = projectDashboard?.governance ?? null
-  const projectRuns = projectDashboard?.runs.data ?? []
+  const riskReduction = projectDashboard?.risk_reduction ?? null
   const dashboardFindings =
     projectDashboard?.findings.remediation_queue.data ?? []
-  const topServiceRows = governanceServiceRows(projectGovernanceRollups)
   const dashboardSignalCounts = projectDashboard
     ? dashboardSignalCountsFromApi(projectDashboard.findings.signal_counts)
     : emptyDashboardSignalCounts
@@ -99,7 +95,6 @@ function DashboardRouteContainer() {
       demoWorkspaceEnabled={demoWorkspaceEnabled}
       demoWorkspaceError={demoWorkspaceActionError}
       demoWorkspacePending={demoWorkspaceMutation.isPending}
-      epssBuckets={epssBucketChartData(dashboardSignalCounts.epssBuckets)}
       findings={dashboardFindings}
       findingsError=""
       findingsLoading={
@@ -115,12 +110,12 @@ function DashboardRouteContainer() {
       onRefresh={refreshDashboard}
       onResetDemoWorkspace={() => void activateDemoWorkspace(true)}
       projectListLoading={projectListLoading}
-      projectRuns={projectRuns}
       projectSummary={projectSummary}
       projects={projects}
       providerStatus={providerStatus}
       providerStatusError={providerStatusError || statusError}
       providerStatusLoading={providerStatusLoading}
+      riskReduction={riskReduction}
       runsLoading={
         projectDashboardQuery.isLoading || projectDashboardQuery.isFetching
       }
@@ -134,8 +129,6 @@ function DashboardRouteContainer() {
       summaryLoading={
         projectDashboardQuery.isLoading || projectDashboardQuery.isFetching
       }
-      topServiceRows={topServiceRows.rows}
-      topServiceSource={topServiceRows.source}
     />
   )
 }

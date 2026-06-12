@@ -15,6 +15,8 @@ import {
 import {
   compactFindingText,
   findingComponentDetailLabel,
+  findingGovernanceActionNote,
+  findingGovernanceStatus,
   findingHeroSummary,
   findingRecommendedAction,
   findingRecommendedActionParts,
@@ -32,15 +34,17 @@ export function FindingDetailContext({
 }: FindingDetailContextProps) {
   const recommendedAction = findingRecommendedAction(finding, explanation)
   const action = findingRecommendedActionParts(recommendedAction)
+  const governanceStatus = findingGovernanceStatus(finding)
+  const governanceNote = findingGovernanceActionNote(finding)
   const recommendationSummary = compactFindingText(
     `${action.title}. Validate affected assets, then record the fix path in Triage.`,
     150,
   )
   const riskMetrics: MetricStripMetric[] = [
     {
-      description: "Operational priority",
+      description: governanceStatus ? "Residual signal score" : "Operational priority",
       label: "Risk score",
-      tone: "critical",
+      tone: governanceStatus ? "info" : "critical",
       value: formatNullableNumber(finding.risk_score),
     },
     {
@@ -56,10 +60,10 @@ export function FindingDetailContext({
       value: formatNullableNumber(finding.cvss_base_score),
     },
     {
-      description: "Response target",
+      description: governanceStatus ? "Governance state" : "Response target",
       label: "SLA",
       tone: "success",
-      value: findingSlaLabel(finding.priority),
+      value: findingSlaLabel(finding.priority, finding.status),
     },
   ]
 
@@ -70,13 +74,6 @@ export function FindingDetailContext({
           <RiskBadge level={finding.priority} />
           <StatusLozenge status={finding.status} />
           {finding.in_kev ? <SignalChip kind="kev" /> : null}
-          {finding.epss !== null && finding.epss !== undefined ? (
-            <SignalChip kind="epss" value={finding.epss} />
-          ) : null}
-          {finding.cvss_base_score !== null &&
-          finding.cvss_base_score !== undefined ? (
-            <SignalChip kind="cvss" value={finding.cvss_base_score} />
-          ) : null}
         </div>
       }
       aria-label="Finding decision summary"
@@ -91,12 +88,21 @@ export function FindingDetailContext({
       }
       eyebrow="Triage decision"
       note={
-        <>
-          <span className="font-semibold text-[var(--vpw-text-primary)]">
-            Recommended action:{" "}
-          </span>
-          <span title={recommendedAction}>{recommendationSummary}</span>
-        </>
+        governanceNote ? (
+          <>
+            <span className="font-semibold text-[var(--vpw-text-primary)]">
+              Governance state:{" "}
+            </span>
+            <span>{governanceNote}</span>
+          </>
+        ) : (
+          <>
+            <span className="font-semibold text-[var(--vpw-text-primary)]">
+              Recommended action:{" "}
+            </span>
+            <span title={recommendedAction}>{recommendationSummary}</span>
+          </>
+        )
       }
       role="region"
       title={<span className="font-mono">{finding.cve_id}</span>}

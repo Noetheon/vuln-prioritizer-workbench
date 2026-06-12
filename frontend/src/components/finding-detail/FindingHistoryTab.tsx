@@ -13,8 +13,7 @@ export function FindingHistoryTab({ historyRows }: FindingHistoryTabProps) {
         <span>History</span>
         <h3>Lifecycle and evidence timeline</h3>
         <p>
-          First seen, last seen, status, VEX or waiver state, evidence refresh,
-          and provider snapshot changes for this finding.
+          First seen, last seen, current status, and the VEX or waiver state recorded for this finding.
         </p>
       </div>
       <section

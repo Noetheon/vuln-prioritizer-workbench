@@ -1927,6 +1927,15 @@ export type FindingPublic = {
 export type FindingStatus = 'open' | 'in_review' | 'remediating' | 'fixed' | 'accepted' | 'suppressed';
 
 /**
+ * FindingStatusUpdateRequest
+ *
+ * Manual workflow status change for one finding.
+ */
+export type FindingStatusUpdateRequest = {
+    status: FindingStatus;
+};
+
+/**
  * FindingsPublic
  *
  * Paginated finding collection response.
@@ -3081,6 +3090,7 @@ export type ProjectDashboardPublic = {
      * Project Id
      */
     project_id: string;
+    risk_reduction?: ProjectRiskReductionPublic;
     runs: AnalysisRunsPublic;
     summary: ProjectDecisionSummaryPublic;
 };
@@ -3211,6 +3221,43 @@ export type ProjectPublic = {
      * Updated At
      */
     updated_at: string;
+};
+
+/**
+ * ProjectRiskReductionPublic
+ *
+ * Risk-reduction opportunities for the project dashboard.
+ */
+export type ProjectRiskReductionPublic = {
+    /**
+     * Actionable Finding Count
+     */
+    actionable_finding_count?: number;
+    /**
+     * Current Actionable Risk
+     */
+    current_actionable_risk?: number;
+    /**
+     * Governance Debt Risk
+     */
+    governance_debt_risk?: number;
+    /**
+     * History
+     */
+    history?: Array<RiskIndexHistoryPointPublic>;
+    largest_driver?: RiskContributionPublic | null;
+    /**
+     * Methodology
+     */
+    methodology?: string;
+    /**
+     * Residual Steps
+     */
+    residual_steps?: Array<ResidualRiskStepPublic>;
+    /**
+     * Top Opportunities
+     */
+    top_opportunities?: Array<RiskReductionOpportunityPublic>;
 };
 
 /**
@@ -3777,6 +3824,150 @@ export type ReportsPublic = {
      * Data
      */
     data: Array<ReportPublic>;
+};
+
+/**
+ * ResidualRiskStepPublic
+ *
+ * One step in the dashboard residual-risk ladder.
+ */
+export type ResidualRiskStepPublic = {
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Reduction
+     */
+    reduction?: number;
+    /**
+     * Risk Score
+     */
+    risk_score?: number;
+};
+
+/**
+ * RiskContributionPublic
+ *
+ * Largest visible contributor to current project risk.
+ */
+export type RiskContributionPublic = {
+    /**
+     * Critical Count
+     */
+    critical_count?: number;
+    /**
+     * Dimension
+     */
+    dimension: string;
+    /**
+     * Finding Count
+     */
+    finding_count?: number;
+    /**
+     * High Count
+     */
+    high_count?: number;
+    /**
+     * Kev Count
+     */
+    kev_count?: number;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Risk Score Total
+     */
+    risk_score_total?: number;
+};
+
+/**
+ * RiskIndexHistoryPointPublic
+ *
+ * Persisted risk index of one completed analysis run.
+ */
+export type RiskIndexHistoryPointPublic = {
+    /**
+     * Finished At
+     */
+    finished_at: string;
+    /**
+     * Risk Index
+     */
+    risk_index?: number;
+    /**
+     * Run Id
+     */
+    run_id: string;
+};
+
+/**
+ * RiskReductionOpportunityPublic
+ *
+ * Actionable remediation group with its expected score reduction.
+ */
+export type RiskReductionOpportunityPublic = {
+    /**
+     * Affected Assets
+     */
+    affected_assets?: Array<string>;
+    /**
+     * Business Services
+     */
+    business_services?: Array<string>;
+    /**
+     * Component
+     */
+    component?: string | null;
+    /**
+     * Cve Id
+     */
+    cve_id: string;
+    /**
+     * Expected Reduction
+     */
+    expected_reduction?: number;
+    /**
+     * Finding Count
+     */
+    finding_count?: number;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * In Kev
+     */
+    in_kev?: boolean;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Max Cvss
+     */
+    max_cvss?: number | null;
+    /**
+     * Max Epss
+     */
+    max_epss?: number | null;
+    /**
+     * Owners
+     */
+    owners?: Array<string>;
+    /**
+     * Recommended Action
+     */
+    recommended_action: string;
+    /**
+     * Residual After
+     */
+    residual_after?: number;
+    /**
+     * Search Query
+     */
+    search_query: string;
 };
 
 /**
@@ -4725,6 +4916,36 @@ export type GetApiV1FindingsByFindingIdExplainResponses = {
 };
 
 export type GetApiV1FindingsByFindingIdExplainResponse = GetApiV1FindingsByFindingIdExplainResponses[keyof GetApiV1FindingsByFindingIdExplainResponses];
+
+export type PatchApiV1FindingsByFindingIdStatusData = {
+    body: FindingStatusUpdateRequest;
+    path: {
+        /**
+         * Finding Id
+         */
+        finding_id: string;
+    };
+    query?: never;
+    url: '/api/v1/findings/{finding_id}/status';
+};
+
+export type PatchApiV1FindingsByFindingIdStatusErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type PatchApiV1FindingsByFindingIdStatusError = PatchApiV1FindingsByFindingIdStatusErrors[keyof PatchApiV1FindingsByFindingIdStatusErrors];
+
+export type PatchApiV1FindingsByFindingIdStatusResponses = {
+    /**
+     * Successful Response
+     */
+    200: FindingDetailPublic;
+};
+
+export type PatchApiV1FindingsByFindingIdStatusResponse = PatchApiV1FindingsByFindingIdStatusResponses[keyof PatchApiV1FindingsByFindingIdStatusResponses];
 
 export type GetApiV1ProjectsData = {
     body?: never;

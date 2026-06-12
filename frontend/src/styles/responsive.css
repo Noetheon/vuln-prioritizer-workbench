@@ -22,7 +22,6 @@
   .finding-evidence-grid {
     grid-template-columns: repeat(5, minmax(140px, 1fr));
   }
-
 }
 
 @media (max-width: 1280px) {
@@ -60,7 +59,6 @@
 @media (max-width: 960px) {
   .dashboard-chart-grid,
   .dashboard-cockpit-grid,
-  .dashboard-signal-layout,
   .finding-decision-fact-grid,
   .finding-decision-reasons,
   .finding-evidence-detail-grid,

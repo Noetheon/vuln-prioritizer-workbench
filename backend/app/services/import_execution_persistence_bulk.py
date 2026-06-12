@@ -46,6 +46,7 @@ from app.services.import_execution_persistence_payloads import (
     _decision_published,
     _finding_status_for_occurrence,
     _occurrence_scope_payload,
+    _scoped_operational_score_for_occurrence,
     _suppressed_by_vex_for_occurrence,
 )
 from app.services.import_execution_persistence_queries import (
@@ -191,12 +192,14 @@ def _persist_workbench_occurrences_bulk_insert(
             compact_payload = _compact_decision_payload(decision)
             compact_payload_by_cve[occurrence.cve_id] = compact_payload
         occurrence_scope = _occurrence_scope_payload(occurrence)
+        scoped_score = _scoped_operational_score_for_occurrence(decision, occurrence)
         decision_payload = _decision_payload_for_occurrence(
             decision,
             occurrence,
             compact=True,
             base_payload=compact_payload,
             occurrence_scope=occurrence_scope,
+            scoped_score=scoped_score,
         )
         data_quality_payload = data_quality_by_cve.get(occurrence.cve_id)
         if data_quality_payload is None:
@@ -216,6 +219,7 @@ def _persist_workbench_occurrences_bulk_insert(
                 occurrence,
                 priority_state=decision_payload.get("priority_state"),
                 occurrence_scope=occurrence_scope,
+                operational_score=scoped_score[0],
             ),
             "dedup": {
                 "key": dedup_key,
@@ -280,7 +284,7 @@ def _persist_workbench_occurrences_bulk_insert(
             status=_finding_status_for_occurrence(decision, occurrence).value,
             priority=_decision_priority(decision).value,
             priority_rank=decision.priority_rank,
-            risk_score=float(decision.operational_score),
+            risk_score=float(scoped_score[0]),
             operational_rank=decision.operational_rank or index,
             in_kev=decision.in_kev,
             epss=decision.epss,

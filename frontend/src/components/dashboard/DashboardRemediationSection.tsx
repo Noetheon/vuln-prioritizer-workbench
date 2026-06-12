@@ -44,9 +44,9 @@ export function DashboardRemediationSection({
       <VpwSurfaceHeader>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <VpwSurfaceTitle>Top Remediation Queue</VpwSurfaceTitle>
+            <VpwSurfaceTitle>Remediation queue</VpwSurfaceTitle>
             <VpwSurfaceDescription>
-              Prioritized items ranked by risk score for immediate action.
+              Ranked by risk score; each row maps back to the risk reducers above.
             </VpwSurfaceDescription>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[30rem] sm:flex-row sm:items-center sm:justify-end">
