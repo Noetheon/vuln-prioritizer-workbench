@@ -37,6 +37,7 @@ echo "playwright-image=${playwright_image}"
 docker run --rm \
   --ipc=host \
   --shm-size=2g \
+  -e ALLOW_EMULATED_PLAYWRIGHT="${ALLOW_EMULATED_PLAYWRIGHT:-}" \
   -e HOST_ARCH="${host_arch}" \
   -e HOST_GID="$(id -g)" \
   -e HOST_UID="$(id -u)" \
