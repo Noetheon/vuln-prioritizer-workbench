@@ -156,7 +156,7 @@ function firstCompactSentence(value: string, maxLength = 190) {
     }
     compact = candidate
   }
-  return `${compact || firstSentence.slice(0, maxLength - 3).trimEnd()}...`
+  return `${(compact || firstSentence.slice(0, maxLength - 3).trimEnd()).replace(/[.,;:]+$/, "")}...`
 }
 
 export function compactFindingText(value: string, maxLength = 260) {
@@ -177,7 +177,7 @@ export function compactFindingText(value: string, maxLength = 260) {
     }
     output = next
   }
-  return `${output || candidate.slice(0, maxLength - 3).trimEnd()}...`
+  return `${(output || candidate.slice(0, maxLength - 3).trimEnd()).replace(/[.,;:]+$/, "")}...`
 }
 
 export function findingRecommendedActionParts(value: string) {
@@ -230,6 +230,17 @@ export function findingHeroSummary(
   }
   if (isProductionEnvironment(finding.asset_environment)) {
     signals.push(`${labelize(finding.asset_environment)} environment`)
+  }
+
+  const governanceStatus = findingGovernanceStatus(finding)
+  if (governanceStatus && signals.length > 0) {
+    const stateCopy =
+      governanceStatus === "suppressed"
+        ? "is suppressed by a VEX statement"
+        : governanceStatus === "accepted"
+          ? "is tracked as accepted risk under a waiver"
+          : "is confirmed fixed"
+    return `${stateCopy}; ${summaryList(signals)} stay recorded as evidence, not as an active call to action.`
   }
 
   if (signals.length > 0) {
@@ -291,7 +302,19 @@ export function findingOwnerDetailLabel(
   )
 }
 
-export function findingSlaLabel(priority: FindingPriority | undefined) {
+export function findingSlaLabel(
+  priority: FindingPriority | undefined,
+  status?: FindingDetailPublic["status"],
+) {
+  if (status === "suppressed") {
+    return "None - suppressed"
+  }
+  if (status === "accepted") {
+    return "Waiver review date"
+  }
+  if (status === "fixed") {
+    return "Resolved"
+  }
   switch (priority) {
     case "critical":
       return "24 hours"
@@ -303,6 +326,34 @@ export function findingSlaLabel(priority: FindingPriority | undefined) {
       return "90 days"
     default:
       return "Define during triage"
+  }
+}
+
+export function findingGovernanceStatus(
+  finding: FindingDetailPublic | null,
+): "accepted" | "fixed" | "suppressed" | null {
+  switch (finding?.status) {
+    case "accepted":
+    case "fixed":
+    case "suppressed":
+      return finding.status
+    default:
+      return null
+  }
+}
+
+export function findingGovernanceActionNote(
+  finding: FindingDetailPublic | null,
+) {
+  switch (findingGovernanceStatus(finding)) {
+    case "suppressed":
+      return "No remediation required while the VEX statement holds - verify the suppression scope at the next evidence review."
+    case "accepted":
+      return "Tracked as accepted risk under a recorded waiver - revisit at the waiver review date instead of remediating now."
+    case "fixed":
+      return "Confirmed fixed - keep the evidence trail for reporting; no remediation work remains."
+    default:
+      return null
   }
 }
 

@@ -52,24 +52,7 @@
 }
 
 .dashboard-context-actions {
-  border-top: 1px solid var(--vpw-border-subtle);
-  padding-top: 0.9rem;
-}
-
-.dashboard-command-grid {
-  align-items: start;
-}
-
-@media (min-width: 1280px) {
-  .dashboard-command-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(18rem, 20rem);
-  }
-}
-
-@media (min-width: 1536px) {
-  .dashboard-command-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(20rem, 22rem);
-  }
+  padding-top: 0;
 }
 
 .dashboard-chart-grid {
@@ -248,31 +231,6 @@
   white-space: nowrap;
 }
 
-.dashboard-signal-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-  align-items: stretch;
-}
-
-@media (min-width: 1536px) {
-  .dashboard-signal-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(260px, 0.42fr);
-  }
-}
-
-.dashboard-key-takeaways {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 16px;
-  min-width: 0;
-  border: 1px solid var(--dashboard-analyst-border);
-  border-radius: 8px;
-  padding: 16px;
-  background: var(--vpw-bg-card);
-}
-
 .dashboard-next-action {
   width: 100%;
   justify-content: flex-start;
@@ -315,4 +273,826 @@
 .dashboard-next-action-icon--info {
   background: var(--vpw-bg-info);
   color: var(--vpw-blue);
+}
+
+.dashboard-risk-posture {
+  --dashboard-risk-posture-critical-fill: color-mix(
+    in srgb,
+    var(--vpw-red) 12%,
+    var(--vpw-bg-card)
+  );
+  --dashboard-risk-posture-warning-fill: color-mix(
+    in srgb,
+    var(--vpw-amber) 16%,
+    var(--vpw-bg-card)
+  );
+  --dashboard-risk-posture-success-fill: color-mix(
+    in srgb,
+    var(--vpw-green) 17%,
+    var(--vpw-bg-card)
+  );
+  overflow: hidden;
+}
+
+.dashboard-risk-posture-header {
+  border-bottom: 1px solid var(--dashboard-analyst-soft-border);
+  padding-bottom: 0.7rem;
+}
+
+.dashboard-risk-posture-heading {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.dashboard-risk-posture-title {
+  font-size: 1.38rem;
+  font-weight: 850;
+  line-height: 1.1;
+}
+
+.dashboard-risk-posture-loading {
+  display: grid;
+  grid-template-columns: minmax(14.5rem, 16.25rem) minmax(32rem, 1fr) minmax(
+      20rem,
+      0.46fr
+    );
+  gap: 1rem;
+}
+
+.dashboard-risk-posture-grid {
+  display: grid;
+  grid-template-columns: minmax(14.5rem, 16.25rem) minmax(32rem, 1fr) minmax(
+      20rem,
+      0.46fr
+    );
+  gap: 0;
+  align-items: start;
+}
+
+.dashboard-risk-posture-summary,
+.dashboard-risk-posture-projection,
+.dashboard-risk-posture-reducers {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  min-height: 0;
+}
+
+.dashboard-risk-posture-summary {
+  gap: 0.74rem;
+  padding: 1.1rem 1.3rem 1.1rem 0;
+}
+
+.dashboard-risk-posture-projection,
+.dashboard-risk-posture-reducers {
+  border-left: 1px solid var(--dashboard-analyst-soft-border);
+}
+
+.dashboard-risk-posture-projection {
+  container-type: inline-size;
+}
+
+.dashboard-risk-posture-reducers {
+  min-height: 0;
+}
+
+.dashboard-risk-posture-summary-kicker,
+.dashboard-risk-posture-index-change,
+.dashboard-risk-posture-section-title {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  color: var(--vpw-text-secondary);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.dashboard-risk-posture-summary-kicker {
+  display: block;
+  color: var(--vpw-text-muted);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.28;
+  text-transform: uppercase;
+}
+
+.dashboard-risk-posture-summary-kicker svg,
+.dashboard-risk-posture-index-change svg,
+.dashboard-risk-posture-section-title svg {
+  color: var(--vpw-teal);
+}
+
+.dashboard-risk-posture-index {
+  font-size: 5.1rem;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  line-height: 0.86;
+}
+
+.dashboard-risk-posture-index--critical {
+  color: var(--vpw-red);
+}
+
+.dashboard-risk-posture-index--moderate {
+  color: var(--vpw-amber);
+}
+
+.dashboard-risk-posture-index--low {
+  color: var(--vpw-green);
+}
+
+.dashboard-risk-posture-index-change {
+  color: var(--vpw-text-muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.dashboard-risk-posture-index-change svg {
+  color: var(--vpw-green);
+}
+
+.dashboard-risk-posture-index-change-value {
+  color: var(--vpw-green);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-risk-posture-scale {
+  display: grid;
+  gap: 0.42rem;
+  margin-top: 0.45rem;
+}
+
+.dashboard-risk-posture-scale-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: 40% 30% 30%;
+  gap: 0;
+  height: 0.6rem;
+  overflow: visible;
+  border-radius: 999px;
+}
+
+.dashboard-risk-posture-scale-band {
+  min-width: 0;
+}
+
+.dashboard-risk-posture-scale-band:first-child {
+  border-radius: 999px 0 0 999px;
+}
+
+.dashboard-risk-posture-scale-band:last-of-type {
+  border-radius: 0 999px 999px 0;
+}
+
+.dashboard-risk-posture-scale-band--low {
+  background: color-mix(in srgb, var(--vpw-green) 68%, var(--vpw-bg-card));
+}
+
+.dashboard-risk-posture-scale-band--moderate {
+  background: color-mix(in srgb, var(--vpw-amber) 68%, var(--vpw-bg-card));
+}
+
+.dashboard-risk-posture-scale-band--critical {
+  background: color-mix(in srgb, var(--vpw-red) 68%, var(--vpw-bg-card));
+}
+
+.dashboard-risk-posture-scale-needle {
+  position: absolute;
+  top: -0.3rem;
+  left: var(--risk-posture-level);
+  width: 0.22rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  background: var(--vpw-text-primary);
+  box-shadow: 0 0 0 2px var(--vpw-bg-card);
+  transform: translateX(-50%);
+}
+
+.dashboard-risk-posture-scale-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--vpw-text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.dashboard-risk-posture-severity {
+  margin-top: 0.75rem;
+}
+
+.dashboard-risk-posture-severity-track {
+  display: flex;
+  gap: 0.22rem;
+  height: 0.6rem;
+}
+
+.dashboard-risk-posture-severity-segment {
+  display: block;
+  flex: 0 1 var(--risk-posture-severity-width);
+  min-width: 0.55rem;
+  border-radius: 4px;
+}
+
+.dashboard-risk-posture-severity-segment:first-child {
+  border-radius: 999px 4px 4px 999px;
+}
+
+.dashboard-risk-posture-severity-segment:last-child {
+  border-radius: 4px 999px 999px 4px;
+}
+
+.dashboard-risk-posture-severity-segment[data-empty="true"] {
+  flex: 0 0 var(--risk-posture-severity-width);
+  background: var(--dashboard-analyst-muted-fill);
+}
+
+.dashboard-risk-posture-severity-segment--critical {
+  background: color-mix(in srgb, var(--vpw-red) 72%, var(--vpw-bg-card));
+}
+
+.dashboard-risk-posture-severity-segment--high {
+  background: color-mix(in srgb, var(--vpw-chart-high) 76%, var(--vpw-bg-card));
+}
+
+.dashboard-risk-posture-severity-segment--medium {
+  background: color-mix(
+    in srgb,
+    var(--vpw-chart-medium) 76%,
+    var(--vpw-bg-card)
+  );
+}
+
+.dashboard-risk-posture-severity-segment--low {
+  background: var(--vpw-border-strong);
+}
+
+.dashboard-risk-posture-scope-line {
+  display: grid;
+  gap: 0.14rem;
+  color: var(--vpw-text-secondary);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.dashboard-risk-posture-scope-item {
+  min-width: 0;
+}
+
+.dashboard-risk-posture-scope-item
+  + .dashboard-risk-posture-scope-item {
+  color: var(--vpw-text-muted);
+}
+
+.dashboard-risk-posture-projection,
+.dashboard-risk-posture-reducers {
+  gap: 0.85rem;
+  padding: 1rem 1.1rem 1.05rem;
+}
+
+.dashboard-risk-posture-section-head {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.dashboard-risk-posture-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: flex-end;
+  color: var(--vpw-text-muted);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.dashboard-risk-posture-legend-item {
+  display: inline-flex;
+  gap: 0.28rem;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.dashboard-risk-posture-legend-item::before {
+  width: 0.72rem;
+  height: 0.42rem;
+  border-radius: 3px;
+  background: var(--dashboard-analyst-muted-fill);
+  content: "";
+}
+
+.dashboard-risk-posture-legend-item--actual::before {
+  border: 1px solid color-mix(in srgb, var(--vpw-red) 55%, transparent);
+  background: var(--vpw-bg-critical);
+}
+
+.dashboard-risk-posture-legend-item--projected::before {
+  border: 1px dashed var(--vpw-green);
+  background: var(--vpw-bg-success);
+}
+
+.dashboard-risk-posture-legend-item--target::before {
+  height: 0;
+  border-top: 1px dashed var(--vpw-green);
+  background: transparent;
+}
+
+.dashboard-risk-posture-projection-chart {
+  display: grid;
+  gap: 0;
+  align-items: start;
+  min-height: 0;
+}
+
+.dashboard-risk-posture-bar-chart {
+  display: block;
+  width: 100%;
+  height: 18.75rem;
+}
+
+.dashboard-risk-posture-chart-grid-line {
+  stroke: color-mix(in srgb, var(--vpw-chart-grid) 80%, transparent);
+  stroke-width: 1;
+}
+
+.dashboard-risk-posture-chart-axis-label {
+  fill: var(--vpw-text-muted);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: end;
+}
+
+.dashboard-risk-posture-chart-today {
+  stroke: var(--vpw-text-primary);
+  stroke-dasharray: 2 5;
+  stroke-linecap: round;
+  stroke-width: 1.6;
+}
+
+.dashboard-risk-posture-chart-today-label {
+  fill: var(--vpw-text-primary);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 12px;
+  font-weight: 850;
+  text-anchor: middle;
+}
+
+.dashboard-risk-posture-chart-target {
+  stroke: var(--vpw-green);
+  stroke-dasharray: 7 5;
+  stroke-width: 1.5;
+}
+
+.dashboard-risk-posture-chart-target-label {
+  fill: var(--vpw-green);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 12.5px;
+  font-weight: 850;
+  paint-order: stroke;
+  stroke: var(--vpw-bg-card);
+  stroke-linejoin: round;
+  stroke-width: 5px;
+  text-anchor: end;
+}
+
+.dashboard-risk-posture-bar {
+  cursor: pointer;
+  outline: none;
+}
+
+.dashboard-risk-posture-bar-hit {
+  fill: transparent;
+}
+
+.dashboard-risk-posture-bar-fill {
+  stroke: none;
+  transition:
+    fill 140ms ease,
+    opacity 140ms ease;
+}
+
+.dashboard-risk-posture-bar:focus-visible .dashboard-risk-posture-bar-fill,
+.dashboard-risk-posture-bar-fill--active {
+  opacity: 0.85;
+}
+
+.dashboard-risk-posture-grad-stop--critical,
+.dashboard-risk-posture-grad-stop--history {
+  stop-color: var(--vpw-red);
+}
+
+.dashboard-risk-posture-grad-stop--moderate {
+  stop-color: var(--vpw-amber);
+}
+
+.dashboard-risk-posture-grad-stop--low,
+.dashboard-risk-posture-grad-stop--projected,
+.dashboard-risk-posture-grad-stop--success {
+  stop-color: var(--vpw-green);
+}
+
+.dashboard-risk-posture-bar-fill--critical {
+  fill: url("#vpw-risk-posture-grad-critical");
+}
+
+.dashboard-risk-posture-bar-fill--history {
+  fill: url("#vpw-risk-posture-grad-history");
+}
+
+.dashboard-risk-posture-bar-fill--moderate {
+  fill: url("#vpw-risk-posture-grad-moderate");
+}
+
+.dashboard-risk-posture-bar-fill--low {
+  fill: url("#vpw-risk-posture-grad-low");
+}
+
+.dashboard-risk-posture-bar-fill--projected {
+  fill: url("#vpw-risk-posture-grad-projected");
+  stroke: color-mix(in srgb, var(--vpw-green) 45%, transparent);
+  stroke-dasharray: 4 4;
+  stroke-width: 1.2;
+}
+
+.dashboard-risk-posture-bar-fill--success {
+  fill: url("#vpw-risk-posture-grad-success");
+  stroke: color-mix(in srgb, var(--vpw-green) 50%, transparent);
+  stroke-dasharray: 4 4;
+  stroke-width: 1.2;
+}
+
+.dashboard-risk-posture-bar-cap--critical {
+  fill: var(--vpw-red);
+}
+
+.dashboard-risk-posture-bar-cap--history {
+  fill: color-mix(in srgb, var(--vpw-red) 72%, var(--vpw-bg-card));
+}
+
+.dashboard-risk-posture-bar-cap--moderate {
+  fill: var(--vpw-amber);
+}
+
+.dashboard-risk-posture-bar-cap--low,
+.dashboard-risk-posture-bar-cap--projected,
+.dashboard-risk-posture-bar-cap--success {
+  fill: var(--vpw-green);
+}
+
+.dashboard-risk-posture-bar-value {
+  fill: var(--vpw-text-primary);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 14.5px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: var(--vpw-bg-card);
+  stroke-linejoin: round;
+  stroke-width: 5px;
+  text-anchor: middle;
+}
+
+.dashboard-risk-posture-bar-value--muted {
+  fill: var(--vpw-text-muted);
+  font-weight: 750;
+}
+
+.dashboard-risk-posture-chart-x-label {
+  fill: var(--vpw-text-primary);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 12.5px;
+  font-weight: 850;
+  text-anchor: middle;
+  text-transform: uppercase;
+}
+
+.dashboard-risk-posture-chart-x-detail {
+  fill: var(--vpw-text-muted);
+  font-size: 11px;
+  font-weight: 750;
+  text-anchor: middle;
+}
+
+.dashboard-risk-posture-readout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.65rem;
+  align-items: center;
+  margin-top: 0.25rem;
+  border: 1px solid var(--dashboard-analyst-soft-border);
+  border-radius: var(--vpw-radius-sm);
+  padding: 0.5rem 0.7rem;
+  background: color-mix(in srgb, var(--vpw-bg-panel) 62%, transparent);
+}
+
+.dashboard-risk-posture-readout-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 5px;
+  padding: 0.22rem 0.5rem;
+  background: var(--vpw-text-primary);
+  color: var(--vpw-bg-card);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.7rem;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.dashboard-risk-posture-readout-text {
+  color: var(--vpw-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.dashboard-risk-posture-readout .dashboard-risk-posture-readout-text strong {
+  color: var(--vpw-text-primary);
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-risk-posture-readout-warn {
+  color: var(--vpw-amber);
+}
+
+.dashboard-risk-posture-reducers ol {
+  display: grid;
+  gap: 1.05rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dashboard-risk-posture-reducers-head {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.dashboard-risk-posture-reducers-head p {
+  margin: 0;
+  color: var(--vpw-text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.dashboard-risk-posture-reducer {
+  display: grid;
+  gap: 0.34rem;
+  min-width: 0;
+}
+
+.dashboard-risk-posture-reducer-main {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  gap: 0.46rem;
+  align-items: start;
+  min-width: 0;
+}
+
+.dashboard-risk-posture-reducer-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--vpw-text-primary);
+}
+
+.dashboard-risk-posture-reducer-toggle:focus-visible {
+  outline: 2px solid var(--vpw-ring);
+  outline-offset: 2px;
+}
+
+.dashboard-risk-posture-reducer-copy {
+  min-width: 0;
+}
+
+.dashboard-risk-posture-reducer-link {
+  display: inline-flex;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--vpw-text-primary);
+  font-size: 0.84rem;
+  font-weight: 850;
+  line-height: 1.22;
+}
+
+.dashboard-risk-posture-reducer-meta,
+.dashboard-risk-posture-reducer-track {
+  margin-left: 1.81rem;
+}
+
+.dashboard-risk-posture-reducer-link:hover {
+  color: var(--vpw-blue);
+}
+
+.dashboard-risk-posture-reducer-impact {
+  color: var(--vpw-red);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.9rem;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.32;
+  white-space: nowrap;
+}
+
+.dashboard-risk-posture-lever-tag {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  border-radius: 4px;
+  padding: 0.14rem 0.32rem;
+  background: var(--vpw-red);
+  color: var(--vpw-bg-card);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.58rem;
+  font-weight: 850;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dashboard-risk-posture-reducer-track {
+  display: block;
+  height: 0.26rem;
+  overflow: hidden;
+  margin-top: 0.12rem;
+  border-radius: 999px;
+  background: var(--dashboard-analyst-muted-fill);
+}
+
+.dashboard-risk-posture-reducer-track-fill {
+  display: block;
+  width: var(--risk-posture-reducer-width);
+  height: 100%;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--vpw-text-primary) 78%, transparent);
+}
+
+.dashboard-risk-posture-reducer-meta {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+  color: var(--vpw-text-muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.dashboard-risk-posture-reducer-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.32rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.dashboard-risk-posture-reducer-tag {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0.04rem 0.24rem;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.61rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.dashboard-risk-posture-reducer-context {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--vpw-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-risk-posture-reducer-tag--kev {
+  background: var(--vpw-bg-critical);
+  color: var(--vpw-red);
+}
+
+.dashboard-risk-posture-reducer-tag--epss {
+  background: var(--vpw-bg-info);
+  color: var(--vpw-blue);
+}
+
+.dashboard-risk-posture-reducer-tag--cvss {
+  border-color: var(--dashboard-analyst-border);
+  background: var(--vpw-bg-card);
+  color: var(--vpw-text-secondary);
+}
+
+@media (min-width: 1800px) {
+  .dashboard-risk-posture-grid {
+    grid-template-columns:
+      minmax(15rem, 17rem) minmax(38rem, 1fr)
+      minmax(21rem, 28rem);
+  }
+
+  .dashboard-risk-posture-summary,
+  .dashboard-risk-posture-projection,
+  .dashboard-risk-posture-reducers {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+}
+
+@media (max-width: 1180px) {
+  .dashboard-risk-posture-loading,
+  .dashboard-risk-posture-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-risk-posture-summary,
+  .dashboard-risk-posture-projection,
+  .dashboard-risk-posture-reducers {
+    min-height: 0;
+  }
+
+  .dashboard-risk-posture-summary {
+    padding-right: 0;
+  }
+
+  .dashboard-risk-posture-projection,
+  .dashboard-risk-posture-reducers {
+    border-top: 1px solid var(--dashboard-analyst-soft-border);
+    border-left: 0;
+    padding-right: 0;
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-risk-posture-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dashboard-risk-posture-legend {
+    justify-content: flex-start;
+  }
+
+  .dashboard-risk-posture-index {
+    font-size: 4rem;
+  }
+
+  .dashboard-risk-posture-projection-chart {
+    overflow-x: auto;
+  }
+
+  .dashboard-risk-posture-bar-chart {
+    min-width: 46rem;
+  }
+
+  .dashboard-risk-posture-reducer-main {
+    grid-template-columns: max-content minmax(0, 1fr);
+  }
+
+  .dashboard-risk-posture-reducer-impact {
+    grid-column: 2;
+  }
 }

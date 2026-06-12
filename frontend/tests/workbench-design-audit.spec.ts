@@ -61,7 +61,7 @@ const allAuditRoutes: AuditRoute[] = [
     path: ({ project_id }) => `/?projectId=${project_id}`,
     readyText: /Critical Priority|Priority distribution/i,
     slug: "overview",
-    stableText: "Top Remediation Queue",
+    stableText: "Remediation queue",
   },
   {
     name: "Triage",

@@ -57,8 +57,10 @@ export function findingEvidenceRows(
     },
     {
       detail: optionalText(
-        stringValue(firstOccurrence?.source_record_id) ??
-          stringValue(firstOccurrence?.raw_reference) ??
+        formatSourceRecordRef(
+          stringValue(firstOccurrence?.source_record_id) ??
+            stringValue(firstOccurrence?.raw_reference),
+        ) ??
           stringValue(firstOccurrence?.source_id),
       ),
       label: "Input source",
@@ -160,23 +162,16 @@ export function findingHistoryRows(
             ? labelize(vexStatus)
             : "Not accepted",
     },
-    {
-      detail: finding?.updated_at
-        ? "Finding evidence was refreshed from the stored Workbench record."
-        : "No evidence refresh timestamp recorded.",
-      label: "Evidence refreshed",
-      value: finding?.updated_at
-        ? formatFindingDateTime(finding.updated_at)
-        : "Not recorded",
-    },
-    {
-      detail:
-        "Provider snapshot changes are recorded through the imported evidence and explanation payload when supplied.",
-      label: "Provider snapshot changed",
-      value:
-        finding?.evidence
-          ? "Stored with finding"
-          : "Not recorded",
-    },
   ]
+}
+
+function formatSourceRecordRef(value: string | null | undefined) {
+  if (value === null || value === undefined || value.trim() === "") {
+    return null
+  }
+  const rowMatch = value.match(/^row:(\d+)$/i)
+  if (rowMatch) {
+    return `Source row ${rowMatch[1]}`
+  }
+  return value
 }

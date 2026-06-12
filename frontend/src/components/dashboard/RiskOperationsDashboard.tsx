@@ -1,48 +1,28 @@
-import { lazy, Suspense, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Callout } from "@/components/vpw"
-import {
-  epssBucketChartData,
-  findingsByPriorityChartData,
-  runActivityTrendData,
-  topServicesByRiskChartData,
-} from "@/lib/chart-data"
 import { formatProviderFreshness } from "@/lib/provider-format"
-import {
-  DashboardDemoBanner,
-  DashboardSetupEmptyState,
-} from "./DashboardEmptyState"
+import { DashboardSetupEmptyState } from "./DashboardEmptyState"
 import { DashboardContextBar } from "./DashboardContextBar"
-import { DashboardDetailRail } from "./DashboardDetailRail"
 import { DashboardMetricStrip } from "./DashboardMetricStrip"
 import { DashboardProviderWarning } from "./DashboardProviderWarning"
 import { DashboardRemediationSection } from "./DashboardRemediationSection"
-import { DashboardSignalOverviewFallback } from "./DashboardSignalOverviewFallback"
-import {
-  latestRunFacts,
-  type DashboardRunRange,
-  type QueueFilterState,
-  type RiskOperationsDashboardProps,
+import { DashboardRiskReductionPanel } from "./DashboardRiskReductionPanel"
+import type {
+  QueueFilterState,
+  RiskOperationsDashboardProps,
 } from "./dashboard-model"
 import {
   buildDashboardMetricSummaries,
-  buildDashboardSignalTakeaways,
   providerNeedsRefresh,
   rankedDashboardQueueFindings,
 } from "./dashboard-summary-model"
-
-const DashboardSignalOverview = lazy(() =>
-  import("./DashboardSignalOverview").then((module) => ({
-    default: module.DashboardSignalOverview,
-  })),
-)
 
 export function RiskOperationsDashboard({
   dashboardError,
   demoWorkspaceEnabled,
   demoWorkspaceError,
   demoWorkspacePending,
-  epssBuckets,
   findings,
   findingsError,
   findingsLoading,
@@ -54,11 +34,11 @@ export function RiskOperationsDashboard({
   onProjectChange,
   onResetDemoWorkspace,
   projectListLoading,
-  projectRuns,
   projects,
   providerStatus,
   providerStatusError,
   providerStatusLoading,
+  riskReduction,
   runsLoading,
   selectedProject,
   selectedProjectId,
@@ -66,13 +46,10 @@ export function RiskOperationsDashboard({
   signalError,
   signalLoading,
   summaryLoading,
-  topServiceRows,
-  topServiceSource,
   projectSummary,
 }: RiskOperationsDashboardProps) {
   const [filters, setFilters] = useState<QueueFilterState>({
     queueSearch: "",
-    selectedRunRange: "10",
   })
 
   const isLoading =
@@ -89,28 +66,11 @@ export function RiskOperationsDashboard({
 
   const freshness = formatProviderFreshness(providerStatus)
 
-  const priorityItems = findingsByPriorityChartData(projectSummary)
-  const serviceItems = topServicesByRiskChartData(topServiceRows)
-  const trendItems = useMemo(
-    () =>
-      runActivityTrendData(
-        projectRuns,
-        Number.parseInt(filters.selectedRunRange, 10),
-      ),
-    [projectRuns, filters.selectedRunRange],
-  )
-
-  const epssItems = useMemo(() => {
-    if (epssBuckets.length > 0) return epssBuckets
-    return epssBucketChartData(signalCounts.epssBuckets)
-  }, [epssBuckets, signalCounts.epssBuckets])
-
   const queueFindings = useMemo(
     () => rankedDashboardQueueFindings(findings, filters.queueSearch),
     [findings, filters.queueSearch],
   )
 
-  const latestRun = projectRuns[0] ?? null
   const acceptedRiskCount = projectSummary?.counts_by_status?.accepted ?? 0
   const summaryMetrics = useMemo(
     () =>
@@ -139,17 +99,6 @@ export function RiskOperationsDashboard({
     !signalError &&
     !providerStatusError
 
-  const latestRunFactsRows = latestRunFacts(projectRuns)
-  const dataQualityWarnings = providerStatus?.warnings ?? []
-  const dataQualityError = providerStatus?.last_error ?? null
-  const topServiceLabel = serviceItems[0]?.label ?? null
-  const signalTakeaways = buildDashboardSignalTakeaways({
-    acceptedRiskCount,
-    effectiveSignalCounts: signalCounts,
-    effectiveSummary: projectSummary,
-    topServiceLabel,
-  })
-
   const dashboardContent = (
     <div className="min-w-0 flex flex-col gap-4">
       <DashboardContextBar
@@ -168,16 +117,6 @@ export function RiskOperationsDashboard({
         providerStatusLoading={providerStatusLoading}
         selectedProjectId={selectedProjectId}
       />
-
-      {isManagedDemoWorkspace ? (
-        <DashboardDemoBanner
-          demoWorkspaceEnabled={demoWorkspaceEnabled}
-          demoWorkspacePending={demoWorkspacePending}
-          isManagedDemoWorkspace={isManagedDemoWorkspace}
-          onLoadDemoWorkspace={onLoadDemoWorkspace}
-          onResetDemoWorkspace={onResetDemoWorkspace}
-        />
-      ) : null}
 
       {dashboardError ||
       signalError ||
@@ -206,6 +145,12 @@ export function RiskOperationsDashboard({
         />
       ) : (
         <>
+          <DashboardRiskReductionPanel
+            isLoading={isLoading}
+            projectSummary={projectSummary}
+            riskReduction={riskReduction}
+            selectedProjectId={selectedProjectId}
+          />
           <DashboardMetricStrip
             isLoading={isLoading}
             metrics={summaryMetrics}
@@ -223,27 +168,6 @@ export function RiskOperationsDashboard({
             queueSearch={filters.queueSearch}
             selectedProjectId={selectedProjectId}
           />
-          <Suspense fallback={<DashboardSignalOverviewFallback />}>
-            <DashboardSignalOverview
-              epssItems={epssItems}
-              governanceLoading={governanceLoading}
-              keyTakeaways={signalTakeaways}
-              onRunRangeChange={(value: DashboardRunRange) =>
-                setFilters((current) => ({
-                  ...current,
-                  selectedRunRange: value,
-                }))
-              }
-              priorityItems={priorityItems}
-              runsLoading={runsLoading}
-              selectedProjectId={selectedProjectId}
-              selectedRunRange={filters.selectedRunRange}
-              serviceItems={serviceItems}
-              summaryLoading={summaryLoading}
-              topServiceSource={topServiceSource}
-              trendItems={trendItems}
-            />
-          </Suspense>
         </>
       )}
     </div>
@@ -255,28 +179,7 @@ export function RiskOperationsDashboard({
         aria-label="Risk Operations dashboard"
         className="dashboard-analyst-layout flex flex-col gap-4 pb-4"
       >
-        <div
-          className={
-            showEmptyState ? "grid gap-4" : "dashboard-command-grid grid gap-4"
-          }
-        >
-          {dashboardContent}
-          {!showEmptyState ? (
-            <DashboardDetailRail
-              dataQualityError={dataQualityError}
-              dataQualityWarnings={dataQualityWarnings}
-              effectiveProviderStatus={providerStatus}
-              effectiveRuns={projectRuns}
-              effectiveSummary={projectSummary}
-              freshness={freshness}
-              latestRun={latestRun}
-              latestRunFactsRows={latestRunFactsRows}
-              providerStatusLoading={providerStatusLoading}
-              selectedProjectId={selectedProjectId}
-              staleProvider={staleProvider}
-            />
-          ) : null}
-        </div>
+        <div className="grid gap-4">{dashboardContent}</div>
       </section>
     </TooltipProvider>
   )

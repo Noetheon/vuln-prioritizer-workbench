@@ -211,6 +211,12 @@ class FindingDetailPublic(FindingPublic):
     attack_context: FindingAttackContextDetailPublic | None = None
 
 
+class FindingStatusUpdateRequest(SQLModel):
+    """Manual workflow status change for one finding."""
+
+    status: FindingStatus
+
+
 class FindingsPublic(SQLModel):
     """Paginated finding collection response."""
 

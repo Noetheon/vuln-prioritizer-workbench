@@ -3728,6 +3728,20 @@ export const FindingStatusSchema = {
     type: 'string'
 } as const;
 
+export const FindingStatusUpdateRequestSchema = {
+    description: 'Manual workflow status change for one finding.',
+    properties: {
+        status: {
+            $ref: '#/components/schemas/FindingStatus'
+        }
+    },
+    required: [
+        'status'
+    ],
+    title: 'FindingStatusUpdateRequest',
+    type: 'object'
+} as const;
+
 export const FindingsPublicSchema = {
     description: 'Paginated finding collection response.',
     properties: {
@@ -5769,6 +5783,9 @@ export const ProjectDashboardPublicSchema = {
             title: 'Project Id',
             type: 'string'
         },
+        risk_reduction: {
+            $ref: '#/components/schemas/ProjectRiskReductionPublic'
+        },
         runs: {
             $ref: '#/components/schemas/AnalysisRunsPublic'
         },
@@ -5986,6 +6003,65 @@ export const ProjectPublicSchema = {
         'updated_at'
     ],
     title: 'ProjectPublic',
+    type: 'object'
+} as const;
+
+export const ProjectRiskReductionPublicSchema = {
+    description: 'Risk-reduction opportunities for the project dashboard.',
+    properties: {
+        actionable_finding_count: {
+            default: 0,
+            title: 'Actionable Finding Count',
+            type: 'integer'
+        },
+        current_actionable_risk: {
+            default: 0,
+            title: 'Current Actionable Risk',
+            type: 'number'
+        },
+        governance_debt_risk: {
+            default: 0,
+            title: 'Governance Debt Risk',
+            type: 'number'
+        },
+        history: {
+            items: {
+                $ref: '#/components/schemas/RiskIndexHistoryPointPublic'
+            },
+            title: 'History',
+            type: 'array'
+        },
+        largest_driver: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RiskContributionPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        methodology: {
+            default: 'Simulates score reduction by removing open actionable findings when their remediation opportunity is completed.',
+            title: 'Methodology',
+            type: 'string'
+        },
+        residual_steps: {
+            items: {
+                $ref: '#/components/schemas/ResidualRiskStepPublic'
+            },
+            title: 'Residual Steps',
+            type: 'array'
+        },
+        top_opportunities: {
+            items: {
+                $ref: '#/components/schemas/RiskReductionOpportunityPublic'
+            },
+            title: 'Top Opportunities',
+            type: 'array'
+        }
+    },
+    title: 'ProjectRiskReductionPublic',
     type: 'object'
 } as const;
 
@@ -6959,6 +7035,212 @@ export const ReportsPublicSchema = {
         'count'
     ],
     title: 'ReportsPublic',
+    type: 'object'
+} as const;
+
+export const ResidualRiskStepPublicSchema = {
+    description: 'One step in the dashboard residual-risk ladder.',
+    properties: {
+        label: {
+            title: 'Label',
+            type: 'string'
+        },
+        reduction: {
+            default: 0,
+            title: 'Reduction',
+            type: 'number'
+        },
+        risk_score: {
+            default: 0,
+            title: 'Risk Score',
+            type: 'number'
+        }
+    },
+    required: [
+        'label'
+    ],
+    title: 'ResidualRiskStepPublic',
+    type: 'object'
+} as const;
+
+export const RiskContributionPublicSchema = {
+    description: 'Largest visible contributor to current project risk.',
+    properties: {
+        critical_count: {
+            default: 0,
+            title: 'Critical Count',
+            type: 'integer'
+        },
+        dimension: {
+            title: 'Dimension',
+            type: 'string'
+        },
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
+        high_count: {
+            default: 0,
+            title: 'High Count',
+            type: 'integer'
+        },
+        kev_count: {
+            default: 0,
+            title: 'Kev Count',
+            type: 'integer'
+        },
+        label: {
+            title: 'Label',
+            type: 'string'
+        },
+        risk_score_total: {
+            default: 0,
+            title: 'Risk Score Total',
+            type: 'number'
+        }
+    },
+    required: [
+        'dimension',
+        'label'
+    ],
+    title: 'RiskContributionPublic',
+    type: 'object'
+} as const;
+
+export const RiskIndexHistoryPointPublicSchema = {
+    description: 'Persisted risk index of one completed analysis run.',
+    properties: {
+        finished_at: {
+            format: 'date-time',
+            title: 'Finished At',
+            type: 'string'
+        },
+        risk_index: {
+            default: 0,
+            title: 'Risk Index',
+            type: 'number'
+        },
+        run_id: {
+            format: 'uuid',
+            title: 'Run Id',
+            type: 'string'
+        }
+    },
+    required: [
+        'run_id',
+        'finished_at'
+    ],
+    title: 'RiskIndexHistoryPointPublic',
+    type: 'object'
+} as const;
+
+export const RiskReductionOpportunityPublicSchema = {
+    description: 'Actionable remediation group with its expected score reduction.',
+    properties: {
+        affected_assets: {
+            items: {
+                type: 'string'
+            },
+            title: 'Affected Assets',
+            type: 'array'
+        },
+        business_services: {
+            items: {
+                type: 'string'
+            },
+            title: 'Business Services',
+            type: 'array'
+        },
+        component: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component'
+        },
+        cve_id: {
+            title: 'Cve Id',
+            type: 'string'
+        },
+        expected_reduction: {
+            default: 0,
+            title: 'Expected Reduction',
+            type: 'number'
+        },
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
+        id: {
+            title: 'Id',
+            type: 'string'
+        },
+        in_kev: {
+            default: false,
+            title: 'In Kev',
+            type: 'boolean'
+        },
+        label: {
+            title: 'Label',
+            type: 'string'
+        },
+        max_cvss: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Cvss'
+        },
+        max_epss: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Epss'
+        },
+        owners: {
+            items: {
+                type: 'string'
+            },
+            title: 'Owners',
+            type: 'array'
+        },
+        recommended_action: {
+            title: 'Recommended Action',
+            type: 'string'
+        },
+        residual_after: {
+            default: 0,
+            title: 'Residual After',
+            type: 'number'
+        },
+        search_query: {
+            title: 'Search Query',
+            type: 'string'
+        }
+    },
+    required: [
+        'id',
+        'label',
+        'cve_id',
+        'recommended_action',
+        'search_query'
+    ],
+    title: 'RiskReductionOpportunityPublic',
     type: 'object'
 } as const;
 

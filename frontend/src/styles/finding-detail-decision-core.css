@@ -535,10 +535,17 @@
 }
 
 .finding-detail-action-block {
+  display: grid;
+  gap: 0.45rem;
+  align-content: start;
   border: 1px solid var(--vpw-border-subtle);
   border-radius: var(--vpw-radius-md);
   padding: 0.75rem;
   background: var(--vpw-bg-panel);
+}
+
+.finding-detail-action-block + .finding-detail-action-block {
+  margin-top: 0.7rem;
 }
 
 .finding-decision-section {

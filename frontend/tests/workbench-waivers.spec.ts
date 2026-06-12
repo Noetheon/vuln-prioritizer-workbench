@@ -239,15 +239,6 @@ test("workbench governance rollups show service risk and accepted-risk debt", as
     review_due_count: 1,
   })
 
-  await page.goto(`/?projectId=${project.id}`)
-  await page.getByRole("tab", { name: "Top Services" }).click()
-  await expect(page.getByText("Top Services by Risk")).toBeVisible()
-  await expect(page.getByText("checkout").first()).toBeVisible()
-  await page.screenshot({
-    fullPage: true,
-    path: evidenceScreenshotPath("vpw-067-top-services-by-risk.png"),
-  })
-
   await page.goto(`/waivers?projectId=${project.id}`)
   await expect(
     page.getByRole("combobox", {
@@ -258,6 +249,11 @@ test("workbench governance rollups show service risk and accepted-risk debt", as
   await expect(page.getByText("Governance overview")).toBeVisible()
   await expect(page.getByText("Review queue").first()).toBeVisible()
   await expect(page.getByText("Owner rollup").first()).toBeVisible()
+  await expect(page.getByText("checkout").first()).toBeVisible()
+  await page.screenshot({
+    fullPage: true,
+    path: evidenceScreenshotPath("vpw-067-waiver-governance-rollup.png"),
+  })
   await expect(page.getByText("Expired").first()).toBeVisible()
   await expect(page.getByText("Review due").first()).toBeVisible()
   await expect(page.getByText("checkout").first()).toBeVisible()

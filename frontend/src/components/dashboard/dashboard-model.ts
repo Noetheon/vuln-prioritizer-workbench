@@ -3,15 +3,19 @@ import type { ReactNode } from "react"
 import type {
   AnalysisRunPublic,
   FindingPublic,
-  GovernanceRollupPublic,
   ProjectDecisionSummaryPublic,
   ProjectPublic,
+  ProjectRiskReductionPublic,
   ProviderStatusPublic,
 } from "@/api-client"
-import type { ChartDatum, EpssBucketCounts } from "@/lib/chart-data"
+import type { EpssBucketCounts } from "@/lib/chart-data"
 import { runStatusLabel, runStatusTone } from "@/lib/risk-format"
 
 export { findingWhyNow } from "@/lib/finding-urgency-summary"
+export {
+  findingAssetServiceLabel,
+  findingPlannedAction,
+} from "@/lib/finding-queue-labels"
 
 export type DashboardSignalCounts = {
   highEpss: number
@@ -19,14 +23,11 @@ export type DashboardSignalCounts = {
   epssBuckets: EpssBucketCounts
 }
 
-export type DashboardRunRange = "10" | "30"
-
 export type RiskOperationsDashboardProps = {
   dashboardError?: string
   demoWorkspaceEnabled: boolean
   demoWorkspaceError: string
   demoWorkspacePending: boolean
-  epssBuckets: readonly ChartDatum[]
   findings: readonly FindingPublic[]
   findingsError: string
   findingsLoading: boolean
@@ -37,7 +38,6 @@ export type RiskOperationsDashboardProps = {
   onResetDemoWorkspace: () => void
   onProjectChange: (projectId: string) => void
   projectListLoading: boolean
-  projectRuns: readonly AnalysisRunPublic[]
   projects: readonly ProjectPublic[]
   providerStatus: ProviderStatusPublic | null
   providerStatusError: string
@@ -49,15 +49,13 @@ export type RiskOperationsDashboardProps = {
   signalError: string
   signalLoading: boolean
   summaryLoading: boolean
-  topServiceRows: readonly GovernanceRollupPublic[]
-  topServiceSource: "assets" | "services"
   projectSummary: ProjectDecisionSummaryPublic | null
+  riskReduction: ProjectRiskReductionPublic | null
   isManagedDemoWorkspace: boolean
 }
 
 export type QueueFilterState = {
   queueSearch: string
-  selectedRunRange: DashboardRunRange
 }
 
 export type DashboardMetricSummary = {

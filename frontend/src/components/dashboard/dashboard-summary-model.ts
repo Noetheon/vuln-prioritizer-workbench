@@ -113,35 +113,3 @@ export function buildDashboardMetricSummaries({
     },
   ]
 }
-
-export function buildDashboardSignalTakeaways({
-  acceptedRiskCount,
-  effectiveSignalCounts,
-  effectiveSummary,
-  topServiceLabel,
-}: {
-  acceptedRiskCount: number
-  effectiveSignalCounts: DashboardSignalCounts
-  effectiveSummary: ProjectDecisionSummaryPublic | null
-  topServiceLabel: string | null
-}) {
-  const criticalCount =
-    effectiveSummary === null ? 0 : priorityCount(effectiveSummary, "Critical")
-  const kevCount = effectiveSummary?.kev_hits ?? 0
-  const internetFacingCount = effectiveSignalCounts.internetFacingCriticals
-
-  return [
-    `${criticalCount} critical findings demand immediate action.`,
-    kevCount > 0
-      ? `${kevCount} known-exploited KEV findings are active prioritization signals.`
-      : "No known-exploited KEV findings are currently in scope.",
-    internetFacingCount > 0
-      ? `${internetFacingCount} internet-facing critical findings drive near-term risk.`
-      : "No internet-facing critical findings are currently driving the queue.",
-    acceptedRiskCount > 0
-      ? `${acceptedRiskCount} accepted-risk records should stay on review cadence.`
-      : topServiceLabel
-        ? `${topServiceLabel} is the highest-risk service concentration.`
-        : "Service concentration will appear after ownership data is imported.",
-  ]
-}

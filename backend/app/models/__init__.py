@@ -59,6 +59,11 @@ from app.models.dashboard import (
     DashboardSignalCountsPublic,
     ProjectDashboardFindingsPublic,
     ProjectDashboardPublic,
+    ProjectRiskReductionPublic,
+    ResidualRiskStepPublic,
+    RiskContributionPublic,
+    RiskIndexHistoryPointPublic,
+    RiskReductionOpportunityPublic,
 )
 from app.models.decisions import (
     FindingExplanationPublic,
@@ -89,6 +94,7 @@ from app.models.findings import (
     FindingOccurrencePublic,
     FindingPublic,
     FindingsPublic,
+    FindingStatusUpdateRequest,
 )
 from app.models.github_issues import (
     GitHubIssueExport,
@@ -259,6 +265,7 @@ __all__ = [
     "FindingPriority",
     "FindingStatus",
     "FindingsPublic",
+    "FindingStatusUpdateRequest",
     "GovernanceRollupPublic",
     "GovernanceWaiverDebtEntryPublic",
     "GovernanceWaiverDebtPublic",
@@ -283,6 +290,7 @@ __all__ = [
     "ProjectDecisionSummaryPublic",
     "ProjectGovernanceRollupsPublic",
     "ProjectPublic",
+    "ProjectRiskReductionPublic",
     "ProjectsPublic",
     "ProjectUpdate",
     "ProviderSnapshot",
@@ -301,6 +309,7 @@ __all__ = [
     "ReportVerificationPublic",
     "ReportsPublic",
     "RateLimitBucket",
+    "ResidualRiskStepPublic",
     "RuntimeServiceHeartbeat",
     "SidecarUploadCapabilityPublic",
     "UploadPolicyPublic",
@@ -312,6 +321,9 @@ __all__ = [
     "WaiverPublic",
     "WaiversPublic",
     "WaiverUpdate",
+    "RiskContributionPublic",
+    "RiskIndexHistoryPointPublic",
+    "RiskReductionOpportunityPublic",
     "WorkflowEvent",
     "WorkflowEventBase",
     "WorkflowEventPublic",

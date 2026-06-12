@@ -5,12 +5,12 @@ import { DashboardContextActions } from "./DashboardContextActions"
 import { DashboardContextProjectPicker } from "./DashboardContextProjectPicker"
 
 type DashboardContextBarProps = {
+  demoWorkspaceEnabled: boolean
+  demoWorkspacePending: boolean
   effectiveProjects: readonly ProjectPublic[]
   effectiveProviderStatus: ProviderStatusPublic | null
   effectiveSelectedProject: ProjectPublic | null
   freshness: ProviderFreshnessSummary
-  demoWorkspaceEnabled: boolean
-  demoWorkspacePending: boolean
   isManagedDemoWorkspace: boolean
   onLoadDemoWorkspace: () => void
   onProjectChange: (projectId: string) => void
@@ -22,12 +22,12 @@ type DashboardContextBarProps = {
 }
 
 export function DashboardContextBar({
+  demoWorkspaceEnabled,
+  demoWorkspacePending,
   effectiveProjects,
   effectiveProviderStatus,
   effectiveSelectedProject,
   freshness,
-  demoWorkspaceEnabled,
-  demoWorkspacePending,
   isManagedDemoWorkspace,
   onLoadDemoWorkspace,
   onProjectChange,

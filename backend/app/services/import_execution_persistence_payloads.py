@@ -6,10 +6,40 @@ from copy import deepcopy
 from typing import Any
 
 from app.domain.engine.models import PrioritizedFinding
+from app.domain.engine.scoring_operational import build_scoped_operational_score
 from app.domain.import_asset_context import string_evidence as _string_evidence
 from app.importers.contracts import NormalizedOccurrence
 from app.models import FindingPriority, FindingStatus
 from app.services.analysis import WorkbenchAnalysisError, WorkbenchAnalysisResult
+
+
+def _scoped_operational_score_for_occurrence(
+    decision: PrioritizedFinding,
+    occurrence: NormalizedOccurrence,
+) -> tuple[int, list[str]]:
+    """
+    Score one occurrence using its own asset context instead of CVE-wide context.
+
+    Context delivered out-of-band (e.g. an asset-context sidecar) only exists on
+    the CVE-wide provenance, so each scope field falls back to that aggregate.
+    """
+    provenance = decision.provenance
+    exposure = _string_evidence(occurrence.raw_evidence, "exposure") or (
+        provenance.highest_asset_exposure
+    )
+    environment = _string_evidence(occurrence.raw_evidence, "environment") or next(
+        iter(provenance.asset_environments),
+        None,
+    )
+    criticality = _string_evidence(occurrence.raw_evidence, "criticality") or (
+        decision.highest_asset_criticality
+    )
+    return build_scoped_operational_score(
+        decision,
+        asset_exposure=exposure,
+        asset_environment=environment,
+        asset_criticality=criticality,
+    )
 
 
 def _analysis_semantics_summary(
@@ -41,6 +71,7 @@ def _decision_payload_for_occurrence(
     compact: bool = False,
     base_payload: dict[str, Any] | None = None,
     occurrence_scope: dict[str, Any] | None = None,
+    scoped_score: tuple[int, list[str]] | None = None,
 ) -> dict[str, Any]:
     if base_payload is not None:
         payload = deepcopy(base_payload)
@@ -54,6 +85,10 @@ def _decision_payload_for_occurrence(
         occurrence,
         base_priority_state=payload.get("priority_state"),
     )
+    if scoped_score is None:
+        scoped_score = _scoped_operational_score_for_occurrence(decision, occurrence)
+    payload["operational_score"] = scoped_score[0]
+    payload["operational_score_reasons"] = list(scoped_score[1])
     provenance = payload.get("provenance")
     if isinstance(provenance, dict):
         provenance["occurrence_scope"] = occurrence_scope
@@ -69,6 +104,7 @@ def _analysis_evidence_for_occurrence(
     *,
     priority_state: str | None = None,
     occurrence_scope: dict[str, Any] | None = None,
+    operational_score: int | None = None,
 ) -> dict[str, Any]:
     occurrence_scope = occurrence_scope or _occurrence_scope_payload(occurrence)
     return {
@@ -79,7 +115,9 @@ def _analysis_evidence_for_occurrence(
             occurrence,
             base_priority_state=decision.priority_state,
         ),
-        "operational_score": decision.operational_score,
+        "operational_score": (
+            operational_score if operational_score is not None else decision.operational_score
+        ),
         "provider_snapshot_id": str(analysis_result.provider_snapshot_id)
         if analysis_result.provider_snapshot_id is not None
         else None,

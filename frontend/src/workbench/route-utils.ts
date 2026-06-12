@@ -73,16 +73,6 @@ export function attackConfidenceSummary(
     .join(" / ")
 }
 
-export function governanceServiceRows(
-  rollups: ProjectGovernanceRollupsPublic | null,
-) {
-  const services = rollups?.top_services_by_risk ?? []
-  if (services.length > 0) {
-    return { rows: services, source: "services" as const }
-  }
-  return { rows: rollups?.top_assets_by_risk ?? [], source: "assets" as const }
-}
-
 export function waiverDebtRows(rollups: ProjectGovernanceRollupsPublic | null) {
   return rollups?.waiver_debt?.items ?? []
 }

@@ -514,7 +514,6 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
         REPO_ROOT / "frontend/src/components/dashboard/DashboardContextProjectPicker.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardProviderWarning.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardRemediationSection.tsx",
-        REPO_ROOT / "frontend/src/components/dashboard/DashboardSignalOverviewFallback.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/dashboard-summary-model.ts",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardMetricStrip.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardDetailRail.tsx",
@@ -522,10 +521,8 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
         REPO_ROOT / "frontend/src/components/dashboard/DashboardRecentRunsPanel.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardDataQualityPanel.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardRecommendedActionsPanel.tsx",
-        REPO_ROOT / "frontend/src/components/dashboard/DashboardSignalOverview.tsx",
-        REPO_ROOT / "frontend/src/components/dashboard/DashboardSignalTabs.tsx",
-        REPO_ROOT / "frontend/src/components/dashboard/DashboardKeyTakeaways.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardRemediationColumns.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardRiskReductionPanel.tsx",
     ]
     finding_detail_paths = [
         REPO_ROOT / "frontend/src/components/finding-detail/FindingDetailRoute.tsx",
@@ -550,23 +547,21 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     dashboard_context_source = dashboard_paths[1].read_text(encoding="utf-8")
     dashboard_context_actions_source = dashboard_paths[2].read_text(encoding="utf-8")
     dashboard_context_project_picker_source = dashboard_paths[3].read_text(encoding="utf-8")
-    dashboard_summary_source = dashboard_paths[7].read_text(encoding="utf-8")
-    dashboard_metric_strip_source = dashboard_paths[8].read_text(encoding="utf-8")
-    dashboard_detail_rail_source = dashboard_paths[9].read_text(encoding="utf-8")
-    dashboard_operations_source = dashboard_paths[10].read_text(encoding="utf-8")
-    dashboard_recent_runs_source = dashboard_paths[11].read_text(encoding="utf-8")
-    dashboard_data_quality_source = dashboard_paths[12].read_text(encoding="utf-8")
-    dashboard_recommended_actions_source = dashboard_paths[13].read_text(encoding="utf-8")
-    dashboard_signal_overview_source = dashboard_paths[14].read_text(encoding="utf-8")
-    dashboard_signal_tabs_source = dashboard_paths[15].read_text(encoding="utf-8")
-    dashboard_key_takeaways_source = dashboard_paths[16].read_text(encoding="utf-8")
-    dashboard_remediation_columns_source = dashboard_paths[17].read_text(encoding="utf-8")
+    dashboard_summary_source = dashboard_paths[6].read_text(encoding="utf-8")
+    dashboard_metric_strip_source = dashboard_paths[7].read_text(encoding="utf-8")
+    dashboard_detail_rail_source = dashboard_paths[8].read_text(encoding="utf-8")
+    dashboard_operations_source = dashboard_paths[9].read_text(encoding="utf-8")
+    dashboard_recent_runs_source = dashboard_paths[10].read_text(encoding="utf-8")
+    dashboard_data_quality_source = dashboard_paths[11].read_text(encoding="utf-8")
+    dashboard_recommended_actions_source = dashboard_paths[12].read_text(encoding="utf-8")
+    dashboard_remediation_columns_source = dashboard_paths[13].read_text(encoding="utf-8")
+    dashboard_risk_posture_source = dashboard_paths[14].read_text(encoding="utf-8")
     finding_context_source = finding_detail_paths[1].read_text(encoding="utf-8")
     assert "DashboardProviderWarning" in dashboard_source
-    assert "DashboardSignalOverviewFallback" in dashboard_source
     assert "DashboardContextBar" in dashboard_source
     assert "DashboardMetricStrip" in dashboard_source
-    assert "DashboardDetailRail" in dashboard_source
+    assert "DashboardRiskReductionPanel" in dashboard_source
+    assert "DashboardDetailRail" not in dashboard_source
     assert "dashboard-summary-model" in dashboard_source
     assert "VpwCommandPanel" in dashboard_context_source
     assert "DashboardContextActions" in dashboard_context_source
@@ -593,15 +588,6 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     assert "DashboardDataQualityPanel" in dashboard_data_quality_source
     assert "DashboardRecommendedActionsPanel" in dashboard_recommended_actions_source
     assert "RECOMMENDED_ACTIONS" in dashboard_recommended_actions_source
-    assert "./DashboardSignalTabs" in dashboard_signal_overview_source
-    assert "./DashboardKeyTakeaways" in dashboard_signal_overview_source
-    assert "ChartCard" not in dashboard_signal_overview_source
-    assert "TabsContent" not in dashboard_signal_overview_source
-    assert "DashboardSignalTabs" in dashboard_signal_tabs_source
-    assert "ChartCard" in dashboard_signal_tabs_source
-    assert "DashboardPriorityChart" in dashboard_signal_tabs_source
-    assert "DashboardKeyTakeaways" in dashboard_key_takeaways_source
-    assert "CheckCircle2" in dashboard_key_takeaways_source
     _assert_metric_strip_adapter(
         dashboard_metric_strip_source,
         "dashboard metric strip",
@@ -609,16 +595,17 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     assert "VpwSurface" in dashboard_paths[4].read_text(encoding="utf-8")
     assert "VpwSurface" in dashboard_paths[5].read_text(encoding="utf-8")
     assert "VpwDataTable" in dashboard_paths[5].read_text(encoding="utf-8")
-    assert "VpwSurface" in dashboard_paths[6].read_text(encoding="utf-8")
     _assert_metric_strip_adapter(
-        dashboard_paths[8].read_text(encoding="utf-8"),
+        dashboard_paths[7].read_text(encoding="utf-8"),
         "dashboard route metric strip",
     )
     assert "VpwSurface" in dashboard_operations_source
     assert "VpwSurface" in dashboard_recent_runs_source
     assert "VpwSurface" in dashboard_data_quality_source
     assert "VpwSurface" in dashboard_recommended_actions_source
-    assert "VpwSurface" in dashboard_signal_overview_source
+    assert "VpwSurface" in dashboard_risk_posture_source
+    assert "buildRiskPostureProjection" in dashboard_risk_posture_source
+    assert "selectedRiskPostureReducers" in dashboard_risk_posture_source
     assert "VpwStatusBanner" in finding_detail_paths[0].read_text(encoding="utf-8")
     assert "VpwCommandPanel" in finding_context_source
     _assert_metric_strip_adapter(finding_context_source, "finding detail metric strip")

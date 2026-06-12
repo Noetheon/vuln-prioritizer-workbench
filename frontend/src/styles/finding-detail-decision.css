@@ -1,1 +1,8 @@
 @import "./finding-detail-decision-core.css";
+
+.finding-detail-action-error {
+  margin: 0.25rem 0 0;
+  color: var(--vpw-red);
+  font-size: 0.74rem;
+  font-weight: 700;
+}

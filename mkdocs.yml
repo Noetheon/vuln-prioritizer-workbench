@@ -20,9 +20,11 @@ nav:
       - Workbench UI Migration Plan: workbench-ui-migration-plan.md
       - Dependency and Package Policy: dependency-and-package-policy.md
       - Scoring Methodology: scoring-methodology.md
+      - Risk Posture And Reduction: risk-reduction-opportunities.md
       - ATT&CK/TTP Methodology: attack-ttp-methodology.md
       - Reports and Evidence: reports-and-evidence.md
       - Demo Readiness: demo-readiness.md
+      - Demo Walkthrough: demo-walkthrough.md
       - Offline Demo Runbook: workbench-offline-demo.md
       - Threat Model and Readiness: workbench-threat-model.md
       - Local/Private Deployment Runbook: workbench-public-deployment.md

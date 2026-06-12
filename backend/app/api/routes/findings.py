@@ -17,12 +17,17 @@ from app.models import (
     FindingPriority,
     FindingsPublic,
     FindingStatus,
+    FindingStatusUpdateRequest,
 )
 from app.repositories import FindingPageQuery, FindingRepository
 from app.services import DecisionDataUnavailableError, build_finding_explanation_payload
 from app.services.finding_projection import (
     _finding_detail_public_with_attack_context,
     _finding_public,
+)
+from app.services.finding_status import (
+    FindingStatusTransitionError,
+    update_finding_workflow_status,
 )
 
 router = APIRouter(tags=["findings"])
@@ -109,6 +114,32 @@ def read_finding(
         raise HTTPException(status_code=404, detail="Finding not found")
     require_project(session, finding.project_id)
     return _finding_detail_public_with_attack_context(session, finding)
+
+
+@router.patch("/findings/{finding_id}/status", response_model=FindingDetailPublic)
+def update_finding_status(
+    finding_id: uuid.UUID,
+    payload: FindingStatusUpdateRequest,
+    session: SessionDep,
+    local_actor: LocalActor,
+) -> FindingDetailPublic:
+    """Apply a manual workflow status (open, in_review, remediating) to one finding."""
+    finding = FindingRepository(session).get_finding(finding_id)
+    if finding is None:
+        raise HTTPException(status_code=404, detail="Finding not found")
+    require_project(session, finding.project_id)
+    try:
+        updated = update_finding_workflow_status(
+            session,
+            finding=finding,
+            status=payload.status,
+            local_actor=local_actor,
+        )
+    except FindingStatusTransitionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    session.commit()
+    session.refresh(updated)
+    return _finding_detail_public_with_attack_context(session, updated)
 
 
 @router.get("/findings/{finding_id}/explain", response_model=FindingExplanationPublic)

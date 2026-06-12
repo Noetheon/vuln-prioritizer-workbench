@@ -1379,6 +1379,41 @@ def test_vpw202_project_dashboard_aggregate_replaces_dashboard_query_fanout(
     }
     assert payload["governance"]["project_id"] == project["id"]
     assert payload["governance"]["services"][0]["label"] == "payments"
+    assert payload["risk_reduction"]["current_actionable_risk"] == 99.0
+    assert payload["risk_reduction"]["actionable_finding_count"] == 1
+    assert payload["risk_reduction"]["governance_debt_risk"] == 0.0
+    assert payload["risk_reduction"]["largest_driver"] == {
+        "dimension": "service",
+        "label": "payments",
+        "risk_score_total": 99.0,
+        "finding_count": 1,
+        "critical_count": 1,
+        "high_count": 0,
+        "kev_count": 1,
+    }
+    assert payload["risk_reduction"]["top_opportunities"][0] == {
+        "id": "CVE-2021-44228|log4j-core-2-14-1|upgrade-log4j-core-to-a-fixed-version",
+        "label": "CVE-2021-44228 on log4j-core 2.14.1",
+        "cve_id": DEMO_CVE_LOG4SHELL,
+        "component": "log4j-core 2.14.1",
+        "recommended_action": "Upgrade log4j-core to a fixed version.",
+        "expected_reduction": 99.0,
+        "residual_after": 0.0,
+        "finding_count": 1,
+        "affected_assets": ["Payments API"],
+        "business_services": ["payments"],
+        "owners": ["platform"],
+        "max_epss": 0.95,
+        "max_cvss": 10.0,
+        "in_kev": True,
+        "search_query": DEMO_CVE_LOG4SHELL,
+    }
+    assert payload["risk_reduction"]["residual_steps"] == [
+        {"label": "Current", "risk_score": 99.0, "reduction": 0.0},
+        {"label": "After top 1", "risk_score": 0.0, "reduction": 99.0},
+        {"label": "After top 3", "risk_score": 0.0, "reduction": 99.0},
+        {"label": "Remaining", "risk_score": 0.0, "reduction": 99.0},
+    ]
 
 
 def test_vpw011_missing_and_secondary_project_resources_use_local_runtime_errors(
