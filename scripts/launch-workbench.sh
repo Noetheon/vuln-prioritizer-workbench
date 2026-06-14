@@ -19,10 +19,11 @@ compose() {
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/launch-workbench.sh [start|stop|status|logs|smoke|reset|update|diagnostics]
+  scripts/launch-workbench.sh [start|demo|stop|status|logs|smoke|reset|update|diagnostics]
 
 Commands:
   start        Prepare .env when needed, build images, start db/backend/worker/frontend.
+  demo         Start the Workbench, ensure the local demo workspace exists, and open exam-ready demo tabs.
   stop         Stop the local Workbench containers, keeping data volumes.
   status       Show Docker Compose service status.
   logs         Follow recent service logs.
@@ -32,11 +33,14 @@ Commands:
   diagnostics  Create a redacted diagnostics bundle under diagnostics/.
 
 Environment overrides:
-  DOCKER_DEMO_FRONTEND_PORT=15174
-  DOCKER_DEMO_BACKEND_PORT=18080
+  DOCKER_DEMO_FRONTEND_PORT=5173
+  DOCKER_DEMO_BACKEND_PORT=8000
   COMPOSE_PROJECT_NAME=vpw-local-workbench
   VPW_OPEN_BROWSER=0
   VPW_ASSUME_YES=1
+  VPW_DEMO_PROJECT_ID=00000000-0000-4000-8000-00000000d001
+  VPW_DEMO_KILL_FRONTEND_PORTS=1
+  VPW_START_DOCKER_DESKTOP=0
 EOF
 }
 
@@ -57,6 +61,17 @@ check_docker() {
     exit 1
   fi
   if ! docker info >/dev/null 2>&1; then
+    if [[ "${VPW_START_DOCKER_DESKTOP:-1}" != "0" && "$(uname -s 2>/dev/null || true)" == "Darwin" && "$(command -v open || true)" != "" ]]; then
+      echo "Docker is installed but not running. Starting Docker Desktop..."
+      open -a Docker >/dev/null 2>&1 || true
+      for _ in $(seq 1 60); do
+        if docker info >/dev/null 2>&1; then
+          echo "Docker Desktop is ready."
+          return
+        fi
+        sleep 2
+      done
+    fi
     echo "Docker is installed but not running. Start Docker, then rerun this launcher." >&2
     exit 1
   fi
@@ -109,6 +124,58 @@ port_is_busy() {
   else
     (exec 3<>"/dev/tcp/127.0.0.1/$port") >/dev/null 2>&1
   fi
+}
+
+listening_pids_for_port() {
+  local port="$1"
+  if ! command -v lsof >/dev/null 2>&1; then
+    return
+  fi
+  lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null | sort -u || true
+}
+
+free_listening_port() {
+  local port="$1"
+  local pids
+  local remaining
+  local attempt
+
+  pids="$(listening_pids_for_port "$port")"
+  if [[ -z "$pids" ]]; then
+    return
+  fi
+
+  echo "Freeing demo port $port..."
+  ps -o pid=,ppid=,comm= -p $(printf '%s\n' "$pids" | tr '\n' ' ') 2>/dev/null || true
+  kill $pids 2>/dev/null || true
+
+  for attempt in $(seq 1 20); do
+    remaining="$(listening_pids_for_port "$port")"
+    if [[ -z "$remaining" ]]; then
+      return
+    fi
+    sleep 0.2
+  done
+
+  echo "Port $port did not stop after SIGTERM; forcing it down."
+  kill -9 $remaining 2>/dev/null || true
+}
+
+free_demo_frontend_ports() {
+  local port
+  if [[ "${VPW_DEMO_KILL_FRONTEND_PORTS:-0}" != "1" ]]; then
+    return
+  fi
+  for port in "${DOCKER_DEMO_FRONTEND_PORT:-5173}" 5174; do
+    free_listening_port "$port"
+  done
+}
+
+free_demo_extra_frontend_ports() {
+  if [[ "${VPW_DEMO_KILL_FRONTEND_PORTS:-0}" != "1" ]]; then
+    return
+  fi
+  free_listening_port 5174
 }
 
 choose_port() {
@@ -170,6 +237,28 @@ running_backend_port() {
   fi
 }
 
+stop_mismatched_compose_runtime() {
+  local desired_frontend_port="${DOCKER_DEMO_FRONTEND_PORT:-}"
+  local desired_backend_port="${DOCKER_DEMO_BACKEND_PORT:-}"
+  local existing_frontend_port
+  local existing_backend_port
+
+  existing_frontend_port="$(running_frontend_port || true)"
+  existing_backend_port="$(running_backend_port || true)"
+  if [[ -z "$existing_frontend_port" && -z "$existing_backend_port" ]]; then
+    return
+  fi
+
+  if {
+    [[ -n "$desired_frontend_port" && "$existing_frontend_port" != "$desired_frontend_port" ]]
+  } || {
+    [[ -n "$desired_backend_port" && "$existing_backend_port" != "$desired_backend_port" ]]
+  }; then
+    echo "Stopping existing Compose runtime on frontend ${existing_frontend_port:-unknown} / backend ${existing_backend_port:-unknown}; demo expects frontend ${desired_frontend_port:-auto} / backend ${desired_backend_port:-auto}."
+    compose down --remove-orphans
+  fi
+}
+
 configure_ports_for_start() {
   local existing_frontend_port
   local existing_backend_port
@@ -216,6 +305,22 @@ wait_for_url() {
   exit 1
 }
 
+configured_runtime_is_ready() {
+  local frontend_port="${DOCKER_DEMO_FRONTEND_PORT:-}"
+  local backend_port="${DOCKER_DEMO_BACKEND_PORT:-}"
+  local backend_health_url
+
+  if [[ -z "$frontend_port" || -z "$backend_port" ]]; then
+    return 1
+  fi
+
+  backend_health_url="http://127.0.0.1:${backend_port}/api/v1/utils/health-check/"
+  if [[ "$(curl -fsS --max-time 3 "$backend_health_url" 2>/dev/null || true)" != "true" ]]; then
+    return 1
+  fi
+  curl -fsS --max-time 3 "http://127.0.0.1:${frontend_port}/" >/dev/null 2>&1
+}
+
 open_frontend() {
   local url="$1"
   if [[ "${VPW_OPEN_BROWSER:-1}" == "0" ]]; then
@@ -226,6 +331,30 @@ open_frontend() {
   elif command -v xdg-open >/dev/null 2>&1; then
     xdg-open "$url" >/dev/null 2>&1 || true
   fi
+}
+
+json_string_value() {
+  local json="$1"
+  local key="$2"
+  printf '%s' "$json" | sed -nE "s/.*\"${key}\":\"([^\"]+)\".*/\\1/p"
+}
+
+demo_workspace_is_ready() {
+  local json="$1"
+  printf '%s' "$json" | grep -q '"seeded":true' \
+    && printf '%s' "$json" | grep -q '"finding_count":32' \
+    && printf '%s' "$json" | grep -q '"asset_count":21' \
+    && printf '%s' "$json" | grep -q '"report_count":7' \
+    && printf '%s' "$json" | grep -q '"waiver_count":4'
+}
+
+refresh_compose_demo_snapshot() {
+  if ! service_is_running backend; then
+    return
+  fi
+  compose exec -T backend sh -c \
+    'cp -f /app/examples/demo_provider_snapshot.json /app/provider-snapshots/demo_provider_snapshot.json' \
+    >/dev/null 2>&1 || true
 }
 
 print_urls() {
@@ -258,6 +387,99 @@ start_workbench() {
   wait_for_url "Frontend" "http://127.0.0.1:${DOCKER_DEMO_FRONTEND_PORT}/"
   print_urls
   open_frontend "http://127.0.0.1:${DOCKER_DEMO_FRONTEND_PORT}"
+}
+
+ensure_demo_workspace() {
+  local backend_url="http://127.0.0.1:${DOCKER_DEMO_BACKEND_PORT}"
+  local status_json
+  local seed_json
+
+  status_json="$(curl -fsS --max-time 10 "${backend_url}/api/v1/workbench/demo")"
+  if ! printf '%s' "$status_json" | grep -q '"enabled":true'; then
+    echo "Demo workspace is not enabled by the running backend." >&2
+    echo "The Docker launcher should enable DEMO_WORKSPACE_ENABLED=true; check compose.override.yml and backend logs." >&2
+    exit 1
+  fi
+
+  if demo_workspace_is_ready "$status_json"; then
+    echo "Demo workspace is already loaded."
+    return
+  fi
+
+  refresh_compose_demo_snapshot
+  if printf '%s' "$status_json" | grep -q '"seeded":true'; then
+    echo "Demo workspace is incomplete or stale; resetting it."
+    seed_json="$(curl -sS --max-time 180 -X POST "${backend_url}/api/v1/workbench/demo" \
+      -H 'Content-Type: application/json' \
+      --data '{"reset":true}')"
+  else
+    echo "Loading deterministic demo workspace..."
+    seed_json="$(curl -sS --max-time 180 -X POST "${backend_url}/api/v1/workbench/demo" \
+      -H 'Content-Type: application/json' \
+      --data '{"reset":false}')"
+  fi
+
+  if ! demo_workspace_is_ready "$seed_json"; then
+    echo "Demo workspace did not reach the expected 32 findings / 21 assets / 7 reports / 4 waivers state." >&2
+    printf '%s\n' "$seed_json" >&2
+    exit 1
+  fi
+  echo "Demo workspace loaded."
+}
+
+print_demo_urls() {
+  local frontend_url="http://127.0.0.1:${DOCKER_DEMO_FRONTEND_PORT}"
+  local backend_url="http://127.0.0.1:${DOCKER_DEMO_BACKEND_PORT}"
+  local status_json
+  local project_id
+  local run_id
+  local overview_url
+  local triage_url
+  local reports_url
+
+  status_json="$(curl -fsS --max-time 10 "${backend_url}/api/v1/workbench/demo")"
+  project_id="$(json_string_value "$status_json" "project_id")"
+  run_id="$(json_string_value "$status_json" "latest_run_id")"
+  project_id="${project_id:-${VPW_DEMO_PROJECT_ID:-00000000-0000-4000-8000-00000000d001}}"
+
+  overview_url="${frontend_url}/?projectId=${project_id}"
+  triage_url="${frontend_url}/findings?projectId=${project_id}&query=CVE-2021-44228&ownerService=payments"
+  reports_url="${frontend_url}/reports?projectId=${project_id}"
+  if [[ -n "$run_id" ]]; then
+    reports_url="${reports_url}&runId=${run_id}"
+  fi
+
+  echo
+  echo "Exam demo is ready."
+  echo "Start screen:     $overview_url"
+  echo "Filtered triage:  $triage_url"
+  echo "Evidence Center:  $reports_url"
+  echo
+  echo "For the presentation, start on the overview tab and use the filtered triage URL as the safe fallback."
+
+  open_frontend "$triage_url"
+  sleep 1
+  open_frontend "$overview_url"
+}
+
+demo_workbench() {
+  local previous_open_browser="${VPW_OPEN_BROWSER:-1}"
+  require_command curl "Install curl or use Docker Compose manually."
+  free_demo_extra_frontend_ports
+  if configured_runtime_is_ready; then
+    echo "Using already running Workbench on frontend port ${DOCKER_DEMO_FRONTEND_PORT} and backend port ${DOCKER_DEMO_BACKEND_PORT}."
+  else
+    check_docker
+    stop_mismatched_compose_runtime
+    free_demo_frontend_ports
+    VPW_OPEN_BROWSER=0
+    export VPW_OPEN_BROWSER
+    start_workbench
+  fi
+  ensure_demo_workspace
+  VPW_OPEN_BROWSER="$previous_open_browser"
+  export VPW_OPEN_BROWSER
+  print_demo_urls
 }
 
 stop_workbench() {
@@ -443,6 +665,9 @@ command="${1:-start}"
 case "$command" in
   start)
     start_workbench
+    ;;
+  demo)
+    demo_workbench
     ;;
   stop)
     stop_workbench

@@ -4,21 +4,27 @@
 
 Supported Workbench `input_type` values:
 
-- `cve-list`: TXT files with one CVE per line, or CSV files with a `cve` or
-  `cve_id` column
-- `generic-occurrence-csv`: manual occurrence rows with CVE, component, asset,
-  owner, service, and fix/version context
-- `trivy-json`: Trivy JSON exports
-- `grype-json`: Grype JSON exports
-- `cyclonedx-json`: CycloneDX JSON with vulnerability data
-- `spdx-json`: SPDX JSON with vulnerability data
-- `dependency-check-json`: OWASP Dependency-Check JSON
-- `github-alerts-json`: documented GitHub alerts JSON export
-- `nessus-xml`: Nessus XML export (`.nessus` or XML)
-- `openvas-xml`: pinned OpenVAS XML export
+- [`cve-list`](cve-list-import.md): TXT files with one CVE per line, or CSV
+  files with a `cve_id` column
+- [`generic-occurrence-csv`](generic-occurrence-csv-import.md): manual
+  occurrence rows with CVE, component, asset, owner, service, and fix/version
+  context
+- [`trivy-json`](trivy-json-import.md): Trivy JSON exports
+- [`grype-json`](grype-json-import.md): Grype JSON exports
+- [`cyclonedx-json`](cyclonedx-json-import.md): CycloneDX JSON with
+  vulnerability data
+- [`spdx-json`](spdx-json-import.md): SPDX JSON with vulnerability data
+- [`dependency-check-json`](dependency-check-json-import.md): OWASP
+  Dependency-Check JSON
+- [`github-alerts-json`](github-alerts-json-import.md): pinned GitHub alerts
+  JSON export shape
+- [`nessus-xml`](nessus-xml-import.md): Nessus XML export (`.nessus` or XML)
+- [`openvas-xml`](openvas-xml-import.md): pinned OpenVAS-style XML export
 
-Input is normalized, validated, and deduplicated. Invalid lines become warnings instead of aborting the whole run.
-For XML ingest, the parser rejects `DOCTYPE` and `ENTITY` declarations before parsing.
+Input is normalized, validated, and deduplicated. Format-specific parser errors
+fail the import; records that do not expose a resolvable CVE are skipped with
+warnings where the parser can continue. For XML ingest, the parser rejects
+`DOCTYPE` and `ENTITY` declarations before parsing.
 
 ## Data Enrichment
 

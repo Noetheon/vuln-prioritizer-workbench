@@ -36,12 +36,21 @@ Use this path when you want a reproducible browser demo from a repository
 checkout without customer data or live-provider-only behavior.
 
 ```bash
+bash scripts/launch-workbench.sh demo
+```
+
+That starts the local Docker Workbench when needed, seeds or repairs the
+deterministic Online Shop Demo Workspace, and opens demo-ready Workbench URLs.
+
+Maintainers can also run the underlying checks and manual Compose path:
+
+```bash
 make install
 make provider-snapshot-validate
 docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
 ```
 
-Then open `http://127.0.0.1:5173`, create a local project, and follow the
+Then open `http://127.0.0.1:5173`, load the demo workspace, and follow the
 step-by-step [Workbench offline demo runbook](workbench-offline-demo.md). That
 runbook covers import, locked provider replay, findings review, provider
 freshness, reports, evidence bundles, screenshot capture, fallback artifacts,
@@ -76,7 +85,7 @@ DOCKER_DEMO_BACKEND_PORT=18081 DOCKER_DEMO_FRONTEND_PORT=15175 make docker-demo-
 | Quickstart and Docker | [README](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/README.md), [Workbench offline demo](workbench-offline-demo.md) | Compose smoke, local Workbench commands, and demo fixtures. |
 | Architecture | [Architecture overview](architecture/index.md) | Workbench surface, input normalization, provider enrichment, prioritization, reporting, cache, and contract boundaries. |
 | Data model and contracts | [Contracts](contracts.md), [Decision/Evidence Kernel](architecture/decision-evidence-kernel.md), [Core Workbench schema](architecture/core-workbench-schema.md), [Analysis run provider schema](architecture/analysis-run-provider-schema.md) | JSON envelopes, schema versions, active Workbench models, analysis runs, provider evidence, kernel-first evidence production, and API rules. |
-| Import formats | [Support matrix](support_matrix.md), [CVE list import](cve-list-import.md), [Generic occurrence CSV](generic-occurrence-csv-import.md), [Trivy JSON import](trivy-json-import.md), [Grype JSON import](grype-json-import.md) | Supported file formats, preserved provenance, parser safety boundaries, and CI guidance. |
+| Import formats | [Support matrix](support_matrix.md), [CVE list](cve-list-import.md), [Generic occurrence CSV](generic-occurrence-csv-import.md), [Trivy JSON](trivy-json-import.md), [Grype JSON](grype-json-import.md), [CycloneDX JSON](cyclonedx-json-import.md), [SPDX JSON](spdx-json-import.md), [Dependency-Check JSON](dependency-check-json-import.md), [GitHub alerts JSON](github-alerts-json-import.md), [Nessus XML](nessus-xml-import.md), [OpenVAS XML](openvas-xml-import.md) | Supported file formats, preserved provenance, parser safety boundaries, and CI guidance. |
 | Providers and replay | [Provider cache and snapshots](architecture/vpw-022-provider-cache-status-snapshots.md), [Provider snapshot replay](architecture/vpw-026-provider-snapshot-replay.md), [Provider data quality flags](architecture/vpw-027-provider-data-quality-flags.md) | NVD, EPSS, KEV, cache state, locked snapshots, confidence/freshness flags, and replay behavior. |
 | Scoring and explanation | [Methodology](methodology.md), [Contracts](contracts.md) | Base priority from CVSS, EPSS, and KEV; operational score; decision guidance; comparison and explain semantics. |
 | Reports and evidence | [Support matrix](support_matrix.md), [Contracts](contracts.md), [Evidence archive](evidence.md) | Markdown, JSON, SARIF, HTML, CSV, evidence ZIP manifests, verification, and governance artifacts. |

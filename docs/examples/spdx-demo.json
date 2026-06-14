@@ -1,0 +1,56 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "checkout-demo-spdx",
+  "documentNamespace": "https://example.local/spdx/checkout-demo",
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-xz",
+      "name": "xz",
+      "versionInfo": "5.6.0-r0",
+      "primaryPackagePurpose": "LIBRARY",
+      "downloadLocation": "sbom.spdx.json",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-moveit",
+      "name": "moveit-transfer",
+      "versionInfo": "2023.0.1",
+      "primaryPackagePurpose": "LIBRARY",
+      "downloadLocation": "requirements.txt",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/moveit-transfer@2023.0.1"
+        }
+      ]
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2024-3094",
+      "severity": "CRITICAL",
+      "affects": [
+        {
+          "ref": "SPDXRef-Package-xz"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2023-34362",
+      "severity": "HIGH",
+      "affects": [
+        {
+          "ref": "SPDXRef-Package-moveit"
+        }
+      ]
+    }
+  ]
+}

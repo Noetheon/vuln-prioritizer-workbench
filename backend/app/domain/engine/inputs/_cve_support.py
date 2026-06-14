@@ -29,3 +29,16 @@ def first_normalized_cve(values: Iterable[str | None]) -> str | None:
         if cve_id is not None:
             return cve_id
     return None
+
+
+def all_normalized_cves(values: Iterable[str | None]) -> list[str]:
+    """Return every distinct CVE identifier in input order."""
+    cve_ids: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        cve_id = normalize_cve_id(value)
+        if cve_id is None or cve_id in seen:
+            continue
+        seen.add(cve_id)
+        cve_ids.append(cve_id)
+    return cve_ids

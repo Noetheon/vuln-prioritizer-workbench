@@ -1,0 +1,32 @@
+[
+  {
+    "number": 101,
+    "state": "open",
+    "html_url": "https://github.example.local/acme/checkout/security/dependabot/101",
+    "dependency": {
+      "manifest_path": "requirements.txt",
+      "scope": "runtime",
+      "package_version": "2023.0.1",
+      "package": {
+        "ecosystem": "pip",
+        "name": "moveit-transfer"
+      }
+    },
+    "security_advisory": {
+      "ghsa_id": "GHSA-1111-2222-3333",
+      "cve_id": "CVE-2023-34362",
+      "severity": "critical",
+      "summary": "Synthetic MOVEit Transfer advisory"
+    },
+    "security_vulnerability": {
+      "package": {
+        "ecosystem": "pip",
+        "name": "moveit-transfer"
+      },
+      "vulnerable_version_range": "< 2023.0.2",
+      "first_patched_version": {
+        "identifier": "2023.0.2"
+      }
+    }
+  }
+]

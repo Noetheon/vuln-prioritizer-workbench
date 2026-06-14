@@ -25,24 +25,82 @@ permissions:
 
 jobs:
   check:
+    name: check (${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        include:
+          - python-version: "3.11"
+            gate: full
+          - python-version: "3.12"
+            gate: compatibility
+          - python-version: "3.13"
+            gate: compatibility
 
     steps:
       - name: Check out repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Skip expensive Python gate for draft PR
         if: github.event_name == 'pull_request' && github.event.pull_request.draft
         run: echo "Draft pull request; skipping expensive Python workflow gate."
 
-      - name: Set up Python
+      - name: Decide Python gate scope
+        id: python-scope
         if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+        shell: bash
+        run: |
+          set -euo pipefail
+          write_python_gate() {
+            echo "gate=$1" >> "$GITHUB_OUTPUT"
+          }
+
+          matrix_gate="${{ matrix.gate }}"
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            write_python_gate "$matrix_gate"
+            exit 0
+          fi
+
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          changed_files="$(git diff --name-only "$base_sha"...HEAD)"
+          printf '%s\n' "$changed_files"
+
+          run_python=false
+          run_docs=false
+          while IFS= read -r path; do
+            case "$path" in
+              backend/*|pyproject.toml|uv.lock|.pre-commit-config.yaml)
+                run_python=true
+                ;;
+              Makefile|scripts/*|.github/workflows/ci.yml)
+                run_python=true
+                ;;
+              README.md|CONTRIBUTING.md|INSTALL.md|mkdocs.yml|docs/*|archive/vpw-evidence/*)
+                run_docs=true
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          if [[ "$run_python" == "true" ]]; then
+            write_python_gate "$matrix_gate"
+          elif [[ "$run_docs" == "true" && "$matrix_gate" == "full" ]]; then
+            write_python_gate docs
+          else
+            echo "No Python/runtime inputs changed for this matrix leg."
+            write_python_gate skip
+          fi
+
+      - name: Skip Python gate for scoped PR
+        if: steps.python-scope.outputs.gate == 'skip'
+        run: echo "Python gate skipped for this matrix leg; no Python/runtime inputs changed."
+
+      - name: Set up Python
+        if: steps.python-scope.outputs.gate != 'skip' && steps.python-scope.outputs.gate != ''
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -53,24 +111,84 @@ jobs:
             .pre-commit-config.yaml
 
       - name: Install project and dev dependencies
-        if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+        if: steps.python-scope.outputs.gate != 'skip' && steps.python-scope.outputs.gate != ''
         run: python -m pip install -e "backend[dev]"
 
       - name: Run local Workbench gate
-        if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+        if: steps.python-scope.outputs.gate == 'full'
         run: make local-workbench-check
+
+      - name: Run documentation gate for docs-only PR
+        if: steps.python-scope.outputs.gate == 'docs'
+        run: make docs-check
+
+      - name: Run backend compatibility tests without duplicate coverage/static gates
+        if: steps.python-scope.outputs.gate == 'compatibility'
+        run: make backend-compatibility-check
 
   dependency-audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
 
     steps:
       - name: Check out repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          fetch-depth: 0
           persist-credentials: false
 
+      - name: Decide whether dependency audit is needed
+        id: dependency-scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            echo "run-dependency-audit=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          changed_files="$(git diff --name-only "$base_sha"...HEAD)"
+          printf '%s\n' "$changed_files"
+
+          run_dependency_audit=false
+          while IFS= read -r path; do
+            case "$path" in
+              backend/pyproject.toml|pyproject.toml|uv.lock)
+                run_dependency_audit=true
+                ;;
+              backend/requirements*.txt|frontend/package.json|frontend/package-lock.json)
+                run_dependency_audit=true
+                ;;
+              backend/Dockerfile|frontend/Dockerfile|frontend/Dockerfile.playwright)
+                run_dependency_audit=true
+                ;;
+              compose.yml|compose.traefik.yml|Makefile|.grype.yaml)
+                run_dependency_audit=true
+                ;;
+              scripts/check_release_evidence_hygiene.py|scripts/check_dockerfile_base_digests.py)
+                run_dependency_audit=true
+                ;;
+              .github/dependabot.yml|.github/workflows/ci.yml)
+                run_dependency_audit=true
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          if [[ "$run_dependency_audit" == "true" ]]; then
+            echo "run-dependency-audit=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No dependency, package manager, or base-image inputs changed; dependency audit skipped."
+            echo "run-dependency-audit=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip dependency audit
+        if: steps.dependency-scope.outputs.run-dependency-audit != 'true'
+        run: echo "Dependency audit skipped; no dependency-impacting files changed."
+
       - name: Set up Python
+        if: steps.dependency-scope.outputs.run-dependency-audit == 'true'
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.13"
@@ -81,6 +199,7 @@ jobs:
             backend/requirements.lock.txt
 
       - name: Set up Node
+        if: steps.dependency-scope.outputs.run-dependency-audit == 'true'
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: "22"
@@ -88,13 +207,16 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install audit tooling
+        if: steps.dependency-scope.outputs.run-dependency-audit == 'true'
         run: python -m pip install -e "backend[dev]"
 
       - name: Run dependency audit
+        if: steps.dependency-scope.outputs.run-dependency-audit == 'true'
         run: make dependency-audit
 
   frontend:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Check out repository
@@ -108,14 +230,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          write_frontend_outputs() {
+            {
+              echo "run-frontend=$1"
+              echo "run-browser=$2"
+              echo "run-design-audit=$3"
+              echo "playwright-browsers=$4"
+              echo "playwright-projects=$5"
+            } >> "$GITHUB_OUTPUT"
+          }
+
           if [[ "${{ github.event_name }}" != "pull_request" ]]; then
-            echo "run-frontend=true" >> "$GITHUB_OUTPUT"
+            write_frontend_outputs true true true "chromium firefox webkit" ""
             exit 0
           fi
 
           if [[ "${{ github.event.pull_request.draft }}" == "true" ]]; then
             echo "Draft pull request; skipping expensive frontend gate."
-            echo "run-frontend=false" >> "$GITHUB_OUTPUT"
+            write_frontend_outputs false false false chromium "--project=chromium --project=mobile-chromium"
             exit 0
           fi
 
@@ -124,6 +256,9 @@ jobs:
           printf '%s\n' "$changed_files"
 
           run_frontend=false
+          run_browser=false
+          run_design_audit=false
+          run_full_browser_suite=false
           while IFS= read -r path; do
             case "$path" in
               frontend/*|backend/app/*)
@@ -139,13 +274,64 @@ jobs:
                 run_frontend=true
                 ;;
             esac
+
+            case "$path" in
+              backend/app/api/*|backend/app/main.py|backend/app/core/config.py)
+                run_browser=true
+                ;;
+              frontend/index.html|frontend/components.json|frontend/playwright.config.ts)
+                run_browser=true
+                run_design_audit=true
+                run_full_browser_suite=true
+                ;;
+              frontend/tests/workbench-design-audit.spec.ts|frontend/tests/evidence-paths.ts)
+                run_browser=true
+                run_design_audit=true
+                run_full_browser_suite=true
+                ;;
+              frontend/tests/cross-browser-critical-smoke.spec.ts|frontend/tests/responsive-shell.spec.ts)
+                run_browser=true
+                run_full_browser_suite=true
+                ;;
+              frontend/tests/*.spec.ts)
+                run_browser=true
+                ;;
+              frontend/src/main.tsx|frontend/src/index.css|frontend/src/styles/*|frontend/src/components/*)
+                run_browser=true
+                run_design_audit=true
+                run_full_browser_suite=true
+                ;;
+              frontend/src/*)
+                run_browser=true
+                ;;
+              frontend/package.json|frontend/package-lock.json|frontend/vite.config.*|frontend/tsconfig*.json)
+                run_browser=true
+                run_full_browser_suite=true
+                ;;
+              .github/workflows/ci.yml)
+                run_browser=true
+                run_design_audit=true
+                run_full_browser_suite=true
+                ;;
+            esac
           done <<< "$changed_files"
 
           if [[ "$run_frontend" == "true" ]]; then
-            echo "run-frontend=true" >> "$GITHUB_OUTPUT"
+            if [[ "$run_browser" == "true" && "$run_design_audit" == "true" ]]; then
+              design_audit_output=true
+            else
+              design_audit_output=false
+            fi
+            if [[ "$run_browser" == "true" && "$run_full_browser_suite" == "true" ]]; then
+              write_frontend_outputs true true "$design_audit_output" "chromium firefox webkit" ""
+            elif [[ "$run_browser" == "true" ]]; then
+              write_frontend_outputs true true "$design_audit_output" chromium "--project=chromium --project=mobile-chromium"
+            else
+              write_frontend_outputs true false false chromium "--project=chromium --project=mobile-chromium"
+            fi
           else
             echo "No frontend/API/runtime-impacting files changed; skipping expensive frontend gate."
-            echo "run-frontend=false" >> "$GITHUB_OUTPUT"
+            write_frontend_outputs false false false chromium "--project=chromium --project=mobile-chromium"
           fi
 
       - name: Skip frontend gate
@@ -207,16 +393,20 @@ jobs:
         run: make frontend-test-unit-coverage
 
       - name: Install Playwright browsers
-        if: steps.frontend-scope.outputs.run-frontend == 'true'
-        run: scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true exec -- playwright install --with-deps chromium firefox webkit
+        if: steps.frontend-scope.outputs.run-browser == 'true'
+        run: scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true exec -- playwright install --with-deps ${{ steps.frontend-scope.outputs.playwright-browsers }}
 
       - name: Run VPW visual regression baseline
-        if: steps.frontend-scope.outputs.run-frontend == 'true'
+        if: steps.frontend-scope.outputs.run-browser == 'true' && steps.frontend-scope.outputs.run-design-audit == 'true'
         run: make frontend-design-audit-linux-docker
 
-      - name: Run full frontend Playwright suite
-        if: steps.frontend-scope.outputs.run-frontend == 'true'
-        run: scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test -- --grep-invert "design audit matches VPW visual regression baselines"
+      - name: Skip frontend browser gate
+        if: steps.frontend-scope.outputs.run-frontend == 'true' && steps.frontend-scope.outputs.run-browser != 'true'
+        run: echo "Frontend static gate passed; browser gate skipped for non-browser-impacting change scope."
+
+      - name: Run frontend Playwright suite
+        if: steps.frontend-scope.outputs.run-browser == 'true'
+        run: scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test -- ${{ steps.frontend-scope.outputs.playwright-projects }} --grep-invert "design audit matches VPW visual regression baselines"
 
       - name: Upload frontend Playwright failure evidence
         if: failure()

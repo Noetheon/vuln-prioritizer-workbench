@@ -209,7 +209,16 @@ def _workflow_python_matrix_versions(job: dict[str, object]) -> tuple[str, ...]:
         return ()
     versions = matrix.get("python-version")
     if not isinstance(versions, list) or not all(isinstance(version, str) for version in versions):
-        return ()
+        include = matrix.get("include")
+        if not isinstance(include, list):
+            return ()
+        versions = [
+            item.get("python-version")
+            for item in include
+            if isinstance(item, dict) and isinstance(item.get("python-version"), str)
+        ]
+        if not versions:
+            return ()
     return tuple(versions)
 
 

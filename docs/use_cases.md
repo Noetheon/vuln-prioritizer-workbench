@@ -32,8 +32,10 @@ Why it matters:
 
 Goal:
 
-- prioritize CycloneDX, SPDX, or Dependency-Check vulnerability exports
-- keep package names, versions, paths, and fix hints visible
+- prioritize [CycloneDX](cyclonedx-json-import.md),
+  [SPDX](spdx-json-import.md), or
+  [Dependency-Check](dependency-check-json-import.md) vulnerability exports
+- keep package names, versions, paths, and source severity visible
 - route remediation by owner, service, or asset when context is available
 
 Workbench path:
@@ -60,8 +62,8 @@ Goal:
 
 Workbench path:
 
-1. Import the XML export with `input_type=nessus-xml` or
-   `input_type=openvas-xml`.
+1. Import the XML export with [`input_type=nessus-xml`](nessus-xml-import.md)
+   or [`input_type=openvas-xml`](openvas-xml-import.md).
 2. Upload asset context when available.
 3. Select reviewed ATT&CK context only when you have explicit local mapping data.
 4. Review Findings, Assets, TTP Context, and Reports.

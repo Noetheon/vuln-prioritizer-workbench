@@ -6,8 +6,8 @@ remote systems or actively probe hosts.
 
 ## Supported Inputs
 
-- `nessus-xml`
-- `openvas-xml`
+- [`nessus-xml`](../nessus-xml-import.md)
+- [`openvas-xml`](../openvas-xml-import.md)
 
 XML support is intentionally limited to safe local parsing of exported scanner
 evidence.

@@ -76,20 +76,24 @@ archive artifacts, or external primary sources own the major documentation
 claims. A passing docs build is necessary, but it is not sufficient proof that a
 provider, release, deployment, or archived-evidence statement is current.
 
-The latest documentation hygiene pass recorded in this checkout is 2026-06-03.
-It covered the Public + Root documentation scope, verified MkDocs navigation
-coverage, checked the worker-first Workflow v2 quickstarts, rechecked the
-kernel-first Decision/Evidence Kernel v2 producer, and validated the
-evidence-first `decision_core/readmodels.py` read model against code and tests.
-Successful v2 imports now read product output facts from `AnalysisEvidenceV2`
-and `FindingDecisionEvidenceV2` through that central read model; relational
-finding columns remain useful for identity, joins, pagination, sorting, and
-lifecycle context. The same pass rechecked import/report format claims against
-active backend and frontend definitions and ran the docs hygiene/build gates.
-The active evidence baseline is `analysis-result.v2.json`;
+The latest documentation hygiene pass recorded in this checkout is 2026-06-13.
+It covered the Public + Root documentation scope, verified 89 MkDocs-published
+Markdown pages, checked tracked Markdown links, rechecked the worker-first
+Workflow v2 quickstarts, rechecked the kernel-first Decision/Evidence Kernel v2
+producer, and validated the evidence-first `decision_core/readmodels.py` read
+model against code and tests. Successful v2 imports now read product output
+facts from `AnalysisEvidenceV2` and `FindingDecisionEvidenceV2` through that
+central read model; relational finding columns remain useful for identity,
+joins, pagination, sorting, and lifecycle context. The same pass rechecked
+import/report format claims against active backend and frontend definitions,
+added dedicated public pages and parseable examples for every active Workbench
+import format, updated the local demo docs to the seeded 32-finding Workbench
+demo contract, and ran the docs hygiene/build gates plus targeted contract
+gates. The active evidence baseline is `analysis-result.v2.json`;
 `analysis-result.v1.json` is no longer an active contract. The
 provider/version wording baseline was refreshed against primary sources on
-2026-05-30. Treat these as documentation baselines, not as live-provider uptime proof or public deployment certification.
+2026-05-30. Treat these as documentation baselines, not as live-provider uptime
+proof or public deployment certification.
 
 The current package maturity classifier is `Development Status :: 4 - Beta`.
 That means the self-hosted Workbench is release-gated for local-first

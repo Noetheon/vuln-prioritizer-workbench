@@ -1,12 +1,19 @@
 import { createHash } from "node:crypto"
 import { readFileSync, writeFileSync } from "node:fs"
-import { expect, type Locator, type Page, test } from "@playwright/test"
+import {
+  type APIRequestContext,
+  expect,
+  type Locator,
+  type Page,
+  test,
+} from "@playwright/test"
 import { evidenceScreenshotPath } from "./evidence-paths"
 import { backendBaseUrl, localApiHeaders } from "./workbench-runtime-helpers"
 
 const screenshotViewport = { height: 900, width: 1440 }
 const screenshotStepRatio = 0.78
 const duplicateScrollTolerancePx = 8
+const screenshotAssertionTimeoutMs = 30_000
 const visualMaskSelector = "[data-vpw-visual-mask]"
 const visualMaskColor = "#f3f4f6"
 const screenshotDiffOptionsByFileName = {
@@ -168,76 +175,107 @@ if (missingRouteFilters.length > 0) {
   )
 }
 
-test("design audit matches VPW visual regression baselines", async ({
-  page,
-}) => {
-  test.setTimeout(routeFilter.size > 0 ? 300_000 : 240_000)
-  await page.setViewportSize(screenshotViewport)
+test.describe("VPW visual regression baselines", () => {
+  test.describe.configure({ mode: "serial" })
 
-  const workspace = await seedDemoWorkspace(page)
-  const findingId = await firstFindingId(page, workspace.project_id)
-  const manifest: ScreenshotManifestEntry[] = []
+  const capturedManifest: ScreenshotManifestEntry[] = []
+  let workspace: DemoWorkspace
+  let findingId: string
+
+  test.beforeAll(async ({ request }) => {
+    workspace = await seedDemoWorkspace(request)
+    findingId = await firstFindingId(request, workspace.project_id)
+  })
 
   for (const route of auditRoutes) {
-    await page.goto(route.path(workspace, findingId))
-    await expect(page.getByRole("main")).toBeVisible()
-    await waitForVisibleText(page, route.readyText)
-    await waitForStableRouteContent(page, route)
-    await page.evaluate(() => document.fonts.ready.then(() => undefined))
+    test(`design audit matches VPW visual regression baselines: ${route.name}`, async ({
+      page,
+    }) => {
+      test.setTimeout(120_000)
+      const routeEntries = await captureAuditRoute(
+        page,
+        route,
+        workspace,
+        findingId,
+      )
 
-    const content = page
-      .locator('section[aria-label="Workbench page content"]')
-      .first()
-    await expect(content).toBeVisible()
-    await assertRouteDesignContract(page, route)
-
-    const scrollMetrics = await measureRouteScroll(content)
-    const scrollTargets = uniqueScrollTargets(scrollMetrics)
-    const routeEntries: ScreenshotManifestEntry[] = []
-
-    for (const [index, scrollTarget] of scrollTargets.entries()) {
-      const segment = index + 1
-      const scroll = await scrollRouteSegment(content, scrollTarget)
-      const fileName = `${route.slug}-${String(segment).padStart(2, "0")}.png`
-      const file = evidenceScreenshotPath("design-audit", fileName)
-      const mask = visualMaskLocators(content)
-      await content.screenshot({
-        animations: "disabled",
-        caret: "hide",
-        mask,
-        maskColor: visualMaskColor,
-        path: file,
-      })
-      await expect(content).toHaveScreenshot(["design-audit", fileName], {
-        mask,
-        maskColor: visualMaskColor,
-        ...screenshotDiffOptions(fileName),
-      })
-      routeEntries.push({
-        file,
-        maxScroll: scroll.maxScroll,
-        route: route.name,
-        scroll,
-        segment,
-        sha256: screenshotSha256(file),
-        slug: route.slug,
-        scrollTop: scroll.scrollTop,
-      })
-    }
-    manifest.push(...routeEntries)
+      expectRouteCoverage([route], routeEntries)
+      expectNoDuplicateAuditSegments(routeEntries)
+      capturedManifest.push(...routeEntries)
+      writeFileSync(
+        evidenceScreenshotPath("design-audit", `manifest-${route.slug}.json`),
+        `${JSON.stringify(routeEntries, null, 2)}\n`,
+      )
+    })
   }
 
-  expectRouteCoverage(auditRoutes, manifest)
-  expectNoDuplicateAuditSegments(manifest)
-  writeFileSync(
-    evidenceScreenshotPath("design-audit", "manifest.json"),
-    `${JSON.stringify(manifest, null, 2)}\n`,
-  )
+  test.afterAll(() => {
+    expectRouteCoverage(auditRoutes, capturedManifest)
+    expectNoDuplicateAuditSegments(capturedManifest)
+    writeFileSync(
+      evidenceScreenshotPath("design-audit", "manifest.json"),
+      `${JSON.stringify(capturedManifest, null, 2)}\n`,
+    )
+  })
 })
 
-async function seedDemoWorkspace(page: Page): Promise<DemoWorkspace> {
-  await clearWorkbenchProjects(page)
-  const response = await page.request.post(
+async function captureAuditRoute(
+  page: Page,
+  route: AuditRoute,
+  workspace: DemoWorkspace,
+  findingId: string,
+): Promise<ScreenshotManifestEntry[]> {
+  await page.setViewportSize(screenshotViewport)
+
+  await page.goto(route.path(workspace, findingId))
+  await expect(page.getByRole("main")).toBeVisible()
+  await waitForVisibleText(page, route.readyText)
+  await waitForStableRouteContent(page, route)
+  await page.evaluate(() => document.fonts.ready.then(() => undefined))
+
+  const content = page
+    .locator('section[aria-label="Workbench page content"]')
+    .first()
+  await expect(content).toBeVisible()
+  await assertRouteDesignContract(page, route)
+
+  const scrollMetrics = await measureRouteScroll(content)
+  const scrollTargets = uniqueScrollTargets(scrollMetrics)
+  const routeEntries: ScreenshotManifestEntry[] = []
+
+  for (const [index, scrollTarget] of scrollTargets.entries()) {
+    const segment = index + 1
+    const scroll = await scrollRouteSegment(content, scrollTarget)
+    const fileName = `${route.slug}-${String(segment).padStart(2, "0")}.png`
+    const file = evidenceScreenshotPath("design-audit", fileName)
+    const mask = visualMaskLocators(content)
+    await captureEvidenceScreenshot(page, content, mask, file)
+    await expect(content).toHaveScreenshot(["design-audit", fileName], {
+      mask,
+      maskColor: visualMaskColor,
+      ...screenshotDiffOptions(fileName),
+      timeout: screenshotAssertionTimeoutMs,
+    })
+    routeEntries.push({
+      file,
+      maxScroll: scroll.maxScroll,
+      route: route.name,
+      scroll,
+      segment,
+      sha256: screenshotSha256(file),
+      slug: route.slug,
+      scrollTop: scroll.scrollTop,
+    })
+  }
+
+  return routeEntries
+}
+
+async function seedDemoWorkspace(
+  request: APIRequestContext,
+): Promise<DemoWorkspace> {
+  await clearWorkbenchProjects(request)
+  const response = await request.post(
     `${backendBaseUrl}/api/v1/workbench/demo`,
     {
       data: { reset: true },
@@ -254,8 +292,10 @@ async function seedDemoWorkspace(page: Page): Promise<DemoWorkspace> {
   }
 }
 
-async function clearWorkbenchProjects(page: Page): Promise<void> {
-  const response = await page.request.get(
+async function clearWorkbenchProjects(
+  request: APIRequestContext,
+): Promise<void> {
+  const response = await request.get(
     `${backendBaseUrl}/api/v1/projects/?limit=500`,
     { headers: localApiHeaders() },
   )
@@ -263,7 +303,7 @@ async function clearWorkbenchProjects(page: Page): Promise<void> {
   const payload = (await response.json()) as ProjectList
 
   for (const project of payload.data) {
-    const deleteResponse = await page.request.delete(
+    const deleteResponse = await request.delete(
       `${backendBaseUrl}/api/v1/projects/${project.id}`,
       { headers: localApiHeaders() },
     )
@@ -271,8 +311,11 @@ async function clearWorkbenchProjects(page: Page): Promise<void> {
   }
 }
 
-async function firstFindingId(page: Page, projectId: string): Promise<string> {
-  const response = await page.request.get(
+async function firstFindingId(
+  request: APIRequestContext,
+  projectId: string,
+): Promise<string> {
+  const response = await request.get(
     `${backendBaseUrl}/api/v1/projects/${projectId}/findings/?limit=1`,
     { headers: localApiHeaders() },
   )
@@ -424,6 +467,33 @@ async function scrollRouteSegment(content: Locator, scrollTop: number) {
     },
     { scrollTop },
   )
+}
+
+async function captureEvidenceScreenshot(
+  page: Page,
+  content: Locator,
+  mask: Locator[],
+  path: string,
+) {
+  const clip = await content.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    return {
+      height: Math.max(1, Math.round(rect.height)),
+      width: Math.max(1, Math.round(rect.width)),
+      x: Math.max(0, Math.round(rect.x)),
+      y: Math.max(0, Math.round(rect.y)),
+    }
+  })
+
+  await page.screenshot({
+    animations: "disabled",
+    caret: "hide",
+    clip,
+    mask,
+    maskColor: visualMaskColor,
+    path,
+    timeout: screenshotAssertionTimeoutMs,
+  })
 }
 
 function visualMaskLocators(content: Locator) {
