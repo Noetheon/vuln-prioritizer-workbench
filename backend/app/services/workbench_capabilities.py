@@ -173,7 +173,7 @@ IMPORT_FORMAT_CAPABILITIES: tuple[ImportFormatCapabilityPublic, ...] = (
         notes=[
             "Use the JSON report exported by OWASP Dependency-Check.",
             "Current normalization preserves file name, file path, "
-            "first project reference, and raw severity.",
+            + "first project reference, and raw severity.",
         ],
         short_description="OWASP Dependency-Check JSON report.",
     ),
