@@ -114,7 +114,7 @@ The kernel-first path is protected by:
 - `backend/tests/api/import_contracts/`
 - `backend/tests/api/report_contracts/`
 - `backend/tests/api/workflow_contracts/`
-- `backend/tests/test_decision_core/readmodels.py`
+- `backend/tests/test_decision_projection.py`
 - `backend/tests/test_docs_hygiene.py`
 
 Run the focused documentation and contract checks after changing this page or

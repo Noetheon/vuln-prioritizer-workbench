@@ -311,6 +311,22 @@ def test_github_workflow_checkouts_do_not_persist_credentials() -> None:
     assert offenders == []
 
 
+def test_codeql_installs_python_dependencies_only_for_python_analysis() -> None:
+    workflow = _read_repo_text(".github/workflows/codeql.yml")
+
+    assert "Decide whether CodeQL analysis is needed" in workflow
+    assert "run-codeql=$1" in workflow
+    assert "write_codeql_output false" in workflow
+    assert "No CodeQL-relevant source or dependency inputs changed" in workflow
+    assert "fetch-depth: 0" in workflow
+    assert "matrix.language == 'python'" in workflow
+    assert "steps.codeql-scope.outputs.run-codeql == 'true' && matrix.language == 'python'" in (
+        workflow
+    )
+    assert 'python -m pip install -e "backend[dev]"' in workflow
+    assert "language: javascript-typescript" in workflow
+
+
 def test_import_service_modules_do_not_import_http_or_route_boundaries() -> None:
     violations: dict[str, list[str]] = {}
     blocked_prefixes = ("fastapi", "starlette", "app.api")
@@ -658,7 +674,7 @@ def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:
     assert not any(marker in docker_demo_smoke for marker in LEGACY_RUNTIME_STARTERS)
 
 
-def test_ci_frontend_gate_runs_coverage_and_full_playwright_suite() -> None:
+def test_ci_frontend_gate_tiers_playwright_and_visual_audit_by_change_scope() -> None:
     workflow = _read_repo_text(".github/workflows/ci.yml")
 
     assert "make frontend-test-unit-coverage" in workflow
@@ -670,16 +686,61 @@ def test_ci_frontend_gate_runs_coverage_and_full_playwright_suite() -> None:
     assert (
         "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true run test"
     ) in workflow
+    assert "write_frontend_outputs()" in workflow
+    assert 'write_frontend_outputs true true true "chromium firefox webkit" ""' in workflow
+    assert (
+        "write_frontend_outputs false false false chromium "
+        '"--project=chromium --project=mobile-chromium"'
+    ) in workflow
+    assert "run-browser=$2" in workflow
+    assert "playwright-browsers=$4" in workflow
+    assert "playwright-projects=$5" in workflow
+    assert "steps.frontend-scope.outputs.run-browser == 'true'" in workflow
+    assert "Skip frontend browser gate" in workflow
+    assert "steps.frontend-scope.outputs.run-design-audit == 'true'" in workflow
+    assert "frontend/src/main.tsx|frontend/src/index.css|frontend/src/styles/*" in workflow
+    assert "frontend/src/*" in workflow
+    assert "backend/app/api/*|backend/app/main.py|backend/app/core/config.py" in workflow
     assert "frontend/*|backend/app/*" in workflow
     assert ".nvmrc|.npmrc|package.json" in workflow
 
 
-def test_ci_docker_gate_runs_for_frontend_toolchain_policy_changes() -> None:
+def test_ci_docker_gate_tiers_demo_full_and_image_security_work() -> None:
     workflow = _read_repo_text(".github/workflows/docker.yml")
 
+    assert 'cron: "43 4 * * 2"' in workflow
     assert ".nvmrc|.npmrc|package.json|frontend/package.json|frontend/package-lock.json" in workflow
+    assert "docker-smoke-mode: ${{ steps.scope.outputs.docker-smoke-mode }}" in workflow
+    assert "run-image-security: ${{ steps.scope.outputs.run-image-security }}" in workflow
+    assert "write_docker_outputs()" in workflow
+    assert "write_docker_outputs true full true" in workflow
+    assert 'write_docker_outputs true "$docker_smoke_mode" "$image_security_output"' in workflow
+    assert "set_demo_smoke()" in workflow
+    assert "set_full_smoke()" in workflow
+    assert "docker_smoke_mode=demo" in workflow
+    assert "image_security_output=true" in workflow
     assert "make docker-demo-smoke" in workflow
     assert "make docker-production-smoke" in workflow
+    assert "needs.changes.outputs.docker-smoke-mode == 'full'" in workflow
+    assert "needs.changes.outputs.run-image-security == 'true'" in workflow
+
+
+def test_ci_cost_report_workflow_tracks_runner_minutes_without_write_tokens() -> None:
+    workflow = _read_repo_text(".github/workflows/ci-cost-report.yml")
+    script = _read_repo_text("scripts/ci_cost_report.py")
+    makefile = _read_repo_text("Makefile")
+
+    assert "name: CI Cost Report" in workflow
+    assert 'cron: "23 5 * * 1"' in workflow
+    assert "actions: read" in workflow
+    assert "contents: read" in workflow
+    assert "persist-credentials: false" in workflow
+    assert "python3 scripts/ci_cost_report.py" in workflow
+    assert "--json-output build/ci-cost/ci-cost-report.json" in workflow
+    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in workflow
+    assert 'DEFAULT_WORKFLOWS = ("CI", "Docker", "CodeQL")' in script
+    assert "total_job_minutes" in script
+    assert "ci-cost-report:" in makefile
 
 
 def test_legacy_cli_entrypoint_is_removed() -> None:

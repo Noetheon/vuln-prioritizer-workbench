@@ -35,27 +35,32 @@ def parse_trivy_json(path: Path) -> ParsedInput:
         ):
             total_rows += 1
             source_id = first_present_string(vulnerability.get("VulnerabilityID"))
-            cve_id = _cve_support.first_normalized_cve(_trivy_cve_candidates(vulnerability))
-            if cve_id is None:
+            cve_ids = _cve_support.all_normalized_cves(_trivy_cve_candidates(vulnerability))
+            if not cve_ids:
                 _warn_non_cve_trivy_id(source_id, warnings)
                 continue
-            occurrences.append(
-                InputOccurrence(
-                    cve_id=cve_id,
-                    source_format="trivy-json",
-                    source_id=source_id or cve_id,
-                    component_name=vulnerability.get("PkgName"),
-                    component_version=vulnerability.get("InstalledVersion"),
-                    purl=dict_value(vulnerability.get("PkgIdentifier")).get("PURL"),
-                    package_type=package_type,
-                    file_path=vulnerability.get("PkgPath"),
-                    fix_versions=_trivy_fix_versions(vulnerability),
-                    source_record_id=f"result:{result_index}:vuln:{vuln_index}",
-                    raw_severity=vulnerability.get("Severity"),
-                    target_kind="image",
-                    target_ref=target,
+            for cve_index, cve_id in enumerate(cve_ids, start=1):
+                occurrences.append(
+                    InputOccurrence(
+                        cve_id=cve_id,
+                        source_format="trivy-json",
+                        source_id=source_id or cve_id,
+                        component_name=vulnerability.get("PkgName"),
+                        component_version=vulnerability.get("InstalledVersion"),
+                        purl=dict_value(vulnerability.get("PkgIdentifier")).get("PURL"),
+                        package_type=package_type,
+                        file_path=vulnerability.get("PkgPath"),
+                        fix_versions=_trivy_fix_versions(vulnerability),
+                        source_record_id=_cve_source_record_id(
+                            f"result:{result_index}:vuln:{vuln_index}",
+                            cve_index=cve_index,
+                            cve_count=len(cve_ids),
+                        ),
+                        raw_severity=vulnerability.get("Severity"),
+                        target_kind="image",
+                        target_ref=target,
+                    )
                 )
-            )
 
     return ParsedInput(
         input_format="trivy-json",
@@ -109,8 +114,8 @@ def parse_grype_json(path: Path) -> ParsedInput:
             warnings.append(f"Ignored Grype match {match_number} without a vulnerability object.")
             continue
         source_id = first_present_string(vulnerability.get("id"))
-        cve_id = _cve_support.first_normalized_cve(_grype_cve_candidates(vulnerability))
-        if cve_id is None:
+        cve_ids = _cve_support.all_normalized_cves(_grype_cve_candidates(vulnerability))
+        if not cve_ids:
             _warn_non_cve_grype_id(source_id, warnings)
             continue
         artifact = dict_value(match_item.get("artifact"))
@@ -123,23 +128,28 @@ def parse_grype_json(path: Path) -> ParsedInput:
         file_path = None
         if locations:
             file_path = locations[0].get("path") or locations[0].get("realPath")
-        occurrences.append(
-            InputOccurrence(
-                cve_id=cve_id,
-                source_format="grype-json",
-                source_id=source_id or cve_id,
-                component_name=artifact.get("name"),
-                component_version=artifact.get("version"),
-                purl=artifact.get("purl"),
-                package_type=artifact.get("type"),
-                file_path=file_path,
-                fix_versions=_grype_fix_versions(match_item, vulnerability),
-                source_record_id=f"match:{match_number}",
-                raw_severity=vulnerability.get("severity"),
-                target_kind=target_kind,
-                target_ref=source_target,
+        for cve_index, cve_id in enumerate(cve_ids, start=1):
+            occurrences.append(
+                InputOccurrence(
+                    cve_id=cve_id,
+                    source_format="grype-json",
+                    source_id=source_id or cve_id,
+                    component_name=artifact.get("name"),
+                    component_version=artifact.get("version"),
+                    purl=artifact.get("purl"),
+                    package_type=artifact.get("type"),
+                    file_path=file_path,
+                    fix_versions=_grype_fix_versions(match_item, vulnerability),
+                    source_record_id=_cve_source_record_id(
+                        f"match:{match_number}",
+                        cve_index=cve_index,
+                        cve_count=len(cve_ids),
+                    ),
+                    raw_severity=vulnerability.get("severity"),
+                    target_kind=target_kind,
+                    target_ref=source_target,
+                )
             )
-        )
 
     return ParsedInput(
         input_format="grype-json",
@@ -276,10 +286,10 @@ def parse_github_alerts_json(path: Path) -> ParsedInput:
     for index, alert in enumerate(alerts, start=1):
         advisory = dict_value(alert.get("security_advisory"))
         identifiers = dict_items(advisory.get("identifiers"))
-        cve_id = _cve_support.first_normalized_cve(
+        cve_ids = _cve_support.all_normalized_cves(
             [advisory.get("cve_id"), *(identifier.get("value") for identifier in identifiers)]
         )
-        if cve_id is None:
+        if not cve_ids:
             warnings.append(
                 "Ignored GitHub alert without a resolvable CVE identifier: "
                 f"{advisory.get('ghsa_id') or alert.get('number')!r}"
@@ -292,27 +302,32 @@ def parse_github_alerts_json(path: Path) -> ParsedInput:
         first_patched_version = (
             first_patched_version if isinstance(first_patched_version, dict) else {}
         )
-        occurrences.append(
-            InputOccurrence(
-                cve_id=cve_id,
-                source_format="github-alerts-json",
-                component_name=package.get("name"),
-                component_version=first_present_string(
-                    dependency.get("package_version"),
-                    dependency.get("version"),
-                    package.get("version"),
-                    vulnerability.get("package_version"),
-                    vulnerability.get("version"),
-                ),
-                package_type=package.get("ecosystem"),
-                file_path=dependency.get("manifest_path"),
-                fix_versions=as_string_list([first_patched_version.get("identifier")]),
-                source_record_id=f"alert:{index}",
-                raw_severity=advisory.get("severity"),
-                target_kind="repository",
-                target_ref=alert.get("html_url") or dependency.get("manifest_path"),
+        for cve_index, cve_id in enumerate(cve_ids, start=1):
+            occurrences.append(
+                InputOccurrence(
+                    cve_id=cve_id,
+                    source_format="github-alerts-json",
+                    component_name=package.get("name"),
+                    component_version=first_present_string(
+                        dependency.get("package_version"),
+                        dependency.get("version"),
+                        package.get("version"),
+                        vulnerability.get("package_version"),
+                        vulnerability.get("version"),
+                    ),
+                    package_type=package.get("ecosystem"),
+                    file_path=dependency.get("manifest_path"),
+                    fix_versions=as_string_list([first_patched_version.get("identifier")]),
+                    source_record_id=_cve_source_record_id(
+                        f"alert:{index}",
+                        cve_index=cve_index,
+                        cve_count=len(cve_ids),
+                    ),
+                    raw_severity=advisory.get("severity"),
+                    target_kind="repository",
+                    target_ref=alert.get("html_url") or dependency.get("manifest_path"),
+                )
             )
-        )
 
     return ParsedInput(
         input_format="github-alerts-json",
@@ -320,3 +335,9 @@ def parse_github_alerts_json(path: Path) -> ParsedInput:
         occurrences=occurrences,
         warnings=warnings,
     )
+
+
+def _cve_source_record_id(base_record_id: str, *, cve_index: int, cve_count: int) -> str:
+    if cve_count == 1:
+        return base_record_id
+    return f"{base_record_id}:cve:{cve_index}"

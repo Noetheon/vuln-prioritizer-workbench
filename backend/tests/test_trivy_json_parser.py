@@ -88,6 +88,45 @@ def test_trivy_json_uses_cve_alias_and_keeps_non_cve_source_id(tmp_path: Path) -
     assert occurrence.target_ref == "service/requirements.txt"
 
 
+def test_trivy_json_emits_all_valid_cve_aliases(tmp_path: Path) -> None:
+    input_file = tmp_path / "trivy.json"
+    input_file.write_text(
+        json.dumps(
+            {
+                "Results": [
+                    {
+                        "Target": "service/requirements.txt",
+                        "Type": "pip",
+                        "Vulnerabilities": [
+                            {
+                                "VulnerabilityID": "GHSA-9m7r-4c2v-9j5j",
+                                "Aliases": ["CVE-2024-0001", "CVE-2024-0002"],
+                                "PkgName": "demo-package",
+                                "InstalledVersion": "1.0.0",
+                            }
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    parsed = InputLoader().load(input_file, input_format="trivy-json")
+
+    assert parsed.warnings == []
+    assert parsed.unique_cves == ["CVE-2024-0001", "CVE-2024-0002"]
+    assert [item.cve_id for item in parsed.occurrences] == [
+        "CVE-2024-0001",
+        "CVE-2024-0002",
+    ]
+    assert {item.source_id for item in parsed.occurrences} == {"GHSA-9m7r-4c2v-9j5j"}
+    assert [item.source_record_id for item in parsed.occurrences] == [
+        "result:1:vuln:1:cve:1",
+        "result:1:vuln:1:cve:2",
+    ]
+
+
 def test_trivy_json_skips_non_cve_without_alias_and_warns_source_id(tmp_path: Path) -> None:
     input_file = tmp_path / "trivy.json"
     input_file.write_text(

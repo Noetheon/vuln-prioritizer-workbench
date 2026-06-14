@@ -129,3 +129,55 @@ def test_github_alerts_null_first_patched_version_loads_without_fix_versions(
     )
 
     assert occurrence.fix_versions == []
+
+
+def test_github_alerts_emits_all_valid_advisory_cve_identifiers(tmp_path: Path) -> None:
+    path = _write_github_alerts_export(
+        tmp_path,
+        [
+            {
+                "number": 29,
+                "state": "open",
+                "html_url": "https://github.example/alerts/29",
+                "dependency": {
+                    "manifest_path": "requirements.txt",
+                    "package": {
+                        "ecosystem": "pip",
+                        "name": "demo",
+                    },
+                },
+                "security_advisory": {
+                    "ghsa_id": "GHSA-1111-2222-5555",
+                    "severity": "high",
+                    "identifiers": [
+                        {"type": "CVE", "value": "CVE-2024-0001"},
+                        {"type": "CVE", "value": "CVE-2024-0002"},
+                    ],
+                },
+                "security_vulnerability": {
+                    "package": {
+                        "ecosystem": "pip",
+                        "name": "demo",
+                    },
+                    "first_patched_version": {
+                        "identifier": "2.0.0",
+                    },
+                },
+            }
+        ],
+    )
+
+    parsed = InputLoader().load(path=path, input_format="github-alerts-json")
+
+    assert parsed.warnings == []
+    assert parsed.unique_cves == ["CVE-2024-0001", "CVE-2024-0002"]
+    assert [item.cve_id for item in parsed.occurrences] == [
+        "CVE-2024-0001",
+        "CVE-2024-0002",
+    ]
+    assert {item.component_name for item in parsed.occurrences} == {"demo"}
+    assert {tuple(item.fix_versions) for item in parsed.occurrences} == {("2.0.0",)}
+    assert [item.source_record_id for item in parsed.occurrences] == [
+        "alert:1:cve:1",
+        "alert:1:cve:2",
+    ]

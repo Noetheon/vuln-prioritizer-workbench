@@ -71,6 +71,10 @@ def test_local_actor_is_stable_without_db_user_bootstrap(tmp_path: Path) -> None
 
     try:
         assert db_module._connect_args("postgresql+psycopg://workbench@db/workbench") == {}
+        assert db_module._connect_args("sqlite:///workbench.db") == {
+            "check_same_thread": False,
+            "timeout": 30,
+        }
         assert local_actor_id("ADMIN@example.test") == local_actor_id("admin@example.test")
 
         actor = configured_local_actor(active_settings)

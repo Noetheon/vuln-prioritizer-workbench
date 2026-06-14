@@ -129,9 +129,9 @@ IMPORT_FORMAT_CAPABILITIES: tuple[ImportFormatCapabilityPublic, ...] = (
         extensions=[".json"],
         accepted_mime_types=["application/json", "text/json"],
         best_for="Software inventory with vulnerability references.",
-        expected_shape="CycloneDX components plus vulnerability references.",
-        minimum_fields=["components", "vulnerabilities"],
-        optional_fields=["bom-ref", "purl", "affects"],
+        expected_shape="CycloneDX JSON with vulnerability records.",
+        minimum_fields=["vulnerabilities[].id"],
+        optional_fields=["components[].bom-ref", "components[].purl", "affects", "ratings"],
         context_support="component-vulnerability-context",
         example_snippet=(
             '{"bomFormat":"CycloneDX","components":[],"vulnerabilities":[{"id":"CVE-2024-3094"}]}'
@@ -146,14 +146,16 @@ IMPORT_FORMAT_CAPABILITIES: tuple[ImportFormatCapabilityPublic, ...] = (
         category_label=FORMAT_CATEGORY_LABELS["sbom"],
         extensions=[".json"],
         accepted_mime_types=["application/json", "text/json"],
-        best_for="SPDX package inventory with vulnerability references where supported.",
-        expected_shape="SPDX JSON package data.",
-        minimum_fields=["packages"],
-        optional_fields=["externalRefs", "relationships"],
+        best_for="SPDX package inventory with vulnerability references.",
+        expected_shape="SPDX JSON with vulnerability records.",
+        minimum_fields=["vulnerabilities[].id"],
+        optional_fields=["packages[].SPDXID", "externalRefs", "affects", "severity"],
         context_support="component-context",
-        example_snippet='{"spdxVersion":"SPDX-2.3","packages":[]}',
-        notes=["Package data is parsed locally from supplied SPDX JSON."],
-        short_description="SPDX JSON package data.",
+        example_snippet=(
+            '{"spdxVersion":"SPDX-2.3","packages":[],"vulnerabilities":[{"id":"CVE-2024-3094"}]}'
+        ),
+        notes=["SPDX vulnerability records are required to create prioritized occurrences."],
+        short_description="SPDX JSON plus vulnerabilities.",
     ),
     ImportFormatCapabilityPublic(
         input_type=InputFormat.dependency_check_json.value,
@@ -164,11 +166,15 @@ IMPORT_FORMAT_CAPABILITIES: tuple[ImportFormatCapabilityPublic, ...] = (
         accepted_mime_types=["application/json", "text/json"],
         best_for="OWASP Dependency-Check output.",
         expected_shape="OWASP Dependency-Check JSON report.",
-        minimum_fields=["dependencies[].vulnerabilities[]"],
-        optional_fields=["packages", "evidenceCollected", "severity"],
+        minimum_fields=["dependencies[].vulnerabilities[].name"],
+        optional_fields=["fileName", "filePath", "projectReferences", "severity"],
         context_support="component-context",
         example_snippet=('{"dependencies":[{"vulnerabilities":[{"name":"CVE-2024-3094"}]}]}'),
-        notes=["Use the JSON report exported by OWASP Dependency-Check."],
+        notes=[
+            "Use the JSON report exported by OWASP Dependency-Check.",
+            "Current normalization preserves file name, file path, "
+            + "first project reference, and raw severity.",
+        ],
         short_description="OWASP Dependency-Check JSON report.",
     ),
     ImportFormatCapabilityPublic(
@@ -200,7 +206,7 @@ IMPORT_FORMAT_CAPABILITIES: tuple[ImportFormatCapabilityPublic, ...] = (
         best_for="Network tool export evidence supplied as local XML.",
         expected_shape="Nessus export with ReportHost / ReportItem CVE data.",
         minimum_fields=["ReportHost", "ReportItem CVE data"],
-        optional_fields=["plugin_output", "severity", "solution"],
+        optional_fields=["risk_factor", "severity", "svc_name", "port", "protocol"],
         context_support="partial-occurrence-context",
         example_snippet=(
             '<NessusClientData_v2><Report><ReportHost name="host"><ReportItem>'
@@ -219,7 +225,7 @@ IMPORT_FORMAT_CAPABILITIES: tuple[ImportFormatCapabilityPublic, ...] = (
         best_for="OpenVAS-style result evidence supplied as local XML.",
         expected_shape="OpenVAS result CVE data.",
         minimum_fields=["result CVE data"],
-        optional_fields=["host", "port", "threat", "description"],
+        optional_fields=["host", "hostname", "ip", "severity", "threat", "nvt refs"],
         context_support="partial-occurrence-context",
         example_snippet=(
             "<report><results><result><nvt><cve>CVE-2024-3094</cve></nvt>"
@@ -369,7 +375,10 @@ def _report_format_capability(report_format: ReportFormat) -> ReportFormatCapabi
             label="Evidence ZIP",
             title="Evidence ZIP Bundle",
             action_label="Build evidence ZIP",
-            detail="ZIP package with reports, manifest, source artifacts, and SHA256 checksums.",
+            detail=(
+                "ZIP package with reports, manifest, provider snapshot, source input hash "
+                "metadata, and SHA256 checksums."
+            ),
             audience="Audit",
             kind=REPORT_KIND_EVIDENCE_BUNDLE,
             filename=REPORT_FILENAME_EVIDENCE_BUNDLE,

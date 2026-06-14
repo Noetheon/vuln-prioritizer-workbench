@@ -173,6 +173,12 @@ maintainer triage without making the required PR smoke permanently red. Public
 production release evidence still needs candidate-specific image digests and
 any required signing/provenance attestation for those exact images.
 
+The same Docker workflow also runs weekly in full mode. That scheduled run is
+the CVE-drift backstop for pinned base images: normal PRs only pay for image
+security when Docker, dependency, Compose, Grype, or build-policy inputs change,
+while new fixable high/critical findings are still surfaced without waiting for
+the next container-related pull request.
+
 Any Grype ignore in `.grype.yaml` must be narrow, documented, and temporary.
 Use it only for upstream base-image findings where the scanner reports a fix
 outside the repository's current stable runtime policy, such as a beta-only

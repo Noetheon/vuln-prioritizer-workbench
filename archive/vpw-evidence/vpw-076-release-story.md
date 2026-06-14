@@ -12,7 +12,7 @@ or deployment proof without fresh validation.
 | --- | --- |
 | Changelog | `CHANGELOG.md` documents the Workbench-capable `1.1.0` package line and preserves `1.0.0` as the stable OSS release line. |
 | Release notes | `docs/releases/workbench-v1.0.0.md` explicitly documents Features, Non-Goals, Known Limitations, demo evidence, and bundle verification expectations. `docs/releases/v1.1.0.md` documents the package tag that carries the current Workbench tree. |
-| Release checklist | `docs/workbench-v1-release-checklist.md` records the v1.0 milestone checklist, gate expectations, screenshot set, residual risks, and sign-off table. |
+| Release checklist | The former `docs/workbench-v1-release-checklist.md` was retired during docs cleanup; this archived release story now preserves the durable v1.0/v1.1 closeout context. |
 | Demo evidence bundle | Historical target `make demo-evidence-bundle-check` generated and verified `build/v1.0-demo-evidence-bundle.zip`; the durable verification output now lives at `archive/vpw-evidence/vpw-076-demo-evidence-bundle-verification.json`. |
 | Screenshots | `docs/examples/media/workbench-dashboard.png`, `docs/examples/media/workbench-findings.png`, `docs/examples/media/workbench-finding-detail-ttp.png`, `docs/examples/media/workbench-reports-evidence.png`, plus VPW-075 evidence screenshots. |
 | Roadmap v1.1/v1.2 | `docs/roadmap.md` records the implemented `v1.1.0` release surface and current Workbench app direction through the integration slices. |
@@ -129,6 +129,6 @@ VPW-076 is verified by this PR when:
   preserves the verification output in the archive,
 - `CHANGELOG.md` records the added release-story evidence,
 - `docs/releases/workbench-v1.0.0.md` explicitly lists Features, Non-Goals, and Known Limitations,
-- `docs/workbench-v1-release-checklist.md` links the VPW-076 closeout evidence,
+- this archived release story links the VPW-076 closeout evidence,
 - historical `make demo-evidence-bundle-check` passed with `summary.ok=true`,
 - `make docs-check` passes.

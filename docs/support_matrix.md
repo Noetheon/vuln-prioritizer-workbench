@@ -24,16 +24,16 @@ boundaries, but Workbench uploads must use one of the explicit values below.
 
 | `input_type` | Workbench import | Normalized provenance currently preserved | Notes |
 | --- | --- | --- | --- |
-| `cve-list` | yes | CVE ID, optional asset ref, component, version, source line/row | Plain TXT and minimal CSV CVE lists. |
-| `generic-occurrence-csv` | yes | Component, version, PURL, fix versions, target, asset context, owner, service | Additive manual-occurrence format for backlogs and spreadsheets. |
+| `cve-list` | yes | CVE ID, optional asset ref, component, version, source line/row | Plain TXT and minimal CSV CVE lists; see [CVE List Import](cve-list-import.md). |
+| `generic-occurrence-csv` | yes | Component, version, PURL, fix versions, target, asset context, owner, service | Additive manual-occurrence format for backlogs and spreadsheets; see [Generic Occurrence CSV Import](generic-occurrence-csv-import.md). |
 | `trivy-json` | yes | Component, version, PURL, package type, path, fix versions, target image, source ID | Default target kind is `image`; see [Trivy JSON Import](trivy-json-import.md). |
 | `grype-json` | yes | Component, version, PURL, package type, path, fix versions, target image, source ID | Keeps the first artifact location as current path evidence; see [Grype JSON Import](grype-json-import.md). |
-| `cyclonedx-json` | yes | Component refs, PURLs, versions, dependency context when present | Used for SBOM plus vulnerability exports, not plain BOMs without vulnerabilities. |
-| `spdx-json` | yes | Package names, versions, file names when available | Current support is JSON only. |
-| `dependency-check-json` | yes | Dependency path, package/file names, severity, fix/version hints where present | Current support is JSON only. |
-| `github-alerts-json` | yes | Advisory source and package context when present | Contract assumes a pinned JSON export shape, not arbitrary API responses. |
-| `nessus-xml` | yes | Host target, plugin name, service/port label, severity, source record ID | Safe local XML parsing for pinned Nessus exports. |
-| `openvas-xml` | yes | Host target, NVT name, severity, source record ID | Safe local XML parsing for pinned OpenVAS-style exports. |
+| `cyclonedx-json` | yes | Component refs, PURLs, versions, package type, repository target, raw severity | Used for SBOM plus vulnerability exports, not plain BOMs without vulnerabilities; see [CycloneDX JSON Import](cyclonedx-json-import.md). |
+| `spdx-json` | yes | Package names, versions, PURLs, package purpose, file/download location, raw severity | Current support is JSON only; see [SPDX JSON Import](spdx-json-import.md). |
+| `dependency-check-json` | yes | File name, file path, raw severity, first project reference | Current support is JSON only; see [Dependency-Check JSON Import](dependency-check-json-import.md). |
+| `github-alerts-json` | yes | Advisory CVE, package name, ecosystem, manifest path, fix version, source severity | Contract assumes a pinned JSON export shape, not arbitrary API responses; see [GitHub Alerts JSON Import](github-alerts-json-import.md). |
+| `nessus-xml` | yes | Host target, plugin name, service/port label, severity, source record ID | Safe local XML parsing for pinned Nessus exports; see [Nessus XML Import](nessus-xml-import.md). |
+| `openvas-xml` | yes | Host target, NVT/result name, severity, source record ID | Safe local XML parsing for pinned OpenVAS-style exports; see [OpenVAS XML Import](openvas-xml-import.md). |
 
 ## Context Overlays
 
@@ -70,6 +70,6 @@ boundaries, but Workbench uploads must use one of the explicit values below.
 - Keep input files local and explicit. The Workbench prioritizes already-known
   CVEs from supplied evidence; it does not scan systems.
 - This matrix was rechecked against backend/frontend format definitions and the
-  Decision/Evidence Kernel v2 read-model contract on 2026-06-03. Re-run the
+  Decision/Evidence Kernel v2 read-model contract on 2026-06-13. Re-run the
   docs hygiene tests when adding or removing an import type, report format, or
   evidence field.

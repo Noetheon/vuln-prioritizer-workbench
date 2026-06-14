@@ -132,12 +132,19 @@ Before opening or merging a change, verify that it does not:
 
 ## Demo Artifacts
 
-When output changes materially, regenerate the checked-in demo artifacts:
+When report output changes materially, update the relevant checked-in report
+fixtures described in [VPW-054 Report Snapshots](docs/evidence/vpw-054-report-snapshots.md),
+then run the snapshot contract gate:
 
 ```bash
-make demo-report
-make demo-compare
-make demo-explain
+python3 -m pytest -q backend/tests/api/report_contracts/test_report_snapshot_contracts.py --no-cov
+```
+
+When browser screenshots intentionally change, refresh the checked-in screenshot
+evidence with:
+
+```bash
+make demo-screenshot
 ```
 
 For a full release-oriented local sweep:
@@ -146,7 +153,8 @@ For a full release-oriented local sweep:
 make release-check
 ```
 
-`make release-check` remains the stricter maintainer sweep because it also regenerates the checked-in demo artifacts before packaging.
+`make release-check` remains the stricter maintainer sweep because it runs the
+workflow gate, frontend gate, dependency audit, and Docker demo smoke.
 
 Only for an explicitly scoped release or public/shared deployment track, run the
 release-readiness evidence sweep:

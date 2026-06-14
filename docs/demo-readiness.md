@@ -11,21 +11,29 @@ Use the Workbench as the first-screen experience. The canonical demo story is
 checked-in occurrence CSV, OpenVEX file, locked provider snapshot, curated
 ATT&CK mapping, and seeded accepted-risk decisions.
 
-1. **Projects**: create or select a project.
-2. **Imports**: import CVE, scanner, SBOM, generic occurrence CSV, and optional
-   VEX or asset-context inputs.
-3. **Findings**: review the remediation queue, filters, sort, priority, EPSS,
+1. **Overview**: load the Online Shop Demo Workspace and review priority,
+   provider, service, and workflow status.
+2. **Projects**: confirm the active local project context.
+3. **Imports**: review the seeded import run, diagnostics, supplied evidence,
+   and supported format registry.
+4. **Findings**: review the remediation queue, filters, sort, priority, EPSS,
    CVSS, KEV, status, and "Why now" context. Repeated CVEs are visible here as
    occurrence evidence; executive reporting groups them into campaigns.
-4. **Finding Detail**: inspect hero metrics, priority explanation, evidence,
+5. **Finding Detail**: inspect hero metrics, priority explanation, evidence,
    TTP Context, and history.
-5. **TTP Context**: show the no-inference state for unmapped findings and the
+6. **TTP Context**: show the no-inference state for unmapped findings and the
    curated mapped demo proof when available.
-6. **Waivers**: review accepted-risk decisions with owner, scope, expiry,
+7. **Assets**: review owner, service, environment, exposure, criticality, and
+   linked findings.
+8. **Data Sources**: show provider freshness, locked snapshot replay,
+   diagnostics, and data-quality notes.
+9. **Waivers**: review accepted-risk decisions with owner, scope, expiry,
    review date, and waiver debt. The demo includes active, expiring-soon, and
    review-due states.
-7. **Evidence Center**: generate reports and inspect checksum metadata.
-8. **Evidence Bundle**: download and verify the ZIP bundle manifest.
+10. **Evidence Center**: generate reports and inspect checksum metadata.
+11. **Evidence Bundle**: download and verify the ZIP bundle manifest.
+12. **Settings**: confirm local runtime, diagnostics, and provider status
+    without exposing secrets.
 
 The flow demonstrates prioritization of known CVEs. It does not scan targets or
 prove exploitability.

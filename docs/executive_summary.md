@@ -25,8 +25,7 @@ Security teams usually face more known vulnerabilities than they can remediate i
 The Workbench now provides:
 
 - prioritized finding views
-- Markdown and JSON reports
-- `CVSS-only` vs enriched comparison output
+- Markdown, HTML, JSON, CSV, SARIF, Evidence ZIP, and ATT&CK Navigator reports
 - mapped-CVE ATT&CK context in finding detail and reports
 - ATT&CK coverage summaries
 - ATT&CK Navigator layer export

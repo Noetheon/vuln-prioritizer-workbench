@@ -12,6 +12,8 @@ on:
       - ready_for_review
     branches:
       - main
+  schedule:
+    - cron: "43 4 * * 2"
   workflow_dispatch:
 
 # Keep only the newest Docker smoke run for each PR/branch. Docker builds are
@@ -26,8 +28,11 @@ permissions:
 jobs:
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       run-docker: ${{ steps.scope.outputs.run-docker }}
+      docker-smoke-mode: ${{ steps.scope.outputs.docker-smoke-mode }}
+      run-image-security: ${{ steps.scope.outputs.run-image-security }}
 
     steps:
       - name: Check out repository
@@ -41,14 +46,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          write_docker_outputs() {
+            {
+              echo "run-docker=$1"
+              echo "docker-smoke-mode=$2"
+              echo "run-image-security=$3"
+            } >> "$GITHUB_OUTPUT"
+          }
+
           if [[ "${{ github.event_name }}" != "pull_request" ]]; then
-            echo "run-docker=true" >> "$GITHUB_OUTPUT"
+            write_docker_outputs true full true
             exit 0
           fi
 
           if [[ "${{ github.event.pull_request.draft }}" == "true" ]]; then
             echo "Draft pull request; Docker compose smoke skipped."
-            echo "run-docker=false" >> "$GITHUB_OUTPUT"
+            write_docker_outputs false skip false
             exit 0
           fi
 
@@ -61,38 +74,77 @@ jobs:
           # route, component, and CSS changes are covered by the CI frontend
           # job and do not need a Docker rebuild on every PR.
           run_docker=false
+          docker_smoke_mode=skip
+          run_image_security=false
+          set_demo_smoke() {
+            run_docker=true
+            if [[ "$docker_smoke_mode" == "skip" ]]; then
+              docker_smoke_mode=demo
+            fi
+          }
+          set_full_smoke() {
+            run_docker=true
+            docker_smoke_mode=full
+          }
           while IFS= read -r path; do
             case "$path" in
-              backend/*|compose*.yml|frontend/Dockerfile*|docker/*)
-                run_docker=true
-                ;;
-              pyproject.toml|uv.lock|Makefile)
-                run_docker=true
-                ;;
-              scripts/docker_quickstart_api_smoke.py|scripts/production_readiness_smoke.py|scripts/start*)
-                run_docker=true
-                ;;
-              .nvmrc|.npmrc|package.json|frontend/package.json|frontend/package-lock.json)
-                run_docker=true
+              compose*.yml|backend/Dockerfile|frontend/Dockerfile*|docker/*)
+                set_full_smoke
                 ;;
               frontend/nginx.conf|frontend/nginx-backend-not-found.conf)
-                run_docker=true
+                set_full_smoke
                 ;;
-              frontend/vite.config.*|frontend/tsconfig*.json|.github/workflows/docker.yml|.grype.yaml)
-                run_docker=true
+              scripts/production_readiness_smoke.py|.github/workflows/docker.yml|Makefile)
+                set_full_smoke
+                ;;
+              backend/app/core/config.py|backend/app/main.py|backend/app/core/schema_smoke.py)
+                set_full_smoke
+                ;;
+              backend/*|pyproject.toml|uv.lock)
+                set_demo_smoke
+                ;;
+              scripts/docker_quickstart_api_smoke.py|scripts/start*)
+                set_demo_smoke
+                ;;
+              .nvmrc|.npmrc|package.json|frontend/package.json|frontend/package-lock.json)
+                set_demo_smoke
+                ;;
+              frontend/vite.config.*|frontend/tsconfig*.json|.grype.yaml)
+                set_demo_smoke
+                ;;
+            esac
+
+            case "$path" in
+              compose*.yml|backend/Dockerfile|frontend/Dockerfile*|docker/*)
+                run_image_security=true
+                ;;
+              pyproject.toml|uv.lock|backend/requirements*.txt)
+                run_image_security=true
+                ;;
+              frontend/package.json|frontend/package-lock.json)
+                run_image_security=true
+                ;;
+              .github/workflows/docker.yml|.grype.yaml|Makefile)
+                run_image_security=true
                 ;;
             esac
           done <<< "$changed_files"
 
           if [[ "$run_docker" == "true" ]]; then
-            echo "run-docker=true" >> "$GITHUB_OUTPUT"
+            if [[ "$run_image_security" == "true" ]]; then
+              image_security_output=true
+            else
+              image_security_output=false
+            fi
+            write_docker_outputs true "$docker_smoke_mode" "$image_security_output"
           else
             echo "No runtime-impacting Docker inputs changed; compose smoke skipped."
-            echo "run-docker=false" >> "$GITHUB_OUTPUT"
+            write_docker_outputs false skip false
           fi
 
   compose-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: changes
     env:
       GRYPE_IMAGE: docker.io/anchore/grype:v0.106.0@sha256:f6fa9ac31f97591957edb13b7c7c24fd172cf11b6e2a2df5dd3464ebb8eefefc
@@ -114,11 +166,11 @@ jobs:
         run: make docker-demo-smoke
 
       - name: Run production-like Docker smoke
-        if: needs.changes.outputs.run-docker == 'true'
+        if: needs.changes.outputs.docker-smoke-mode == 'full'
         run: make docker-production-smoke
 
       - name: Generate image SBOMs
-        if: needs.changes.outputs.run-docker == 'true'
+        if: needs.changes.outputs.run-image-security == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -137,7 +189,7 @@ jobs:
             -o spdx-json=/output/frontend.spdx.json
 
       - name: Generate image vulnerability reports
-        if: needs.changes.outputs.run-docker == 'true'
+        if: needs.changes.outputs.run-image-security == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -158,7 +210,7 @@ jobs:
             -o json > build/docker-sbom/frontend.grype.json
 
       - name: Fail on fixable high and critical image vulnerabilities
-        if: needs.changes.outputs.run-docker == 'true'
+        if: needs.changes.outputs.run-image-security == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -175,7 +227,7 @@ jobs:
           done
 
       - name: Upload container security artifacts
-        if: needs.changes.outputs.run-docker == 'true'
+        if: needs.changes.outputs.run-image-security == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: docker-image-security-reports

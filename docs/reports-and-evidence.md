@@ -39,7 +39,7 @@ The current report surface supports:
 | CSV | Finding table export for spreadsheets and ticket routing. |
 | SARIF | Code-scanning and CI evidence workflows. |
 | ATT&CK Navigator | Defensive layer for mapped techniques when ATT&CK context exists. |
-| Evidence ZIP Bundle | Bundle containing reports, source artifacts, manifest, and SHA256 checksums. |
+| Evidence ZIP Bundle | Bundle containing generated reports, provider snapshot, manifest, source input hash metadata, and SHA256 checksums. |
 
 Available formats depend on the selected run and report action state. The local
 demo workspace is seeded through the backend and should be treated as sample
@@ -48,11 +48,12 @@ evidence, not production evidence.
 ## Evidence ZIP Bundle
 
 The Evidence ZIP Bundle is the most complete local audit artifact. It contains
-generated reports plus a manifest that records file names, sizes, and SHA256
-checksums. Current bundle contents include `manifest.json`, `analysis.json`,
-`technical.md`, `executive.html`, `provider-snapshot.json`, `findings.csv`,
-`results.sarif`, optional `attack-navigator-layer.json`, and optional
-governance artifacts under `governance/`.
+generated reports plus a manifest that records file names, sizes, SHA256
+checksums, and source input hash metadata. It does not copy the original input
+file into the ZIP. Current bundle contents include `manifest.json`,
+`analysis.json`, `technical.md`, `executive.html`, `provider-snapshot.json`,
+`findings.csv`, `results.sarif`, optional `attack-navigator-layer.json`, and
+optional governance artifacts under `governance/`.
 
 Verification checks that bundle contents still match the manifest. Tampered or
 missing artifacts should fail verification instead of being treated as usable

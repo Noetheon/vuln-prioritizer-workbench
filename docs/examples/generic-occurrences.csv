@@ -1,0 +1,3 @@
+cve_id,target_ref,component_name,component_version,purl,source,fix_versions,raw_severity,owner,business_service,criticality,exposure,environment
+CVE-2024-3094,checkout-api,xz,5.6.0-r0,pkg:apk/alpine/xz@5.6.0-r0,trivy,5.6.1-r2,CRITICAL,platform-team,checkout,critical,internet-facing,prod
+CVE-2023-34362,file-transfer,moveit-transfer,2023.0.1,pkg:pypi/moveit-transfer@2023.0.1,manual-backlog,2023.0.2,critical,appsec,file-transfer,high,dmz,prod
