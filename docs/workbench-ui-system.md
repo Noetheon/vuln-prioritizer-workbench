@@ -6,9 +6,7 @@ Scope: React/Vite/TypeScript Workbench UI using the current local route adapter,
 
 Use this document with:
 
-- `docs/workbench-ui-audit.md`
 - `docs/workbench-information-architecture.md`
-- `docs/workbench-ui-migration-plan.md`
 - `frontend/DESIGN.md`
 - `frontend/src/components/vpw/README.md`
 - `frontend/src/styles/README.md`
@@ -199,8 +197,8 @@ Components to narrow or retire from Workbench route use:
 - Direct route composition with `VpwMetricStrip` and `VpwCompactMetric`; route
   code should use the canonical `MetricStrip` adapter, while VPW primitives and
   showcase evidence may continue to use the lower-level components.
-- Route-local hero, tab, drawer, panel, and badge variants listed as baseline
-  findings in `docs/workbench-ui-audit.md`.
+- Route-local hero, tab, drawer, panel, and badge variants outside the shared
+  VPW component contracts.
 
 ### Component Usage Examples
 

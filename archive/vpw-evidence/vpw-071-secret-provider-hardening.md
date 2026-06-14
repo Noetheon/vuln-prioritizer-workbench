@@ -61,7 +61,7 @@ Out of scope:
 
 - `README.md` records the runtime hardening contract next to Workbench
   environment variables.
-- [docs/workbench-threat-model.md](../workbench-threat-model.md) records the
+- [docs/workbench-threat-model.md](../../docs/workbench-threat-model.md) records the
   secret-source, default-secret, provider endpoint, and redaction threats.
 - `mkdocs.yml` links this evidence page under Historical Appendix.
 

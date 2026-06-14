@@ -7,7 +7,7 @@ successfully and still be misleading if it mixes current Workbench behavior,
 historical CLI/template material, archived demo evidence, or live provider
 facts.
 
-Latest documentation hygiene pass recorded from this checkout: 2026-06-03.
+Latest documentation hygiene pass recorded from this checkout: 2026-06-13.
 Scope: Public + Root documentation. That means every MkDocs-published
 `docs/**/*.md` page plus root/community docs, `backend/README.md`,
 `frontend/README.md`, `frontend/DESIGN.md`, `frontend/VPW_PAGE_PATTERNS.md`,
@@ -26,6 +26,26 @@ current docs link to them.
   primary sources before updating public wording.
 - Downgrade unproven claims to limitations, historical notes, or evidence gaps.
   Do not convert local demo proof into public/shared deployment certification.
+
+## 2026-06-13 Documentation Audit Findings
+
+- Public + Root documentation was rechecked against current backend contracts,
+  frontend route/runtime code, launch scripts, MkDocs navigation, and tracked
+  Markdown links.
+- MkDocs navigation covers 89 public pages; no public Markdown page was outside
+  navigation except the explicit non-public evidence-contract allowlist.
+- The Workbench offline demo docs now match the seeded demo service contract:
+  Online Shop Demo Workspace, 32 findings, 21 assets, 7 generated reports, and
+  4 waivers.
+- Generic occurrence CSV docs now match the Workbench fail-closed importer
+  boundary for invalid CVE rows.
+- Every active Workbench import type now has a dedicated public import page, a
+  Support Matrix link, a MkDocs navigation entry, and a parseable synthetic
+  `docs/examples/**` input sample checked through the importer registry.
+- Evidence bundle docs now state that bundles include generated artifacts and
+  source input hash metadata, not copies of the original input files.
+- The pass was rechecked with docs hygiene/build gates, a tracked Markdown link
+  sweep, and targeted decision/import/report/workflow/provider contract suites.
 
 ## 2026-06-03 Evidence-First Read Model Findings
 
@@ -75,20 +95,22 @@ current docs link to them.
   `python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov`,
   `make docs-check`, and the targeted import/report/workflow contract gates.
 
-## 2026-05-30 Provider And Format Baseline
+## 2026-06-13 Provider And Format Baseline
 
-- MkDocs navigation covers 84 public pages; no public Markdown page was outside
-  navigation except the explicit non-public evidence-contract allowlist.
 - Supported Workbench import types in [Support Matrix](support_matrix.md)
   matched `backend/app/domain/engine/options.py` and
   `frontend/src/lib/import-format-types.ts`: `cve-list`,
   `generic-occurrence-csv`, `trivy-json`, `grype-json`, `cyclonedx-json`,
   `spdx-json`, `dependency-check-json`, `github-alerts-json`, `nessus-xml`,
   and `openvas-xml`.
+- Dedicated import docs and synthetic examples are published for every active
+  input type, including scanner, SBOM, GitHub-alert, and XML network-export
+  formats.
 - Supported Workbench report formats matched `backend/app/models/reports.py`
   and `frontend/src/lib/report-format.ts`: `markdown`, `html`, `json`, `csv`,
   `zip`, `attack-navigator`, and `sarif`.
-- External provider/version wording was rechecked against primary sources:
+- External provider/version wording was rechecked against primary sources on
+  2026-05-30:
   NVD CVE API 2.0 uses `cveIds`, FIRST EPSS exposes `/data/v1/epss`, CISA KEV
   remains the canonical catalog with the official `cisagov/kev-data` mirror,
   and MITRE lists ATT&CK v19.1 as current while VPW demo fixtures remain pinned
@@ -103,9 +125,9 @@ current docs link to them.
 | --- | --- | --- | --- | --- |
 | Product identity | Local-first, single-user Workbench for prioritizing already-known CVEs. Not a scanner, exploit tool, autopatcher, SaaS, or AI/ML scoring engine. | `README.md`, `docs/current-product-state.md`, `backend/app/**`, `frontend/src/**`, `backend/app/domain/engine/**` | Not applicable. This is a product-scope claim owned by the repo. | `python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov` |
 | Active stack | FastAPI backend under `backend/app`, React/Vite frontend under `frontend`, internal engine namespace under `backend/app/domain/engine`. | `backend/app/main.py`, `backend/app/api/routes/**`, `frontend/package.json`, `frontend/src/AppRouter.tsx`, `backend/pyproject.toml` | Not applicable. | `make local-workbench-check` |
-| Supported imports | Active Workbench import types are `cve-list`, `generic-occurrence-csv`, `trivy-json`, `grype-json`, `cyclonedx-json`, `spdx-json`, `dependency-check-json`, `github-alerts-json`, `nessus-xml`, and `openvas-xml`. | `backend/app/importers/offline_loader.py`, `backend/app/domain/engine/options.py`, `frontend/src/lib/import-format-types.ts`, `docs/support_matrix.md` | Tool format ownership remains external, but support is repo-defined. | `python3 -m pytest -q backend/tests/test_input_fixtures.py backend/tests/test_trivy_json_parser.py backend/tests/test_grype_json_parser.py --no-cov` |
+| Supported imports | Active Workbench import types are `cve-list`, `generic-occurrence-csv`, `trivy-json`, `grype-json`, `cyclonedx-json`, `spdx-json`, `dependency-check-json`, `github-alerts-json`, `nessus-xml`, and `openvas-xml`. Each active input type has a public detail page, Support Matrix link, MkDocs nav entry, and parseable synthetic example. | `backend/app/importers/offline_loader.py`, `backend/app/domain/engine/options.py`, `backend/app/domain/engine/inputs/parser_registry.py`, `backend/app/services/workbench_capabilities.py`, `frontend/src/lib/import-format-types.ts`, `docs/support_matrix.md`, `docs/*-import.md`, `docs/examples/*` | Tool format ownership remains external, but support is repo-defined. | `python3 -m pytest -q backend/tests/test_input_fixtures.py backend/tests/test_input_support_edges.py backend/tests/test_github_alerts_normalization.py backend/tests/api/import_contracts/test_import_parser_contracts.py backend/tests/test_docs_hygiene.py --no-cov` |
 | Report outputs | Active report formats are Markdown, HTML, JSON, CSV, Evidence ZIP, ATT&CK Navigator, and SARIF. | `backend/app/models/reports.py`, `backend/app/services/report_contracts.py`, `frontend/src/lib/report-format.ts`, `docs/contracts.md` | SARIF version is external; VPW support is repo-defined. | `python3 -m pytest -q backend/tests/api/report_contracts backend/tests/test_report_formatting.py --no-cov` |
-| Decision/Evidence Kernel v2 | Successful imports produce one typed `DecisionRunResult`; bounded run evidence lives in `analysis_evidence`, while per-finding decision graphs live in `finding_decision_evidence`. Successful workflow result JSON is only a compact reference payload, and successful read paths hydrate public DTOs through the central `decision_core/readmodels.py` read model. Relational finding columns remain identity/join/index context, not a second decision source. | `backend/app/decision_core/producer.py`, `backend/app/decision_core/readmodels.py`, `backend/app/decision_core/contracts.py`, `backend/app/models/evidence.py`, `backend/app/repositories/evidence.py`, `backend/app/services/import_execution.py`, `backend/app/services/run_workflow_projection.py`, `backend/app/services/finding_projection.py`, `backend/app/services/dashboard.py`, `backend/app/services/governance.py`, `backend/app/services/github_issues.py`, `backend/app/services/report_service_payload.py`, `backend/tests/test_decision_core/readmodels.py`, `backend/tests/api/import_contracts/test_kernel_first_import_contract.py`, `backend/tests/api/import_contracts/`, `backend/tests/api/report_contracts/`, `backend/tests/hygiene/test_backend_boundaries.py` | Not applicable. | `python3 -m pytest -q backend/tests/test_decision_core/readmodels.py backend/tests/hygiene/test_backend_boundaries.py backend/tests/api/import_contracts backend/tests/api/report_contracts backend/tests/api/workflow_contracts --no-cov` |
+| Decision/Evidence Kernel v2 | Successful imports produce one typed `DecisionRunResult`; bounded run evidence lives in `analysis_evidence`, while per-finding decision graphs live in `finding_decision_evidence`. Successful workflow result JSON is only a compact reference payload, and successful read paths hydrate public DTOs through the central `decision_core/readmodels.py` read model. Relational finding columns remain identity/join/index context, not a second decision source. | `backend/app/decision_core/producer.py`, `backend/app/decision_core/readmodels.py`, `backend/app/decision_core/contracts.py`, `backend/app/models/evidence.py`, `backend/app/repositories/evidence.py`, `backend/app/services/import_execution.py`, `backend/app/services/run_workflow_projection.py`, `backend/app/services/finding_projection.py`, `backend/app/services/dashboard.py`, `backend/app/services/governance.py`, `backend/app/services/github_issues.py`, `backend/app/services/report_service_payload.py`, `backend/tests/test_decision_projection.py`, `backend/tests/api/import_contracts/test_kernel_first_import_contract.py`, `backend/tests/api/import_contracts/`, `backend/tests/api/report_contracts/`, `backend/tests/hygiene/test_backend_boundaries.py` | Not applicable. | `python3 -m pytest -q backend/tests/test_decision_projection.py backend/tests/hygiene/test_backend_boundaries.py backend/tests/api/import_contracts backend/tests/api/report_contracts backend/tests/api/workflow_contracts --no-cov` |
 | Provider enrichment | VPW uses NVD, FIRST EPSS, and CISA KEV as transparent provider signals and surfaces degraded or missing provider data. | `backend/app/domain/engine/providers/*.py`, `backend/tests/test_provider_response_contracts.py`, `backend/tests/live/test_provider_live_contracts.py` | [NVD CVE API 2.0](https://nvd.nist.gov/developers/vulnerabilities), [FIRST EPSS API](https://api.first.org/epss/), [CISA KEV catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) | `VPW_RUN_LIVE_PROVIDER_TESTS=1 python3 -m pytest -q backend/tests/live/test_provider_live_contracts.py --no-cov` |
 | Provider request limits | NVD documents `cveIds` as the current parameter with up to 100 CVE IDs per request. FIRST EPSS documents comma-separated CVEs with a 2000-character `cve` parameter limit. VPW currently sends NVD requests per CVE and EPSS chunks below the documented limit. | `backend/app/domain/engine/providers/nvd.py`, `backend/app/domain/engine/providers/epss.py`, `backend/app/domain/engine/config.py` | [NVD vulnerability API](https://nvd.nist.gov/developers/vulnerabilities), [FIRST EPSS API](https://api.first.org/epss/) | Provider fixture tests plus live provider smoke. |
 | CISA KEV source | cisa.gov is the authoritative catalog. `cisagov/kev-data` is an official mirror used as fallback. | `backend/app/domain/engine/providers/kev.py`, `backend/app/domain/engine/config.py`, `backend/tests/test_provider_response_contracts.py` | [CISA KEV catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog), [cisagov/kev-data](https://github.com/cisagov/kev-data) | `python3 -m pytest -q backend/tests/test_provider_response_contracts.py --no-cov` |
@@ -133,7 +155,7 @@ The 2026-06-03 evidence-first read-model pass additionally used these targeted
 contract checks while auditing docs:
 
 ```bash
-python3 -m pytest -q backend/tests/test_decision_core/readmodels.py backend/tests/hygiene/test_backend_boundaries.py --no-cov
+python3 -m pytest -q backend/tests/test_decision_projection.py backend/tests/hygiene/test_backend_boundaries.py --no-cov
 python3 -m pytest -q backend/tests/api/import_contracts/test_kernel_first_import_contract.py --no-cov
 python3 -m pytest -q backend/tests/test_input_fixtures.py backend/tests/test_trivy_json_parser.py backend/tests/test_grype_json_parser.py --no-cov
 python3 -m pytest -q backend/tests/api/report_contracts backend/tests/test_report_formatting.py --no-cov

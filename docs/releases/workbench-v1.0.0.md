@@ -49,7 +49,8 @@ The v1.0 release gate recorded these historical acceptance criteria:
   `docs/examples/media/workbench-findings.png`,
   `docs/examples/media/workbench-finding-detail-ttp.png`, and
   `docs/examples/media/workbench-reports-evidence.png`
-- the completed checklist in [workbench-v1-release-checklist.md](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/v1.1.0/docs/workbench-v1-release-checklist.md)
+- the archived VPW-076 release story in
+  `archive/vpw-evidence/vpw-076-release-story.md`
 
 Dependency audit disposition for the 2026-04-24 release pass: `make dependency-audit` completed successfully and `pip-audit` reported no known vulnerabilities for `requirements.txt`; there are no accepted dependency-audit exceptions for this release.
 

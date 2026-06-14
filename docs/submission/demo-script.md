@@ -26,8 +26,11 @@ Clarify:
 | 4 | Findings | Remediation Queue, filters, sorting, Why Now. | "The queue shows priority, score, CVSS, EPSS, KEV, status, and a signal-derived reason for acting or reviewing now." |
 | 5 | Finding Detail | Hero, Why this priority, Evidence. | "This turns a technical finding into a justified decision record." |
 | 6 | TTP Context | No-inference and mapped demo proof. | "Unmapped stays unmapped. Only reviewed mapping sources appear as defensive ATT&CK context." |
-| 7 | Waivers | Accepted risk and governance. | "Accepted risks remain visible, scoped, and verifiable; they are not deleted." |
-| 8 | Evidence Center | Reports, evidence ZIP, manifest, checksums. | "The decision ends with artifacts that can be verified later." |
+| 7 | Assets | Owner, service, environment, exposure, and linked findings. | "Asset context turns a CVE queue into operational ownership and business routing." |
+| 8 | Data Sources | Provider freshness, locked replay, and diagnostics. | "Provider evidence is visible and reproducible; locked replay is not the same as live freshness." |
+| 9 | Waivers | Accepted risk and governance. | "Accepted risks remain visible, scoped, and verifiable; they are not deleted." |
+| 10 | Evidence Center | Reports, evidence ZIP, manifest, checksums. | "The decision ends with artifacts that can be verified later." |
+| 11 | Settings | Local runtime and diagnostics without secrets. | "The Workbench shows local health and diagnostics without exposing secret values." |
 
 ## Exact Screens To Show
 
@@ -39,8 +42,11 @@ If the live demo is stable, open the app in this order:
 4. `/findings`
 5. a Finding Detail page
 6. TTP Context Tab
-7. `/waivers`
-8. `/reports`
+7. `/assets`
+8. `/providers`
+9. `/waivers`
+10. `/reports`
+11. `/settings`
 
 Archived fallback screens are historical demo evidence. They are useful if the
 live demo is unavailable, but they do not certify the current `main` UI by

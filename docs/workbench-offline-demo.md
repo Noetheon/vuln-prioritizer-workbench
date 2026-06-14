@@ -19,14 +19,18 @@ make provider-snapshot-validate
 python3 -m pytest -q backend/tests/api/test_workbench_local_runtime_smoke.py backend/tests/api/import_contracts backend/tests/api/report_contracts --no-cov
 make docker-demo-smoke
 make dependency-audit
+bash scripts/launch-workbench.sh demo
 docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
 ```
 
-Open `http://127.0.0.1:5173` and create the project `online-shop-demo`.
-The browser demo uses the active backend in `backend/app` and the generated
-`/api/v1` React client. The `worker` service must stay running because imports,
-provider refreshes, report generation, retry, and cancellation are durable
-Workflow v2 jobs.
+The preferred demo launcher starts the local Docker Workbench when needed,
+loads or repairs the deterministic Online Shop Demo Workspace, then prints and
+opens demo-ready overview, filtered triage, and Evidence Center URLs. For a
+manual run, open `http://127.0.0.1:5173` after Compose is ready and use **Load
+demo workspace** from the dashboard. The browser demo uses the active backend in
+`backend/app` and the generated `/api/v1` React client. The `worker` service
+must stay running because imports, provider refreshes, report generation,
+retry, and cancellation are durable Workflow v2 jobs.
 
 The smoke target defaults to backend `18080` and frontend `15174`. If those
 host ports are already occupied, run it with explicit host bindings, for
@@ -41,10 +45,12 @@ If `pip-audit`, npm, or advisory data is unavailable, record that as a release-c
 ## Demo Steps
 
 1. Open the Workbench dashboard.
-2. Select **Load demo workspace**. This seeds the deterministic Online Shop
-   workspace through normal import and report services.
-3. Confirm the dashboard shows 24 findings, high EPSS signals, KEV-backed
-   exposure, top services, recent runs, and locked provider replay status.
+2. Select **Load demo workspace**, or use the URL opened by
+   `bash scripts/launch-workbench.sh demo`. This seeds the deterministic Online
+   Shop workspace through normal import and report services.
+3. Confirm the dashboard shows 32 findings, 21 assets, 7 reports, 4 waivers,
+   high EPSS signals, KEV-backed exposure, top services, recent runs, and
+   locked provider replay status.
 4. Open **Findings** and apply filters for `Critical`, `High`, `KEV`, owner,
    service, status, and CVE search.
 5. Open a mapped critical finding such as Log4Shell and show `Why this

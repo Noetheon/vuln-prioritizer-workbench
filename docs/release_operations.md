@@ -249,25 +249,30 @@ The repository keeps PR safety checks active while reducing duplicate and
 long-running GitHub Actions work.
 
 Ready pull requests to `main` run the Python workflow gate, package smoke,
-frontend lint/build/client drift checks with coverage, full Playwright coverage
-for frontend/API/runtime-impacting changes, Docker workflow status, and CodeQL
-where configured. Docs/archive-only PRs still get successful frontend and Docker
-workflow contexts, but the expensive browser and Docker compose work is skipped
-after the workflows confirm that only non-runtime paths changed.
+frontend lint/build/client drift checks with coverage, scoped Playwright
+coverage for frontend/API/runtime-impacting changes, Docker workflow status, and
+CodeQL where configured. Docs/archive-only PRs still get successful frontend and
+Docker workflow contexts, but the expensive browser and Docker compose work is
+skipped after the workflows confirm that only non-runtime paths changed.
 
 The CI frontend gate runs for frontend, API, generated-client, runtime, Node/npm
 toolchain policy, and CI gate changes. It runs lint, build, unit tests,
-generated-client drift, and the full Playwright suite. Docs/archive-only PRs
-still get an explicit successful skip.
+generated-client drift, and Playwright. Backend/API-only PRs use Chromium and
+mobile Chromium; UI, style, browser-config, `main`, and manual runs keep the
+full browser and visual-regression path. Docs/archive-only PRs still get an
+explicit successful skip.
 
-The Docker workflow runs `make docker-demo-smoke` and
-`make docker-production-smoke` for backend, Compose, Docker, dependency,
-runtime script, Node/npm toolchain policy, frontend build-config, and Docker
-workflow changes. Those smokes cover health, local readiness, locked-provider
-import, findings, provider status, Postgres Alembic/schema/repository readiness,
-same-origin production routing, security headers, report download, and path
-redaction. Docs/archive-only PRs still get an explicit successful skip, and
-failures print compose status/logs.
+The Docker workflow runs `make docker-demo-smoke` for backend, dependency,
+runtime script, Node/npm toolchain policy, and frontend build-config changes. It
+adds `make docker-production-smoke` for Compose, Dockerfile, nginx,
+production-smoke, runtime config, Makefile, and Docker workflow changes. Image
+SBOM and Grype scans run for dependency, Dockerfile, Compose, Grype, Makefile,
+and Docker workflow changes. Those gates cover health, local readiness,
+locked-provider import, findings, provider status, Postgres
+Alembic/schema/repository readiness, same-origin production routing, security
+headers, report download, path redaction, and image vulnerability policy.
+Docs/archive-only PRs still get an explicit successful skip, and failures print
+compose status/logs.
 
 Pushes to `main` run the post-merge version of the same CI workflows. Manual
 `workflow_dispatch` remains available for full validation of CI, Docker,
@@ -278,23 +283,24 @@ The main cost controls are:
 - stale workflow runs are cancelled after newer pushes;
 - feature-branch push workflows are not duplicated when a PR already validates
   the same commit;
-- ready PRs skip expensive frontend and Docker work only when scope analysis
-  shows no relevant runtime/browser inputs changed;
+- ready PRs scope expensive frontend and Docker work according to changed
+  runtime/browser/container inputs;
 - draft PRs keep successful required contexts where possible and rerun the full
   ready-state gates on the `ready_for_review` event;
 - Docker compose is skipped for docs/archive-only changes;
 - failure/debug artifacts use short retention windows.
 
-The tradeoff is cost and runtime: frontend/API/runtime PRs now pay for the full
-Playwright suite before merge. Draft PRs remain the intentional exception until
-the PR is marked ready for review.
+The tradeoff is cost and runtime: UI/browser PRs still pay for full browser and
+visual-regression coverage before merge, while backend/API-only PRs get
+representative Playwright coverage. Draft PRs remain the intentional exception
+until the PR is marked ready for review.
 
 ## Required Contexts And Ownership
 
 Branch protection should treat these release-adjacent contexts as required for
 release or runtime PRs:
 
-- `CI / check (3.13)` for the local-equivalent Python workflow gate.
+- `CI / check (3.11)` for the local-equivalent Python workflow gate.
 - `CI / frontend` for frontend/API/runtime representative browser evidence.
 - `Docker / compose-smoke` for runtime and Compose evidence.
 - CodeQL where repository security policy requires it.

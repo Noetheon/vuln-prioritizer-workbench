@@ -110,9 +110,10 @@ def test_compose_override_exposes_workbench_shell_and_frontend_ports() -> None:
     backend_command = "\n".join(services["backend"]["command"])
 
     assert services["backend"]["ports"] == ["127.0.0.1:${DOCKER_DEMO_BACKEND_PORT:-8000}:8000"]
-    assert "cp -n /app/examples/*provider_snapshot*.json /app/provider-snapshots/" in (
-        backend_command
-    )
+    assert (
+        "cp -f /app/examples/demo_provider_snapshot.json "
+        "/app/provider-snapshots/demo_provider_snapshot.json"
+    ) in backend_command
     assert "alembic -c /app/backend/alembic.ini upgrade head" in backend_command
     assert "python -m app.core.migration_bootstrap" not in backend_command
     assert "init_db(session)" not in backend_command

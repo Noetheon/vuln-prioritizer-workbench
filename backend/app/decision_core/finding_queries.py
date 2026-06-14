@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import heapq
 import uuid
+from collections.abc import Iterable
 from typing import Any, cast
 
 from sqlalchemy.orm import QueryableAttribute, selectinload
@@ -23,6 +25,8 @@ from app.repositories.finding_attack_query import (
 )
 from app.repositories.finding_page_query import FindingPageQuery
 from app.repositories.findings import FindingRepository
+
+_GENERAL_FINDING_PAGE_CHUNK_SIZE = 500
 
 
 def list_project_attack_summary_inputs(
@@ -114,18 +118,64 @@ def list_project_findings_query(
         .where(Finding.project_id == query.project_id)
         .order_by(Finding.cve_id, col(Finding.id))
     )
-    findings = list(session.exec(statement).all())
-    views = [
-        view
-        for view in project_finding_decision_views(session, findings)
-        if _matches_finding_page_query(view, query)
-    ]
-    views.sort(key=lambda view: _finding_page_sort_key(view, query))
-    if query.direction == "desc":
-        views.reverse()
-    count = len(views)
-    page = views[query.offset : query.offset + query.limit]
+    return _general_project_findings_page(session, query, statement)
+
+
+def _general_project_findings_page(
+    session: Session,
+    query: FindingPageQuery,
+    statement: Any,
+) -> tuple[list[Finding], int]:
+    """Return a sorted page without materializing all project evidence at once."""
+
+    def matched_views() -> Iterable[DecisionFindingView]:
+        for findings in _iter_project_finding_chunks(session, statement):
+            for view in project_finding_decision_views(session, findings):
+                if _matches_finding_page_query(view, query):
+                    yield view
+
+    page, count = _bounded_sorted_finding_page(matched_views(), query)
     return [view.finding for view in page], count
+
+
+def _iter_project_finding_chunks(session: Session, statement: Any) -> Iterable[list[Finding]]:
+    chunk_offset = 0
+    while True:
+        findings = list(
+            session.exec(
+                statement.offset(chunk_offset).limit(_GENERAL_FINDING_PAGE_CHUNK_SIZE)
+            ).all()
+        )
+        if not findings:
+            return
+        yield findings
+        if len(findings) < _GENERAL_FINDING_PAGE_CHUNK_SIZE:
+            return
+        chunk_offset += _GENERAL_FINDING_PAGE_CHUNK_SIZE
+
+
+def _bounded_sorted_finding_page(
+    matched_views: Iterable[DecisionFindingView],
+    query: FindingPageQuery,
+) -> tuple[list[DecisionFindingView], int]:
+    count = 0
+
+    def counted_views() -> Iterable[DecisionFindingView]:
+        nonlocal count
+        for view in matched_views:
+            count += 1
+            yield view
+
+    window_size = query.offset + query.limit
+
+    def sort_key(view: DecisionFindingView) -> tuple[Any, ...]:
+        return _finding_page_sort_key(view, query)
+
+    if query.direction == "desc":
+        window = heapq.nlargest(window_size, counted_views(), key=sort_key)
+    else:
+        window = heapq.nsmallest(window_size, counted_views(), key=sort_key)
+    return window[query.offset : query.offset + query.limit], count
 
 
 def _database_cve_page_if_unfiltered(

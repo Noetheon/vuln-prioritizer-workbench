@@ -37,8 +37,8 @@ in neutral domain modules, not runtime-specific packages.
 
 ## Frontend Structure
 
-TanStack routes are mostly thin entrypoints. Route or feature modules own the
-visible surfaces:
+The local route adapter keeps route entrypoints thin. Route or feature modules
+own the visible surfaces:
 
 - Dashboard: `frontend/src/components/dashboard/`
 - Findings: `frontend/src/components/findings/`

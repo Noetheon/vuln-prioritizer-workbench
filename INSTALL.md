@@ -74,6 +74,7 @@ macOS/Linux:
 
 ```bash
 bash scripts/launch-workbench.sh start
+bash scripts/launch-workbench.sh demo
 bash scripts/launch-workbench.sh status
 bash scripts/launch-workbench.sh logs
 bash scripts/launch-workbench.sh smoke
@@ -120,6 +121,12 @@ docker compose -f compose.yml -f compose.override.yml up --build backend fronten
 
 Open the printed frontend URL and use the dashboard action to load the demo
 workspace. The local Docker launcher enables the demo workspace by default.
+
+For a deterministic presentation-ready demo, run:
+
+```bash
+bash scripts/launch-workbench.sh demo
+```
 
 To refresh reproducible demo screenshot evidence for maintainers:
 

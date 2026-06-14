@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 from paths import REPO_ROOT
 
+from app.importers import build_importer_registry
 from app.models.reports import REPORT_FORMAT_VALUES
 from app.services.workbench_capabilities import IMPORT_FORMAT_CAPABILITIES
 
@@ -36,6 +37,48 @@ GITHUB_ISSUE_TEMPLATE_ROOT = REPO_ROOT / ".github" / "ISSUE_TEMPLATE"
 MAINTAINERS_FILE = REPO_ROOT / "MAINTAINERS.md"
 SUPPORT_FILE = REPO_ROOT / "SUPPORT.md"
 USER_DOCUMENTATION_FILE = REPO_ROOT / "docs" / "user_documentation.md"
+IMPORT_FORMAT_DOC_EXAMPLES = {
+    "cve-list": (
+        Path("docs/cve-list-import.md"),
+        Path("docs/examples/cve-list.txt"),
+    ),
+    "generic-occurrence-csv": (
+        Path("docs/generic-occurrence-csv-import.md"),
+        Path("docs/examples/generic-occurrences.csv"),
+    ),
+    "trivy-json": (
+        Path("docs/trivy-json-import.md"),
+        Path("docs/examples/trivy-demo.json"),
+    ),
+    "grype-json": (
+        Path("docs/grype-json-import.md"),
+        Path("docs/examples/grype-demo.json"),
+    ),
+    "cyclonedx-json": (
+        Path("docs/cyclonedx-json-import.md"),
+        Path("docs/examples/cyclonedx-demo.json"),
+    ),
+    "spdx-json": (
+        Path("docs/spdx-json-import.md"),
+        Path("docs/examples/spdx-demo.json"),
+    ),
+    "dependency-check-json": (
+        Path("docs/dependency-check-json-import.md"),
+        Path("docs/examples/dependency-check-demo.json"),
+    ),
+    "github-alerts-json": (
+        Path("docs/github-alerts-json-import.md"),
+        Path("docs/examples/github-alerts-demo.json"),
+    ),
+    "nessus-xml": (
+        Path("docs/nessus-xml-import.md"),
+        Path("docs/examples/nessus-demo.nessus"),
+    ),
+    "openvas-xml": (
+        Path("docs/openvas-xml-import.md"),
+        Path("docs/examples/openvas-demo.xml"),
+    ),
+}
 TEXT_SUFFIXES = {
     ".css",
     ".html",
@@ -335,9 +378,6 @@ def test_dependency_audit_docs_cover_frontend_build_chain_dependencies() -> None
         / "dependency-and-package-policy.md",
         "docs/workbench-threat-model.md": REPO_ROOT / "docs" / "workbench-threat-model.md",
         "docs/workbench-offline-demo.md": REPO_ROOT / "docs" / "workbench-offline-demo.md",
-        "docs/workbench-v1-release-checklist.md": REPO_ROOT
-        / "docs"
-        / "workbench-v1-release-checklist.md",
     }
     stale_phrases = ("--omit=dev", "frontend production dependencies")
     violations = {
@@ -356,12 +396,7 @@ def test_dependency_policy_does_not_carry_closed_dependency_prs() -> None:
 
 
 def test_frontend_docs_use_current_npm_test_commands() -> None:
-    active_frontend_docs = {
-        "frontend/README.md": REPO_ROOT / "frontend" / "README.md",
-        "docs/workbench-ui-migration-plan.md": REPO_ROOT
-        / "docs"
-        / "workbench-ui-migration-plan.md",
-    }
+    active_frontend_docs = {"frontend/README.md": REPO_ROOT / "frontend" / "README.md"}
     stale_phrases = (
         "cd frontend && npm",
         "run test -- --run frontend/tests",
@@ -460,9 +495,6 @@ def test_documentation_map_defines_current_and_historical_boundaries() -> None:
             if "Current Product State" in item
         )
     )
-    history_pages = _nav_markdown_pages(
-        next(item["Workbench History"] for item in mkdocs["nav"] if "Workbench History" in item)
-    )
     current_state = CURRENT_PRODUCT_STATE_FILE.read_text(encoding="utf-8")
     documentation_map = DOCUMENTATION_MAP_FILE.read_text(encoding="utf-8")
     pyproject = PYPROJECT_FILE.read_text(encoding="utf-8")
@@ -472,8 +504,6 @@ def test_documentation_map_defines_current_and_historical_boundaries() -> None:
     assert Path("docs/architecture/decision-evidence-kernel.md") in nav_pages
     assert Path("docs/workbench-threat-model.md") in current_product_pages
     assert Path("docs/workbench-public-deployment.md") in current_product_pages
-    assert Path("docs/workbench-threat-model.md") not in history_pages
-    assert Path("docs/workbench-public-deployment.md") not in history_pages
     assert "FastAPI" in current_state
     assert "`backend/app`" in current_state
     assert "React, Vite, TypeScript" in current_state
@@ -504,18 +534,49 @@ def test_support_matrix_tracks_active_import_and_report_formats() -> None:
     assert documented_reports == backend_reports
 
 
+def test_import_format_docs_cover_every_active_workbench_import_type() -> None:
+    backend_inputs = _backend_input_format_values()
+    support_matrix = SUPPORT_MATRIX_FILE.read_text(encoding="utf-8")
+    mkdocs = yaml.safe_load(MKDOCS_FILE.read_text(encoding="utf-8"))
+    nav_pages = _nav_markdown_pages(mkdocs["nav"])
+    registry = build_importer_registry()
+
+    assert set(IMPORT_FORMAT_DOC_EXAMPLES) == backend_inputs
+
+    for input_type, (doc_path, example_path) in IMPORT_FORMAT_DOC_EXAMPLES.items():
+        full_doc_path = REPO_ROOT / doc_path
+        full_example_path = REPO_ROOT / example_path
+
+        assert full_doc_path.is_file(), input_type
+        assert full_example_path.is_file(), input_type
+        assert doc_path in nav_pages, input_type
+        assert f"]({doc_path.relative_to('docs').as_posix()})" in support_matrix, input_type
+
+        doc_text = full_doc_path.read_text(encoding="utf-8")
+        assert f"`{input_type}`" in doc_text
+        assert example_path.relative_to("docs").as_posix() in doc_text
+
+        occurrences = registry.parse(
+            input_type,
+            full_example_path.read_bytes(),
+            filename=full_example_path.name,
+        )
+        assert occurrences, input_type
+
+
 def test_documentation_evidence_matrix_records_current_hygiene_baseline() -> None:
     current_state = CURRENT_PRODUCT_STATE_FILE.read_text(encoding="utf-8")
     evidence_matrix = DOCUMENTATION_EVIDENCE_MATRIX_FILE.read_text(encoding="utf-8")
     support_matrix = SUPPORT_MATRIX_FILE.read_text(encoding="utf-8")
     user_documentation = USER_DOCUMENTATION_FILE.read_text(encoding="utf-8")
     reports_and_evidence = REPORTS_AND_EVIDENCE_FILE.read_text(encoding="utf-8")
+    normalized_current_state = " ".join(current_state.split())
     normalized_support_matrix = " ".join(support_matrix.split())
     normalized_user_documentation = " ".join(user_documentation.split())
     normalized_reports_and_evidence = " ".join(reports_and_evidence.split())
 
     for text in (current_state, evidence_matrix):
-        assert "2026-06-03" in text
+        assert "2026-06-13" in text
         assert "Public + Root" in text
         assert "documentation hygiene" in text.lower()
 
@@ -524,7 +585,10 @@ def test_documentation_evidence_matrix_records_current_hygiene_baseline() -> Non
     assert "backend/app/decision_core/readmodels.py" in evidence_matrix
     assert "Relational finding columns remain identity/join/index context" in evidence_matrix
     assert "provider/version wording baseline was refreshed" in current_state
-    assert "MkDocs navigation covers 84 public pages" in evidence_matrix
+    assert "MkDocs navigation covers 89 public pages" in evidence_matrix
+    assert "Every active Workbench import type now has a dedicated public import page" in (
+        evidence_matrix
+    )
     assert "Supported Workbench import types" in evidence_matrix
     assert "Supported Workbench report formats" in evidence_matrix
     assert "backend/app/decision_core/producer.py" in evidence_matrix
@@ -533,7 +597,7 @@ def test_documentation_evidence_matrix_records_current_hygiene_baseline() -> Non
     assert "FIRST EPSS exposes `/data/v1/epss`" in evidence_matrix
     assert "official `cisagov/kev-data` mirror" in evidence_matrix
     assert "MITRE lists ATT&CK v19.1 as current" in evidence_matrix
-    assert "not as live-provider uptime proof" in current_state
+    assert "not as live-provider uptime proof" in normalized_current_state
 
     for source_claim in (
         "NVD CVE API 2.0",

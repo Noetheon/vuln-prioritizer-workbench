@@ -1,0 +1,57 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "bom-ref": "github.com/example/checkout",
+      "name": "checkout-service",
+      "version": "1.0.0"
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64",
+      "type": "library",
+      "name": "xz",
+      "version": "5.6.0-r0",
+      "purl": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64"
+    },
+    {
+      "bom-ref": "pkg:pypi/moveit-transfer@2023.0.1",
+      "type": "library",
+      "name": "moveit-transfer",
+      "version": "2023.0.1",
+      "purl": "pkg:pypi/moveit-transfer@2023.0.1"
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2024-3094",
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "affects": [
+        {
+          "ref": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2023-34362",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "affects": [
+        {
+          "ref": "pkg:pypi/moveit-transfer@2023.0.1"
+        }
+      ]
+    }
+  ]
+}

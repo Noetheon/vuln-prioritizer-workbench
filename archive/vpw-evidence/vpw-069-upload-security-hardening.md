@@ -32,7 +32,7 @@ Out of scope:
 | Per project/run isolated | Stored uploads stay under the configured upload root and are isolated by server-owned project/run or equivalent UUID-scoped directories. |
 | Parser errors path-redacted | Client-visible parser errors include structured context such as input type, sanitized filename, line, field, and value when known, but do not expose absolute upload paths, temporary directories, stack traces, or local filesystem layout. |
 | XML defused | Nessus/OpenVAS XML import uses defused XML handling, rejects DOCTYPE, ENTITY, and XXE-style constructs before parsing, and returns malformed XML as a sanitized parser error. |
-| Threat model aligned | The upload control row in [Workbench Threat Model and Readiness](../workbench-threat-model.md#control-evidence-for-v12) names both template FastAPI imports and older Workbench imports. |
+| Threat model aligned | The upload control row in [Workbench Threat Model and Readiness](../../docs/workbench-threat-model.md#control-evidence-for-v12) names both template FastAPI imports and older Workbench imports. |
 
 ## Evidence Requirements
 
@@ -65,7 +65,7 @@ patterns in the upload/application code paths.
 ## Threat Model Reference
 
 The upload control is tracked in
-[docs/workbench-threat-model.md](../workbench-threat-model.md#control-evidence-for-v12).
+[docs/workbench-threat-model.md](../../docs/workbench-threat-model.md#control-evidence-for-v12).
 The readiness expectation is that template FastAPI imports and older Workbench
 imports are size bounded, suffix/MIME allowlisted, traversal-safe, isolated per
 project/run, path-redacted on parser errors, and safe for XML scanner exports.

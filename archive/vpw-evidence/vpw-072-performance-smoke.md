@@ -27,7 +27,7 @@ make performance-smoke
 Output artifact:
 
 - `build/vpw-072-performance-smoke.json`
-- archived copy: `docs/evidence/vpw-072-performance-smoke.json`
+- archived copy: `archive/vpw-evidence/vpw-072-performance-smoke.json`
 
 ## Result
 

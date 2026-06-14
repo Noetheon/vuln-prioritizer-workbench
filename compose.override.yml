@@ -14,7 +14,7 @@ services:
       - -c
       - |
         set -e
-        cp -n /app/examples/*provider_snapshot*.json /app/provider-snapshots/ 2>/dev/null || true
+        cp -f /app/examples/demo_provider_snapshot.json /app/provider-snapshots/demo_provider_snapshot.json 2>/dev/null || true
         alembic -c /app/backend/alembic.ini upgrade head
         exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     develop:

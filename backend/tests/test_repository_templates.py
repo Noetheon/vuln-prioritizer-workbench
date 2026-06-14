@@ -149,6 +149,55 @@ def test_default_ci_uses_local_workbench_gate_not_release_or_package_gate() -> N
     assert "$(MAKE) release-readiness-check" not in local_gate
 
 
+def test_default_ci_splits_full_quality_from_python_compatibility() -> None:
+    workflow = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
+    check_job = workflow["jobs"]["check"]
+    ci_workflow = CI_WORKFLOW.read_text(encoding="utf-8")
+    makefile = MAKEFILE.read_text(encoding="utf-8")
+
+    assert check_job["name"] == "check (${{ matrix.python-version }})"
+    assert check_job["timeout-minutes"] == 15
+    assert check_job["strategy"]["matrix"]["include"] == [
+        {"python-version": "3.11", "gate": "full"},
+        {"python-version": "3.12", "gate": "compatibility"},
+        {"python-version": "3.13", "gate": "compatibility"},
+    ]
+
+    check_block = CI_WORKFLOW.read_text(encoding="utf-8").split(
+        "  dependency-audit:",
+        maxsplit=1,
+    )[0]
+
+    assert "Decide Python gate scope" in check_block
+    assert "write_python_gate docs" in check_block
+    assert "write_python_gate skip" in check_block
+    assert "run: make local-workbench-check" in check_block
+    assert "run: make docs-check" in check_block
+    assert "run: make backend-compatibility-check" in check_block
+    assert "python -m pytest backend/tests --no-cov" not in ci_workflow
+    assert "backend-compatibility-check:" in makefile
+    assert "$(BACKEND_TESTS)/api/import_contracts/test_import_api_contracts.py" in makefile
+    assert "$(BACKEND_TESTS)/api/workflow_contracts/test_durable_workflow_core.py" in makefile
+
+
+def test_default_ci_scopes_dependency_audit_to_dependency_inputs() -> None:
+    ci_workflow = CI_WORKFLOW.read_text(encoding="utf-8")
+    dependency_audit = ci_workflow.split("  dependency-audit:", maxsplit=1)[1].split(
+        "  frontend:",
+        maxsplit=1,
+    )[0]
+
+    assert "Decide whether dependency audit is needed" in dependency_audit
+    assert "run-dependency-audit=false" in dependency_audit
+    assert "backend/requirements*.txt|frontend/package.json|frontend/package-lock.json" in (
+        dependency_audit
+    )
+    assert "backend/Dockerfile|frontend/Dockerfile|frontend/Dockerfile.playwright" in (
+        dependency_audit
+    )
+    assert "if: steps.dependency-scope.outputs.run-dependency-audit == 'true'" in (dependency_audit)
+
+
 def test_dependabot_labels_exist_and_use_current_frontend_taxonomy() -> None:
     payload = yaml.safe_load(DEPENDABOT_FILE.read_text(encoding="utf-8"))
     labels_by_ecosystem = {

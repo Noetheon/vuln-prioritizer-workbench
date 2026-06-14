@@ -1,0 +1,51 @@
+{
+  "source": {
+    "type": "image",
+    "target": {
+      "userInput": "registry.example.local/demo/checkout:1.0.0",
+      "name": "demo-checkout"
+    }
+  },
+  "matches": [
+    {
+      "vulnerability": {
+        "id": "CVE-2024-3094",
+        "severity": "Critical",
+        "fix": {
+          "versions": ["5.6.1-r2"]
+        }
+      },
+      "artifact": {
+        "name": "xz",
+        "version": "5.6.0-r0",
+        "type": "apk",
+        "purl": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64",
+        "locations": [
+          {
+            "path": "/lib/apk/db/installed"
+          }
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "GHSA-1111-2222-3333",
+        "aliases": ["CVE-2023-34362"],
+        "severity": "High"
+      },
+      "artifact": {
+        "name": "moveit-transfer",
+        "version": "2023.0.1",
+        "type": "python",
+        "locations": [
+          {
+            "path": "requirements.txt"
+          }
+        ]
+      },
+      "fix": {
+        "versions": ["2023.0.2"]
+      }
+    }
+  ]
+}

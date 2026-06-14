@@ -6,9 +6,9 @@ remediation queue.
 
 ## Supported Inputs
 
-- `cyclonedx-json`
-- `spdx-json`
-- `dependency-check-json`
+- [`cyclonedx-json`](../cyclonedx-json-import.md)
+- [`spdx-json`](../spdx-json-import.md)
+- [`dependency-check-json`](../dependency-check-json-import.md)
 
 Plain BOMs without vulnerability records are not the target workflow. The
 Workbench prioritizes known CVEs already present in the supplied evidence.

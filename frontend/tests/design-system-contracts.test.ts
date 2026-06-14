@@ -996,7 +996,7 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   const ci = readRepoFile(".github/workflows/ci.yml")
   const auditSpec = readProjectFile("tests/workbench-design-audit.spec.ts")
   const playwrightConfig = readProjectFile("playwright.config.ts")
-  const migrationPlan = readRepoFile("docs/workbench-ui-migration-plan.md")
+  const uiSystem = readRepoFile("docs/workbench-ui-system.md")
   const dockerRunner = readRepoFile(
     "scripts/frontend-design-audit-linux-docker.sh",
   )
@@ -1032,15 +1032,15 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   )
   assert.match(
     ci,
-    /Run VPW visual regression baseline[\s\S]{0,180}make frontend-design-audit-linux-docker/,
+    /Run VPW visual regression baseline[\s\S]{0,260}steps\.frontend-scope\.outputs\.run-design-audit == 'true'[\s\S]{0,180}make frontend-design-audit-linux-docker/,
   )
   assert.ok(
     ci.indexOf("Run VPW visual regression baseline") <
-      ci.indexOf("Run full frontend Playwright suite"),
+      ci.indexOf("Run frontend Playwright suite"),
   )
   assert.match(
     ci,
-    /Run full frontend Playwright suite[\s\S]{0,240}--grep-invert "design audit matches VPW visual regression baselines"/,
+    /Run frontend Playwright suite[\s\S]{0,260}steps\.frontend-scope\.outputs\.playwright-projects[\s\S]{0,240}--grep-invert "design audit matches VPW visual regression baselines"/,
   )
   assert.match(
     auditSpec,
@@ -1048,11 +1048,18 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   )
   assert.match(auditSpec, /toHaveScreenshot\(\["design-audit", fileName\]/)
   assert.match(auditSpec, /\[data-vpw-visual-mask\]/)
-  assert.match(auditSpec, /clearWorkbenchProjects\(page\)/)
+  assert.match(auditSpec, /clearWorkbenchProjects\(request\)/)
   assert.match(auditSpec, /\/api\/v1\/projects\/\?limit=500/)
-  assert.match(auditSpec, /page\.request\.delete/)
-  assert.match(auditSpec, /expectRouteCoverage\(auditRoutes, manifest\)/)
-  assert.match(auditSpec, /expectNoDuplicateAuditSegments\(manifest\)/)
+  assert.match(auditSpec, /request\.delete/)
+  assert.match(auditSpec, /for \(const route of auditRoutes\)/)
+  assert.match(auditSpec, /test\.beforeAll\(async \(\{ request \}\)/)
+  assert.match(auditSpec, /test\.setTimeout\(120_000\)/)
+  assert.match(auditSpec, /seedDemoWorkspace\(request\)/)
+  assert.match(auditSpec, /firstFindingId\(request, workspace\.project_id\)/)
+  assert.match(auditSpec, /captureAuditRoute\(\s*page,\s*route,\s*workspace,\s*findingId,/)
+  assert.match(auditSpec, /expectRouteCoverage\(auditRoutes, capturedManifest\)/)
+  assert.match(auditSpec, /expectNoDuplicateAuditSegments\(capturedManifest\)/)
+  assert.match(auditSpec, /manifest-\$\{route\.slug\}\.json/)
   assert.match(auditSpec, /screenshotSha256\(file\)/)
   assert.doesNotMatch(auditSpec, /expect\(manifest\)\.toHaveLength\(\d+\)/)
   assert.doesNotMatch(auditSpec, /\bsegments:\s*\d/)
@@ -1065,11 +1072,11 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   assert.match(playwrightConfig, /colorScheme:\s*"light"/)
   assert.match(playwrightConfig, /locale:\s*"en-US"/)
   assert.match(playwrightConfig, /timezoneId:\s*"UTC"/)
-  assert.match(migrationPlan, /Visual regression baselines/)
-  assert.match(migrationPlan, /darwin\/chromium\/design-audit/)
-  assert.match(migrationPlan, /frontend-design-audit-update/)
-  assert.match(migrationPlan, /frontend-design-audit-linux-docker/)
-  assert.match(migrationPlan, /DOCKER_DEFAULT_PLATFORM=linux\/amd64/)
+  assert.match(uiSystem, /Visual regression guardrails/)
+  assert.match(uiSystem, /Workbench route UI/)
+  assert.match(makefile, /frontend-design-audit-update/)
+  assert.match(makefile, /frontend-design-audit-linux-docker/)
+  assert.match(dockerRunner, /DOCKER_DEFAULT_PLATFORM=linux\/amd64/)
   assert.match(
     playwrightDockerfile,
     /mcr\.microsoft\.com\/playwright:v1\.60\.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948/,

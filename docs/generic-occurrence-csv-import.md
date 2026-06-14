@@ -42,7 +42,10 @@ prioritization, asset matching, or VEX matching.
 The only required logical field is `cve_id`:
 
 - Use `cve_id` for new files.
-- Empty CVE cells are treated as invalid rows and skipped with a warning.
+- Empty or invalid CVE cells are treated as row errors and the Workbench import
+  fails closed. The lower-level parser can report invalid rows as warnings, but
+  the Workbench upload boundary rejects those warnings so operators do not miss
+  malformed evidence.
 
 All other columns are optional. Rows without `target_ref` still import as generic
 occurrences, but asset-context and VEX matching will have less local context to
@@ -80,8 +83,7 @@ ATT&CK data during import.
 - A non-CSV file is rejected.
 - A missing header row is an error.
 - A header without `cve_id` is an error.
-- Invalid CVE identifiers are skipped and reported as warnings with the source
-  line number.
+- Invalid CVE identifiers fail the Workbench import with source line context.
 - Unknown asset criticality, exposure, or environment values are ignored and
   reported as warnings with the row number.
 - Unknown columns are preserved as raw evidence.

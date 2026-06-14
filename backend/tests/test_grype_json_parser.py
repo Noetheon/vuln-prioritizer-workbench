@@ -88,6 +88,49 @@ def test_grype_json_uses_related_cve_and_keeps_non_cve_source_id(tmp_path: Path)
     assert occurrence.target_ref == "repo/demo"
 
 
+def test_grype_json_emits_all_valid_related_cves(tmp_path: Path) -> None:
+    input_file = tmp_path / "grype.json"
+    input_file.write_text(
+        json.dumps(
+            {
+                "source": {"type": "directory", "target": {"name": "repo/demo"}},
+                "matches": [
+                    {
+                        "vulnerability": {
+                            "id": "GHSA-9m7r-4c2v-9j5j",
+                            "relatedVulnerabilities": [
+                                {"id": "CVE-2024-0001"},
+                                {"id": "CVE-2024-0002"},
+                            ],
+                            "severity": "High",
+                        },
+                        "artifact": {
+                            "name": "demo-package",
+                            "version": "1.0.0",
+                            "type": "npm",
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    parsed = InputLoader().load(input_file, input_format="grype-json")
+
+    assert parsed.warnings == []
+    assert parsed.unique_cves == ["CVE-2024-0001", "CVE-2024-0002"]
+    assert [item.cve_id for item in parsed.occurrences] == [
+        "CVE-2024-0001",
+        "CVE-2024-0002",
+    ]
+    assert {item.source_id for item in parsed.occurrences} == {"GHSA-9m7r-4c2v-9j5j"}
+    assert [item.source_record_id for item in parsed.occurrences] == [
+        "match:1:cve:1",
+        "match:1:cve:2",
+    ]
+
+
 def test_grype_json_warns_about_unexpected_match_shapes(tmp_path: Path) -> None:
     input_file = tmp_path / "grype.json"
     input_file.write_text(

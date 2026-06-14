@@ -45,9 +45,55 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          fetch-depth: 0
           persist-credentials: false
 
+      - name: Decide whether CodeQL analysis is needed
+        id: codeql-scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          write_codeql_output() {
+            echo "run-codeql=$1" >> "$GITHUB_OUTPUT"
+          }
+
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            write_codeql_output true
+            exit 0
+          fi
+
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          changed_files="$(git diff --name-only "$base_sha"...HEAD)"
+          printf '%s\n' "$changed_files"
+
+          run_codeql=false
+          while IFS= read -r path; do
+            case "$path" in
+              backend/app/*|backend/pyproject.toml|pyproject.toml|uv.lock)
+                run_codeql=true
+                ;;
+              frontend/src/*|frontend/package.json|frontend/package-lock.json)
+                run_codeql=true
+                ;;
+              frontend/vite.config.*|frontend/tsconfig*.json|.github/workflows/codeql.yml)
+                run_codeql=true
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          if [[ "$run_codeql" == "true" ]]; then
+            write_codeql_output true
+          else
+            echo "No CodeQL-relevant source or dependency inputs changed; analysis skipped."
+            write_codeql_output false
+          fi
+
+      - name: Skip CodeQL analysis
+        if: steps.codeql-scope.outputs.run-codeql != 'true'
+        run: echo "CodeQL skipped for non-source PR scope; scheduled and main runs remain full."
+
       - name: Set up Python
+        if: steps.codeql-scope.outputs.run-codeql == 'true' && matrix.language == 'python'
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.13"
@@ -58,13 +104,16 @@ jobs:
             .pre-commit-config.yaml
 
       - name: Initialize CodeQL
+        if: steps.codeql-scope.outputs.run-codeql == 'true'
         uses: github/codeql-action/init@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4
         with:
           languages: ${{ matrix.language }}
           queries: security-and-quality
 
       - name: Install project and dev dependencies
+        if: steps.codeql-scope.outputs.run-codeql == 'true' && matrix.language == 'python'
         run: python -m pip install -e "backend[dev]"
 
       - name: Perform CodeQL analysis
+        if: steps.codeql-scope.outputs.run-codeql == 'true'
         uses: github/codeql-action/analyze@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4

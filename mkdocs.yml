@@ -16,12 +16,11 @@ nav:
       - Product Architecture: architecture.md
       - Workbench Information Architecture: workbench-information-architecture.md
       - Workbench UI System: workbench-ui-system.md
-      - Workbench UI Audit: workbench-ui-audit.md
-      - Workbench UI Migration Plan: workbench-ui-migration-plan.md
       - Dependency and Package Policy: dependency-and-package-policy.md
       - Scoring Methodology: scoring-methodology.md
       - Risk Posture And Reduction: risk-reduction-opportunities.md
       - ATT&CK/TTP Methodology: attack-ttp-methodology.md
+      - Workbench ATT&CK Methodology: workbench-attack-methodology.md
       - Reports and Evidence: reports-and-evidence.md
       - Demo Readiness: demo-readiness.md
       - Demo Walkthrough: demo-walkthrough.md
@@ -77,14 +76,17 @@ nav:
   - Release Operations: release_operations.md
   - Public-Production Release Evidence Ledger: public-production-release-evidence-ledger.md
   - Roadmap: roadmap.md
-  - Workbench History:
-      - v1.0 Release Checklist: workbench-v1-release-checklist.md
-      - ATT&CK Methodology: workbench-attack-methodology.md
   - Examples:
       - CVE List Import: cve-list-import.md
       - Generic Occurrence CSV Import: generic-occurrence-csv-import.md
       - Trivy JSON Import: trivy-json-import.md
       - Grype JSON Import: grype-json-import.md
+      - CycloneDX JSON Import: cyclonedx-json-import.md
+      - SPDX JSON Import: spdx-json-import.md
+      - Dependency-Check JSON Import: dependency-check-json-import.md
+      - GitHub Alerts JSON Import: github-alerts-json-import.md
+      - Nessus XML Import: nessus-xml-import.md
+      - OpenVAS XML Import: openvas-xml-import.md
       - Base Report: example_report.md
       - ATT&CK Report: example_attack_report.md
       - ATT&CK Coverage: example_attack_coverage.md

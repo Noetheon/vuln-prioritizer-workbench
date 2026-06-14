@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<NessusClientData_v2>
+  <Report name="Synthetic Internal Scan">
+    <ReportHost name="web-01">
+      <HostProperties>
+        <tag name="host-fqdn">web-01.example.internal</tag>
+        <tag name="host-ip">192.0.2.10</tag>
+      </HostProperties>
+      <ReportItem
+        port="443"
+        svc_name="https"
+        protocol="tcp"
+        severity="4"
+        pluginID="10001"
+        pluginName="Apache Log4j Remote Code Execution"
+      >
+        <risk_factor>Critical</risk_factor>
+        <cve>CVE-2021-44228</cve>
+      </ReportItem>
+      <ReportItem
+        port="8443"
+        svc_name="https"
+        protocol="tcp"
+        severity="3"
+        pluginID="10002"
+        pluginName="MOVEit Transfer Exposure"
+      >
+        <risk_factor>High</risk_factor>
+        <cve>CVE-2023-34362</cve>
+      </ReportItem>
+    </ReportHost>
+  </Report>
+</NessusClientData_v2>

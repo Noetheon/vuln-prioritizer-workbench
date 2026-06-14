@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, create_engine
 
 from app.core.config import Settings, settings
 
 
-def _connect_args(database_uri: str) -> dict[str, bool]:
+def _connect_args(database_uri: str) -> dict[str, Any]:
     if database_uri.startswith("sqlite"):
-        return {"check_same_thread": False}
+        return {"check_same_thread": False, "timeout": 30}
     return {}
 
 

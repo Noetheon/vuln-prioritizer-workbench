@@ -6,9 +6,7 @@ The Workbench is a local-first, single-user vulnerability prioritization and evi
 
 Use this document with:
 
-- `docs/workbench-ui-audit.md`
 - `docs/workbench-ui-system.md`
-- `docs/workbench-ui-migration-plan.md`
 - `frontend/src/AppRouter.tsx`
 - `frontend/src/lib/app-route-config.ts`
 - `frontend/src/lib/workbench-navigation.ts`

@@ -29,14 +29,14 @@ It covers three major input families:
 
 Across those families it exercises all currently supported checked-in example formats:
 
-- `trivy-json`
-- `grype-json`
-- `cyclonedx-json`
-- `spdx-json`
-- `dependency-check-json`
-- `github-alerts-json`
-- `nessus-xml`
-- `openvas-xml`
+- [`trivy-json`](trivy-json-import.md)
+- [`grype-json`](grype-json-import.md)
+- [`cyclonedx-json`](cyclonedx-json-import.md)
+- [`spdx-json`](spdx-json-import.md)
+- [`dependency-check-json`](dependency-check-json-import.md)
+- [`github-alerts-json`](github-alerts-json-import.md)
+- [`nessus-xml`](nessus-xml-import.md)
+- [`openvas-xml`](openvas-xml-import.md)
 
 It also includes a dedicated snapshot-diff regression corpus:
 

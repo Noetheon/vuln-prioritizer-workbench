@@ -15,11 +15,12 @@ PRODUCTION_SMOKE_SECRET_KEY ?= production-smoke-secret-key-change-in-real-deploy
 PRODUCTION_SMOKE_POSTGRES_PASSWORD ?= production-smoke-postgres-password
 PRODUCTION_SMOKE_FRONTEND_PORT ?= 5180
 ACTIONLINT_IMAGE ?= rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+CI_COST_REPORT_LIMIT ?= 20
 NPM ?= scripts/frontend-npm.sh
 FRONTEND_NPM_ENGINE_STRICT ?= true
 FRONTEND_NPM := $(NPM) --prefix frontend --workspaces=false --engine-strict=$(FRONTEND_NPM_ENGINE_STRICT)
 
-.PHONY: install launch workbench-status workbench-stop workbench-reset workbench-update workbench-diagnostics test lint format fix typecheck check critical-coverage-check property-check mutation-check quality-10-check local-workbench-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-design-audit frontend-design-audit-update frontend-design-audit-linux-docker frontend-design-audit-linux-docker-update demo-screenshot frontend-audit frontend-check python-lock-check docker-base-image-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package release-bundle package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
+.PHONY: install launch workbench-status workbench-stop workbench-reset workbench-update workbench-diagnostics test lint format fix typecheck check critical-coverage-check backend-compatibility-check property-check mutation-check quality-10-check local-workbench-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-design-audit frontend-design-audit-update frontend-design-audit-linux-docker frontend-design-audit-linux-docker-update demo-screenshot frontend-audit frontend-check python-lock-check docker-base-image-check pre-commit-pin-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check ci-cost-report docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package release-bundle package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -69,6 +70,22 @@ check:
 
 critical-coverage-check:
 	$(PYTHON) scripts/check_critical_coverage.py build/coverage-current.json
+
+backend-compatibility-check:
+	$(PYTHON) -m pytest -q --no-cov \
+		$(BACKEND_TESTS)/test_analysis_inputs.py \
+		$(BACKEND_TESTS)/test_input_parser_common.py \
+		$(BACKEND_TESTS)/test_input_loader_contracts.py \
+		$(BACKEND_TESTS)/test_input_loader_merge.py \
+		$(BACKEND_TESTS)/test_grype_json_parser.py \
+		$(BACKEND_TESTS)/test_trivy_json_parser.py \
+		$(BACKEND_TESTS)/test_github_alerts_normalization.py \
+		$(BACKEND_TESTS)/test_backend_runtime_boundary.py \
+		$(BACKEND_TESTS)/api/test_workbench_api_skeleton.py \
+		$(BACKEND_TESTS)/api/import_contracts/test_import_api_contracts.py \
+		$(BACKEND_TESTS)/api/import_contracts/test_import_parser_contracts.py \
+		$(BACKEND_TESTS)/api/report_contracts/test_report_format_contracts.py \
+		$(BACKEND_TESTS)/api/workflow_contracts/test_durable_workflow_core.py
 
 property-check:
 	$(PYTHON) -m pytest -q $(BACKEND_TESTS)/property --no-cov
@@ -161,6 +178,9 @@ python-lock-check:
 docker-base-image-check:
 	$(PYTHON) scripts/check_dockerfile_base_digests.py
 
+pre-commit-pin-check:
+	$(PYTHON) scripts/check_pre_commit_pins.py
+
 docs-check: release-evidence-hygiene-check archive-evidence-check
 	$(PYTHON) -m mkdocs build --clean
 
@@ -174,10 +194,14 @@ provider-snapshot-validate:
 actionlint-check:
 	docker run --rm -v "$$(pwd):/repo" -w /repo $(ACTIONLINT_IMAGE) -color .github/workflows/*.yml
 
+ci-cost-report:
+	$(PYTHON) scripts/ci_cost_report.py --limit $(CI_COST_REPORT_LIMIT)
+
 workflow-check:
 	$(MAKE) check
 	$(MAKE) docker-base-image-check
 	$(PYTHON) scripts/check_github_action_pins.py
+	$(MAKE) pre-commit-pin-check
 	$(MAKE) docs-check
 	$(MAKE) actionlint-check
 	$(PYTHON) -m pre_commit run --all-files
