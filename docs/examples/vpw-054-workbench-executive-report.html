@@ -25,6 +25,8 @@
   --violet: #475569;
   --radius: 12px;
   --radius-sm: 8px;
+  --report-gutter: 32px;
+  --report-max: 1280px;
 }
 * { box-sizing: border-box; }
 body {
@@ -39,7 +41,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 .report-shell {
-  width: min(1280px, calc(100% - 32px));
+  width: min(var(--report-max), calc(100% - var(--report-gutter)));
   margin: 0 auto;
   padding: 24px 0 40px;
 }
@@ -71,7 +73,7 @@ h3 {
   line-height: 1.3;
   font-weight: 680;
 }
-.eyebrow, dt, .metric span, th, .status-label {
+.eyebrow, dt, .metric span, th, .status-label, .stale-flag, .risk-card-rank {
   font-family:
     "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
     Consolas, monospace;
@@ -79,6 +81,11 @@ h3 {
   line-height: 1rem;
   letter-spacing: 0;
   text-transform: uppercase;
+}
+.risk-card-cve, .mono-dim, .stale-chip {
+  font-family:
+    "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, monospace;
 }
 .eyebrow { margin-bottom: 6px; color: var(--green); font-weight: 650; }
 .lede {
@@ -90,19 +97,45 @@ h3 {
   max-width: none;
   width: 100%;
 }
-.meta-grid, .metric-grid, .provider-grid {
+.metric-grid, .provider-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
-.meta-grid { margin-top: 18px; }
-.meta-grid div, .metric, .provider-grid div {
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  overflow: hidden;
+}
+.meta-grid div {
+  min-width: 0;
+  padding: 8px 10px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.meta-grid div:nth-child(4n) { border-right: 0; }
+.meta-grid div:nth-last-child(-n + 4) { border-bottom: 0; }
+.meta-grid dt {
+  font-size: 11px;
+  line-height: 1;
+}
+.meta-grid dd {
+  margin-top: 3px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.metric, .provider-grid div {
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 12px;
 }
-.meta-grid div, .provider-grid div { background: var(--bg-panel); }
+.provider-grid div { background: var(--bg-panel); }
 dt, .metric span { color: var(--text-muted); font-weight: 560; }
 dd { margin: 4px 0 0; overflow-wrap: anywhere; }
 .metric {
@@ -194,10 +227,58 @@ tbody tr:last-child td { border-bottom: 0; }
 .badge-stale { border-color: #fecaca; background: var(--bg-critical); color: var(--red); }
 .badge-warning { border-color: #fed7aa; background: var(--bg-warning); color: var(--amber); }
 .signal-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.campaign-table {
+  table-layout: fixed;
+  min-width: 1120px;
+}
+.campaign-table th,
+.campaign-table td {
+  padding: 9px 10px;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.campaign-table th:nth-child(1),
+.campaign-table td:nth-child(1) { width: 7%; }
+.campaign-table th:nth-child(2),
+.campaign-table td:nth-child(2) { width: 13%; }
+.campaign-table th:nth-child(3),
+.campaign-table td:nth-child(3) { width: 13%; }
+.campaign-table th:nth-child(4),
+.campaign-table td:nth-child(4) { width: 15%; }
+.campaign-table th:nth-child(5),
+.campaign-table td:nth-child(5) { width: 12%; }
+.campaign-table th:nth-child(6),
+.campaign-table td:nth-child(6) { width: 12%; }
+.campaign-table th:nth-child(7),
+.campaign-table td:nth-child(7) { width: 11%; }
+.campaign-table th:nth-child(8),
+.campaign-table td:nth-child(8) { width: 17%; }
 .campaign-table td:nth-child(1),
-.campaign-table td:nth-child(3),
-.campaign-table td:nth-child(4) {
+.campaign-table td:nth-child(3) {
   white-space: nowrap;
+}
+.campaign-cluster-title,
+.campaign-cluster-cve {
+  display: block;
+}
+.campaign-cluster-title {
+  line-height: 1.25;
+}
+.campaign-cluster-cve {
+  margin-top: 4px;
+  overflow-wrap: normal;
+}
+.campaign-table td:nth-child(4),
+.campaign-table td:nth-child(5),
+.campaign-table td:nth-child(6),
+.campaign-table td:nth-child(8) {
+  line-height: 1.3;
+}
+.campaign-table .signal-row {
+  gap: 5px;
+}
+.campaign-table .badge {
+  padding-inline: 7px;
 }
 .evidence-package-table code {
   white-space: normal;
@@ -207,6 +288,437 @@ tbody tr:last-child td { border-bottom: 0; }
 .recommendation-list li + li { margin-top: 14px; }
 .recommendation-list strong { display: block; margin-bottom: 4px; font-weight: 700; }
 .recommendation-list span { color: var(--text-secondary); }
+.recommendation-table td:nth-child(1) { white-space: nowrap; }
+.mono-dim { font-size: 12px; color: var(--text-muted); }
+.risk-index {
+  margin: 0 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  padding: 16px;
+  box-shadow: inset 3px 0 0 var(--violet);
+}
+.risk-index[data-tone="critical"] { box-shadow: inset 3px 0 0 var(--red); }
+.risk-index[data-tone="warning"] { box-shadow: inset 3px 0 0 var(--amber); }
+.risk-index[data-tone="success"] { box-shadow: inset 3px 0 0 var(--green); }
+.risk-index-value {
+  display: block;
+  margin: 6px 0 2px;
+  font-size: 56px;
+  line-height: 1;
+  font-weight: 760;
+  font-variant-numeric: tabular-nums;
+}
+.risk-index-max { font-size: 20px; font-weight: 700; color: var(--text-muted); }
+.risk-index[data-tone="critical"] .risk-index-value { color: var(--red); }
+.risk-index[data-tone="warning"] .risk-index-value { color: var(--amber); }
+.risk-index[data-tone="success"] .risk-index-value { color: var(--green); }
+.risk-index-band { margin: 0 0 12px; font-weight: 680; color: var(--text-secondary); }
+.risk-gauge {
+  position: relative;
+  height: 8px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg, var(--green) 0 40%, var(--amber) 40% 70%, var(--red) 70% 100%);
+}
+.risk-gauge-needle {
+  position: absolute;
+  top: -4px;
+  width: 3px;
+  height: 16px;
+  background: var(--text-primary);
+  border-radius: 2px;
+  transform: translateX(-50%);
+}
+.risk-gauge-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.risk-index-foot { margin: 12px 0 0; color: var(--text-muted); }
+.risk-scenario {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.9fr) minmax(520px, 2.2fr) minmax(280px, 1.15fr);
+  margin: 0 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  overflow: hidden;
+}
+.risk-scenario > section {
+  margin: 0;
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--bg-card);
+  padding: 16px;
+}
+.risk-scenario > section:last-child { border-right: 0; }
+.risk-scenario-index { box-shadow: inset 3px 0 0 var(--violet); }
+.risk-scenario[data-tone="critical"] .risk-scenario-index { box-shadow: inset 3px 0 0 var(--red); }
+.risk-scenario[data-tone="warning"] .risk-scenario-index { box-shadow: inset 3px 0 0 var(--amber); }
+.risk-scenario[data-tone="success"] .risk-scenario-index { box-shadow: inset 3px 0 0 var(--green); }
+.risk-scenario-index-value {
+  display: block;
+  margin: 8px 0 2px;
+  font-size: 58px;
+  line-height: 0.92;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+.risk-scenario[data-tone="critical"] .risk-scenario-index-value { color: var(--red); }
+.risk-scenario[data-tone="warning"] .risk-scenario-index-value { color: var(--amber); }
+.risk-scenario[data-tone="success"] .risk-scenario-index-value { color: var(--green); }
+.risk-scenario-change {
+  margin: 0 0 12px;
+  color: var(--green);
+  font-weight: 680;
+}
+.risk-scenario-change strong {
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+.risk-scenario-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.risk-scenario-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.risk-scenario-legend b {
+  display: inline-block;
+  width: 14px;
+  height: 8px;
+  border-radius: 4px;
+}
+.legend-actual {
+  border: 1px solid #f3a6a6;
+  background: var(--bg-critical);
+}
+.legend-projected { border: 1px dashed var(--green); background: var(--bg-success); }
+.legend-target {
+  height: 0 !important;
+  border-top: 1px dashed var(--green);
+  background: transparent;
+}
+.risk-projection-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.risk-projection-grid-line {
+  stroke: #dedede;
+  stroke-width: 1;
+}
+.risk-projection-axis-label,
+.risk-projection-bar-label,
+.risk-projection-bar-detail,
+.risk-projection-target-label,
+.risk-projection-today-label {
+  font-family:
+    "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, monospace;
+  fill: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.risk-projection-axis-label { text-anchor: end; }
+.risk-projection-today {
+  stroke: var(--text-primary);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-dasharray: 2 5;
+}
+.risk-projection-today-label,
+.risk-projection-bar-value {
+  fill: var(--text-primary);
+  font-weight: 850;
+  text-anchor: middle;
+}
+.risk-projection-target {
+  stroke: var(--green);
+  stroke-width: 1.5;
+  stroke-dasharray: 7 5;
+}
+.risk-projection-target-label {
+  fill: var(--green);
+  font-weight: 850;
+  paint-order: stroke;
+  stroke: var(--bg-card);
+  stroke-linejoin: round;
+  stroke-width: 5px;
+  text-anchor: end;
+}
+.risk-projection-bar-fill {
+  fill: #f4f4f5;
+  stroke: none;
+}
+.risk-projection-bar-cap {
+  fill: var(--text-muted);
+}
+.risk-projection-bar[data-tone="critical"] .risk-projection-bar-fill {
+  fill: url("#risk-report-grad-critical");
+}
+.risk-projection-bar[data-tone="critical"] .risk-projection-bar-cap {
+  fill: var(--red);
+}
+.risk-projection-bar[data-tone="elevated"] .risk-projection-bar-fill {
+  fill: url("#risk-report-grad-elevated");
+}
+.risk-projection-bar[data-tone="elevated"] .risk-projection-bar-cap {
+  fill: var(--amber);
+}
+.risk-projection-bar[data-tone="low"] .risk-projection-bar-fill,
+.risk-projection-bar[data-tone="success"] .risk-projection-bar-fill {
+  fill: url("#risk-report-grad-success");
+  stroke: rgba(4, 120, 87, 0.5);
+  stroke-dasharray: 4 4;
+  stroke-width: 1.2;
+}
+.risk-projection-bar[data-tone="low"] .risk-projection-bar-cap,
+.risk-projection-bar[data-tone="success"] .risk-projection-bar-cap {
+  fill: var(--green);
+}
+.risk-projection-bar[data-tone="projected"] .risk-projection-bar-fill {
+  fill: url("#risk-report-grad-projected");
+  stroke: rgba(4, 120, 87, 0.46);
+  stroke-dasharray: 4 4;
+  stroke-width: 1.2;
+}
+.risk-projection-bar[data-tone="projected"] .risk-projection-bar-cap {
+  fill: var(--green);
+}
+.risk-projection-bar-value {
+  font-size: 14px;
+  paint-order: stroke;
+  stroke: var(--bg-card);
+  stroke-linejoin: round;
+  stroke-width: 5px;
+  font-family:
+    "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, monospace;
+}
+.risk-projection-bar-label {
+  fill: var(--text-primary);
+  font-size: 12.5px;
+  font-weight: 850;
+  text-anchor: middle;
+}
+.risk-projection-bar-detail { text-anchor: middle; }
+.risk-scenario-readout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 10px;
+  align-items: center;
+  margin-top: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  padding: 8px 10px;
+}
+.risk-scenario-readout-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 5px;
+  background: var(--text-primary);
+  color: var(--bg-card);
+  padding: 3px 8px;
+  font-family:
+    "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, monospace;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+.risk-scenario-readout-text {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.risk-scenario-readout-text strong {
+  color: var(--text-primary);
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+.risk-scenario-readout-warn { color: var(--amber) !important; }
+.risk-scenario-note,
+.risk-scenario-reducer-lede {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.risk-scenario-reducers ol {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.risk-scenario-reducer {
+  display: grid;
+  gap: 4px;
+  padding: 0 0 10px;
+  border-top: 1px solid var(--border);
+}
+.risk-scenario-reducer:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.risk-scenario-reducer-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+.risk-scenario-reducer-title {
+  overflow-wrap: anywhere;
+  font-weight: 850;
+  line-height: 1.22;
+}
+.risk-scenario-reducer-main strong {
+  color: var(--red);
+  font-family:
+    "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, monospace;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.risk-scenario-reducer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 5px;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.3;
+}
+.risk-scenario-reducer-context {
+  display: block;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.risk-reducer-tag {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  border-radius: 4px;
+  background: var(--red);
+  color: var(--bg-card);
+  padding: 2px 5px;
+  font-family:
+    "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, monospace;
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.risk-reducer-tag--kev { background: #fee2e2; color: var(--red); }
+.risk-reducer-tag--epss { background: #dbeafe; color: var(--blue); }
+.risk-reducer-tag--cvss {
+  border: 1px solid #d4d4d8;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+}
+.risk-scenario-reducer-track {
+  display: block;
+  height: 4px;
+  margin-top: 3px;
+  border-radius: 9999px;
+  background: #f0f0f0;
+  overflow: hidden;
+}
+.risk-scenario-reducer-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: rgba(23, 23, 23, 0.78);
+}
+.stale-alert {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  border: 1px solid #fecaca;
+  border-left: 4px solid var(--red);
+  border-radius: var(--radius-sm);
+  background: var(--bg-critical);
+  padding: 16px;
+}
+.stale-flag {
+  flex: none;
+  border-radius: var(--radius-sm);
+  background: var(--red);
+  color: #fff;
+  padding: 4px 9px;
+  font-weight: 680;
+  white-space: nowrap;
+}
+.stale-body { min-width: 0; }
+.stale-body strong { color: #7c2d12; }
+.stale-text { margin: 6px 0 0; color: var(--text-secondary); }
+.stale-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.stale-chip {
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background: var(--bg-card);
+  padding: 4px 11px;
+  font-size: 12px;
+}
+.stale-chip b { color: var(--red); font-weight: 680; }
+.risk-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.risk-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  padding: 16px;
+  box-shadow: inset 3px 0 0 var(--red);
+}
+.risk-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.risk-card-rank { color: var(--red); font-weight: 650; }
+.risk-card-cve { margin: 0; color: var(--text-muted); font-size: 12px; }
+.risk-card-name { margin: 4px 0 0; font-size: 17px; }
+.risk-card-scope { margin: 6px 0 10px; color: var(--text-secondary); }
+.risk-card .signal-row { margin-bottom: 12px; }
+.risk-card-action {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.risk-card-action .status-label { display: block; margin-bottom: 3px; color: var(--red); }
 .note-box {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -216,12 +728,58 @@ tbody tr:last-child td { border-bottom: 0; }
 }
 .note-box + .table-wrap { margin-top: 12px; }
 .footer-note { margin: 0; color: var(--text-muted); }
+@media (min-width: 1680px) {
+  :root {
+    --report-gutter: 56px;
+    --report-max: 1600px;
+  }
+  .risk-scenario {
+    grid-template-columns: minmax(230px, 0.75fr) minmax(660px, 2.4fr) minmax(320px, 1.15fr);
+  }
+  .campaign-table {
+    min-width: 1280px;
+  }
+}
+@media (min-width: 2200px) {
+  :root {
+    --report-gutter: 96px;
+    --report-max: 2160px;
+  }
+  header, section {
+    padding: 22px;
+  }
+  .risk-scenario {
+    grid-template-columns: minmax(270px, 0.72fr) minmax(860px, 2.75fr) minmax(390px, 1.12fr);
+  }
+  .campaign-table {
+    min-width: 1600px;
+  }
+}
 @media (max-width: 900px) {
   .report-shell { width: min(100% - 20px, 1280px); padding-top: 16px; }
   header, section { padding: 16px; }
   h1 { font-size: 26px; }
-  .meta-grid, .metric-grid, .provider-grid, .decision-grid, .signoff-grid {
+  .meta-grid, .metric-grid, .provider-grid, .decision-grid, .signoff-grid, .risk-cards {
     grid-template-columns: 1fr; }
+  .meta-grid div,
+  .meta-grid div:nth-child(4n),
+  .meta-grid div:nth-last-child(-n + 4) {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .meta-grid div:last-child { border-bottom: 0; }
+  .meta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .meta-grid div { border-right: 1px solid var(--border); }
+  .meta-grid div:nth-child(2n) { border-right: 0; }
+  .meta-grid div:nth-last-child(-n + 2) { border-bottom: 0; }
+  .risk-scenario { grid-template-columns: 1fr; }
+  .risk-scenario > section {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .risk-scenario > section:last-child { border-bottom: 0; }
+  .risk-scenario-section-head { align-items: flex-start; flex-direction: column; }
+  .risk-scenario-legend { white-space: normal; }
   table { min-width: 920px; }
   .compact-table { min-width: 720px; }
 }
@@ -231,6 +789,12 @@ tbody tr:last-child td { border-bottom: 0; }
   header, section { border-color: #c8c8c8; break-inside: avoid;
     page-break-inside: avoid; padding: 16px; }
   .signoff-panel { break-inside: avoid; page-break-inside: avoid; }
+  .risk-index, .risk-scenario, .stale-alert, .risk-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .risk-scenario { grid-template-columns: 0.9fr 1.9fr 1.2fr; }
+  .risk-scenario > section { padding: 12px; }
   .signoff-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .table-wrap { overflow: visible; }
   table { min-width: 0; }
@@ -243,40 +807,95 @@ tbody tr:last-child td { border-bottom: 0; }
     <header>
       <p class="eyebrow">Executive Evidence Brief</p>
       <h1>VPW-054 Demo Reports</h1>
-      <p class="lede">Decision oriented vulnerability prioritization report for CISO and stakeholder review. This report summarizes actionable remediation campaigns, governance exceptions and evidence confidence for the current analysis run.</p>
+      <p class="lede">Decision-oriented vulnerability prioritization report for CISO and stakeholder review. This report summarizes actionable remediation campaigns, governance exceptions and evidence confidence for the current analysis run.</p>
       <dl class="meta-grid">
-        <div><dt>Report Type</dt><dd>Executive HTML</dd></div>
+        <div><dt>Report</dt><dd>Executive HTML</dd></div>
         <div><dt>Project ID</dt><dd>00000000-0000-4000-8000-000000000054</dd></div>
-        <div><dt>Project Name</dt><dd>VPW-054 Demo Reports</dd></div>
-        <div><dt>Analysis Run ID</dt><dd>00000000-0000-4000-8000-000000000540</dd></div>
-        <div><dt>Generated At</dt><dd>2026-04-29T12:00:00Z</dd></div>
-        <div><dt>Run Status</dt><dd>completed</dd></div>
+        <div><dt>Run ID</dt><dd>00000000-0000-4000-8000-000000000540</dd></div>
+        <div><dt>Generated</dt><dd>2026-04-29T12:00:00Z</dd></div>
+        <div><dt>Status</dt><dd>completed</dd></div>
         <div><dt>Input Type</dt><dd>cve-list</dd></div>
         <div><dt>Input File</dt><dd>vpw-054-known-cves.txt</dd></div>
-        <div><dt>Provider Snapshot</dt><dd>00000000-0000-4000-8000-000000000654</dd></div>
+        <div><dt>Snapshot</dt><dd>00000000-0000-4000-8000-000000000654</dd></div>
       </dl>
     </header>
 
     <section aria-labelledby="decision-brief">
       <p class="eyebrow">Decision Required</p>
       <h2 id="decision-brief">Decision Brief</h2>
+      <div class="risk-scenario" data-tone="critical">
+        <section class="risk-scenario-index" aria-label="Risk index summary">
+          <span class="status-label">Risk index - avg open findings</span>
+          <span class="risk-scenario-index-value">94.1<span class="risk-index-max">/100</span></span>
+          <p class="risk-index-band">Critical band, immediate action</p>
+          <p class="risk-scenario-change"><strong>94.1</strong> index reduction planned</p>
+          <div class="risk-gauge"><span class="risk-gauge-needle" style="left:94.1%;"></span></div>
+          <div class="risk-gauge-scale"><span>0</span><span>moderate</span><span>100</span></div>
+          <p class="risk-index-foot">Mean risk score across 3 open, non-accepted findings. Accepted risk, VEX suppressed and fixed-evidence findings are excluded.</p>
+        </section>
+        <section class="risk-scenario-chart" aria-label="Scenario projection">
+          <div class="risk-scenario-section-head">
+            <span class="status-label">Scenario projection</span>
+            <span class="risk-scenario-legend"><b class="legend-actual"></b>actual <b class="legend-projected"></b>projected plan <b class="legend-target"></b>target</span>
+          </div>
+          <svg class="risk-projection-svg" role="img" aria-label="Static projection of risk index after top remediation reducers" viewBox="0 0 920 314" preserveAspectRatio="xMidYMin meet">
+            <defs>
+              <linearGradient id="risk-report-grad-critical" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stop-color="#c40000" stop-opacity="0.34" />
+                <stop offset="1" stop-color="#c40000" stop-opacity="0.05" />
+              </linearGradient>
+              <linearGradient id="risk-report-grad-elevated" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stop-color="#b54708" stop-opacity="0.31" />
+                <stop offset="1" stop-color="#b54708" stop-opacity="0.06" />
+              </linearGradient>
+              <linearGradient id="risk-report-grad-low" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stop-color="#047857" stop-opacity="0.22" />
+                <stop offset="1" stop-color="#047857" stop-opacity="0.05" />
+              </linearGradient>
+              <linearGradient id="risk-report-grad-projected" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stop-color="#047857" stop-opacity="0.22" />
+                <stop offset="1" stop-color="#047857" stop-opacity="0.05" />
+              </linearGradient>
+              <linearGradient id="risk-report-grad-success" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stop-color="#047857" stop-opacity="0.28" />
+                <stop offset="1" stop-color="#047857" stop-opacity="0.06" />
+              </linearGradient>
+            </defs>
+            <line class="risk-projection-grid-line" x1="66" x2="900" y1="48" y2="48" /><text class="risk-projection-axis-label" x="56" y="52">100</text><line class="risk-projection-grid-line" x1="66" x2="900" y1="95.5" y2="95.5" /><text class="risk-projection-axis-label" x="56" y="99.5">75</text><line class="risk-projection-grid-line" x1="66" x2="900" y1="143" y2="143" /><text class="risk-projection-axis-label" x="56" y="147">50</text><line class="risk-projection-grid-line" x1="66" x2="900" y1="190.5" y2="190.5" /><text class="risk-projection-axis-label" x="56" y="194.5">25</text><line class="risk-projection-grid-line" x1="66" x2="900" y1="238" y2="238" /><text class="risk-projection-axis-label" x="56" y="242">0</text>
+            <line class="risk-projection-today" x1="285" x2="285" y1="38" y2="238" />
+            <text class="risk-projection-today-label" x="285" y="30">TODAY</text>
+            <line class="risk-projection-target" x1="66" x2="900" y1="148.51" y2="148.51" />
+            <text class="risk-projection-target-label" x="898" y="141.51">TARGET 47.1</text>
+            <g class="risk-projection-bar" data-tone="critical"><rect class="risk-projection-bar-fill" x="126" y="59.21" width="78" height="178.79" rx="3" ry="3" /><rect class="risk-projection-bar-cap" x="126" y="59.21" width="78" height="5" rx="2.5" ry="2.5" /><text class="risk-projection-bar-value" x="165" y="48.21">94.1</text><text class="risk-projection-bar-label" x="165" y="268">NOW</text><text class="risk-projection-bar-detail" x="165" y="288">open risk</text></g><g class="risk-projection-bar" data-tone="projected"><rect class="risk-projection-bar-fill" x="366" y="122.67" width="78" height="115.33" rx="3" ry="3" /><rect class="risk-projection-bar-cap" x="366" y="122.67" width="78" height="5" rx="2.5" ry="2.5" /><text class="risk-projection-bar-value" x="405" y="111.67">60.7</text><text class="risk-projection-bar-label" x="405" y="268">TOP 1</text><text class="risk-projection-bar-detail" x="405" y="288">-100 score</text></g><g class="risk-projection-bar" data-tone="success"><rect class="risk-projection-bar-fill" x="564" y="238" width="78" height="0" rx="3" ry="3" /><rect class="risk-projection-bar-cap" x="564" y="238" width="78" height="5" rx="2.5" ry="2.5" /><text class="risk-projection-bar-value" x="603" y="227">0</text><text class="risk-projection-bar-label" x="603" y="268">TOP 3</text><text class="risk-projection-bar-detail" x="603" y="288">-282.2 score</text></g><g class="risk-projection-bar" data-tone="success"><rect class="risk-projection-bar-fill" x="762" y="238" width="78" height="0" rx="3" ry="3" /><rect class="risk-projection-bar-cap" x="762" y="238" width="78" height="5" rx="2.5" ry="2.5" /><text class="risk-projection-bar-value" x="801" y="227">0</text><text class="risk-projection-bar-label" x="801" y="268">PLAN</text><text class="risk-projection-bar-detail" x="801" y="288">-282.2 score</text></g>
+          </svg>
+          <div class="risk-scenario-readout"><span class="risk-scenario-readout-chip">3 actions planned</span><span class="risk-scenario-readout-text">Completing the shown plan takes the index <strong>94.1 -&gt; 0</strong> (-100%) - target reached <strong>after top 3</strong></span></div>
+          <p class="risk-scenario-note">Static what-if simulation from this run: current open actionable findings minus the shown remediation reducers. It is not a measured run-history curve.</p>
+        </section>
+        <section class="risk-scenario-reducers" aria-label="Top risk reducers">
+          <div class="risk-scenario-section-head">
+            <span class="status-label">Top risk reducers</span>
+          </div>
+          <p class="risk-scenario-reducer-lede">Expected index reduction if completed.</p>
+          <ol><li class="risk-scenario-reducer"><div class="risk-scenario-reducer-main"><span class="risk-scenario-reducer-title">Upgrade xz package to the validated distro-fixed build</span><strong>-33.3</strong></div><div class="risk-scenario-reducer-meta"><span class="risk-reducer-tag">biggest lever</span><span>1 finding - 1 service</span><span class="risk-reducer-tag risk-reducer-tag--epss">EPSS 84.6%</span><span class="risk-reducer-tag risk-reducer-tag--cvss">CVSS 10</span></div><span class="risk-scenario-reducer-context">checkout</span><span class="risk-scenario-reducer-track"><span style="width:100%;"></span></span></li><li class="risk-scenario-reducer"><div class="risk-scenario-reducer-main"><span class="risk-scenario-reducer-title">Upgrade log4j-core to 2.17.2 and redeploy Identity Gateway</span><strong>-31.4</strong></div><div class="risk-scenario-reducer-meta"><span>1 finding - 1 service</span><span class="risk-reducer-tag risk-reducer-tag--kev">KEV</span><span class="risk-reducer-tag risk-reducer-tag--epss">EPSS 94.4%</span><span class="risk-reducer-tag risk-reducer-tag--cvss">CVSS 10</span></div><span class="risk-scenario-reducer-context">identity</span><span class="risk-scenario-reducer-track"><span style="width:94.2%;"></span></span></li><li class="risk-scenario-reducer"><div class="risk-scenario-reducer-main"><span class="risk-scenario-reducer-title">Patch moveit-transfer 2023.0</span><strong>-29.3</strong></div><div class="risk-scenario-reducer-meta"><span>1 finding - 1 service</span><span class="risk-reducer-tag risk-reducer-tag--kev">KEV</span><span class="risk-reducer-tag risk-reducer-tag--epss">EPSS 91.1%</span><span class="risk-reducer-tag risk-reducer-tag--cvss">CVSS 9.8</span></div><span class="risk-scenario-reducer-context">partner file transfer</span><span class="risk-scenario-reducer-track"><span style="width:88%;"></span></span></li></ol>
+        </section>
+      </div>
       <div class="verdict-banner">
-        <p><strong>Decision needed:</strong> Approve 3 emergency remediation campaigns within 24h; confirm assigned owners for the top remediation campaigns; review 2 due or expiring governance items; treat provider freshness as warning before sign-off; require clean validation evidence after re-import.</p>
-        <p>This run analyzed 7 findings from vpw-054-known-cves.txt. 3 findings are open and actionable, 5 findings are KEV-backed, 1 finding is accepted risk, 1 finding is VEX suppressed and 2 fixed findings are retained as evidence. Immediate focus should be CVE-2021-44228 / Log4Shell, CVE-2023-34362 / MOVEit Transfer, CVE-2024-3094 / XZ Utils Backdoor before governance exceptions are signed off.</p>
+        <p><strong>Executive decision:</strong> Approve 3 emergency remediation campaigns for 24h action now; defer formal risk sign-off until provider data is refreshed and clean validation evidence is attached; confirm assigned owners for the top remediation campaigns; review 2 due or expiring governance items.</p>
+        <p>This run analyzed 7 findings from vpw-054-known-cves.txt. 3 findings are open and actionable, 5 findings are KEV-backed, 1 finding is accepted risk, 1 finding is VEX suppressed and 2 fixed findings are retained as evidence. Immediate focus: CVE-2021-44228 / Log4Shell, CVE-2023-34362 / MOVEit Transfer, CVE-2024-3094 / XZ Utils Backdoor. Complete validation before formal sign-off.</p>
       </div>
       <div class="decision-grid decision-grid--three">
         <div class="decision-card">
           <span class="status-label">What management should approve</span>
           <ul>
-            <li>3 emergency remediation campaigns.</li>
+            <li>Approve 3 emergency remediation campaigns for immediate 24h action.</li>
             <li>Named owners for each remediation cluster.</li>
-            <li>Validation evidence after clean re import.</li>
+            <li>Defer formal risk sign-off until provider data is refreshed and validation evidence is clean.</li>
           </ul>
         </div>
         <div class="decision-card">
           <span class="status-label">What requires caution</span>
           <ul>
-            <li>Provider snapshot freshness is warning for formal sign off.</li>
+            <li>Provider snapshot freshness blocks formal sign-off until refreshed.</li>
             <li>Open campaigns have named owners in the evidence.</li>
             <li>Accepted risk, VEX suppressed and fixed findings remain visible as evidence.</li>
           </ul>
@@ -284,7 +903,7 @@ tbody tr:last-child td { border-bottom: 0; }
         <div class="decision-card">
           <span class="status-label">What must be validated after remediation</span>
           <ul>
-            <li>Clean re import after remediation.</li>
+            <li>Clean re-import after remediation.</li>
             <li>Updated fixed evidence for closed findings.</li>
             <li>Evidence ZIP manifest and hashes retained for audit review.</li>
           </ul>
@@ -293,14 +912,27 @@ tbody tr:last-child td { border-bottom: 0; }
       <div class="signoff-panel" aria-label="Printable decision sign-off">
         <span class="status-label">Printable decision sign-off</span>
         <dl class="signoff-grid">
-          <div><dt>Decision owner</dt><dd>N/A</dd></div>
-          <div><dt>Approval outcome</dt><dd>N/A</dd></div>
-          <div><dt>Decision date</dt><dd>N/A</dd></div>
+          <div><dt>Decision owner</dt><dd></dd></div>
+          <div><dt>Approval outcome</dt><dd></dd></div>
+          <div><dt>Decision date</dt><dd></dd></div>
           <div><dt>Evidence package reference</dt><dd>Generate Evidence ZIP to record manifest.json</dd></div>
           <div><dt>Validation required</dt><dd>Clean re-import and fixed evidence before closure</dd></div>
           <div><dt>Analysis run</dt><dd>00000000-0000-4000-8000-000000000540</dd></div>
-          <div><dt>Notes</dt><dd>N/A</dd></div>
+          <div><dt>Notes</dt><dd></dd></div>
         </dl>
+      </div>
+    </section>
+
+    <section aria-labelledby="freshness-alert">
+      <p class="eyebrow">Data Freshness</p>
+      <h2 id="freshness-alert">Provider Intelligence is Warning</h2>
+      <div class="stale-alert">
+        <span class="stale-flag">STALE DATA</span>
+        <div class="stale-body">
+          <strong>The snapshot is reproducible but not necessarily current.</strong>
+          <p class="stale-text">Locked provider data guarantees a deterministic, auditable replay, but it does not mean the intelligence is fresh. Re-import live NVD, EPSS and KEV data before treating this brief as current external intelligence for formal risk sign-off.</p>
+          <div class="stale-chips"><span class="stale-chip">EPSS date: <b>2026-04-15</b> &middot; Warning</span><span class="stale-chip">KEV catalog version: <b>kev-catalog-v2026.04</b> &middot; Needs Review</span></div>
+        </div>
       </div>
     </section>
 
@@ -310,13 +942,13 @@ tbody tr:last-child td { border-bottom: 0; }
       <div class="metric-grid">
         <div class="metric" data-tone="info"><span>Total Findings</span><strong>7</strong></div>
         <div class="metric" data-tone="critical"><span>Open Actionable</span><strong>3</strong></div>
-        <div class="metric" data-tone="critical"><span>KEV Backed</span><strong>5</strong></div>
+        <div class="metric" data-tone="info"><span>KEV-Backed</span><strong>5</strong></div>
         <div class="metric" data-tone="critical"><span>Emergency SLA Campaigns</span><strong>3</strong></div>
         <div class="metric" data-tone="warning"><span>Accepted Risk</span><strong>1</strong></div>
         <div class="metric" data-tone="info"><span>VEX Suppressed</span><strong>1</strong></div>
         <div class="metric" data-tone="success"><span>Fixed Evidence</span><strong>2</strong></div>
         <div class="metric" data-tone="warning"><span>Review Due / Expiring</span><strong>2</strong></div>
-        <div class="metric" data-tone="critical"><span>Internet Facing Prod</span><strong>3</strong></div>
+        <div class="metric" data-tone="critical"><span>Internet-Facing Prod</span><strong>3</strong></div>
         <div class="metric" data-tone="info"><span>Unique CVEs</span><strong>6</strong></div>
         <div class="metric" data-tone="warning"><span>Provider Freshness</span><strong>Warning</strong></div>
         <div class="metric" data-tone="info"><span>Evidence Bundle Ready</span><strong>Expected</strong></div>
@@ -325,9 +957,40 @@ tbody tr:last-child td { border-bottom: 0; }
       <div class='table-wrap'>
         <table class='compact-table'>
           <thead><tr><th>Metric</th><th>Definition</th></tr></thead>
-          <tbody><tr><td><strong>Open Actionable</strong></td><td>Findings that still require remediation or mitigation after accepted risk, VEX suppressed and fixed evidence states are separated.</td></tr><tr><td><strong>KEV Backed</strong></td><td>Findings with a CISA KEV catalog signal.</td></tr><tr><td><strong>Emergency SLA Campaigns</strong></td><td>Remediation campaigns with open actionable KEV, critical CVSS or critical EPSS signals.</td></tr><tr><td><strong>Fixed Evidence</strong></td><td>Findings retained as fixed-state validation evidence, not active remediation work.</td></tr><tr><td><strong>Review Due or Expiring</strong></td><td>Waiver or accepted-risk governance items due, overdue or nearing expiry.</td></tr><tr><td><strong>Internet Facing Prod</strong></td><td>Open actionable findings on production assets with internet-facing or external exposure.</td></tr><tr><td><strong>Provider Freshness</strong></td><td>Deterministic verdict from centralized NVD, EPSS and KEV freshness thresholds.</td></tr><tr><td><strong>Evidence Bundle Ready</strong></td><td>Expected evidence ZIP contents can be generated for offline audit review.</td></tr></tbody>
+          <tbody><tr><td><strong>Open Actionable</strong></td><td>Findings that still require remediation or mitigation after accepted risk, VEX suppressed and fixed evidence states are separated.</td></tr><tr><td><strong>KEV-Backed</strong></td><td>Findings with a CISA KEV catalog signal.</td></tr><tr><td><strong>Emergency SLA Campaigns</strong></td><td>Remediation campaigns with open actionable KEV, critical CVSS or critical EPSS signals.</td></tr><tr><td><strong>Fixed Evidence</strong></td><td>Findings retained as fixed-state validation evidence, not active remediation work.</td></tr><tr><td><strong>Review Due or Expiring</strong></td><td>Waiver or accepted-risk governance items due, overdue or nearing expiry.</td></tr><tr><td><strong>Internet-Facing Prod</strong></td><td>Open actionable findings on production assets with internet-facing or external exposure.</td></tr><tr><td><strong>Provider Freshness</strong></td><td>Deterministic verdict from centralized NVD, EPSS and KEV freshness thresholds.</td></tr><tr><td><strong>Evidence Bundle Ready</strong></td><td>Expected evidence ZIP contents can be generated for offline audit review.</td></tr></tbody>
         </table>
       </div>
+    </section>
+
+    <section aria-labelledby="top-critical-risks">
+      <p class="eyebrow">Lead With These</p>
+      <h2 id="top-critical-risks">Top Critical Risks</h2>
+      <div class="risk-cards">
+    <article class="risk-card">
+      <div class="risk-card-head"><span class="risk-card-rank">Priority 01</span><span class='badge badge-critical'>P1</span></div>
+      <p class="risk-card-cve">CVE-2021-44228</p>
+      <h3 class="risk-card-name">Log4Shell</h3>
+      <p class="risk-card-scope">2 assets; production; internal, internet-facing exposure</p>
+      <div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-critical'>EPSS 0.944</span><span class='badge badge-critical'>CVSS 10</span><span class='badge badge-info'>ATT&CK T1190</span></div>
+      <p class="risk-card-action"><span class="status-label">Action</span>Approve emergency patch and validation window within 24h. Keep fixed evidence visible for audit closure.</p>
+    </article>
+    <article class="risk-card">
+      <div class="risk-card-head"><span class="risk-card-rank">Priority 02</span><span class='badge badge-critical'>P1</span></div>
+      <p class="risk-card-cve">CVE-2023-34362</p>
+      <h3 class="risk-card-name">MOVEit Transfer</h3>
+      <p class="risk-card-scope">1 asset; production; external exposure</p>
+      <div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-critical'>EPSS 0.911</span><span class='badge badge-critical'>CVSS 9.8</span></div>
+      <p class="risk-card-action"><span class="status-label">Action</span>Approve emergency patch and validation window within 24h.</p>
+    </article>
+    <article class="risk-card">
+      <div class="risk-card-head"><span class="risk-card-rank">Priority 03</span><span class='badge badge-critical'>P1</span></div>
+      <p class="risk-card-cve">CVE-2024-3094</p>
+      <h3 class="risk-card-name">XZ Utils Backdoor</h3>
+      <p class="risk-card-scope">1 asset; production; internet-facing exposure</p>
+      <div class="signal-row"><span class='badge badge-critical'>EPSS 0.846</span><span class='badge badge-critical'>CVSS 10</span><span class='badge badge-neutral'>No KEV</span></div>
+      <p class="risk-card-action"><span class="status-label">Action</span>Approve prioritized remediation and validation window.</p>
+    </article>
+  </div>
     </section>
 
     <section aria-labelledby="action-plan">
@@ -339,10 +1002,10 @@ tbody tr:last-child td { border-bottom: 0; }
       <tr><th>Time Window</th><th>Action</th><th>Scope</th><th>Owner</th><th>Evidence Basis</th></tr>
     </thead>
     <tbody>
-      <tr><td><strong>24h</strong></td><td>Approve emergency remediation for open KEV backed production findings and start validation tracking.</td><td>CVE-2021-44228 / Log4Shell, CVE-2023-34362 / MOVEit Transfer, CVE-2024-3094 / XZ Utils Backdoor campaigns.</td><td>identity-team, platform-team, secops, and 1 additional owner</td><td>KEV, EPSS 0.944, CVSS 10, ATT&amp;CK T1190; KEV, EPSS 0.911, CVSS 9.8</td></tr>
+      <tr><td><strong>24h</strong></td><td>Approve 24h remediation for KEV-backed or critical production exposure and start validation tracking.</td><td>CVE-2021-44228 / Log4Shell, CVE-2023-34362 / MOVEit Transfer, CVE-2024-3094 / XZ Utils Backdoor campaigns.</td><td>identity-team, platform-team, secops, and 1 additional owner</td><td>KEV, EPSS 0.944, CVSS 10, ATT&amp;CK T1190; KEV, EPSS 0.911, CVSS 9.8</td></tr>
 <tr><td><strong>72h</strong></td><td>Confirm owners, patch status and interim compensating controls for campaigns not yet closed.</td><td>All open actionable findings and any VEX under investigation.</td><td>Security owner plus service owners</td><td>Technical Markdown, findings CSV, owner rollups and validation notes.</td></tr>
-<tr><td><strong>7d</strong></td><td>Perform clean re import, close fixed evidence and preserve the evidence package for audit review.</td><td>All remediation campaigns and fixed evidence.</td><td>Security operations and platform owners</td><td>Evidence ZIP, manifest, provider snapshot and analysis JSON.</td></tr>
-<tr><td><strong>Governance review</strong></td><td>Review due waiver, expiring waiver, accepted risks and VEX suppressed findings before formal risk sign off.</td><td>1 waiver, 1 review due, 1 expiring soon, 1 accepted risk finding; 1 VEX suppressed finding.</td><td>Risk owner and security owner</td><td>Waiver records, VEX overlays and governance artifacts.</td></tr>
+<tr><td><strong>7d</strong></td><td>Perform clean re-import, close fixed evidence and preserve the evidence package for audit review.</td><td>All remediation campaigns and fixed evidence.</td><td>Security operations and platform owners</td><td>Evidence ZIP, manifest, provider snapshot and analysis JSON.</td></tr>
+<tr><td><strong>Governance review</strong></td><td>Review due waiver, expiring waiver, accepted risks and VEX suppressed findings before formal risk sign-off.</td><td>1 waiver, 1 review due, 1 expiring soon, 1 accepted risk finding; 1 VEX suppressed finding.</td><td>Risk owner and security owner</td><td>Waiver records, VEX overlays and governance artifacts.</td></tr>
     </tbody>
   </table>
 </div>
@@ -357,12 +1020,12 @@ tbody tr:last-child td { border-bottom: 0; }
       <tr><th>Priority</th><th>Risk Cluster</th><th>Actionability</th><th>Scope</th><th>Business Services</th><th>Owners</th><th>Evidence Signals</th><th>Decision Statement</th></tr>
     </thead>
     <tbody>
-        <tr><td><span class='badge badge-critical'>P1</span></td><td><strong>CVE-2021-44228 / Log4Shell</strong></td><td><span class='badge badge-critical'>1 open, 1 fixed</span></td><td>2 assets; production; internal, internet facing exposure</td><td>identity, operations</td><td>identity-team, secops</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-critical'>EPSS 0.944</span><span class='badge badge-critical'>CVSS 10</span><span class='badge badge-info'>ATT&CK T1190</span></div></td><td>Approve emergency patch and validation window within 24h. Keep fixed evidence visible for audit closure.</td></tr>
-        <tr><td><span class='badge badge-critical'>P1</span></td><td><strong>CVE-2023-34362 / MOVEit Transfer</strong></td><td><span class='badge badge-critical'>1 open</span></td><td>1 asset; production; external exposure</td><td>partner file transfer</td><td>soc-team</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-critical'>EPSS 0.911</span><span class='badge badge-critical'>CVSS 9.8</span></div></td><td>Approve emergency patch and validation window within 24h.</td></tr>
-        <tr><td><span class='badge badge-critical'>P1</span></td><td><strong>CVE-2024-3094 / XZ Utils Backdoor</strong></td><td><span class='badge badge-critical'>1 open</span></td><td>1 asset; production; internet facing exposure</td><td>checkout</td><td>platform-team</td><td><div class="signal-row"><span class='badge badge-critical'>EPSS 0.846</span><span class='badge badge-critical'>CVSS 10</span><span class='badge badge-neutral'>No KEV</span></div></td><td>Approve prioritized remediation and validation window.</td></tr>
-        <tr><td><span class='badge badge-neutral'>Evidence</span></td><td><strong>CVE-2024-4577 / PHP CGI</strong></td><td><span class='badge badge-neutral'>1 accepted</span></td><td>1 asset; production; internal exposure</td><td>billing</td><td>risk-owner</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-high'>EPSS 0.037</span><span class='badge badge-critical'>CVSS 9.8</span></div></td><td>Review accepted-risk exception before sign-off.</td></tr>
-        <tr><td><span class='badge badge-neutral'>Evidence</span></td><td><strong>CVE-2022-22965 / Spring4Shell</strong></td><td><span class='badge badge-neutral'>1 fixed</span></td><td>1 asset; production; internal exposure</td><td>catalog</td><td>catalog-team</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-high'>EPSS 0.024</span><span class='badge badge-critical'>CVSS 9.8</span></div></td><td>Keep fixed evidence visible for audit closure.</td></tr>
-        <tr><td><span class='badge badge-neutral'>Evidence</span></td><td><strong>CVE-2023-44487 / HTTP/2 Rapid Reset</strong></td><td><span class='badge badge-neutral'>1 suppressed</span></td><td>1 asset; production; internet facing exposure</td><td>edge ingress</td><td>edge-team</td><td><div class="signal-row"><span class='badge badge-high'>EPSS 0.018</span><span class='badge badge-high'>CVSS 7.5</span><span class='badge badge-neutral'>No KEV</span></div></td><td>Retain VEX evidence for suppressed scope.</td></tr>
+        <tr><td><span class='badge badge-critical'>P1</span></td><td><strong class='campaign-cluster-title'>Log4Shell</strong><span class='mono-dim campaign-cluster-cve'>CVE-2021-44228</span></td><td><span class='badge badge-critical'>1 open, 1 fixed</span></td><td>2 assets; production; internal, internet-facing exposure</td><td>identity, operations</td><td>identity-team, secops</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-critical'>EPSS 0.944</span><span class='badge badge-critical'>CVSS 10</span><span class='badge badge-info'>ATT&CK T1190</span></div></td><td>Approve emergency patch and validation window within 24h. Keep fixed evidence visible for audit closure.</td></tr>
+        <tr><td><span class='badge badge-critical'>P1</span></td><td><strong class='campaign-cluster-title'>MOVEit Transfer</strong><span class='mono-dim campaign-cluster-cve'>CVE-2023-34362</span></td><td><span class='badge badge-critical'>1 open</span></td><td>1 asset; production; external exposure</td><td>partner file transfer</td><td>soc-team</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-critical'>EPSS 0.911</span><span class='badge badge-critical'>CVSS 9.8</span></div></td><td>Approve emergency patch and validation window within 24h.</td></tr>
+        <tr><td><span class='badge badge-critical'>P1</span></td><td><strong class='campaign-cluster-title'>XZ Utils Backdoor</strong><span class='mono-dim campaign-cluster-cve'>CVE-2024-3094</span></td><td><span class='badge badge-critical'>1 open</span></td><td>1 asset; production; internet-facing exposure</td><td>checkout</td><td>platform-team</td><td><div class="signal-row"><span class='badge badge-critical'>EPSS 0.846</span><span class='badge badge-critical'>CVSS 10</span><span class='badge badge-neutral'>No KEV</span></div></td><td>Approve prioritized remediation and validation window.</td></tr>
+        <tr><td><span class='badge badge-neutral'>Evidence</span></td><td><strong class='campaign-cluster-title'>PHP CGI</strong><span class='mono-dim campaign-cluster-cve'>CVE-2024-4577</span></td><td><span class='badge badge-neutral'>1 accepted</span></td><td>1 asset; production; internal exposure</td><td>billing</td><td>risk-owner</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-high'>EPSS 0.037</span><span class='badge badge-critical'>CVSS 9.8</span></div></td><td>Review accepted-risk exception before sign-off.</td></tr>
+        <tr><td><span class='badge badge-neutral'>Evidence</span></td><td><strong class='campaign-cluster-title'>Spring4Shell</strong><span class='mono-dim campaign-cluster-cve'>CVE-2022-22965</span></td><td><span class='badge badge-neutral'>1 fixed</span></td><td>1 asset; production; internal exposure</td><td>catalog</td><td>catalog-team</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-high'>EPSS 0.024</span><span class='badge badge-critical'>CVSS 9.8</span></div></td><td>Keep fixed evidence visible for audit closure.</td></tr>
+        <tr><td><span class='badge badge-neutral'>Evidence</span></td><td><strong class='campaign-cluster-title'>HTTP/2 Rapid Reset</strong><span class='mono-dim campaign-cluster-cve'>CVE-2023-44487</span></td><td><span class='badge badge-neutral'>1 suppressed</span></td><td>1 asset; production; internet-facing exposure</td><td>edge ingress</td><td>edge-team</td><td><div class="signal-row"><span class='badge badge-high'>EPSS 0.018</span><span class='badge badge-high'>CVSS 7.5</span><span class='badge badge-neutral'>No KEV</span></div></td><td>Retain VEX evidence for suppressed scope.</td></tr>
     </tbody>
   </table>
 </div>
@@ -378,13 +1041,13 @@ tbody tr:last-child td { border-bottom: 0; }
             <tr><th>Service</th><th>Open Actionable</th><th>Governed Risk</th><th>Emergency Campaigns</th><th>Environment / Exposure</th><th>Owner</th><th>Decision Needed</th><th>Validation Evidence</th></tr>
           </thead>
           <tbody>
-            <tr><td><strong>identity</strong></td><td>1 campaigns / 1 findings</td><td>0 accepted, 0 VEX suppressed</td><td>1</td><td>1 environment: production / 1 exposure: internet facing</td><td>1 owner: identity-team</td><td><span class='badge badge-critical'>Emergency remediation</span></td><td>Clean re-import and fixed evidence before closure</td></tr>
+            <tr><td><strong>identity</strong></td><td>1 campaigns / 1 findings</td><td>0 accepted, 0 VEX suppressed</td><td>1</td><td>1 environment: production / 1 exposure: internet-facing</td><td>1 owner: identity-team</td><td><span class='badge badge-critical'>Emergency remediation</span></td><td>Clean re-import and fixed evidence before closure</td></tr>
             <tr><td><strong>partner file transfer</strong></td><td>1 campaigns / 1 findings</td><td>0 accepted, 0 VEX suppressed</td><td>1</td><td>1 environment: production / 1 exposure: external</td><td>1 owner: soc-team</td><td><span class='badge badge-critical'>Emergency remediation</span></td><td>Clean re-import and fixed evidence before closure</td></tr>
-            <tr><td><strong>checkout</strong></td><td>1 campaigns / 1 findings</td><td>0 accepted, 0 VEX suppressed</td><td>1</td><td>1 environment: production / 1 exposure: internet facing</td><td>1 owner: platform-team</td><td><span class='badge badge-critical'>Emergency remediation</span></td><td>Clean re-import and fixed evidence before closure</td></tr>
+            <tr><td><strong>checkout</strong></td><td>1 campaigns / 1 findings</td><td>0 accepted, 0 VEX suppressed</td><td>1</td><td>1 environment: production / 1 exposure: internet-facing</td><td>1 owner: platform-team</td><td><span class='badge badge-critical'>Emergency remediation</span></td><td>Clean re-import and fixed evidence before closure</td></tr>
             <tr><td><strong>billing</strong></td><td>0 campaigns / 0 findings</td><td>1 accepted risk</td><td>0</td><td>1 environment: production / 1 exposure: internal</td><td>1 owner: risk-owner</td><td><span class='badge badge-warning'>Governance review</span></td><td>Risk owner review record</td></tr>
             <tr><td><strong>catalog</strong></td><td>0 campaigns / 0 findings</td><td>1 fixed evidence</td><td>0</td><td>1 environment: production / 1 exposure: internal</td><td>1 owner: catalog-team</td><td><span class='badge badge-success'>Evidence validation</span></td><td>Retain VEX or fixed evidence in bundle</td></tr>
             <tr><td><strong>operations</strong></td><td>1 campaigns / 0 findings</td><td>1 fixed evidence</td><td>1</td><td>1 environment: production / 1 exposure: internal</td><td>1 owner: secops</td><td><span class='badge badge-critical'>Emergency remediation</span></td><td>Clean re-import and fixed evidence before closure</td></tr>
-            <tr><td><strong>edge ingress</strong></td><td>0 campaigns / 0 findings</td><td>1 VEX suppressed</td><td>0</td><td>1 environment: production / 1 exposure: internet facing</td><td>1 owner: edge-team</td><td><span class='badge badge-success'>Evidence validation</span></td><td>Retain VEX or fixed evidence in bundle</td></tr>
+            <tr><td><strong>edge ingress</strong></td><td>0 campaigns / 0 findings</td><td>1 VEX suppressed</td><td>0</td><td>1 environment: production / 1 exposure: internet-facing</td><td>1 owner: edge-team</td><td><span class='badge badge-success'>Evidence validation</span></td><td>Retain VEX or fixed evidence in bundle</td></tr>
           </tbody>
         </table>
       </div>
@@ -490,14 +1153,21 @@ tbody tr:last-child td { border-bottom: 0; }
     <section aria-labelledby="recommendations">
       <p class="eyebrow">Recommendations</p>
       <h2 id="recommendations">Decision Ready Recommendations</h2>
-      <ol class="recommendation-list">
-<li><strong>CVE-2021-44228 / Log4Shell remediation campaign</strong><span>Scope: 2 assets; production; internal, internet facing exposure; services: identity, operations. Status: 1 open, 1 fixed. Recommended action: Upgrade log4j-core to 2.17.2 and redeploy Identity Gateway.. SLA: Emergency / 24h. Owners: identity-team, secops. Evidence basis: KEV, EPSS 0.944, CVSS 10, ATT&amp;CK T1190.</span></li>
-<li><strong>CVE-2023-34362 / MOVEit transfer campaign</strong><span>Scope: 1 asset; production; external exposure; services: partner file transfer. Status: 1 open. Recommended action: Investigate VEX under-investigation status, validate exposure and patch if affected.. SLA: Emergency / 24h. Owners: soc-team. Evidence basis: KEV, EPSS 0.911, CVSS 9.8.</span></li>
-<li><strong>CVE-2024-3094 / XZ Utils campaign</strong><span>Scope: 1 asset; production; internet facing exposure; services: checkout. Status: 1 open. Recommended action: Upgrade xz package to the validated distro-fixed build.. SLA: Emergency / 24h. Owners: platform-team. Evidence basis: EPSS 0.846, CVSS 10.</span></li>
-<li><strong>CVE-2024-4577 / PHP CGI campaign</strong><span>Scope: 1 asset; production; internal exposure; services: billing. Status: 1 accepted. Recommended action: Review accepted risk and replace the temporary compensating control.. SLA: Emergency / 24h. Owners: risk-owner. Evidence basis: KEV, EPSS 0.037, CVSS 9.8.</span></li>
-<li><strong>CVE-2022-22965 / Spring4Shell remediation campaign</strong><span>Scope: 1 asset; production; internal exposure; services: catalog. Status: 1 fixed. Recommended action: Retain fixed evidence for Spring4Shell closure.. SLA: Emergency / 24h. Owners: catalog-team. Evidence basis: KEV, EPSS 0.024, CVSS 9.8.</span></li>
-<li><strong>CVE-2023-44487 / Edge HTTP/2 campaign</strong><span>Scope: 1 asset; production; internet facing exposure; services: edge ingress. Status: 1 suppressed. Recommended action: Retain VEX evidence and reopen if affected HTTP/2 module is enabled.. SLA: Emergency / 24h. Owners: edge-team. Evidence basis: EPSS 0.018, CVSS 7.5.</span></li>
-      </ol>
+      <div class="table-wrap">
+  <table class='recommendation-table'>
+    <thead>
+      <tr><th>SLA</th><th>CVE / Campaign</th><th>Status</th><th>Scope</th><th>Recommended Fix</th><th>Owners</th><th>Signals</th></tr>
+    </thead>
+    <tbody>
+        <tr><td><span class='badge badge-critical'>Emergency / 24h</span></td><td><strong>Log4Shell</strong><br><span class='mono-dim'>CVE-2021-44228</span></td><td><span class='badge badge-critical'>1 open, 1 fixed</span></td><td>2 assets; production; internal, internet-facing exposure</td><td>Upgrade log4j-core to 2.17.2 and redeploy Identity Gateway.</td><td>identity-team, secops</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-critical'>EPSS 0.944</span><span class='badge badge-critical'>CVSS 10</span><span class='badge badge-info'>ATT&CK T1190</span></div></td></tr>
+        <tr><td><span class='badge badge-critical'>Emergency / 24h</span></td><td><strong>MOVEit Transfer</strong><br><span class='mono-dim'>CVE-2023-34362</span></td><td><span class='badge badge-critical'>1 open</span></td><td>1 asset; production; external exposure</td><td>Investigate VEX under-investigation status, validate exposure and patch if affected.</td><td>soc-team</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-critical'>EPSS 0.911</span><span class='badge badge-critical'>CVSS 9.8</span></div></td></tr>
+        <tr><td><span class='badge badge-critical'>Emergency / 24h</span></td><td><strong>XZ Utils Backdoor</strong><br><span class='mono-dim'>CVE-2024-3094</span></td><td><span class='badge badge-critical'>1 open</span></td><td>1 asset; production; internet-facing exposure</td><td>Upgrade xz package to the validated distro-fixed build.</td><td>platform-team</td><td><div class="signal-row"><span class='badge badge-critical'>EPSS 0.846</span><span class='badge badge-critical'>CVSS 10</span><span class='badge badge-neutral'>No KEV</span></div></td></tr>
+        <tr><td><span class='badge badge-warning'>Governance review</span></td><td><strong>PHP CGI</strong><br><span class='mono-dim'>CVE-2024-4577</span></td><td><span class='badge badge-warning'>1 accepted</span></td><td>1 asset; production; internal exposure</td><td>Review accepted risk and replace the temporary compensating control.</td><td>risk-owner</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-high'>EPSS 0.037</span><span class='badge badge-critical'>CVSS 9.8</span></div></td></tr>
+        <tr><td><span class='badge badge-success'>Retain evidence</span></td><td><strong>Spring4Shell</strong><br><span class='mono-dim'>CVE-2022-22965</span></td><td><span class='badge badge-success'>1 fixed</span></td><td>1 asset; production; internal exposure</td><td>Retain fixed evidence for Spring4Shell closure.</td><td>catalog-team</td><td><div class="signal-row"><span class='badge badge-critical'>KEV</span><span class='badge badge-high'>EPSS 0.024</span><span class='badge badge-critical'>CVSS 9.8</span></div></td></tr>
+        <tr><td><span class='badge badge-success'>Evidence</span></td><td><strong>HTTP/2 Rapid Reset</strong><br><span class='mono-dim'>CVE-2023-44487</span></td><td><span class='badge badge-success'>1 suppressed</span></td><td>1 asset; production; internet-facing exposure</td><td>Retain VEX evidence and reopen if affected HTTP/2 module is enabled.</td><td>edge-team</td><td><div class="signal-row"><span class='badge badge-high'>EPSS 0.018</span><span class='badge badge-high'>CVSS 7.5</span><span class='badge badge-neutral'>No KEV</span></div></td></tr>
+    </tbody>
+  </table>
+</div>
     </section>
 
     <section aria-labelledby="attack">
