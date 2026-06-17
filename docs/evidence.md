@@ -17,7 +17,7 @@ normal `docs/` navigation.
 ## Current References
 
 - Current roadmap: [docs/roadmap.md](./roadmap.md)
-- Release notes: [docs/releases/](./releases/v1.1.0.md)
+- Release notes: [docs/releases/](./releases/v1.2.0.md)
 - Local/private deployment guidance:
   [docs/workbench-public-deployment.md](./workbench-public-deployment.md)
 - Report and evidence contracts: [docs/contracts.md](./contracts.md)
