@@ -67,7 +67,6 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
         generate_unique_id_function=custom_generate_unique_id,
     )
     active_engine = create_db_engine(selected_settings)
-    assert_api_local_actor_policy(selected_settings.API_V1_STR)
     configure_workbench_state(
         app,
         active_settings=selected_settings,
@@ -100,6 +99,7 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
     app.middleware("http")(_upload_size_guard)
     app.middleware("http")(_security_headers)
     app.include_router(api_router, prefix=selected_settings.API_V1_STR)
+    assert_api_local_actor_policy(selected_settings.API_V1_STR, app.routes)
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
