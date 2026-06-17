@@ -7,7 +7,7 @@ It is intentionally operational: use it when cutting a release, restoring a miss
 
 The repository ships releases through:
 
-- a version tag such as `v1.1.0`
+- a version tag such as `v1.2.0`
 - the release workflow in [`release.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/workflows/release.yml)
 - checked-in release notes under `docs/releases/`
 - GitHub Release artifacts built from the tagged tree
@@ -16,7 +16,7 @@ Release evidence must use the exact tag or commit. The repository contains
 inherited historical/template-line `0.x` tags, so `0.x` names in older roadmap
 or changelog material are not sufficient proof of current VPW behavior. Verify
 the exact tag with `git for-each-ref refs/tags` and prefer the current VPW
-package release tag `v1.1.0` for Workbench-era release evidence.
+package release tag `v1.2.0` for Workbench-era release evidence.
 
 The current package metadata uses `Development Status :: 4 - Beta`, meaning
 local-first self-hosted Workbench readiness, with shared domain code in the
@@ -29,14 +29,14 @@ The workflow already does the important trusted-publishing pieces:
 - it builds source and wheel distributions
 - it builds the local end-user Workbench ZIP through `make release-bundle`
 - it validates them with `twine check`
-- it publishes a GitHub Release from the checked-in notes when present
+- it creates a draft GitHub Release from the checked-in notes when present
 - it uses `pypa/gh-action-pypi-publish@release/v1`
 - it grants `id-token: write` on the PyPI job
 - it runs the PyPI job inside the `pypi` GitHub environment
 
 Current safety model:
 
-- tagged releases always build artifacts and publish the GitHub Release
+- tagged releases always build artifacts and create a draft GitHub Release
 - manual `workflow_dispatch` runs on the release workflow are preflight-only and do not create a GitHub Release or publish to PyPI
 - public PyPI publishing is gated behind the repository variable `PYPI_PUBLISH_ENABLED=true`
 - the live PyPI workflow verifies a hosted-index install after publish
@@ -68,7 +68,7 @@ certify a public deployment: live public TLS/header evidence and the explicit
 public deployment evidence contract still have to be captured for the exact
 deployed candidate.
 For tagged releases, `.github/workflows/release.yml` runs this gate before any
-GitHub Release or PyPI publish job can proceed.
+draft GitHub Release is created or any PyPI publish job can proceed.
 
 The VPW-AUD-999 final scorecard closed on 2026-05-08, but historical PP
 artifacts or local ignored build outputs must not be reused as current release
@@ -109,13 +109,20 @@ git push origin main
 git push origin vX.Y.Z
 ```
 
-7. Confirm that the GitHub Release workflow completed successfully.
+7. Confirm that the GitHub Release workflow completed successfully and created
+   a draft GitHub Release.
 8. Download or link the `release-readiness-evidence` workflow artifact. It must
    include the release-readiness command log, commit metadata, evidence-bundle
    verification JSON when generated, and the SHA-256 list for built release
    artifacts, including the local Workbench ZIP.
-9. If PyPI publishing is enabled for the repository, verify that the package appeared on PyPI.
-10. Confirm that the workflow's hosted-index install verification step completed successfully.
+9. Inspect the draft release before publication. Confirm the release title,
+   notes, tag, asset names, `dist-sha256.txt`, ZIP `.sha256`, and ZIP manifest
+   all match the exact tag.
+10. Paste the evidence comment into the release issue or PR before publishing
+    the draft.
+11. Publish the GitHub Release manually after the asset and evidence review.
+12. If PyPI publishing is enabled for the repository, verify that the package appeared on PyPI.
+13. Confirm that the workflow's hosted-index install verification step completed successfully.
 
 ## Restoring a Missing GitHub Release Object
 
@@ -177,7 +184,7 @@ When configuring the trusted publisher on PyPI, match these repository values:
 
 ## Post-Release Smoke Checks
 
-After each public release:
+After each draft release is verified and published:
 
 1. Confirm the GitHub Release page exists and contains the built `sdist`,
    `wheel`, `vuln-prioritizer-workbench-local-X.Y.Z.zip`, and ZIP SHA-256 file.
@@ -306,10 +313,11 @@ release or runtime PRs:
 - CodeQL where repository security policy requires it.
 
 The release workflow is not a branch-protection context because it runs on tags,
-but tagged releases cannot publish unless `make release-readiness-check` passes
-inside `.github/workflows/release.yml`. Any exception before tagging must name
-the release owner, rationale, residual risk, follow-up issue, and the exact
-non-readiness wording to use in release communications.
+but tagged releases cannot create release assets unless
+`make release-readiness-check` passes inside `.github/workflows/release.yml`.
+Any exception before tagging must name the release owner, rationale, residual
+risk, follow-up issue, and the exact non-readiness wording to use in release
+communications.
 
 ## Failure Modes To Check First
 

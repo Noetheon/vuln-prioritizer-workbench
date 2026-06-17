@@ -11,14 +11,20 @@ This changelog records the VPW product release line and milestone history. The
 repository also contains inherited historical/template-line `0.x` git tags from
 earlier repository history, including tags whose commit dates predate the VPW
 Workbench project. Do not use those old `0.x` tags as evidence for current
-Workbench behavior. Use `v1.1.0` as the current VPW package release tag and use
+Workbench behavior. Use `v1.2.0` as the current VPW package release tag and use
 the [documentation evidence matrix](docs/documentation-evidence-matrix.md) plus
 exact git tag output when release wording needs to be verified.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-17
+
 ### Added
 
+- Current Workbench `v1.2.0` release notes with the GitHub Release ZIP,
+  bundle manifest, and checksum asset contract for issue #594.
+- Draft-first GitHub Release publication for tagged releases so maintainers can
+  verify assets and evidence before publishing.
 - VPW-076 release-story evidence that links v1.0 release notes, changelog, demo evidence bundle verification, screenshots, roadmap state, 15-minute technical/CISO storyline, and backup plan.
 - GitHub open-source readiness documentation, maintainer ownership guidance,
   and stronger public repository routing links across README, Support,
@@ -26,6 +32,10 @@ exact git tag output when release wording needs to be verified.
 
 ### Changed
 
+- Bumped the package and workspace metadata to `1.2.0` for the current
+  Workbench release candidate.
+- Updated active release-status documentation from `v1.1.0` to `v1.2.0` while
+  keeping historical `v1.1.0` release notes scoped to their tag.
 - Updated GitHub issue and pull request templates to use the current final
   release scorecard language and include public TLS/header plus archive binary
   evidence fields where release-readiness evidence is requested.

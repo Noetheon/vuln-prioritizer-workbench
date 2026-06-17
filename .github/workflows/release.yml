@@ -59,7 +59,7 @@ jobs:
             exit 1
           fi
 
-      - name: Run release-readiness gate before publishing
+      - name: Run release-readiness gate before release artifacts
         shell: bash
         run: |
           set -euo pipefail
@@ -177,6 +177,7 @@ jobs:
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
         with:
           body_path: ${{ needs.build-and-release.outputs.release_notes_body_path }}
+          draft: true
           files: |
             dist/*
             release-readiness-evidence/dist-sha256.txt
@@ -186,6 +187,7 @@ jobs:
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
         with:
           generate_release_notes: true
+          draft: true
           files: |
             dist/*
             release-readiness-evidence/dist-sha256.txt

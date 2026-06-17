@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vuln-prioritizer-workbench"
-version = "1.1.0"
+version = "1.2.0"
 description = "Local-first Workbench for explainable CVE prioritization from scanner, SBOM, VEX, and asset-context evidence using CVSS, EPSS, KEV, and curated ATT&CK/TTP context."
 readme = "README.md"
 requires-python = ">=3.11"

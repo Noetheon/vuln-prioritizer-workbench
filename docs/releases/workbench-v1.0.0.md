@@ -4,7 +4,9 @@
 
 Workbench `v1.0.0` is the first release-ready Workbench milestone on top of the stable CLI core. It keeps the product boundary narrow: known-CVE prioritization from existing inputs, not scanning, exploitation, or generated CVE-to-ATT&CK mapping.
 
-These notes are Workbench milestone notes. The current package tree is versioned `1.1.0`, so a public package tag cut from `main` must use `v1.1.0` and the matching [v1.1.0 release notes](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/v1.1.0/docs/releases/v1.1.0.md).
+These notes are Workbench milestone notes. The current package tree is versioned
+`1.2.0`, so a public package tag cut from `main` must use `v1.2.0` and the
+matching [v1.2.0 release notes](v1.2.0.md).
 They are not a standalone `v1.0.0` package-tag certification for current
 `main`.
 
@@ -140,4 +142,6 @@ Record the release commit with `git rev-parse HEAD`, the date of the run, and th
   `v1.1.0` tree. Current `main` has since narrowed the active product to the
   local single-user Workbench and does not expose API-token gating, RBAC,
   login/session flows, or the old CLI/Action product surface.
-- The `v1.1.0` package tag and GitHub Release now carry the completed Workbench scope from `main`; future Workbench work should be tracked as new issues rather than as unfinished v1.0 follow-up.
+- The historical `v1.1.0` package tag carried the completed Workbench milestone
+  scope at tag time. Current release evidence for `main` belongs to the current
+  package tag and release notes, not this Workbench milestone page.

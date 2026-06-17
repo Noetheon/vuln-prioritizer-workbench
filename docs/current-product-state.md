@@ -113,7 +113,7 @@ page explicitly links it as such and explains the scope. Tracked binary evidence
 under `archive/vpw-evidence/**` is hash-pinned in
 `archive/vpw-evidence/BINARY-MANIFEST.json`.
 
-The current VPW package release tag is `v1.1.0`. Older `0.x` tags in this
+The current VPW package release tag is `v1.2.0`. Older `0.x` tags in this
 repository include inherited historical/template-line tags and must not be used
 as proof for current VPW Workbench claims unless a page explicitly scopes the
 reference to that historical line.
