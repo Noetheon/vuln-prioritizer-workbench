@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, WebSocket
 from sqlalchemy.engine import Engine
 
 from app.core.config import Settings, settings
@@ -26,7 +26,7 @@ def configure_workbench_state(
 
 
 def workbench_settings(
-    request: Request,
+    request: Request | WebSocket,
     *,
     required: bool = True,
 ) -> Settings:

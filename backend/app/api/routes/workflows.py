@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, WebSocket
 from fastapi.encoders import jsonable_encoder
 from sqlmodel import Session
 
-from app.api.deps import LocalActor, SessionDep
+from app.api.deps import LocalActor, SessionDep, WebSocketLocalActor
 from app.api.routes.workbench_access import require_project
 from app.models import (
     WorkflowEventsPublic,
@@ -142,6 +142,7 @@ def read_workflow_events(
 async def stream_workflow_events(
     websocket: WebSocket,
     workflow_id: uuid.UUID,
+    _local_actor: WebSocketLocalActor,
     after_sequence: int = 0,
 ) -> None:
     """Stream workflow snapshots and events over WebSocket."""

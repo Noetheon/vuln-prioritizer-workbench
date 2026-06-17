@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends, Request, WebSocket
 from sqlmodel import Session
 
 from app.core.app_state import workbench_engine, workbench_settings
@@ -33,3 +33,11 @@ def get_local_actor(request: Request) -> LocalWorkbenchActor:
 
 
 LocalActor = Annotated[LocalWorkbenchActor, Depends(get_local_actor)]
+
+
+def get_websocket_local_actor(websocket: WebSocket) -> LocalWorkbenchActor:
+    """Return the local single-user Workbench principal for WebSocket routes."""
+    return configured_local_actor(workbench_settings(websocket, required=False))
+
+
+WebSocketLocalActor = Annotated[LocalWorkbenchActor, Depends(get_websocket_local_actor)]
