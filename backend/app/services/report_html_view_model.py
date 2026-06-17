@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from app.services.report_html_attack_context import _reviewed_attack_mapping_rows_for_findings
 from app.services.report_html_campaign_model import (
     _business_service_view_rows,
@@ -37,12 +39,40 @@ from app.services.report_models import (
     EvidencePackageContext,
     ExecutiveReportViewModel,
     GovernanceExceptions,
+    MarkdownReportFinding,
     MarkdownReportPayload,
     ReportIdentity,
     RiskPosture,
     TechnicalAppendix,
 )
 from app.services.report_renderer_common import _dict_list
+
+
+def _risk_index_helper(
+    findings: Sequence[MarkdownReportFinding],
+) -> tuple[int | None, str, int]:
+    """
+    Compute the mean risk score across open, non-accepted findings as a 0-100 index.
+
+    Accepted-risk, VEX-suppressed and fixed-evidence findings are excluded so the index
+    reflects only the open posture management still owns. Returns the rounded index, its
+    severity band and the population it was averaged over.
+    """
+    scores = [
+        finding.risk_score
+        for finding in findings
+        if _is_actionable_finding(finding) and finding.risk_score is not None
+    ]
+    if not scores:
+        return None, "none", 0
+    index = round(sum(scores) / len(scores))
+    if index >= 70:
+        band = "critical"
+    elif index >= 40:
+        band = "elevated"
+    else:
+        band = "low"
+    return index, band, len(scores)
 
 
 def build_executive_report_view_model(
@@ -89,6 +119,30 @@ def build_executive_report_view_model(
     open_campaigns = [campaign for campaign in campaigns if campaign.actionable_count > 0]
     owner_gap_count = sum(1 for campaign in open_campaigns if not campaign.owners)
     evidence_bundle_status = _evidence_bundle_status_label(evidence_package_context)
+    risk_index, risk_index_band, risk_index_population = _risk_index_helper(payload.findings)
+    if emergency_campaigns:
+        approval_scope = (
+            f"Approve {_pluralize(len(emergency_campaigns), 'emergency remediation campaign')} "
+            "for immediate 24h action."
+        )
+    elif open_campaigns:
+        approval_scope = (
+            f"Approve remediation windows for {_pluralize(len(open_campaigns), 'open campaign')}."
+        )
+    else:
+        approval_scope = "Confirm no active remediation campaign requires management approval."
+
+    signoff_approval = (
+        "Defer formal risk sign-off until provider data is refreshed and validation evidence "
+        "is clean."
+        if provider_freshness in {"Warning", "Stale"}
+        else "Complete formal risk sign-off only after clean validation evidence is attached."
+    )
+    provider_caution = (
+        "Provider snapshot freshness blocks formal sign-off until refreshed."
+        if provider_freshness in {"Warning", "Stale"}
+        else "Provider snapshot freshness supports the current operational decision."
+    )
     return ExecutiveReportViewModel(
         report_identity=ReportIdentity(
             report_type="Executive HTML",
@@ -105,17 +159,12 @@ def build_executive_report_view_model(
             decision_needed=decision_needed,
             executive_summary=_executive_verdict_summary_helper(payload),
             management_approval_items=(
-                f"{_pluralize(len(emergency_campaigns), 'emergency remediation campaign')}."
-                if emergency_campaigns
-                else (
-                    f"{_pluralize(len(open_campaigns), 'open remediation campaign')} "
-                    "remediation window."
-                ),
+                approval_scope,
                 "Named owners for each remediation cluster.",
-                "Validation evidence after clean re import.",
+                signoff_approval,
             ),
             caution_items=(
-                f"Provider snapshot freshness is {provider_freshness.lower()} for formal sign off.",
+                provider_caution,
                 (
                     f"{_pluralize(owner_gap_count, 'open campaign')} "
                     f"{'has' if owner_gap_count == 1 else 'have'} no named owner."
@@ -125,13 +174,16 @@ def build_executive_report_view_model(
                 "Accepted risk, VEX suppressed and fixed findings remain visible as evidence.",
             ),
             validation_items=(
-                "Clean re import after remediation.",
+                "Clean re-import after remediation.",
                 "Updated fixed evidence for closed findings.",
                 "Evidence ZIP manifest and hashes retained for audit review.",
             ),
         ),
         risk_posture=RiskPosture(
             total_findings=len(payload.findings),
+            risk_index=risk_index,
+            risk_index_band=risk_index_band,
+            risk_index_population=risk_index_population,
             open_actionable_findings=actionability.get("open", 0),
             kev_backed_findings=_count_findings(payload.findings, lambda finding: finding.in_kev),
             emergency_sla_count=len(emergency_campaigns),

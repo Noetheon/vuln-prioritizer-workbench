@@ -155,7 +155,7 @@ def _normalized_context_label(value: str) -> str:
     normalized = value.strip().lower().replace("_", "-")
     replacements = {
         "prod": "production",
-        "internet-facing": "internet facing",
+        "internet-facing": "internet-facing",
         "external": "external",
         "dmz": "DMZ",
         "dr": "DR",
