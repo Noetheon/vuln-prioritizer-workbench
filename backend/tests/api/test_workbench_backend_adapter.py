@@ -13,7 +13,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
-from app.api.main import PUBLIC_API_ROUTE_PATHS
+from app.api.main import assert_api_local_actor_policy
 from app.api.routes.workbench import _database_readiness
 from app.core.config import (
     Settings,
@@ -177,21 +177,7 @@ def test_workbench_backend_openapi_omits_oauth_security_for_local_runtime(tmp_pa
 
 
 def test_workbench_api_routes_require_local_actor_unless_allowlisted() -> None:
-    public_paths: set[str] = set()
-    unprotected_paths: list[str] = []
-
-    for route in app.routes:
-        if not isinstance(route, APIRoute) or not route.path.startswith("/api/v1"):
-            continue
-        if route.path in PUBLIC_API_ROUTE_PATHS:
-            public_paths.add(route.path)
-            continue
-        dependency_names = _route_dependency_names(route)
-        if dependency_names.isdisjoint({"dependency", "get_local_actor"}):
-            unprotected_paths.append(f"{','.join(sorted(route.methods))} {route.path}")
-
-    assert public_paths == PUBLIC_API_ROUTE_PATHS
-    assert unprotected_paths == []
+    assert_api_local_actor_policy("/api/v1", app.routes)
 
 
 def test_workbench_backend_rejects_invalid_host_header() -> None:
@@ -876,19 +862,6 @@ def _stamp_alembic_head(engine: Engine) -> None:
 def _column_names(engine: Engine, table_name: str) -> set[str]:
     with engine.connect() as connection:
         return {column["name"] for column in inspect(connection).get_columns(table_name)}
-
-
-def _route_dependency_names(route: APIRoute) -> set[str]:
-    dependency_names: set[str] = set()
-
-    def visit(dependant: object) -> None:
-        for dependency in getattr(dependant, "dependencies", []):
-            call = getattr(dependency, "call", None)
-            dependency_names.add(getattr(call, "__name__", repr(call)))
-            visit(dependency)
-
-    visit(route.dependant)
-    return dependency_names
 
 
 def test_workbench_backend_adapter_does_not_import_legacy_web_or_db_stack() -> None:
