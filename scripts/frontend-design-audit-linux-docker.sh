@@ -27,6 +27,19 @@ docker_server_arch="$(docker version --format '{{.Server.Arch}}')"
 docker_server_os="$(docker version --format '{{.Server.Os}}')"
 playwright_image="${PLAYWRIGHT_DOCKER_IMAGE:-mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948}"
 
+git_common_dir="$(git -C "${repo_root}" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+git_dir="$(git -C "${repo_root}" rev-parse --path-format=absolute --git-dir 2>/dev/null || true)"
+git_mount_args=()
+if [[ -n "${git_common_dir}" && -d "${git_common_dir}" ]]; then
+  git_mount_args+=(-v "${git_common_dir}:${git_common_dir}:ro")
+fi
+if [[ -n "${git_dir}" && -d "${git_dir}" ]]; then
+  case "${git_dir}/" in
+    "${git_common_dir}/"*) ;;
+    *) git_mount_args+=(-v "${git_dir}:${git_dir}:ro") ;;
+  esac
+fi
+
 node_modules_volume="${PLAYWRIGHT_NODE_MODULES_VOLUME:-vpw_frontend_node_modules_${docker_server_os}_${docker_server_arch}}"
 npm_cache_volume="${PLAYWRIGHT_NPM_CACHE_VOLUME:-vpw_npm_cache_${docker_server_os}_${docker_server_arch}}"
 pip_cache_volume="${PLAYWRIGHT_PIP_CACHE_VOLUME:-vpw_pip_cache_${docker_server_os}_${docker_server_arch}}"
@@ -46,6 +59,7 @@ docker run --rm \
   -v "${node_modules_volume}:/work/frontend/node_modules" \
   -v "${npm_cache_volume}:/root/.npm" \
   -v "${pip_cache_volume}:/root/.cache/pip" \
+  "${git_mount_args[@]}" \
   -w /work \
   "${playwright_image}" \
   bash -lc '

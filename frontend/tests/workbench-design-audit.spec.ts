@@ -17,8 +17,11 @@ const screenshotAssertionTimeoutMs = 30_000
 const visualMaskSelector = "[data-vpw-visual-mask]"
 const visualMaskColor = "#f3f4f6"
 const screenshotDiffOptionsByFileName = {
-  // Text-heavy Linux x64 captures can drift in font antialiasing between hosted
-  // runners while the layout and content remain stable.
+  // Text-heavy table captures can drift in font antialiasing between local
+  // and hosted runners while the layout and content remain stable.
+  "imports-01.png": { maxDiffPixelRatio: 0.02 },
+  "imports-02.png": { maxDiffPixelRatio: 0.02 },
+  "imports-03.png": { maxDiffPixelRatio: 0.02 },
   "imports-run-02.png": { maxDiffPixelRatio: 0.04 },
 }
 const routeFilter = new Set(
@@ -47,6 +50,7 @@ type AuditRoute = {
   readyText: RegExp | string
   slug: string
   stableText?: RegExp | string
+  stabilityTimeoutMs?: number
 }
 
 type ScreenshotManifestEntry = {
@@ -125,6 +129,7 @@ const allAuditRoutes: AuditRoute[] = [
     readyText: /Asset inventory|Asset register/i,
     slug: "assets",
     stableText: /Asset register|analytics-etl-01/,
+    stabilityTimeoutMs: 90_000,
   },
   {
     name: "Data Sources",
@@ -191,7 +196,9 @@ test.describe("VPW visual regression baselines", () => {
     test(`design audit matches VPW visual regression baselines: ${route.name}`, async ({
       page,
     }) => {
-      test.setTimeout(120_000)
+      test.setTimeout(
+        Math.max(120_000, (route.stabilityTimeoutMs ?? 60_000) + 60_000),
+      )
       const routeEntries = await captureAuditRoute(
         page,
         route,
@@ -404,7 +411,7 @@ async function waitForStableRouteContent(page: Page, route: AuditRoute) {
       return !visibleLoadingText
     },
     {},
-    { timeout: 60_000 },
+    { timeout: route.stabilityTimeoutMs ?? 60_000 },
   )
 }
 

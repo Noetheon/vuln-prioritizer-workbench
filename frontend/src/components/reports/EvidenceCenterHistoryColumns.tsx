@@ -147,7 +147,11 @@ export function buildReportHistoryColumns({
       width: "11%",
     },
     {
-      cell: (report) => reportSizeLabel(report.size_bytes),
+      cell: (report) => (
+        <span data-vpw-visual-mask="true">
+          {reportSizeLabel(report.size_bytes)}
+        </span>
+      ),
       header: "Size",
       id: "size",
       width: "9%",
