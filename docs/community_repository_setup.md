@@ -29,17 +29,37 @@ The split matters:
 | Repository visibility and surface settings | GitHub UI or API | Public/private state, discussions, wiki, homepage, merge cleanup, and related toggles must be configured on GitHub. |
 | Private vulnerability reporting or security advisories settings | GitHub repository settings | Must be configured on GitHub if the project wants GitHub-managed private reporting in addition to `SECURITY.md`. |
 
-## Current GitHub Metadata Check
+## Recommended Launch Metadata
 
-As of 2026-04-24, `gh repo view Noetheon/vuln-prioritizer-workbench` showed:
+Use this public metadata unless the repository settings deliberately differ:
 
 - visibility: `PUBLIC`
 - default branch: `main`
-- description: `Local-first vulnerability prioritization workbench for explainable CVE remediation decisions.`
-- homepage: empty
-- topics: `cisa-kev`, `cve`, `cvss`, `devsecops`, `docker`, `epss`, `fastapi`, `nvd`, `python`, `risk-based-vulnerability-management`, `sbom`, `security-tools`, `sqlite`, `vex`, `vulnerability-management`
+- description: `Local-first workbench for explainable CVE prioritization from scanner, SBOM, VEX, and asset evidence.`
+- homepage: empty until a stable docs, release, or project page URL exists
+- social preview: upload `docs/examples/media/github-social-preview.png` in the
+  repository settings
+- projects: disabled unless a maintained public GitHub Project board is active
+- packages: unused unless a release explicitly publishes container or package
+  artifacts through GitHub Packages
 
-Before broader public launch, set a homepage only if there is a stable docs, release, or project page URL to point at. GitHub-side settings should be rechecked after repository moves, renames, or release automation changes.
+Recommended external-share title:
+
+```text
+Vuln Prioritizer Workbench: local-first CVE triage with EPSS, KEV, SBOM/VEX, and evidence reports
+```
+
+Recommended external-share summary:
+
+```text
+Open-source local Docker Workbench that imports existing CVE evidence, explains
+remediation priority with CVSS/EPSS/KEV plus asset and VEX context, and exports
+auditable reports and evidence bundles. It is defensive prioritization software,
+not a scanner, exploit tool, hosted SaaS, or AI scoring black box.
+```
+
+Before broader public launch, recheck GitHub-side settings after repository
+moves, renames, release automation changes, or docs-site publication.
 
 ## Recommended Repository Topics
 
@@ -49,19 +69,25 @@ Start with a small topic set that accurately describes the project:
 - `workbench`
 - `security`
 - `cve`
+- `cvss`
 - `epss`
-- `kev`
+- `cisa-kev`
 - `mitre-attack`
 - `vulnerability-management`
+- `risk-based-vulnerability-management`
 - `sbom`
+- `vex`
 - `sarif`
+- `devsecops`
+- `security-tools`
+- `docker`
 
 Optional topics when they reflect the current release surface:
 
-- `openvex`
 - `cyclonedx`
 - `fastapi`
-- `docker`
+- `react`
+- `local-first`
 - `sqlite`
 
 Avoid adding adjacent-but-misleading topics such as `scanner`, `siem`, `edr`, or
@@ -179,16 +205,58 @@ These steps must be done on GitHub. They are not created by local files alone:
 1. Set the repository visibility to `public` when the project is ready for external consumption.
 2. Add the recommended repository topics in the repository "About" panel.
 3. Set a concise repository description that matches the current product surface.
-4. Enable discussions if you want a public support and workflow-help channel that is separate from issues.
-5. Disable the wiki when versioned docs in `docs/` are the authoritative documentation surface.
-6. Enable delete-branch-on-merge for normal PR hygiene.
-7. Protect `main` against force-push and deletion at minimum. Add stricter PR or status-check requirements only when they match the maintainer workflow you actually intend to enforce.
-8. Enable GitHub code security features that fit a public repository: secret scanning, push protection, vulnerability alerts, automated security fixes, and the existing CodeQL workflow.
-9. Confirm GitHub is surfacing `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, and `SUPPORT.md` in the community health surface where applicable, and that `README.md` links `MAINTAINERS.md`, `CHANGELOG.md`, and the GitHub readiness page.
-10. If private vulnerability reporting is desired, enable the repository security/advisory setting in GitHub after the repository is public.
-11. If public releases are enabled, confirm the GitHub Release object exists for the current tag and that the release workflow still matches the maintainer guidance in [docs/release_operations.md](./release_operations.md), including tag-only publish behavior.
-12. If PyPI publishing is enabled, confirm the PyPI Trusted Publisher points at this repository, the `.github/workflows/release.yml` workflow, and the `pypi` environment, and that the hosted-index install verification job is green.
-13. If TestPyPI validation is enabled, confirm the separate Trusted Publisher points at `.github/workflows/testpypi.yml`, the `testpypi` environment, that the repository variable `TEST_PYPI_PUBLISH_ENABLED` is intentional, and that the hosted-index install verification job is green.
+4. Set a social preview image that remains readable in small Reddit, Slack, and
+   GitHub unfurl cards.
+5. Disable Projects unless a maintained public GitHub Project board is active.
+6. Enable discussions if you want a public support and workflow-help channel
+   that is separate from issues.
+7. Disable the wiki when versioned docs in `docs/` are the authoritative
+   documentation surface.
+8. Enable delete-branch-on-merge for normal PR hygiene.
+9. Protect `main` against force-push and deletion at minimum. Add stricter PR or
+   status-check requirements only when they match the maintainer workflow you
+   actually intend to enforce.
+10. Enable GitHub code security features that fit a public repository: secret
+   scanning, push protection, vulnerability alerts, automated security fixes,
+   and the existing CodeQL workflow.
+11. Confirm GitHub is surfacing `SECURITY.md`, `CONTRIBUTING.md`,
+    `CODE_OF_CONDUCT.md`, and `SUPPORT.md` in the community health surface where
+    applicable, and that `README.md` links `MAINTAINERS.md`, `CHANGELOG.md`, and
+    the GitHub readiness page.
+12. If private vulnerability reporting is desired, enable the repository
+    security/advisory setting in GitHub after the repository is public.
+13. If public releases are enabled, confirm the GitHub Release object exists for
+    the current tag and that the release workflow still matches the maintainer
+    guidance in [docs/release_operations.md](./release_operations.md), including
+    tag-only publish behavior.
+14. If PyPI publishing is enabled, confirm the PyPI Trusted Publisher points at
+    this repository, the `.github/workflows/release.yml` workflow, and the `pypi`
+    environment, and that the hosted-index install verification job is green.
+15. If TestPyPI validation is enabled, confirm the separate Trusted Publisher
+    points at `.github/workflows/testpypi.yml`, the `testpypi` environment, that
+    the repository variable `TEST_PYPI_PUBLISH_ENABLED` is intentional, and that
+    the hosted-index install verification job is green.
+
+## Reddit Launch Checklist
+
+Use this checklist before sharing the repository in Reddit security,
+DevSecOps, vulnerability management, or open-source communities:
+
+1. Link to the repository root or the latest GitHub Release, not a deep docs
+   page.
+2. Use the recommended external-share title or another title that says
+   "local-first CVE prioritization" without implying scanner, exploit, or AI
+   autopatching behavior.
+3. Put the install command, supported input formats, safety boundary, and demo
+   screenshot in the first comment or post body.
+4. Mention that sample data is synthetic and that users should not post private
+   scanner exports, customer data, tokens, internal hostnames, or exploit
+   payloads in public threads.
+5. Link `SECURITY.md` for vulnerability reports and `SUPPORT.md` for usage
+   questions.
+6. Avoid broad claims such as "production certified", "detects exploitation",
+   "maps every CVE to ATT&CK", or "automatically fixes vulnerabilities" unless a
+   current release has explicit evidence for that exact claim.
 
 ## Recommended `main` Protection Baseline
 

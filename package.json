@@ -1,6 +1,6 @@
 {
   "name": "vuln-prioritizer-workbench",
-  "description": "Local-first Workbench for prioritizing known CVEs from existing evidence.",
+  "description": "Local-first Workbench for explainable CVE prioritization from scanner, SBOM, VEX, and asset-context evidence.",
   "private": true,
   "packageManager": "npm@10.9.4",
   "engines": {

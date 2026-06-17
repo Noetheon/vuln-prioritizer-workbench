@@ -5,14 +5,25 @@
 [![Status: Beta](https://img.shields.io/badge/status-beta-orange)](#status-and-scope)
 [![Local first](https://img.shields.io/badge/runtime-local--first-informational)](#quickstart)
 
-Vuln Prioritizer Workbench is a local-first, single-user Workbench for
-prioritizing already-known CVEs from supplied evidence. It imports CVE lists,
-scanner exports, SBOM vulnerability exports, VEX statements, and asset context,
-then explains priority with transparent signals such as CVSS, EPSS, CISA KEV,
-provider freshness, reviewed ATT&CK/TTP context, lifecycle state, waivers, and
-evidence artifacts.
+Vuln Prioritizer Workbench turns existing vulnerability evidence into an
+explainable local remediation queue. It imports CVE lists, scanner exports, SBOM
+vulnerability exports, VEX statements, and asset context, then explains priority
+with transparent signals such as CVSS, EPSS, CISA KEV, provider freshness,
+reviewed ATT&CK/TTP context, lifecycle state, waivers, and evidence artifacts.
+It does not scan systems or invent exploitability; the decision trail stays
+auditable from source data, policy, and generated local artifacts.
 
 ![Vuln Prioritizer Workbench overview](docs/examples/media/workbench-dashboard.png)
+
+## At A Glance
+
+| Question | Answer |
+| --- | --- |
+| Best fit | Local security teams or maintainers who already have CVEs from scanners, SBOMs, advisories, or GitHub alerts and need a defensible triage queue. |
+| Inputs | CVE lists, Trivy, Grype, CycloneDX, SPDX, Dependency-Check, GitHub alerts, Nessus, OpenVAS, VEX, and asset context CSV. |
+| Decision signals | CVSS, EPSS, CISA KEV, provider freshness, asset exposure, lifecycle state, waivers, and reviewed defensive ATT&CK/TTP context. |
+| Outputs | Technical Markdown, executive HTML, JSON, CSV, SARIF, ATT&CK Navigator, and deterministic Evidence ZIP artifacts. |
+| Boundary | Local-first, single-user, defensive prioritization only. No scanner, exploit runner, PoC generator, autopatcher, or AI CVE-to-ATT&CK mapper. |
 
 ## What It Does
 
@@ -202,6 +213,7 @@ make demo-screenshot
 - [Demo Readiness](docs/demo-readiness.md)
 - [Local/Private Workbench Deployment](docs/workbench-public-deployment.md)
 - [GitHub Open Source Readiness](docs/github-open-source-readiness.md)
+- [Community repository setup](docs/community_repository_setup.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 - [Code of conduct](CODE_OF_CONDUCT.md)

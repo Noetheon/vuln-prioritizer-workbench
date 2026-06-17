@@ -382,15 +382,59 @@ def test_executive_html_groups_campaigns_and_interprets_freshness() -> None:
         row.select("td")[1].get_text(" ", strip=True)
         for row in soup.select('section[aria-labelledby="campaigns"] tbody tr')
     ]
-    assert campaign_clusters.count("CVE-2021-44228 / Log4Shell") == 1
-    assert campaign_clusters.count("CVE-2022-22965 / Spring4Shell") == 1
+    assert campaign_clusters.count("Log4Shell CVE-2021-44228") == 1
+    assert campaign_clusters.count("Spring4Shell CVE-2022-22965") == 1
 
-    recommendation_titles = [
-        item.select_one("strong").get_text(" ", strip=True)
-        for item in soup.select('section[aria-labelledby="recommendations"] li')
+    stale_text = soup.select_one(".stale-text")
+    stale_chips = soup.select_one(".stale-chips")
+    assert stale_text is not None
+    assert stale_chips is not None
+    assert not stale_text.select(".stale-chips")
+    assert stale_chips.parent is not None
+    assert "stale-body" in (stale_chips.parent.get("class") or [])
+
+    risk_scenario = soup.select_one(".risk-scenario")
+    assert risk_scenario is not None
+    risk_scenario_text = risk_scenario.get_text(" ", strip=True)
+    assert "Scenario projection" in risk_scenario_text
+    assert "Top risk reducers" in risk_scenario_text
+    assert "Static what-if simulation from this run" in risk_scenario_text
+    assert "Upgrade affected log4j-core components" in risk_scenario_text
+    assert "Apply validated Spring Framework fixes" in risk_scenario_text
+    assert "CVE-2024-0001" not in risk_scenario_text
+    reducer_impacts = [
+        reducer.select_one(".risk-scenario-reducer-main strong").get_text(" ", strip=True)
+        for reducer in risk_scenario.select(".risk-scenario-reducer")
     ]
-    assert recommendation_titles.count("CVE-2021-44228 / Log4Shell remediation campaign") == 1
-    assert recommendation_titles.count("CVE-2022-22965 / Spring4Shell remediation campaign") == 1
+    assert reducer_impacts[:2] == ["-43.8", "-26.3"]
+
+    top_risk_cells = [
+        card.select_one(".risk-card-cve").get_text(" ", strip=True)
+        for card in soup.select('section[aria-labelledby="top-critical-risks"] .risk-card')
+    ]
+    assert top_risk_cells == ["CVE-2021-44228", "CVE-2022-22965"]
+    assert "CVE-2024-0001" not in top_risk_cells
+    top_risk_actions = [
+        card.select_one(".risk-card-action").get_text(" ", strip=True)
+        for card in soup.select('section[aria-labelledby="top-critical-risks"] .risk-card')
+    ]
+    assert top_risk_actions[0].startswith("Action Approve emergency patch")
+    assert "Upgrade log4j-core to 2.17.2" not in top_risk_actions[0]
+
+    recommendation_rows = soup.select('section[aria-labelledby="recommendations"] tbody tr')
+    recommendation_cells = [
+        row.select("td")[1].get_text(" ", strip=True) for row in recommendation_rows
+    ]
+    assert sum("CVE-2021-44228" in cell for cell in recommendation_cells) == 1
+    assert sum("CVE-2022-22965" in cell for cell in recommendation_cells) == 1
+    assert any("Log4Shell" in cell for cell in recommendation_cells)
+    recommendation_by_cve = {
+        row.select("td")[1].select_one(".mono-dim").get_text(" ", strip=True): row
+        for row in recommendation_rows
+    }
+    accepted_row = recommendation_by_cve["CVE-2024-0001"]
+    assert accepted_row.select("td")[0].get_text(" ", strip=True) == "Governance review"
+    assert accepted_row.select("td")[2].get_text(" ", strip=True) == "1 accepted"
 
     provider_rows = renderers._provider_freshness_rows(snapshot, payload.generated_at)
     provider_statuses = {row["signal"]: row["status"] for row in provider_rows}
@@ -410,6 +454,27 @@ def test_executive_html_groups_campaigns_and_interprets_freshness() -> None:
     assert view_model.evidence_package[0].artifact == "manifest.json"
     assert view_model.evidence_package[0].status == "expected"
     assert view_model.technical_appendix.note.startswith("Detailed finding rows")
+
+
+def test_executive_html_formats_long_slas_as_days() -> None:
+    payload = _payload(
+        findings=[
+            _finding(cve_id="CVE-2026-0001", decision_sla="Emergency / 24h"),
+            _finding(cve_id="CVE-2026-0002", decision_sla="High / 168h"),
+            _finding(cve_id="CVE-2026-0003", decision_sla="Standard / 720h"),
+            _finding(cve_id="CVE-2026-0004", decision_sla="Monitor / 2160h"),
+        ]
+    )
+
+    html = renderers.render_html_executive_report(payload)
+
+    assert "Emergency / 24h" in html
+    assert "High / 7d" in html
+    assert "Standard / 30d" in html
+    assert "Monitor / 90d" in html
+    assert "High / 168h" not in html
+    assert "Standard / 720h" not in html
+    assert "Monitor / 2160h" not in html
 
 
 def test_executive_view_model_separates_overlapping_actionability_states() -> None:

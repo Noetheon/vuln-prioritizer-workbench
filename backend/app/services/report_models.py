@@ -232,6 +232,9 @@ class RiskPosture(StrictModel):
     """Risk posture metrics for the executive report."""
 
     total_findings: int
+    risk_index: int | None = None
+    risk_index_band: str = "none"
+    risk_index_population: int = 0
     open_actionable_findings: int
     kev_backed_findings: int
     emergency_sla_count: int

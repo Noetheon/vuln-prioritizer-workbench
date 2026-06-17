@@ -3,14 +3,20 @@
 from __future__ import annotations
 
 from app.services.report_html_attack_context import _html_attack_context_table_helper
-from app.services.report_html_campaign_rendering import _html_business_impact_table_helper
+from app.services.report_html_campaign_rendering import (
+    _html_business_impact_table_helper,
+    _html_recommendations_table_helper,
+    _html_top_critical_risks_helper,
+)
 from app.services.report_html_decision import (
     _html_action_plan_table_helper,
     _html_decision_signoff_helper,
     _html_risk_metric_definitions_helper,
+    _html_stale_data_alert_helper,
 )
 from app.services.report_html_evidence_package import _html_evidence_package_table_helper
 from app.services.report_html_provider_freshness import _html_provider_snapshot_helper
+from app.services.report_html_risk_projection import _html_risk_scenario_panel_helper
 from app.services.report_html_view_model import build_executive_report_view_model
 from app.services.report_models import EvidencePackageContext, MarkdownReportPayload
 
@@ -24,10 +30,7 @@ def render_html_executive_report_helper(
     from app.services.report_formatting import iso_datetime as _iso_datetime
     from app.services.report_formatting import safe_html as _safe_html
     from app.services.report_html_components import _html_metric
-    from app.services.report_html_findings import (
-        _html_deduplicated_recommendations,
-        _html_remediation_campaigns,
-    )
+    from app.services.report_html_findings import _html_remediation_campaigns
     from app.services.report_html_governance import _html_governance_rollups
     from app.services.report_html_styles import EXECUTIVE_REPORT_CSS as _EXECUTIVE_REPORT_CSS
     from app.services.report_renderer_common import _redacted_bundle_payload
@@ -55,7 +58,7 @@ def render_html_executive_report_helper(
     else:
         verdict_banner = (
             '      <div class="verdict-banner">\n'
-            "        <p><strong>Decision needed:</strong> "
+            "        <p><strong>Executive decision:</strong> "
             f"{_safe_html(decision_brief.decision_needed)}</p>\n"
             f"        <p>{_safe_html(decision_brief.executive_summary)}</p>\n"
             "      </div>"
@@ -94,6 +97,13 @@ def render_html_executive_report_helper(
         "      </div>"
     )
     signoff_panel = _html_decision_signoff_helper(view_model)
+    risk_scenario_panel = _html_risk_scenario_panel_helper(payload.findings, risk_posture)
+    stale_alert_section = _html_stale_data_alert_helper(view_model)
+    top_critical_risks = _html_top_critical_risks_helper(
+        payload.findings,
+        project_name=payload.project_name,
+    )
+    stale_alert_block = f"{stale_alert_section}\n\n" if stale_alert_section else ""
 
     action_plan_table = _html_action_plan_table_helper(payload)
     campaigns_section = _html_remediation_campaigns(
@@ -119,12 +129,12 @@ def render_html_executive_report_helper(
         evidence_package_context=evidence_package_context,
     )
     attack_context_table = _html_attack_context_table_helper(payload.findings)
-    recommendations_list = _html_deduplicated_recommendations(
+    recommendations_table = _html_recommendations_table_helper(
         payload.findings,
         project_name=payload.project_name,
     )
     header_lede = (
-        "Decision oriented vulnerability prioritization report for CISO and stakeholder "
+        "Decision-oriented vulnerability prioritization report for CISO and stakeholder "
         "review. This report summarizes actionable remediation campaigns, governance "
         "exceptions and evidence confidence for the current analysis run."
     )
@@ -158,17 +168,15 @@ def render_html_executive_report_helper(
         f"      <h1>{_safe_html(identity.project_name)}</h1>\n"
         f'      <p class="lede">{_safe_html(header_lede)}</p>\n'
         '      <dl class="meta-grid">\n'
-        f"        <div><dt>Report Type</dt><dd>{_safe_html(identity.report_type)}</dd></div>\n"
+        f"        <div><dt>Report</dt><dd>{_safe_html(identity.report_type)}</dd></div>\n"
         f"        <div><dt>Project ID</dt><dd>{_safe_html(identity.project_id)}</dd></div>\n"
-        "        <div><dt>Project Name</dt><dd>"
-        f"{_safe_html(identity.project_name)}</dd></div>\n"
-        "        <div><dt>Analysis Run ID</dt><dd>"
+        "        <div><dt>Run ID</dt><dd>"
         f"{_safe_html(identity.analysis_run_id)}</dd></div>\n"
-        f"        <div><dt>Generated At</dt><dd>{generated_at}</dd></div>\n"
-        f"        <div><dt>Run Status</dt><dd>{_safe_html(identity.run_status)}</dd></div>\n"
+        f"        <div><dt>Generated</dt><dd>{generated_at}</dd></div>\n"
+        f"        <div><dt>Status</dt><dd>{_safe_html(identity.run_status)}</dd></div>\n"
         f"        <div><dt>Input Type</dt><dd>{_safe_html(identity.input_type)}</dd></div>\n"
         f"        <div><dt>Input File</dt><dd>{_safe_html(identity.input_file)}</dd></div>\n"
-        "        <div><dt>Provider Snapshot</dt><dd>"
+        "        <div><dt>Snapshot</dt><dd>"
         f"{_safe_html(provider_snapshot_id)}</dd></div>\n"
         "      </dl>\n"
         "    </header>\n"
@@ -176,18 +184,20 @@ def render_html_executive_report_helper(
         '    <section aria-labelledby="decision-brief">\n'
         '      <p class="eyebrow">Decision Required</p>\n'
         '      <h2 id="decision-brief">Decision Brief</h2>\n'
+        f"{risk_scenario_panel}\n"
         f"{verdict_banner}\n"
         f"{decision_grid}\n"
         f"{signoff_panel}\n"
         "    </section>\n"
         "\n"
+        f"{stale_alert_block}"
         '    <section aria-labelledby="risk-posture">\n'
         '      <p class="eyebrow">Risk Posture</p>\n'
         '      <h2 id="risk-posture">Executive Risk Posture</h2>\n'
         '      <div class="metric-grid">\n'
         f"        {_html_metric('Total Findings', risk_posture.total_findings)}\n"
         f"        {_html_metric('Open Actionable', risk_posture.open_actionable_findings)}\n"
-        f"        {_html_metric('KEV Backed', risk_posture.kev_backed_findings)}\n"
+        f"        {_html_metric('KEV-Backed', risk_posture.kev_backed_findings)}\n"
         f"        {_html_metric('Emergency SLA Campaigns', risk_posture.emergency_sla_count)}\n"
         f"        {_html_metric('Accepted Risk', risk_posture.accepted_risk_findings)}\n"
         f"        {_html_metric('VEX Suppressed', risk_posture.vex_suppressed_findings)}\n"
@@ -195,13 +205,19 @@ def render_html_executive_report_helper(
         "        "
         f"{_html_metric('Review Due / Expiring', risk_posture.review_due_or_expiring_count)}\n"
         "        "
-        f"{_html_metric('Internet Facing Prod', risk_posture.internet_facing_prod_count)}\n"
+        f"{_html_metric('Internet-Facing Prod', risk_posture.internet_facing_prod_count)}\n"
         f"        {_html_metric('Unique CVEs', risk_posture.unique_cves_count)}\n"
         "        "
         f"{_html_metric('Provider Freshness', risk_posture.provider_freshness_verdict)}\n"
         f"        {_html_metric('Evidence Bundle Ready', risk_posture.evidence_bundle_status)}\n"
         "      </div>\n"
         f"{_html_risk_metric_definitions_helper()}\n"
+        "    </section>\n"
+        "\n"
+        '    <section aria-labelledby="top-critical-risks">\n'
+        '      <p class="eyebrow">Lead With These</p>\n'
+        '      <h2 id="top-critical-risks">Top Critical Risks</h2>\n'
+        f"      {top_critical_risks}\n"
         "    </section>\n"
         "\n"
         '    <section aria-labelledby="action-plan">\n'
@@ -239,7 +255,7 @@ def render_html_executive_report_helper(
         '    <section aria-labelledby="recommendations">\n'
         '      <p class="eyebrow">Recommendations</p>\n'
         '      <h2 id="recommendations">Decision Ready Recommendations</h2>\n'
-        f'      <ol class="recommendation-list">\n{recommendations_list}\n      </ol>\n'
+        f"      {recommendations_table}\n"
         "    </section>\n"
         "\n"
         '    <section aria-labelledby="attack">\n'

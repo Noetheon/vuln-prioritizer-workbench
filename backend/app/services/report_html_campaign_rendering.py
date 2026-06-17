@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 
 from app.services.report_formatting import format_number as _format_number
@@ -32,6 +33,19 @@ from app.services.report_models import (
     MarkdownReportPayload,
     RemediationCampaign,
 )
+
+_SLA_HOURS_PATTERN = re.compile(r"^(?P<label>.+?)\s*/\s*(?P<hours>\d+(?:\.\d+)?)h$")
+
+
+def _executive_sla_label(label: str) -> str:
+    """Return a compact SLA label for executive HTML display."""
+    match = _SLA_HOURS_PATTERN.match(label.strip())
+    if match is None:
+        return label
+    hours = float(match.group("hours"))
+    if hours >= 72 and hours.is_integer() and int(hours) % 24 == 0:
+        return f"{match.group('label')} / {int(hours) // 24}d"
+    return label
 
 
 def _html_evidence_signals_badges(campaign: RemediationCampaign) -> str:
@@ -110,12 +124,33 @@ def _executive_verdict_summary_helper(payload: MarkdownReportPayload) -> str:
 
     campaigns = _get_remediation_campaigns_helper(payload.findings)
     open_campaigns = [campaign for campaign in campaigns if campaign.actionable_count > 0]
-    top_campaigns = _campaigns_label(open_campaigns or campaigns, limit=5)
-    focus_sentence = (
-        f"Immediate focus should be {top_campaigns} before governance exceptions are signed off."
-        if campaigns
-        else "Confirm import coverage before treating this run as a no-risk result."
-    )
+    emergency_campaigns = [
+        campaign for campaign in open_campaigns if _campaign_requires_emergency(campaign)
+    ]
+    if emergency_campaigns:
+        top_campaigns = _campaigns_label(emergency_campaigns, limit=5)
+        remaining_open = max(0, len(open_campaigns) - len(emergency_campaigns))
+        focus_sentence = f"Immediate focus: {top_campaigns}."
+        if remaining_open:
+            focus_sentence += (
+                f" Track {_pluralize(remaining_open, 'remaining open remediation campaign')} "
+                "in the follow-on plan before governance exceptions are formally signed off."
+            )
+        else:
+            focus_sentence += " Complete validation before formal sign-off."
+    elif open_campaigns:
+        top_campaigns = _campaigns_label(open_campaigns, limit=5)
+        focus_sentence = (
+            f"Immediate focus: {top_campaigns}. Confirm owners, remediation windows and "
+            "validation evidence before formal sign-off."
+        )
+    elif campaigns:
+        focus_sentence = (
+            "No open remediation campaign needs approval; retain governance and fixed evidence "
+            "for sign-off."
+        )
+    else:
+        focus_sentence = "Confirm import coverage before treating this run as a no-risk result."
     return (
         f"This run analyzed {total_findings} {finding_word} from {filename}. "
         f"{open_phrase}, {kev_phrase}, {accepted_phrase}, {vex_phrase} and {fixed_phrase}. "
@@ -360,10 +395,12 @@ def _html_remediation_campaigns_helper(
     rows = []
     for campaign in campaigns[:10]:
         owners = (
-            _short_list(campaign.owners, limit=3, noun="owner") if campaign.owners else "Unassigned"
+            _compact_campaign_list(campaign.owners, limit=2, noun="owner")
+            if campaign.owners
+            else "Unassigned"
         )
         services = (
-            _short_list(campaign.services, limit=3, noun="service")
+            _compact_campaign_list(campaign.services, limit=2, noun="service")
             if campaign.services
             else "Unknown service"
         )
@@ -386,11 +423,12 @@ def _html_remediation_campaigns_helper(
 
         decision_stmt = _campaign_decision_statement(campaign)
         decision_html = f"{_safe_html(decision_stmt)}"
+        cluster_html = _campaign_cluster_cell(campaign)
 
         rows.append(
             "        <tr>"
             f"<td><span class='badge {priority_class}'>{campaign.priority_label}</span></td>"
-            f"<td><strong>{_safe_html(campaign.campaign_name)}</strong></td>"
+            f"<td>{cluster_html}</td>"
             f"<td><span class='badge {actionability_class}'>"
             f"{_safe_html(actionability)}</span></td>"
             f"<td>{_safe_html(_campaign_scope_summary(campaign))}</td>"
@@ -413,6 +451,34 @@ def _html_remediation_campaigns_helper(
         "  </table>\n"
         "</div>"
     )
+
+
+def _campaign_cluster_cell(campaign: RemediationCampaign) -> str:
+    """Render campaign title and CVE separately so the table does not over-wrap."""
+    title = campaign.alias or campaign.campaign_name
+    if title == campaign.cve_id:
+        return f"<strong>{_safe_html(campaign.cve_id)}</strong>"
+    return (
+        f"<strong class='campaign-cluster-title'>{_safe_html(title)}</strong>"
+        f"<span class='mono-dim campaign-cluster-cve'>{_safe_html(campaign.cve_id)}</span>"
+    )
+
+
+def _compact_campaign_list(
+    values: Sequence[str],
+    *,
+    limit: int,
+    noun: str,
+) -> str:
+    """Return compact service/owner copy for dense executive tables."""
+    shown = [str(value) for value in values[:limit] if value]
+    if not shown:
+        return "N/A"
+    remaining = max(0, len(values) - len(shown))
+    if not remaining:
+        return ", ".join(shown)
+    suffix = noun if remaining == 1 else f"{noun}s"
+    return f"{', '.join(shown)} +{remaining} {suffix}"
 
 
 def _html_deduplicated_recommendations_helper(
@@ -459,7 +525,7 @@ def _html_deduplicated_recommendations_helper(
             campaign.actions[0] if campaign.actions else (_campaign_decision_statement(campaign))
         )
         if campaign.slas:
-            sla_str = campaign.slas[0]
+            sla_str = _executive_sla_label(campaign.slas[0])
         elif _campaign_requires_emergency(campaign):
             sla_str = "Emergency / 24h"
         else:
@@ -479,11 +545,140 @@ def _html_deduplicated_recommendations_helper(
     return "\n".join(items)
 
 
+def _html_top_critical_risks_helper(
+    findings: Sequence[MarkdownReportFinding], project_name: str | None = None
+) -> str:
+    """Render the lead-with-these top critical risk cards."""
+    campaigns = _get_remediation_campaigns_helper(findings, project_name=project_name)
+    top_candidates = [campaign for campaign in campaigns if campaign.actionable_count > 0]
+    top_candidates.sort(
+        key=lambda campaign: (
+            0 if _campaign_requires_emergency(campaign) else 1,
+            campaign.rank,
+        )
+    )
+    top = top_candidates[:3]
+    if not top:
+        return (
+            '<p class="empty-state">No open actionable critical risks to highlight for this run.'
+            "</p>"
+        )
+
+    cards = []
+    for position, campaign in enumerate(top, start=1):
+        priority_class = (
+            "badge-critical"
+            if campaign.priority_label == "P1"
+            else "badge-high"
+            if campaign.priority_label in {"P2", "P3"}
+            else "badge-neutral"
+        )
+        title = campaign.alias or campaign.campaign_name
+        action = _campaign_decision_statement(campaign)
+        scope = _safe_html(_campaign_scope_summary(campaign))
+        cards.append(
+            '    <article class="risk-card">\n'
+            '      <div class="risk-card-head">'
+            f'<span class="risk-card-rank">Priority {position:02d}</span>'
+            f"<span class='badge {priority_class}'>{_safe_html(campaign.priority_label)}</span>"
+            "</div>\n"
+            f'      <p class="risk-card-cve">{_safe_html(campaign.cve_id)}</p>\n'
+            f'      <h3 class="risk-card-name">{_safe_html(title)}</h3>\n'
+            f'      <p class="risk-card-scope">{scope}</p>\n'
+            f"      {_html_evidence_signals_badges(campaign)}\n"
+            '      <p class="risk-card-action"><span class="status-label">Action</span>'
+            f"{render_safe_text_with_links(action)}</p>\n"
+            "    </article>"
+        )
+    return '<div class="risk-cards">\n' + "\n".join(cards) + "\n  </div>"
+
+
+def _recommendation_sla_label(campaign: RemediationCampaign) -> tuple[str, str]:
+    """Return the executive-facing SLA label and badge class for a campaign row."""
+    if campaign.actionable_count > 0:
+        if campaign.slas:
+            sla = _executive_sla_label(campaign.slas[0])
+        elif _campaign_requires_emergency(campaign):
+            sla = "Emergency / 24h"
+        else:
+            sla = "Standard patch cycle"
+        badge_class = "badge-critical" if _campaign_requires_emergency(campaign) else "badge-high"
+        return sla, badge_class
+    if campaign.accepted_count:
+        return "Governance review", "badge-warning"
+    if campaign.vex_count:
+        return "Evidence", "badge-success"
+    if campaign.fixed_count:
+        return "Retain evidence", "badge-success"
+    return "Evidence", "badge-neutral"
+
+
+def _recommendation_status_label(campaign: RemediationCampaign) -> tuple[str, str]:
+    """Return the actionability status label and badge class for a recommendation row."""
+    if campaign.actionable_count > 0:
+        badge_class = "badge-critical" if _campaign_requires_emergency(campaign) else "badge-high"
+        return _actionability_summary_helper(campaign.findings), badge_class
+    if campaign.accepted_count:
+        return _actionability_summary_helper(campaign.findings), "badge-warning"
+    if campaign.vex_count or campaign.fixed_count:
+        return _actionability_summary_helper(campaign.findings), "badge-success"
+    return _actionability_summary_helper(campaign.findings), "badge-neutral"
+
+
+def _html_recommendations_table_helper(
+    findings: Sequence[MarkdownReportFinding], project_name: str | None = None
+) -> str:
+    """Render decision-ready recommendations as a scannable table."""
+    campaigns = _get_remediation_campaigns_helper(findings, project_name=project_name)
+    if not campaigns:
+        return (
+            '<p class="empty-state">No remediation recommendations are available for this run.</p>'
+        )
+
+    rows = []
+    for campaign in campaigns:
+        sla, sla_class = _recommendation_sla_label(campaign)
+        status, status_class = _recommendation_status_label(campaign)
+        action = campaign.actions[0] if campaign.actions else _campaign_decision_statement(campaign)
+        owners = (
+            _short_list(campaign.owners, limit=3, noun="owner") if campaign.owners else "Unassigned"
+        )
+        title = campaign.alias or campaign.campaign_name
+        rows.append(
+            "        <tr>"
+            f"<td><span class='badge {sla_class}'>{_safe_html(sla)}</span></td>"
+            f"<td><strong>{_safe_html(title)}</strong><br>"
+            f"<span class='mono-dim'>{_safe_html(campaign.cve_id)}</span></td>"
+            f"<td><span class='badge {status_class}'>{_safe_html(status)}</span></td>"
+            f"<td>{_safe_html(_campaign_scope_summary(campaign))}</td>"
+            f"<td>{render_safe_text_with_links(action)}</td>"
+            f"<td>{_safe_html(owners)}</td>"
+            f"<td>{_html_evidence_signals_badges(campaign)}</td>"
+            "</tr>"
+        )
+    return (
+        '<div class="table-wrap">\n'
+        "  <table class='recommendation-table'>\n"
+        "    <thead>\n"
+        "      <tr><th>SLA</th><th>CVE / Campaign</th><th>Status</th><th>Scope</th>"
+        "<th>Recommended Fix</th><th>Owners</th><th>Signals</th></tr>\n"
+        "    </thead>\n"
+        f"    <tbody>\n{chr(10).join(rows)}\n    </tbody>\n"
+        "  </table>\n"
+        "</div>"
+    )
+
+
 __all__ = [
     "_html_evidence_signals_badges",
     "_executive_verdict_summary_helper",
     "_html_business_services_prose_helper",
     "_html_business_impact_table_helper",
     "_html_remediation_campaigns_helper",
+    "_html_top_critical_risks_helper",
+    "_html_recommendations_table_helper",
+    "_recommendation_sla_label",
+    "_recommendation_status_label",
+    "_executive_sla_label",
     "_html_deduplicated_recommendations_helper",
 ]

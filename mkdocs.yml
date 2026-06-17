@@ -1,5 +1,5 @@
 site_name: Vuln Prioritizer Workbench
-site_description: Local-first Workbench for prioritizing known CVEs with CVSS, EPSS, KEV, ATT&CK, Asset Context, and VEX.
+site_description: Local-first Workbench for explainable CVE prioritization from scanner, SBOM, VEX, and asset-context evidence.
 repo_url: https://github.com/Noetheon/vuln-prioritizer-workbench
 repo_name: Noetheon/vuln-prioritizer-workbench
 theme:

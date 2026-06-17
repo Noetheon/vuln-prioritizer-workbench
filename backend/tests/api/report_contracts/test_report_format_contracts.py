@@ -309,8 +309,9 @@ def test_vpw070_html_report_escapes_malicious_external_text() -> None:
     lowered = body.lower()
     assert "<script" not in lowered
     assert "<img" not in lowered
-    assert "<svg" not in lowered
+    assert "<svg onload" not in lowered
     assert 'href="javascript:' not in lowered
+    assert '<svg class="risk-projection-svg"' in body
     assert "&lt;script&gt;window.__vpwXss=1&lt;/script&gt;" in body
     assert "known-cves&quot;&gt;&lt;img src=x onerror=window.__vpwXss=1&gt;.txt" in body
     assert "provider &lt;svg onload=&quot;window.__vpwXss=1&quot;&gt;" in body

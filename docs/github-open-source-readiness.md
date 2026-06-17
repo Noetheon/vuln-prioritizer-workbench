@@ -24,6 +24,7 @@ external readers and contributors.
 | Understand conduct expectations | [`CODE_OF_CONDUCT.md`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/CODE_OF_CONDUCT.md) | Community behavior and conduct escalation. |
 | Understand ownership | [`MAINTAINERS.md`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/MAINTAINERS.md) and [`.github/CODEOWNERS`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/CODEOWNERS) | Maintainer responsibilities and default review ownership. |
 | Review releases | [`CHANGELOG.md`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/CHANGELOG.md), [Release Operations](release_operations.md), and [Dependency and Package Policy](dependency-and-package-policy.md) | Historical changes, package workflow, evidence requirements, and residual-risk tracking. |
+| Prepare public sharing | [Community And Public Repository Setup](community_repository_setup.md) | Recommended GitHub metadata, repository topics, social preview guidance, and Reddit launch checklist. |
 
 ## Community Health Files
 
@@ -125,7 +126,10 @@ These settings are not created by files in this repository. Maintainers should
 verify them in GitHub before broad public launch or release promotion:
 
 - repository description and topics match the current Workbench scope
+- social preview image is set from `docs/examples/media/github-social-preview.png`
+  and remains readable in small GitHub, Slack, and Reddit unfurl cards
 - homepage points to stable docs or is intentionally empty
+- Projects is disabled unless an actively maintained public board exists
 - discussions are enabled only if they are actively supported
 - wiki is disabled if versioned docs remain canonical
 - delete-branch-on-merge is enabled

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from app.services.report_formatting import safe_html as _safe_html
 from app.services.report_html_campaign_model import (
     _campaign_evidence_label,
@@ -21,7 +23,106 @@ from app.services.report_models import (
     ExecutiveReportViewModel,
     MarkdownReportPayload,
     RemediationCampaign,
+    RiskPosture,
 )
+
+_RISK_INDEX_BANDS: dict[str, tuple[str, str]] = {
+    "critical": ("Critical band, immediate action", "critical"),
+    "elevated": ("Elevated band, prioritized remediation", "warning"),
+    "low": ("Low band, routine handling", "success"),
+    "none": ("No open actionable findings to score", "neutral"),
+}
+
+
+def _campaign_scope_sentence(campaigns: Sequence[RemediationCampaign], *, limit: int = 5) -> str:
+    """Return a grammatical campaign scope sentence without duplicating list nouns."""
+    if not campaigns:
+        return "No emergency campaigns active"
+    label = _campaigns_label(campaigns, limit=limit)
+    if len(campaigns) > limit:
+        return f"{label}."
+    suffix = " campaign." if len(campaigns) == 1 else " campaigns."
+    return f"{label}{suffix}"
+
+
+def _blankable_html(value: object | None) -> str:
+    """Escape HTML while preserving intentionally blank sign-off fields."""
+    if value is None:
+        return ""
+    text = str(value).strip()
+    return _safe_html(text) if text else ""
+
+
+def _html_risk_index_panel_helper(risk_posture: RiskPosture) -> str:
+    """Render the headline risk index gauge for the decision hero."""
+    index = risk_posture.risk_index
+    label, tone = _RISK_INDEX_BANDS.get(risk_posture.risk_index_band, _RISK_INDEX_BANDS["none"])
+    if index is None:
+        value_html = '<span class="risk-index-value">N/A</span>'
+        needle = ""
+        foot = "No open, non-accepted finding carries a risk score for this run."
+    else:
+        value_html = (
+            f'<span class="risk-index-value">{index}<span class="risk-index-max">/100</span></span>'
+        )
+        needle = f'<span class="risk-gauge-needle" style="left:{index}%;"></span>'
+        foot = (
+            "Mean risk score across "
+            f"{_pluralize(risk_posture.risk_index_population, 'open, non-accepted finding')}. "
+            "Accepted risk, VEX suppressed and fixed-evidence findings are excluded."
+        )
+    return (
+        f'      <div class="risk-index" data-tone="{tone}">\n'
+        '        <span class="status-label">Risk Index, open and non-accepted</span>\n'
+        f"        {value_html}\n"
+        f'        <p class="risk-index-band">{_safe_html(label)}</p>\n'
+        f'        <div class="risk-gauge">{needle}</div>\n'
+        '        <div class="risk-gauge-scale"><span>0 low</span><span>40</span>'
+        "<span>70</span><span>100 crit</span></div>\n"
+        f'        <p class="risk-index-foot">{_safe_html(foot)}</p>\n'
+        "      </div>"
+    )
+
+
+def _html_stale_data_alert_helper(view_model: ExecutiveReportViewModel) -> str:
+    """
+    Render a prominent provider-freshness alert when intelligence data is not current.
+
+    Returns an empty string when freshness is acceptable so the section can be omitted.
+    """
+    verdict = view_model.risk_posture.provider_freshness_verdict
+    if verdict not in {"Warning", "Stale"}:
+        return ""
+    stale_rows = [
+        row
+        for row in view_model.evidence_confidence.provider_rows
+        if str(row.get("status")) in {"Stale", "Warning", "Needs Review"}
+        and any(tag in str(row.get("signal", "")) for tag in ("NVD", "EPSS", "KEV"))
+    ]
+    chips = "".join(
+        '<span class="stale-chip">'
+        f"{_safe_html(row.get('signal'))}: <b>{_safe_html(row.get('value'))}</b> "
+        f"&middot; {_safe_html(row.get('status'))}</span>"
+        for row in stale_rows
+    )
+    chips_html = f'\n          <div class="stale-chips">{chips}</div>' if chips else ""
+    return (
+        '    <section aria-labelledby="freshness-alert">\n'
+        '      <p class="eyebrow">Data Freshness</p>\n'
+        f'      <h2 id="freshness-alert">Provider Intelligence is {_safe_html(verdict)}</h2>\n'
+        '      <div class="stale-alert">\n'
+        '        <span class="stale-flag">STALE DATA</span>\n'
+        '        <div class="stale-body">\n'
+        "          <strong>The snapshot is reproducible but not necessarily current.</strong>\n"
+        '          <p class="stale-text">Locked provider data guarantees a deterministic, '
+        "auditable replay, but it does not mean the intelligence is fresh. Re-import live "
+        "NVD, EPSS and KEV data before treating this brief as current external intelligence "
+        "for formal risk sign-off.</p>"
+        f"{chips_html}\n"
+        "        </div>\n"
+        "      </div>\n"
+        "    </section>"
+    )
 
 
 def _action_plan_rows_helper(payload: MarkdownReportPayload) -> list[ActionPlanRow]:
@@ -41,9 +142,9 @@ def _action_plan_rows_helper(payload: MarkdownReportPayload) -> list[ActionPlanR
     )
 
     if emergency_campaigns:
-        first_scope = f"{_campaigns_label(emergency_campaigns, limit=5)} campaigns."
+        first_scope = _campaign_scope_sentence(emergency_campaigns, limit=5)
         first_action = (
-            "Approve emergency remediation for open KEV backed production findings "
+            "Approve 24h remediation for KEV-backed or critical production exposure "
             "and start validation tracking."
         )
         first_owner = _first_available_owner(emergency_campaigns)
@@ -67,7 +168,7 @@ def _action_plan_rows_helper(payload: MarkdownReportPayload) -> list[ActionPlanR
 
     seven_day_scope = "All remediation campaigns and fixed evidence."
     seven_day_action = (
-        "Perform clean re import, close fixed evidence and preserve the evidence package "
+        "Perform clean re-import, close fixed evidence and preserve the evidence package "
         "for audit review."
     )
     seven_day_owner = "Security operations and platform owners"
@@ -107,7 +208,7 @@ def _action_plan_rows_helper(payload: MarkdownReportPayload) -> list[ActionPlanR
 
     governance_action = (
         "Review due waiver, expiring waiver, accepted risks and VEX suppressed findings "
-        "before formal risk sign off."
+        "before formal risk sign-off."
     )
     governance_owner = "Risk owner and security owner"
     governance_evidence = "Waiver records, VEX overlays and governance artifacts."
@@ -186,7 +287,7 @@ def _decision_needed_statement_helper(
     if emergency_campaigns:
         parts.append(
             f"Approve {_pluralize(len(emergency_campaigns), 'emergency remediation campaign')} "
-            "within 24h"
+            "for 24h action now"
         )
     elif open_campaigns:
         parts.append(
@@ -195,6 +296,15 @@ def _decision_needed_statement_helper(
         )
     else:
         parts.append("Confirm no active remediation campaign requires approval")
+    if provider_freshness in {"Warning", "Stale"}:
+        parts.append(
+            "defer formal risk sign-off until provider data is refreshed and clean validation "
+            "evidence is attached"
+        )
+    else:
+        parts.append(
+            "complete formal risk sign-off only after clean validation evidence is attached"
+        )
     if owner_gap_count:
         parts.append(f"assign owners for {_pluralize(owner_gap_count, 'unowned campaign')}")
     else:
@@ -203,9 +313,6 @@ def _decision_needed_statement_helper(
         parts.append(
             f"review {_pluralize(review_due_or_expiring, 'due or expiring governance item')}"
         )
-    if provider_freshness in {"Warning", "Stale"}:
-        parts.append(f"treat provider freshness as {provider_freshness.lower()} before sign-off")
-    parts.append("require clean validation evidence after re-import")
     return "; ".join(parts) + "."
 
 
@@ -217,7 +324,7 @@ def _html_risk_metric_definitions_helper() -> str:
             "Findings that still require remediation or mitigation after accepted risk, "
             "VEX suppressed and fixed evidence states are separated.",
         ),
-        ("KEV Backed", "Findings with a CISA KEV catalog signal."),
+        ("KEV-Backed", "Findings with a CISA KEV catalog signal."),
         (
             "Emergency SLA Campaigns",
             "Remediation campaigns with open actionable KEV, critical CVSS or "
@@ -232,7 +339,7 @@ def _html_risk_metric_definitions_helper() -> str:
             "Waiver or accepted-risk governance items due, overdue or nearing expiry.",
         ),
         (
-            "Internet Facing Prod",
+            "Internet-Facing Prod",
             "Open actionable findings on production assets with internet-facing or "
             "external exposure.",
         ),
@@ -279,7 +386,7 @@ def _html_decision_signoff_helper(view_model: ExecutiveReportViewModel) -> str:
         ("Notes", ""),
     ]
     row_html = "\n".join(
-        f"          <div><dt>{_safe_html(label)}</dt><dd>{_safe_html(value)}</dd></div>"
+        f"          <div><dt>{_safe_html(label)}</dt><dd>{_blankable_html(value)}</dd></div>"
         for label, value in rows
     )
     return (
@@ -296,6 +403,8 @@ __all__ = [
     "_action_plan_rows_helper",
     "_html_action_plan_table_helper",
     "_decision_needed_statement_helper",
+    "_html_risk_index_panel_helper",
     "_html_risk_metric_definitions_helper",
+    "_html_stale_data_alert_helper",
     "_html_decision_signoff_helper",
 ]
