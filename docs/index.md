@@ -112,7 +112,7 @@ inputs.
   repository-setting checks.
 - Use [public-production-release-evidence-ledger.md](public-production-release-evidence-ledger.md) only when explicitly working on public/shared deployment evidence. It is not part of the normal local Workbench development path or release-readiness path.
 - Use [community_repository_setup.md](community_repository_setup.md) for maintainer-facing public repo topics, labels, and triage defaults.
-- Use [releases/v1.1.0.md](releases/v1.1.0.md) for the current package release.
+- Use [releases/v1.2.0.md](releases/v1.2.0.md) for the current package release.
 
 ## Local Docs Preview (Repo Checkout Only)
 
