@@ -20,7 +20,7 @@ NPM ?= scripts/frontend-npm.sh
 FRONTEND_NPM_ENGINE_STRICT ?= true
 FRONTEND_NPM := $(NPM) --prefix frontend --workspaces=false --engine-strict=$(FRONTEND_NPM_ENGINE_STRICT)
 
-.PHONY: install launch workbench-status workbench-stop workbench-reset workbench-update workbench-diagnostics test lint format fix typecheck check critical-coverage-check backend-compatibility-check property-check mutation-check quality-10-check local-workbench-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-design-audit frontend-design-audit-update frontend-design-audit-linux-docker frontend-design-audit-linux-docker-update demo-screenshot frontend-audit frontend-check python-lock-check docker-base-image-check pre-commit-pin-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check ci-cost-report docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package release-bundle package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
+.PHONY: install launch workbench-status workbench-stop workbench-reset workbench-update workbench-diagnostics test lint format fix typecheck check critical-coverage-check backend-compatibility-check property-check mutation-check quality-10-check local-workbench-check performance-smoke playwright-install playwright-check playwright-check-without-design-audit frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-design-audit frontend-design-audit-update frontend-design-audit-linux-docker frontend-design-audit-linux-docker-update demo-screenshot frontend-audit frontend-check python-lock-check docker-base-image-check pre-commit-pin-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check ci-cost-report docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package release-bundle package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -108,6 +108,9 @@ playwright-install: frontend-install
 
 playwright-check: playwright-install
 	$(FRONTEND_NPM) run test
+
+playwright-check-without-design-audit: playwright-install
+	$(FRONTEND_NPM) run test -- --grep-invert "design audit matches VPW visual regression baselines"
 
 frontend-install:
 	$(FRONTEND_NPM) ci
@@ -355,7 +358,7 @@ release-check:
 	$(MAKE) dependency-audit
 	$(MAKE) docker-demo-smoke
 
-release-readiness-check: release-check api-client-drift-check archive-evidence-check playwright-check docker-production-smoke
+release-readiness-check: release-check api-client-drift-check archive-evidence-check frontend-design-audit-linux-docker playwright-check-without-design-audit docker-production-smoke
 
 quality-10-check:
 	$(MAKE) release-readiness-check
