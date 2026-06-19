@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-and-release:
@@ -147,50 +147,25 @@ jobs:
             docs/example*.json
             docs/examples/*.json
 
-  publish-github-release:
-    needs: build-and-release
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-        with:
-          persist-credentials: false
-
-      - name: Download built distributions
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: release-dist
-          path: dist
-
-      - name: Download release-readiness evidence
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: release-readiness-evidence
-          path: release-readiness-evidence
-
       - name: Publish GitHub release from checked-in notes
-        if: needs.build-and-release.outputs.release_notes_body_path != ''
+        if: startsWith(github.ref, 'refs/tags/v') && steps.release_notes.outputs.body_path != ''
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
         with:
-          body_path: ${{ needs.build-and-release.outputs.release_notes_body_path }}
+          body_path: ${{ steps.release_notes.outputs.body_path }}
           draft: true
           files: |
             dist/*
-            release-readiness-evidence/dist-sha256.txt
+            ${{ runner.temp }}/workflow-artifacts/release-readiness/dist-sha256.txt
 
       - name: Publish GitHub release with generated notes
-        if: needs.build-and-release.outputs.release_notes_body_path == ''
+        if: startsWith(github.ref, 'refs/tags/v') && steps.release_notes.outputs.body_path == ''
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
         with:
           generate_release_notes: true
           draft: true
           files: |
             dist/*
-            release-readiness-evidence/dist-sha256.txt
+            ${{ runner.temp }}/workflow-artifacts/release-readiness/dist-sha256.txt
 
   publish-pypi:
     needs: build-and-release
