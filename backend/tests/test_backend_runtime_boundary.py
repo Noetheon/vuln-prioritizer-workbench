@@ -654,11 +654,19 @@ def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:
     assert "$(BACKEND_TESTS)/playwright" not in makefile
     assert "playwright install --with-deps chromium" in playwright_install
     assert "playwright-check: playwright-install" in makefile
+    assert "playwright-check-without-design-audit: playwright-install" in makefile
     assert "$(FRONTEND_NPM) run test" in playwright_check
+    assert (
+        '--grep-invert "design audit matches VPW visual regression baselines"' in playwright_check
+    )
     assert "tests/ui-smoke.spec.ts tests/responsive-shell.spec.ts" not in playwright_check
     assert "frontend-test-unit-coverage" in makefile
     assert "public-production-evidence-check" not in release_readiness
     assert "release-check api-client-drift-check archive-evidence-check" in release_readiness
+    assert (
+        "frontend-design-audit-linux-docker playwright-check-without-design-audit"
+        in release_readiness
+    )
     assert "--profile legacy-postgres" not in docker_demo_smoke
     assert "workbench-postgres" not in docker_demo_smoke
     assert "$(COMPOSE) up -d --build backend frontend worker" in docker_demo_smoke

@@ -62,11 +62,13 @@ make release-readiness-check
 ```
 
 This adds generated-client drift, archive binary evidence validation,
-Playwright smoke evidence, and package smoke validation to the normal release
-gate. It also runs the production-like Docker smoke. It does not by itself
-certify a public deployment: live public TLS/header evidence and the explicit
-public deployment evidence contract still have to be captured for the exact
-deployed candidate.
+CI-aligned Playwright evidence, and package smoke validation to the normal
+release gate. The visual regression audit runs in the pinned Playwright Docker
+image, while the remaining Playwright suite runs without the visual audit. It
+also runs the production-like Docker smoke. It does not by itself certify a
+public deployment: live public TLS/header evidence and the explicit public
+deployment evidence contract still have to be captured for the exact deployed
+candidate.
 For tagged releases, `.github/workflows/release.yml` runs this gate before any
 draft GitHub Release is created or any PyPI publish job can proceed.
 
