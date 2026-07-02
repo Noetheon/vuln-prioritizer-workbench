@@ -48,7 +48,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",
     "@biomejs/biome": "^2.4.15",
-    "@hey-api/openapi-ts": "0.97.0",
+    "@hey-api/openapi-ts": "0.97.3",
     "@playwright/test": "1.60.0",
     "@tailwindcss/vite": "^4.3.0",
     "@types/node": "^25.7.0",
