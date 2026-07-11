@@ -1,0 +1,2 @@
+target_kind,target_ref,asset_id,criticality,exposure,environment,owner,business_service
+"image","ghcr.io/acme/demo-app:1.0.0 (alpine 3.19)","api-gateway","critical","internet-facing","prod","platform-team","customer-login"

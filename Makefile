@@ -20,7 +20,7 @@ NPM ?= scripts/frontend-npm.sh
 FRONTEND_NPM_ENGINE_STRICT ?= true
 FRONTEND_NPM := $(NPM) --prefix frontend --workspaces=false --engine-strict=$(FRONTEND_NPM_ENGINE_STRICT)
 
-.PHONY: install launch workbench-status workbench-stop workbench-reset workbench-update workbench-diagnostics test lint format fix typecheck check critical-coverage-check backend-compatibility-check property-check mutation-check quality-10-check local-workbench-check performance-smoke playwright-install playwright-check playwright-check-without-design-audit frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-design-audit frontend-design-audit-update frontend-design-audit-linux-docker frontend-design-audit-linux-docker-update demo-screenshot frontend-audit frontend-check python-lock-check docker-base-image-check pre-commit-pin-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check ci-cost-report docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package release-bundle package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
+.PHONY: install launch workbench-status workbench-stop workbench-reset workbench-update workbench-diagnostics test lint format fix typecheck check critical-coverage-check backend-compatibility-check property-check mutation-check quality-10-check local-workbench-check performance-smoke playwright-install playwright-check playwright-check-without-design-audit frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-design-audit frontend-design-audit-update frontend-design-audit-linux-docker frontend-design-audit-linux-docker-update demo-screenshot frontend-audit frontend-check runtime-assets-sync runtime-assets-check python-lock-check docker-base-image-check pre-commit-pin-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check ci-cost-report docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package release-bundle package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -118,6 +118,12 @@ frontend-install:
 frontend-build:
 	$(FRONTEND_NPM) run build
 
+runtime-assets-sync: frontend-build
+	$(PYTHON) scripts/sync_runtime_assets.py
+
+runtime-assets-check:
+	$(PYTHON) scripts/sync_runtime_assets.py --check
+
 frontend-lint:
 	$(FRONTEND_NPM) run lint
 
@@ -164,7 +170,7 @@ api-client-drift-check:
 frontend-audit:
 	$(FRONTEND_NPM) audit --audit-level=high
 
-frontend-check: frontend-install frontend-lint frontend-build frontend-test-types frontend-test-unit-coverage api-client-drift-check
+frontend-check: frontend-install frontend-lint frontend-build runtime-assets-check frontend-test-types frontend-test-unit-coverage api-client-drift-check
 
 release-evidence-hygiene-check:
 	$(PYTHON) scripts/check_release_evidence_hygiene.py
@@ -326,7 +332,7 @@ clean-local:
 clean-deps: clean-local
 	rm -rf node_modules frontend/node_modules Library/Caches/ms-playwright
 
-package:
+package: frontend-install runtime-assets-sync
 	rm -rf dist
 	$(PYTHON) -m build $(BACKEND_DIR) --outdir dist
 
@@ -343,6 +349,7 @@ package-check: package-contents-check
 	$(PYTHON) -m venv "$$tmp/venv"; \
 	"$$tmp/venv/bin/python" -m pip install --upgrade pip >/dev/null; \
 	"$$tmp/venv/bin/python" -m pip install --force-reinstall dist/*.whl >/dev/null; \
+	"$$tmp/venv/bin/vpw" --version; \
 	"$$tmp/venv/bin/python" scripts/workbench_wheel_smoke.py build/package-workbench-wheel-smoke.json
 
 package-check-temp:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import socket
+import threading
 import time
 import uuid
 from collections.abc import Sequence
@@ -109,10 +110,13 @@ def run_worker_loop(
     retry_delay_seconds: int = 30,
     poll_interval_seconds: float = 2.0,
     max_jobs: int | None = None,
+    stop_event: threading.Event | None = None,
 ) -> None:
     """Run the durable workflow worker until interrupted or max_jobs is reached."""
     processed = 0
     while max_jobs is None or processed < max_jobs:
+        if stop_event is not None and stop_event.is_set():
+            return
         result = run_worker_once(
             engine=engine,
             settings=settings,
@@ -123,7 +127,12 @@ def run_worker_loop(
         )
         processed += result.completed + result.cancelled + result.retried_or_failed
         if result.claimed == 0:
-            time.sleep(max(0.1, poll_interval_seconds))
+            interval = max(0.1, poll_interval_seconds)
+            if stop_event is not None:
+                if stop_event.wait(interval):
+                    return
+            else:
+                time.sleep(interval)
 
 
 def _execute_claimed_workflow(

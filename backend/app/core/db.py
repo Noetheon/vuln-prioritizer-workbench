@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, create_engine
 
@@ -18,11 +19,37 @@ def _connect_args(database_uri: str) -> dict[str, Any]:
 
 def create_db_engine(active_settings: Settings) -> Engine:
     """Create a SQLAlchemy engine for one concrete settings object."""
-    return create_engine(
+    active_engine = create_engine(
         active_settings.SQLALCHEMY_DATABASE_URI,
         connect_args=_connect_args(active_settings.SQLALCHEMY_DATABASE_URI),
         pool_pre_ping=True,
     )
+    if active_settings.SQLALCHEMY_DATABASE_URI.startswith("sqlite"):
+        _configure_sqlite_connections(
+            active_engine,
+            enable_wal=_is_file_sqlite_uri(active_settings.SQLALCHEMY_DATABASE_URI),
+        )
+    return active_engine
+
+
+def _configure_sqlite_connections(engine: Engine, *, enable_wal: bool) -> None:
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragmas(dbapi_connection: Any, _connection_record: Any) -> None:
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.execute("PRAGMA busy_timeout=30000")
+            if enable_wal:
+                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.execute("PRAGMA synchronous=NORMAL")
+                cursor.execute("PRAGMA wal_autocheckpoint=1000")
+        finally:
+            cursor.close()
+
+
+def _is_file_sqlite_uri(database_uri: str) -> bool:
+    normalized = database_uri.casefold()
+    return normalized not in {"sqlite://", "sqlite:///:memory:"} and "mode=memory" not in normalized
 
 
 engine = create_db_engine(settings)

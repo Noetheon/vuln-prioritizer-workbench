@@ -3,7 +3,9 @@ from __future__ import annotations
 import ast
 import json
 import os
+import sqlite3
 import subprocess
+import sys
 import tarfile
 import tomllib
 from collections import deque
@@ -376,6 +378,7 @@ def test_default_compose_services_start_only_active_backend_runtime() -> None:
     assert backend_environment["DECISION_API_MAX_FINDINGS"] == (
         "${DECISION_API_MAX_FINDINGS:-1000}"
     )
+    assert backend_environment["COMPOSE_COMPATIBILITY_MODE"] == "true"
     assert backend_environment["POSTGRES_PASSWORD"].startswith(
         "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD"
     )
@@ -536,6 +539,8 @@ def test_backup_restore_scripts_support_database_url_and_compose_artifacts() -> 
     assert "docker compose ps -q backend" in backup
     assert "docker compose ps -q backend" in restore
     assert "validate_artifact_archive" in restore
+    assert "sqlite_backup.py" in backup
+    assert "sqlite_backup.py" in restore
     assert "Refusing artifact archive with unsafe member path" in restore
     assert "Refusing artifact archive with symlink or hardlink member" in restore
     assert (
@@ -544,16 +549,17 @@ def test_backup_restore_scripts_support_database_url_and_compose_artifacts() -> 
     )
     assert "LEGACY_COMPOSE_ARTIFACT_PATHS=" not in backup
     assert "legacy_storage_fallback_enabled" not in backup
-    assert "for path in $(host_artifact_paths)" in backup
+    assert "host_artifact_paths | while IFS= read -r path" in backup
 
 
 def test_backup_script_uses_workbench_artifacts_only_by_default(tmp_path: Path) -> None:
     database_path = tmp_path / "workbench.db"
-    database_path.write_text("sqlite bytes\n", encoding="utf-8")
-    for artifact_dir in (
-        tmp_path / "data" / "workbench-reports",
-        tmp_path / "data" / "template-reports",
-    ):
+    database = sqlite3.connect(database_path)
+    database.execute("PRAGMA journal_mode=WAL")
+    database.execute("CREATE TABLE backup_probe (value TEXT NOT NULL)")
+    database.execute("INSERT INTO backup_probe (value) VALUES ('committed-in-wal')")
+    database.commit()
+    for artifact_dir in (tmp_path / "reports", tmp_path / "template-reports"):
         artifact_dir.mkdir(parents=True)
         (artifact_dir / "marker.txt").write_text(artifact_dir.name, encoding="utf-8")
 
@@ -576,10 +582,117 @@ def test_backup_script_uses_workbench_artifacts_only_by_default(tmp_path: Path) 
         with tarfile.open(backup_dir / "artifacts.tar") as archive:
             return set(archive.getnames())
 
-    default_members = run_backup("backup-default")
+    try:
+        default_members = run_backup("backup-default")
+    finally:
+        database.close()
 
-    assert "workbench-reports" in default_members
+    assert "reports" in default_members
     assert "template-reports" not in default_members
+    restored = sqlite3.connect(tmp_path / "backup-default" / "workbench.db")
+    try:
+        assert restored.execute("SELECT value FROM backup_probe").fetchone() == (
+            "committed-in-wal",
+        )
+    finally:
+        restored.close()
+
+
+def test_sqlite_restore_is_verified_and_refuses_active_wal_destination(tmp_path: Path) -> None:
+    backup = tmp_path / "backup.db"
+    database = sqlite3.connect(backup)
+    try:
+        database.execute("CREATE TABLE restore_probe (value TEXT NOT NULL)")
+        database.execute("INSERT INTO restore_probe (value) VALUES ('verified-restore')")
+        database.commit()
+    finally:
+        database.close()
+
+    destination = tmp_path / "runtime" / "workbench.db"
+    destination.parent.mkdir()
+    database = sqlite3.connect(destination)
+    try:
+        database.execute("CREATE TABLE old_probe (value TEXT NOT NULL)")
+        database.commit()
+    finally:
+        database.close()
+    sidecar = destination.with_name(f"{destination.name}-wal")
+    sidecar.write_bytes(b"active-or-uncheckpointed")
+    command = [
+        sys.executable,
+        str(REPO_ROOT / "scripts/sqlite_backup.py"),
+        "restore",
+        str(backup),
+        str(destination),
+    ]
+
+    refused = subprocess.run(command, capture_output=True, check=False, text=True)
+
+    assert refused.returncode != 0
+    assert "WAL sidecars" in refused.stderr
+    database = sqlite3.connect(destination)
+    try:
+        assert database.execute("SELECT name FROM sqlite_master WHERE name='old_probe'").fetchone()
+    finally:
+        database.close()
+
+    for suffix in ("-wal", "-shm"):
+        destination.with_name(f"{destination.name}{suffix}").unlink(missing_ok=True)
+    subprocess.run(command, capture_output=True, check=True, text=True)
+    database = sqlite3.connect(destination)
+    try:
+        assert database.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+        assert database.execute("SELECT value FROM restore_probe").fetchone() == (
+            "verified-restore",
+        )
+    finally:
+        database.close()
+
+
+def test_restore_validates_artifact_archive_before_replacing_sqlite(tmp_path: Path) -> None:
+    backup_dir = tmp_path / "backup"
+    backup_dir.mkdir()
+    database = sqlite3.connect(backup_dir / "workbench.db")
+    try:
+        database.execute("CREATE TABLE replacement_probe (value TEXT NOT NULL)")
+        database.commit()
+    finally:
+        database.close()
+    with tarfile.open(backup_dir / "artifacts.tar", "w") as archive:
+        member = tarfile.TarInfo("../escaped.txt")
+        member.size = 0
+        archive.addfile(member)
+    destination = tmp_path / "runtime" / "workbench.db"
+    destination.parent.mkdir()
+    database = sqlite3.connect(destination)
+    try:
+        database.execute("CREATE TABLE preserved_probe (value TEXT NOT NULL)")
+        database.commit()
+    finally:
+        database.close()
+
+    restored = subprocess.run(
+        [str(REPO_ROOT / "scripts/workbench-restore.sh"), str(backup_dir)],
+        capture_output=True,
+        check=False,
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(destination),
+            "ARTIFACT_RESTORE_ROOT": str(destination.parent),
+        },
+        text=True,
+    )
+
+    assert restored.returncode != 0
+    assert "unsafe member path" in restored.stderr
+    database = sqlite3.connect(destination)
+    try:
+        assert database.execute(
+            "SELECT name FROM sqlite_master WHERE name='preserved_probe'"
+        ).fetchone()
+    finally:
+        database.close()
+    assert not (tmp_path / "escaped.txt").exists()
 
 
 def test_active_runtime_entrypoints_use_workbench_backend_app() -> None:
