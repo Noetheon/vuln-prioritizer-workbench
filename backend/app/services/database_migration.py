@@ -18,8 +18,8 @@ from typing import Any
 from sqlalchemy import Connection, Engine, inspect, select, text
 from sqlmodel import Session, SQLModel
 
-from app import models as _models  # noqa: F401 - registers every SQLModel table
 from app.core.migration_bootstrap import ALEMBIC_HEAD
+from app.models import import_table_models
 from app.repositories.current_projections import FindingCurrentProjectionRepository
 
 
@@ -57,6 +57,7 @@ def copy_database_with_parity(
     target_report_root: Path | None = None,
 ) -> DatabaseMigrationResult:
     """Copy the current schema and prove row-level parity before returning."""
+    import_table_models()
     bounded_batch_size = max(1, min(batch_size, 2_000))
     _require_revision(source_engine, role="source")
     _require_revision(target_engine, role="target")
