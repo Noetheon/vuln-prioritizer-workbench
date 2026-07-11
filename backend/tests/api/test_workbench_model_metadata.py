@@ -9,6 +9,7 @@ from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel
 
 from app.core.migration_bootstrap import ALEMBIC_HEAD, current_alembic_head
@@ -178,6 +179,7 @@ def test_decision_ledger_migration_backfills_latest_finding_evidence(tmp_path: P
             )
         )
         session.commit()
+    _replace_finding_decision_evidence_with_stale_foreign_key(engine)
     engine.dispose()
 
     command.upgrade(config, "head")
@@ -206,6 +208,49 @@ def test_decision_ledger_migration_backfills_latest_finding_evidence(tmp_path: P
     assert row["source_finding_evidence_id"] is not None
     assert parity.checked == 1
     assert parity.matches is True
+
+
+def _replace_finding_decision_evidence_with_stale_foreign_key(engine: Engine) -> None:
+    """Model a historical SQLite table whose renamed FK target no longer exists."""
+    with engine.connect() as connection:
+        connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+        connection.exec_driver_sql(
+            """
+            CREATE TABLE finding_decision_evidence_stale (
+                schema_version VARCHAR(80) NOT NULL,
+                cve_id VARCHAR(64) NOT NULL,
+                dedup_key VARCHAR(512) NOT NULL,
+                priority VARCHAR(40) NOT NULL,
+                status VARCHAR(40) NOT NULL,
+                payload_json JSON NOT NULL,
+                id CHAR(32) NOT NULL PRIMARY KEY,
+                analysis_evidence_id CHAR(32) NOT NULL,
+                project_id CHAR(32) NOT NULL,
+                analysis_run_id CHAR(32) NOT NULL,
+                finding_id CHAR(32) NOT NULL,
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL,
+                FOREIGN KEY(analysis_run_id)
+                    REFERENCES _analysis_run_legacy_repair (id) ON DELETE CASCADE,
+                FOREIGN KEY(finding_id)
+                    REFERENCES _finding_legacy_repair (id) ON DELETE CASCADE
+            )
+            """
+        )
+        connection.exec_driver_sql(
+            """
+            INSERT INTO finding_decision_evidence_stale
+            SELECT schema_version, cve_id, dedup_key, priority, status, payload_json,
+                   id, analysis_evidence_id, project_id, analysis_run_id, finding_id,
+                   created_at, updated_at
+              FROM finding_decision_evidence
+            """
+        )
+        connection.exec_driver_sql("DROP TABLE finding_decision_evidence")
+        connection.exec_driver_sql(
+            "ALTER TABLE finding_decision_evidence_stale RENAME TO finding_decision_evidence"
+        )
+        connection.commit()
 
 
 def _alembic_config(tmp_path: Path) -> Config:

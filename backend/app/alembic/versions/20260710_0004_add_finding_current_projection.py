@@ -124,8 +124,18 @@ def downgrade() -> None:
 def _backfill_current_projection() -> None:
     bind = op.get_bind()
     metadata = sa.MetaData()
-    evidence = sa.Table("finding_decision_evidence", metadata, autoload_with=bind)
-    projection = sa.Table("finding_current_projection", metadata, autoload_with=bind)
+    evidence = sa.Table(
+        "finding_decision_evidence",
+        metadata,
+        autoload_with=bind,
+        resolve_fks=False,
+    )
+    projection = sa.Table(
+        "finding_current_projection",
+        metadata,
+        autoload_with=bind,
+        resolve_fks=False,
+    )
     rows = bind.execute(
         sa.select(evidence).order_by(
             evidence.c.finding_id,
