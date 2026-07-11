@@ -96,6 +96,13 @@ def test_frontend_npm_engine_policy_is_enforced_for_local_and_ci_commands() -> N
     assert "Bun-compatible" not in frontend_readme
 
 
+def test_mutation_runner_path_is_shell_quoted() -> None:
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+
+    assert 'cd $(BACKEND_DIR) && "$(MUTMUT)" run' in makefile
+    assert "cd $(BACKEND_DIR) && $(MUTMUT) run" not in makefile
+
+
 def test_sdist_manifest_excludes_partial_test_tree() -> None:
     manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
 

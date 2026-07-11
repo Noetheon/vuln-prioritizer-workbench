@@ -92,7 +92,7 @@ property-check:
 
 mutation-check:
 	rm -rf .mutmut-cache mutants $(BACKEND_DIR)/.mutmut-cache $(BACKEND_DIR)/mutants
-	cd $(BACKEND_DIR) && $(MUTMUT) run --max-children 4 $(MUTATION_PATTERNS)
+	cd $(BACKEND_DIR) && "$(MUTMUT)" run --max-children 4 $(MUTATION_PATTERNS)
 	cd $(BACKEND_DIR) && $(PYTHON) ../scripts/check_mutmut_results.py mutants $(MUTATION_PATTERNS)
 	rm -rf $(BACKEND_DIR)/.mutmut-cache $(BACKEND_DIR)/mutants
 
