@@ -41,6 +41,8 @@ exact git tag output when release wording needs to be verified.
   database replacement; PostgreSQL restore runs in one fail-fast transaction.
 - Dependency locks and the generated OpenAPI client were refreshed to current
   patched compatible versions while preserving the checked client boundary.
+- The backend container now pins Python 3.13.14 and limits its remaining Grype
+  waiver to the exact stable runtime version lacking a same-branch fix.
 - Docker Compose/PostgreSQL is deprecated for new installations but retained
   for one transition release and may be removed only after documented
   functional, data, rollback, and platform parity.
