@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from types import SimpleNamespace
 
 from sqlmodel import Session
 from utils.workbench_env import (
@@ -12,43 +11,14 @@ from utils.workbench_env import (
     create_project_via_api,
     create_vulnerability,
     local_api_headers,
+    seed_finding_pair,
 )
 
 from app.decision_core import finding_queries
-from app.decision_core.finding_queries import _can_use_database_cve_page, _finding_page_sort_key
 from app.repositories import FindingPageQuery
 
 
-def test_finding_page_operational_sort_key_stabilizes_equal_rank_ties() -> None:
-    query = SimpleNamespace(sort="operational")
-    tied_views = [
-        _view("payments", "team-payments", "pay-api-01"),
-        _view("identity", "team-identity", "id-admin-01"),
-        _view("catalog", "team-catalog", "catalog-api-01"),
-    ]
-
-    sorted_views = sorted(tied_views, key=lambda view: _finding_page_sort_key(view, query))
-
-    assert [_service(view) for view in sorted_views] == [
-        "catalog",
-        "identity",
-        "payments",
-    ]
-
-
-def test_unfiltered_cve_sort_can_use_database_pagination_without_evidence_filters() -> None:
-    project_id = uuid.uuid4()
-
-    assert _can_use_database_cve_page(FindingPageQuery(project_id=project_id, sort="cve"))
-    assert not _can_use_database_cve_page(
-        FindingPageQuery(project_id=project_id, sort="cve", priority="High")
-    )
-    assert not _can_use_database_cve_page(
-        FindingPageQuery(project_id=project_id, sort="operational")
-    )
-
-
-def test_operational_findings_page_batches_general_query_evidence_lookup(
+def test_operational_findings_page_uses_database_projection_without_evidence_scan(
     workbench_api_env: WorkbenchApiEnv,
     monkeypatch,
 ) -> None:
@@ -84,19 +54,10 @@ def test_operational_findings_page_batches_general_query_evidence_lookup(
             )
         session.commit()
 
-    chunk_sizes: list[int] = []
-    original_project_finding_decision_views = finding_queries.project_finding_decision_views
+    def fail_evidence_scan(*_args, **_kwargs):  # noqa: ANN002, ANN003, ANN202
+        raise AssertionError("Current finding pages must not scan historical evidence.")
 
-    def recording_project_finding_decision_views(session, findings):  # noqa: ANN001
-        chunk_sizes.append(len(findings))
-        return original_project_finding_decision_views(session, findings)
-
-    monkeypatch.setattr(finding_queries, "_GENERAL_FINDING_PAGE_CHUNK_SIZE", 2)
-    monkeypatch.setattr(
-        finding_queries,
-        "project_finding_decision_views",
-        recording_project_finding_decision_views,
-    )
+    monkeypatch.setattr(finding_queries, "project_finding_decision_views", fail_evidence_scan)
 
     with Session(workbench_api_env.engine) as session:
         findings, count = finding_queries.list_project_findings_query(
@@ -106,24 +67,89 @@ def test_operational_findings_page_batches_general_query_evidence_lookup(
 
     assert count == 5
     assert len(findings) == 2
-    assert chunk_sizes == [2, 2, 1]
+    assert [finding.cve_id for finding in findings] == ["CVE-2024-0001", "CVE-2024-0002"]
+
+    with Session(workbench_api_env.engine) as session:
+        wildcard_findings, wildcard_count = finding_queries.list_project_findings_query(
+            session,
+            FindingPageQuery(project_id=project_id, query="2024_0001"),
+        )
+        literal_findings, literal_count = finding_queries.list_project_findings_query(
+            session,
+            FindingPageQuery(project_id=project_id, query="2024-0001"),
+        )
+
+    assert wildcard_findings == []
+    assert wildcard_count == 0
+    assert [finding.cve_id for finding in literal_findings] == ["CVE-2024-0001"]
+    assert literal_count == 1
 
 
-def _view(business_service: str, owner: str, asset_key: str) -> SimpleNamespace:
-    asset = SimpleNamespace(
-        asset_key=asset_key,
-        business_service=business_service,
-        owner=owner,
+def test_numeric_sort_keeps_missing_projection_values_last_in_both_directions(
+    workbench_api_env: WorkbenchApiEnv,
+) -> None:
+    project = create_project_via_api(
+        workbench_api_env.client,
+        local_api_headers(workbench_api_env.client),
     )
-    component = SimpleNamespace(name="log4j-core", version="2.14.1")
-    finding = SimpleNamespace(asset=asset, component=component, id=uuid.uuid4())
-    return SimpleNamespace(
-        cve_id="CVE-2021-44228",
-        finding=finding,
-        operational_rank=1,
-        priority_rank=1,
+    project_id = uuid.UUID(project["id"])
+    seeded = seed_finding_pair(
+        workbench_api_env.engine,
+        workbench_api_env.app_models,
+        workbench_api_env.repositories,
+        project_id=project_id,
+        with_decision_evidence=True,
     )
+    with Session(workbench_api_env.engine) as session:
+        asset = create_asset(
+            session,
+            workbench_api_env.app_models,
+            workbench_api_env.repositories,
+            project_id=project_id,
+            asset_key="unknown-score-api",
+            name="Unknown Score API",
+        )
+        component = create_component(
+            session,
+            workbench_api_env.repositories,
+            name="unknown-score-component",
+        )
+        vulnerability = create_vulnerability(
+            session,
+            workbench_api_env.repositories,
+            cve_id="CVE-2024-9999",
+        )
+        missing_score = create_finding(
+            session,
+            workbench_api_env.app_models,
+            workbench_api_env.repositories,
+            project_id=project_id,
+            vulnerability_id=vulnerability.id,
+            component_id=component.id,
+            asset_id=asset.id,
+            cve_id="CVE-2024-9999",
+        )
+        missing_score_id = missing_score.id
+        session.commit()
 
+    with Session(workbench_api_env.engine) as session:
+        ascending, _ = finding_queries.list_project_findings_query(
+            session,
+            FindingPageQuery(project_id=project_id, sort="score", direction="asc"),
+        )
+        descending, _ = finding_queries.list_project_findings_query(
+            session,
+            FindingPageQuery(project_id=project_id, sort="score", direction="desc"),
+        )
 
-def _service(view: SimpleNamespace) -> str:
-    return str(view.finding.asset.business_service)
+    seeded_ids = [uuid.UUID(str(value)) for value in seeded["finding_ids"]]
+    assert [finding.id for finding in ascending] == [
+        seeded_ids[1],
+        seeded_ids[0],
+        missing_score_id,
+    ]
+    assert [finding.id for finding in descending] == [
+        seeded_ids[0],
+        seeded_ids[1],
+        missing_score_id,
+    ]

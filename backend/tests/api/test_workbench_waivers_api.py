@@ -358,15 +358,20 @@ def test_workbench_expired_waiver_sync_updates_v2_evidence_with_string_status(
     assert detail.json()["status"] == "open"
     assert detail.json()["waived"] is False
     with Session(workbench_api_env.engine) as session:
-        evidence = workbench_api_env.repositories.EvidenceRepository(
+        historical_evidence = workbench_api_env.repositories.EvidenceRepository(
             session
         ).latest_finding_decision_evidence(finding_id)
-        assert evidence is not None
-        assert evidence.status == "open"
-        assert evidence.governance.waived is False
+        current_evidence = workbench_api_env.repositories.FindingCurrentProjectionRepository(
+            session
+        ).get_evidence(finding_id)
+        assert historical_evidence is not None
+        assert current_evidence is not None
+        assert historical_evidence.governance.waiver == {}
+        assert current_evidence.status == "open"
+        assert current_evidence.governance.waived is False
         waiver_record = {
-            **evidence.governance.waiver,
-            **dict(evidence.priority_evidence.raw.get("waiver") or {}),
+            **current_evidence.governance.waiver,
+            **dict(current_evidence.priority_evidence.raw.get("waiver") or {}),
         }
         assert waiver_record["waiver_status"] == "expired"
 
@@ -435,7 +440,9 @@ def _seed_report_run(
             raw_reference=DEMO_CVE_LOG4SHELL,
         )
         evidence_repo = workbench_api_env.repositories.EvidenceRepository(session)
-        latest_evidence = evidence_repo.latest_finding_decision_evidence(uuid.UUID(finding_id))
+        latest_evidence = workbench_api_env.repositories.FindingCurrentProjectionRepository(
+            session
+        ).get_evidence(uuid.UUID(finding_id))
         assert latest_evidence is not None
         finding_evidence = _seed_finding_evidence(
             finding=finding,

@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Query
 from app.api.deps import LocalActor, SessionDep
 from app.api.routes.workbench_access import require_project
 from app.decision_core.finding_queries import list_project_findings_query
+from app.decision_core.readmodels import project_finding_decision_views
 from app.models import (
     AssetExposure,
     FindingDetailPublic,
@@ -23,7 +24,7 @@ from app.repositories import FindingPageQuery, FindingRepository
 from app.services import DecisionDataUnavailableError, build_finding_explanation_payload
 from app.services.finding_projection import (
     _finding_detail_public_with_attack_context,
-    _finding_public,
+    _finding_public_from_view,
 )
 from app.services.finding_status import (
     FindingStatusTransitionError,
@@ -96,10 +97,8 @@ def read_project_findings(
             cvss_max=cvss_max,
         ),
     )
-    return FindingsPublic(
-        data=[_finding_public(finding, session=session) for finding in findings],
-        count=count,
-    )
+    views = project_finding_decision_views(session, findings)
+    return FindingsPublic(data=[_finding_public_from_view(view) for view in views], count=count)
 
 
 @router.get("/findings/{finding_id}", response_model=FindingDetailPublic)

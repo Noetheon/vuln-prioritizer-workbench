@@ -8,7 +8,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.decision_core.contracts import (
     AnalysisEvidenceUploadsV2,
@@ -138,12 +138,12 @@ def _replace_zip_member(bundle: bytes, member_path: str, replacement: bytes) -> 
     return output.getvalue()
 
 
-def _add_vpw051_bundle_metadata(
+def _seed_bundle_reportable_run(
     workbench_api_env: WorkbenchApiEnv,
-    run_id: uuid.UUID,
+    project_id: uuid.UUID,
     tmp_path: Path,
-) -> dict[str, Any]:
-    app_models = workbench_api_env.app_models
+) -> tuple[uuid.UUID, dict[str, Any]]:
+    """Seed the sensitive bundle fixture before its ledger records are finalized."""
     upload_path = tmp_path / "private" / "known-cves.txt"
     upload_content = f"{DEMO_CVE_XZ}\n{DEMO_CVE_LOG4SHELL}\n".encode()
     upload_path.parent.mkdir(parents=True, exist_ok=True)
@@ -153,194 +153,119 @@ def _add_vpw051_bundle_metadata(
         "size_bytes": len(upload_content),
         "sha256": hashlib.sha256(upload_content).hexdigest(),
     }
-    with Session(workbench_api_env.engine) as session:
-        run = session.get(app_models.AnalysisRun, run_id)
-        assert run is not None
-        evidence_repo = workbench_api_env.repositories.EvidenceRepository(session)
-        evidence = evidence_repo.get_analysis_evidence(run.id)
-        assert evidence is not None
-        evidence_repo.upsert_analysis_evidence(
-            project_id=run.project_id,
-            analysis_run_id=run.id,
-            provider_snapshot_id=run.provider_snapshot_id,
-            evidence=evidence.model_copy(
+    run_id = _seed_reportable_run(
+        workbench_api_env,
+        project_id,
+        bundle_upload=(upload_path, input_metadata),
+    )
+    return run_id, input_metadata
+
+
+def _attack_evidence(
+    *,
+    technique_id: str,
+    technique_name: str,
+    tactic: str,
+    confidence: str,
+    review_status: str,
+) -> AttackEvidenceV2:
+    mapping = {
+        "technique_id": technique_id,
+        "technique_name": technique_name,
+        "attack_object_id": technique_id,
+        "attack_object_name": technique_name,
+        "tactics": [tactic],
+        "confidence": confidence,
+        "review_status": review_status,
+        "source": "local-curated",
+        "mapping_type": "exploitation",
+        "defensive_note": "Use for defensive triage and coverage review.",
+        "rationale": "Reviewed local mapping; no procedural detail included.",
+    }
+    return AttackEvidenceV2(
+        mapped=True,
+        source="local-curated",
+        review_status=review_status,
+        defensive_note="Defensive triage context only; validate before action.",
+        rationale="Reviewed local ATT&CK mapping for defensive prioritization.",
+        confidence=confidence,
+        technique_ids=[technique_id],
+        tactic_ids=[tactic],
+        mappings=[mapping],
+    )
+
+
+def _bundle_finding_evidence(
+    evidence: FindingDecisionEvidenceV2,
+    upload_path: Path,
+) -> FindingDecisionEvidenceV2:
+    recommended_action = "Patch after using super-secret-token in the approval system."
+    rationale = f"Review local evidence from {upload_path.parent / 'vpw-051-input.txt'}."
+    return evidence.model_copy(
+        update={
+            "rationale": rationale,
+            "recommended_action": recommended_action,
+            "remediation": evidence.remediation.model_copy(
                 update={
-                    "input_sha256": input_metadata["sha256"],
-                    "uploads": AnalysisEvidenceUploadsV2(
-                        input=EvidenceUploadRef(
-                            input_type=run.input_type,
-                            original_filename=upload_path.name,
-                            stored_filename=upload_path.name,
-                            size_bytes=input_metadata["size_bytes"],
-                            sha256=input_metadata["sha256"],
-                            path=str(upload_path),
-                            storage_ref=upload_path.name,
-                        )
-                    ),
+                    "recommended_action": recommended_action,
+                    "recommendation": recommended_action,
+                    "raw": {
+                        **evidence.remediation.raw,
+                        "authorization": "Bearer super-secret-token",
+                        "upload_path": str(upload_path),
+                    },
                 }
             ),
-        )
-        if run.provider_snapshot is not None:
-            run.provider_snapshot.source_metadata_json = {
-                **dict(run.provider_snapshot.source_metadata_json or {}),
-                "source_path": str(tmp_path / "private" / "provider-snapshot.json"),
-                "api_key": "provider-secret-key",
-                "cache_dir": str(tmp_path / "private" / "cache"),
-            }
-            session.add(run.provider_snapshot)
-        finding = session.exec(
-            select(app_models.Finding)
-            .where(app_models.Finding.project_id == run.project_id)
-            .where(app_models.Finding.cve_id == DEMO_CVE_XZ)
-        ).first()
-        assert finding is not None
-        recommended_action = "Patch after using super-secret-token in the approval system."
-        rationale = f"Review local evidence from {tmp_path}/private/vpw-051-input.txt."
-        finding_evidence = evidence_repo.latest_finding_decision_evidence(finding.id)
-        assert finding_evidence is not None
-        evidence_record = evidence_repo.get_analysis_evidence_record(run.id)
-        assert evidence_record is not None
-        evidence_repo.replace_finding_decision_evidence(
-            analysis_evidence_id=evidence_record.id,
-            project_id=run.project_id,
-            analysis_run_id=run.id,
-            evidence_items=[
-                finding_evidence.model_copy(
-                    update={
-                        "rationale": rationale,
-                        "recommended_action": recommended_action,
-                        "remediation": finding_evidence.remediation.model_copy(
-                            update={
-                                "recommended_action": recommended_action,
-                                "recommendation": recommended_action,
-                                "raw": {
-                                    **finding_evidence.remediation.raw,
-                                    "authorization": "Bearer super-secret-token",
-                                    "upload_path": str(upload_path),
-                                },
-                            }
-                        ),
-                    }
-                )
-            ],
-        )
-        session.add(finding)
-        session.add(run)
-        session.commit()
-    return input_metadata
-
-
-def _add_vpw060_attack_contexts(
-    workbench_api_env: WorkbenchApiEnv,
-    run_id: uuid.UUID,
-) -> None:
-    app_models_for_env = workbench_api_env.app_models
-    with Session(workbench_api_env.engine) as session:
-        run = session.get(app_models_for_env.AnalysisRun, run_id)
-        assert run is not None
-        findings = {
-            finding.cve_id: finding
-            for finding in session.exec(
-                select(app_models_for_env.Finding).where(
-                    app_models_for_env.Finding.project_id == run.project_id
-                )
-            ).all()
         }
-        log4shell = findings[DEMO_CVE_LOG4SHELL]
-        xz = findings[DEMO_CVE_XZ]
-        for finding, technique_id, technique_name, tactic, confidence, review_status in (
-            (
-                log4shell,
-                "T1190",
-                "Exploit Public-Facing Application",
-                "initial-access",
-                "medium",
-                "reviewed",
-            ),
-            (
-                xz,
-                "T1059",
-                "Command and Scripting Interpreter",
-                "execution",
-                "low",
-                "needs_review",
-            ),
-        ):
-            session.add(
-                app_models_for_env.FindingAttackContext(
-                    finding_id=finding.id,
-                    analysis_run_id=run.id,
-                    cve_id=finding.cve_id,
-                    mapped=True,
-                    source="local-curated",
-                    review_status=review_status,
-                    defensive_note="Defensive triage context only; validate before action.",
-                    rationale="Reviewed local ATT&CK mapping for defensive prioritization.",
-                    technique_ids_json=[technique_id],
-                    tactic_ids_json=[tactic],
-                    mappings_json=[
-                        {
-                            "technique_id": technique_id,
-                            "technique_name": technique_name,
-                            "attack_object_id": technique_id,
-                            "attack_object_name": technique_name,
-                            "tactics": [tactic],
-                            "confidence": confidence,
-                            "review_status": review_status,
-                            "source": "local-curated",
-                            "mapping_type": "exploitation",
-                            "defensive_note": "Use for defensive triage and coverage review.",
-                            "rationale": "Reviewed local mapping; no procedural detail included.",
-                        }
-                    ],
-                )
-            )
-            evidence_repo = workbench_api_env.repositories.EvidenceRepository(session)
-            evidence_record = evidence_repo.get_finding_decision_evidence_record(
-                finding_id=finding.id,
-                analysis_run_id=run.id,
-            )
-            assert evidence_record is not None
-            evidence = FindingDecisionEvidenceV2.model_validate(evidence_record.payload_json)
-            evidence_record.payload_json = evidence.model_copy(
-                update={
-                    "attack_mapped": True,
-                    "attack": AttackEvidenceV2(
-                        mapped=True,
-                        source="local-curated",
-                        review_status=review_status,
-                        defensive_note="Defensive triage context only; validate before action.",
-                        rationale="Reviewed local ATT&CK mapping for defensive prioritization.",
-                        confidence=confidence,
-                        technique_ids=[technique_id],
-                        tactic_ids=[tactic],
-                        mappings=[
-                            {
-                                "technique_id": technique_id,
-                                "technique_name": technique_name,
-                                "attack_object_id": technique_id,
-                                "attack_object_name": technique_name,
-                                "tactics": [tactic],
-                                "confidence": confidence,
-                                "review_status": review_status,
-                                "source": "local-curated",
-                                "mapping_type": "exploitation",
-                                "defensive_note": "Use for defensive triage and coverage review.",
-                                "rationale": (
-                                    "Reviewed local mapping; no procedural detail included."
-                                ),
-                            }
-                        ],
-                    ),
-                }
-            ).to_jsonable()
-            session.add(evidence_record)
-        session.commit()
+    )
 
 
-def _seed_reportable_run(workbench_api_env: WorkbenchApiEnv, project_id: uuid.UUID) -> uuid.UUID:
+def _seed_reportable_run(
+    workbench_api_env: WorkbenchApiEnv,
+    project_id: uuid.UUID,
+    *,
+    bundle_upload: tuple[Path, dict[str, Any]] | None = None,
+    with_attack_contexts: bool = False,
+) -> uuid.UUID:
     app_models = workbench_api_env.app_models
     repositories = workbench_api_env.repositories
+    source_metadata: dict[str, Any] = {
+        "locked_provider_data": True,
+        "selected_sources": ["nvd", "epss", "kev"],
+        "source_path": "demo_provider_snapshot.json",
+        "item_count": 2,
+    }
+    if bundle_upload is not None:
+        upload_path, _ = bundle_upload
+        source_metadata.update(
+            {
+                "source_path": str(upload_path.parent / "provider-snapshot.json"),
+                "api_key": "provider-secret-key",
+                "cache_dir": str(upload_path.parent / "cache"),
+            }
+        )
+    log4shell_attack = (
+        _attack_evidence(
+            technique_id="T1190",
+            technique_name="Exploit Public-Facing Application",
+            tactic="initial-access",
+            confidence="medium",
+            review_status="reviewed",
+        )
+        if with_attack_contexts
+        else None
+    )
+    xz_attack = (
+        _attack_evidence(
+            technique_id="T1059",
+            technique_name="Command and Scripting Interpreter",
+            tactic="execution",
+            confidence="low",
+            review_status="needs_review",
+        )
+        if with_attack_contexts
+        else None
+    )
     with Session(workbench_api_env.engine) as session:
         run_repo = repositories.RunRepository(session)
         snapshot = run_repo.get_or_create_provider_snapshot(
@@ -349,12 +274,7 @@ def _seed_reportable_run(workbench_api_env: WorkbenchApiEnv, project_id: uuid.UU
             epss_date="2026-04-28",
             kev_catalog_version="2026-04-28",
             source_hashes_json={"provider_snapshot": "sha256:vpw048-snapshot"},
-            source_metadata_json={
-                "locked_provider_data": True,
-                "selected_sources": ["nvd", "epss", "kev"],
-                "source_path": "demo_provider_snapshot.json",
-                "item_count": 2,
-            },
+            source_metadata_json=source_metadata,
         )
         run = run_repo.create_analysis_run(
             project_id=project_id,
@@ -364,20 +284,10 @@ def _seed_reportable_run(workbench_api_env: WorkbenchApiEnv, project_id: uuid.UU
             status=app_models.AnalysisRunStatus.COMPLETED,
         )
         evidence_repo = repositories.EvidenceRepository(session)
-        analysis_evidence = evidence_repo.upsert_analysis_evidence(
+        analysis_evidence = evidence_repo.prepare_analysis_evidence_record(
             project_id=project_id,
             analysis_run_id=run.id,
             provider_snapshot_id=snapshot.id,
-            evidence=_seed_analysis_evidence(
-                project_id=project_id,
-                run=run,
-                provider_snapshot_id=snapshot.id,
-                provider_snapshot_hash=snapshot.content_hash,
-                finding_count=0,
-                counts_by_priority={},
-                locked_provider_data=True,
-                findings=[],
-            ),
         )
         first = _seed_finding(
             session,
@@ -402,7 +312,9 @@ def _seed_reportable_run(workbench_api_env: WorkbenchApiEnv, project_id: uuid.UU
             action="Patch via vendor upgrade.",
             confidence="medium",
             flags=[{"code": "missing_asset_owner", "message": "Owner missing <img>"}],
+            attack_evidence=log4shell_attack,
         )
+        bundle_upload_path = bundle_upload[0] if bundle_upload is not None else None
         second = _seed_finding(
             session,
             app_models,
@@ -426,6 +338,8 @@ def _seed_reportable_run(workbench_api_env: WorkbenchApiEnv, project_id: uuid.UU
             action="Patch [open](javascript:alert(1)) now.",
             confidence="high",
             flags=[],
+            attack_evidence=xz_attack,
+            bundle_upload_path=bundle_upload_path,
         )
         run_repo.add_finding_occurrence(
             finding_id=first.id,
@@ -440,20 +354,39 @@ def _seed_reportable_run(workbench_api_env: WorkbenchApiEnv, project_id: uuid.UU
             raw_reference=DEMO_CVE_XZ,
         )
         findings_evidence = list(evidence_repo.finding_decision_evidence_for_run(run.id).values())
+        final_analysis_evidence = _seed_analysis_evidence(
+            project_id=project_id,
+            run=run,
+            provider_snapshot_id=snapshot.id,
+            provider_snapshot_hash=snapshot.content_hash,
+            finding_count=2,
+            counts_by_priority={"Critical": 1, "High": 1},
+            locked_provider_data=True,
+            findings=findings_evidence,
+        )
+        if bundle_upload is not None:
+            upload_path, input_metadata = bundle_upload
+            final_analysis_evidence = final_analysis_evidence.model_copy(
+                update={
+                    "input_sha256": input_metadata["sha256"],
+                    "uploads": AnalysisEvidenceUploadsV2(
+                        input=EvidenceUploadRef(
+                            input_type=run.input_type,
+                            original_filename=upload_path.name,
+                            stored_filename=upload_path.name,
+                            size_bytes=input_metadata["size_bytes"],
+                            sha256=input_metadata["sha256"],
+                            path=str(upload_path),
+                            storage_ref=upload_path.name,
+                        )
+                    ),
+                }
+            )
         evidence_repo.upsert_analysis_evidence(
             project_id=project_id,
             analysis_run_id=run.id,
             provider_snapshot_id=snapshot.id,
-            evidence=_seed_analysis_evidence(
-                project_id=project_id,
-                run=run,
-                provider_snapshot_id=snapshot.id,
-                provider_snapshot_hash=snapshot.content_hash,
-                finding_count=2,
-                counts_by_priority={"Critical": 1, "High": 1},
-                locked_provider_data=True,
-                findings=findings_evidence,
-            ),
+            evidence=final_analysis_evidence,
         )
         run_id = run.id
         session.commit()
@@ -479,20 +412,10 @@ def _seed_formula_run(workbench_api_env: WorkbenchApiEnv, project_id: uuid.UUID)
             status=app_models.AnalysisRunStatus.COMPLETED,
         )
         evidence_repo = repositories.EvidenceRepository(session)
-        analysis_evidence = evidence_repo.upsert_analysis_evidence(
+        analysis_evidence = evidence_repo.prepare_analysis_evidence_record(
             project_id=project_id,
             analysis_run_id=run.id,
             provider_snapshot_id=snapshot.id,
-            evidence=_seed_analysis_evidence(
-                project_id=project_id,
-                run=run,
-                provider_snapshot_id=snapshot.id,
-                provider_snapshot_hash=snapshot.content_hash,
-                finding_count=0,
-                counts_by_priority={},
-                locked_provider_data=False,
-                findings=[],
-            ),
         )
         finding = _seed_finding(
             session,
@@ -573,6 +496,8 @@ def _seed_finding(
     flags: list[dict[str, str]],
     asset_owner: str | None = None,
     asset_business_service: str | None = None,
+    attack_evidence: AttackEvidenceV2 | None = None,
+    bundle_upload_path: Path | None = None,
 ) -> Any:
     asset = create_asset(
         session,
@@ -626,12 +551,34 @@ def _seed_finding(
         confidence=confidence,
         flags=flags,
     )
+    if bundle_upload_path is not None:
+        evidence = _bundle_finding_evidence(evidence, bundle_upload_path)
+    if attack_evidence is not None:
+        evidence = evidence.model_copy(
+            update={"attack_mapped": attack_evidence.mapped, "attack": attack_evidence}
+        )
     repositories.EvidenceRepository(session).replace_finding_decision_evidence(
         analysis_evidence_id=analysis_evidence_id,
         project_id=project_id,
         analysis_run_id=analysis_run_id,
         evidence_items=[evidence],
     )
+    if attack_evidence is not None:
+        session.add(
+            app_models.FindingAttackContext(
+                finding_id=finding.id,
+                analysis_run_id=analysis_run_id,
+                cve_id=finding.cve_id,
+                mapped=attack_evidence.mapped,
+                source=attack_evidence.source,
+                review_status=attack_evidence.review_status,
+                defensive_note=attack_evidence.defensive_note or "Defensive triage context.",
+                rationale=attack_evidence.rationale,
+                technique_ids_json=list(attack_evidence.technique_ids),
+                tactic_ids_json=list(attack_evidence.tactic_ids),
+                mappings_json=list(attack_evidence.mappings),
+            )
+        )
     return finding
 
 

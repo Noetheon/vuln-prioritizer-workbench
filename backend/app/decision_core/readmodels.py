@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from dataclasses import dataclass
 from typing import Any
@@ -11,6 +12,7 @@ from typing import Any
 from sqlalchemy.orm import object_session
 from sqlmodel import Session
 
+from app.core.config import settings
 from app.decision_core.builders import build_run_diagnostics
 from app.decision_core.contracts import (
     AnalysisEvidenceV2,
@@ -31,8 +33,11 @@ from app.models import (
     FindingStatus,
     WorkflowRunKind,
 )
+from app.repositories.current_projections import FindingCurrentProjectionRepository
 from app.repositories.evidence import EvidenceRepository
 from app.repositories.workflows import WorkflowRepository
+
+logger = logging.getLogger(__name__)
 
 SUCCESSFUL_RUN_STATUSES = {
     AnalysisRunStatus.SUCCEEDED,
@@ -409,7 +414,15 @@ def latest_finding_decision_view(
     active_session = session or object_session(finding)
     evidence = None
     if isinstance(active_session, Session):
-        evidence = EvidenceRepository(active_session).latest_finding_decision_evidence(finding.id)
+        projection_repository = FindingCurrentProjectionRepository(active_session)
+        projection = projection_repository.get_record(finding.id)
+        if projection is not None:
+            _shadow_check_current_projections(projection_repository, [projection])
+            evidence = projection_repository.get_evidence(finding.id)
+        else:
+            evidence = EvidenceRepository(active_session).latest_finding_decision_evidence(
+                finding.id
+            )
     return DecisionFindingView(finding=finding, evidence=evidence)
 
 
@@ -418,9 +431,18 @@ def project_finding_decision_views(
     findings: list[Finding],
 ) -> list[DecisionFindingView]:
     """Return latest decision views for a project finding list without N+1 lookups."""
-    evidence_by_finding = EvidenceRepository(session).latest_finding_decision_evidence_for_findings(
-        [finding.id for finding in findings]
-    )
+    finding_ids = [finding.id for finding in findings]
+    projection_repository = FindingCurrentProjectionRepository(session)
+    projections = projection_repository.records_for_findings(finding_ids)
+    _shadow_check_current_projections(projection_repository, projections)
+    evidence_by_finding = projection_repository.evidence_for_records(projections)
+    missing_ids = [
+        finding_id for finding_id in finding_ids if finding_id not in evidence_by_finding
+    ]
+    if missing_ids:
+        evidence_by_finding.update(
+            EvidenceRepository(session).latest_finding_decision_evidence_for_findings(missing_ids)
+        )
     return [
         DecisionFindingView(finding=finding, evidence=evidence_by_finding.get(finding.id))
         for finding in findings
@@ -457,6 +479,24 @@ def decision_views_for_findings(findings: list[Finding]) -> list[DecisionFinding
     if isinstance(session, Session):
         return project_finding_decision_views(session, findings)
     return [DecisionFindingView(finding=finding) for finding in findings]
+
+
+def _shadow_check_current_projections(
+    repository: FindingCurrentProjectionRepository,
+    projections: list[Any],
+) -> None:
+    if not settings.DECISION_LEDGER_SHADOW_READ or not projections:
+        return
+    result = repository.verify_source_parity(
+        projections,
+        sample_size=settings.DECISION_LEDGER_SHADOW_SAMPLE_SIZE,
+    )
+    if result.matches:
+        return
+    detail = ", ".join(result.mismatches)
+    if settings.DECISION_LEDGER_STRICT_PARITY:
+        raise DecisionEvidenceInvariantError(f"Decision Ledger shadow-read parity failed: {detail}")
+    logger.error("Decision Ledger shadow-read parity failed: %s", detail)
 
 
 def evidence_priority_label(value: str | FindingPriority) -> str:

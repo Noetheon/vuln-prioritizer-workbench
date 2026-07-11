@@ -84,6 +84,14 @@ class Finding(FindingBase, table=True):
         back_populates="finding",
         cascade_delete=True,
     )
+    current_projection: Optional["FindingCurrentProjection"] = Relationship(  # type: ignore[name-defined]  # noqa: F821
+        back_populates="finding",
+        sa_relationship_kwargs={
+            "cascade": "all, delete-orphan",
+            "single_parent": True,
+            "uselist": False,
+        },
+    )
 
 
 class FindingPublic(FindingBase):

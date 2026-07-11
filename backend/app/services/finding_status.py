@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from copy import deepcopy
 from typing import Any
 
 from sqlmodel import Session
@@ -10,7 +9,7 @@ from sqlmodel import Session
 from app.core.local_actor import LocalWorkbenchActor
 from app.models import Finding, FindingStatus
 from app.models.base import get_datetime_utc
-from app.repositories import EvidenceRepository
+from app.repositories import FindingCurrentProjectionRepository
 from app.services.audit import record_audit_event
 
 # Statuses an analyst may set by hand. Terminal governance states stay owned
@@ -35,7 +34,7 @@ def update_finding_workflow_status(
     status: FindingStatus,
     local_actor: LocalWorkbenchActor,
 ) -> Finding:
-    """Apply a manual workflow status and keep decision evidence in sync."""
+    """Apply a manual workflow status and update only materialized current state."""
     if status not in WORKFLOW_STATUSES:
         raise FindingStatusTransitionError(
             f"Status '{status.value}' is governance-managed and cannot be set manually."
@@ -51,7 +50,7 @@ def update_finding_workflow_status(
     finding.status = status
     finding.updated_at = get_datetime_utc()
     session.add(finding)
-    _sync_latest_evidence_status(session, finding)
+    _sync_current_projection_status(session, finding)
     record_audit_event(
         session,
         action="finding.status",
@@ -66,17 +65,12 @@ def update_finding_workflow_status(
     return finding
 
 
-def _sync_latest_evidence_status(session: Session, finding: Finding) -> None:
-    """Mirror the manual status into the newest decision evidence record."""
-    evidence_record = EvidenceRepository(session).latest_finding_decision_evidence_record(
-        finding.id
-    )
-    if evidence_record is None:
-        return
-    payload: dict[str, Any] = deepcopy(evidence_record.payload_json or {})
+def _sync_current_projection_status(session: Session, finding: Finding) -> None:
+    """Mirror the manual status into mutable current state, never run history."""
     status_value = FindingStatus(finding.status).value
-    payload["status"] = status_value
-    evidence_record.payload_json = payload
-    evidence_record.status = status_value
-    evidence_record.updated_at = get_datetime_utc()
-    session.add(evidence_record)
+
+    def update(payload: dict[str, Any]) -> dict[str, Any]:
+        payload["status"] = status_value
+        return payload
+
+    FindingCurrentProjectionRepository(session).mutate_current_payload(finding.id, update)

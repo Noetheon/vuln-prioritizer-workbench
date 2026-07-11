@@ -16,7 +16,6 @@ from utils.report_contract_fixtures import (
     replace,
 )
 from utils.workbench_contracts import (
-    _add_vpw060_attack_contexts,
     _configure_report_dir,
     _create_report_via_worker,
     _layer_metadata,
@@ -566,8 +565,11 @@ def test_vpw060_attack_navigator_report_create_downloads_filtered_layer(
     report_dir = _configure_report_dir(workbench_api_env, tmp_path)
     headers = local_api_headers(workbench_api_env.client)
     project = create_project_via_api(workbench_api_env.client, headers)
-    run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
-    _add_vpw060_attack_contexts(workbench_api_env, run_id)
+    run_id = _seed_reportable_run(
+        workbench_api_env,
+        uuid.UUID(project["id"]),
+        with_attack_contexts=True,
+    )
 
     payload = _create_report_via_worker(
         workbench_api_env,
