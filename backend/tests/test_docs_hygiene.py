@@ -340,22 +340,26 @@ def test_workbench_demo_docs_use_managed_snapshot_filename_in_import_field() -> 
     assert violations == {name: [] for name in active_demo_docs}
 
 
-def test_active_quickstart_docs_start_the_workflow_worker() -> None:
+def test_active_quickstart_docs_use_single_process_runtime() -> None:
     active_quickstart_docs = {
         "README.md": README_FILE,
         "docs/index.md": REPO_ROOT / "docs" / "index.md",
         "docs/user_documentation.md": USER_DOCUMENTATION_FILE,
         "docs/workbench-offline-demo.md": WORKBENCH_OFFLINE_DEMO_FILE,
     }
-    required = (
-        "docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker"
-    )
+    required = "vpw serve"
     missing = {
         name: required not in path.read_text(encoding="utf-8")
         for name, path in active_quickstart_docs.items()
     }
 
     assert missing == {name: False for name in active_quickstart_docs}
+
+    combined = "\n".join(
+        path.read_text(encoding="utf-8") for path in active_quickstart_docs.values()
+    )
+    assert "deprecated" in combined.lower()
+    assert "Docker Compose" in combined
 
 
 def test_gitignore_covers_workbench_runtime_artifacts() -> None:
@@ -564,7 +568,7 @@ def test_import_format_docs_cover_every_active_workbench_import_type() -> None:
         assert occurrences, input_type
 
 
-def test_documentation_evidence_matrix_records_current_hygiene_baseline() -> None:
+def test_documentation_evidence_matrix_records_current_architecture_baseline() -> None:
     current_state = CURRENT_PRODUCT_STATE_FILE.read_text(encoding="utf-8")
     evidence_matrix = DOCUMENTATION_EVIDENCE_MATRIX_FILE.read_text(encoding="utf-8")
     support_matrix = SUPPORT_MATRIX_FILE.read_text(encoding="utf-8")
@@ -576,14 +580,19 @@ def test_documentation_evidence_matrix_records_current_hygiene_baseline() -> Non
     normalized_reports_and_evidence = " ".join(reports_and_evidence.split())
 
     for text in (current_state, evidence_matrix):
-        assert "2026-06-13" in text
-        assert "Public + Root" in text
-        assert "documentation hygiene" in text.lower()
+        assert "2026-07-10" in text
+        assert "Decision Ledger" in text
+        assert "vpw serve" in text
+
+    assert "2026-06-13" in evidence_matrix
+    assert "Public + Root" in evidence_matrix
+    assert "Documentation Audit Findings" in evidence_matrix
 
     assert "Workflow v2 documentation was checked" in evidence_matrix
     assert "evidence-first read-model consolidation" in evidence_matrix
     assert "backend/app/decision_core/readmodels.py" in evidence_matrix
-    assert "Relational finding columns remain identity/join/index context" in evidence_matrix
+    assert "current state lives in `finding_current_projection`" in evidence_matrix
+    assert "per-table row/content digests" in evidence_matrix
     assert "provider/version wording baseline was refreshed" in current_state
     assert "MkDocs navigation covers 89 public pages" in evidence_matrix
     assert "Every active Workbench import type now has a dedicated public import page" in (
@@ -684,7 +693,8 @@ def test_root_roadmap_keeps_local_workbench_work_lightweight() -> None:
 def test_user_documentation_keeps_demo_path_separate_from_release_evidence() -> None:
     user_documentation = USER_DOCUMENTATION_FILE.read_text(encoding="utf-8")
 
-    assert "active-runtime smoke path" in user_documentation
+    assert "vpw serve" in user_documentation
+    assert "supervised worker" in user_documentation
     assert "reproducible local demos" in user_documentation
     assert "release evidence" not in user_documentation
 

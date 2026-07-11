@@ -1,11 +1,13 @@
 # Vuln Prioritizer Workbench Backend
 
 This backend workspace packages the active FastAPI Workbench API, database
-migrations, supporting services, and the internal `app.domain.engine` domain
-modules used by the Workbench runtime.
+migrations, packaged browser assets/resources, the supervised local worker,
+supporting services, and the internal `app.domain.engine` domain modules used by
+the Workbench runtime.
 
-The published backend distribution is `vuln-prioritizer-workbench` and ships the
-`app/**` package only. Old CLI/package namespaces are not compatibility
+The published backend distribution is `vuln-prioritizer-workbench`, ships the
+`app/**` package only, and exposes `vpw serve` as its local browser-runtime
+entrypoint. Old Typer analytical CLI/package namespaces are not compatibility
 surfaces; package checks validate that the wheel and sdist do not publish the
 removed `vuln_prioritizer` tree.
 

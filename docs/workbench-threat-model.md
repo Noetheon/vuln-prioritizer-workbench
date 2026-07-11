@@ -1,6 +1,6 @@
 # Workbench Threat Model and Readiness
 
-Status: current local-first Workbench threat model. Last reviewed: 2026-05-30.
+Status: current local-first Workbench threat model. Last reviewed: 2026-07-10.
 
 This page defines the defensive threat model and operational readiness assumptions for the local Workbench. It keeps the same product boundaries as the rest of the project: `vuln-prioritizer-workbench` prioritizes known CVEs and existing findings. It is not a scanner, exploit tool, proof-of-concept generator, or general-purpose vulnerability-management platform.
 
@@ -8,17 +8,17 @@ This page defines the defensive threat model and operational readiness assumptio
 
 The current local-first Workbench threat model covers:
 
-- active browser Workbench use through the backend runtime in `backend/app` and
-  the React frontend
+- active browser Workbench use through packaged same-origin `vpw serve` in
+  `backend/app` and the React frontend
 - retained shared domain logic under `backend/app/domain/engine/**`
 - import of existing CVE lists and selected scanner export files
 - provider enrichment from NVD, FIRST EPSS, CISA KEV, local caches, and locked provider snapshots
 - optional ATT&CK context from local CTID Mappings Explorer JSON and local technique metadata
 - database-backed single-node Workbench state and durable workflow queue through
-  SQLite in local developer runs or PostgreSQL in the Compose quickstart
-- separate local worker-process execution for queued imports, provider
-  refreshes, automatic retries, cooperative cancellation, and queued report
-  generation
+  SQLite WAL by default or PostgreSQL in the deprecated Compose compatibility
+  topology
+- supervised in-process worker execution by default, with the same worker loop
+  retained as a separate Compose process for transition parity
 - local single-user browser/API access for active `/api/v1` routes, without
   login, RBAC, session cookies, API tokens, or CSRF headers
 - local-first GitHub issue preview/export
@@ -39,11 +39,11 @@ The current local-first Workbench threat model does not cover:
 | Asset | Security objective | Notes |
 | --- | --- | --- |
 | Imported finding files | Confidentiality, integrity, provenance | Inputs may contain hostnames, package paths, image names, service names, owners, or environment labels. |
-| Normalized findings and run records | Integrity, reproducibility | The Workbench preserves source provenance and does not silently rewrite evidence. |
+| Decision Ledger history and current projection | Integrity, reproducibility, auditability | Per-run evidence is immutable after finalization. Current state is materialized separately with source/current hashes, revisions, and parity checks. |
 | Provider enrichment data | Integrity, freshness transparency | NVD, EPSS, KEV, local cache, and locked snapshot data must remain distinguishable in outputs. |
 | ATT&CK mapping data | Integrity, source provenance | `ctid-json` is canonical for Workbench ATT&CK mappings. Technique metadata may enrich labels but must not create mappings. |
 | Asset context, VEX, and waivers | Integrity, auditability | These records influence explanation, applicability, or suppression and need explicit rationale. |
-| Workbench database | Integrity, local confidentiality, availability | Local developer runs may use SQLite; the Compose quickstart uses PostgreSQL for the active `backend/app` schema. Credentials, volumes, backups, network exposure, and retention are operator responsibilities. |
+| Workbench database | Integrity, local confidentiality, availability | `vpw serve` uses private SQLite WAL state. Deprecated Compose uses PostgreSQL for one transition release. Filesystem permissions, credentials, volumes, backups, network exposure, and retention are operator responsibilities. |
 | Durable workflow queue | Integrity, availability, auditability | Queued imports, provider refreshes, and report generation are persisted in the Workbench database with leases, retries, cancellation state, and append-only events. |
 | Upload, report, and evidence directories | Confidentiality, integrity, availability | Generated artifacts may include source metadata and should be treated as security-sensitive. |
 | Configuration and secrets | Confidentiality | Environment values such as NVD keys, provider credentials, and deployment secrets must not be displayed in full or written into reports. Secret-bearing settings should store names, state, or hashes rather than values whenever possible. |
@@ -60,7 +60,9 @@ flowchart LR
   U --> WEB["Workbench web UI"]
   WEB --> API["FastAPI routes"]
   API --> CORE
-  CORE --> DB["SQLite state or optional PostgreSQL profile"]
+  CORE --> DB["SQLite WAL state"]
+  CORE --> WORKER["Supervised workflow worker"]
+  DB -. compatibility .-> PG["Deprecated Compose PostgreSQL"]
   CORE --> FS["Uploads, reports, evidence bundles"]
   CORE --> CACHE["Provider cache and locked snapshots"]
   CORE --> ATK["Local CTID JSON and ATT&CK metadata"]
@@ -96,8 +98,9 @@ Primary boundaries:
 | ATT&CK mapping drift or speculative mappings | Misleading threat context | Use `ctid-json` as canonical for Workbench mappings, preserve source checksum/provenance, leave absent CVEs unmapped, and reject heuristic, fuzzy, or LLM-generated mappings as source of record. |
 | Confusing ATT&CK context with exploit proof | Overstated risk or unsafe operational decisions | Label ATT&CK as defensive context. Do not include exploit instructions, payloads, PoC steps, or claims that a mapping proves active exploitation. |
 | Hidden scoring changes from context layers | Loss of trust in priority decisions | Keep base priority transparent from CVSS, EPSS, and KEV. Present ATT&CK, asset context, VEX, and waivers as separate rationale or applicability layers. |
-| SQLite corruption or single-node contention | Lost run history or failed imports | Document SQLite as default single-node storage, keep writes short, use migrations, and treat database backup/restore as an operator responsibility. |
-| PostgreSQL misconfiguration | Unauthorized database access, persistent data exposure, or unavailable Workbench state | Keep the Compose database bound to local/private use, avoid committing real credentials, prefer secret injection outside committed files, restrict database network reachability, use migrations consistently, and treat backups, retention, TLS, and role hardening as operator controls. |
+| SQLite corruption or single-node contention | Lost run history or failed imports | Enable WAL, foreign keys, a bounded busy timeout, normal synchronous durability, short transactions, and migration-before-serve. Stop VPW before copying the database and keep WAL/SHM sidecars with live backups. Crash/restart/reader-during-writer tests are release gates. Avoid network filesystems. |
+| PostgreSQL misconfiguration | Unauthorized database access, persistent data exposure, or unavailable Workbench state | Treat PostgreSQL as a deprecated compatibility boundary, keep it local/private, avoid committed credentials, restrict network reachability, run the same migrations/contracts, and retain verified backup/rollback evidence through the transition release. |
+| Tampered migration database or artifact archive | Silent data loss, path overwrite, unavailable historical reports | Require equal Alembic heads, complete Decision Ledger parity, per-table count/content digests, safe archive member roots, no links/traversal/duplicates, report/upload size and SHA-256 checks, SQLite foreign-key checks, an empty target, and activation only after every check passes. Source credentials come from environment variables and are never printed. |
 | Accidental local API exposure | Unauthorized state changes through local API routes | Active `/api/v1` routes run through `backend/app` with a local single-user principal. Keep the service bound to trusted local or private hosts, validate `ALLOWED_HOSTS`, keep docs disabled outside local development, and keep the Compose Traefik app/API routers behind the default-deny `TRAEFIK_APP_IP_ALLOWLIST` and `TRAEFIK_API_IP_ALLOWLIST` controls when route opt-in is enabled. Treat browser login, API tokens, or shared-user access as future reviewed security work rather than current protection. |
 | Unsafe secret source or environment-variable name | Credential leakage or accidental literal-token use | Read the NVD API key only from the variable name configured by `WORKBENCH_NVD_API_KEY_ENV`, defaulting to `NVD_API_KEY`. Environment-variable name settings must match `^[A-Z_][A-Z0-9_]*$` and must never be interpreted as raw secret values. |
 | Bootstrap default secrets used outside local/dev | Predictable signing keys or local runtime secrets in shared environments | Treat defaults such as `changethis` as local/dev bootstrap placeholders only. Staging and production must reject default `SECRET_KEY` and equivalent secret values before serving traffic. Unknown `ENVIRONMENT` values fail closed instead of silently selecting local mode. Local mode may use the placeholders only with local-only `ALLOWED_HOSTS`; public hostnames require real secrets even if `ENVIRONMENT=local`. |
@@ -117,8 +120,9 @@ Primary boundaries:
 ## Operational Assumptions
 
 - The operator runs the Workbench on a trusted workstation, local VM, CI runner, or private single-node host.
-- The default developer database can be SQLite. The Compose quickstart uses a
-  private single-node PostgreSQL service plus one durable workflow worker;
+- The standard runtime uses SQLite WAL plus one supervised in-process worker.
+  Deprecated Compose uses a private single-node PostgreSQL service plus one
+  separate worker for one transition release;
   clustered deployments, multi-node worker fleets, and multi-tenant state
   separation are not part of the current local-first scope. Request execution
   and worker execution both record durable workflow state in the local database.
@@ -223,9 +227,9 @@ The current local-first Workbench is readiness-aligned when:
 | Import upload hardening | Active FastAPI imports in `backend/app/api/routes/imports.py` and asset-context imports in `backend/app/api/routes/assets.py` are size bounded, suffix/MIME allowlisted, traversal-safe, and isolated under configured upload roots by project/run. Parser errors returned to clients are path-redacted. Nessus/OpenVAS XML handling uses defused XML handling and rejects DOCTYPE, ENTITY, and XXE-style constructs before parsing. VPW-069 evidence is archived in `archive/vpw-evidence/vpw-069-upload-security-hardening.md`. | `backend/tests/api/import_contracts/`, XML input-loader contract tests, `make check`, `make dependency-audit`, and `make docker-demo-smoke` passed for VPW-069. |
 | Report and evidence artifact downloads | `backend/app/services/reports.py`, `backend/app/services/report_renderers.py`, and related report services write run artifacts under the configured report directory. Active report routes resolve downloads back under that root, verify stored artifacts, return attachment downloads, and verify evidence bundles without extracting unsafe members. | `backend/tests/api/report_contracts/` verifies JSON, Markdown, HTML, CSV, SARIF, evidence ZIP, manifest hashes, verification URLs, outside-root rejection, checksum handling, and formula-safe CSV output. |
 | Single-user active access model | Workbench dependencies in `backend/app/api/deps.py` resolve an in-memory local actor and do not require login, RBAC, project membership, API tokens, session cookies, or CSRF headers. Login, user-management, API-token, and session-list routers are not mounted in `backend/app/api/main.py`; the v2 initial schema does not create inactive user, API-token, or auth-session tables. | `backend/tests/api/test_workbench_local_runtime_smoke.py`, `backend/tests/api/test_workbench_local_access.py`, and generated-client drift checks verify that removed auth/token/user routes are not active contracts. `backend/tests/test_backend_runtime_boundary.py` verifies the active import graph does not reach removed runtime modules. |
-| Compose database and provider refresh | `compose.yml` defines the active backend, durable workflow worker, frontend, and PostgreSQL database. Backend and worker share the Workbench database and managed upload/report/provider volumes; no second Workbench runtime is present. | `tests/test_workbench_integration_contracts.py` checks the active Compose boundary; `make docker-demo-smoke` verifies the Compose Postgres Alembic head/model schema, a direct repository create/list/delete path, and the active import plus provider update path when Docker is available. |
+| Compose compatibility and provider refresh | `compose.yml` retains the backend, durable worker, frontend, PostgreSQL schema, and managed volumes for one transition release. | `tests/test_workbench_integration_contracts.py` checks the deprecated boundary; `make docker-demo-smoke` verifies PostgreSQL Alembic/schema/repository writes, import, and provider update when Docker is available. |
 | 10k findings API smoke | The active API exposes paginated findings with limit/offset and sort controls. This is a smoke check, not the final scale architecture. | `make performance-smoke` runs the VPW-072 import and pagination smoke with 10,000 findings. |
-| Docker demo smoke | `docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker` is the supported active Workbench readiness path. Direct Compose defaults remain `8000` for the backend and `5173` for the frontend; `make docker-demo-smoke` defaults to isolated host ports `18080` and `15174` so release checks do not collide with a manual quickstart. `DOCKER_DEMO_BACKEND_PORT` and `DOCKER_DEMO_FRONTEND_PORT` may override only local host bindings. | `make docker-demo-smoke` starts Compose with backend, frontend, and worker, polls `/api/v1/utils/health-check/` on the configured host backend port, verifies the Compose Postgres Alembic head/model schema plus a direct repository create/list/delete path, runs a local import/provider smoke, and tears the stack down with `docker compose down -v --remove-orphans`. |
+| Docker compatibility smoke | Direct Compose defaults remain backend `8000` and frontend `5173`; `make docker-demo-smoke` uses isolated ports `18080` and `15174`. | The smoke starts backend, frontend, worker, and PostgreSQL; polls health; verifies Alembic/schema/repository writes; runs import/provider checks; and tears down isolated volumes. It is compatibility evidence, not the standard quickstart. |
 | Production-like Docker smoke | `compose.production-smoke.yml` overlays production environment flags, non-default secrets, same-origin frontend API routing, docs-disabled backend behavior, and exact hosts. | `make docker-production-smoke` validates the Compose Postgres Alembic head/model schema plus repository write path, CSP, minimal public health, local readiness and provider diagnostics, import, report download, and path-redacted JSON responses. |
 | Dependency audit | Backend dependency policy stays bounded in `backend/requirements.txt`, Python resolution is committed in `uv.lock`, backend audit uses the exported hash-pinned `backend/requirements.lock.txt`, Docker runtime installs use the separate Python 3.13 `backend/requirements.runtime.lock.txt` without dev extras, and frontend runtime plus dev/build-chain dependencies are reviewed from the committed npm lockfile. | `make dependency-audit` requires `pip-audit`, runs Python lock hygiene for the audit and Docker runtime locks, audits `backend/requirements.lock.txt`, and runs `scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true audit --audit-level=high`; release notes or the release checklist should record the result and any accepted exceptions. `make package-check` verifies the built wheel includes the Workbench app, Alembic migrations, and a wheel-installed migration smoke. |
 | VPW-071 secret and provider hardening | Runtime docs require NVD API keys by environment variable name only, environment variable names matching `^[A-Z_][A-Z0-9_]*$`, local/dev-only bootstrap defaults, fixed HTTPS public provider endpoints, and redacted settings/report/log-facing diagnostics. VPW-071 evidence is archived in `archive/vpw-evidence/vpw-071-secret-provider-hardening.md`. | Focused provider/settings/report tests, grep/no-real-key review, `make docs-check`, `make check`, and `make docker-demo-smoke` are the evidence commands to record before marking implementation complete. |
@@ -244,7 +248,9 @@ Maintain v1.2 readiness with local, repeatable checks:
   path.
 - `make workflow-check` only when the heavier maintainer workflow gate is
   explicitly useful and Docker plus pre-commit tooling are available.
-- `make docker-demo-smoke` for the Compose quickstart path; it starts the Workbench stack on isolated default host ports, polls `/api/v1/utils/health-check/`, verifies the Postgres Alembic head/model schema and repository write path, verifies a locked provider-data import, triggers `/api/v1/providers/update-jobs`, and removes the demo stack. Use `DOCKER_DEMO_BACKEND_PORT` and `DOCKER_DEMO_FRONTEND_PORT` when the smoke host ports are occupied.
+- `make docker-demo-smoke` for the deprecated Compose compatibility path; it
+  verifies PostgreSQL migrations, repository writes, a locked import, provider
+  update, and clean teardown on isolated ports.
 - `make docker-production-smoke` for the production-like local path; it starts the production overlay, validates the Postgres Alembic head/model schema and repository write path, same-origin CSP/API routing, local readiness and provider diagnostics, import, report download, and path redaction.
 - `make release-readiness-check` before local release handoff when the local release gate, package smoke, browser smoke, and Docker smoke should be recorded together.
 - `python3 scripts/check_public_deployment_evidence.py` only when this exact candidate will be exposed as a public or shared deployment.

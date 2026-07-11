@@ -155,12 +155,16 @@ version, and package type. Missing component or asset context is represented by
 an explicit empty marker so repeated minimal CVE-list imports reuse the same
 finding instead of relying on SQL NULL uniqueness behavior.
 
-Finding-level explanation, data-quality, provider, ATT&CK, governance, waiver,
-occurrence, and remediation evidence lives in `finding_decision_evidence` as
-typed `FindingDecisionEvidenceV2`. `finding` intentionally keeps only indexed
-working fields and links so triage queries stay bounded. Successful v2 read
+Immutable per-run finding explanation, data-quality, provider, ATT&CK,
+governance, waiver, occurrence, and remediation evidence lives in
+`finding_decision_evidence` as typed `FindingDecisionEvidenceV2`. Effective
+current state lives in `finding_current_projection`, with indexed decision
+columns and a sparse lifecycle overlay linked to its immutable source. The
+validated effective payload is reconstructed from that source plus overlay;
+the projection does not duplicate the full source payload. `finding`
+intentionally keeps identity/relationship fields and links. Successful v2 read
 paths project product facts from `decision_core/readmodels.py`, not from stale
-finding decision columns.
+finding decision columns or a scan of historical evidence.
 
 ## Persistence Contract
 

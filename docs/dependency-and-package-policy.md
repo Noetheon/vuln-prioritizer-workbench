@@ -26,18 +26,27 @@ The package boundary is enforced by:
 - `backend/pyproject.toml`, where `tool.setuptools.packages.find.include`
   includes only `app*`
 - `make package-check`, which builds the backend distributions, validates that
-  their content includes every tracked Workbench Alembic migration through
+  their content includes every tracked Workbench Alembic migration, packaged
+  frontend asset, and required runtime resource through
   `scripts/check_package_contents.py`, runs `twine check`, installs the built
-  wheel into a temporary virtualenv, imports `app.main:create_app`, and migrates
-  a temporary Workbench database through Alembic head
+  wheel into a temporary virtualenv, invokes the `vpw` entrypoint, imports
+  `app.main:create_app`, mounts the frontend, and migrates a temporary Workbench
+  database through Alembic head
 - `build/package-contents.json`, generated locally by the package-content check
 
-The sdist and wheel must contain `app/main.py`, `app/api/main.py`,
-`app/domain/engine/**`, and the active Workbench Alembic migration tree. They do
-not publish the old Typer CLI as a console entrypoint. They must not include the
-backend test tree. They also must not reintroduce removed legacy Workbench
+The sdist and wheel must contain `app/cli.py`, `app/main.py`, `app/api/main.py`,
+`app/domain/engine/**`, `app/static/**`, `app/resources/**`, and the active
+Workbench Alembic migration tree. The `vpw` console script starts or maintains
+the browser Workbench; it does not publish the old Typer analytical CLI. The
+distributions must not include the backend test tree or reintroduce removed legacy Workbench
 runtime packages under
 `app/domain/engine/api`, `app/domain/engine/db`, or `app/domain/engine/web`.
+
+`scripts/sync_runtime_assets.py` is the package boundary between source assets
+and installed runtime assets. `make runtime-assets-check` must prove that
+`frontend/dist` and selected local provider/ATT&CK resources match the packaged
+copies. Generated runtime assets are release inputs and must be refreshed after
+every frontend build or selected-resource change.
 
 ## Coverage Boundary
 

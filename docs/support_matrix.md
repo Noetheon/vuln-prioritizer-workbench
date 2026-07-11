@@ -1,8 +1,9 @@
 # Support Matrix
 
-This matrix describes the active local Workbench surface. The retired Typer CLI,
-composite GitHub Action, runtime-config discovery, snapshot/rollup commands, and
-SQLite state commands are no longer supported product paths.
+This matrix describes the active local Workbench surface. The retired Typer
+analytical CLI, composite GitHub Action, runtime-config discovery, and
+snapshot/rollup commands are no longer supported product paths. The new `vpw`
+command is a thin Workbench runtime, Ledger, and migration launcher only.
 
 ## Workbench Surfaces
 
@@ -10,10 +11,11 @@ SQLite state commands are no longer supported product paths.
 | --- | --- | --- |
 | React Workbench | active | Project selection, imports, findings, finding detail, assets, waivers, providers, reports, evidence center, and settings. |
 | FastAPI `/api/v1` | active | Local single-user API used by the Workbench. Routes do not require login, sessions, RBAC, API tokens, or CSRF headers. |
-| Docker Compose | active | Local self-hosted runtime for the backend, durable workflow worker, frontend, PostgreSQL, uploads, reports, cache, and provider snapshots. |
-| Decision/Evidence Kernel v2 | active | Kernel-first `DecisionRunResult` production backed by typed `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, and `RunDiagnosticsV2` contracts in `analysis_evidence` and `finding_decision_evidence`; successful read paths use the central `decision_core/readmodels.py` read model. |
+| `vpw serve` | active, standard | Packaged same-origin UI/API, supervised in-process workflow worker, migrations, and private SQLite WAL state on loopback. |
+| Docker Compose/PostgreSQL | deprecated compatibility | Retained for one transition release, existing installations, rollback, and parity tests. Separate backend/frontend/worker services are no longer the new-install default. |
+| Decision Ledger | active | Typed immutable `AnalysisEvidenceV2`/`FindingDecisionEvidenceV2` history plus materialized `finding_current_projection`, transactional dual-write, idempotent backfill, and hash/column parity verification. |
 | Domain package | active | Parser, provider, scoring, enrichment, ATT&CK, SARIF, Markdown, HTML, and evidence helpers used by the Workbench services. |
-| Legacy CLI entrypoint | removed | No console script, Typer command modules, GitHub composite Action, or CLI smoke contract remains active. |
+| Legacy analytical CLI | removed | No Typer `analyze`/`compare`/`explain` command modules or GitHub composite Action remains active. The `vpw` launcher does not expose them. |
 
 ## Input-Format Matrix
 
@@ -61,15 +63,18 @@ boundaries, but Workbench uploads must use one of the explicit values below.
 ## Operational Notes
 
 - Prefer the Workbench UI for local review and repeated triage.
+- Start new local instances with `vpw serve`. Keep Compose only for the
+  documented transition release or explicit PostgreSQL compatibility checks.
 - Prefer `POST /api/v1/projects/{project_id}/imports` for automation that needs
   to feed the local Workbench directly. The response contains the queued run and
-  embedded workflow; the durable worker performs parsing and persistence.
+  embedded workflow; the durable queue and supervised worker perform parsing
+  and persistence.
 - Prefer `POST /api/v1/runs/{run_id}/report-jobs` for automation that needs
   report artifacts after a completed run. Poll or stream the returned workflow
   until it reaches a terminal state before downloading artifacts.
 - Keep input files local and explicit. The Workbench prioritizes already-known
   CVEs from supplied evidence; it does not scan systems.
 - This matrix was rechecked against backend/frontend format definitions and the
-  Decision/Evidence Kernel v2 read-model contract on 2026-06-13. Re-run the
+  Decision Ledger/read-model contract on 2026-07-10. Re-run the
   docs hygiene tests when adding or removing an import type, report format, or
   evidence field.

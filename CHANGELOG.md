@@ -17,6 +17,34 @@ exact git tag output when release wording needs to be verified.
 
 ## [Unreleased]
 
+### Added
+
+- Decision Ledger persistence with immutable per-run decision history,
+  materialized current projections, transactional dual-write, migration
+  backfill, canonical hashes, and bounded/full parity verification.
+- `vpw serve` as the packaged local-first runtime with same-origin frontend,
+  supervised in-process Workflow v2 worker, SQLite WAL configuration, and
+  platform data directories.
+- Verified PostgreSQL-to-SQLite migration with schema-head checks, complete
+  Ledger parity, per-table count/content digests, safe artifact staging,
+  report/upload hash verification, path relocation, and atomic activation.
+- Crash/restart/locking, packaged-runtime, Decision Ledger, migration, and
+  artifact-parity regression coverage.
+
+### Changed
+
+- Current finding filters, ordering, pagination, dashboard/detail projections,
+  and lifecycle updates now use the indexed current projection instead of
+  scanning or rewriting historical run evidence.
+- SQLite backup/restore now includes committed WAL state, verifies integrity,
+  refuses active restore sidecars, and validates artifact archives before
+  database replacement; PostgreSQL restore runs in one fail-fast transaction.
+- Dependency locks and the generated OpenAPI client were refreshed to current
+  patched compatible versions while preserving the checked client boundary.
+- Docker Compose/PostgreSQL is deprecated for new installations but retained
+  for one transition release and may be removed only after documented
+  functional, data, rollback, and platform parity.
+
 ## [1.2.0] - 2026-06-19
 
 ### Added

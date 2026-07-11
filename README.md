@@ -40,51 +40,54 @@ auditable from source data, policy, and generated local artifacts.
 
 ## Quickstart
 
-The supported end-user path is the local launcher. It prepares `.env` when
-needed, generates local-only secrets, builds Docker images, starts PostgreSQL,
-the FastAPI backend, the workflow worker, and the React frontend, then prints
-the URL.
+The standard end-user path is one local command. The installed package contains
+the API, browser application, database migrations, demo resources, and a
+supervised workflow worker.
+
+```bash
+git clone https://github.com/Noetheon/vuln-prioritizer-workbench.git
+cd vuln-prioritizer-workbench
+pipx install ./backend
+vpw serve
+```
+
+Open `http://127.0.0.1:8765`. `vpw serve` creates a private platform data
+directory, migrates its SQLite database, enables WAL mode, starts the worker in
+the same process, and opens the browser. No Docker, Node.js, or PostgreSQL
+installation is needed.
+
+Use an explicit location when the database and artifacts should stay together:
+
+```bash
+vpw serve --data-dir ./vpw-data
+```
+
+The launcher binds to loopback by default. Network binding is rejected unless
+the operator deliberately supplies `--allow-network`; this remains a local
+single-user application without browser authentication or RBAC.
+
+For a built transition-release candidate, install its wheel with:
+
+```bash
+pipx install ./vuln_prioritizer_workbench-X.Y.Z-py3-none-any.whl
+vpw serve
+```
+
+`pipx install vuln-prioritizer-workbench` becomes the short registry path only
+after a release containing the `vpw` entrypoint is actually published. The
+current published `v1.2.0` tag predates this unreleased runtime change.
+
+Docker Compose with PostgreSQL remains available for one transition release as
+a **deprecated compatibility path** for existing installations:
 
 ```bash
 bash scripts/launch-workbench.sh start
 ```
 
-macOS:
-
-```bash
-./launch-workbench.command
-```
-
-Windows:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\launch-workbench.ps1 start
-```
-
-Open the printed frontend URL and load the demo workspace from the dashboard.
-For a deterministic presentation-ready demo, run:
-
-```bash
-bash scripts/launch-workbench.sh demo
-```
-
-Useful launcher commands:
-
-```bash
-bash scripts/launch-workbench.sh status
-bash scripts/launch-workbench.sh logs
-bash scripts/launch-workbench.sh smoke
-bash scripts/launch-workbench.sh update
-bash scripts/launch-workbench.sh diagnostics
-bash scripts/launch-workbench.sh stop
-```
-
-Manual Docker Compose startup remains supported:
-
-```bash
-cp .env.example .env
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
-```
+That path keeps its separate backend, frontend, worker, and PostgreSQL services;
+it is not the default for new installations. Existing PostgreSQL state is not
+silently copied into SQLite. Back it up and follow the explicit transition
+guide before changing runtimes.
 
 Detailed install paths for Git clones, GitHub Release ZIPs, macOS, Linux, and
 Windows are in [INSTALL.md](INSTALL.md). Recovery steps for Docker, ports,
@@ -129,8 +132,9 @@ context overlays, report formats, and operational notes.
 
 ## Outputs And Evidence
 
-Report jobs run through the durable workflow worker and write local artifacts
-for the selected analysis run:
+Report jobs run through the durable workflow queue. With `vpw serve`, the
+supervised worker consumes that queue inside the same process and writes local
+artifacts for the selected analysis run:
 
 - technical Markdown report
 - executive HTML report
@@ -169,8 +173,12 @@ and are not proof of compromise.
 
 The active runtime is:
 
-- FastAPI backend under [`backend/app`](backend/app)
-- durable worker under [`backend/app/workers`](backend/app/workers)
+- packaged FastAPI backend and same-origin React UI under
+  [`backend/app`](backend/app)
+- supervised in-process worker under
+  [`backend/app/workers`](backend/app/workers), backed by the durable database
+  workflow queue
+- SQLite in WAL mode for the standard `vpw serve` path
 - React/Vite/TypeScript Workbench under [`frontend`](frontend)
 - generated OpenAPI client under [`frontend/src/client`](frontend/src/client)
 - domain engine under [`backend/app/domain/engine`](backend/app/domain/engine)
@@ -208,6 +216,8 @@ make demo-screenshot
 - [Documentation map](docs/documentation-map.md)
 - [Documentation evidence matrix](docs/documentation-evidence-matrix.md)
 - [Product Architecture](docs/architecture.md)
+- [Decision Ledger architecture](docs/architecture/decision-ledger.md)
+- [Single-process runtime transition](docs/single-process-runtime-transition.md)
 - [Support Matrix](docs/support_matrix.md)
 - [Reports and Evidence](docs/reports-and-evidence.md)
 - [Demo Readiness](docs/demo-readiness.md)
