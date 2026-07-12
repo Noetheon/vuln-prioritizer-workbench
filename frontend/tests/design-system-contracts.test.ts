@@ -1102,6 +1102,18 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   )
   assert.match(
     dockerRunner,
+    /\/work\/build\/frontend-playwright-workbench-\*\.db-wal/,
+  )
+  assert.match(
+    dockerRunner,
+    /\/work\/build\/frontend-playwright-workbench-\*\.db-shm/,
+  )
+  assert.match(
+    dockerRunner,
+    /\/work\/build\/frontend-playwright-workbench-\*\.db-journal/,
+  )
+  assert.match(
+    dockerRunner,
     /\/work\/build\/frontend-playwright-workbench-\*-reports/,
   )
   assert.match(dockerRunner, /\/work\/data\/workbench-import-uploads/)

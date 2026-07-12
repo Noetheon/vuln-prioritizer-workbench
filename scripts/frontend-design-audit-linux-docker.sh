@@ -72,6 +72,9 @@ docker run --rm \
         fi
         for artifact_path in \
           /work/build/frontend-playwright-workbench-*.db \
+          /work/build/frontend-playwright-workbench-*.db-wal \
+          /work/build/frontend-playwright-workbench-*.db-shm \
+          /work/build/frontend-playwright-workbench-*.db-journal \
           /work/build/frontend-playwright-workbench-*-reports \
           /work/data/workbench-import-uploads \
           /work/data/workbench-reports \
