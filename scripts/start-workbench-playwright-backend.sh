@@ -9,7 +9,7 @@ db_path="${WORKBENCH_PLAYWRIGHT_DB:-$repo_root/build/frontend-playwright-workben
 report_dir="${WORKBENCH_PLAYWRIGHT_REPORT_DIR:-$repo_root/build/frontend-playwright-workbench-$backend_port-reports}"
 mkdir -p "$(dirname "$db_path")"
 mkdir -p "$report_dir"
-rm -f "$db_path"
+rm -f -- "$db_path" "$db_path-wal" "$db_path-shm" "$db_path-journal"
 rm -rf "$report_dir"
 mkdir -p "$report_dir"
 
