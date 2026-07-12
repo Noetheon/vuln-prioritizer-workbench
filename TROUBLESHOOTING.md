@@ -1,154 +1,125 @@
 # Troubleshooting
 
-This guide covers the local Docker Workbench started by `launch-workbench`.
+This guide starts with the standard `vpw serve` runtime. Docker Compose notes
+apply only to the deprecated compatibility path.
 
-## Docker Is Not Running
+## Command Not Found
 
-Start Docker Desktop or Docker Engine, wait until Docker reports it is ready,
-then rerun:
-
-```bash
-bash scripts/launch-workbench.sh start
-```
-
-Check Docker manually:
+Confirm the isolated package is installed and that the pipx binary directory is
+on `PATH`:
 
 ```bash
-docker info
-docker compose version
+pipx list
+pipx ensurepath
+vpw --version
 ```
+
+Open a new terminal after `pipx ensurepath`. From a source checkout, reinstall
+the current package with `pipx install --force ./backend`.
 
 ## Port Already In Use
 
-The launcher automatically falls back from frontend `5173` and backend `8000`
-to isolated local ports when it can. To force specific ports:
+Choose another loopback port:
 
 ```bash
-DOCKER_DEMO_FRONTEND_PORT=15174 DOCKER_DEMO_BACKEND_PORT=18080 \
-  bash scripts/launch-workbench.sh start
+vpw serve --port 8877
 ```
 
-Windows PowerShell:
+The browser URL then becomes `http://127.0.0.1:8877`.
 
-```powershell
-$env:DOCKER_DEMO_FRONTEND_PORT = "15174"
-$env:DOCKER_DEMO_BACKEND_PORT = "18080"
-powershell -ExecutionPolicy Bypass -File scripts\launch-workbench.ps1 start
-```
+## Browser Does Not Open
 
-## Containers Start But The App Does Not Open
-
-Check service state and logs:
+Start without browser automation and open the printed URL manually:
 
 ```bash
+vpw serve --no-browser
+```
+
+Check `http://127.0.0.1:8765/api/v1/utils/health-check/`. A JSON response with
+HTTP 200 proves the API is ready even when the operating system blocks automatic
+browser launch.
+
+## Database Or Migration Error
+
+Stop VPW before inspecting or copying its data directory. Make a complete copy
+of `workbench.db` plus any `workbench.db-wal` and `workbench.db-shm` files before
+attempting recovery.
+
+Then run the explicit ledger checks:
+
+```bash
+vpw ledger backfill --data-dir ./vpw-data
+vpw ledger verify --strict --data-dir ./vpw-data
+```
+
+Use the same `--data-dir` that was passed to `vpw serve`. Do not delete a
+database to work around a migration failure unless its contents are known to be
+disposable.
+
+## Work Remains Pending
+
+Workflow state is durable in SQLite. Restart `vpw serve`; the supervised worker
+will resume claimable jobs and expired leases according to the existing retry
+contract. A worker exception is logged and the supervisor starts a replacement
+worker after a bounded backoff.
+
+If a workflow remains stuck, inspect its state in the Imports, Providers, or
+Reports view. Preserve the data directory before resetting anything.
+
+## Data Directory Permissions
+
+The process must be able to create the data directory, SQLite database,
+imports, reports, and provider-cache directories. Prefer a user-owned local
+path:
+
+```bash
+mkdir -p "$HOME/vpw-data"
+vpw serve --data-dir "$HOME/vpw-data"
+```
+
+Avoid network filesystems for the SQLite WAL database. They can violate SQLite
+locking assumptions.
+
+## Package Assets Missing
+
+If VPW reports that packaged frontend assets are missing, reinstall the wheel:
+
+```bash
+pipx install --force ./backend
+```
+
+For a released candidate, replace `./backend` with the verified wheel path.
+
+Repository developers must run the frontend build and runtime-asset sync before
+building a package:
+
+```bash
+make frontend-build
+make runtime-assets-sync
+make package-check
+```
+
+## Docker Compose Compatibility
+
+The old OS launchers still start the deprecated Compose/PostgreSQL topology for
+one transition release. They print a deprecation warning by design.
+
+Check Docker and the compatibility stack with:
+
+```bash
+docker info
 bash scripts/launch-workbench.sh status
 bash scripts/launch-workbench.sh logs
-```
-
-Run the API smoke test when the backend is reachable:
-
-```bash
 bash scripts/launch-workbench.sh smoke
 ```
 
-## Database Or Migration Errors
-
-First try a normal restart:
-
-```bash
-bash scripts/launch-workbench.sh stop
-bash scripts/launch-workbench.sh start
-```
-
-If the local data is disposable, reset this Workbench project:
-
-```bash
-bash scripts/launch-workbench.sh reset
-```
-
-`reset` deletes only the Docker Compose resources for the configured
-`COMPOSE_PROJECT_NAME`. It removes the local database, import upload volume,
-report volume, provider snapshot volume, and provider cache volume for this
-Workbench instance.
-
-## Windows Execution Policy
-
-Use the checked-in BAT launcher or run PowerShell with a process-local bypass:
-
-```powershell
-launch-workbench.bat
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\launch-workbench.ps1 start
-```
-
-This does not change the machine-wide PowerShell execution policy.
-
-## macOS Permission Or Quarantine Issues
-
-After extracting a downloaded ZIP, macOS may require executable permissions:
-
-```bash
-chmod +x launch-workbench.command scripts/launch-workbench.sh
-./launch-workbench.command
-```
-
-If Gatekeeper quarantine blocks the launcher from a downloaded archive:
-
-```bash
-xattr -dr com.apple.quarantine .
-./launch-workbench.command
-```
-
-Only run this inside the extracted Workbench folder after verifying the release
-source.
-
-## Update Problems
-
-The `update` command uses `git pull --ff-only` only when the worktree is clean.
-If local changes exist, it prints `git status --short`, skips the pull, rebuilds
-from the current checkout, and starts the Workbench.
-
-```bash
-bash scripts/launch-workbench.sh update
-```
-
-For release ZIP installs, download a newer release ZIP and extract it to a new
-folder.
-
-## Diagnostics Bundle
-
-Create a local redacted support bundle:
-
-```bash
-bash scripts/launch-workbench.sh diagnostics
-```
-
-Windows:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\launch-workbench.ps1 diagnostics
-```
-
-The bundle is written under `diagnostics/` and includes Compose status, recent
-service logs, backend Workbench status, provider status, demo status, Docker
-versions, and Git status when available.
-
-The bundle intentionally excludes `.env` files, database dumps, uploaded import
-files, generated reports, and provider cache contents. Review the files before
-sharing them.
-
-## Full Local Rebuild
-
-When Docker image state looks stale but data should stay:
-
-```bash
-bash scripts/launch-workbench.sh stop
-docker compose -f compose.yml -f compose.override.yml build --no-cache backend frontend worker
-bash scripts/launch-workbench.sh start
-```
-
-When local data can be discarded:
+The destructive compatibility reset removes this Compose project's database,
+uploads, reports, snapshots, and provider-cache volumes:
 
 ```bash
 VPW_ASSUME_YES=1 bash scripts/launch-workbench.sh reset
-bash scripts/launch-workbench.sh start
 ```
+
+Use it only for disposable data. For retained installations, create and verify
+a backup first with `scripts/workbench-backup.sh` and follow the
+[single-process runtime transition](docs/single-process-runtime-transition.md).

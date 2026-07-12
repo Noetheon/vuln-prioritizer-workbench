@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import re
+import uuid
 from collections import Counter
 from collections.abc import Sequence
 from typing import Any
+
+from sqlalchemy import func
+from sqlmodel import Session, col, select
 
 from app.decision_core.readmodels import (
     DecisionFindingView,
@@ -14,6 +18,7 @@ from app.decision_core.readmodels import (
 from app.models import (
     AnalysisRun,
     Finding,
+    FindingCurrentProjection,
     ProjectRiskReductionPublic,
     ResidualRiskStepPublic,
     RiskContributionPublic,
@@ -87,6 +92,27 @@ def project_risk_index(findings: Sequence[Finding | DecisionFindingView]) -> flo
         return 0.0
     average = sum(_risk_score(finding) for finding in actionable) / len(actionable)
     return _round_score(min(average, 100.0))
+
+
+def project_risk_index_from_projection(session: Session, project_id: uuid.UUID) -> float:
+    """Calculate the persisted risk index from materialized current columns only."""
+    value = session.exec(
+        select(func.avg(func.coalesce(FindingCurrentProjection.risk_score, 0.0)))
+        .select_from(Finding)
+        .outerjoin(
+            FindingCurrentProjection,
+            col(FindingCurrentProjection.finding_id) == col(Finding.id),
+        )
+        .where(
+            Finding.project_id == project_id,
+            func.coalesce(FindingCurrentProjection.status, Finding.status).in_(ACTIONABLE_STATUSES),
+            func.coalesce(FindingCurrentProjection.suppressed_by_vex, False).is_(False),
+            func.coalesce(FindingCurrentProjection.waived, False).is_(False),
+        )
+    ).one()
+    if value is None:
+        return 0.0
+    return _round_score(min(float(value), 100.0))
 
 
 def _decision_views(

@@ -17,24 +17,21 @@ It uses the checked-in locked provider snapshot and local fixture inputs for the
 make install
 make provider-snapshot-validate
 python3 -m pytest -q backend/tests/api/test_workbench_local_runtime_smoke.py backend/tests/api/import_contracts backend/tests/api/report_contracts --no-cov
-make docker-demo-smoke
 make dependency-audit
-bash scripts/launch-workbench.sh demo
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
+pipx install --force ./backend
+vpw serve --data-dir ./build/vpw-offline-demo
 ```
 
-The preferred demo launcher starts the local Docker Workbench when needed,
-loads or repairs the deterministic Online Shop Demo Workspace, then prints and
-opens demo-ready overview, filtered triage, and Evidence Center URLs. For a
-manual run, open `http://127.0.0.1:5173` after Compose is ready and use **Load
-demo workspace** from the dashboard. The browser demo uses the active backend in
-`backend/app` and the generated `/api/v1` React client. The `worker` service
-must stay running because imports, provider refreshes, report generation,
-retry, and cancellation are durable Workflow v2 jobs.
+Open `http://127.0.0.1:8765` and use **Load demo workspace**. The packaged
+snapshot loads or repairs the deterministic Online Shop Demo Workspace. The
+browser demo uses the active backend in `backend/app`, the generated `/api/v1`
+React client, and the supervised in-process worker. Imports, provider
+refreshes, report generation, retry, and cancellation remain durable Workflow
+v2 jobs.
 
-The smoke target defaults to backend `18080` and frontend `15174`. If those
-host ports are already occupied, run it with explicit host bindings, for
-example:
+Maintainers must still run the deprecated Compose/PostgreSQL compatibility
+smoke before a transition release. It defaults to backend `18080` and frontend
+`15174`:
 
 ```bash
 DOCKER_DEMO_BACKEND_PORT=18081 DOCKER_DEMO_FRONTEND_PORT=15175 make docker-demo-smoke

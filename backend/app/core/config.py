@@ -66,6 +66,12 @@ class Settings:
     RATE_LIMIT_ENABLED: bool = True
     API_RATE_LIMIT_PER_MINUTE: int = 600
     DECISION_API_MAX_FINDINGS: int = 1000
+    DECISION_LEDGER_SHADOW_READ: bool = True
+    DECISION_LEDGER_STRICT_PARITY: bool = False
+    DECISION_LEDGER_SHADOW_SAMPLE_SIZE: int = 25
+    IN_PROCESS_WORKER_ENABLED: bool = False
+    WORKER_POLL_INTERVAL_SECONDS: float = 2.0
+    COMPOSE_COMPATIBILITY_MODE: bool = False
     BACKGROUND_IMPORT_STALE_MINUTES: int = 120
     PROVIDER_UPDATE_STALE_MINUTES: int = 120
     TRUSTED_PROXY_CIDRS: tuple[str, ...] = field(default_factory=tuple)
@@ -226,6 +232,21 @@ def load_settings() -> Settings:
         RATE_LIMIT_ENABLED=_bool_from_env("RATE_LIMIT_ENABLED", True),
         API_RATE_LIMIT_PER_MINUTE=_positive_int_from_env("API_RATE_LIMIT_PER_MINUTE", 600),
         DECISION_API_MAX_FINDINGS=_positive_int_from_env("DECISION_API_MAX_FINDINGS", 1000),
+        DECISION_LEDGER_SHADOW_READ=_bool_from_env("DECISION_LEDGER_SHADOW_READ", True),
+        DECISION_LEDGER_STRICT_PARITY=_bool_from_env(
+            "DECISION_LEDGER_STRICT_PARITY",
+            False,
+        ),
+        DECISION_LEDGER_SHADOW_SAMPLE_SIZE=_positive_int_from_env(
+            "DECISION_LEDGER_SHADOW_SAMPLE_SIZE",
+            25,
+        ),
+        IN_PROCESS_WORKER_ENABLED=_bool_from_env("IN_PROCESS_WORKER_ENABLED", False),
+        WORKER_POLL_INTERVAL_SECONDS=_positive_float_from_env(
+            "WORKER_POLL_INTERVAL_SECONDS",
+            2.0,
+        ),
+        COMPOSE_COMPATIBILITY_MODE=_bool_from_env("COMPOSE_COMPATIBILITY_MODE", False),
         BACKGROUND_IMPORT_STALE_MINUTES=_positive_int_from_env(
             "BACKGROUND_IMPORT_STALE_MINUTES",
             120,
@@ -247,6 +268,17 @@ def _positive_int_from_env(name: str, default: int) -> int:
         return default
     try:
         parsed = int(raw_value)
+    except ValueError:
+        return default
+    return parsed if parsed > 0 else default
+
+
+def _positive_float_from_env(name: str, default: float) -> float:
+    raw_value = environ.get(name)
+    if raw_value is None:
+        return default
+    try:
+        parsed = float(raw_value)
     except ValueError:
         return default
     return parsed if parsed > 0 else default

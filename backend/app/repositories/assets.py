@@ -27,9 +27,9 @@ from app.models import (
     AssetExposure,
     AssetUpdate,
     Finding,
-    FindingDecisionEvidence,
 )
 from app.models.base import get_datetime_utc
+from app.repositories.current_projections import FindingCurrentProjectionRepository
 
 ASSET_CONTEXT_RESCORE_FLAG = "asset_context_rescore_needed"
 
@@ -228,17 +228,17 @@ class AssetRepository:
         changed = sorted(set(changed_fields))
         statement = select(Finding).where(Finding.asset_id == asset_id)
         findings = list(self.session.exec(statement).all())
+        projection_repository = FindingCurrentProjectionRepository(self.session)
         for finding in findings:
-            record = self._latest_finding_evidence_record(finding.id)
-            if record is not None:
-                record.payload_json = _mark_decision_evidence_rescore_needed(
-                    record.payload_json,
+            current_payload = projection_repository.current_payload(finding.id)
+            if current_payload is not None:
+                updated_payload = _mark_decision_evidence_rescore_needed(
+                    current_payload,
                     asset_id=asset_id,
                     changed_fields=changed,
                     changed_at=timestamp,
                 )
-                record.updated_at = timestamp
-                self.session.add(record)
+                projection_repository.update_current_payload(finding.id, updated_payload)
             finding.updated_at = timestamp
             self.session.add(finding)
         self.session.flush()
@@ -249,22 +249,21 @@ class AssetRepository:
         timestamp = get_datetime_utc()
         statement = select(Finding).where(Finding.asset_id == asset.id)
         findings = list(self.session.exec(statement).all())
+        projection_repository = FindingCurrentProjectionRepository(self.session)
         cleared_flags = 0
         scores: list[int] = []
         for finding in findings:
             finding.updated_at = timestamp
             self.session.add(finding)
-            record = self._latest_finding_evidence_record(finding.id)
+            current_payload = projection_repository.current_payload(finding.id)
             operational_score = 0
-            if record is not None:
+            if current_payload is not None:
                 updated_payload, cleared = _clear_decision_evidence_rescore_needed(
-                    record.payload_json,
+                    current_payload,
                     asset=asset,
                     recalculated_at=timestamp,
                 )
-                record.payload_json = updated_payload
-                record.updated_at = timestamp
-                self.session.add(record)
+                projection_repository.update_current_payload(finding.id, updated_payload)
                 cleared_flags += cleared
                 operational_score = int(
                     float(_decision_payload(updated_payload).get("risk_score") or 0)
@@ -282,18 +281,8 @@ class AssetRepository:
 
     def finding_rescore_needed(self, finding: Finding) -> bool:
         """Return whether the latest v2 finding evidence is marked for re-score."""
-        record = self._latest_finding_evidence_record(finding.id)
-        return record is not None and _decision_evidence_rescore_needed(record.payload_json)
-
-    def _latest_finding_evidence_record(
-        self,
-        finding_id: uuid.UUID,
-    ) -> FindingDecisionEvidence | None:
-        return self.session.exec(
-            select(FindingDecisionEvidence)
-            .where(FindingDecisionEvidence.finding_id == finding_id)
-            .order_by(col(FindingDecisionEvidence.created_at).desc())
-        ).first()
+        payload = FindingCurrentProjectionRepository(self.session).current_payload(finding.id)
+        return payload is not None and _decision_evidence_rescore_needed(payload)
 
 
 def _mark_decision_evidence_rescore_needed(

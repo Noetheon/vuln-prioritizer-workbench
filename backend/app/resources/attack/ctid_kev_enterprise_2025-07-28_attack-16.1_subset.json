@@ -1,0 +1,455 @@
+{
+  "mapping_objects": [
+    {
+      "attack_object_id": "T1190",
+      "attack_object_name": "Exploit Public-Facing Application",
+      "capability_description": "Progress MOVEit Transfer SQL Injection Vulnerability",
+      "capability_group": "sql_injection",
+      "capability_id": "CVE-2023-34362",
+      "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+      "mapping_type": "exploitation_technique",
+      "references": [
+        "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
+        "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+      ]
+    },
+    {
+      "attack_object_id": "T1059",
+      "attack_object_name": "Command and Scripting Interpreter",
+      "capability_description": "Progress MOVEit Transfer SQL Injection Vulnerability",
+      "capability_group": "sql_injection",
+      "capability_id": "CVE-2023-34362",
+      "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+      "mapping_type": "primary_impact",
+      "references": [
+        "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
+        "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+      ]
+    },
+    {
+      "attack_object_id": "T1531",
+      "attack_object_name": "Account Access Removal",
+      "capability_description": "Progress MOVEit Transfer SQL Injection Vulnerability",
+      "capability_group": "sql_injection",
+      "capability_id": "CVE-2023-34362",
+      "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
+        "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+      ]
+    },
+    {
+      "attack_object_id": "T1136",
+      "attack_object_name": "Create Account",
+      "capability_description": "Progress MOVEit Transfer SQL Injection Vulnerability",
+      "capability_group": "sql_injection",
+      "capability_id": "CVE-2023-34362",
+      "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
+        "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+      ]
+    },
+    {
+      "attack_object_id": "T1005",
+      "attack_object_name": "Data from Local System",
+      "capability_description": "Progress MOVEit Transfer SQL Injection Vulnerability",
+      "capability_group": "sql_injection",
+      "capability_id": "CVE-2023-34362",
+      "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
+        "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+      ]
+    },
+    {
+      "attack_object_id": "T1082",
+      "attack_object_name": "System Information Discovery",
+      "capability_description": "Progress MOVEit Transfer SQL Injection Vulnerability",
+      "capability_group": "sql_injection",
+      "capability_id": "CVE-2023-34362",
+      "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
+        "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+      ]
+    },
+    {
+      "attack_object_id": "T1105",
+      "attack_object_name": "Ingress Tool Transfer",
+      "capability_description": "Progress MOVEit Transfer SQL Injection Vulnerability",
+      "capability_group": "sql_injection",
+      "capability_id": "CVE-2023-34362",
+      "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
+        "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+      ]
+    },
+    {
+      "attack_object_id": "T1087.002",
+      "attack_object_name": "Domain Account",
+      "capability_description": "Microsoft Netlogon Privilege Escalation Vulnerability",
+      "capability_group": "priv_escalation",
+      "capability_id": "CVE-2020-1472",
+      "comments": "CVE-2020-1472 is a privilege elevation vulnerability. The immediate effect of successful exploitation results in the ability to authentication to the vulnerable Domain Controller with Domain Administrator level credentials. In compromises exploiting this vulnerability, exploitation was typically followed immediately by dumping all hashes for Domain accounts.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://www.crowdstrike.com/en-us/blog/cve-2020-1472-zerologon-security-advisory/",
+        "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-209a"
+      ]
+    },
+    {
+      "attack_object_id": "T1087.002",
+      "attack_object_name": "Domain Account",
+      "capability_description": "Microsoft Netlogon Privilege Escalation Vulnerability",
+      "capability_group": "priv_escalation",
+      "capability_id": "CVE-2020-1472",
+      "comments": "CVE-2020-1472, an elevation of privilege vulnerability in Microsoft\u2019s Netlogon. A remote attacker can exploit this vulnerability to breach unpatched Active Directory domain controllers and obtain domain administrator access. ",
+      "mapping_type": "primary_impact",
+      "references": [
+        "https://www.bleepingcomputer.com/news/security/fbi-and-cisa-warn-of-opportunistic-rhysida-ransomware-attacks/",
+        "https://therecord.media/cisa-cuba-ransomware-group-has-stolen-60-million-from-at-least-100-organizations",
+        "https://www.cisa.gov/news-events/alerts/2020/09/24/unpatched-domain-controllers-remain-vulnerable-netlogon-vulnerability#:~:text=The%20Cybersecurity%20and%20Infrastructure%20Security",
+        "and%20obtain%20domain%20administrator%20access."
+      ]
+    },
+    {
+      "attack_object_id": "T1133",
+      "attack_object_name": "External Remote Services",
+      "capability_description": "Microsoft Netlogon Privilege Escalation Vulnerability",
+      "capability_group": "priv_escalation",
+      "capability_id": "CVE-2020-1472",
+      "comments": "CVE-2020-1472 is a privilege escalation vulnerability in Windows Netlogon. After gaining initial access, the actors exploit CVE-2020-1472 to compromise all Active Directory (AD) identity services. Actors have then been observed using legitimate remote access tools, such as VPN and Remote Desktop Protocol (RDP), to access the environment with the compromised credentials.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://cisa.gov/news-events/cybersecurity-advisories/aa20-283a"
+      ]
+    },
+    {
+      "attack_object_id": "T1021",
+      "attack_object_name": "Remote Services",
+      "capability_description": "Microsoft Netlogon Privilege Escalation Vulnerability",
+      "capability_group": "priv_escalation",
+      "capability_id": "CVE-2020-1472",
+      "comments": "CVE-2020-1472 is a privilege elevation vulnerability. The immediate effect of successful exploitation results in the ability to authentication to the vulnerable Domain Controller with Domain Administrator level credentials. In compromises exploiting this vulnerability, exploitation was typically followed immediately by dumping all hashes for Domain accounts.",
+      "mapping_type": "primary_impact",
+      "references": [
+        "https://www.crowdstrike.com/en-us/blog/cve-2020-1472-zerologon-security-advisory/",
+        "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-209a"
+      ]
+    },
+    {
+      "attack_object_id": "T1110",
+      "attack_object_name": "Brute Force",
+      "capability_description": "Microsoft Netlogon Privilege Escalation Vulnerability",
+      "capability_group": "priv_escalation",
+      "capability_id": "CVE-2020-1472",
+      "comments": "CVE-2020-1472 is a privilege elevation vulnerability. The immediate effect of successful exploitation results in the ability to authentication to the vulnerable Domain Controller with Domain Administrator level credentials. In compromises exploiting this vulnerability, exploitation was typically followed immediately by dumping all hashes for Domain accounts.",
+      "mapping_type": "exploitation_technique",
+      "references": [
+        "https://www.crowdstrike.com/en-us/blog/cve-2020-1472-zerologon-security-advisory/",
+        "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-209a"
+      ]
+    },
+    {
+      "attack_object_id": "T1486",
+      "attack_object_name": "Data Encrypted for Impact",
+      "capability_description": "Microsoft Netlogon Privilege Escalation Vulnerability",
+      "capability_group": "priv_escalation",
+      "capability_id": "CVE-2020-1472",
+      "comments": "CVE-2020-1472, an elevation of privilege vulnerability in Microsoft\u2019s Netlogon. A remote attacker can exploit this vulnerability to breach unpatched Active Directory domain controllers and obtain domain administrator access. CVE-2020-1472 has been reported to be exploited by Ransomware groups for initial access.  ",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://www.bleepingcomputer.com/news/security/fbi-and-cisa-warn-of-opportunistic-rhysida-ransomware-attacks/",
+        "https://therecord.media/cisa-cuba-ransomware-group-has-stolen-60-million-from-at-least-100-organizations",
+        "https://www.cisa.gov/news-events/alerts/2020/09/24/unpatched-domain-controllers-remain-vulnerable-netlogon-vulnerability#:~:text=The%20Cybersecurity%20and%20Infrastructure%20Security",
+        "and%20obtain%20domain%20administrator%20access."
+      ]
+    },
+    {
+      "attack_object_id": "T1068",
+      "attack_object_name": "Exploitation for Privilege Escalation",
+      "capability_description": "Microsoft Netlogon Privilege Escalation Vulnerability",
+      "capability_group": "priv_escalation",
+      "capability_id": "CVE-2020-1472",
+      "comments": "CVE-2020-1472, an elevation of privilege vulnerability in Microsoft\u2019s Netlogon. A remote attacker can exploit this vulnerability to breach unpatched Active Directory domain controllers and obtain domain administrator access. ",
+      "mapping_type": "primary_impact",
+      "references": [
+        "https://www.bleepingcomputer.com/news/security/fbi-and-cisa-warn-of-opportunistic-rhysida-ransomware-attacks/",
+        "https://therecord.media/cisa-cuba-ransomware-group-has-stolen-60-million-from-at-least-100-organizations",
+        "https://www.cisa.gov/news-events/alerts/2020/09/24/unpatched-domain-controllers-remain-vulnerable-netlogon-vulnerability#:~:text=The%20Cybersecurity%20and%20Infrastructure%20Security",
+        "and%20obtain%20domain%20administrator%20access."
+      ]
+    },
+    {
+      "attack_object_id": "T1133",
+      "attack_object_name": "External Remote Services",
+      "capability_description": "Microsoft Netlogon Privilege Escalation Vulnerability",
+      "capability_group": "priv_escalation",
+      "capability_id": "CVE-2020-1472",
+      "comments": "CVE-2020-1472, an elevation of privilege vulnerability in Microsoft\u2019s Netlogon. A remote attacker can exploit this vulnerability to breach unpatched Active Directory domain controllers and obtain domain administrator access. ",
+      "mapping_type": "exploitation_technique",
+      "references": [
+        "https://www.bleepingcomputer.com/news/security/fbi-and-cisa-warn-of-opportunistic-rhysida-ransomware-attacks/",
+        "https://therecord.media/cisa-cuba-ransomware-group-has-stolen-60-million-from-at-least-100-organizations",
+        "https://msrc.microsoft.com/blog/2020/10/attacks-exploiting-netlogon-vulnerability-cve-2020-1472/",
+        "https://www.cisa.gov/news-events/alerts/2020/09/24/unpatched-domain-controllers-remain-vulnerable-netlogon-vulnerability#:~:text=The%20Cybersecurity%20and%20Infrastructure%20Security",
+        "and%20obtain%20domain%20administrator%20access."
+      ]
+    },
+    {
+      "attack_object_id": "T1190",
+      "attack_object_name": "Exploit Public-Facing Application",
+      "capability_description": "PHP-CGI OS Command Injection Vulnerability",
+      "capability_group": "command_injection",
+      "capability_id": "CVE-2024-4577",
+      "comments": "CVE-2024-4577 is a PHP argument injection vulnerability that allows an adversary to execute arbitrary php commands. Threat actors have been observed utilizing Cobalt Strike and the TaoWu toolkit for post-exploitation activities, such as conducting reconnaisance, establishing persistence, escalating privileges to SYSTEM level, and harvesting credentials.",
+      "mapping_type": "exploitation_technique",
+      "references": [
+        "https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/",
+        "https://www.cyber.gc.ca/en/alerts-advisories/al25-001-mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://www.greynoise.io/blog/mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://blog.talosintelligence.com/new-persistent-attacks-japan/"
+      ]
+    },
+    {
+      "attack_object_id": "T1059",
+      "attack_object_name": "Command and Scripting Interpreter",
+      "capability_description": "PHP-CGI OS Command Injection Vulnerability",
+      "capability_group": "command_injection",
+      "capability_id": "CVE-2024-4577",
+      "comments": "CVE-2024-4577 is a PHP argument injection vulnerability that allows an adversary to execute arbitrary php commands. Threat actors have been observed utilizing Cobalt Strike and the TaoWu toolkit for post-exploitation activities, such as conducting reconnaisance, establishing persistence, escalating privileges to SYSTEM level, and harvesting credentials.",
+      "mapping_type": "primary_impact",
+      "references": [
+        "https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/",
+        "https://www.cyber.gc.ca/en/alerts-advisories/al25-001-mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://www.greynoise.io/blog/mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://blog.talosintelligence.com/new-persistent-attacks-japan/"
+      ]
+    },
+    {
+      "attack_object_id": "T1112",
+      "attack_object_name": "Modify Registry",
+      "capability_description": "PHP-CGI OS Command Injection Vulnerability",
+      "capability_group": "command_injection",
+      "capability_id": "CVE-2024-4577",
+      "comments": "CVE-2024-4577 is a PHP argument injection vulnerability that allows an adversary to execute arbitrary php commands. Threat actors have been observed utilizing Cobalt Strike and the TaoWu toolkit for post-exploitation activities, such as conducting reconnaisance, establishing persistence, escalating privileges to SYSTEM level, and harvesting credentials.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/",
+        "https://www.cyber.gc.ca/en/alerts-advisories/al25-001-mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://www.greynoise.io/blog/mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://blog.talosintelligence.com/new-persistent-attacks-japan/"
+      ]
+    },
+    {
+      "attack_object_id": "T1053",
+      "attack_object_name": "Scheduled Task/Job",
+      "capability_description": "PHP-CGI OS Command Injection Vulnerability",
+      "capability_group": "command_injection",
+      "capability_id": "CVE-2024-4577",
+      "comments": "CVE-2024-4577 is a PHP argument injection vulnerability that allows an adversary to execute arbitrary php commands. Threat actors have been observed utilizing Cobalt Strike and the TaoWu toolkit for post-exploitation activities, such as conducting reconnaisance, establishing persistence, escalating privileges to SYSTEM level, and harvesting credentials.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/",
+        "https://www.cyber.gc.ca/en/alerts-advisories/al25-001-mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://www.greynoise.io/blog/mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://blog.talosintelligence.com/new-persistent-attacks-japan/"
+      ]
+    },
+    {
+      "attack_object_id": "T1543",
+      "attack_object_name": "Create or Modify System Process",
+      "capability_description": "PHP-CGI OS Command Injection Vulnerability",
+      "capability_group": "command_injection",
+      "capability_id": "CVE-2024-4577",
+      "comments": "CVE-2024-4577 is a PHP argument injection vulnerability that allows an adversary to execute arbitrary php commands. Threat actors have been observed utilizing Cobalt Strike and the TaoWu toolkit for post-exploitation activities, such as conducting reconnaisance, establishing persistence, escalating privileges to SYSTEM level, and harvesting credentials.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/",
+        "https://www.cyber.gc.ca/en/alerts-advisories/al25-001-mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://www.greynoise.io/blog/mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://blog.talosintelligence.com/new-persistent-attacks-japan/"
+      ]
+    },
+    {
+      "attack_object_id": "T1033",
+      "attack_object_name": "System Owner/User Discovery",
+      "capability_description": "PHP-CGI OS Command Injection Vulnerability",
+      "capability_group": "command_injection",
+      "capability_id": "CVE-2024-4577",
+      "comments": "CVE-2024-4577 is a PHP argument injection vulnerability that allows an adversary to execute arbitrary php commands. Threat actors have been observed utilizing Cobalt Strike and the TaoWu toolkit for post-exploitation activities, such as conducting reconnaisance, establishing persistence, escalating privileges to SYSTEM level, and harvesting credentials.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/",
+        "https://www.cyber.gc.ca/en/alerts-advisories/al25-001-mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://www.greynoise.io/blog/mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://blog.talosintelligence.com/new-persistent-attacks-japan/"
+      ]
+    },
+    {
+      "attack_object_id": "T1068",
+      "attack_object_name": "Exploitation for Privilege Escalation",
+      "capability_description": "PHP-CGI OS Command Injection Vulnerability",
+      "capability_group": "command_injection",
+      "capability_id": "CVE-2024-4577",
+      "comments": "CVE-2024-4577 is a PHP argument injection vulnerability that allows an adversary to execute arbitrary php commands. Threat actors have been observed utilizing Cobalt Strike and the TaoWu toolkit for post-exploitation activities, such as conducting reconnaisance, establishing persistence, escalating privileges to SYSTEM level, and harvesting credentials.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/",
+        "https://www.cyber.gc.ca/en/alerts-advisories/al25-001-mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://www.greynoise.io/blog/mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://blog.talosintelligence.com/new-persistent-attacks-japan/"
+      ]
+    },
+    {
+      "attack_object_id": "T1071.001",
+      "attack_object_name": "Web Protocols",
+      "capability_description": "PHP-CGI OS Command Injection Vulnerability",
+      "capability_group": "command_injection",
+      "capability_id": "CVE-2024-4577",
+      "comments": "CVE-2024-4577 is a PHP argument injection vulnerability that allows an adversary to execute arbitrary php commands. Threat actors have been observed utilizing Cobalt Strike and the TaoWu toolkit for post-exploitation activities, such as conducting reconnaisance, establishing persistence, escalating privileges to SYSTEM level, and harvesting credentials.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/",
+        "https://www.cyber.gc.ca/en/alerts-advisories/al25-001-mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://www.greynoise.io/blog/mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://blog.talosintelligence.com/new-persistent-attacks-japan/"
+      ]
+    },
+    {
+      "attack_object_id": "T1570",
+      "attack_object_name": "Lateral Tool Transfer",
+      "capability_description": "PHP-CGI OS Command Injection Vulnerability",
+      "capability_group": "command_injection",
+      "capability_id": "CVE-2024-4577",
+      "comments": "CVE-2024-4577 is a PHP argument injection vulnerability that allows an adversary to execute arbitrary php commands. Threat actors have been observed utilizing Cobalt Strike and the TaoWu toolkit for post-exploitation activities, such as conducting reconnaisance, establishing persistence, escalating privileges to SYSTEM level, and harvesting credentials.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/",
+        "https://www.cyber.gc.ca/en/alerts-advisories/al25-001-mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://www.greynoise.io/blog/mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://blog.talosintelligence.com/new-persistent-attacks-japan/"
+      ]
+    },
+    {
+      "attack_object_id": "T1003",
+      "attack_object_name": "OS Credential Dumping",
+      "capability_description": "PHP-CGI OS Command Injection Vulnerability",
+      "capability_group": "command_injection",
+      "capability_id": "CVE-2024-4577",
+      "comments": "CVE-2024-4577 is a PHP argument injection vulnerability that allows an adversary to execute arbitrary php commands. Threat actors have been observed utilizing Cobalt Strike and the TaoWu toolkit for post-exploitation activities, such as conducting reconnaisance, establishing persistence, escalating privileges to SYSTEM level, and harvesting credentials.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/",
+        "https://www.cyber.gc.ca/en/alerts-advisories/al25-001-mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://www.greynoise.io/blog/mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://blog.talosintelligence.com/new-persistent-attacks-japan/"
+      ]
+    },
+    {
+      "attack_object_id": "T1003.001",
+      "attack_object_name": "LSASS Memory",
+      "capability_description": "PHP-CGI OS Command Injection Vulnerability",
+      "capability_group": "command_injection",
+      "capability_id": "CVE-2024-4577",
+      "comments": "CVE-2024-4577 is a PHP argument injection vulnerability that allows an adversary to execute arbitrary php commands. Threat actors have been observed utilizing Cobalt Strike and the TaoWu toolkit for post-exploitation activities, such as conducting reconnaisance, establishing persistence, escalating privileges to SYSTEM level, and harvesting credentials.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/",
+        "https://www.cyber.gc.ca/en/alerts-advisories/al25-001-mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://www.greynoise.io/blog/mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://blog.talosintelligence.com/new-persistent-attacks-japan/"
+      ]
+    },
+    {
+      "attack_object_id": "T1041",
+      "attack_object_name": "Exfiltration Over C2 Channel",
+      "capability_description": "PHP-CGI OS Command Injection Vulnerability",
+      "capability_group": "command_injection",
+      "capability_id": "CVE-2024-4577",
+      "comments": "CVE-2024-4577 is a PHP argument injection vulnerability that allows an adversary to execute arbitrary php commands. Threat actors have been observed utilizing Cobalt Strike and the TaoWu toolkit for post-exploitation activities, such as conducting reconnaisance, establishing persistence, escalating privileges to SYSTEM level, and harvesting credentials.",
+      "mapping_type": "secondary_impact",
+      "references": [
+        "https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/",
+        "https://www.cyber.gc.ca/en/alerts-advisories/al25-001-mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://www.greynoise.io/blog/mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577",
+        "https://blog.talosintelligence.com/new-persistent-attacks-japan/"
+      ]
+    }
+  ],
+  "metadata": {
+    "attack_version": "16.1",
+    "author": null,
+    "capability_groups": {
+      "access_ctrl": "Improper Access Control",
+      "auth_bypass": "Authentication Bypass",
+      "auth_missing": "Missing Authentication",
+      "buffer_overflow": "Buffer Overflow",
+      "code_execution": "Code Execution",
+      "code_injection": "Code Injection",
+      "command_execution": "Command Execution",
+      "command_injection": "Command Injection",
+      "default_cfg": "Default Configuration",
+      "dir_traversal": "Directory Traversal (Relative and Absolute)",
+      "dos": "Denial of Service",
+      "feature_bypass": "Security Feature Bypass",
+      "hardcoded_creds": "Hard-coded Credentials",
+      "inject": "Other Injection",
+      "input_validation": "Input Validation",
+      "int_overflow": "Integer Overflow",
+      "memory_corruption": "Memory Corruption",
+      "memory_mgmt": "Memory Management",
+      "oob": "Out-of-Bounds (Read and Write)",
+      "other": "Other",
+      "pointer_deref": "Pointer Dereference",
+      "pointer_vuln": "Other Pointer Vulnerability",
+      "priv_escalation": "Privilege Escalation",
+      "priv_mgmt": "Improper Privilege Management",
+      "race_condition": "Race Condition",
+      "resource_mgmt": "Resource Management",
+      "sandbox_bypass": "Sandbox Bypass or Escape",
+      "spoofing_vuln": "Spoofing Vulnerability",
+      "sql_injection": "SQL Injection",
+      "ssrf": "Server-Side Request Forgery (SSRF)",
+      "type_confusion": "Type Confusion",
+      "unrestricted_upload": "Unrestricted File Upload",
+      "untrusted_data": "Deserialization of Untrusted Data",
+      "use_after_free": "Use After Free",
+      "xss": "Cross-site Scripting (XSS)",
+      "xxe": "XML External Entity (XXE)"
+    },
+    "contact": null,
+    "creation_date": "07/28/2025",
+    "last_update": "08/28/2025",
+    "mapping_framework": "kev",
+    "mapping_framework_version": "07/28/2025",
+    "mapping_types": {
+      "exploitation_technique": {
+        "description": "",
+        "name": "exploitation_technique"
+      },
+      "primary_impact": {
+        "description": "",
+        "name": "primary_impact"
+      },
+      "secondary_impact": {
+        "description": "",
+        "name": "secondary_impact"
+      },
+      "uncategorized": {
+        "description": "",
+        "name": "uncategorized"
+      }
+    },
+    "mapping_version": "",
+    "organization": null,
+    "technology_domain": "enterprise"
+  }
+}

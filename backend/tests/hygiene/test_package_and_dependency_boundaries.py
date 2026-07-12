@@ -96,6 +96,13 @@ def test_frontend_npm_engine_policy_is_enforced_for_local_and_ci_commands() -> N
     assert "Bun-compatible" not in frontend_readme
 
 
+def test_mutation_runner_path_is_shell_quoted() -> None:
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+
+    assert 'cd $(BACKEND_DIR) && "$(MUTMUT)" run' in makefile
+    assert "cd $(BACKEND_DIR) && $(MUTMUT) run" not in makefile
+
+
 def test_sdist_manifest_excludes_partial_test_tree() -> None:
     manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
 
@@ -110,8 +117,16 @@ def test_backend_package_boundary_intentionally_ships_workbench_app() -> None:
     makefile = (ROOT.parent / "Makefile").read_text(encoding="utf-8")
 
     assert 'include = ["app*"]' in pyproject
-    assert "[project.scripts]" not in pyproject
+    assert "[project.scripts]" in pyproject
+    assert 'vpw = "app.cli:main"' in pyproject
+    assert "app/cli.py" in package_check
+    assert "app/core/frontend.py" in package_check
     assert "app/main.py" in package_check
+    assert "app/services/database_migration.py" in package_check
+    assert "app/services/artifact_migration.py" in package_check
+    assert "app/workers/in_process.py" in package_check
+    assert "app/static/index.html" in package_check
+    assert "app/resources/demo_provider_snapshot.json" in package_check
     assert '"vuln_prioritizer/cli.py"' in package_check
     assert "FORBIDDEN_WHEEL_PREFIXES" in package_check
     assert "FORBIDDEN_WHEEL_FILES" in package_check
@@ -122,4 +137,4 @@ def test_backend_package_boundary_intentionally_ships_workbench_app() -> None:
     assert "vuln_prioritizer/web/" in package_check
     assert "package-contents-check: package" in makefile
     assert "package-check: package-contents-check" in makefile
-    assert "pipx-source-smoke" not in makefile
+    assert "runtime-assets-check" in makefile

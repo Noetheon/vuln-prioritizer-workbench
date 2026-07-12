@@ -14,8 +14,11 @@ the active local product surface:
 
 - `backend/app/`: FastAPI application, API routes, SQL models, services,
   repositories, and Alembic migrations.
-- `backend/app/workers/`: DB-backed durable workflow worker runtime for queued
-  imports, provider refreshes, and report generation.
+- `backend/app/cli.py`: packaged `vpw serve`, Ledger maintenance, and verified
+  database-transition entrypoints.
+- `backend/app/workers/`: DB-backed durable workflow runtime for queued imports,
+  provider refreshes, and report generation. The standard runtime supervises it
+  in-process; deprecated Compose runs the same worker separately.
 - `frontend/`: React, Vite, TypeScript, TanStack Query, a local route adapter,
   and the generated API client consumed by the browser app.
 - `frontend/src/client/**`: generated OpenAPI client. Generated files are not
@@ -26,18 +29,22 @@ the active local product surface:
   by parsing, provider, scoring, SARIF contract, and redaction logic.
 - Python package boundary: `backend/pyproject.toml` intentionally includes only
   `app*`, so the backend distribution ships one Workbench package with the
-  FastAPI app and internal engine in the same namespace.
+  FastAPI app, built frontend, runtime resources, worker, migrations, and
+  internal engine in the same namespace.
 
-The frontend and backend communicate through the generated API client. UI
+`vpw serve` mounts the packaged frontend on the same origin as the API and uses
+SQLite WAL plus private platform data directories. The source frontend and
+backend communicate through the generated API client. UI
 component structure, route extraction, CSS organization, and VPW design-system
 implementation details are intentionally outside the backend/API contract.
 
 ## Backend Runtime Boundary
 
-The active browser Workbench runtime is `backend/app`. Docker, the local Compose
-quickstart, Playwright backend startup, and OpenAPI client generation must point
-to `app.main:app` or import `app.main.app`. The generated browser API boundary is
-`frontend/src/client/**`; `frontend/src/api-client.ts` is manual wrapper code.
+The active browser Workbench runtime is `backend/app`. `vpw serve`, Playwright
+backend startup, OpenAPI client generation, and the deprecated Compose
+compatibility services point to `app.main:app` or import `app.main.app`. The
+generated browser API boundary is `frontend/src/client/**`;
+`frontend/src/api-client.ts` is manual wrapper code.
 
 `backend/app/domain/engine/**` is the internal Workbench engine namespace. The
 active backend may import framework-light helpers from this package, such as
@@ -69,31 +76,36 @@ modules. Durable workflow state lives in `workflow_run` and `workflow_event`;
 imports, provider refreshes, and report generation now publish status, stage,
 progress, errors, and artifact references through `WorkflowRepository` and the
 public workflow projections. The productive worker layer uses those same tables
-as a database-backed queue: API routes enqueue work, `app.workers.workflow_worker`
-claims due rows with leases, executes the matching handler, writes heartbeat and
-retry state, and cooperatively honors cancellation requests. The executive HTML
+as a database-backed queue: API routes enqueue work,
+`app.workers.workflow_worker` claims due rows with leases, executes the matching
+handler, writes heartbeat and retry state, and cooperatively honors cancellation
+requests. `app.workers.in_process` supervises that loop under `vpw serve`,
+restarts it after unexpected failure with bounded backoff, and stops it before
+the database engine is disposed. The executive HTML
 report stack is split into view-model assembly, campaign modeling/rendering,
 provider freshness, evidence-package, governance/decision, and document
 composition modules.
 
-Decision and evidence data are centralized in the Decision/Evidence Kernel v2:
+Decision production remains centralized in the Decision/Evidence Kernel v2:
 `backend/app/decision_core/producer.py`,
 `backend/app/decision_core/readmodels.py`,
 `backend/app/decision_core/contracts.py`, `analysis_evidence`, and
-`finding_decision_evidence`. Successful imports produce a typed
+`finding_decision_evidence`, and `finding_current_projection`. Successful imports produce a typed
 `DecisionRunResult`, then validate and persist run-wide `AnalysisEvidenceV2`
-plus per-finding `FindingDecisionEvidenceV2` records before the workflow is
-terminal. Run-wide evidence deliberately does not embed every finding decision;
-reports and detail views hydrate those decisions from
-`finding_decision_evidence`. Run summaries, finding detail, dashboards, waiver
-rollups, governance views, GitHub issue previews, and report exports project
-through the central evidence-first read model in `decision_core/readmodels.py`.
+plus per-finding immutable `FindingDecisionEvidenceV2` records and atomically
+advance one materialized current projection per finding before the workflow is
+terminal. Run-wide evidence deliberately does not embed every finding decision.
+Historical run views hydrate from `finding_decision_evidence`; current finding,
+dashboard, waiver, governance, GitHub preview, and query paths hydrate from the
+indexed current projection through `decision_core/readmodels.py`. Lifecycle
+actions never rewrite run evidence.
 `workflow_run.result_ref_json` remains an internal lifecycle/ref payload, not the
 source of product truth.
 
 See [Decision/Evidence Kernel](architecture/decision-evidence-kernel.md) for
 the kernel input/output contract, projection rules, and the exact successful
-workflow result boundary.
+workflow result boundary. See [Decision Ledger](architecture/decision-ledger.md)
+for history/current invariants, dual-write, backfill, and parity.
 
 The old Workbench runtime packages, runtime database package, provider
 scheduler, and `web`/`db` CLI entrypoints have been removed. The active

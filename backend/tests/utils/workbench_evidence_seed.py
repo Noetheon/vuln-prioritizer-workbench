@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import uuid
 from typing import Any
 
@@ -17,6 +18,9 @@ from app.decision_core.contracts import (
     RemediationEvidenceV2,
     RunCountsV2,
 )
+
+_SEED_UPLOAD_CONTENT = b"vpw050-input"
+_SEED_UPLOAD_SHA256 = hashlib.sha256(_SEED_UPLOAD_CONTENT).hexdigest()
 
 
 def _seed_analysis_evidence(
@@ -36,7 +40,7 @@ def _seed_analysis_evidence(
         input_type=run.input_type,
         filename=run.filename,
         status=str(run.status),
-        input_sha256="sha256:vpw050-input",
+        input_sha256=_SEED_UPLOAD_SHA256,
         counts=RunCountsV2(
             finding_count=finding_count,
             occurrence_count=finding_count,
@@ -48,7 +52,8 @@ def _seed_analysis_evidence(
                 input_type=run.input_type,
                 original_filename=run.filename,
                 stored_filename=run.filename,
-                sha256="sha256:vpw050-input",
+                sha256=_SEED_UPLOAD_SHA256,
+                size_bytes=len(_SEED_UPLOAD_CONTENT),
                 storage_ref=f"{project_id}/{run.id}/{run.filename}",
             )
         ),

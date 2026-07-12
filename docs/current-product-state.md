@@ -23,12 +23,13 @@ hosted SaaS product.
 | Layer | Current source of truth | Notes |
 | --- | --- | --- |
 | Backend runtime | `backend/app` | Active FastAPI app, `/api/v1` routes, SQLModel models, repositories, services, and Alembic migrations. |
-| Worker runtime | `backend/app/workers` | Separate database-backed worker process for queued durable imports, provider refreshes, retries, cancellation, and report generation. |
-| Decision/Evidence Kernel | `backend/app/decision_core/producer.py`, `backend/app/decision_core/readmodels.py`, `backend/app/decision_core/contracts.py`, `analysis_evidence`, `finding_decision_evidence` | Kernel-first typed v2 producer plus evidence-first read model for bounded run evidence, per-finding decisions, provider facts, governance signals, priority explanations, diagnostics, API projection, dashboard, governance, GitHub preview, and reports. |
-| Frontend runtime | `frontend` | React, Vite, TypeScript, TanStack Query, local route adapter, Playwright tests, and Workbench UI. |
+| Local runtime | `backend/app/cli.py`, `backend/app/main.py` | `vpw serve` is the standard entrypoint: one loopback FastAPI process, packaged same-origin browser UI, migrations, SQLite WAL database, and supervised worker. |
+| Worker runtime | `backend/app/workers` | Durable database queue with leases, retries, cancellation, and events. It runs in-process under `vpw serve`; the deprecated Compose path keeps the same worker as a separate process. |
+| Decision Ledger | `analysis_evidence`, `finding_decision_evidence`, `finding_current_projection`, `backend/app/repositories/current_projections.py` | Immutable run history plus one materialized current row per finding, transactional dual-write, idempotent backfill, hashes, revisions, and shadow/full parity checks. |
+| Frontend runtime | `frontend`, packaged under `backend/app/static` | React, Vite, TypeScript, TanStack Query, local route adapter, Playwright tests, and the same-origin packaged Workbench UI. |
 | Generated client | `frontend/src/client/**` | Generated from backend OpenAPI. Do not edit generated files manually. |
 | Frontend integration wrapper | `frontend/src/api-client.ts` | Handwritten wrapper over generated client code. Normal app code should use this boundary. |
-| Domain core | `backend/app/domain/engine` | Parsers, providers, scoring, SARIF contracts, and neutral vulnerability logic shared with Workbench services. Typer command modules, CLI entrypoints, and legacy report facades have been removed from the active package. |
+| Domain core | `backend/app/domain/engine` | Parsers, providers, scoring, SARIF contracts, and neutral vulnerability logic shared with Workbench services. The retired Typer analytical commands and legacy report facades remain removed. |
 | Docs site | `mkdocs.yml` and `docs/**` | Public docs, contracts, examples, release notes, submission material, and historical references. |
 | Historical evidence | `archive/**` | Minimal historical issue proof, demo-flow summaries, presentation pointers, and archived validation notes. |
 
@@ -39,9 +40,11 @@ hosted SaaS product.
 - API: versioned FastAPI routes under `/api/v1`, including durable workflow
   status/events, cancel/retry, queued report jobs, and WebSocket streaming for
   imports, provider refreshes, and report generation.
-- Docker Compose: local self-hosted Workbench quickstart and production-like
-  smoke topology with a backend, frontend, database, and durable workflow
-  worker.
+- Local command: `vpw serve`, with `vpw ledger` and `vpw migrate database` as
+  bounded maintenance/transition commands. These are not a return of the old
+  analytical CLI.
+- Docker Compose/PostgreSQL: deprecated compatibility topology retained for one
+  transition release and release parity evidence, not the default quickstart.
 
 ## Canonical Docs
 
@@ -49,6 +52,8 @@ hosted SaaS product.
 | --- | --- |
 | Full user path | [User Documentation Guide](user_documentation.md) |
 | Product architecture | [Product Architecture](architecture.md) |
+| Decision history and current state | [Decision Ledger Architecture](architecture/decision-ledger.md) |
+| Compose-to-local transition | [Single-Process Runtime Transition](single-process-runtime-transition.md) |
 | Documentation ownership and classification | [Documentation Map](documentation-map.md) |
 | Claim-to-evidence routing | [Documentation Evidence Matrix](documentation-evidence-matrix.md) |
 | Stable API and report behavior | [Contracts](contracts.md) |
@@ -76,15 +81,14 @@ archive artifacts, or external primary sources own the major documentation
 claims. A passing docs build is necessary, but it is not sufficient proof that a
 provider, release, deployment, or archived-evidence statement is current.
 
-The latest documentation hygiene pass recorded in this checkout is 2026-06-13.
-It covered the Public + Root documentation scope, verified 89 MkDocs-published
-Markdown pages, checked tracked Markdown links, rechecked the worker-first
-Workflow v2 quickstarts, rechecked the kernel-first Decision/Evidence Kernel v2
-producer, and validated the evidence-first `decision_core/readmodels.py` read
-model against code and tests. Successful v2 imports now read product output
-facts from `AnalysisEvidenceV2` and `FindingDecisionEvidenceV2` through that
-central read model; relational finding columns remain useful for identity,
-joins, pagination, sorting, and lifecycle context. The same pass rechecked
+The current-tree architecture pass recorded on 2026-07-10 added the Decision
+Ledger and packaged single-process runtime. Successful imports append typed
+`AnalysisEvidenceV2`/`FindingDecisionEvidenceV2` history and atomically advance
+`finding_current_projection`. Current reads use that indexed projection;
+run-specific reads remain bound to immutable run evidence. The same pass added
+complete parity verification, verified cross-database migration, same-origin
+packaged assets, supervised worker restart behavior, and SQLite WAL/locking
+coverage. The earlier public-doc baseline also rechecked
 import/report format claims against active backend and frontend definitions,
 added dedicated public pages and parseable examples for every active Workbench
 import format, updated the local demo docs to the seeded 32-finding Workbench
@@ -113,7 +117,9 @@ page explicitly links it as such and explains the scope. Tracked binary evidence
 under `archive/vpw-evidence/**` is hash-pinned in
 `archive/vpw-evidence/BINARY-MANIFEST.json`.
 
-The current VPW package release tag is `v1.2.0`. Older `0.x` tags in this
+The current published VPW package release tag remains `v1.2.0`; the standard
+`vpw serve` and Decision Ledger changes in this tree are unreleased until a new
+candidate passes the full release gate. Older `0.x` tags in this
 repository include inherited historical/template-line tags and must not be used
 as proof for current VPW Workbench claims unless a page explicitly scopes the
 reference to that historical line.
@@ -122,6 +128,9 @@ reference to that historical line.
 
 The active app is not a second template runtime, and the old Typer CLI is no
 longer an active product surface. CLI is not the current product direction.
+The small `vpw` command only starts or maintains the browser Workbench; it does
+not restore `analyze`, `compare`, `explain`, report-generation, or scanner-like
+terminal commands.
 Remaining uses of `template`, `Template`, CLI, or historical compatibility
 phrasing should be limited to clearly labelled historical material, archived
 evidence, release snapshots, or generator-owned framework internals.

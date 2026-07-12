@@ -4,6 +4,12 @@ This runbook covers local and private single-operator Workbench deployments.
 The active product target is a self-hosted Workbench for a trusted operator, not
 a shared SaaS or internet-facing multi-user service.
 
+For a trusted workstation, the standard path is loopback-only `vpw serve` and
+requires none of the proxy or PostgreSQL settings below. The Compose/Traefik
+sections describe the deprecated one-release compatibility topology and
+candidate-specific private deployment evidence; they are not the new-install
+quickstart.
+
 Status: local/private deployment guidance. Public or shared exposure is outside
 the normal product scope and remains a future reviewed security decision. The
 historical VPW-AUD-999 final scorecard closed on 2026-05-08; any public or
@@ -147,6 +153,11 @@ evidence.
 
 ## Compose Volumes And Compatibility
 
+Compose/PostgreSQL is deprecated for new installations but remains supported
+through the transition release. Keep its volumes until the
+[single-process migration](single-process-runtime-transition.md) and rollback
+checks have completed.
+
 Fresh Compose stacks use Workbench-branded named volumes by default:
 
 ```bash
@@ -237,10 +248,16 @@ running retention cleanup.
 SQLite:
 
 ```bash
-SQLITE_DATABASE_PATH=workbench.db \
-WORKBENCH_ARTIFACT_PATHS="data/workbench-import-uploads data/workbench-reports data/workbench-provider-cache data/provider-snapshots" \
+SQLITE_DATABASE_PATH="./vpw-data/workbench.db" \
 scripts/workbench-backup.sh
 ```
+
+The script uses SQLite's online backup API, includes committed WAL state, runs
+`PRAGMA integrity_check` on the copy, and activates the backup file atomically.
+It infers `imports`, `reports`, `provider-cache`, and `provider-snapshots` beside
+the SQLite database. `WORKBENCH_ARTIFACT_ROOT` can override that common root.
+Stopping `vpw serve` is still preferred for a simple operator-consistent
+database-plus-artifact snapshot.
 
 Postgres:
 
@@ -277,12 +294,19 @@ symlink members, and hardlink members.
 ## Restore
 
 Restore into an empty or intentionally replaced environment.
+Stop `vpw serve` before a SQLite restore. The restore refuses a destination
+with WAL sidecars or one it cannot lock exclusively, validates any artifact
+archive before changing the database, and activates the integrity-checked copy
+with an atomic rename. PostgreSQL restore paths use one transaction and stop on
+the first error.
 
 SQLite:
 
 ```bash
-SQLITE_DATABASE_PATH=workbench.db scripts/workbench-restore.sh backups/<backup-dir>
-alembic -c backend/alembic.ini upgrade head
+SQLITE_DATABASE_PATH="./vpw-data/workbench.db" \
+ARTIFACT_RESTORE_ROOT="./vpw-data" \
+scripts/workbench-restore.sh backups/<backup-dir>
+vpw ledger verify --strict --data-dir ./vpw-data
 ```
 
 Docker Compose named volumes:
@@ -307,8 +331,7 @@ alembic -c backend/alembic.ini upgrade head
 After restore, verify:
 
 ```bash
-alembic -c backend/alembic.ini upgrade head
-python -c "import urllib.request; print(urllib.request.urlopen('https://${DOMAIN}/api/v1/workbench/health', timeout=5).read().decode())"
+vpw serve --data-dir ./vpw-data --no-browser
 ```
 
 The public health response should only report a minimal OK status. Verify

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request
@@ -25,10 +26,14 @@ from app.api.main import api_router, assert_api_local_actor_policy
 from app.core.app_state import configure_workbench_state, workbench_settings
 from app.core.config import Settings, settings
 from app.core.db import create_db_engine
+from app.core.frontend import mount_packaged_frontend
 from app.core.local_schema_bootstrap import bootstrap_local_sqlite_schema
 from app.core.rate_limit import RateLimiter, create_rate_limiter, rate_limit_key
 from app.core.schema_smoke import assert_migrated_schema
 from app.services.provider_updates import reconcile_stale_provider_update_runs
+from app.workers.in_process import InProcessWorkflowWorker
+
+logger = logging.getLogger(__name__)
 
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
@@ -82,6 +87,17 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
     app.router.on_startup.append(
         lambda: _reconcile_stale_import_runs_on_startup(active_engine, selected_settings)
     )
+    if selected_settings.COMPOSE_COMPATIBILITY_MODE:
+        app.router.on_startup.append(_warn_compose_compatibility_mode)
+    if selected_settings.IN_PROCESS_WORKER_ENABLED:
+        worker = InProcessWorkflowWorker(
+            engine=active_engine,
+            settings=selected_settings,
+            poll_interval_seconds=selected_settings.WORKER_POLL_INTERVAL_SECONDS,
+        )
+        app.state.in_process_workflow_worker = worker
+        app.router.on_startup.append(worker.start)
+        app.router.on_shutdown.append(worker.stop)
     app.router.on_shutdown.append(lambda: active_engine.dispose())
     app.add_middleware(
         TrustedHostMiddleware,
@@ -104,7 +120,15 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
     install_error_openapi_schema(app)
+    mount_packaged_frontend(app)
     return app
+
+
+def _warn_compose_compatibility_mode() -> None:
+    logger.warning(
+        "Docker Compose/PostgreSQL is a deprecated one-release compatibility path; "
+        "use the packaged 'vpw serve' single-process runtime for new installations."
+    )
 
 
 def _reconcile_stale_import_runs_on_startup(

@@ -1084,20 +1084,10 @@ def _seed_vpw042_findings(
             status=app_models.AnalysisRunStatus.COMPLETED,
         )
         evidence_repo = repositories.EvidenceRepository(session)
-        analysis_evidence = evidence_repo.upsert_analysis_evidence(
+        analysis_evidence = evidence_repo.prepare_analysis_evidence_record(
             project_id=project_id,
             analysis_run_id=run.id,
             provider_snapshot_id=None,
-            evidence=_seed_analysis_evidence(
-                project_id=project_id,
-                run=run,
-                provider_snapshot_id=None,
-                provider_snapshot_hash=None,
-                finding_count=0,
-                counts_by_priority={},
-                locked_provider_data=False,
-                findings=[],
-            ),
         )
         evidence_items = [
             _seed_finding_evidence(

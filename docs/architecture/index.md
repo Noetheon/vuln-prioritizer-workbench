@@ -49,10 +49,11 @@ and generated OpenAPI client creation point to `app.main:app`.
 Workbench runtime state is controlled by active backend environment variables
 for database URL, upload directory, report directory, trusted provider snapshot
 directory, provider cache directory, upload size, and NVD API-key environment
-name. The Docker Compose path uses named volumes for writable runtime state,
-keeps provider snapshots writable for refresh jobs, and mounts checked-in demo
-data read-only so startup can seed locked demo snapshots without making fixture
-data mutable.
+name. Standard `vpw serve` uses private platform directories and SQLite WAL.
+The deprecated Docker Compose path uses named volumes for writable runtime
+state, keeps provider snapshots writable for refresh jobs, and mounts checked-in
+demo data read-only so startup can seed locked demo snapshots without making
+fixture data mutable.
 
 The current web/API import path uses the local input-format matrix for
 single-upload and multi-upload imports: CVE lists, generic occurrence CSV,

@@ -17,8 +17,7 @@ from app.decision_core.producer import (
 )
 from app.importers import ImporterParseError, ImporterValidationError
 from app.models import AnalysisRun, AnalysisRunStatus, WorkflowRunKind, WorkflowRunStatus
-from app.repositories import EvidenceRepository, RunRepository, WorkflowRepository
-from app.repositories.findings import FindingRepository
+from app.repositories import EvidenceRepository, RunRepository, WaiverRepository, WorkflowRepository
 from app.services.analysis import AnalysisService, WorkbenchAnalysisError
 from app.services.import_execution_context import (
     _apply_workbench_asset_context,
@@ -62,7 +61,7 @@ from app.services.import_execution_uploads import (
     store_prepared_uploads as _store_prepared_uploads,
 )
 from app.services.import_uploads import sanitize_parser_error_message as _sanitize_error_message
-from app.services.risk_reduction import project_risk_index
+from app.services.risk_reduction import project_risk_index_from_projection
 from app.services.workflow_execution import WorkflowExecutionContext
 
 __all__ = [
@@ -524,10 +523,9 @@ async def execute_project_import_upload(
             analysis_run_id=finished_run.id,
             evidence_items=decision_result.finding_evidence,
         )
+    WaiverRepository(session).sync_project_waivers(project_id)
     session.flush()
-    finished_run.risk_index = project_risk_index(
-        FindingRepository(session).list_project_findings(project_id)
-    )
+    finished_run.risk_index = project_risk_index_from_projection(session, project_id)
     context.succeed(
         stage="succeeded",
         message="Import workflow succeeded.",
