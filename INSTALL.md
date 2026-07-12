@@ -36,15 +36,16 @@ pipx install ./vuln_prioritizer_workbench-X.Y.Z-py3-none-any.whl
 vpw serve
 ```
 
-After a release that explicitly lists the `vpw` entrypoint is published, the
-registry install becomes:
+After the matching package-registry artifact is published and verified, the
+short install becomes:
 
 ```bash
 pipx install vuln-prioritizer-workbench
 ```
 
-The current published `v1.2.0` tag predates this unreleased runtime change; do
-not use its registry artifact as evidence for `vpw serve`.
+`v1.3.0` is the first release line containing `vpw serve`. Use the attached
+wheel while the GitHub Release is still under draft-first review; a GitHub tag
+or draft alone does not prove that the registry artifact is available.
 
 Upgrade or remove the isolated installation with:
 

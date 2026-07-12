@@ -117,12 +117,12 @@ page explicitly links it as such and explains the scope. Tracked binary evidence
 under `archive/vpw-evidence/**` is hash-pinned in
 `archive/vpw-evidence/BINARY-MANIFEST.json`.
 
-The current published VPW package release tag remains `v1.2.0`; the standard
-`vpw serve` and Decision Ledger changes in this tree are unreleased until a new
-candidate passes the full release gate. Older `0.x` tags in this
-repository include inherited historical/template-line tags and must not be used
-as proof for current VPW Workbench claims unless a page explicitly scopes the
-reference to that historical line.
+The current VPW package release line is `v1.3.0`; it introduces the standard
+`vpw serve` runtime and Decision Ledger. Its GitHub Release remains a draft
+until the exact tag artifacts and checksums are reviewed. Older `0.x` tags in
+this repository include inherited historical/template-line tags and must not
+be used as proof for current VPW Workbench claims unless a page explicitly
+scopes the reference to that historical line.
 
 ## Compatibility And Historical Material
 

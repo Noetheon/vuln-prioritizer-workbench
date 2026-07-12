@@ -5,8 +5,8 @@
 Workbench `v1.0.0` is the first release-ready Workbench milestone on top of the stable CLI core. It keeps the product boundary narrow: known-CVE prioritization from existing inputs, not scanning, exploitation, or generated CVE-to-ATT&CK mapping.
 
 These notes are Workbench milestone notes. The current package tree is versioned
-`1.2.0`, so a public package tag cut from `main` must use `v1.2.0` and the
-matching [v1.2.0 release notes](v1.2.0.md).
+`1.3.0`, so a public package tag cut from `main` must use `v1.3.0` and the
+matching [v1.3.0 release notes](v1.3.0.md).
 They are not a standalone `v1.0.0` package-tag certification for current
 `main`.
 

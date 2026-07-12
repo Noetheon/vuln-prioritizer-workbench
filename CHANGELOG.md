@@ -11,11 +11,13 @@ This changelog records the VPW product release line and milestone history. The
 repository also contains inherited historical/template-line `0.x` git tags from
 earlier repository history, including tags whose commit dates predate the VPW
 Workbench project. Do not use those old `0.x` tags as evidence for current
-Workbench behavior. Use `v1.2.0` as the current VPW package release tag and use
+Workbench behavior. Use `v1.3.0` as the current VPW package release tag and use
 the [documentation evidence matrix](docs/documentation-evidence-matrix.md) plus
 exact git tag output when release wording needs to be verified.
 
 ## [Unreleased]
+
+## [1.3.0] - 2026-07-12
 
 ### Added
 
