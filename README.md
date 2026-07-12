@@ -73,9 +73,9 @@ pipx install ./vuln_prioritizer_workbench-X.Y.Z-py3-none-any.whl
 vpw serve
 ```
 
-`pipx install vuln-prioritizer-workbench` becomes the short registry path only
-after a release containing the `vpw` entrypoint is actually published. The
-current published `v1.2.0` tag predates this unreleased runtime change.
+`v1.3.0` is the first release line containing the `vpw` entrypoint. Use its
+attached wheel until publication of the matching package-registry artifact has
+been verified; the GitHub Release is intentionally reviewed as a draft first.
 
 Docker Compose with PostgreSQL remains available for one transition release as
 a **deprecated compatibility path** for existing installations:
