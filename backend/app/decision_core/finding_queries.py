@@ -2,21 +2,21 @@
 
 from __future__ import annotations
 
-import heapq
 import uuid
-from collections.abc import Iterable
 from typing import Any, cast
 
+from sqlalchemy import case, or_
 from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlmodel import Session, col, func, select
 
-from app.decision_core.readmodels import DecisionFindingView, project_finding_decision_views
+from app.decision_core.readmodels import project_finding_decision_views
 from app.models import (
     Asset,
     AttackSummaryContextRow,
     AttackSummaryFindingRow,
     Component,
     Finding,
+    FindingCurrentProjection,
     FindingPriority,
     FindingStatus,
 )
@@ -25,8 +25,6 @@ from app.repositories.finding_attack_query import (
 )
 from app.repositories.finding_page_query import FindingPageQuery
 from app.repositories.findings import FindingRepository
-
-_GENERAL_FINDING_PAGE_CHUNK_SIZE = 500
 
 
 def list_project_attack_summary_inputs(
@@ -98,110 +96,34 @@ def list_project_findings_query(
     """Return a filtered, sorted, paginated project finding page."""
     asset_relationship = cast(QueryableAttribute[Any], Finding.asset)
     component_relationship = cast(QueryableAttribute[Any], Finding.component)
-    database_page = _database_cve_page_if_unfiltered(
-        session,
-        query,
-        asset_relationship=asset_relationship,
-        component_relationship=component_relationship,
+    filters = _database_finding_filters(query)
+    count = int(
+        session.exec(
+            select(func.count())
+            .select_from(Finding)
+            .outerjoin(Asset, col(Finding.asset_id) == col(Asset.id))
+            .outerjoin(Component, col(Finding.component_id) == col(Component.id))
+            .outerjoin(
+                FindingCurrentProjection,
+                col(FindingCurrentProjection.finding_id) == col(Finding.id),
+            )
+            .where(*filters)
+        ).one()
     )
-    if database_page is not None:
-        return database_page
-
+    order_by = _database_finding_order(query)
     statement = (
         select(Finding)
         .outerjoin(Asset, col(Finding.asset_id) == col(Asset.id))
         .outerjoin(Component, col(Finding.component_id) == col(Component.id))
+        .outerjoin(
+            FindingCurrentProjection,
+            col(FindingCurrentProjection.finding_id) == col(Finding.id),
+        )
         .options(
             selectinload(asset_relationship),
             selectinload(component_relationship),
         )
-        .where(Finding.project_id == query.project_id)
-        .order_by(Finding.cve_id, col(Finding.id))
-    )
-    return _general_project_findings_page(session, query, statement)
-
-
-def _general_project_findings_page(
-    session: Session,
-    query: FindingPageQuery,
-    statement: Any,
-) -> tuple[list[Finding], int]:
-    """Return a sorted page without materializing all project evidence at once."""
-
-    def matched_views() -> Iterable[DecisionFindingView]:
-        for findings in _iter_project_finding_chunks(session, statement):
-            for view in project_finding_decision_views(session, findings):
-                if _matches_finding_page_query(view, query):
-                    yield view
-
-    page, count = _bounded_sorted_finding_page(matched_views(), query)
-    return [view.finding for view in page], count
-
-
-def _iter_project_finding_chunks(session: Session, statement: Any) -> Iterable[list[Finding]]:
-    chunk_offset = 0
-    while True:
-        findings = list(
-            session.exec(
-                statement.offset(chunk_offset).limit(_GENERAL_FINDING_PAGE_CHUNK_SIZE)
-            ).all()
-        )
-        if not findings:
-            return
-        yield findings
-        if len(findings) < _GENERAL_FINDING_PAGE_CHUNK_SIZE:
-            return
-        chunk_offset += _GENERAL_FINDING_PAGE_CHUNK_SIZE
-
-
-def _bounded_sorted_finding_page(
-    matched_views: Iterable[DecisionFindingView],
-    query: FindingPageQuery,
-) -> tuple[list[DecisionFindingView], int]:
-    count = 0
-
-    def counted_views() -> Iterable[DecisionFindingView]:
-        nonlocal count
-        for view in matched_views:
-            count += 1
-            yield view
-
-    window_size = query.offset + query.limit
-
-    def sort_key(view: DecisionFindingView) -> tuple[Any, ...]:
-        return _finding_page_sort_key(view, query)
-
-    if query.direction == "desc":
-        window = heapq.nlargest(window_size, counted_views(), key=sort_key)
-    else:
-        window = heapq.nsmallest(window_size, counted_views(), key=sort_key)
-    return window[query.offset : query.offset + query.limit], count
-
-
-def _database_cve_page_if_unfiltered(
-    session: Session,
-    query: FindingPageQuery,
-    *,
-    asset_relationship: QueryableAttribute[Any],
-    component_relationship: QueryableAttribute[Any],
-) -> tuple[list[Finding], int] | None:
-    if not _can_use_database_cve_page(query):
-        return None
-    count = int(
-        session.exec(
-            select(func.count()).select_from(Finding).where(Finding.project_id == query.project_id)
-        ).one()
-    )
-    order_by: tuple[Any, ...] = (col(Finding.cve_id), col(Finding.id))
-    if query.direction == "desc":
-        order_by = tuple(column.desc() for column in order_by)
-    statement = (
-        select(Finding)
-        .options(
-            selectinload(asset_relationship),
-            selectinload(component_relationship),
-        )
-        .where(Finding.project_id == query.project_id)
+        .where(*filters)
         .order_by(*order_by)
         .offset(query.offset)
         .limit(query.limit)
@@ -209,145 +131,168 @@ def _database_cve_page_if_unfiltered(
     return list(session.exec(statement).all()), count
 
 
-def _can_use_database_cve_page(query: FindingPageQuery) -> bool:
-    return (
-        query.sort == "cve"
-        and query.priority is None
-        and query.status is None
-        and query.kev is None
-        and query.owner is None
-        and query.service is None
-        and query.owner_service is None
-        and query.query is None
-        and query.asset_id is None
-        and query.exposure is None
-        and query.epss_min is None
-        and query.epss_max is None
-        and query.cvss_min is None
-        and query.cvss_max is None
-    )
-
-
-def _matches_finding_page_query(
-    view: DecisionFindingView,
-    query: FindingPageQuery,
-) -> bool:
-    finding = view.finding
-    asset = finding.asset
-    component = finding.component
-    if query.priority is not None and view.priority != FindingPriority(query.priority):
-        return False
-    if query.status is not None and view.status != FindingStatus(query.status):
-        return False
-    if query.kev is not None and view.in_kev != query.kev:
-        return False
-    if query.asset_id is not None and finding.asset_id != query.asset_id:
-        return False
-    if query.exposure is not None and (asset is None or asset.exposure != query.exposure):
-        return False
-    if query.epss_min is not None and (view.epss is None or view.epss < query.epss_min):
-        return False
-    if query.epss_max is not None and (view.epss is None or view.epss > query.epss_max):
-        return False
-    if query.cvss_min is not None and (
-        view.cvss_base_score is None or view.cvss_base_score < query.cvss_min
-    ):
-        return False
-    if query.cvss_max is not None and (
-        view.cvss_base_score is None or view.cvss_base_score > query.cvss_max
-    ):
-        return False
-    if not _contains(asset.owner if asset else None, query.owner):
-        return False
-    if not _contains(asset.business_service if asset else None, query.service):
-        return False
-    if query.owner_service and not (
-        _contains(asset.owner if asset else None, query.owner_service)
-        or _contains(asset.business_service if asset else None, query.owner_service)
-    ):
-        return False
-    if query.query and not any(
-        _contains(value, query.query)
-        for value in (
-            view.cve_id,
-            view.recommended_action,
-            view.rationale,
-            component.name if component else None,
-            component.version if component else None,
-            component.purl if component else None,
-            component.ecosystem if component else None,
-            asset.asset_key if asset else None,
-            asset.name if asset else None,
-            asset.target_ref if asset else None,
-            asset.owner if asset else None,
-            asset.business_service if asset else None,
+def _database_finding_filters(query: FindingPageQuery) -> list[Any]:
+    filters: list[Any] = [Finding.project_id == query.project_id]
+    if query.priority is not None:
+        filters.append(
+            func.coalesce(FindingCurrentProjection.priority, "medium")
+            == FindingPriority(query.priority).value
         )
-    ):
-        return False
-    return True
+    if query.status is not None:
+        filters.append(
+            func.coalesce(FindingCurrentProjection.status, Finding.status)
+            == FindingStatus(query.status).value
+        )
+    if query.kev is not None:
+        filters.append(func.coalesce(FindingCurrentProjection.in_kev, False) == query.kev)
+    if query.asset_id is not None:
+        filters.append(Finding.asset_id == query.asset_id)
+    if query.exposure is not None:
+        filters.append(Asset.exposure == str(query.exposure))
+    if query.epss_min is not None:
+        filters.append(col(FindingCurrentProjection.epss) >= query.epss_min)
+    if query.epss_max is not None:
+        filters.append(col(FindingCurrentProjection.epss) <= query.epss_max)
+    if query.cvss_min is not None:
+        filters.append(col(FindingCurrentProjection.cvss_base_score) >= query.cvss_min)
+    if query.cvss_max is not None:
+        filters.append(col(FindingCurrentProjection.cvss_base_score) <= query.cvss_max)
+    if query.owner and query.owner.strip():
+        filters.append(_database_contains(Asset.owner, query.owner))
+    if query.service and query.service.strip():
+        filters.append(_database_contains(Asset.business_service, query.service))
+    if query.owner_service and query.owner_service.strip():
+        filters.append(
+            or_(
+                _database_contains(Asset.owner, query.owner_service),
+                _database_contains(Asset.business_service, query.owner_service),
+            )
+        )
+    if query.query and query.query.strip():
+        filters.append(
+            or_(
+                _database_contains(FindingCurrentProjection.cve_id, query.query),
+                _database_contains(Finding.cve_id, query.query),
+                _database_contains(FindingCurrentProjection.recommended_action, query.query),
+                _database_contains(FindingCurrentProjection.rationale, query.query),
+                _database_contains(Component.name, query.query),
+                _database_contains(Component.version, query.query),
+                _database_contains(Component.purl, query.query),
+                _database_contains(Component.ecosystem, query.query),
+                _database_contains(Asset.asset_key, query.query),
+                _database_contains(Asset.name, query.query),
+                _database_contains(Asset.target_ref, query.query),
+                _database_contains(Asset.owner, query.query),
+                _database_contains(Asset.business_service, query.query),
+            )
+        )
+    return filters
 
 
-def _contains(value: object, needle: str | None) -> bool:
-    if not needle or not needle.strip():
-        return True
-    return needle.strip().casefold() in str(value or "").casefold()
-
-
-def _finding_page_sort_key(view: DecisionFindingView, query: FindingPageQuery) -> tuple[Any, ...]:
-    finding = view.finding
-    asset = finding.asset
-    component = finding.component
-    stable_tie = _finding_page_stable_tie_key(view)
+def _database_finding_order(query: FindingPageQuery) -> tuple[Any, ...]:
+    priority_rank = func.coalesce(FindingCurrentProjection.priority_rank, 99)
+    stable_tie = _database_stable_tie_order()
     if query.sort == "operational":
-        return (view.operational_rank or 999_999, view.priority_rank, *stable_tie)
+        operational_rank = func.coalesce(
+            func.nullif(FindingCurrentProjection.operational_rank, 0),
+            999_999,
+        )
+        return _database_direction((operational_rank, priority_rank, *stable_tie), query.direction)
     if query.sort == "priority":
-        return (view.priority_rank, *stable_tie)
+        return _database_direction((priority_rank, *stable_tie), query.direction)
     if query.sort == "score":
-        return (_none_last_number(view.risk_score), view.priority_rank, *stable_tie)
-    if query.sort == "cve":
-        return stable_tie
-    if query.sort == "status":
-        return (view.status.value, *stable_tie)
-    if query.sort == "epss":
-        return (_none_last_number(view.epss), view.priority_rank, *stable_tie)
-    if query.sort == "cvss":
-        return (_none_last_number(view.cvss_base_score), view.priority_rank, *stable_tie)
-    if query.sort == "kev":
-        return (1 if view.in_kev else 0, view.priority_rank, *stable_tie)
-    if query.sort == "last_seen":
-        return (finding.last_seen_at, view.priority_rank, *stable_tie)
-    if query.sort == "component":
         return (
-            str(component.name if component else ""),
-            str(component.version if component else ""),
-            str(asset.business_service if asset else ""),
-            str(asset.asset_key if asset else ""),
-            view.cve_id,
+            *_database_none_last_number_order(
+                FindingCurrentProjection.risk_score,
+                query.direction,
+            ),
+            *_database_direction((priority_rank, *stable_tie), query.direction),
+        )
+    if query.sort == "cve":
+        return _database_direction(stable_tie, query.direction)
+    if query.sort == "status":
+        return _database_direction(
+            (func.coalesce(FindingCurrentProjection.status, Finding.status), *stable_tie),
+            query.direction,
+        )
+    if query.sort == "epss":
+        return (
+            *_database_none_last_number_order(FindingCurrentProjection.epss, query.direction),
+            *_database_direction((priority_rank, *stable_tie), query.direction),
+        )
+    if query.sort == "cvss":
+        return (
+            *_database_none_last_number_order(
+                FindingCurrentProjection.cvss_base_score,
+                query.direction,
+            ),
+            *_database_direction((priority_rank, *stable_tie), query.direction),
+        )
+    if query.sort == "kev":
+        return _database_direction(
+            (
+                func.coalesce(FindingCurrentProjection.in_kev, False),
+                priority_rank,
+                *stable_tie,
+            ),
+            query.direction,
+        )
+    if query.sort == "last_seen":
+        return _database_direction(
+            (Finding.last_seen_at, priority_rank, *stable_tie),
+            query.direction,
+        )
+    if query.sort == "component":
+        return _database_direction(
+            (
+                func.lower(func.coalesce(Component.name, "")),
+                func.lower(func.coalesce(Component.version, "")),
+                func.lower(func.coalesce(Asset.business_service, "")),
+                func.lower(func.coalesce(Asset.asset_key, "")),
+                func.lower(func.coalesce(FindingCurrentProjection.cve_id, Finding.cve_id)),
+                Finding.id,
+            ),
+            query.direction,
         )
     if query.sort == "owner":
-        return (
-            str(asset.owner if asset else ""),
-            str(asset.business_service if asset else ""),
-            str(asset.asset_key if asset else ""),
-            view.cve_id,
+        return _database_direction(
+            (
+                func.lower(func.coalesce(Asset.owner, "")),
+                func.lower(func.coalesce(Asset.business_service, "")),
+                func.lower(func.coalesce(Asset.asset_key, "")),
+                func.lower(func.coalesce(FindingCurrentProjection.cve_id, Finding.cve_id)),
+                Finding.id,
+            ),
+            query.direction,
         )
     raise ValueError(f"Unsupported findings sort field: {query.sort}.")
 
 
-def _finding_page_stable_tie_key(view: DecisionFindingView) -> tuple[str, ...]:
-    finding = view.finding
-    asset = finding.asset
-    component = finding.component
+def _database_stable_tie_order() -> tuple[Any, ...]:
     return (
-        str(view.cve_id or "").casefold(),
-        str(component.name if component else "").casefold(),
-        str(component.version if component else "").casefold(),
-        str(asset.business_service if asset else "").casefold(),
-        str(asset.owner if asset else "").casefold(),
-        str(asset.asset_key if asset else "").casefold(),
-        str(finding.id),
+        func.lower(func.coalesce(FindingCurrentProjection.cve_id, Finding.cve_id, "")),
+        func.lower(func.coalesce(Component.name, "")),
+        func.lower(func.coalesce(Component.version, "")),
+        func.lower(func.coalesce(Asset.business_service, "")),
+        func.lower(func.coalesce(Asset.owner, "")),
+        func.lower(func.coalesce(Asset.asset_key, "")),
+        Finding.id,
     )
 
 
-def _none_last_number(value: float | int | None) -> tuple[int, float]:
-    return (1, 0.0) if value is None else (0, float(value))
+def _database_direction(expressions: tuple[Any, ...], direction: str) -> tuple[Any, ...]:
+    if direction == "desc":
+        return tuple(expression.desc() for expression in expressions)
+    return tuple(expression.asc() for expression in expressions)
+
+
+def _database_none_last_number_order(column: Any, direction: str) -> tuple[Any, Any]:
+    value = col(column)
+    null_rank = case((value.is_(None), 1), else_=0).asc()
+    ordered_value = value.desc() if direction == "desc" else value.asc()
+    return (null_rank, ordered_value)
+
+
+def _database_contains(column: Any, needle: str) -> Any:
+    escaped = needle.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return col(column).ilike(f"%{escaped}%", escape="\\")

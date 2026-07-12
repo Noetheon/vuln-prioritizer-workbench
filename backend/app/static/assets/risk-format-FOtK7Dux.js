@@ -1,0 +1,1 @@
+function e(e){return e==null?`Not scored`:e.toFixed(1)}function t(e){return e==null?`Not scored`:`${Math.round(e*1e3)/10}%`}function n(e){return e?e.replaceAll(`_`,` `):`pending`}function r(e){return e===`succeeded`||e===`completed`?`succeeded`:e===`failed`||e===`cancelled`?`failed`:e===`completed_with_errors`?`warning`:`pending`}export{r as i,e as n,n as r,t};

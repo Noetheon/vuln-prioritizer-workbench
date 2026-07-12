@@ -25,8 +25,16 @@ from app.domain.import_asset_context import (
 from app.domain.import_asset_context import asset_exposure_from_evidence as _asset_exposure
 from app.domain.import_asset_context import string_evidence as _string_evidence
 from app.importers.contracts import NormalizedOccurrence
-from app.models import Asset, Finding, FindingDecisionEvidence, FindingOccurrence, Vulnerability
+from app.models import (
+    Asset,
+    Finding,
+    FindingCurrentProjection,
+    FindingDecisionEvidence,
+    FindingOccurrence,
+    Vulnerability,
+)
 from app.models.base import get_datetime_utc
+from app.repositories.current_projections import projection_insert_values
 from app.services.analysis import WorkbenchAnalysisResult
 from app.services.import_execution_dedup import _dedup_key_parts, _finding_dedup_key
 from app.services.import_execution_persistence_attack import _attack_context_enabled
@@ -178,6 +186,7 @@ def _persist_workbench_occurrences_bulk_insert(
     finding_batch: list[dict[str, Any]] = []
     occurrence_batch: list[dict[str, Any]] = []
     evidence_batch: list[dict[str, Any]] = []
+    projection_batch: list[dict[str, Any]] = []
     decisions: list[dict[str, Any]] = []
     finding_evidence: list[FindingDecisionEvidenceV2] = []
     created_count = len(occurrences)
@@ -304,9 +313,11 @@ def _persist_workbench_occurrences_bulk_insert(
         if analysis_evidence_id is None:
             finding_evidence.append(evidence_item)
         else:
+            evidence_record_id = uuid.uuid4()
+            source_payload = evidence_item.to_jsonable()
             evidence_batch.append(
                 {
-                    "id": uuid.uuid4(),
+                    "id": evidence_record_id,
                     "analysis_evidence_id": analysis_evidence_id,
                     "project_id": project_id,
                     "analysis_run_id": run_id,
@@ -316,10 +327,18 @@ def _persist_workbench_occurrences_bulk_insert(
                     "dedup_key": evidence_item.dedup_key,
                     "priority": evidence_item.priority,
                     "status": evidence_item.status,
-                    "payload_json": evidence_item.to_jsonable(),
+                    "payload_json": source_payload,
                     "created_at": now,
                     "updated_at": now,
                 }
+            )
+            projection_batch.append(
+                projection_insert_values(
+                    source_record_id=evidence_record_id,
+                    source_created_at=now,
+                    evidence=evidence_item,
+                    source_payload=source_payload,
+                )
             )
         if len(decisions) < DEDUP_DECISION_SAMPLE_LIMIT:
             decisions.append(
@@ -341,7 +360,9 @@ def _persist_workbench_occurrences_bulk_insert(
             occurrence_batch.clear()
         if len(evidence_batch) >= 100:
             session.execute(insert(FindingDecisionEvidence), evidence_batch)
+            session.execute(insert(FindingCurrentProjection), projection_batch)
             evidence_batch.clear()
+            projection_batch.clear()
 
     if finding_batch:
         session.execute(insert(Finding), finding_batch)
@@ -349,6 +370,7 @@ def _persist_workbench_occurrences_bulk_insert(
         session.execute(insert(FindingOccurrence), occurrence_batch)
     if evidence_batch:
         session.execute(insert(FindingDecisionEvidence), evidence_batch)
+        session.execute(insert(FindingCurrentProjection), projection_batch)
     session.flush()
 
     return {

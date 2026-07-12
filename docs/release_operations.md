@@ -190,7 +190,7 @@ After each draft release is verified and published:
 
 1. Confirm the GitHub Release page exists and contains the built `sdist`,
    `wheel`, `vuln-prioritizer-workbench-local-X.Y.Z.zip`, and ZIP SHA-256 file.
-2. Verify the release bundle locally:
+2. Verify the release bundle compatibility contents locally:
 
 ```bash
 tmpdir="$(mktemp -d)"
@@ -199,24 +199,29 @@ cd "$tmpdir"/vuln-prioritizer-workbench-local-X.Y.Z
 bash scripts/launch-workbench.sh status
 ```
 
-This validates that the release asset contains the launchers, Compose files,
-source tree, and `BUNDLE-MANIFEST.json`. Run `bash scripts/launch-workbench.sh
-start` for a full Docker launch verification when Docker is available.
+This validates that the source release asset contains the deprecated launchers,
+Compose compatibility files, source tree, and `BUNDLE-MANIFEST.json`. Run the
+Docker compatibility smoke when Docker is available; this is not the standard
+new-install runtime.
 
-3. Verify the documented GitHub tag install path:
+3. Verify the documented wheel and GitHub tag install paths, including the
+   installed runtime command:
 
 ```bash
 tmpdir="$(mktemp -d)"
 python3 -m venv "$tmpdir/venv"
 "$tmpdir/venv/bin/python" -m pip install \
   "git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y.Z#subdirectory=backend"
+"$tmpdir/venv/bin/vpw" --version
 "$tmpdir/venv/bin/python" scripts/workbench_wheel_smoke.py \
   "$tmpdir/workbench-source-smoke.json"
 ```
 
-This validates the supported source-at-tag install path and the installed
-Workbench app/Alembic package contents. It does not validate installation from
-the GitHub Release asset files themselves.
+This validates the supported source-at-tag install path, console entrypoint,
+packaged frontend/resources, Workbench app, and Alembic contents. The release
+gate must additionally start `vpw serve` from the built wheel, poll same-origin
+health and frontend routes, execute one durable workflow, stop it, and restart
+against the same data directory.
 
 The tag-push release workflow performs the same source-at-tag Workbench smoke
 automatically before publication. Keep the manual check here as an

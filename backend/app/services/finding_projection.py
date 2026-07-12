@@ -32,7 +32,12 @@ def _finding_public(
 ) -> FindingPublic:
     """Return a finding DTO with display context needed by the Workbench table."""
     view = latest_finding_decision_view(finding, session=session)
-    return FindingPublic.model_validate(finding).model_copy(update=view.public_update())
+    return _finding_public_from_view(view)
+
+
+def _finding_public_from_view(view: DecisionFindingView) -> FindingPublic:
+    """Return a finding DTO from an already-batched current decision view."""
+    return FindingPublic.model_validate(view.finding).model_copy(update=view.public_update())
 
 
 def _latest_decision_evidence(
@@ -497,6 +502,7 @@ def _int_evidence(evidence: dict[str, object], key: str) -> int:
 
 __all__ = [
     "_finding_public",
+    "_finding_public_from_view",
     "_redacted_finding_json",
     "_finding_detail_public",
     "_finding_detail_public_with_attack_context",

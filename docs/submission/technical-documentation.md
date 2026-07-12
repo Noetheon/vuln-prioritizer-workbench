@@ -2,9 +2,10 @@
 
 ## System Overview
 
-VPW consists of a FastAPI backend, a React/Vite frontend with a local route
-adapter, and a generated API client. The active Workbench is local-first and
-self-hosted. The internal engine remains available to Workbench services for
+VPW consists of a packaged FastAPI backend, a same-origin React/Vite frontend
+with a local route adapter, a supervised durable worker, SQLite WAL state, and a
+generated API client. The active Workbench is local-first and self-hosted. The
+internal engine remains available to Workbench services for
 parsing, provider enrichment, scoring, SARIF, and report helpers.
 
 | Area | Implementation |
@@ -13,16 +14,17 @@ parsing, provider enrichment, scoring, SARIF, and report helpers.
 | Frontend | React, Vite, TypeScript, local route adapter, VPW Design System. |
 | API Boundary | `frontend/src/client/**` is generated from OpenAPI. |
 | Product Logic | `frontend/src/api-client.ts` is manual wrapper code; components import services/types from the generated client but do not edit generated files manually. |
-| Package Boundary | The backend distribution intentionally ships both `app/**` and `app/domain/engine/**`. |
+| Package Boundary | The backend distribution ships `app/**`, including the API, `vpw` launcher, migrations, built frontend, runtime resources, worker, and `app/domain/engine/**`. |
+| Decision State | Immutable run/finding evidence plus a materialized current projection with dual-write, backfill, and parity checks. |
 | Evidence | Reports, evidence ZIP bundle, manifest, checksums, and contract artifacts. |
 
 Further details are available in [Product Architecture](../architecture.md).
 
 ## Backend Runtime Boundary
 
-`backend/app` is the active browser Workbench runtime. Docker, Compose,
-Playwright backend startup, and OpenAPI client generation use `app.main:app` or
-`app.main.app`. The browser calls the generated `/api/v1` client under
+`backend/app` is the active browser Workbench runtime. `vpw serve`, Playwright,
+OpenAPI client generation, and deprecated Compose compatibility services use
+`app.main:app` or `app.main.app`. The browser calls the generated `/api/v1` client under
 `frontend/src/client/**` through manual frontend integration code such as
 `frontend/src/api-client.ts`.
 

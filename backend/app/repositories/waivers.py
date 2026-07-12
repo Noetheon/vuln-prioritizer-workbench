@@ -12,7 +12,7 @@ from sqlmodel import Session, col, func, select
 
 from app.models import Asset, Finding, FindingStatus, Waiver, WaiverCreate, WaiverUpdate
 from app.models.base import get_datetime_utc
-from app.repositories.evidence import EvidenceRepository
+from app.repositories.current_projections import FindingCurrentProjectionRepository
 
 
 class WaiverRepository:
@@ -205,11 +205,12 @@ class WaiverRepository:
 
     def _clear_workbench_waiver_state(self, finding: Finding) -> None:
         """Clear workbench waiver state method for WaiverRepository."""
-        evidence_record = EvidenceRepository(self.session).latest_finding_decision_evidence_record(
-            finding.id
-        )
+        projection_repository = FindingCurrentProjectionRepository(self.session)
+        projection_record = projection_repository.get_record(finding.id)
         payload = (
-            deepcopy(evidence_record.payload_json or {}) if evidence_record is not None else {}
+            deepcopy(projection_repository.current_payload(finding.id) or {})
+            if projection_record is not None
+            else {}
         )
         priority_evidence = _object_value(payload.get("priority_evidence"))
         explanation = _object_value(priority_evidence.get("raw"))
@@ -233,16 +234,13 @@ class WaiverRepository:
         governance["waived"] = False
         if finding.status == FindingStatus.ACCEPTED:
             finding.status = FindingStatus.OPEN
-        if evidence_record is not None:
+        if projection_record is not None:
             priority_evidence["raw"] = explanation
             payload["priority_evidence"] = priority_evidence
             payload["governance"] = governance
             payload["waived"] = False
             payload["status"] = _finding_status_value(finding.status)
-            evidence_record.payload_json = payload
-            evidence_record.status = _finding_status_value(finding.status)
-            evidence_record.updated_at = get_datetime_utc()
-            self.session.add(evidence_record)
+            projection_repository.update_current_payload(finding.id, payload)
         finding.updated_at = get_datetime_utc()
         self.session.add(finding)
 
@@ -256,11 +254,12 @@ class WaiverRepository:
         elif finding.status == FindingStatus.ACCEPTED:
             finding.status = FindingStatus.OPEN
 
-        evidence_record = EvidenceRepository(self.session).latest_finding_decision_evidence_record(
-            finding.id
-        )
+        projection_repository = FindingCurrentProjectionRepository(self.session)
+        projection_record = projection_repository.get_record(finding.id)
         payload = (
-            deepcopy(evidence_record.payload_json or {}) if evidence_record is not None else {}
+            deepcopy(projection_repository.current_payload(finding.id) or {})
+            if projection_record is not None
+            else {}
         )
         priority_evidence = _object_value(payload.get("priority_evidence"))
         explanation = _object_value(priority_evidence.get("raw"))
@@ -288,16 +287,13 @@ class WaiverRepository:
         explanation["waiver_scope"] = scope
         governance["waiver"] = waiver_payload
         governance["waived"] = waived
-        if evidence_record is not None:
+        if projection_record is not None:
             priority_evidence["raw"] = explanation
             payload["priority_evidence"] = priority_evidence
             payload["governance"] = governance
             payload["waived"] = waived
             payload["status"] = _finding_status_value(finding.status)
-            evidence_record.payload_json = payload
-            evidence_record.status = _finding_status_value(finding.status)
-            evidence_record.updated_at = get_datetime_utc()
-            self.session.add(evidence_record)
+            projection_repository.update_current_payload(finding.id, payload)
         finding.updated_at = get_datetime_utc()
         self.session.add(finding)
 

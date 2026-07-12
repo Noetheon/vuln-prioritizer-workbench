@@ -11,9 +11,9 @@ prioritization and report generation.
    CycloneDX JSON, SPDX JSON, Dependency-Check JSON, Nessus XML, or OpenVAS XML.
 2. A local Workbench operator or automation imports that file into a Workbench
    project.
-3. The API returns a queued run with an embedded durable workflow. The Workbench
-   worker processes the import; automation polls or streams the workflow until
-   it reaches a terminal state.
+3. The API returns a queued run with an embedded durable workflow. The
+   supervised `vpw serve` worker processes the import; automation polls or
+   streams the workflow until it reaches a terminal state.
 4. The completed run queues report artifacts from the Workbench Reports
    surface through the same worker-first workflow model.
 5. Optional evidence bundles are verified before external sharing.

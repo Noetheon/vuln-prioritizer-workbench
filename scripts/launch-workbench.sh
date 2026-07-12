@@ -664,6 +664,8 @@ smoke_workbench() {
 command="${1:-start}"
 case "$command" in
   start)
+    echo "NOTICE: Docker Compose/PostgreSQL is a deprecated compatibility path for this release."
+    echo "New source installations should use: pipx install ./backend && vpw serve"
     start_workbench
     ;;
   demo)

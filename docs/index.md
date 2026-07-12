@@ -43,29 +43,30 @@ submission material.
 
 ## Quickstart
 
-For a complete external-user path across install, Docker, Workbench demo,
+For a complete external-user path across install, the Workbench demo,
 architecture, scoring, providers, reports, ATT&CK, security, and known
 limitations, start with the [User Documentation Guide](user_documentation.md).
 
 Local Workbench from a repository checkout:
 
 ```bash
-cp .env.example .env
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
-curl http://127.0.0.1:8000/api/v1/workbench/health
+pipx install ./backend
+vpw serve
 ```
 
-Open `http://127.0.0.1:5173`, create or select a project, and import
+Open `http://127.0.0.1:8765`, create or select a project, and import
 `data/sample_cves.txt`. In the provider snapshot field, enter
 `demo_provider_snapshot.json` and enable locked provider data. The checked-in
 snapshot source is `data/demo_provider_snapshot.json`. The current local
 Workbench is single-user and does not require a login step. This path works
 without live provider API keys.
 
-The Compose path starts the current FastAPI backend, React frontend, and durable
-workflow worker. The Workbench remains local-first and uses the import-format
-matrix documented in [support_matrix.md](support_matrix.md) for supported
-inputs.
+The same process serves the packaged React UI and FastAPI API and supervises the
+durable workflow worker over SQLite WAL. The Workbench remains local-first and
+uses the import-format matrix documented in
+[support_matrix.md](support_matrix.md). Docker Compose/PostgreSQL is a
+deprecated one-release compatibility path documented in the
+[transition runbook](single-process-runtime-transition.md).
 
 ## Documentation Structure
 
@@ -87,6 +88,9 @@ inputs.
 - Read [architecture/decision-evidence-kernel.md](architecture/decision-evidence-kernel.md)
   for the kernel-first import/evidence flow, projection rules, and workflow
   result boundary.
+- Read [architecture/decision-ledger.md](architecture/decision-ledger.md) for
+  immutable history, materialized current state, dual-write, backfill, and
+  parity rules.
 - Read [dependency-and-package-policy.md](dependency-and-package-policy.md) for
   backend package contents, frontend lockfile ownership, Dependabot labels, and
   dependency-audit policy.

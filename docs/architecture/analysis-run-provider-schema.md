@@ -4,8 +4,8 @@
 
 VPW-009 added the initial Workbench persistence contract for import and
 analysis run provenance. The current schema keeps that provenance layer and
-adds the Decision/Evidence Kernel v2 tables that now hold run-wide evidence and
-per-finding decisions.
+adds the Decision Ledger tables that hold immutable run-wide/per-finding
+evidence and materialized current decisions.
 
 The kernel-first producer and projection rules are documented in
 [Decision/Evidence Kernel](decision-evidence-kernel.md).
@@ -18,6 +18,7 @@ The SQLModel tables are singular and owned by the Workbench backend:
 - `analysis_run`
 - `analysis_evidence`
 - `finding_decision_evidence`
+- `finding_current_projection`
 - `finding_occurrence`
 - `provider_snapshot`
 - `workflow_run`
@@ -159,8 +160,8 @@ typed diagnostics without a corresponding `analysis_evidence` row.
 
 ### `finding_decision_evidence`
 
-Finding decision evidence records the validated `FindingDecisionEvidenceV2`
-payload for one finding/run pair.
+Finding decision evidence records the immutable validated
+`FindingDecisionEvidenceV2` payload for one finding/run pair.
 
 Minimum fields:
 
@@ -183,10 +184,39 @@ Constraints and indexes:
 - index on `(project_id, analysis_run_id)`
 - index on `(finding_id, created_at)`
 
-This table is the active source for priority explanations, provider evidence,
-governance signals, waiver state, ATT&CK mapping context, remediation fields,
-and asset re-score flags. It replaces the old active use of finding-level
-`explanation_json`, `data_quality_json`, and `evidence_json` fields.
+This table is the source for historical run priority explanations, provider
+evidence, governance signals, waiver state, ATT&CK mapping context, remediation
+fields, and asset re-score flags. It is append-only per run.
+
+### `finding_current_projection`
+
+The current projection stores one effective decision row per finding. It links
+to its newest immutable source evidence and denormalizes the columns required
+for current SQL filtering, ordering, counting, and pagination. It deliberately
+does not duplicate the complete source payload: effective current evidence is
+rehydrated from the immutable source plus a sparse lifecycle overlay.
+
+Minimum fields include:
+
+- `finding_id` as the primary key
+- `project_id`
+- `source_analysis_run_id`
+- `source_finding_evidence_id`
+- `source_created_at`
+- `schema_version`
+- current priority/status/rank/risk/provider/governance columns
+- sparse `lifecycle_overlay_json` for fields changed after the source run
+- `source_payload_sha256` and `projection_payload_sha256`
+- `revision` and `lifecycle_revision`
+- `created_at` and `updated_at`
+
+Indexes cover project plus operational rank, priority, status, KEV, EPSS, CVSS,
+and risk score. Import persistence appends history and advances current state in
+one transaction. Lifecycle actions mutate only this projection. Alembic
+revision `20260710_0004` backfills the newest historical source per finding
+with an empty overlay; full and shadow parity checks validate coverage,
+identities, source and effective hashes, reconstructed payloads, and
+denormalized columns.
 
 ### `workflow_run`
 
@@ -292,15 +322,17 @@ pending work by queue name, keeps `locked_by` and lease timestamps while a job i
 running, refreshes `last_heartbeat_at`, writes terminal output to
 `result_ref_json`, `diagnostics_json`, and `artifact_refs_json`, and uses
 `next_retry_at`, `attempt_count`, and `max_attempts` for automatic retry
-scheduling. The default worker process is
-`python -m app.workers.workflow_worker`; it uses the Workbench database as the
-queue rather than Redis, Celery, or another broker.
+scheduling. `vpw serve` supervises the worker loop in-process. Deprecated
+Compose starts the same loop with `python -m app.workers.workflow_worker`; both
+use the Workbench database as the queue rather than Redis, Celery, or another
+broker.
 
 For successful imports, `result_ref_json` is a small internal reference payload
 only: `schema_version: workflow-result-ref.v2`, `analysis_evidence_id`, and
 `artifact_refs`. Counts, provider facts, sidecar summaries, dedup summaries, and
-finding semantics come from `AnalysisEvidenceV2` and
-`FindingDecisionEvidenceV2`, not from workflow result JSON.
+finding semantics come from `AnalysisEvidenceV2`, immutable
+`FindingDecisionEvidenceV2`, and the current projection appropriate to the
+read context, not from workflow result JSON.
 
 `GET /api/v1/runs/{run_id}` and `GET /api/v1/runs/{run_id}/summary` derive these
 UI fields from Decision/Evidence Kernel v2 without requiring clients to parse

@@ -1,0 +1,231 @@
+{
+  "attack_version": "16.1",
+  "domain": "enterprise",
+  "techniques": [
+    {
+      "attack_object_id": "T1003",
+      "deprecated": false,
+      "name": "OS Credential Dumping",
+      "revoked": false,
+      "tactics": [
+        "credential-access"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1003"
+    },
+    {
+      "attack_object_id": "T1003.001",
+      "deprecated": false,
+      "name": "LSASS Memory",
+      "revoked": false,
+      "tactics": [
+        "credential-access"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1003/001"
+    },
+    {
+      "attack_object_id": "T1005",
+      "deprecated": false,
+      "name": "Data from Local System",
+      "revoked": false,
+      "tactics": [
+        "collection"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1005"
+    },
+    {
+      "attack_object_id": "T1021",
+      "deprecated": false,
+      "name": "Remote Services",
+      "revoked": false,
+      "tactics": [
+        "lateral-movement"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1021"
+    },
+    {
+      "attack_object_id": "T1033",
+      "deprecated": false,
+      "name": "System Owner/User Discovery",
+      "revoked": false,
+      "tactics": [
+        "discovery"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1033"
+    },
+    {
+      "attack_object_id": "T1041",
+      "deprecated": false,
+      "name": "Exfiltration Over C2 Channel",
+      "revoked": false,
+      "tactics": [
+        "exfiltration"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1041"
+    },
+    {
+      "attack_object_id": "T1053",
+      "deprecated": false,
+      "name": "Scheduled Task/Job",
+      "revoked": false,
+      "tactics": [
+        "execution",
+        "persistence",
+        "privilege-escalation"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1053"
+    },
+    {
+      "attack_object_id": "T1059",
+      "deprecated": false,
+      "name": "Command and Scripting Interpreter",
+      "revoked": false,
+      "tactics": [
+        "execution"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1059"
+    },
+    {
+      "attack_object_id": "T1068",
+      "deprecated": false,
+      "name": "Exploitation for Privilege Escalation",
+      "revoked": false,
+      "tactics": [
+        "privilege-escalation"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1068"
+    },
+    {
+      "attack_object_id": "T1071.001",
+      "deprecated": false,
+      "name": "Web Protocols",
+      "revoked": false,
+      "tactics": [
+        "command-and-control"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1071/001"
+    },
+    {
+      "attack_object_id": "T1082",
+      "deprecated": false,
+      "name": "System Information Discovery",
+      "revoked": false,
+      "tactics": [
+        "discovery"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1082"
+    },
+    {
+      "attack_object_id": "T1087.002",
+      "deprecated": false,
+      "name": "Domain Account",
+      "revoked": false,
+      "tactics": [
+        "discovery"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1087/002"
+    },
+    {
+      "attack_object_id": "T1105",
+      "deprecated": false,
+      "name": "Ingress Tool Transfer",
+      "revoked": false,
+      "tactics": [
+        "command-and-control"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1105"
+    },
+    {
+      "attack_object_id": "T1110",
+      "deprecated": false,
+      "name": "Brute Force",
+      "revoked": false,
+      "tactics": [
+        "credential-access"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1110"
+    },
+    {
+      "attack_object_id": "T1112",
+      "deprecated": false,
+      "name": "Modify Registry",
+      "revoked": false,
+      "tactics": [
+        "defense-evasion",
+        "persistence"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1112"
+    },
+    {
+      "attack_object_id": "T1133",
+      "deprecated": false,
+      "name": "External Remote Services",
+      "revoked": false,
+      "tactics": [
+        "persistence",
+        "initial-access"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1133"
+    },
+    {
+      "attack_object_id": "T1136",
+      "deprecated": false,
+      "name": "Create Account",
+      "revoked": false,
+      "tactics": [
+        "persistence"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1136"
+    },
+    {
+      "attack_object_id": "T1190",
+      "deprecated": false,
+      "name": "Exploit Public-Facing Application",
+      "revoked": false,
+      "tactics": [
+        "initial-access"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1190"
+    },
+    {
+      "attack_object_id": "T1486",
+      "deprecated": false,
+      "name": "Data Encrypted for Impact",
+      "revoked": false,
+      "tactics": [
+        "impact"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1486"
+    },
+    {
+      "attack_object_id": "T1531",
+      "deprecated": false,
+      "name": "Account Access Removal",
+      "revoked": false,
+      "tactics": [
+        "impact"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1531"
+    },
+    {
+      "attack_object_id": "T1543",
+      "deprecated": false,
+      "name": "Create or Modify System Process",
+      "revoked": false,
+      "tactics": [
+        "persistence",
+        "privilege-escalation"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1543"
+    },
+    {
+      "attack_object_id": "T1570",
+      "deprecated": false,
+      "name": "Lateral Tool Transfer",
+      "revoked": false,
+      "tactics": [
+        "lateral-movement"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1570"
+    }
+  ]
+}

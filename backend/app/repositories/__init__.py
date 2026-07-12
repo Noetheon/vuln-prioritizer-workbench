@@ -2,6 +2,10 @@
 
 from app.repositories.assets import AssetRepository
 from app.repositories.audit import AuditEventRepository
+from app.repositories.current_projections import (
+    FindingCurrentProjectionRepository,
+    ProjectionParityResult,
+)
 from app.repositories.evidence import EvidenceRepository
 from app.repositories.finding_page_query import FindingPageQuery
 from app.repositories.findings import FindingRepository
@@ -17,10 +21,12 @@ __all__ = [
     "AssetRepository",
     "AuditEventRepository",
     "EvidenceRepository",
+    "FindingCurrentProjectionRepository",
     "FindingPageQuery",
     "FindingRepository",
     "GitHubIssueExportRepository",
     "ProjectRepository",
+    "ProjectionParityResult",
     "ReportRepository",
     "RuntimeHeartbeatRepository",
     "RunRepository",

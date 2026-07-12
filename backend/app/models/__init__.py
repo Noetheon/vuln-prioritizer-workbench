@@ -81,6 +81,8 @@ from app.models.enums import (
 from app.models.evidence import (
     AnalysisEvidence,
     AnalysisEvidenceBase,
+    FindingCurrentProjection,
+    FindingCurrentProjectionBase,
     FindingDecisionEvidence,
     FindingDecisionEvidenceBase,
 )
@@ -255,6 +257,8 @@ __all__ = [
     "FindingAttackTechniqueDetailPublic",
     "FindingBase",
     "FindingDetailPublic",
+    "FindingCurrentProjection",
+    "FindingCurrentProjectionBase",
     "FindingDecisionEvidence",
     "FindingDecisionEvidenceBase",
     "FindingExplanationPublic",

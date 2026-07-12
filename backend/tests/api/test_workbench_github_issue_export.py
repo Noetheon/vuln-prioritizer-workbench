@@ -17,7 +17,6 @@ from utils.workbench_env import (
 )
 
 from app import models as app_models
-from app.decision_core.contracts import FindingDecisionEvidenceV2
 
 
 def test_workbench_github_issue_preview_selected_findings_markdown_redacts_secrets(
@@ -37,22 +36,27 @@ def test_workbench_github_issue_preview_selected_findings_markdown_redacts_secre
     unselected_id = seeded["finding_ids"][1]
 
     with Session(workbench_api_env.engine) as session:
-        evidence_repo = workbench_api_env.repositories.EvidenceRepository(session)
-        evidence_record = evidence_repo.latest_finding_decision_evidence_record(selected_id)
-        assert evidence_record is not None
-        evidence = FindingDecisionEvidenceV2.model_validate(evidence_record.payload_json)
-        evidence_record.payload_json = evidence.model_copy(
-            update={
-                "rationale": (
-                    "EPSS and KEV make this urgent. token=ghp_secretshouldnotleak "
-                    "and source /Users/alice/private/sbom.json"
-                ),
-                "recommended_action": ("Upgrade log4j-core and rotate api_key=super-secret-value."),
-                "risk_score": 98.6,
-                "epss": 0.9442,
-            }
-        ).to_jsonable()
-        session.add(evidence_record)
+        projection_repository = workbench_api_env.repositories.FindingCurrentProjectionRepository(
+            session
+        )
+        evidence = projection_repository.get_evidence(selected_id)
+        assert evidence is not None
+        projection_repository.update_current_payload(
+            selected_id,
+            evidence.model_copy(
+                update={
+                    "rationale": (
+                        "EPSS and KEV make this urgent. token=ghp_secretshouldnotleak "
+                        "and source /Users/alice/private/sbom.json"
+                    ),
+                    "recommended_action": (
+                        "Upgrade log4j-core and rotate api_key=super-secret-value."
+                    ),
+                    "risk_score": 98.6,
+                    "epss": 0.9442,
+                }
+            ).to_jsonable(),
+        )
         session.commit()
 
     response = client.post(

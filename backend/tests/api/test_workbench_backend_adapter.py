@@ -234,8 +234,13 @@ def test_workbench_backend_http_errors_include_stable_envelope() -> None:
     assert payload["detail"] == "Not Found"
 
 
-def test_workbench_backend_validation_errors_include_redacted_envelope() -> None:
-    selected_app = create_app(Settings(ENVIRONMENT="local"))
+def test_workbench_backend_validation_errors_include_redacted_envelope(tmp_path: Path) -> None:
+    selected_app = create_app(
+        Settings(
+            ENVIRONMENT="local",
+            SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'validation-errors.db'}",
+        )
+    )
 
     @selected_app.get("/debug/{item_id}")
     def _debug_item(item_id: int) -> dict[str, int]:
@@ -270,11 +275,12 @@ def test_workbench_backend_allows_configured_frontend_cors_origin() -> None:
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
 
 
-def test_workbench_backend_can_be_configured_without_legacy_state_aliases() -> None:
+def test_workbench_backend_can_be_configured_without_legacy_state_aliases(tmp_path: Path) -> None:
     selected_settings = Settings(
         API_V1_STR="/api/v1",
         PROJECT_NAME="VPW Workbench Adapter",
         ENVIRONMENT="local",
+        SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'adapter-settings.db'}",
     )
     selected_app = create_app(selected_settings)
 

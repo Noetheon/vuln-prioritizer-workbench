@@ -52,7 +52,7 @@ Vuln Prioritizer Workbench: local-first CVE triage with EPSS, KEV, SBOM/VEX, and
 Recommended external-share summary:
 
 ```text
-Open-source local Docker Workbench that imports existing CVE evidence, explains
+Open-source local-first Workbench that imports existing CVE evidence, explains
 remediation priority with CVSS/EPSS/KEV plus asset and VEX context, and exports
 auditable reports and evidence bundles. It is defensive prioritization software,
 not a scanner, exploit tool, hosted SaaS, or AI scoring black box.

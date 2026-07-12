@@ -1,0 +1,1 @@
+var e={name:``,description:``},t=`demo_provider_snapshot.json`,n={attackMappingFile:``,attackSource:`none`,attackTechniqueMetadataFile:``,assetContextFile:null,file:null,inputType:``,lockedProviderData:!1,providerSnapshotFile:``,vexFile:null};function r(e){return{...e,lockedProviderData:!0,providerSnapshotFile:t}}export{r as i,t as n,e as r,n as t};

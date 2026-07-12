@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Iterable
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from app.decision_core.contracts import (
     ANALYSIS_EVIDENCE_SCHEMA_VERSION,
@@ -14,8 +14,10 @@ from app.decision_core.contracts import (
     FindingDecisionEvidenceV2,
     RunDiagnosticsV2,
 )
+from app.decision_core.ledger import DecisionLedgerInvariantError
 from app.models import AnalysisEvidence, FindingDecisionEvidence
 from app.models.base import get_datetime_utc
+from app.repositories.current_projections import FindingCurrentProjectionRepository
 
 
 class EvidenceRepository:
@@ -33,7 +35,15 @@ class EvidenceRepository:
         evidence: AnalysisEvidenceV2,
         diagnostics: RunDiagnosticsV2 | None = None,
     ) -> AnalysisEvidence:
-        """Persist the validated run-wide evidence contract."""
+        """Finalize one immutable validated run-wide evidence contract."""
+        if evidence.project_id != str(project_id):
+            raise DecisionLedgerInvariantError(
+                "Analysis evidence project does not match its persistence envelope."
+            )
+        if evidence.analysis_run_id != str(analysis_run_id):
+            raise DecisionLedgerInvariantError(
+                "Analysis evidence run does not match its persistence envelope."
+            )
         existing = self.get_analysis_evidence_record(analysis_run_id)
         record = existing or AnalysisEvidence(
             project_id=project_id,
@@ -44,12 +54,30 @@ class EvidenceRepository:
             self.session.add(record)
             self.session.flush()
         payload = evidence.model_copy(update={"analysis_evidence_id": str(record.id)})
+        payload_json = payload.to_jsonable()
+        diagnostics_json = diagnostics.to_jsonable() if diagnostics is not None else {}
+        if existing is not None and (
+            existing.project_id != project_id
+            or existing.provider_snapshot_id != provider_snapshot_id
+        ):
+            raise DecisionLedgerInvariantError(
+                f"Analysis evidence run {analysis_run_id} changed persistence identity."
+            )
+        if existing is not None and existing.payload_json:
+            if (
+                existing.payload_json != payload_json
+                or existing.diagnostics_json != diagnostics_json
+            ):
+                raise DecisionLedgerInvariantError(
+                    f"Analysis evidence for run {analysis_run_id} is immutable once finalized."
+                )
+            return existing
         record.project_id = project_id
         record.analysis_run_id = analysis_run_id
         record.provider_snapshot_id = provider_snapshot_id
         record.schema_version = ANALYSIS_EVIDENCE_SCHEMA_VERSION
-        record.payload_json = payload.to_jsonable()
-        record.diagnostics_json = diagnostics.to_jsonable() if diagnostics is not None else {}
+        record.payload_json = payload_json
+        record.diagnostics_json = diagnostics_json
         record.updated_at = get_datetime_utc()
         self.session.add(record)
         self.session.flush()
@@ -62,7 +90,7 @@ class EvidenceRepository:
         analysis_run_id: uuid.UUID,
         provider_snapshot_id: uuid.UUID | None,
     ) -> AnalysisEvidence:
-        """Create the run evidence row before chunked finding evidence writes."""
+        """Create an empty run evidence envelope before chunked finding writes."""
         existing = self.get_analysis_evidence_record(analysis_run_id)
         record = existing or AnalysisEvidence(
             project_id=project_id,
@@ -72,6 +100,16 @@ class EvidenceRepository:
         if existing is None:
             self.session.add(record)
             self.session.flush()
+        else:
+            if existing.project_id != project_id:
+                raise DecisionLedgerInvariantError(
+                    f"Analysis evidence run {analysis_run_id} changed project identity."
+                )
+            if existing.provider_snapshot_id != provider_snapshot_id:
+                raise DecisionLedgerInvariantError(
+                    f"Analysis evidence run {analysis_run_id} changed provider snapshot identity."
+                )
+            return existing
         record.project_id = project_id
         record.analysis_run_id = analysis_run_id
         record.provider_snapshot_id = provider_snapshot_id
@@ -89,15 +127,43 @@ class EvidenceRepository:
         analysis_run_id: uuid.UUID,
         evidence_items: Iterable[FindingDecisionEvidenceV2],
     ) -> list[FindingDecisionEvidence]:
-        """Upsert current finding evidence records for a run."""
+        """Append immutable finding evidence and atomically advance current projections."""
         records: list[FindingDecisionEvidence] = []
+        projection_items: list[tuple[FindingDecisionEvidence, FindingDecisionEvidenceV2]] = []
         for item in evidence_items:
+            if item.project_id != str(project_id):
+                raise DecisionLedgerInvariantError(
+                    "Finding decision evidence project does not match its persistence envelope."
+                )
+            if item.analysis_run_id != str(analysis_run_id):
+                raise DecisionLedgerInvariantError(
+                    "Finding decision evidence run does not match its persistence envelope."
+                )
             finding_id = uuid.UUID(item.finding_id)
             existing = self.get_finding_decision_evidence_record(
                 finding_id=finding_id,
                 analysis_run_id=analysis_run_id,
             )
-            record = existing or FindingDecisionEvidence(
+            payload_json = item.to_jsonable()
+            if existing is not None:
+                if (
+                    existing.analysis_evidence_id != analysis_evidence_id
+                    or existing.project_id != project_id
+                    or existing.analysis_run_id != analysis_run_id
+                    or existing.finding_id != finding_id
+                    or existing.cve_id != item.cve_id
+                    or existing.dedup_key != item.dedup_key
+                    or existing.priority != item.priority
+                    or existing.status != item.status
+                    or existing.payload_json != payload_json
+                ):
+                    raise DecisionLedgerInvariantError(
+                        "Finding decision evidence is immutable once persisted for a run."
+                    )
+                records.append(existing)
+                projection_items.append((existing, item))
+                continue
+            record = FindingDecisionEvidence(
                 analysis_evidence_id=analysis_evidence_id,
                 project_id=project_id,
                 analysis_run_id=analysis_run_id,
@@ -107,21 +173,18 @@ class EvidenceRepository:
                 priority=item.priority,
                 status=item.status,
             )
-            if existing is None:
-                self.session.add(record)
-            record.analysis_evidence_id = analysis_evidence_id
-            record.project_id = project_id
-            record.analysis_run_id = analysis_run_id
-            record.finding_id = finding_id
             record.schema_version = FINDING_DECISION_EVIDENCE_SCHEMA_VERSION
-            record.cve_id = item.cve_id
-            record.dedup_key = item.dedup_key
-            record.priority = item.priority
-            record.status = item.status
-            record.payload_json = item.to_jsonable()
-            record.updated_at = get_datetime_utc()
+            record.payload_json = payload_json
+            self.session.add(record)
             records.append(record)
+            projection_items.append((record, item))
         self.session.flush()
+        projection_repository = FindingCurrentProjectionRepository(self.session)
+        for record, item in projection_items:
+            projection_repository.upsert_from_evidence_record(
+                source_record=record,
+                evidence=item,
+            )
         return records
 
     def get_analysis_evidence_record(
@@ -179,7 +242,10 @@ class EvidenceRepository:
         return self.session.exec(
             select(FindingDecisionEvidence)
             .where(FindingDecisionEvidence.finding_id == finding_id)
-            .order_by(col(FindingDecisionEvidence.created_at).desc())
+            .order_by(
+                col(FindingDecisionEvidence.created_at).desc(),
+                col(FindingDecisionEvidence.id).desc(),
+            )
         ).first()
 
     def latest_finding_decision_evidence_for_findings(
@@ -190,22 +256,31 @@ class EvidenceRepository:
         ids = list(finding_ids)
         if not ids:
             return {}
+        ranked = (
+            select(
+                col(FindingDecisionEvidence.id).label("evidence_id"),
+                func.row_number()
+                .over(
+                    partition_by=col(FindingDecisionEvidence.finding_id),
+                    order_by=(
+                        col(FindingDecisionEvidence.created_at).desc(),
+                        col(FindingDecisionEvidence.id).desc(),
+                    ),
+                )
+                .label("row_number"),
+            )
+            .where(col(FindingDecisionEvidence.finding_id).in_(ids))
+            .subquery()
+        )
         rows = self.session.exec(
             select(FindingDecisionEvidence)
-            .where(col(FindingDecisionEvidence.finding_id).in_(ids))
-            .order_by(
-                col(FindingDecisionEvidence.finding_id),
-                col(FindingDecisionEvidence.created_at).desc(),
-            )
+            .join(ranked, col(FindingDecisionEvidence.id) == ranked.c.evidence_id)
+            .where(ranked.c.row_number == 1)
         ).all()
-        evidence_by_finding: dict[uuid.UUID, FindingDecisionEvidenceV2] = {}
-        for row in rows:
-            if row.finding_id in evidence_by_finding:
-                continue
-            evidence_by_finding[row.finding_id] = FindingDecisionEvidenceV2.model_validate(
-                row.payload_json
-            )
-        return evidence_by_finding
+        return {
+            row.finding_id: FindingDecisionEvidenceV2.model_validate(row.payload_json)
+            for row in rows
+        }
 
     def finding_decision_evidence_for_run(
         self,

@@ -54,7 +54,7 @@ def main() -> None:
 
     if revision != ALEMBIC_HEAD:
         raise SystemExit(f"Expected Alembic head {ALEMBIC_HEAD}, got {revision}.")
-    required_tables = {"audit_event", "project"}
+    required_tables = {"audit_event", "finding_current_projection", "project"}
     missing = sorted(required_tables - tables)
     if missing:
         raise SystemExit(f"Installed Workbench migration is missing tables: {missing}")
@@ -62,6 +62,10 @@ def main() -> None:
     still_present = sorted(removed_tables & tables)
     if still_present:
         raise SystemExit(f"Installed Workbench migration kept removed tables: {still_present}")
+    if not app.state.frontend_mounted:
+        raise SystemExit("Installed Workbench wheel did not mount the packaged frontend.")
+    if not resources.files("app").joinpath("resources/demo_provider_snapshot.json").is_file():
+        raise SystemExit("Installed Workbench wheel is missing packaged demo resources.")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
@@ -70,6 +74,7 @@ def main() -> None:
                 "alembic_head": ALEMBIC_HEAD,
                 "api_route_count": len(app.routes),
                 "database_url": database_url,
+                "frontend_mounted": bool(app.state.frontend_mounted),
                 "status": "ok",
             },
             indent=2,

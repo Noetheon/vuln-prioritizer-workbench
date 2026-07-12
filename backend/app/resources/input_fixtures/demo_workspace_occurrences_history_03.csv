@@ -1,0 +1,16 @@
+cve_id,target_ref,component_name,component_version,purl,source,fix_versions,raw_severity,owner,business_service,criticality,exposure,environment
+CVE-2022-22965,pay-api-01,spring-webmvc,5.3.17,pkg:maven/org.springframework/spring-webmvc@5.3.17,trivy,5.3.18,CRITICAL,team-payments,payments,critical,internet-facing,production
+CVE-2021-44228,pay-api-01,log4j-core,2.14.1,pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1,trivy,2.17.2,CRITICAL,team-payments,payments,critical,internet-facing,production
+CVE-2024-4577,checkout-web-01,php-cgi,8.3.7,pkg:generic/php-cgi@8.3.7,manual,8.3.8,CRITICAL,team-checkout,checkout,critical,internet-facing,production
+CVE-2024-4577,checkout-web-02,php-cgi,8.2.20,pkg:generic/php-cgi@8.2.20,manual,8.2.21,CRITICAL,team-checkout,checkout,high,dmz,production
+CVE-2020-1472,id-dc-01,windows-netlogon,2019,pkg:generic/windows-netlogon@2019,manual,2020-09-rollup,CRITICAL,team-identity,identity,critical,internal,production
+CVE-2020-1472,id-dc-02,windows-netlogon,2016,pkg:generic/windows-netlogon@2016,manual,2020-09-rollup,CRITICAL,team-identity,identity,high,internal,production
+CVE-2021-44228,id-admin-01,log4j-core,2.13.3,pkg:maven/org.apache.logging.log4j/log4j-core@2.13.3,grype,2.17.2,CRITICAL,team-identity,identity,high,internal,production
+CVE-2023-34362,file-transfer-01,moveit-transfer,2023.0.0,pkg:pypi/moveit-transfer@2023.0.0,manual,2023.0.2,CRITICAL,team-platform,file-transfer,critical,dmz,production
+CVE-2023-34362,file-transfer-dr-01,moveit-transfer,2023.0.1,pkg:pypi/moveit-transfer@2023.0.1,manual,2023.0.2,HIGH,team-platform,file-transfer,high,internal,production
+CVE-2022-22965,catalog-api-01,spring-webmvc,5.3.15,pkg:maven/org.springframework/spring-webmvc@5.3.15,trivy,5.3.18,CRITICAL,team-catalog,catalog,high,internal,production
+CVE-2021-44228,catalog-api-01,log4j-core,2.12.1,pkg:maven/org.apache.logging.log4j/log4j-core@2.12.1,trivy,2.17.2,CRITICAL,team-catalog,catalog,high,internal,production
+CVE-2021-44228,warehouse-api-01,log4j-core,2.14.1,pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1,grype,2.17.2,CRITICAL,team-fulfillment,fulfillment,high,internal,production
+CVE-2023-44487,edge-cache-02,envoy,1.25.0,pkg:generic/envoy@1.25.0,manual,1.27.3,HIGH,team-edge,edge,high,internet-facing,production
+CVE-2024-4577,backoffice-01,php-cgi,8.1.28,pkg:generic/php-cgi@8.1.28,manual,8.1.29,HIGH,team-corporate,backoffice,medium,internal,production
+CVE-2021-44228,order-worker-01,log4j-core,2.14.1,pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1,trivy,2.17.2,CRITICAL,team-orders,orders,high,internal,production

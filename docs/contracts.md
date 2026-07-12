@@ -97,12 +97,12 @@ they do not expose raw `result_ref_json`, `diagnostics_json`, `summary_json`,
 Queued execution is the workflow contract. Import uploads, provider refreshes,
 and report generation all enqueue worker-owned workflows. Public request and
 response contracts do not include `execution_mode`; the server always uses the
-worker path. The worker runtime is a separate process started with
-`python -m app.workers.workflow_worker`. It claims due workflows from the
-database, records leases and heartbeats, retries retryable failures up to the
-stored retry budget, and stops cooperatively when cancellation has been
-requested. The default topology intentionally does not require Redis, Celery, or
-another queue broker.
+worker path. Under `vpw serve`, a supervised worker thread claims due workflows
+from the same SQLite database. The deprecated Compose topology starts the same
+loop as a separate process with `python -m app.workers.workflow_worker`. Both
+shapes record the same leases and heartbeats, retry retryable failures up to the
+stored budget, and stop cooperatively after cancellation. The contract does not
+require Redis, Celery, or another queue broker.
 
 The workflow stream sends JSON messages with `type: "workflow"` for current
 snapshots and `type: "event"` for append-only events after the requested
@@ -125,9 +125,18 @@ Compatibility rules:
 ## Decision/Evidence Kernel v2
 
 Successful imports build one typed `DecisionRunResult` before terminal workflow
-completion. `analysis_evidence` stores the run-wide evidence from that result,
-and `finding_decision_evidence` stores the current decision evidence for each
-finding/run pair. These tables hold the active product truth used by run
+completion. `analysis_evidence` stores immutable run-wide evidence,
+`finding_decision_evidence` stores immutable evidence for each finding/run pair,
+and `finding_current_projection` stores one materialized effective current row
+per finding as indexed columns plus a sparse lifecycle overlay. The effective
+contract is rehydrated from immutable source evidence plus that overlay rather
+than duplicating the full payload. History and current projection are written
+in the same transaction.
+Run reads use the immutable tables; current reads use the indexed projection.
+Status and waiver actions change current state and append their existing audit
+history without rewriting run evidence. Hash, identity, payload, materialized
+column, and coverage checks define the Shadow-Read parity contract. These
+tables hold the active product truth used by run
 projection, finding detail, dashboard rollups, waiver/governance views, and
 report rendering.
 
@@ -252,13 +261,19 @@ JSON or manifest schema changes.
 
 ## Removed Surfaces
 
-The following are intentionally no longer active contracts:
+The following analytical/automation surfaces are intentionally no longer active
+contracts:
 
-- `vuln-prioritizer-workbench` console entrypoint
-- Typer command modules
+- the former Typer `vuln-prioritizer-workbench` console entrypoint and command
+  modules
 - `analyze`, `compare`, `explain`, `doctor`, `snapshot`, `state`, `rollup`,
   `data`, and `report` CLI commands
 - root composite GitHub Action
-- install-safe CLI smoke tests
+- install-safe analytical CLI smoke tests
 - runtime config discovery for CLI defaults
-- optional CLI SQLite state store
+- optional analytical-CLI SQLite state store
+
+The new `vpw` console script is a separate, intentionally small browser-runtime
+surface: `serve`, `ledger backfill`, `ledger verify`, and verified
+`migrate database`. It does not restore any removed analytical command or JSON
+contract.

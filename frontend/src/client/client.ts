@@ -23,6 +23,8 @@ export interface ClientOptions {
   throwOnError?: boolean
 }
 
+export type ClientMeta = Record<never, never>
+
 export type Config<_TOptions extends ClientOptions = ClientOptions> = Omit<
   RequestInit,
   "body" | "headers" | "method"

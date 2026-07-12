@@ -19,8 +19,9 @@ payloads.
 | Public contracts | `backend/app/decision_core/contracts.py` | Validate `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, `OccurrenceEvidenceV2`, and `RunDiagnosticsV2`. |
 | Import orchestration | `backend/app/services/import_execution.py` | Store uploads, run parser/enrichment, persist findings/occurrences, call the kernel, persist evidence, and close the workflow. |
 | Persistence summary adapters | `backend/app/services/import_execution_persistence.py`, `backend/app/services/import_execution_persistence_bulk.py` | Persist relational records and return the typed summary consumed by `DecisionPersistencePlan`. |
-| Evidence repository | `backend/app/repositories/evidence.py` | Upsert run-wide evidence and replace per-finding decision evidence. |
-| Evidence read model | `backend/app/decision_core/readmodels.py` | Centralize evidence-first run, finding, occurrence, report, dashboard, governance, and GitHub issue read views. |
+| Evidence repository | `backend/app/repositories/evidence.py` | Prepare/finalize immutable run evidence, append immutable per-run finding evidence, and dual-write current projections. |
+| Current projection repository | `backend/app/repositories/current_projections.py` | Materialize current state, apply lifecycle-only changes, backfill, and verify hashes/columns/coverage. |
+| Evidence read model | `backend/app/decision_core/readmodels.py` | Centralize immutable run views and current-projection finding, occurrence, report, dashboard, governance, and GitHub issue views. |
 | Public projections | `backend/app/services/run_workflow_projection.py`, `backend/app/services/finding_projection.py`, `backend/app/services/dashboard.py`, `backend/app/services/governance.py`, `backend/app/services/decisions.py`, `backend/app/services/github_issues.py`, `backend/app/services/report_projection.py`, `backend/app/services/report_service_payload.py` | Map central decision views into stable API, finding detail, dashboard, waiver/governance, GitHub issue preview, and report payloads. |
 
 `backend/app/decision_core/builders.py` remains an adapter module for
@@ -40,11 +41,14 @@ flowchart LR
   F --> G
   G --> H["AnalysisEvidenceV2"]
   G --> I["FindingDecisionEvidenceV2 rows"]
+  I --> P["finding_current_projection"]
   G --> J["workflow-result-ref.v2"]
   H --> K["readmodels.DecisionRunView"]
-  I --> L["readmodels.DecisionFindingView"]
+  I --> L["Historical run DecisionFindingView"]
+  P --> Q["Current DecisionFindingView"]
   K --> M["Run API and summaries"]
-  L --> N["Finding detail, governance, reports, GitHub export"]
+  L --> N["Historical run reports and evidence"]
+  Q --> O["Current detail, governance, GitHub export"]
 ```
 
 ## Kernel Output
@@ -63,10 +67,16 @@ Run-wide evidence must remain bounded. It may contain counts, upload refs,
 provider facts, warnings, parse errors, sidecar summaries, dedup summaries, and
 ATT&CK rollup state, but it must not embed the full finding decision list.
 
-Per-finding decision truth lives in `finding_decision_evidence`. That includes
+Per-run finding decision truth lives immutably in
+`finding_decision_evidence`. That includes
 priority, provider evidence, governance state, remediation guidance, ATT&CK
 context, occurrence evidence, waiver state, VEX state, and raw explanation
-material needed for explain/report projections.
+material needed for explain/report projections. Effective current state lives
+in `finding_current_projection`, which links to its source evidence and may
+advance with a newer run or explicit lifecycle action without rewriting that
+source. It stores indexed current fields and only a sparse lifecycle overlay;
+read models reconstruct and validate the effective payload from source plus
+overlay.
 
 ## Workflow Result Boundary
 
@@ -91,8 +101,10 @@ or cancelled workflows may still expose typed diagnostics through
 Projection code should follow these rules:
 
 - Run APIs read successful output facts from `AnalysisEvidenceV2`.
-- Finding list/detail payloads read decision fields and occurrence evidence from
-  `DecisionFindingView`.
+- Current finding list/detail payloads read decision fields and occurrence
+  evidence from `DecisionFindingView` backed by `finding_current_projection`.
+- Historical run payloads and run-specific reports read the immutable
+  `finding_decision_evidence` rows for that run.
 - Reports, dashboard, waiver/governance views, and GitHub issue previews use
   the same central decision views as API and UI projections.
 - SQL tables such as `finding`, `finding_occurrence`, and `analysis_run` remain
@@ -115,6 +127,7 @@ The kernel-first path is protected by:
 - `backend/tests/api/report_contracts/`
 - `backend/tests/api/workflow_contracts/`
 - `backend/tests/test_decision_projection.py`
+- `backend/tests/test_decision_ledger.py`
 - `backend/tests/test_docs_hygiene.py`
 
 Run the focused documentation and contract checks after changing this page or

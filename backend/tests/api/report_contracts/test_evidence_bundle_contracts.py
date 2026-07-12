@@ -16,14 +16,13 @@ from utils.report_contract_fixtures import (
     replace,
 )
 from utils.workbench_contracts import (
-    _add_vpw051_bundle_metadata,
-    _add_vpw060_attack_contexts,
     _configure_report_dir,
     _create_report_via_worker,
     _load_schema,
     _normalize_html_snapshot,
     _replace_zip_member,
     _repo_root,
+    _seed_bundle_reportable_run,
     _seed_reportable_run,
 )
 from utils.workbench_env import (
@@ -47,8 +46,11 @@ def test_vpw051_evidence_bundle_zip_create_downloads_manifest_integrity(
     _configure_report_dir(workbench_api_env, tmp_path)
     headers = local_api_headers(workbench_api_env.client)
     project = create_project_via_api(workbench_api_env.client, headers)
-    run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
-    input_metadata = _add_vpw051_bundle_metadata(workbench_api_env, run_id, tmp_path)
+    run_id, input_metadata = _seed_bundle_reportable_run(
+        workbench_api_env,
+        uuid.UUID(project["id"]),
+        tmp_path,
+    )
 
     payload = _create_report_via_worker(
         workbench_api_env,
@@ -337,8 +339,11 @@ def test_vpw060_evidence_bundle_includes_attack_navigator_layer_when_mapped(
     _configure_report_dir(workbench_api_env, tmp_path)
     headers = local_api_headers(workbench_api_env.client)
     project = create_project_via_api(workbench_api_env.client, headers)
-    run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
-    _add_vpw060_attack_contexts(workbench_api_env, run_id)
+    run_id = _seed_reportable_run(
+        workbench_api_env,
+        uuid.UUID(project["id"]),
+        with_attack_contexts=True,
+    )
 
     payload = _create_report_via_worker(
         workbench_api_env,

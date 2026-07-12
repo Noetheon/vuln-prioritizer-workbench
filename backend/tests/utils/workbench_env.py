@@ -498,20 +498,10 @@ def seed_finding_pair(
                 filename="github-issue-preview-cves.txt",
             )
             evidence_repo = repositories.EvidenceRepository(session)
-            analysis_evidence = evidence_repo.upsert_analysis_evidence(
+            analysis_evidence = evidence_repo.prepare_analysis_evidence_record(
                 project_id=project_id,
                 analysis_run_id=run.id,
                 provider_snapshot_id=snapshot.id,
-                evidence=_seed_analysis_evidence(
-                    project_id=project_id,
-                    run=run,
-                    provider_snapshot_id=snapshot.id,
-                    provider_snapshot_hash=snapshot.content_hash,
-                    finding_count=0,
-                    counts_by_priority={},
-                    locked_provider_data=True,
-                    findings=[],
-                ),
             )
             evidence_items = [
                 _seed_finding_evidence(

@@ -255,6 +255,10 @@ def _alembic_head_is_current(session: Session) -> bool:
 
 
 def _runtime_mode(settings: Settings) -> str:
+    if settings.IN_PROCESS_WORKER_ENABLED:
+        return "local-single-process"
+    if settings.COMPOSE_COMPATIBILITY_MODE:
+        return "compose-compatibility-deprecated"
     if settings.ENVIRONMENT == "local":
         return "local-single-user"
     return f"{settings.ENVIRONMENT}-single-user"

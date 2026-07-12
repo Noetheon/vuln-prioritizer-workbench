@@ -59,6 +59,9 @@ def assert_api_local_actor_policy(api_prefix: str, routes: Iterable[object]) -> 
         dependant = getattr(route, "dependant", None)
         if not isinstance(route_path, str) or not isinstance(dependant, Dependant):
             continue
+        normalized_prefix = f"/{api_prefix.strip('/')}"
+        if not route_path.startswith(f"{normalized_prefix}/"):
+            continue
         registered_paths.add(route_path)
         route_suffix = _api_route_suffix(route_path, api_prefix)
         registered_suffixes.add(route_suffix)

@@ -35,14 +35,18 @@ current acceptance source.
 - The active decision/evidence source is Decision/Evidence Kernel v2:
   `backend/app/decision_core/producer.py`, `AnalysisEvidenceV2`,
   `FindingDecisionEvidenceV2`, `RunDiagnosticsV2`, `analysis_evidence`, and
-  `finding_decision_evidence`.
+  immutable `analysis_evidence`/`finding_decision_evidence` history plus the
+  materialized `finding_current_projection` current view.
 - Default prioritization stays grounded in `CVSS + EPSS + KEV`.
 - ATT&CK, asset context, and VEX remain explicit contextual layers.
 - The old composite GitHub Action is no longer an active delivery surface; Workbench/API flows are the supported direction.
 - Local quality gates collect backend coverage through pytest-cov and enforce
   critical Workbench module floors through `make critical-coverage-check`;
   docs/frontend/browser checks validate the active Workbench surface.
-- Docker and Compose provide a local runtime bootstrap for the Workbench.
+- `vpw serve` is the standard packaged local runtime with same-origin UI/API,
+  SQLite WAL, and a supervised in-process worker.
+- Docker Compose/PostgreSQL is deprecated for new installations and retained
+  for one transition release, rollback, and parity evidence.
 - Workflow v2 is the active execution core: imports, provider refreshes, and
   report generation are queued durable workflows processed by the local worker.
 - Parser and provider contributions are governed by the static local
@@ -63,10 +67,13 @@ workflows around the same transparent prioritization model.
 
 Current Workbench scope:
 
-- Docker Compose quickstart as the local web/API runtime entry point.
-- Local developer runs may use SQLite; the Compose quickstart uses private
-  Postgres plus a durable workflow worker and mounted provider cache, upload,
-  snapshot, and report volumes.
+- `vpw serve` as the local web/API runtime entry point, with private SQLite WAL
+  state, packaged frontend/resources, and a supervised durable workflow worker.
+- Verified PostgreSQL-to-SQLite migration with schema, Ledger, table digest,
+  artifact, foreign-key, and rollback boundaries.
+- Deprecated Compose compatibility with private Postgres, a separate durable
+  worker, and mounted provider cache/upload/snapshot/report volumes for one
+  release cycle.
 - Import paths for the local input-format matrix, including CVE lists, generic occurrence CSV, Trivy JSON, Grype JSON, CycloneDX JSON, SPDX JSON, Dependency-Check JSON, GitHub alerts JSON, Nessus XML, and OpenVAS XML.
 - Findings table and detail views that expose priority, evidence, owner/service context, and "why this priority?" explanations.
 - Dashboard and report flows for Markdown, HTML, JSON, and evidence bundles.
@@ -75,14 +82,15 @@ Current Workbench scope:
   setup, provider snapshot refresh, report artifacts, ATT&CK context, GitHub
   issue preview/export, SARIF validation, and CI/CD docs.
 
-The current active Compose stack runs the `backend/app` FastAPI runtime on
-`127.0.0.1:8000`, the durable workflow worker in the backend image, and the
-React frontend on `127.0.0.1:5173`.
+The standard runtime serves `backend/app` and the packaged React application on
+`127.0.0.1:8765`. The compatibility stack retains backend `8000`, frontend
+`5173`, a separate worker, and PostgreSQL.
 
 Current local Workbench limits:
 
 - Local-first single-node runtime, not a hardened shared or exposed deployment.
-- Active Compose uses `backend/app` plus the local durable workflow worker.
+- Standard local operation uses the supervised in-process worker. Deprecated
+  Compose uses the same durable worker contract in a separate process.
   Browser login, API tokens, SSO, organization-wide ticket sync policy,
   multi-node worker fleets, and multi-workspace support remain outside the
   current local-first scope.
@@ -161,7 +169,8 @@ Status: implemented; release workflow is wired for tagged GitHub Releases and ga
 
 - Historical CLI-era package and JSON contracts. These are no longer the active
   product surface.
-- Historical `pipx` installation documentation and tests.
+- Historical `pipx` analytical-CLI installation documentation and tests. The
+  current `pipx` package path installs the browser Workbench launcher only.
 - Stable scanner/SBOM export inputs, Asset Context, VEX, and GitHub integration.
 - Local MkDocs-based documentation site for a browsable public doc surface.
 

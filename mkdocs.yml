@@ -14,6 +14,8 @@ nav:
       - Documentation Map: documentation-map.md
       - Documentation Evidence Matrix: documentation-evidence-matrix.md
       - Product Architecture: architecture.md
+      - Decision Ledger Architecture: architecture/decision-ledger.md
+      - Single-Process Runtime Transition: single-process-runtime-transition.md
       - Workbench Information Architecture: workbench-information-architecture.md
       - Workbench UI System: workbench-ui-system.md
       - Dependency and Package Policy: dependency-and-package-policy.md

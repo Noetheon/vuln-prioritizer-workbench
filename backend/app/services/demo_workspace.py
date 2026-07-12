@@ -18,6 +18,7 @@ from app.models import (
     AnalysisRun,
     Asset,
     Finding,
+    FindingCurrentProjection,
     FindingDecisionEvidence,
     FindingOccurrence,
     Project,
@@ -358,6 +359,13 @@ def _backdate_latest_demo_run(session: Session, *, age_days: int) -> None:
         finding_evidence.created_at = backdated_finish
         finding_evidence.updated_at = backdated_finish
         session.add(finding_evidence)
+    for projection in session.exec(
+        select(FindingCurrentProjection).where(
+            FindingCurrentProjection.source_analysis_run_id == run.id
+        )
+    ):
+        projection.source_created_at = backdated_finish
+        session.add(projection)
     # Keep finding lifecycle timestamps consistent with the backdated run so
     # the history tab tells the same story as the risk index timeline.
     finding_ids = session.exec(

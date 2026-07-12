@@ -268,6 +268,7 @@ function Write-WorkbenchUrls {
 }
 
 function Start-Workbench {
+  Write-Warning "Docker Compose/PostgreSQL is a deprecated compatibility path for this release. New source installations should use: pipx install ./backend; vpw serve"
   Assert-DockerReady
   Initialize-EnvFile
   Set-LaunchPorts

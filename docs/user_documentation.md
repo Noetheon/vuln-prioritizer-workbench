@@ -11,20 +11,23 @@ from descriptions, keywords, or AI output.
 
 ## First Run
 
-Use this path when you want to try the local Workbench from a repository
-checkout and already have CVE evidence or scanner exports.
+Use this path when you already have CVE evidence or scanner exports.
 
 ```bash
-cp .env.example .env
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
+git clone https://github.com/Noetheon/vuln-prioritizer-workbench.git
+cd vuln-prioritizer-workbench
+pipx install ./backend
+vpw serve
 ```
 
-Open `http://127.0.0.1:5173`, create or select a project, and upload your
+After the transition release is published, the package-registry install may
+replace the source install. The current published `v1.2.0` predates `vpw`.
+Open `http://127.0.0.1:8765`, create or select a project, and upload your
 evidence through Imports. Choose the input type explicitly so parsing does not
 depend on filename detection.
-Keep the `worker` service running while using Imports, Providers, and Reports.
-Those actions enqueue durable Workflow v2 jobs and do not complete inside the
-initial HTTP request.
+The supervised worker starts with the browser runtime. Imports, Providers, and
+Reports enqueue durable Workflow v2 jobs and do not complete inside the initial
+HTTP request.
 
 Use the [support matrix](support_matrix.md) before wiring imports or reports
 into local automation. It lists supported input formats, output contracts, and
@@ -32,25 +35,24 @@ Workbench coverage.
 
 ## Local Workbench Demo
 
-Use this path when you want a reproducible browser demo from a repository
-checkout without customer data or live-provider-only behavior.
+Use this path when you want a reproducible browser demo without customer data
+or live-provider-only behavior.
 
 ```bash
-bash scripts/launch-workbench.sh demo
+vpw serve
 ```
 
-That starts the local Docker Workbench when needed, seeds or repairs the
-deterministic Online Shop Demo Workspace, and opens demo-ready Workbench URLs.
+Use **Load demo workspace** on the dashboard. Packaged provider and ATT&CK
+resources seed or repair the deterministic Online Shop Demo Workspace.
 
-Maintainers can also run the underlying checks and manual Compose path:
+Maintainers can run the underlying fixture checks:
 
 ```bash
 make install
 make provider-snapshot-validate
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend worker
 ```
 
-Then open `http://127.0.0.1:5173`, load the demo workspace, and follow the
+Then follow the
 step-by-step [Workbench offline demo runbook](workbench-offline-demo.md). That
 runbook covers import, locked provider replay, findings review, provider
 freshness, reports, evidence bundles, screenshot capture, fallback artifacts,
@@ -59,12 +61,11 @@ and no-secret rules.
 The active browser Workbench uses the backend runtime under `backend/app` and
 the generated `/api/v1` browser client:
 
-```bash
-curl http://127.0.0.1:8000/api/v1/workbench/health
-```
+`GET http://127.0.0.1:8765/api/v1/workbench/health` exposes the same active
+runtime health contract.
 
-Maintainers can run the same active-runtime smoke path with isolated smoke
-ports, backend `18080` and frontend `15174`, by default:
+Compose/PostgreSQL remains a deprecated compatibility smoke path with isolated
+backend `18080` and frontend `15174` ports by default:
 
 ```bash
 make docker-demo-smoke
@@ -82,9 +83,9 @@ DOCKER_DEMO_BACKEND_PORT=18081 DOCKER_DEMO_FRONTEND_PORT=15175 make docker-demo-
 | Need | Start here | What it covers |
 | --- | --- | --- |
 | Product scope and non-goals | [concept.md](concept.md), [README](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/README.md) | Known-CVE prioritization, local-first Workbench scope, and explicit non-scanner boundaries. |
-| Quickstart and Docker | [README](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/README.md), [Workbench offline demo](workbench-offline-demo.md) | Compose smoke, local Workbench commands, and demo fixtures. |
-| Architecture | [Architecture overview](architecture/index.md) | Workbench surface, input normalization, provider enrichment, prioritization, reporting, cache, and contract boundaries. |
-| Data model and contracts | [Contracts](contracts.md), [Decision/Evidence Kernel](architecture/decision-evidence-kernel.md), [Core Workbench schema](architecture/core-workbench-schema.md), [Analysis run provider schema](architecture/analysis-run-provider-schema.md) | JSON envelopes, schema versions, active Workbench models, analysis runs, provider evidence, kernel-first evidence production, and API rules. |
+| Quickstart and transition | [README](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/README.md), [Workbench offline demo](workbench-offline-demo.md), [runtime transition](single-process-runtime-transition.md) | `vpw serve`, demo fixtures, and the deprecated Compose migration/rollback path. |
+| Architecture | [Architecture overview](architecture/index.md), [Decision Ledger](architecture/decision-ledger.md) | Workbench surface, immutable/current decision data, input normalization, provider enrichment, prioritization, reporting, cache, and contract boundaries. |
+| Data model and contracts | [Contracts](contracts.md), [Decision/Evidence Kernel](architecture/decision-evidence-kernel.md), [Decision Ledger](architecture/decision-ledger.md), [Core Workbench schema](architecture/core-workbench-schema.md), [Analysis run provider schema](architecture/analysis-run-provider-schema.md) | JSON envelopes, immutable history, current projection, schema versions, active Workbench models, analysis runs, provider evidence, kernel-first evidence production, and API rules. |
 | Import formats | [Support matrix](support_matrix.md), [CVE list](cve-list-import.md), [Generic occurrence CSV](generic-occurrence-csv-import.md), [Trivy JSON](trivy-json-import.md), [Grype JSON](grype-json-import.md), [CycloneDX JSON](cyclonedx-json-import.md), [SPDX JSON](spdx-json-import.md), [Dependency-Check JSON](dependency-check-json-import.md), [GitHub alerts JSON](github-alerts-json-import.md), [Nessus XML](nessus-xml-import.md), [OpenVAS XML](openvas-xml-import.md) | Supported file formats, preserved provenance, parser safety boundaries, and CI guidance. |
 | Providers and replay | [Provider cache and snapshots](architecture/vpw-022-provider-cache-status-snapshots.md), [Provider snapshot replay](architecture/vpw-026-provider-snapshot-replay.md), [Provider data quality flags](architecture/vpw-027-provider-data-quality-flags.md) | NVD, EPSS, KEV, cache state, locked snapshots, confidence/freshness flags, and replay behavior. |
 | Scoring and explanation | [Methodology](methodology.md), [Contracts](contracts.md) | Base priority from CVSS, EPSS, and KEV; operational score; decision guidance; comparison and explain semantics. |
@@ -133,8 +134,9 @@ or customer scanner exports in public docs.
 ## Known Limitations
 
 - The Workbench is local-first and single-node by default.
-- Local developer runs can use SQLite by default; the Compose quickstart uses a
-  private single-node Postgres service plus one durable workflow worker.
+- The standard runtime uses SQLite WAL plus one supervised workflow worker.
+  Deprecated Compose uses private single-node PostgreSQL plus a separate worker
+  during the transition release.
 - Public internet exposure, SSO, multi-tenancy, managed backups, retention
   policy, multi-node worker fleets, and organization-wide ticket-sync
   governance are outside the current local-first threat model.

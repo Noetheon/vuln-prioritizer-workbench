@@ -6,12 +6,13 @@ import uuid
 from typing import Any, cast
 
 from sqlalchemy.orm import QueryableAttribute, selectinload
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from app.models import (
     Component,
     Finding,
     FindingAttackContext,
+    FindingCurrentProjection,
     FindingStatus,
     Vulnerability,
 )
@@ -202,24 +203,45 @@ class FindingRepository:
         component_relationship = cast(QueryableAttribute[Any], Finding.component)
         statement = (
             select(Finding)
+            .outerjoin(
+                FindingCurrentProjection,
+                col(FindingCurrentProjection.finding_id) == col(Finding.id),
+            )
             .where(Finding.project_id == project_id)
             .options(
                 selectinload(asset_relationship),
                 selectinload(component_relationship),
             )
-            .order_by(Finding.cve_id, col(Finding.id))
+            .order_by(
+                func.coalesce(
+                    func.nullif(FindingCurrentProjection.operational_rank, 0),
+                    999_999,
+                ),
+                func.coalesce(FindingCurrentProjection.priority_rank, 99),
+                Finding.cve_id,
+                col(Finding.id),
+            )
         )
         return list(self.session.exec(statement).all())
 
     def count_project_findings(self, project_id: uuid.UUID) -> int:
         """Return the project finding count without materializing finding rows."""
-        statement = select(Finding).where(Finding.project_id == project_id)
-        return len(list(self.session.exec(statement).all()))
+        statement = (
+            select(func.count()).select_from(Finding).where(Finding.project_id == project_id)
+        )
+        return int(self.session.exec(statement).one())
 
     def _count_project_findings_where(self, project_id: uuid.UUID, *criteria: Any) -> int:
         """Count project findings matching additional SQL identity criteria."""
-        statement = select(Finding).where(Finding.project_id == project_id, *criteria)
-        return len(list(self.session.exec(statement).all()))
+        statement = (
+            select(func.count())
+            .select_from(Finding)
+            .where(
+                Finding.project_id == project_id,
+                *criteria,
+            )
+        )
+        return int(self.session.exec(statement).one())
 
     def list_project_attack_contexts(self, project_id: uuid.UUID) -> list[FindingAttackContext]:
         """Return ATT&CK contexts for findings in one project, newest rows first."""

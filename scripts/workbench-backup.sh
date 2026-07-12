@@ -1,17 +1,39 @@
 #!/usr/bin/env sh
 set -eu
 
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 BACKUP_DIR="${BACKUP_DIR:-./backups/workbench-$(date -u +%Y%m%dT%H%M%SZ)}"
 mkdir -p "$BACKUP_DIR"
 DEFAULT_ARTIFACT_PATHS="data/workbench-import-uploads data/workbench-reports data/workbench-provider-cache data/provider-snapshots"
 DEFAULT_COMPOSE_ARTIFACT_PATHS="workbench-import-uploads workbench-reports provider-snapshots workbench-provider-cache"
 
 host_artifact_paths() {
-  if [ -n "${WORKBENCH_ARTIFACT_PATHS:-}" ]; then
-    printf '%s\n' "$WORKBENCH_ARTIFACT_PATHS"
+  if [ -n "${WORKBENCH_ARTIFACT_ROOT:-}" ]; then
+    printf '%s\n' \
+      "$WORKBENCH_ARTIFACT_ROOT/imports" \
+      "$WORKBENCH_ARTIFACT_ROOT/reports" \
+      "$WORKBENCH_ARTIFACT_ROOT/provider-cache" \
+      "$WORKBENCH_ARTIFACT_ROOT/provider-snapshots"
     return
   fi
-  printf '%s\n' "$DEFAULT_ARTIFACT_PATHS"
+  if [ -n "${WORKBENCH_ARTIFACT_PATHS:-}" ]; then
+    for path in $WORKBENCH_ARTIFACT_PATHS; do
+      printf '%s\n' "$path"
+    done
+    return
+  fi
+  if [ -n "${SQLITE_DATABASE_PATH:-}" ]; then
+    sqlite_root="$(dirname -- "$SQLITE_DATABASE_PATH")"
+    printf '%s\n' \
+      "$sqlite_root/imports" \
+      "$sqlite_root/reports" \
+      "$sqlite_root/provider-cache" \
+      "$sqlite_root/provider-snapshots"
+    return
+  fi
+  for path in $DEFAULT_ARTIFACT_PATHS; do
+    printf '%s\n' "$path"
+  done
 }
 
 compose_artifact_paths() {
@@ -33,7 +55,8 @@ backup_compose_database() {
 }
 
 if [ -n "${SQLITE_DATABASE_PATH:-}" ]; then
-  cp "$SQLITE_DATABASE_PATH" "$BACKUP_DIR/workbench.db"
+  python3 "$SCRIPT_DIR/sqlite_backup.py" \
+    backup "$SQLITE_DATABASE_PATH" "$BACKUP_DIR/workbench.db"
 elif [ -n "${DATABASE_URL:-}" ]; then
   pg_dump --format=custom --file="$BACKUP_DIR/workbench.dump" "$DATABASE_URL"
 elif [ "${WORKBENCH_DATABASE_MODE:-host}" = "compose" ]; then
@@ -51,7 +74,7 @@ else
 fi
 
 backup_host_artifacts() {
-  for path in $(host_artifact_paths); do
+  host_artifact_paths | while IFS= read -r path; do
     if [ -e "$path" ]; then
       tar -C "$(dirname "$path")" -rf "$BACKUP_DIR/artifacts.tar" "$(basename "$path")"
     fi

@@ -54,6 +54,9 @@ dependencies = [
   "uvicorn[standard]>=0.30,<1.0",
 ]
 
+[project.scripts]
+vpw = "app.cli:main"
+
 [project.urls]
 Homepage = "https://github.com/Noetheon/vuln-prioritizer-workbench"
 Repository = "https://github.com/Noetheon/vuln-prioritizer-workbench"
@@ -88,7 +91,14 @@ include = ["app*"]
 exclude = ["tests*"]
 
 [tool.setuptools.package-data]
-app = ["alembic/script.py.mako", "domain/engine/py.typed"]
+app = [
+  "alembic/script.py.mako",
+  "domain/engine/py.typed",
+  "resources/*",
+  "resources/**/*",
+  "static/*",
+  "static/**/*",
+]
 
 [tool.pytest.ini_options]
 addopts = "-ra --cov=app --cov-report=term-missing"

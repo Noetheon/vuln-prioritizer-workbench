@@ -12,18 +12,33 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_WHEEL_SUFFIXES = (
+    "app/cli.py",
     "app/main.py",
     "app/api/main.py",
+    "app/core/frontend.py",
     "app/alembic/env.py",
     "app/domain/engine/models.py",
     "app/domain/engine/py.typed",
+    "app/resources/demo_provider_snapshot.json",
+    "app/services/artifact_migration.py",
+    "app/services/database_migration.py",
+    "app/static/index.html",
+    "app/workers/in_process.py",
+    ".dist-info/entry_points.txt",
 )
 REQUIRED_SDIST_SUFFIXES = (
+    "app/cli.py",
     "app/main.py",
     "app/api/main.py",
+    "app/core/frontend.py",
     "app/alembic/env.py",
     "app/domain/engine/models.py",
     "app/domain/engine/py.typed",
+    "app/resources/demo_provider_snapshot.json",
+    "app/services/artifact_migration.py",
+    "app/services/database_migration.py",
+    "app/static/index.html",
+    "app/workers/in_process.py",
     "pyproject.toml",
 )
 FORBIDDEN_WHEEL_PREFIXES = (
@@ -116,6 +131,19 @@ def _assert_no_legacy_workbench_modules(entries: list[str], artifact: str) -> No
         )
 
 
+def _assert_vpw_console_script(wheel: Path) -> None:
+    with zipfile.ZipFile(wheel) as archive:
+        entry = next(
+            (name for name in archive.namelist() if name.endswith(".dist-info/entry_points.txt")),
+            None,
+        )
+        if entry is None:
+            raise SystemExit(f"{wheel.name} is missing console-script metadata.")
+        metadata_text = archive.read(entry).decode("utf-8")
+    if "vpw = app.cli:main" not in metadata_text:
+        raise SystemExit(f"{wheel.name} does not publish the vpw serve entrypoint.")
+
+
 def _tracked_alembic_migration_suffixes() -> tuple[str, ...]:
     migration_dir = ROOT / "backend" / "app" / "alembic" / "versions"
     try:
@@ -169,12 +197,14 @@ def main() -> None:
     _assert_no_tests(sdist_entries, sdist.name)
     _assert_no_legacy_workbench_modules(wheel_entries, wheel.name)
     _assert_no_legacy_workbench_modules(sdist_entries, sdist.name)
+    _assert_vpw_console_script(wheel)
 
     report = {
         "boundary": (
-            "The backend distribution ships the active Workbench FastAPI package "
-            "and its internal app.domain.engine decision domain. It does not "
-            "publish or include the removed legacy vuln_prioritizer package."
+            "The backend distribution ships the active Workbench FastAPI package, "
+            "vpw launcher, frontend/resources, Decision Ledger and migration support, "
+            "and its internal app.domain.engine decision domain. It does not publish "
+            "or include the removed legacy vuln_prioritizer package."
         ),
         "wheel": {
             "path": wheel.as_posix(),

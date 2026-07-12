@@ -1,2 +1,4 @@
 prune tests
+recursive-include app/resources *
+recursive-include app/static *
 global-exclude __pycache__ *.py[cod] .DS_Store
