@@ -9,6 +9,10 @@ from dataclasses import dataclass
 from fnmatch import fnmatchcase
 from typing import Any, Literal, overload
 
+from app.domain.asset_identity import (
+    normalize_asset_identity_value,
+    normalize_asset_target_kind,
+)
 from app.domain.engine.models import (
     AssetContextRecord,
     InputOccurrence,
@@ -50,8 +54,10 @@ def apply_manual_target(
         return occurrence
     return occurrence.model_copy(
         update={
-            "target_kind": (target_kind or occurrence.target_kind).lower(),
-            "target_ref": target_ref or occurrence.target_ref,
+            "target_kind": normalize_asset_target_kind(target_kind or occurrence.target_kind),
+            "target_ref": normalize_asset_identity_value(target_ref)
+            if target_ref is not None
+            else occurrence.target_ref,
         }
     )
 
@@ -159,7 +165,12 @@ def apply_asset_context(
             unmatched_occurrences += 1
             mapped_enriched.append(occurrence)
             continue
-        asset = asset_records.get((occurrence.target_kind.lower(), occurrence.target_ref))
+        asset = asset_records.get(
+            (
+                normalize_asset_target_kind(occurrence.target_kind),
+                normalize_asset_identity_value(occurrence.target_ref),
+            )
+        )
         if asset is None:
             unmatched_occurrences += 1
             mapped_enriched.append(occurrence)
@@ -242,23 +253,24 @@ def _asset_context_rule_matches(
 ) -> bool:
     if occurrence.target_ref is None:
         return False
-    target_kind = (occurrence.target_kind or "").lower()
-    rule_kind = (getattr(rule, "target_kind", "") or "").lower()
-    rule_ref = getattr(rule, "target_ref", "") or ""
+    target_kind = normalize_asset_target_kind(occurrence.target_kind or "")
+    rule_kind = normalize_asset_target_kind(getattr(rule, "target_kind", "") or "")
+    occurrence_ref = normalize_asset_identity_value(occurrence.target_ref)
+    rule_ref = normalize_asset_identity_value(getattr(rule, "target_ref", "") or "")
     match_mode = (getattr(rule, "match_mode", "exact") or "exact").lower()
     if target_kind != rule_kind:
         return False
     if match_mode == "glob":
-        return fnmatchcase(occurrence.target_ref, rule_ref)
+        return fnmatchcase(occurrence_ref, rule_ref)
     if match_mode == "contains":
-        return rule_ref in occurrence.target_ref
+        return rule_ref in occurrence_ref
     if match_mode == "regex":
         try:
             validate_asset_context_regex(rule_ref)
-            return re.search(rule_ref, occurrence.target_ref) is not None
+            return re.search(rule_ref, occurrence_ref) is not None
         except (ValueError, re.error):
             return False
-    return occurrence.target_ref == rule_ref
+    return occurrence_ref == rule_ref
 
 
 def validate_asset_context_regex(pattern: str) -> None:

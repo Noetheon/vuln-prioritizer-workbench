@@ -169,16 +169,37 @@ def _database_finding_filters(query: FindingPageQuery) -> list[Any]:
             )
         )
     if query.query and query.query.strip():
+        component_name = _database_component_field(
+            FindingCurrentProjection.component_name,
+            Component.name,
+        )
+        component_version = _database_component_field(
+            FindingCurrentProjection.component_version,
+            Component.version,
+        )
+        component_purl = _database_component_field(
+            FindingCurrentProjection.component_purl,
+            Component.purl,
+        )
+        component_package_type = _database_component_field(
+            FindingCurrentProjection.component_package_type,
+            Component.package_type,
+        )
+        component_ecosystem = _database_component_field(
+            FindingCurrentProjection.component_ecosystem,
+            Component.ecosystem,
+        )
         filters.append(
             or_(
                 _database_contains(FindingCurrentProjection.cve_id, query.query),
                 _database_contains(Finding.cve_id, query.query),
                 _database_contains(FindingCurrentProjection.recommended_action, query.query),
                 _database_contains(FindingCurrentProjection.rationale, query.query),
-                _database_contains(Component.name, query.query),
-                _database_contains(Component.version, query.query),
-                _database_contains(Component.purl, query.query),
-                _database_contains(Component.ecosystem, query.query),
+                _database_contains(component_name, query.query),
+                _database_contains(component_version, query.query),
+                _database_contains(component_purl, query.query),
+                _database_contains(component_package_type, query.query),
+                _database_contains(component_ecosystem, query.query),
                 _database_contains(Asset.asset_key, query.query),
                 _database_contains(Asset.name, query.query),
                 _database_contains(Asset.target_ref, query.query),
@@ -243,10 +264,11 @@ def _database_finding_order(query: FindingPageQuery) -> tuple[Any, ...]:
             query.direction,
         )
     if query.sort == "component":
+        component_name, component_version = _database_component_sort_fields()
         return _database_direction(
             (
-                func.lower(func.coalesce(Component.name, "")),
-                func.lower(func.coalesce(Component.version, "")),
+                func.lower(func.coalesce(component_name, "")),
+                func.lower(func.coalesce(component_version, "")),
                 func.lower(func.coalesce(Asset.business_service, "")),
                 func.lower(func.coalesce(Asset.asset_key, "")),
                 func.lower(func.coalesce(FindingCurrentProjection.cve_id, Finding.cve_id)),
@@ -269,14 +291,33 @@ def _database_finding_order(query: FindingPageQuery) -> tuple[Any, ...]:
 
 
 def _database_stable_tie_order() -> tuple[Any, ...]:
+    component_name, component_version = _database_component_sort_fields()
     return (
         func.lower(func.coalesce(FindingCurrentProjection.cve_id, Finding.cve_id, "")),
-        func.lower(func.coalesce(Component.name, "")),
-        func.lower(func.coalesce(Component.version, "")),
+        func.lower(func.coalesce(component_name, "")),
+        func.lower(func.coalesce(component_version, "")),
         func.lower(func.coalesce(Asset.business_service, "")),
         func.lower(func.coalesce(Asset.owner, "")),
         func.lower(func.coalesce(Asset.asset_key, "")),
         Finding.id,
+    )
+
+
+def _database_component_sort_fields() -> tuple[Any, Any]:
+    return (
+        _database_component_field(FindingCurrentProjection.component_name, Component.name),
+        _database_component_field(FindingCurrentProjection.component_version, Component.version),
+    )
+
+
+def _database_component_field(projection_column: Any, legacy_column: Any) -> Any:
+    """Use evidence-bound fields whenever a current projection row exists."""
+    return case(
+        (
+            col(FindingCurrentProjection.finding_id).is_not(None),
+            col(projection_column),
+        ),
+        else_=col(legacy_column),
     )
 
 
@@ -295,4 +336,4 @@ def _database_none_last_number_order(column: Any, direction: str) -> tuple[Any, 
 
 def _database_contains(column: Any, needle: str) -> Any:
     escaped = needle.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-    return col(column).ilike(f"%{escaped}%", escape="\\")
+    return column.ilike(f"%{escaped}%", escape="\\")

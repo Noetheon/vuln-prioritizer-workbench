@@ -162,6 +162,9 @@ def _normalize_occurrence(
     prefer_asset_id_as_target_ref: bool,
 ) -> NormalizedOccurrence:
     """Normalize occurrence function."""
+    # The option is retained for importer-call compatibility only. Asset IDs are
+    # mutable context links and must never overwrite the source target identity.
+    _ = prefer_asset_id_as_target_ref
     raw_evidence = dict(occurrence.raw_evidence)
     if not raw_evidence:
         raw_evidence = _raw_evidence(occurrence, input_type=input_type)
@@ -171,25 +174,13 @@ def _normalize_occurrence(
         cve_id=occurrence.cve_id,
         component_name=occurrence.component_name,
         component_version=occurrence.component_version,
-        target_ref=_target_ref(
-            occurrence,
-            prefer_asset_id_as_target_ref=prefer_asset_id_as_target_ref,
-        ),
+        target_kind=occurrence.target_kind,
+        target_ref=occurrence.target_ref,
+        asset_id=occurrence.asset_id,
         source=occurrence.source_format,
         fix_version=occurrence.fix_versions[0] if occurrence.fix_versions else None,
         raw_evidence=raw_evidence,
     )
-
-
-def _target_ref(
-    occurrence: InputOccurrence,
-    *,
-    prefer_asset_id_as_target_ref: bool,
-) -> str | None:
-    """Return the canonical target reference for importer DTOs."""
-    if prefer_asset_id_as_target_ref:
-        return occurrence.asset_id or occurrence.target_ref
-    return occurrence.target_ref
 
 
 def _raw_evidence(occurrence: InputOccurrence, *, input_type: str) -> dict[str, Any]:

@@ -78,8 +78,15 @@ export function assetRequestBody(form: AssetFormState): AssetCreate {
   }
 }
 
-export function assetUpdateBody(form: AssetFormState): AssetUpdate {
-  return assetRequestBody(form)
+export function assetUpdateBody(
+  form: AssetFormState,
+  currentAssetKey?: string,
+): AssetUpdate {
+  const body: AssetUpdate = assetRequestBody(form)
+  if (currentAssetKey && body.asset_key === currentAssetKey.trim()) {
+    delete body.asset_key
+  }
+  return body
 }
 
 export function validateAssetForm(form: AssetFormState) {

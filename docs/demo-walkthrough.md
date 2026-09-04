@@ -70,7 +70,8 @@ prioritization is visible instead of drowned in uniform noise.
 
 - The KEV share (16/32) is intentionally above real-world rates: this is a
   curated incident-review workspace, not a raw scanner dump.
-- Vulnerability decisions are made per CVE; the per-asset score scopes the
-  context portion. Spread bonus and recommended action remain CVE-wide.
+- Provider facts are shared per CVE, while VEX, remediation, score,
+  explanation, guidance, and rank are evaluated per component/asset finding
+  scope. A scoped decision never borrows those fields from another asset.
 - Manual statuses are limited to open / in review / remediating. Accepted,
   suppressed, and fixed remain owned by waivers, VEX, and imports.

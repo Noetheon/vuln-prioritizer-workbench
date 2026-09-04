@@ -29,6 +29,7 @@ from app.services import (
     github_repository_path,
 )
 from app.services.audit import record_audit_event
+from app.services.decision_scope_lock import lock_project_decision_scope
 
 router = APIRouter(tags=["github-issues"])
 
@@ -83,7 +84,7 @@ def export_project_github_issues(
     local_actor: LocalActor,
 ) -> GitHubIssueExportPublic:
     """Dry-run or explicitly create GitHub issues for selected visible findings."""
-    require_project(session, project_id)
+    _lock_existing_export_project(session, project_id)
     repository_path = github_repository_path(payload.repository)
     try:
         token = None if payload.dry_run else github_export_token(payload.token_env)
@@ -131,10 +132,15 @@ def export_project_github_issues(
     skipped_count = 0
     stale_reservation_count = 0
     for item in preview_items:
+        # A reservation commit releases the project row lock before the network
+        # call. Reacquire it before each later item; the incomplete reservation
+        # itself blocks deletion while GitHub's outcome is unknown.
+        _lock_existing_export_project(session, project_id)
         duplicate = item.duplicate_key in batch_keys or repo.export_exists(
             project_id=project_id,
             repository=payload.repository,
             duplicate_key=item.duplicate_key,
+            finding_id=item.finding_id,
         )
         if duplicate:
             skipped_count += 1
@@ -156,14 +162,36 @@ def export_project_github_issues(
                 )
             )
         else:
-            deleted_stale_reservations = repo.delete_incomplete_export(
+            unresolved_reservation = repo.incomplete_export_exists(
                 project_id=project_id,
                 repository=payload.repository,
                 duplicate_key=item.duplicate_key,
+                finding_id=item.finding_id,
             )
-            if deleted_stale_reservations:
-                stale_reservation_count += deleted_stale_reservations
+            if unresolved_reservation:
+                _record_github_issue_export_audit(
+                    session,
+                    project_id=project_id,
+                    payload=payload,
+                    actor=local_actor,
+                    status="failure",
+                    data=data,
+                    created_count=created_count,
+                    skipped_count=skipped_count,
+                    stale_reservation_count=stale_reservation_count,
+                    failure_kind="reservation_unresolved",
+                    http_status_code=409,
+                    failed_item=item,
+                    reservation_outcome="blocked_unresolved",
+                )
                 session.commit()
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        "A previous GitHub issue creation outcome is unresolved. "
+                        "Verify the remote repository before clearing the local reservation."
+                    ),
+                )
             try:
                 with session.begin_nested():
                     reserved_export = repo.create_export(
@@ -176,17 +204,63 @@ def export_project_github_issues(
                         issue_number=None,
                     )
             except IntegrityError:
-                skipped_count += 1
-                data.append(
-                    GitHubIssueExportRecord(
-                        **item.model_dump(),
-                        status="skipped_duplicate",
-                        issue_url=None,
-                        issue_number=None,
-                    )
+                completed_winner = repo.export_exists(
+                    project_id=project_id,
+                    repository=payload.repository,
+                    duplicate_key=item.duplicate_key,
+                    finding_id=item.finding_id,
                 )
-                batch_keys.add(item.duplicate_key)
-                continue
+                if completed_winner:
+                    skipped_count += 1
+                    data.append(
+                        GitHubIssueExportRecord(
+                            **item.model_dump(),
+                            status="skipped_duplicate",
+                            issue_url=None,
+                            issue_number=None,
+                        )
+                    )
+                    batch_keys.add(item.duplicate_key)
+                    continue
+                unresolved_winner = repo.incomplete_export_exists(
+                    project_id=project_id,
+                    repository=payload.repository,
+                    duplicate_key=item.duplicate_key,
+                    finding_id=item.finding_id,
+                )
+                _record_github_issue_export_audit(
+                    session,
+                    project_id=project_id,
+                    payload=payload,
+                    actor=local_actor,
+                    status="failure",
+                    data=data,
+                    created_count=created_count,
+                    skipped_count=skipped_count,
+                    stale_reservation_count=stale_reservation_count,
+                    failure_kind=(
+                        "reservation_unresolved" if unresolved_winner else "reservation_conflict"
+                    ),
+                    http_status_code=409,
+                    failed_item=item,
+                    reservation_outcome=(
+                        "blocked_unresolved"
+                        if unresolved_winner
+                        else "blocked_conflict_without_winner"
+                    ),
+                )
+                session.commit()
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        "A concurrent GitHub export reservation is unresolved."
+                        if unresolved_winner
+                        else "GitHub export reservation state changed; retry after refreshing."
+                    ),
+                )
+            # The reservation must survive a process crash or an ambiguous
+            # network outcome after GitHub may already have created the issue.
+            session.commit()
             try:
                 issue = create_github_issue(
                     repository_path=repository_path,
@@ -194,8 +268,10 @@ def export_project_github_issues(
                     item=item,
                 )
             except HTTPException as exc:
-                session.delete(reserved_export)
-                session.flush()
+                uncertain_outcome = _github_create_outcome_is_uncertain(exc)
+                if not uncertain_outcome:
+                    session.delete(reserved_export)
+                    session.flush()
                 _record_github_issue_export_audit(
                     session,
                     project_id=project_id,
@@ -214,6 +290,9 @@ def export_project_github_issues(
                         else None
                     ),
                     failed_item=item,
+                    reservation_outcome=(
+                        "retained_unresolved" if uncertain_outcome else "removed_confirmed_failure"
+                    ),
                 )
                 session.commit()
                 raise
@@ -231,7 +310,6 @@ def export_project_github_issues(
                     issue_number=issue["issue_number"],
                 )
             )
-            session.commit()
         batch_keys.add(item.duplicate_key)
     _record_github_issue_export_audit(
         session,
@@ -252,6 +330,12 @@ def export_project_github_issues(
         count=len(data),
         data=data,
     )
+
+
+def _lock_existing_export_project(session: Session, project_id: uuid.UUID) -> None:
+    """Serialize export reservations with project deletion and reject stale callers."""
+    require_project(session, project_id)
+    lock_project_decision_scope(session, project_id)
 
 
 def _record_github_issue_preview_audit(
@@ -303,6 +387,7 @@ def _record_github_issue_export_audit(
     http_status_code: int | None = None,
     upstream_status_code: int | None = None,
     failed_item: Any | None = None,
+    reservation_outcome: str | None = None,
 ) -> None:
     detail: dict[str, Any] = {
         "repository": payload.repository,
@@ -321,6 +406,8 @@ def _record_github_issue_export_audit(
         detail["http_status_code"] = http_status_code
     if upstream_status_code is not None:
         detail["upstream_status_code"] = upstream_status_code
+    if reservation_outcome is not None:
+        detail["reservation_outcome"] = reservation_outcome
     if failed_item is not None:
         detail["failed_finding_id"] = str(failed_item.finding_id)
         detail["failed_cve_id"] = failed_item.cve_id
@@ -346,6 +433,16 @@ def _github_create_failure_kind(exc: HTTPException) -> str:
     if isinstance(exc, GitHubIssueCreationError):
         return exc.failure_kind
     return _http_failure_kind(exc)
+
+
+def _github_create_outcome_is_uncertain(exc: HTTPException) -> bool:
+    """Return whether a failed POST may still have created a remote issue."""
+    if not isinstance(exc, GitHubIssueCreationError):
+        return False
+    if exc.failure_kind in {"invalid_response", "network_error"}:
+        return True
+    status = exc.upstream_status_code
+    return status is None or status >= 500 or status in {408, 425, 429}
 
 
 def _token_failure_kind(exc: HTTPException) -> str:

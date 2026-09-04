@@ -9,6 +9,7 @@ from typing import Any, TypeVar
 
 from app import models as app_models
 from app.core.local_actor import LocalWorkbenchActor, local_actor_id
+from app.domain.component_identity import component_scope_identity, component_storage_key
 
 app_models.import_table_models()
 
@@ -115,6 +116,17 @@ def workbench_component(index: int = 1, **overrides: Any) -> app_models.Componen
         "updated_at": _time(index),
     }
     values.update(overrides)
+    if "identity_key" not in values or "identity_material" not in values:
+        material = component_scope_identity(
+            component_name=values.get("name"),
+            component_version=values.get("version"),
+            purl=values.get("purl"),
+            package_type=values.get("package_type") or values.get("ecosystem"),
+        )
+        if material is None:
+            raise ValueError("Workbench component fixture requires stable identity material.")
+        values.setdefault("identity_material", material)
+        values.setdefault("identity_key", component_storage_key(material))
     return app_models.Component(**values)
 
 

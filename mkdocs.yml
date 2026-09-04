@@ -41,6 +41,7 @@ nav:
   - Benchmarking: benchmarking.md
   - Architecture:
       - Overview: architecture/index.md
+      - Scope-First Decision Graph: architecture/scope-first-decision-graph.md
       - Decision/Evidence Kernel: architecture/decision-evidence-kernel.md
       - Model Import Registry: architecture/model-imports.md
       - Core Workbench Schema: architecture/core-workbench-schema.md

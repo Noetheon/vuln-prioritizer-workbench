@@ -73,7 +73,7 @@ rule emits one reason line that is persisted in decision evidence:
 | Internet-facing asset | +8 |
 | Production environment | +4 |
 | Asset criticality | critical +7, high +4, medium +2 |
-| Spread across assets | up to +5 for additional active occurrences |
+| Additional active observations in the same finding scope | up to +5 |
 | Accepted-risk waiver | -20 active, -5 review due |
 
 The weights are deliberately balanced so that vulnerability signals alone do
@@ -81,15 +81,41 @@ not saturate the scale: only the combination of a critical vulnerability with
 exposed, business-critical context reaches 100. This keeps asset context a
 visible differentiator instead of dead weight behind a clamp.
 
-### Per-Asset Scope
+### Scope-First Decisions
 
-Vulnerability analysis runs once per CVE, but the persisted risk score of each
-finding is computed against its own occurrence scope (exposure, environment,
-criticality of that asset). The same CVE therefore ranks differently on an
-internet-facing payment API than on an internal batch worker, while base
-signals, the spread bonus, and the recommended action stay CVE-wide. Context
-delivered out-of-band (asset-context sidecars) falls back to the CVE-wide
-aggregate per field.
+Provider enrichment remains shared per CVE, but VPW makes the operational
+decision only after grouping observations by their final finding scope:
+
+```text
+normalized CVE + component identity + target kind + source target reference
+```
+
+For each scope, VPW independently aggregates provenance and derives VEX state,
+remediation and fixed-version evidence, operational score and reasons,
+explanation, decision guidance, and work-queue rank. Asset-context and VEX
+sidecars therefore affect only the matching scope. A fixed version observed for
+one component is not recommended for another component, and an
+`under_investigation`, `fixed`, or `not_affected` statement does not leak to an
+unmatched asset or component.
+
+CVSS, EPSS, KEV, provider data-quality facts, and explicit ATT&CK context remain
+shared CVE facts. They are reused rather than fetched once per asset. Base
+priority is still derived from CVSS/EPSS/KEV, while context-dependent state and
+operational ordering are evaluated per finding scope.
+
+After every scope has been scored, VPW assigns globally unique operational
+ranks `1..N` across the final finding set. Stable scope identity breaks complete
+ties, so two findings for the same CVE cannot both receive rank 1.
+Open Critical, High, Medium, and Low work is ordered ahead of governed terminal
+states. Accepted risk follows open work, then VEX-suppressed and fixed evidence;
+the operational score and the existing KEV, waiver, and asset-context signals
+order findings within the same effective state.
+
+Source records remain separate observations. Scanner `source_id` contributes
+to provenance but is not part of finding identity; two scanners reporting the
+same CVE/component/target converge on one finding scope. See
+[Scope-First Decision Graph](architecture/scope-first-decision-graph.md) for
+identity, replay, and persistence details.
 
 ## Data Quality and Gaps
 

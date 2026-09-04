@@ -17,7 +17,14 @@ from utils.workbench_workflow_contracts import (
     run_summary,
 )
 
-from app.models import AnalysisRun, AnalysisRunStatus, WorkflowRunKind, WorkflowRunStatus
+from app.models import (
+    AnalysisRun,
+    AnalysisRunStatus,
+    Project,
+    WorkflowRun,
+    WorkflowRunKind,
+    WorkflowRunStatus,
+)
 from app.repositories import WorkflowRepository
 from app.workers import workflow_handlers, workflow_worker
 from app.workers.workflow_worker import run_worker_once
@@ -525,6 +532,7 @@ def test_worker_cancellation_loop_and_cli_runtime_paths(
 def test_workflow_handler_validation_edges(
     workbench_api_env: WorkbenchApiEnv,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     active_settings = workbench_api_env.client.app.state.workbench_settings
     settings = replace(active_settings, IMPORT_UPLOAD_DIR=str(tmp_path / "uploads"))
@@ -538,7 +546,7 @@ def test_workflow_handler_validation_edges(
             handler="app.services.import_execution.execute_project_import_upload",
             status=WorkflowRunStatus.RUNNING,
         )
-        missing_run_import = repository.create_workflow_run(
+        missing_run_import = WorkflowRun(
             kind=WorkflowRunKind.IMPORT,
             title="Missing run import",
             handler="app.services.import_execution.execute_project_import_upload",
@@ -571,8 +579,6 @@ def test_workflow_handler_validation_edges(
             filename="known-cves.txt",
             status=AnalysisRunStatus.SUCCEEDED,
         )
-        session.add(run_without_project)
-        session.flush()
         missing_project_report = repository.create_workflow_run(
             kind=WorkflowRunKind.REPORT_GENERATION,
             title="Missing project report",
@@ -618,6 +624,17 @@ def test_workflow_handler_validation_edges(
                 settings=settings,
                 workflow=missing_run_report,
             )
+
+        original_get = session.get
+
+        def get_without_project(model: Any, identity: Any, **kwargs: Any) -> Any:
+            if model is AnalysisRun and identity == run_without_project.id:
+                return run_without_project
+            if model is Project and identity == run_without_project.project_id:
+                return None
+            return original_get(model, identity, **kwargs)
+
+        monkeypatch.setattr(session, "get", get_without_project)
         with pytest.raises(workflow_handlers.WorkflowHandlerError, match="Project not found"):
             workflow_handlers._execute_report_generation_workflow(
                 session,

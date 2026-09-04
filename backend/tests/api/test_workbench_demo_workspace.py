@@ -10,11 +10,14 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
-from sqlmodel import Session, col, select
+import pytest
+from sqlmodel import Session, SQLModel, col, func, select
 from utils.workbench_env import WorkbenchApiEnv, local_api_headers
 
+from app.api.routes import projects as project_routes
 from app.domain.engine.providers.curated_attack_mappings import CuratedAttackMappingProvider
 from app.models.base import get_datetime_utc
+from app.services.artifact_cleanup import cleanup_project_artifacts
 from app.services.demo_workspace import _demo_data_dir
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -208,6 +211,7 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
     assert attack_response.json()["mapped_coverage_percent"] == 65.6
     assert (tmp_path / "uploads" / project_id).exists()
     assert (tmp_path / "reports" / project_id).exists()
+    first_project_counts = _project_scoped_row_counts(workbench_api_env, project_id)
 
     existing_response = workbench_api_env.client.post(
         "/api/v1/workbench/demo",
@@ -230,6 +234,15 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
     assert reset_response.json()["asset_count"] == 21
     assert reset_response.json()["waiver_count"] == 4
     assert reset_response.json()["report_count"] == 7
+    reset_findings_response = workbench_api_env.client.get(
+        f"/api/v1/projects/{project_id}/findings/?limit=100",
+        headers=headers,
+    )
+    assert reset_findings_response.status_code == 200
+    assert _semantic_finding_queue(reset_findings_response.json()["data"]) == (
+        _semantic_finding_queue(findings)
+    )
+    assert _project_scoped_row_counts(workbench_api_env, project_id) == first_project_counts
 
     delete_response = workbench_api_env.client.delete("/api/v1/workbench/demo", headers=headers)
     status_response = workbench_api_env.client.get("/api/v1/workbench/demo", headers=headers)
@@ -240,6 +253,7 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
     assert status_response.json()["seeded"] is False
     assert not (tmp_path / "uploads" / project_id).exists()
     assert not (tmp_path / "reports" / project_id).exists()
+    assert not any(_project_scoped_row_counts(workbench_api_env, project_id).values())
 
     recreated_response = workbench_api_env.client.post(
         "/api/v1/workbench/demo",
@@ -252,6 +266,111 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
     assert recreated_response.json()["asset_count"] == 21
     assert recreated_response.json()["waiver_count"] == 4
     assert recreated_response.json()["report_count"] == 7
+    assert _project_scoped_row_counts(workbench_api_env, project_id) == first_project_counts
+
+
+@pytest.mark.parametrize("outer_operation", ["delete", "reset"])
+def test_demo_lifecycle_rejects_recreate_during_destructive_cleanup(
+    file_backed_workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    outer_operation: str,
+) -> None:
+    """A completed delete must never remove a concurrent demo generation's files."""
+    _enable_demo_workspace(file_backed_workbench_api_env, tmp_path)
+    client = file_backed_workbench_api_env.client
+    headers = local_api_headers(client)
+    seeded = client.post(
+        "/api/v1/workbench/demo",
+        headers=headers,
+        json={"reset": True},
+    )
+    assert seeded.status_code == 200
+
+    nested_responses: list[Any] = []
+
+    def cleanup_with_nested_reset(*args: Any, **kwargs: Any) -> Any:
+        if not kwargs.get("dry_run", False) and not nested_responses:
+            nested_responses.append(
+                client.post(
+                    "/api/v1/workbench/demo",
+                    headers=headers,
+                    json={"reset": True},
+                )
+            )
+        return cleanup_project_artifacts(*args, **kwargs)
+
+    monkeypatch.setattr(
+        "app.services.project_deletion.cleanup_project_artifacts",
+        cleanup_with_nested_reset,
+    )
+    if outer_operation == "delete":
+        outer_response = client.delete("/api/v1/workbench/demo", headers=headers)
+        assert outer_response.status_code == 204
+        assert client.get("/api/v1/workbench/demo", headers=headers).json()["seeded"] is False
+    else:
+        outer_response = client.post(
+            "/api/v1/workbench/demo",
+            headers=headers,
+            json={"reset": True},
+        )
+        assert outer_response.status_code == 200
+        payload = outer_response.json()
+        assert _all_demo_report_artifacts_exist(
+            file_backed_workbench_api_env,
+            project_id=payload["project"]["id"],
+            run_id=payload["latest_run"]["id"],
+        )
+
+    assert len(nested_responses) == 1
+    assert nested_responses[0].status_code == 409
+    assert "being created, reset, or deleted" in nested_responses[0].json()["detail"]
+
+
+def test_normal_project_delete_locks_before_reading_reusable_demo_identity(
+    file_backed_workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A stale general delete must not cross a delete/recreate ABA boundary."""
+    _enable_demo_workspace(file_backed_workbench_api_env, tmp_path)
+    client = file_backed_workbench_api_env.client
+    headers = local_api_headers(client)
+    seeded = client.post(
+        "/api/v1/workbench/demo",
+        headers=headers,
+        json={"reset": True},
+    )
+    assert seeded.status_code == 200
+    project_id = seeded.json()["project"]["id"]
+    nested_responses: list[Any] = []
+    original_delete = project_routes.delete_project_with_artifact_cleanup
+
+    def delete_after_competing_requests(*args: Any, **kwargs: Any) -> Any:
+        nested_responses.extend(
+            [
+                client.delete(f"/api/v1/projects/{project_id}", headers=headers),
+                client.post(
+                    "/api/v1/workbench/demo",
+                    headers=headers,
+                    json={"reset": True},
+                ),
+            ]
+        )
+        return original_delete(*args, **kwargs)
+
+    monkeypatch.setattr(
+        project_routes,
+        "delete_project_with_artifact_cleanup",
+        delete_after_competing_requests,
+    )
+    outer_response = client.delete(f"/api/v1/projects/{project_id}", headers=headers)
+
+    assert outer_response.status_code == 204
+    assert [response.status_code for response in nested_responses] == [409, 409]
+    assert client.get("/api/v1/workbench/demo", headers=headers).json()["seeded"] is False
+    assert not (tmp_path / "uploads" / project_id).exists()
+    assert not (tmp_path / "reports" / project_id).exists()
 
 
 def test_demo_workspace_load_self_heals_mutated_state(
@@ -421,6 +540,20 @@ def _enable_demo_workspace(
     workbench_api_env.client.app.state.workbench_settings = active_settings
 
 
+def _semantic_finding_queue(findings: list[dict[str, Any]]) -> list[tuple[Any, ...]]:
+    """Return queue identity without per-seed UUIDs or lifecycle timestamps."""
+    return [
+        (
+            finding["operational_rank"],
+            finding["cve_id"],
+            finding["component_name"],
+            finding["component_version"],
+            finding["asset_key"],
+        )
+        for finding in findings
+    ]
+
+
 def _corrupt_demo_workspace_without_changing_counts(
     workbench_api_env: WorkbenchApiEnv,
     project_id: str,
@@ -516,6 +649,43 @@ def _all_demo_report_artifacts_exist(
             .where(models.Report.analysis_run_id == run_uuid)
         ).all()
     return len(reports) == 7 and all(Path(report.path).is_file() for report in reports)
+
+
+def _project_scoped_row_counts(
+    workbench_api_env: WorkbenchApiEnv,
+    project_id: str,
+) -> dict[str, int]:
+    """Count direct and important transitive project rows without ORM cascades."""
+    project_uuid = uuid.UUID(project_id)
+    tables = SQLModel.metadata.tables
+    counts: dict[str, int] = {}
+    with Session(workbench_api_env.engine) as session:
+        project_table = tables["project"]
+        counts["project"] = session.exec(
+            select(func.count())
+            .select_from(project_table)
+            .where(project_table.c.id == project_uuid)
+        ).one()
+        for table_name, table in sorted(tables.items()):
+            if table_name == "audit_event" or "project_id" not in table.c:
+                continue
+            counts[table_name] = session.exec(
+                select(func.count()).select_from(table).where(table.c.project_id == project_uuid)
+            ).one()
+
+        workflow_run = tables["workflow_run"]
+        workflow_event = tables["workflow_event"]
+        counts["workflow_event"] = session.exec(
+            select(func.count())
+            .select_from(
+                workflow_event.join(
+                    workflow_run,
+                    workflow_event.c.workflow_run_id == workflow_run.c.id,
+                )
+            )
+            .where(workflow_run.c.project_id == project_uuid)
+        ).one()
+    return counts
 
 
 def _assert_demo_totals_are_coherent(

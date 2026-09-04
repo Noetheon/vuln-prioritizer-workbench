@@ -172,6 +172,11 @@ class FindingCurrentProjectionBase(SQLModel):
     waived: bool = Field(default=False, sa_column=Column(Boolean, nullable=False))
     rationale: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     recommended_action: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    component_name: str | None = Field(default=None, max_length=300)
+    component_version: str | None = Field(default=None, max_length=200)
+    component_purl: str | None = Field(default=None, max_length=1000)
+    component_package_type: str | None = Field(default=None, max_length=120)
+    component_ecosystem: str | None = Field(default=None, max_length=120)
     lifecycle_overlay_json: dict[str, Any] = Field(
         default_factory=dict,
         sa_column=Column(JSON, nullable=False),
@@ -222,6 +227,12 @@ class FindingCurrentProjection(FindingCurrentProjectionBase, table=True):
             "ix_finding_current_projection_project_risk",
             "project_id",
             "risk_score",
+        ),
+        Index(
+            "ix_finding_current_projection_project_component",
+            "project_id",
+            "component_name",
+            "component_version",
         ),
     )
 

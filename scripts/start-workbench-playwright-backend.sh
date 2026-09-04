@@ -4,6 +4,7 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
+python_bin="${VPW_PYTHON:-python3}"
 backend_port="${WORKBENCH_PLAYWRIGHT_BACKEND_PORT:-18000}"
 db_path="${WORKBENCH_PLAYWRIGHT_DB:-$repo_root/build/frontend-playwright-workbench-$backend_port.db}"
 report_dir="${WORKBENCH_PLAYWRIGHT_REPORT_DIR:-$repo_root/build/frontend-playwright-workbench-$backend_port-reports}"
@@ -28,9 +29,9 @@ export SECRET_KEY="${SECRET_KEY:-local-workbench-dev-secret}"
 export WORKBENCH_FIXED_NOW="${WORKBENCH_FIXED_NOW:-2026-06-06T10:00:00+00:00}"
 export TZ="${TZ:-UTC}"
 
-python3 -m alembic -c backend/alembic.ini upgrade head
+"$python_bin" -m alembic -c backend/alembic.ini upgrade head
 
-python3 -m app.workers.workflow_worker \
+"$python_bin" -m app.workers.workflow_worker \
   --worker-id "playwright-worker-$backend_port" \
   --poll-interval 0.2 \
   --lease-seconds 30 \
@@ -43,4 +44,4 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-python3 -m uvicorn app.main:app --host 127.0.0.1 --port "$backend_port"
+"$python_bin" -m uvicorn app.main:app --host 127.0.0.1 --port "$backend_port"

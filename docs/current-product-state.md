@@ -25,6 +25,7 @@ hosted SaaS product.
 | Backend runtime | `backend/app` | Active FastAPI app, `/api/v1` routes, SQLModel models, repositories, services, and Alembic migrations. |
 | Local runtime | `backend/app/cli.py`, `backend/app/main.py` | `vpw serve` is the standard entrypoint: one loopback FastAPI process, packaged same-origin browser UI, migrations, SQLite WAL database, and supervised worker. |
 | Worker runtime | `backend/app/workers` | Durable database queue with leases, retries, cancellation, and events. It runs in-process under `vpw serve`; the deprecated Compose path keeps the same worker as a separate process. |
+| Decision evaluation | `backend/app/decision_core/decision_graph.py`, `backend/app/decision_core/identity.py` | Scope-first internal graph: provider and ATT&CK facts stay shared by CVE, while provenance, VEX, remediation, score, explanation, and global rank are evaluated per CVE/component/source-target finding scope. |
 | Decision Ledger | `analysis_evidence`, `finding_decision_evidence`, `finding_current_projection`, `backend/app/repositories/current_projections.py` | Immutable run history plus one materialized current row per finding, transactional dual-write, idempotent backfill, hashes, revisions, and shadow/full parity checks. |
 | Frontend runtime | `frontend`, packaged under `backend/app/static` | React, Vite, TypeScript, TanStack Query, local route adapter, Playwright tests, and the same-origin packaged Workbench UI. |
 | Generated client | `frontend/src/client/**` | Generated from backend OpenAPI. Do not edit generated files manually. |
@@ -52,6 +53,7 @@ hosted SaaS product.
 | --- | --- |
 | Full user path | [User Documentation Guide](user_documentation.md) |
 | Product architecture | [Product Architecture](architecture.md) |
+| Scope-first decision semantics | [Scope-First Decision Graph](architecture/scope-first-decision-graph.md) |
 | Decision history and current state | [Decision Ledger Architecture](architecture/decision-ledger.md) |
 | Compose-to-local transition | [Single-Process Runtime Transition](single-process-runtime-transition.md) |
 | Documentation ownership and classification | [Documentation Map](documentation-map.md) |
@@ -81,7 +83,49 @@ archive artifacts, or external primary sources own the major documentation
 claims. A passing docs build is necessary, but it is not sufficient proof that a
 provider, release, deployment, or archived-evidence statement is current.
 
-The current-tree architecture pass recorded on 2026-07-10 added the Decision
+The current-tree decision pass recorded on 2026-09-04 added the Scope-First
+Decision Graph. Successful imports reuse provider and ATT&CK facts per CVE but
+evaluate provenance, VEX, remediation, operational score, explanation, and
+global rank per final finding scope. The versioned `finding-scope-v2` identity
+uses project, normalized CVE, component identity, target kind, and stable source
+target; source records remain independently auditable through `observation-v1`. The existing
+Decision/Evidence v2 and Workflow v2 contracts remain backward compatible; the
+API adds a waiver-delete operation without changing its route version. The v2
+DTOs gain optional replay-fingerprint, observation-identity, and typed
+asset-context fields. Database revision `20260904_0005` adds and backfills an
+indexed canonical component identity with full-material collision verification,
+including versionless-PURL versions and NFC-normalized fallback coordinates.
+Canonical aliases are merged deterministically by re-pointing their finding
+foreign keys while leaving finding, occurrence, and immutable Decision Ledger
+records intact. Its PURL semantics are frozen by an exact canonicalizer
+dependency pin, and the generated client and packaged runtime assets are
+regenerated from OpenAPI.
+
+Re-imports hydrate missing asset context before VEX and scoped analysis from an
+identity-consistent current project projection or from a project asset selected
+by an explicit, evidence-consistent asset ID; explicit new context always wins,
+and ambiguous or corrupt legacy evidence fails once without partial decision
+writes or workflow retry. If a partial import changes a shared asset, projections
+not replaced by that run are marked stale instead of presenting their old score
+as current. Asset recalculation materializes the current typed context and then
+recomputes project-wide scores, guidance, statuses, and global ranks without
+rewriting immutable run history. Waiver mutations use the same engine
+reconstruction, deletion is audit-backed, and revision
+`20260904_0006` records the last UTC lifecycle evaluation per project. A stale
+project read performs at most one logical daily refresh and emits a
+`waiver.lifecycle_refresh` audit event only when current finding decisions
+materially change. Imports without waivers retain the bounded fast path.
+When a project-wide refresh is required, exact global ranks are rebuilt through
+two bounded keyset passes rather than loading every finding and evidence payload
+at once. Decision mutations serialize on the project scope through the same
+database transaction. GitHub issue export now reserves stable finding identity
+before the external POST and treats ambiguous results as unresolved. Such a
+reservation blocks project deletion with HTTP 409; completed export history
+cascades through revision `20260904_0008`. Project deletion commits relational
+state before destructive upload/report cleanup, preventing a database failure
+from erasing evidence artifacts while leaving the project live.
+
+The earlier current-tree architecture pass recorded on 2026-07-10 added the Decision
 Ledger and packaged single-process runtime. Successful imports append typed
 `AnalysisEvidenceV2`/`FindingDecisionEvidenceV2` history and atomically advance
 `finding_current_projection`. Current reads use that indexed projection;

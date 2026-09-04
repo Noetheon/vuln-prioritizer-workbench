@@ -97,7 +97,10 @@ workflow Python policy.
 Regenerate or refresh the audit input by reconciling the union of
 `project.dependencies` and `project.optional-dependencies.dev` from
 `backend/pyproject.toml` into `backend/requirements.txt`, preserving bounded
-ranges rather than hard pins. Then refresh the lock artifacts:
+ranges rather than hard pins. The deliberate exception is
+`packageurl-python==0.17.6`: its normalization output is persisted as
+`component-identity-v1`, so even patch-level semantic drift requires a new
+identity version and migration. Then refresh the lock artifacts:
 
 ```bash
 uv lock --python 3.11

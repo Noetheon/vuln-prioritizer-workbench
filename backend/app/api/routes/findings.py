@@ -8,11 +8,12 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 
 from app.api.deps import LocalActor, SessionDep
-from app.api.routes.workbench_access import require_project
+from app.api.routes.workbench_access import lock_existing_project_resource, require_project
 from app.decision_core.finding_queries import list_project_findings_query
 from app.decision_core.readmodels import project_finding_decision_views
 from app.models import (
     AssetExposure,
+    Finding,
     FindingDetailPublic,
     FindingExplanationPublic,
     FindingPriority,
@@ -126,7 +127,13 @@ def update_finding_status(
     finding = FindingRepository(session).get_finding(finding_id)
     if finding is None:
         raise HTTPException(status_code=404, detail="Finding not found")
-    require_project(session, finding.project_id)
+    finding = lock_existing_project_resource(
+        session,
+        model=Finding,
+        resource_id=finding_id,
+        project_id=finding.project_id,
+        not_found_detail="Finding not found",
+    )
     try:
         updated = update_finding_workflow_status(
             session,
