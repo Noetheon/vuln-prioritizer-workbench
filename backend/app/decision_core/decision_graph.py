@@ -197,10 +197,12 @@ class _ScopedDecisionView(Sequence[ScopedFindingDecision]):
         return len(self.records)
 
     @overload
-    def __getitem__(self, index: int) -> ScopedFindingDecision: ...
+    def __getitem__(self, index: int) -> ScopedFindingDecision:
+        raise NotImplementedError
 
     @overload
-    def __getitem__(self, index: slice) -> list[ScopedFindingDecision]: ...
+    def __getitem__(self, index: slice) -> list[ScopedFindingDecision]:
+        raise NotImplementedError
 
     def __getitem__(
         self,
