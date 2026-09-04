@@ -44,6 +44,12 @@ def render_markdown_report(payload: MarkdownReportPayload) -> str:
         f"| Medium | {counts['Medium']} |",
         f"| Low | {counts['Low']} |",
     ]
+    if payload.project_context_source:
+        lines.insert(
+            9,
+            "| Project Context | Current project projection at export time "
+            "(not immutable run evidence) |",
+        )
     if payload.governance_rollups:
         lines.extend(_markdown_governance_section(payload.governance_rollups, payload.findings))
     if payload.detection_coverage:

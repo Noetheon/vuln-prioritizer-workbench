@@ -354,9 +354,9 @@ def build_run_result(
         warnings=list(analysis_result.context.warnings),
         parse_errors=[],
         analysis_service=AnalysisServiceEvidenceV2(
-            pipeline="parse-persist-enrich-score-explain",
+            pipeline="parse-enrich-scope-evaluate-persist",
             engine="app.domain.engine.prepare_analysis",
-            kernel="app.decision_core.producer",
+            kernel="app.decision_core.decision_graph",
         ),
         analysis_semantics=persistence_plan.analysis_semantics,
         asset_context=_dict_or_none(kernel_input.asset_context_summary),

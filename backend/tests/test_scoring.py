@@ -746,6 +746,87 @@ def test_operational_sort_adds_work_queue_rank_without_changing_priority() -> No
     assert "Accepted risk remains visible" in ordered[2].decision_guidance.visibility
 
 
+def test_operational_sort_demotes_governed_terminal_states_below_open_work() -> None:
+    service = PrioritizationService()
+    open_low = _finding(
+        cve_id="CVE-2024-1001",
+        priority_label="Low",
+        priority_rank=4,
+        cvss=3.0,
+        epss=0.01,
+        in_kev=False,
+    )
+    accepted_critical = _finding(
+        cve_id="CVE-2024-1002",
+        priority_label="Critical",
+        priority_rank=1,
+        cvss=9.8,
+        epss=0.9,
+        in_kev=True,
+    ).model_copy(update={"waived": True, "waiver_status": "active"})
+    fixed_critical = _finding(
+        cve_id="CVE-2024-1003",
+        priority_label="Critical",
+        priority_rank=1,
+        cvss=9.8,
+        epss=0.9,
+        in_kev=True,
+    ).model_copy(
+        update={
+            "suppressed_by_vex": True,
+            "provenance": FindingProvenance(
+                occurrence_count=1,
+                active_occurrence_count=0,
+                suppressed_occurrence_count=1,
+                vex_statuses={"fixed": 1},
+            ),
+        }
+    )
+
+    ranked = service.assign_operational_ranks([fixed_critical, accepted_critical, open_low])
+    ordered = service.sort_findings(ranked, sort_by="operational")
+
+    assert [finding.cve_id for finding in ordered] == [
+        "CVE-2024-1001",
+        "CVE-2024-1002",
+        "CVE-2024-1003",
+    ]
+    assert [finding.priority_state for finding in ordered] == ["Low", "Accepted", "Fixed"]
+    assert [finding.operational_rank for finding in ordered] == [1, 2, 3]
+
+
+def test_terminal_vex_state_takes_precedence_over_matching_waiver_guidance() -> None:
+    fixed_and_waived = _finding(
+        cve_id="CVE-2024-2001",
+        priority_label="Critical",
+        priority_rank=1,
+        cvss=9.8,
+        epss=0.9,
+        in_kev=True,
+    ).model_copy(
+        update={
+            "suppressed_by_vex": True,
+            "waived": True,
+            "waiver_status": "active",
+            "provenance": FindingProvenance(
+                occurrence_count=1,
+                active_occurrence_count=0,
+                suppressed_occurrence_count=1,
+                vex_statuses={"fixed": 1},
+            ),
+        }
+    )
+
+    ranked = PrioritizationService().assign_operational_ranks([fixed_and_waived])[0]
+
+    assert ranked.priority_state == "Fixed"
+    assert ranked.operational_score == 0
+    assert ranked.decision_guidance is not None
+    assert ranked.decision_guidance.recommendation == "monitor"
+    assert ranked.decision_guidance.sla.priority == "Fixed"
+    assert ranked.decision_guidance.visibility.startswith("Fixed evidence")
+
+
 def test_build_comparison_marks_kev_upgrade() -> None:
     service = PrioritizationService()
     finding = _finding(

@@ -10,7 +10,7 @@ from app.models import AuditEvent, AuditEventStatus
 
 
 class AuditEventRepository:
-    """Persistence helpers for append-only audit events."""
+    """Persistence helpers for Workbench audit events."""
 
     def __init__(self, session: Session) -> None:
         """Initialize a new instance of AuditEventRepository."""
@@ -55,6 +55,29 @@ class AuditEventRepository:
         count = self.session.exec(count_statement).one()
         events = self.session.exec(statement.offset(offset).limit(limit)).all()
         return list(events), count
+
+    def get_audit_event(self, event_id: uuid.UUID) -> AuditEvent | None:
+        """Return one audit event by identifier."""
+        return self.session.get(AuditEvent, event_id)
+
+    def update_audit_event(
+        self,
+        event_id: uuid.UUID,
+        *,
+        status: AuditEventStatus | None = None,
+        detail: dict[str, Any] | None = None,
+    ) -> AuditEvent | None:
+        """Update one lifecycle audit event without committing the transaction."""
+        event = self.get_audit_event(event_id)
+        if event is None:
+            return None
+        if status is not None:
+            event.status = status
+        if detail is not None:
+            event.detail_json = detail
+        self.session.add(event)
+        self.session.flush()
+        return event
 
     def delete_audit_events_before(self, *, before: datetime) -> int:
         """Delete audit events older than the retention cutoff."""

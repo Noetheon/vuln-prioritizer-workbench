@@ -3,6 +3,7 @@ set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
+python_bin="${VPW_PYTHON:-python3}"
 
 if [[ -n "${PYTHONPATH:-}" ]]; then
   export PYTHONPATH="$PYTHONPATH:$repo_root/backend"
@@ -10,7 +11,7 @@ else
   export PYTHONPATH="$repo_root/backend"
 fi
 
-python3 - <<'PY'
+"$python_bin" - <<'PY'
 import json
 from pathlib import Path
 
@@ -28,7 +29,7 @@ scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict="$e
 rm -rf frontend/src/client/client frontend/src/client/core
 cp frontend/src/client-runtime/local-client.ts frontend/src/client/client.ts
 
-python3 - <<'PY'
+"$python_bin" - <<'PY'
 from pathlib import Path
 
 for path in sorted(Path("frontend/src/client").rglob("*.ts")):

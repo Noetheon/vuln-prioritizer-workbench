@@ -9,6 +9,8 @@ evidence and materialized current decisions.
 
 The kernel-first producer and projection rules are documented in
 [Decision/Evidence Kernel](decision-evidence-kernel.md).
+The analysis identity and per-finding evaluation rules are documented in
+[Scope-First Decision Graph](scope-first-decision-graph.md).
 
 This slice is storage-only. It does not introduce scanning, exploit execution,
 remote plugin loading, or heuristic ATT&CK mapping.
@@ -158,6 +160,15 @@ Constraints and indexes:
 validated as `RunDiagnosticsV2` when diagnostics exist. Failed imports may have
 typed diagnostics without a corresponding `analysis_evidence` row.
 
+For scope-first runs, `AnalysisEvidenceV2.analysis_semantics` records
+`analysis_decision_scope: finding_scope_first`,
+`persistence_scope: decision_graph_materialization`,
+`finding_dedup_key_version: finding-scope-v2`, and no occurrence-level semantic
+overlay fields. Optional fields retain the Decision Graph schema and the
+normalized-input, policy, shared-facts, and combined replay hashes. Its
+priority and governance counts are calculated from final scoped findings, not
+merely from the number of unique CVEs.
+
 ### `finding_decision_evidence`
 
 Finding decision evidence records the immutable validated
@@ -187,6 +198,12 @@ Constraints and indexes:
 This table is the source for historical run priority explanations, provider
 evidence, governance signals, waiver state, ATT&CK mapping context, remediation
 fields, and asset re-score flags. It is append-only per run.
+
+Each row corresponds to the final persisted finding scope selected from the
+Decision Graph. Provider facts may be shared upstream by CVE, but
+`occurrence_scope`, VEX state, provenance, remediation, score reasons,
+explanation, guidance, and operational rank reflect this row's component and
+source-target scope. Operational ranks are globally unique within the run.
 
 ### `finding_current_projection`
 
@@ -392,33 +409,60 @@ Constraints and indexes:
 `grype`. `raw_reference` preserves the scanner or input reference needed for
 auditable traceability.
 
+Source provenance follows the versioned `observation-v1` identity over source,
+source-record ID, CVE, and source ID. This is intentionally distinct from
+finding identity: another scanner can append a new occurrence to the same
+finding scope without splitting that finding.
+
 ## Import Deduplication
 
 Workbench import persistence uses a stable finding dedup key before each
 occurrence is attached to a run. The key material is:
 
 - `project_id`
-- CVE/source identifier, preferring importer `source_id` when present and
-  falling back to the normalized CVE
+- normalized CVE
 - component identity, preferring PURL and falling back to
   component/version/package type
-- `target_ref`, or an explicit empty marker when no target is present
+- normalized `target_kind`
+- the stable source `target_ref`; `asset_id` is used only when no source target
+  exists
 
-The stored `finding.dedup_key` is a `vpw019:` SHA-256 digest of that canonical
-material. The import run records created/reused counts through
+The stored `finding.dedup_key` is a versioned `finding-scope-v2` SHA-256 key
+with the `vpw-finding-scope-v2:` prefix. CVEs are uppercased, PURLs are
+canonicalized with their ecosystem-specific case rules, and non-PURL component
+coordinates use a tagged structural encoding. Missing component or target parts
+remain JSON `null` and cannot alias literal input strings. Importer `source_id`
+remains available in dedup and occurrence evidence,
+but it is not part of the finding hash. A later sidecar can bind the scope to a
+canonical asset without changing its source-derived identity.
+
+The import run records created/reused counts through
 `AnalysisEvidenceV2.counts`, while concrete source records remain auditable
 through `finding_occurrence` and finding decision evidence. Re-importing the
-same normalized occurrences therefore adds new `finding_occurrence` rows for
+same normalized scope therefore adds new `finding_occurrence` rows for
 the new run while keeping the existing `finding.first_seen_at` and updating
 `finding.last_seen_at`.
 
 Edge cases:
 
-- The same CVE on a different asset is a different finding.
-- The same CVE on the same asset but a different PURL or component identity is
-  a different finding.
-- A missing component or asset participates in the key through an explicit
-  `__none__` marker, so minimal CVE-list uploads deduplicate across runs.
+- The same CVE on a different source target is a different finding.
+- The same CVE on the same target but a different target kind, PURL, or
+  component identity is a different finding.
+- The same CVE/component/target reported by a different scanner or source ID is
+  the same finding with distinct observation provenance.
+- A different CVE alias is a different finding even when the source record is
+  otherwise identical.
+- A missing component or target participates as typed JSON `null`, so minimal
+  CVE-list uploads deduplicate across runs without reserving an input string.
+
+Legacy `vpw019:` and `vpw-finding-scope-v1:` rows converge on touch only when
+their stored occurrence evidence proves one unambiguous target kind/reference
+for the same project, vulnerability, and component. Persistence then reuses the
+existing finding and replaces its current key with `finding-scope-v2`;
+historical evidence keeps its original key. A fully unscoped legacy finding can
+converge only when every occurrence is unscoped; mixed or malformed evidence is
+not treated as proof. Ambiguous duplicates are not silently merged, and any
+identity mismatch on a dedup hit fails closed.
 
 ## Relationship Contract
 

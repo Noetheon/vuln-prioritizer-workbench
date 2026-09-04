@@ -62,3 +62,44 @@ def raise_analysis_failure(
             "analysis_error": analysis_error,
         },
     ) from exc
+
+
+def raise_persisted_context_failure(
+    *,
+    session: Session,
+    run_repo: RunRepository,
+    run: AnalysisRun,
+    local_actor: LocalWorkbenchActor,
+    project_id: uuid.UUID,
+    input_type: str,
+    exc: Exception,
+) -> NoReturn:
+    """Fail a corrupt persisted-context import once without exposing ledger internals."""
+    public_message = "Persisted project decision context is inconsistent."
+    failed_run = run_repo.finish_analysis_run(
+        run.id,
+        status=AnalysisRunStatus.FAILED,
+        error_message=public_message,
+    )
+    _record_import_audit(
+        session,
+        local_actor=local_actor,
+        project_id=project_id,
+        run_id=failed_run.id,
+        status="failure",
+        stage="persisted_asset_context",
+        input_type=input_type,
+    )
+    session.commit()
+    raise ImportServiceError(
+        status_code=409,
+        detail={
+            "message": public_message,
+            "analysis_run_id": str(failed_run.id),
+            "asset_context_error": {
+                "message": public_message,
+                "stage": "persisted_asset_context",
+                "error_type": exc.__class__.__name__,
+            },
+        },
+    ) from exc

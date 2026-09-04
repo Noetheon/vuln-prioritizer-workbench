@@ -20,6 +20,7 @@ from app.domain.engine.models import (
     ParsedInput,
     PrioritizedFinding,
     PriorityPolicy,
+    WaiverRule,
 )
 
 
@@ -74,6 +75,7 @@ class AnalysisRequest:
     no_cache: bool
     cache_dir: Path
     cache_ttl_hours: int
+    preloaded_waiver_rules: tuple[WaiverRule, ...] | None = None
     max_provider_age_hours: int | None = None
     fail_on_stale_provider_data: bool = False
 

@@ -87,6 +87,33 @@ def test_remediation_service_prefers_actionable_component_evidence() -> None:
     assert "widget 1.2.3 (package-lock.json) -> 1.2.0, 1.10.0, 2.0.0" in action
 
 
+def test_remediation_merges_canonical_component_display_variants() -> None:
+    remediation = RemediationService().derive(
+        [
+            _occurrence(
+                component_name="OpenSSL",
+                component_version="3.0.0",
+                package_type="DEB",
+                fix_versions=["3.0.1"],
+            ),
+            _occurrence(
+                component_name="  openssl  ",
+                component_version="3.0.0",
+                package_type="deb",
+                fix_versions=["3.0.2"],
+            ),
+        ]
+    )
+
+    assert len(remediation.components) == 1
+    component = remediation.components[0]
+    assert component.name == "OpenSSL"
+    assert component.current_version == "3.0.0"
+    assert component.package_type == "DEB"
+    assert component.fixed_versions == ["3.0.1", "3.0.2"]
+    assert component.occurrence_count == 2
+
+
 def test_remediation_natural_sort_handles_long_numeric_chunks_without_int_conversion() -> None:
     long_digits = "9" * 5000
 

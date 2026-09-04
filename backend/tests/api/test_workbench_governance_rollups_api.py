@@ -42,10 +42,13 @@ def test_vpw067_governance_rollups_count_owner_service_environment_and_waiver_de
     assert checkout["accepted_count"] == 2
     assert checkout["suppressed_by_vex_count"] == 1
     assert checkout["review_due_waiver_count"] == 2
-    assert checkout["risk_score_total"] == 180.0
+    assert checkout["risk_score_total"] == 34.0
+    assert checkout["risk_score_max"] == 34.0
     assert checkout["priority_counts"]["Critical"] == 1
     assert checkout["priority_counts"]["High"] == 1
-    assert checkout["status_counts"]["accepted"] == 2
+    assert checkout["status_counts"]["accepted"] == 1
+    assert checkout["status_counts"]["suppressed"] == 1
+    assert checkout["suppressed_count"] == 1
     assert checkout["top_cves"] == ["CVE-2026-6701", "CVE-2026-6702"]
 
     top_asset = payload["top_assets_by_risk"][0]
@@ -176,6 +179,8 @@ def _seed_vpw067_governance_graph(
                 asset_name=checkout_asset.name or checkout_asset.asset_key,
                 component_name=component.name,
                 component_version=component.version or "",
+                component_purl=component.purl,
+                component_package_type=component.package_type or component.ecosystem,
                 priority=app_models.FindingPriority.CRITICAL,
                 priority_rank=1,
                 operational_rank=1,
@@ -194,6 +199,8 @@ def _seed_vpw067_governance_graph(
                 asset_name=checkout_asset.name or checkout_asset.asset_key,
                 component_name=component.name,
                 component_version=component.version or "",
+                component_purl=component.purl,
+                component_package_type=component.package_type or component.ecosystem,
                 priority=app_models.FindingPriority.HIGH,
                 priority_rank=2,
                 operational_rank=2,
@@ -212,6 +219,8 @@ def _seed_vpw067_governance_graph(
                 asset_name=identity_asset.name or identity_asset.asset_key,
                 component_name=component.name,
                 component_version=component.version or "",
+                component_purl=component.purl,
+                component_package_type=component.package_type or component.ecosystem,
                 priority=app_models.FindingPriority.MEDIUM,
                 priority_rank=3,
                 operational_rank=3,
@@ -306,6 +315,8 @@ def _rollup_finding_evidence(
     asset_name: str,
     component_name: str,
     component_version: str,
+    component_purl: str | None = None,
+    component_package_type: str | None = None,
     priority: object,
     priority_rank: int,
     operational_rank: int,
@@ -325,6 +336,8 @@ def _rollup_finding_evidence(
         asset_name=asset_name,
         component_name=component_name,
         component_version=component_version,
+        component_purl=component_purl,
+        component_package_type=component_package_type,
         priority=priority,
         priority_rank=priority_rank,
         risk_score=risk_score,

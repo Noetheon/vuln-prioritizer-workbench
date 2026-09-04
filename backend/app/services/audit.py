@@ -33,12 +33,7 @@ def record_audit_event(
     detail: dict[str, Any] | None = None,
 ) -> AuditEvent:
     """Persist a redacted audit event without committing the transaction."""
-    redacted_detail: dict[str, Any] = {}
-    if detail:
-        redacted_value, _paths = redact_value(detail)
-        if isinstance(redacted_value, dict):
-            encoded = jsonable_encoder(redacted_value)
-            redacted_detail = _truncate_audit_detail(encoded) if isinstance(encoded, dict) else {}
+    redacted_detail = _redacted_audit_detail(detail)
     return AuditEventRepository(session).create_audit_event(
         action=action,
         resource_type=resource_type,
@@ -47,6 +42,41 @@ def record_audit_event(
         project_id=project_id,
         detail=redacted_detail,
     )
+
+
+def update_audit_event(
+    session: Session,
+    event_id: uuid.UUID,
+    *,
+    status: AuditEventStatus | None = None,
+    detail_patch: dict[str, Any] | None = None,
+) -> AuditEvent | None:
+    """Update a lifecycle audit event through the persistence boundary."""
+    repository = AuditEventRepository(session)
+    event = repository.get_audit_event(event_id)
+    if event is None:
+        return None
+    merged_detail = _truncate_audit_detail(
+        {
+            **dict(event.detail_json or {}),
+            **_redacted_audit_detail(detail_patch),
+        }
+    )
+    return repository.update_audit_event(
+        event_id,
+        status=status,
+        detail=merged_detail,
+    )
+
+
+def _redacted_audit_detail(detail: dict[str, Any] | None) -> dict[str, Any]:
+    if not detail:
+        return {}
+    redacted_value, _paths = redact_value(detail)
+    if not isinstance(redacted_value, dict):
+        return {}
+    encoded = jsonable_encoder(redacted_value)
+    return _truncate_audit_detail(encoded) if isinstance(encoded, dict) else {}
 
 
 def _truncate_audit_detail(detail: dict[str, Any]) -> dict[str, Any]:

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+from sqlalchemy import text
 from sqlmodel import Session
 from utils.workbench_env import (
     DEMO_CVE_LOG4SHELL,
@@ -12,6 +15,7 @@ from utils.workbench_env import (
     create_project,
     create_provider_snapshot,
     create_vulnerability,
+    create_workbench_api_env,
     seed_domain_graph,
 )
 
@@ -135,11 +139,30 @@ def test_vpw012_seed_domain_graph_uses_all_core_factories(
 
 
 def test_vpw012_workbench_api_env_cleanup_removes_db_override() -> None:
-    from utils.workbench_env import create_workbench_api_env
-
     env, cleanup = create_workbench_api_env()
     assert deps.get_db in app.dependency_overrides
 
     cleanup()
 
     assert deps.get_db not in app.dependency_overrides
+
+
+def test_vpw072_workbench_api_env_can_use_file_backed_sqlite(tmp_path: Path) -> None:
+    database_path = tmp_path / "file-backed-workbench.db"
+    env, cleanup = create_workbench_api_env(database_path=database_path)
+    try:
+        assert env.engine.dialect.name == "sqlite"
+        assert env.engine.url.database == str(database_path.resolve())
+        assert database_path.is_file()
+        assert env.client.app.state.workbench_settings.SQLALCHEMY_DATABASE_URI == (
+            f"sqlite:///{database_path.resolve().as_posix()}"
+        )
+    finally:
+        cleanup()
+
+
+def test_workbench_api_env_enforces_sqlite_foreign_keys(
+    workbench_api_env: WorkbenchApiEnv,
+) -> None:
+    with workbench_api_env.engine.connect() as connection:
+        assert connection.execute(text("PRAGMA foreign_keys")).scalar_one() == 1

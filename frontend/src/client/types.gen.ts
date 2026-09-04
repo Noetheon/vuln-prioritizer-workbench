@@ -376,6 +376,10 @@ export type AnalysisSemanticsV2 = {
      */
     cve_count?: number;
     /**
+     * Decision Graph Schema Version
+     */
+    decision_graph_schema_version?: string | null;
+    /**
      * Finding Count
      */
     finding_count?: number;
@@ -383,6 +387,10 @@ export type AnalysisSemanticsV2 = {
      * Finding Dedup Key Version
      */
     finding_dedup_key_version: string;
+    /**
+     * Normalized Input Sha256
+     */
+    normalized_input_sha256?: string | null;
     /**
      * Occurrence Count
      */
@@ -396,9 +404,21 @@ export type AnalysisSemanticsV2 = {
      */
     persistence_scope: string;
     /**
+     * Policy Sha256
+     */
+    policy_sha256?: string | null;
+    /**
+     * Replay Sha256
+     */
+    replay_sha256?: string | null;
+    /**
      * Same Cve Can Create Distinct Asset Findings
      */
     same_cve_can_create_distinct_asset_findings?: boolean;
+    /**
+     * Shared Facts Sha256
+     */
+    shared_facts_sha256?: string | null;
 };
 
 /**
@@ -945,6 +965,10 @@ export type DedupDecisionV2 = {
      */
     source_id?: string | null;
     /**
+     * Target Kind
+     */
+    target_kind?: string | null;
+    /**
      * Target Ref
      */
     target_ref?: string | null;
@@ -961,6 +985,10 @@ export type DedupKeyPartsV2 = {
      */
     component_identity?: string | null;
     /**
+     * Cve Id
+     */
+    cve_id?: string | null;
+    /**
      * Project Id
      */
     project_id?: string | null;
@@ -968,6 +996,10 @@ export type DedupKeyPartsV2 = {
      * Source Id
      */
     source_id?: string | null;
+    /**
+     * Target Kind
+     */
+    target_kind?: string | null;
     /**
      * Target Ref
      */
@@ -1663,6 +1695,10 @@ export type FindingOccurrencePublic = {
      * Asset Exposure
      */
     asset_exposure?: string | null;
+    /**
+     * Asset Id
+     */
+    asset_id?: string | null;
     /**
      * Asset Owner
      */
@@ -2519,6 +2555,14 @@ export type OccurrenceDedupEvidenceV2 = {
      * Key Version
      */
     key_version?: string | null;
+    /**
+     * Observation Key
+     */
+    observation_key?: string | null;
+    /**
+     * Observation Key Version
+     */
+    observation_key_version?: string | null;
     parts?: DedupKeyPartsV2 | null;
 };
 
@@ -2537,9 +2581,21 @@ export type OccurrenceEvidenceV2 = {
      */
     asset_business_service?: string | null;
     /**
+     * Asset Criticality
+     */
+    asset_criticality?: string | null;
+    /**
+     * Asset Environment
+     */
+    asset_environment?: string | null;
+    /**
      * Asset Exposure
      */
     asset_exposure?: string | null;
+    /**
+     * Asset Id
+     */
+    asset_id?: string | null;
     /**
      * Asset Owner
      */
@@ -2571,6 +2627,10 @@ export type OccurrenceEvidenceV2 = {
      * Occurrence Id
      */
     occurrence_id?: string | null;
+    /**
+     * Package Type
+     */
+    package_type?: string | null;
     /**
      * Purl
      */
@@ -2668,6 +2728,10 @@ export type OccurrenceScopeV2 = {
      */
     asset_exposure?: string | null;
     /**
+     * Asset Id
+     */
+    asset_id?: string | null;
+    /**
      * Asset Owner
      */
     asset_owner?: string | null;
@@ -2679,6 +2743,10 @@ export type OccurrenceScopeV2 = {
      * Component Version
      */
     component_version?: string | null;
+    /**
+     * Package Type
+     */
+    package_type?: string | null;
     /**
      * Purl
      */
@@ -2695,6 +2763,10 @@ export type OccurrenceScopeV2 = {
      * Source Record Id
      */
     source_record_id?: string | null;
+    /**
+     * Target Kind
+     */
+    target_kind?: string | null;
     /**
      * Target Ref
      */
@@ -5962,6 +6034,36 @@ export type GetApiV1UtilsHealthCheckResponses = {
 };
 
 export type GetApiV1UtilsHealthCheckResponse = GetApiV1UtilsHealthCheckResponses[keyof GetApiV1UtilsHealthCheckResponses];
+
+export type DeleteApiV1WaiversByWaiverIdData = {
+    body?: never;
+    path: {
+        /**
+         * Waiver Id
+         */
+        waiver_id: string;
+    };
+    query?: never;
+    url: '/api/v1/waivers/{waiver_id}';
+};
+
+export type DeleteApiV1WaiversByWaiverIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type DeleteApiV1WaiversByWaiverIdError = DeleteApiV1WaiversByWaiverIdErrors[keyof DeleteApiV1WaiversByWaiverIdErrors];
+
+export type DeleteApiV1WaiversByWaiverIdResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteApiV1WaiversByWaiverIdResponse = DeleteApiV1WaiversByWaiverIdResponses[keyof DeleteApiV1WaiversByWaiverIdResponses];
 
 export type PatchApiV1WaiversByWaiverIdData = {
     body: WaiverUpdate;

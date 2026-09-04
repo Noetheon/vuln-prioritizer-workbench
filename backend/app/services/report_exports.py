@@ -43,6 +43,11 @@ def render_analysis_result_json(payload: MarkdownReportPayload) -> str:
             "updated_at": _iso_datetime(payload.project_updated_at)
             if payload.project_updated_at
             else None,
+            **(
+                {"context_source": payload.project_context_source}
+                if payload.project_context_source
+                else {}
+            ),
         },
         analysis_run={
             "id": payload.run_id,

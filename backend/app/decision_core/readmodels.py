@@ -14,6 +14,7 @@ from sqlmodel import Session
 
 from app.core.config import settings
 from app.decision_core.builders import build_run_diagnostics
+from app.decision_core.component_projection import project_component_decision
 from app.decision_core.contracts import (
     AnalysisEvidenceV2,
     FindingDecisionEvidenceV2,
@@ -305,12 +306,32 @@ class DecisionFindingView:
 
     @property
     def component_label(self) -> str | None:
-        component = self.finding.component
-        if component is None:
+        name = self.component_name
+        if name is None:
             return None
-        if component.version:
-            return f"{component.name} {component.version}"
-        return component.name
+        version = self.component_version
+        return f"{name} {version}" if version else name
+
+    @property
+    def component_name(self) -> str | None:
+        if self.evidence is not None:
+            return project_component_decision(self.evidence).name
+        component = self.finding.component
+        return component.name if component is not None else None
+
+    @property
+    def component_version(self) -> str | None:
+        if self.evidence is not None:
+            return project_component_decision(self.evidence).version
+        component = self.finding.component
+        return component.version if component is not None else None
+
+    @property
+    def component_purl(self) -> str | None:
+        if self.evidence is not None:
+            return project_component_decision(self.evidence).purl
+        component = self.finding.component
+        return component.purl if component is not None else None
 
     @property
     def asset_label(self) -> str | None:
@@ -326,9 +347,9 @@ class DecisionFindingView:
     def public_update(self) -> dict[str, object]:
         update: dict[str, object] = {
             "evidence": self.evidence,
-            "component_name": self.finding.component.name if self.finding.component else None,
-            "component_version": self.finding.component.version if self.finding.component else None,
-            "component_purl": self.finding.component.purl if self.finding.component else None,
+            "component_name": self.component_name,
+            "component_version": self.component_version,
+            "component_purl": self.component_purl,
             "asset_name": self.finding.asset.name if self.finding.asset else None,
             "asset_key": self.finding.asset.asset_key if self.finding.asset else None,
             "asset_target_ref": self.finding.asset.target_ref if self.finding.asset else None,

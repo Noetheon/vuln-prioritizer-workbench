@@ -7,12 +7,59 @@ successfully and still be misleading if it mixes current Workbench behavior,
 historical CLI/template material, archived demo evidence, or live provider
 facts.
 
-Latest architecture/documentation pass recorded from this checkout: 2026-07-10.
+Latest architecture/documentation pass recorded from this checkout: 2026-09-04.
 Scope: Public + Root documentation. That means every MkDocs-published
 `docs/**/*.md` page plus root/community docs, `backend/README.md`,
 `frontend/README.md`, `frontend/DESIGN.md`, `frontend/VPW_PAGE_PATTERNS.md`,
 and relevant component README files. Archive files were checked only where
 current docs link to them.
+
+## 2026-09-04 Scope-First Decision Findings
+
+- Provider, data-quality, ATT&CK, and defensive-context facts remain shared per
+  normalized CVE, while provenance, VEX, remediation, score, explanation,
+  guidance, and rank are evaluated per final CVE/component/source-target
+  finding scope.
+- `finding-scope-v2` owns stable finding identity. Persistence adds the project
+  to normalized CVE, component identity, target kind, and source target; source IDs remain
+  `observation-v1` provenance and do not split a finding.
+- Scope decisions receive globally unique deterministic ranks. Graph invariants
+  reject duplicate scopes, missing shared CVE facts, non-contiguous ranks, and
+  count mismatches.
+- Replay evidence hashes canonical normalized input, policy semantics, and
+  shared facts. The combined replay identity excludes wall-clock evaluation
+  time and the checkout-local policy-file path.
+- The graph remains an internal boundary. Persistence materializes each scoped
+  decision through the existing `AnalysisEvidenceV2` and
+  `FindingDecisionEvidenceV2` contracts, current Ledger projection, and compact
+  `workflow-result-ref.v2` output. The v2 DTO change is additive and optional;
+  the additive waiver-delete route and evidence fields are tracked by the
+  generated client. Migration `20260904_0005` deterministically merges canonical
+  legacy aliases, re-points their finding references, and backfills indexed
+  component identity material before replacing the obsolete fallback constraint.
+- Both normal and eligible bulk persistence paths select the matching scoped
+  decision and build the same canonical decision payload.
+- Re-imports hydrate only missing, evidence-proven persisted asset context before
+  VEX and analysis, including new scopes that explicitly select an
+  identity-consistent existing asset. Partial imports that mutate a shared asset
+  mark untouched projections stale until recalculation. Ambiguous, renamed, or
+  invalid legacy/current state fails closed without partial finding, occurrence,
+  or Ledger writes.
+- Asset recalculation and waiver lifecycle mutations reconstruct domain
+  decisions and project-global ranks in the mutable current projection while
+  preserving immutable run evidence. Required project-wide convergence uses
+  bounded keyset batches and is exercised after a 10k import by the incremental
+  VPW-072 performance phase. Daily lazy waiver refreshes are marked by
+  revision `20260904_0006` and audited only when decisions change.
+- Asset and component internal key namespaces are collision-resistant, and
+  operator-controlled keys cannot impersonate reserved asset identities.
+  Component aliases in pre-0005 databases use a deterministic survivor and
+  finding-FK re-pointing migration.
+- GitHub exports reserve one strict project/repository/finding identity before
+  an external POST. Incomplete outcomes block both automatic retries and
+  project deletion. Revision `20260904_0008` cascades completed finding-linked
+  history during intentional deletion; the database delete commits before
+  managed artifact cleanup, so relational failure cannot erase evidence files.
 
 ## 2026-07-10 Decision Ledger And Runtime Findings
 
@@ -144,6 +191,7 @@ current docs link to them.
 | Active stack | `vpw serve` packages the FastAPI API, same-origin React/Vite frontend, supervised workflow worker, migrations/resources, and SQLite WAL runtime under `backend/app`. Compose/PostgreSQL is deprecated compatibility. | `backend/app/cli.py`, `backend/app/main.py`, `backend/app/core/frontend.py`, `backend/app/workers/in_process.py`, `backend/app/core/db.py`, `frontend/package.json`, `backend/pyproject.toml`, `compose.yml` | Not applicable. | `python3 -m pytest -q backend/tests/api/test_vpw_serve_runtime.py --no-cov && make package-check` |
 | Supported imports | Active Workbench import types are `cve-list`, `generic-occurrence-csv`, `trivy-json`, `grype-json`, `cyclonedx-json`, `spdx-json`, `dependency-check-json`, `github-alerts-json`, `nessus-xml`, and `openvas-xml`. Each active input type has a public detail page, Support Matrix link, MkDocs nav entry, and parseable synthetic example. | `backend/app/importers/offline_loader.py`, `backend/app/domain/engine/options.py`, `backend/app/domain/engine/inputs/parser_registry.py`, `backend/app/services/workbench_capabilities.py`, `frontend/src/lib/import-format-types.ts`, `docs/support_matrix.md`, `docs/*-import.md`, `docs/examples/*` | Tool format ownership remains external, but support is repo-defined. | `python3 -m pytest -q backend/tests/test_input_fixtures.py backend/tests/test_input_support_edges.py backend/tests/test_github_alerts_normalization.py backend/tests/api/import_contracts/test_import_parser_contracts.py backend/tests/test_docs_hygiene.py --no-cov` |
 | Report outputs | Active report formats are Markdown, HTML, JSON, CSV, Evidence ZIP, ATT&CK Navigator, and SARIF. | `backend/app/models/reports.py`, `backend/app/services/report_contracts.py`, `frontend/src/lib/report-format.ts`, `docs/contracts.md` | SARIF version is external; VPW support is repo-defined. | `python3 -m pytest -q backend/tests/api/report_contracts backend/tests/test_report_formatting.py --no-cov` |
+| Scope-first decision semantics | Shared provider and ATT&CK facts remain CVE-oriented; final finding decisions are independently evaluated for normalized CVE/component/source-target scope, globally ranked, and materialized through compatible Decision/Evidence v2 contracts. `finding-scope-v2` owns finding identity; `observation-v1` owns source provenance. Persisted asset context and waiver changes are recomputed through typed current evidence without rewriting immutable run evidence. GitHub reservations remain attached to stable findings; incomplete reservations block deletion, while completed history cascades under revision `20260904_0008`. | `backend/app/decision_core/decision_graph.py`, `backend/app/decision_core/identity.py`, `backend/app/services/analysis.py`, `backend/app/services/import_execution_context.py`, `backend/app/services/import_execution_persistence*.py`, `backend/app/repositories/waivers.py`, `backend/app/api/routes/github_issues.py`, `backend/app/api/routes/projects.py`, `backend/app/alembic/versions/20260904_0005_add_component_identity_key.py`, `backend/app/alembic/versions/20260904_0006_add_project_waiver_freshness.py`, `backend/app/alembic/versions/20260904_0008_cascade_github_export_finding.py`, `backend/tests/test_scope_first_decision_graph.py`, `backend/tests/api/import_contracts/test_scope_first_import_contract.py`, `backend/tests/api/import_contracts/test_persisted_asset_context_contract.py`, `backend/tests/api/test_workbench_waivers_api.py`, `backend/tests/api/test_workbench_waiver_sync_freshness.py`, `backend/tests/api/test_workbench_github_issue_export.py` | Not applicable. | `python3 -m pytest -q backend/tests/test_scope_first_decision_graph.py backend/tests/api/import_contracts/test_scope_first_import_contract.py backend/tests/api/import_contracts/test_persisted_asset_context_contract.py backend/tests/api/test_workbench_waivers_api.py backend/tests/api/test_workbench_waiver_sync_freshness.py backend/tests/api/test_workbench_github_issue_export.py --no-cov` |
 | Decision Ledger | Successful imports produce one typed `DecisionRunResult`; immutable run/finding history lives in `analysis_evidence` and `finding_decision_evidence`, while current state lives in `finding_current_projection`. Dual-write, backfill, hashes, revisions, SQL queries, and shadow/full parity prevent historical rewrites and Python history scans. | `backend/app/decision_core/producer.py`, `backend/app/decision_core/readmodels.py`, `backend/app/decision_core/ledger.py`, `backend/app/models/evidence.py`, `backend/app/repositories/evidence.py`, `backend/app/repositories/current_projections.py`, `backend/app/decision_core/finding_queries.py`, `backend/app/alembic/versions/20260710_0004_add_finding_current_projection.py`, `backend/tests/test_decision_ledger.py`, `backend/tests/test_decision_projection.py` | Not applicable. | `python3 -m pytest -q backend/tests/test_decision_ledger.py backend/tests/test_decision_projection.py backend/tests/test_finding_repository_sorting.py --no-cov` |
 | Runtime migration | PostgreSQL-to-SQLite transition requires equal schema head, complete Ledger parity, exact transformed row digests, safe/verified artifacts, foreign-key integrity, and atomic activation into an empty target. | `backend/app/services/database_migration.py`, `backend/app/services/artifact_migration.py`, `backend/app/cli.py`, `backend/tests/test_database_migration.py`, `docs/single-process-runtime-transition.md` | Not applicable. | `python3 -m pytest -q backend/tests/test_database_migration.py --no-cov` plus the candidate Compose/PostgreSQL smoke |
 | Provider enrichment | VPW uses NVD, FIRST EPSS, and CISA KEV as transparent provider signals and surfaces degraded or missing provider data. | `backend/app/domain/engine/providers/*.py`, `backend/tests/test_provider_response_contracts.py`, `backend/tests/live/test_provider_live_contracts.py` | [NVD CVE API 2.0](https://nvd.nist.gov/developers/vulnerabilities), [FIRST EPSS API](https://api.first.org/epss/), [CISA KEV catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) | `VPW_RUN_LIVE_PROVIDER_TESTS=1 python3 -m pytest -q backend/tests/live/test_provider_live_contracts.py --no-cov` |

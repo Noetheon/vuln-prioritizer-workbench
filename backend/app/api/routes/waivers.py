@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 from sqlmodel import Session
 
 from app.api.deps import LocalActor, SessionDep
-from app.api.routes.workbench_access import require_project
+from app.api.routes.workbench_access import lock_existing_project_resource, require_project
 from app.models import Waiver, WaiverCreate, WaiverPublic, WaiversPublic, WaiverUpdate
 from app.repositories import AssetRepository, FindingRepository, WaiverRepository
 from app.services.audit import record_audit_event
+from app.services.decision_scope_lock import lock_project_decision_scope
 
 router = APIRouter(tags=["waivers"])
 
@@ -32,8 +33,16 @@ def read_project_waivers(
         limit=limit,
         offset=offset,
     )
+    matched_counts = repository.matching_finding_counts(waivers)
     return WaiversPublic(
-        data=[_waiver_public(repository, waiver) for waiver in waivers],
+        data=[
+            _waiver_public(
+                repository,
+                waiver,
+                matched_findings=matched_counts[waiver.id],
+            )
+            for waiver in waivers
+        ],
         count=count,
     )
 
@@ -48,6 +57,7 @@ def create_project_waiver(
 ) -> WaiverPublic:
     """Create a scoped risk acceptance for a visible project."""
     require_project(session, project_id)
+    lock_project_decision_scope(session, project_id)
     _validate_project_scope(session, project_id=project_id, waiver_in=waiver_in)
     repository = WaiverRepository(session)
     waiver = repository.create_project_waiver(project_id=project_id, waiver_in=waiver_in)
@@ -76,10 +86,7 @@ def update_waiver(
 ) -> WaiverPublic:
     """Update a waiver's scope, owner, reason, approval, and lifecycle dates."""
     repository = WaiverRepository(session)
-    waiver = repository.get_waiver(waiver_id)
-    if waiver is None:
-        raise HTTPException(status_code=404, detail="Waiver not found")
-    require_project(session, waiver.project_id)
+    waiver = _lock_existing_waiver(session, waiver_id=waiver_id, repository=repository)
     _validate_project_scope(session, project_id=waiver.project_id, waiver_in=waiver_in)
     updated = repository.update_waiver(waiver, waiver_in)
     repository.sync_project_waivers(updated.project_id)
@@ -97,6 +104,37 @@ def update_waiver(
     return _waiver_public(repository, updated)
 
 
+@router.delete("/waivers/{waiver_id}", status_code=204)
+def delete_waiver(
+    waiver_id: uuid.UUID,
+    session: SessionDep,
+    local_actor: LocalActor,
+) -> Response:
+    """Delete a waiver and rebuild the project's mutable decision queue."""
+    repository = WaiverRepository(session)
+    waiver = _lock_existing_waiver(session, waiver_id=waiver_id, repository=repository)
+    project_id = waiver.project_id
+    lifecycle_status, days_remaining = repository_status(waiver)
+    audit_detail = {
+        "deleted_waiver": waiver.model_dump(mode="json"),
+        "lifecycle_status": lifecycle_status,
+        "days_remaining": days_remaining,
+    }
+    repository.delete_waiver(waiver)
+    repository.sync_project_waivers(project_id, force=True)
+    record_audit_event(
+        session,
+        action="waiver.delete",
+        resource_type="waiver",
+        resource_id=waiver_id,
+        actor=local_actor,
+        project_id=project_id,
+        detail=audit_detail,
+    )
+    session.commit()
+    return Response(status_code=204)
+
+
 @router.post("/waivers/{waiver_id}/expire", response_model=WaiverPublic)
 def expire_waiver(
     waiver_id: uuid.UUID,
@@ -105,10 +143,7 @@ def expire_waiver(
 ) -> WaiverPublic:
     """Expire a waiver and resynchronize visible accepted-risk state."""
     repository = WaiverRepository(session)
-    waiver = repository.get_waiver(waiver_id)
-    if waiver is None:
-        raise HTTPException(status_code=404, detail="Waiver not found")
-    require_project(session, waiver.project_id)
+    waiver = _lock_existing_waiver(session, waiver_id=waiver_id, repository=repository)
     expired = repository.expire_waiver(waiver)
     repository.sync_project_waivers(expired.project_id)
     record_audit_event(
@@ -123,6 +158,25 @@ def expire_waiver(
     session.commit()
     session.refresh(expired)
     return _waiver_public(repository, expired)
+
+
+def _lock_existing_waiver(
+    session: Session,
+    *,
+    waiver_id: uuid.UUID,
+    repository: WaiverRepository,
+) -> Waiver:
+    """Lock a waiver's project, then reject a concurrently deleted stale row."""
+    stale = repository.get_waiver(waiver_id)
+    if stale is None:
+        raise HTTPException(status_code=404, detail="Waiver not found")
+    return lock_existing_project_resource(
+        session,
+        model=Waiver,
+        resource_id=waiver_id,
+        project_id=stale.project_id,
+        not_found_detail="Waiver not found",
+    )
 
 
 def _validate_project_scope(

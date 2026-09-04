@@ -113,10 +113,10 @@ def build_decision_guidance(finding: PrioritizedFinding) -> FindingDecisionGuida
 def _select_recommendation(finding: PrioritizedFinding) -> tuple[DecisionRecommendation, list[str]]:
     """Select recommendation function."""
     state = finding.priority_state or finding.priority_label
-    if state == "Accepted" or finding.waived:
-        return "waiver", ["recommendation.waiver.accepted_risk_visible"]
     if state in {"Suppressed", "Fixed"} or finding.suppressed_by_vex:
         return "monitor", [f"recommendation.monitor.{state.lower()}_evidence_visible"]
+    if state == "Accepted" or finding.waived:
+        return "waiver", ["recommendation.waiver.accepted_risk_visible"]
     if _has_fixed_version_evidence(finding):
         return "patch", ["recommendation.patch.fixed_version_evidence"]
     if finding.in_kev or finding.priority_label in {"Critical", "High"}:
@@ -129,12 +129,12 @@ def _select_recommendation(finding: PrioritizedFinding) -> tuple[DecisionRecomme
 def _sla_for_finding(finding: PrioritizedFinding) -> SlaTarget:
     """Sla for finding function."""
     state = finding.priority_state or finding.priority_label
-    if finding.waived:
-        return GOVERNANCE_SLA_BY_STATE["Accepted"]
-    if finding.suppressed_by_vex:
-        return GOVERNANCE_SLA_BY_STATE["Suppressed"]
     if state in GOVERNANCE_SLA_BY_STATE:
         return GOVERNANCE_SLA_BY_STATE[state]
+    if finding.suppressed_by_vex:
+        return GOVERNANCE_SLA_BY_STATE["Suppressed"]
+    if finding.waived:
+        return GOVERNANCE_SLA_BY_STATE["Accepted"]
     return SLA_BY_PRIORITY.get(finding.priority_label, SLA_BY_PRIORITY["Low"])
 
 
@@ -233,20 +233,20 @@ def _business_impact_text(level: str, drivers: list[str]) -> str:
 def _visibility_statement(finding: PrioritizedFinding) -> str:
     """Visibility statement function."""
     state = finding.priority_state or finding.priority_label
-    if state == "Accepted" or finding.waived:
+    if state == "Fixed":
         return (
-            "Accepted risk remains visible in reports until the waiver is reviewed, renewed, "
-            "or converted back to remediation work."
+            "Fixed evidence remains visible for audit until follow-up scans confirm the "
+            "occurrence no longer appears."
         )
     if state == "Suppressed" or finding.suppressed_by_vex:
         return (
             "Suppressed evidence remains visible when included and must be reopened if VEX or "
             "asset context changes."
         )
-    if state == "Fixed":
+    if state == "Accepted" or finding.waived:
         return (
-            "Fixed evidence remains visible for audit until follow-up scans confirm the "
-            "occurrence no longer appears."
+            "Accepted risk remains visible in reports until the waiver is reviewed, renewed, "
+            "or converted back to remediation work."
         )
     return "Open remediation work remains visible until validation evidence supports closure."
 

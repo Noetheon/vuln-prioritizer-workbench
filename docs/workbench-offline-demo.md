@@ -77,7 +77,7 @@ If `pip-audit`, npm, or advisory data is unavailable, record that as a release-c
 | Security headers | `tests/api/test_workbench_local_runtime_smoke.py` and an optional `curl -I http://127.0.0.1:8000/api/v1/utils/health-check/` capture showing `nosniff`, `DENY`, and CSP. |
 | Upload filename/path validation | `tests/api/import_contracts/` covers active `/api/v1` upload size, suffix, MIME, path, and provider snapshot validation. |
 | Report/evidence downloads | `tests/api/report_contracts/`; browser evidence should show report links and Evidence ZIP verification. |
-| 10k findings API smoke | `make performance-smoke` runs the active Workbench import and pagination smoke with 10,000 findings. |
+| 10k findings API smoke | `make performance-smoke` imports 10,000 findings, checks pagination, then adds one scope and verifies bounded project-global reranking across all 10,001 findings. |
 | Docker demo smoke | `make docker-demo-smoke` output showing `/api/v1/utils/health-check/` succeeds, the Compose Postgres Alembic/schema/repository smoke passes, and the local import/provider smoke tears down cleanly. |
 | Dependency audit | `make dependency-audit` result for the backend Python lock and frontend runtime plus dev/build-chain dependencies, or a documented exception when audit tooling or advisory data is unavailable. |
 | Demo evidence bundle | Generate JSON, Markdown, HTML, and Evidence ZIP from the Workbench report page and verify the ZIP through the report API. |

@@ -116,6 +116,7 @@ def apply_waivers(
     rules: list[WaiverRule],
     *,
     today: date | None = None,
+    include_unmatched_warnings: bool = True,
 ) -> tuple[list[PrioritizedFinding], list[str]]:
     """Apply the best matching waiver lifecycle state per finding."""
     if not rules:
@@ -150,7 +151,7 @@ def apply_waivers(
 
         if not matching_active:
             if matching_expired:
-                matching_expired.sort(key=_waiver_sort_key)
+                matching_expired.sort(key=lambda rule: _waiver_sort_key(rule, status="expired"))
                 selected = matching_expired[0]
                 if len(matching_expired) > 1:
                     ignored = ", ".join(_waiver_label(rule) for rule in matching_expired[1:])
@@ -167,7 +168,7 @@ def apply_waivers(
             updated_findings.append(finding)
             continue
 
-        matching_active.sort(key=lambda item: _waiver_sort_key(item[0]))
+        matching_active.sort(key=lambda item: _waiver_sort_key(item[0], status=item[1]))
         selected, selected_status = matching_active[0]
         if len(matching_active) > 1:
             ignored = ", ".join(_waiver_label(rule) for rule, _ in matching_active[1:])
@@ -186,13 +187,24 @@ def apply_waivers(
             )
         )
 
-    unmatched_labels = [
-        _waiver_label(rule) for rule in rules if _waiver_label(rule) not in matched_rule_labels
-    ]
-    for label in unmatched_labels:
-        warnings.append(f"Waiver {label} did not match any finding.")
+    if include_unmatched_warnings:
+        unmatched_labels = [
+            _waiver_label(rule) for rule in rules if _waiver_label(rule) not in matched_rule_labels
+        ]
+        for label in unmatched_labels:
+            warnings.append(f"Waiver {label} did not match any finding.")
 
     return updated_findings, warnings
+
+
+def waiver_matches_finding(rule: WaiverRule, finding: PrioritizedFinding) -> bool:
+    """Return whether one rule's declared scope matches one finding."""
+    return _waiver_matches_finding(rule, finding)
+
+
+def waiver_rule_label(rule: WaiverRule) -> str:
+    """Return the stable operator-facing label used in waiver diagnostics."""
+    return _waiver_label(rule)
 
 
 def _validate_rule_dates(rule: WaiverRule, *, source_path: Path) -> None:
@@ -393,7 +405,18 @@ def _waiver_scope(rule: WaiverRule) -> str:
     return "; ".join(parts)
 
 
-def _waiver_sort_key(rule: WaiverRule) -> tuple[int, int, str, str]:
+def _waiver_sort_key(
+    rule: WaiverRule,
+    *,
+    status: str,
+) -> tuple[int, int, int, str, str]:
     specificity = sum(1 for values in (rule.asset_ids, rule.targets, rule.services) if values)
     total_scope_values = len(rule.asset_ids) + len(rule.targets) + len(rule.services)
-    return (-specificity, -total_scope_values, rule.expires_on, _waiver_label(rule))
+    lifecycle_rank = {"review_due": 0, "active": 1, "expired": 2}.get(status, 9)
+    return (
+        -specificity,
+        total_scope_values,
+        lifecycle_rank,
+        rule.expires_on,
+        _waiver_label(rule),
+    )

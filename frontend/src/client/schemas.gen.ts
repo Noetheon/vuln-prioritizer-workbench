@@ -740,6 +740,17 @@ export const AnalysisSemanticsV2Schema = {
             title: 'Cve Count',
             type: 'integer'
         },
+        decision_graph_schema_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Decision Graph Schema Version'
+        },
         finding_count: {
             default: 0,
             title: 'Finding Count',
@@ -748,6 +759,17 @@ export const AnalysisSemanticsV2Schema = {
         finding_dedup_key_version: {
             title: 'Finding Dedup Key Version',
             type: 'string'
+        },
+        normalized_input_sha256: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Normalized Input Sha256'
         },
         occurrence_count: {
             default: 0,
@@ -765,10 +787,43 @@ export const AnalysisSemanticsV2Schema = {
             title: 'Persistence Scope',
             type: 'string'
         },
+        policy_sha256: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Policy Sha256'
+        },
+        replay_sha256: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Replay Sha256'
+        },
         same_cve_can_create_distinct_asset_findings: {
             default: true,
             title: 'Same Cve Can Create Distinct Asset Findings',
             type: 'boolean'
+        },
+        shared_facts_sha256: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Shared Facts Sha256'
         }
     },
     required: [
@@ -1710,6 +1765,17 @@ export const DedupDecisionV2Schema = {
             ],
             title: 'Source Id'
         },
+        target_kind: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target Kind'
+        },
         target_ref: {
             anyOf: [
                 {
@@ -1747,6 +1813,17 @@ export const DedupKeyPartsV2Schema = {
             ],
             title: 'Component Identity'
         },
+        cve_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cve Id'
+        },
         project_id: {
             anyOf: [
                 {
@@ -1768,6 +1845,17 @@ export const DedupKeyPartsV2Schema = {
                 }
             ],
             title: 'Source Id'
+        },
+        target_kind: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target Kind'
         },
         target_ref: {
             anyOf: [
@@ -3106,6 +3194,17 @@ export const FindingOccurrencePublicSchema = {
                 }
             ],
             title: 'Asset Exposure'
+        },
+        asset_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Id'
         },
         asset_owner: {
             anyOf: [
@@ -4657,6 +4756,28 @@ export const OccurrenceDedupEvidenceV2Schema = {
             ],
             title: 'Key Version'
         },
+        observation_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Observation Key'
+        },
+        observation_key_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Observation Key Version'
+        },
         parts: {
             anyOf: [
                 {
@@ -4691,6 +4812,28 @@ export const OccurrenceEvidenceV2Schema = {
             ],
             title: 'Asset Business Service'
         },
+        asset_criticality: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Criticality'
+        },
+        asset_environment: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Environment'
+        },
         asset_exposure: {
             anyOf: [
                 {
@@ -4701,6 +4844,17 @@ export const OccurrenceEvidenceV2Schema = {
                 }
             ],
             title: 'Asset Exposure'
+        },
+        asset_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Id'
         },
         asset_owner: {
             anyOf: [
@@ -4778,6 +4932,17 @@ export const OccurrenceEvidenceV2Schema = {
                 }
             ],
             title: 'Occurrence Id'
+        },
+        package_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Package Type'
         },
         purl: {
             anyOf: [
@@ -5027,6 +5192,17 @@ export const OccurrenceScopeV2Schema = {
             ],
             title: 'Asset Exposure'
         },
+        asset_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Id'
+        },
         asset_owner: {
             anyOf: [
                 {
@@ -5059,6 +5235,17 @@ export const OccurrenceScopeV2Schema = {
                 }
             ],
             title: 'Component Version'
+        },
+        package_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Package Type'
         },
         purl: {
             anyOf: [
@@ -5103,6 +5290,17 @@ export const OccurrenceScopeV2Schema = {
                 }
             ],
             title: 'Source Record Id'
+        },
+        target_kind: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target Kind'
         },
         target_ref: {
             anyOf: [

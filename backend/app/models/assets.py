@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Column, DateTime, Index, String, UniqueConstraint
+from sqlalchemy import Column, DateTime, Index, String, Text, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.base import get_datetime_utc
@@ -139,12 +139,11 @@ class Component(ComponentBase, table=True):
     """Software component associated with findings."""
 
     __tablename__ = "component"
-    __table_args__ = (
-        UniqueConstraint("purl", name="uq_component_purl"),
-        UniqueConstraint("name", "version", "ecosystem", name="uq_component_identity"),
-    )
+    __table_args__ = (UniqueConstraint("identity_key", name="uq_component_identity_key"),)
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    identity_key: str = Field(max_length=128)
+    identity_material: str = Field(sa_column=Column(Text, nullable=False))
     created_at: datetime = Field(
         default_factory=get_datetime_utc,
         sa_column=Column(DateTime(timezone=True), nullable=False),

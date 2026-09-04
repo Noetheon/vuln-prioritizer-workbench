@@ -12,6 +12,7 @@ from typing import Any
 from sqlalchemy import func
 from sqlmodel import Session, col, select
 
+from app.decision_core.component_projection import project_component_decision
 from app.decision_core.contracts import FindingDecisionEvidenceV2
 from app.decision_core.ledger import (
     FINDING_CURRENT_PROJECTION_SCHEMA_VERSION,
@@ -71,22 +72,12 @@ class FindingCurrentProjectionRepository:
     def evidence_for_records(
         self,
         projections: Iterable[FindingCurrentProjection],
+        *,
+        source_records: dict[uuid.UUID, FindingDecisionEvidence] | None = None,
     ) -> dict[uuid.UUID, FindingDecisionEvidenceV2]:
         """Rehydrate effective contracts from immutable sources in one bounded query."""
         rows = list(projections)
-        source_ids = [
-            row.source_finding_evidence_id
-            for row in rows
-            if row.source_finding_evidence_id is not None
-        ]
-        sources = {
-            source.id: source
-            for source in self.session.exec(
-                select(FindingDecisionEvidence).where(
-                    col(FindingDecisionEvidence.id).in_(source_ids)
-                )
-            ).all()
-        }
+        sources = source_records or self.source_records_for_records(rows)
         result: dict[uuid.UUID, FindingDecisionEvidenceV2] = {}
         for projection in rows:
             source_id = projection.source_finding_evidence_id
@@ -100,6 +91,27 @@ class FindingCurrentProjectionRepository:
             )
         return result
 
+    def source_records_for_records(
+        self,
+        projections: Iterable[FindingCurrentProjection],
+    ) -> dict[uuid.UUID, FindingDecisionEvidence]:
+        """Load immutable sources for one bounded projection batch."""
+        source_ids = [
+            row.source_finding_evidence_id
+            for row in projections
+            if row.source_finding_evidence_id is not None
+        ]
+        if not source_ids:
+            return {}
+        return {
+            source.id: source
+            for source in self.session.exec(
+                select(FindingDecisionEvidence).where(
+                    col(FindingDecisionEvidence.id).in_(source_ids)
+                )
+            ).all()
+        }
+
     def records_for_findings(
         self,
         finding_ids: Iterable[uuid.UUID],
@@ -108,19 +120,25 @@ class FindingCurrentProjectionRepository:
         ids = list(dict.fromkeys(finding_ids))
         if not ids:
             return []
-        return list(
-            self.session.exec(
-                select(FindingCurrentProjection).where(
-                    col(FindingCurrentProjection.finding_id).in_(ids)
-                )
-            ).all()
-        )
+        records: list[FindingCurrentProjection] = []
+        for index in range(0, len(ids), 500):
+            records.extend(
+                self.session.exec(
+                    select(FindingCurrentProjection).where(
+                        col(FindingCurrentProjection.finding_id).in_(ids[index : index + 500])
+                    )
+                ).all()
+            )
+        return records
 
     def upsert_from_evidence_record(
         self,
         *,
         source_record: FindingDecisionEvidence,
         evidence: FindingDecisionEvidenceV2,
+        existing_record: FindingCurrentProjection | None = None,
+        lookup_existing: bool = True,
+        flush: bool = True,
     ) -> FindingCurrentProjection:
         """Advance current state to a newer immutable per-run evidence record."""
         finding_id = uuid.UUID(evidence.finding_id)
@@ -150,7 +168,9 @@ class FindingCurrentProjectionRepository:
                 "Projection source columns do not match the decision contract."
             )
 
-        existing = self.get_record(finding_id)
+        existing = existing_record
+        if existing is None and lookup_existing:
+            existing = self.get_record(finding_id)
         if existing is not None and existing.source_finding_evidence_id == source_record.id:
             expected_hash = canonical_payload_sha256(source_record.payload_json)
             if existing.source_payload_sha256 != expected_hash:
@@ -191,19 +211,32 @@ class FindingCurrentProjectionRepository:
         record.revision = (existing.revision + 1) if existing is not None else 1
         record.updated_at = now
         self.session.add(record)
-        self.session.flush()
+        if flush:
+            self.session.flush()
         return record
 
     def update_current_payload(
         self,
         finding_id: uuid.UUID,
         payload: dict[str, Any],
+        *,
+        existing_record: FindingCurrentProjection | None = None,
+        source_record: FindingDecisionEvidence | None = None,
+        flush: bool = True,
     ) -> FindingCurrentProjection | None:
         """Validate and replace mutable current state without rewriting history."""
-        record = self.get_record(finding_id)
+        record = existing_record or self.get_record(finding_id)
         if record is None:
             return None
-        source = self._source_for_projection(record)
+        if record.finding_id != finding_id:
+            raise DecisionLedgerInvariantError(
+                "Lifecycle projection update received a mismatched current record."
+            )
+        source = source_record or self._source_for_projection(record)
+        if source.id != record.source_finding_evidence_id:
+            raise DecisionLedgerInvariantError(
+                "Lifecycle projection update received a mismatched immutable source."
+            )
         source_payload = dict(source.payload_json or {})
         source_hash = canonical_payload_sha256(source_payload)
         if record.source_payload_sha256 != source_hash:
@@ -241,7 +274,8 @@ class FindingCurrentProjectionRepository:
         record.revision += 1
         record.updated_at = get_datetime_utc()
         self.session.add(record)
-        self.session.flush()
+        if flush:
+            self.session.flush()
         return record
 
     def mutate_current_payload(
@@ -417,6 +451,7 @@ def projection_insert_values(
     """Build insert values for the bulk import dual-write path."""
     payload = source_payload or evidence.to_jsonable()
     payload_hash = canonical_payload_sha256(payload)
+    component = project_component_decision(evidence)
     now = get_datetime_utc()
     return {
         "finding_id": uuid.UUID(evidence.finding_id),
@@ -441,6 +476,11 @@ def projection_insert_values(
         "waived": evidence.waived,
         "rationale": evidence.rationale,
         "recommended_action": evidence.recommended_action,
+        "component_name": component.name,
+        "component_version": component.version,
+        "component_purl": component.purl,
+        "component_package_type": component.package_type,
+        "component_ecosystem": component.ecosystem,
         "lifecycle_overlay_json": {},
         "source_payload_sha256": payload_hash,
         "projection_payload_sha256": payload_hash,
@@ -455,6 +495,7 @@ def _apply_projection_columns(
     record: FindingCurrentProjection,
     evidence: FindingDecisionEvidenceV2,
 ) -> None:
+    component = project_component_decision(evidence)
     record.cve_id = evidence.cve_id
     record.dedup_key = evidence.dedup_key
     record.priority = evidence.priority
@@ -471,6 +512,11 @@ def _apply_projection_columns(
     record.waived = evidence.waived
     record.rationale = evidence.rationale
     record.recommended_action = evidence.recommended_action
+    record.component_name = component.name
+    record.component_version = component.version
+    record.component_purl = component.purl
+    record.component_package_type = component.package_type
+    record.component_ecosystem = component.ecosystem
 
 
 def _effective_projection_payload(
@@ -517,6 +563,7 @@ def _projection_columns_match_evidence(
     evidence: FindingDecisionEvidenceV2,
 ) -> bool:
     """Return whether query columns faithfully materialize the validated payload."""
+    component = project_component_decision(evidence)
     return (
         projection.finding_id == uuid.UUID(evidence.finding_id)
         and projection.project_id == uuid.UUID(evidence.project_id)
@@ -537,6 +584,11 @@ def _projection_columns_match_evidence(
         and projection.waived == evidence.waived
         and projection.rationale == evidence.rationale
         and projection.recommended_action == evidence.recommended_action
+        and projection.component_name == component.name
+        and projection.component_version == component.version
+        and projection.component_purl == component.purl
+        and projection.component_package_type == component.package_type
+        and projection.component_ecosystem == component.ecosystem
     )
 
 

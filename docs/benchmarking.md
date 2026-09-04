@@ -89,18 +89,26 @@ for release hardening and regression checks.
 The smoke generates 10,000 synthetic `generic-occurrence-csv` rows, imports them
 through the Workbench API with locked provider data, verifies that
 10,000 findings are persisted, and checks that a high-offset findings page is
-stable across repeated requests.
+stable across repeated requests. It then imports one additional scope into the
+same project and proves that all 10,001 current projections have contiguous,
+globally unique operational ranks. This second phase exercises the bounded
+project-wide convergence path rather than only the all-new bulk path.
 
 Default MVP thresholds:
 
 - import: 60 seconds or less
+- incremental import plus global rerank: 60 seconds or less
 - tail-page query: 1 second or less
 - process RSS delta: 512 MiB or less
 
-The latest VPW-072 evidence is stored in:
+The original VPW-072 baseline remains frozen in:
 
 - `archive/vpw-evidence/vpw-072-performance-smoke.md`
 - `archive/vpw-evidence/vpw-072-performance-smoke.json`
+
+Each current run writes its candidate-specific evidence to
+`build/vpw-072-performance-smoke.json`; do not treat the frozen April baseline
+as proof for a later release candidate.
 
 Known limits: this smoke uses local SQLite and FastAPI `TestClient`. It is not a
 Postgres or concurrent-user benchmark. The large all-new bulk path still emits

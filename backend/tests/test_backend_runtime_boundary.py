@@ -273,7 +273,7 @@ def test_github_workflow_actions_are_sha_pinned() -> None:
     assert "GitHub checkout steps must disable persisted credentials" in pin_check
 
     result = subprocess.run(
-        ["python3", "scripts/check_github_action_pins.py"],
+        [sys.executable, "scripts/check_github_action_pins.py"],
         capture_output=True,
         cwd=REPO_ROOT,
         text=True,
@@ -711,7 +711,9 @@ def test_active_runtime_entrypoints_use_workbench_backend_app() -> None:
     assert "python -m app.core.migration_bootstrap" not in override_backend_command
     assert "alembic -c /app/backend/alembic.ini upgrade head" in override_backend_command
     assert "python3 -m app.core.migration_bootstrap" not in playwright_backend
-    assert "python3 -m alembic -c backend/alembic.ini upgrade head" in playwright_backend
+    assert 'python_bin="${VPW_PYTHON:-python3}"' in playwright_backend
+    assert '"$python_bin" -m alembic -c backend/alembic.ini upgrade head' in playwright_backend
+    assert playwright_backend.count('"$python_bin" -m ') == 3
     assert "frontend-playwright-workbench-$backend_port.db" in playwright_backend
     assert '"$db_path-wal"' in playwright_backend
     assert '"$db_path-shm"' in playwright_backend
@@ -738,10 +740,40 @@ def test_init_db_does_not_create_schema_metadata() -> None:
 
 def test_generated_browser_api_client_is_built_from_active_backend_app() -> None:
     generate_client = (REPO_ROOT / "scripts/generate-client.sh").read_text(encoding="utf-8")
+    makefile = _read_repo_text("Makefile")
 
     assert "from app.main import app" in generate_client
     assert "app.openapi()" in generate_client
     assert "app.domain.engine.api" not in generate_client
+    assert 'python_bin="${VPW_PYTHON:-python3}"' in generate_client
+    assert generate_client.count('"$python_bin" - <<') == 2
+    assert "VPW_PYTHON=$(PYTHON) bash scripts/generate-client.sh" in makefile
+
+
+def test_browser_make_targets_forward_the_configured_python_interpreter() -> None:
+    makefile = _read_repo_text("Makefile")
+
+    for target in (
+        "playwright-check",
+        "playwright-check-without-design-audit",
+        "frontend-design-audit",
+        "frontend-design-audit-update",
+        "demo-screenshot",
+    ):
+        recipe = makefile.split(f"{target}:", 1)[1].split("\n\n", 1)[0]
+        assert "VPW_PYTHON=$(PYTHON)" in recipe
+
+
+def test_api_client_drift_gate_propagates_generator_failures() -> None:
+    makefile = _read_repo_text("Makefile")
+    drift_gate = makefile.split("api-client-drift-check:", 1)[1].split(
+        "frontend-audit:",
+        1,
+    )[0]
+
+    assert "@set -e;" in drift_gate
+    assert "trap 'rm -f" in drift_gate
+    assert "$(MAKE) frontend-generate-client;" in drift_gate
 
 
 def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:

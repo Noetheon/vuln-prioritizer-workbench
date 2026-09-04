@@ -43,6 +43,56 @@ def test_asset_context_basic_exact_rules_keep_last_row_wins(tmp_path: Path) -> N
     assert catalog.diagnostics.glob_rules == 0
 
 
+def test_asset_context_exact_rule_normalizes_nfd_target_and_asset_id(tmp_path: Path) -> None:
+    asset_context_file = tmp_path / "assets.csv"
+    asset_context_file.write_text(
+        "\n".join(
+            [
+                "target_kind,target_ref,asset_id,criticality",
+                "host,Cafe\u0301-target,Cafe\u0301-asset,high",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    catalog = load_asset_context_file(asset_context_file)
+    occurrence = InputOccurrence(
+        cve_id="CVE-2024-9999",
+        source_format="cve-list",
+        target_kind="host",
+        target_ref="Caf\u00e9-target",
+    )
+    resolved = apply_asset_context([occurrence], catalog)
+
+    assert catalog.rules[0].target_ref == "Caf\u00e9-target"
+    assert catalog.rules[0].asset_record.asset_id == "Caf\u00e9-asset"
+    assert resolved[0].asset_id == "Caf\u00e9-asset"
+
+
+def test_asset_context_rejects_rows_colliding_after_nfc_normalization(
+    tmp_path: Path,
+) -> None:
+    asset_context_file = tmp_path / "assets.csv"
+    asset_context_file.write_text(
+        "\n".join(
+            [
+                "target_kind,target_ref,asset_id,criticality",
+                "host,Caf\u00e9-target,asset-one,low",
+                "host,Cafe\u0301-target,asset-two,high",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="rows 1 and 2 collide after nfc-v1 normalization",
+    ):
+        load_asset_context_file(asset_context_file)
+
+
 def test_asset_context_exact_rule_beats_glob_when_precedence_ties(tmp_path: Path) -> None:
     asset_context_file = tmp_path / "assets.csv"
     asset_context_file.write_text(

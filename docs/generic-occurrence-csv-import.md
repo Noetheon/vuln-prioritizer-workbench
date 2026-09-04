@@ -13,9 +13,9 @@ See `examples/generic-occurrences.csv` for a checked-in sample.
 ## Example
 
 ```csv
-cve_id,target_ref,component_name,component_version,purl,source,fix_versions,raw_severity,owner,business_service
-CVE-2021-44228,web-prod-01,log4j-core,2.14.1,pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1,manual-backlog,2.17.1,critical,platform-team,checkout
-CVE-2022-22965,checkout-api,spring-webmvc,5.3.17,pkg:maven/org.springframework/spring-webmvc@5.3.17,manual-backlog,5.3.18,high,appsec,checkout
+cve_id,target_ref,component_name,component_version,purl,package_type,source,fix_versions,raw_severity,owner,business_service
+CVE-2021-44228,web-prod-01,log4j-core,2.14.1,pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1,maven,manual-backlog,2.17.1,critical,platform-team,checkout
+CVE-2022-22965,checkout-api,spring-webmvc,5.3.17,pkg:maven/org.springframework/spring-webmvc@5.3.17,maven,manual-backlog,5.3.18,high,appsec,checkout
 ```
 
 ## Columns
@@ -27,6 +27,7 @@ CVE-2022-22965,checkout-api,spring-webmvc,5.3.17,pkg:maven/org.springframework/s
 | `component_name` | no | Affected component or package name. |
 | `component_version` | no | Installed or affected version. |
 | `purl` | no | Package URL for package-level matching and evidence. |
+| `package_type` | no | Package ecosystem or type (for example `deb`, `rpm`, or `maven`). It is part of fallback component identity when no usable PURL is present. |
 | `source` | no | Source scanner, backlog, or export name. |
 | `fix_versions` | no | Fixed versions. Multiple versions can be separated with commas or `|`. |
 | `raw_severity` | no | Raw source severity. Preserved as source-provided severity context, not as a replacement for CVSS, EPSS, KEV, or policy scoring. |
@@ -56,8 +57,8 @@ match against.
 - The file suffix must be `.csv`.
 - CVE IDs are trimmed and normalized to uppercase.
 - `target_ref` is the only Workbench occurrence target column.
-- `component_name`, `component_version`, `purl`, owner, service, raw severity,
-  and fix-version data are preserved as occurrence provenance.
+- `component_name`, `component_version`, `purl`, `package_type`, owner, service,
+  raw severity, and fix-version data are preserved as occurrence provenance.
 - `fix_versions` is split on commas and `|` into normalized fix-version lists.
 - Asset criticality values accept `low`, `medium`, `high`, `critical`, plus
   `med` and `crit` aliases.

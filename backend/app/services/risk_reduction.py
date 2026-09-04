@@ -328,14 +328,7 @@ def _opportunity_label(cve_id: str, component: str | None, action: str) -> str:
 
 
 def _component_label(finding: DecisionFindingView) -> str | None:
-    component = getattr(finding.finding, "component", None)
-    if component is None:
-        return None
-    name = getattr(component, "name", None)
-    if not name:
-        return None
-    version = getattr(component, "version", None)
-    return f"{name} {version}" if version else str(name)
+    return finding.component_label
 
 
 def _asset_label(finding: DecisionFindingView) -> str | None:

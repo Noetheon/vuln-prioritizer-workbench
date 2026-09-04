@@ -19,6 +19,7 @@ from app.api.errors import (
     error_response_content,
     http_exception_handler,
     install_error_openapi_schema,
+    project_decision_lock_error_handler,
     unhandled_exception_handler,
     validation_error_handler,
 )
@@ -30,6 +31,7 @@ from app.core.frontend import mount_packaged_frontend
 from app.core.local_schema_bootstrap import bootstrap_local_sqlite_schema
 from app.core.rate_limit import RateLimiter, create_rate_limiter, rate_limit_key
 from app.core.schema_smoke import assert_migrated_schema
+from app.services.decision_scope_lock import ProjectDecisionLockError
 from app.services.provider_updates import reconcile_stale_provider_update_runs
 from app.workers.in_process import InProcessWorkflowWorker
 
@@ -118,6 +120,7 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
     assert_api_local_actor_policy(selected_settings.API_V1_STR, app.routes)
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
+    app.add_exception_handler(ProjectDecisionLockError, project_decision_lock_error_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
     install_error_openapi_schema(app)
     mount_packaged_frontend(app)

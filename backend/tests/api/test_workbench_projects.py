@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from collections.abc import Generator
 from dataclasses import replace
 from pathlib import Path
@@ -15,6 +16,10 @@ from utils.workbench_env import WorkbenchApiEnv, create_project_via_api, local_a
 
 from app.core.rate_limit import InMemoryRateLimiter
 from app.main import app
+from app.services.artifact_cleanup import (
+    ProjectArtifactCleanupResult,
+    cleanup_project_artifacts,
+)
 
 
 def test_workbench_project_migration_creates_single_user_project_tables_without_item(
@@ -107,6 +112,106 @@ def test_project_delete_removes_managed_artifact_trees_and_writes_audit(
     delete_event = next(item for item in events if item["action"] == "project.delete")
     assert delete_event["resource_id"] == project_id
     assert len(delete_event["detail"]["removed_artifact_paths"]) == 2
+
+
+def test_artifact_cleanup_deduplicates_roots_and_does_not_follow_project_symlinks(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    managed_root = tmp_path / "managed"
+    outside_tree = tmp_path / "outside" / "evidence"
+    outside_tree.mkdir(parents=True)
+    outside_file = outside_tree / "report.md"
+    outside_file.write_text("preserve", encoding="utf-8")
+    project_id = uuid.uuid4()
+    managed_root.mkdir()
+    project_link = managed_root / str(project_id)
+    project_link.symlink_to(outside_tree, target_is_directory=True)
+    active_settings = replace(
+        workbench_api_env.client.app.state.workbench_settings,
+        IMPORT_UPLOAD_DIR=str(managed_root),
+        REPORT_DIR=str(managed_root),
+    )
+
+    result = cleanup_project_artifacts(settings=active_settings, project_id=project_id)
+
+    assert result.removed_paths == (str(project_link),)
+    assert result.missing_paths == ()
+    assert not project_link.exists()
+    assert outside_file.read_text(encoding="utf-8") == "preserve"
+
+
+def test_project_delete_preserves_artifacts_when_database_delete_fails(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = workbench_api_env.client
+    active_settings = client.app.state.workbench_settings
+    upload_root = tmp_path / "uploads"
+    report_root = tmp_path / "reports"
+    client.app.state.workbench_settings = replace(
+        active_settings,
+        IMPORT_UPLOAD_DIR=str(upload_root),
+        REPORT_DIR=str(report_root),
+    )
+    headers = local_api_headers(client)
+    project = create_project_via_api(client, headers)
+    upload_artifact = upload_root / project["id"] / "run" / "input.txt"
+    report_artifact = report_root / project["id"] / "run" / "report.md"
+    upload_artifact.parent.mkdir(parents=True)
+    report_artifact.parent.mkdir(parents=True)
+    upload_artifact.write_text("CVE-2024-3094\n", encoding="utf-8")
+    report_artifact.write_text("evidence", encoding="utf-8")
+
+    def fail_database_delete(*args: Any, **kwargs: Any) -> None:
+        del args, kwargs
+        raise RuntimeError("simulated relational delete failure")
+
+    monkeypatch.setattr(
+        "app.services.project_deletion.ProjectRepository.delete_project",
+        fail_database_delete,
+    )
+    with pytest.raises(RuntimeError, match="simulated relational delete failure"):
+        client.delete(f"/api/v1/projects/{project['id']}", headers=headers)
+
+    assert upload_artifact.read_text(encoding="utf-8") == "CVE-2024-3094\n"
+    assert report_artifact.read_text(encoding="utf-8") == "evidence"
+    assert client.get(f"/api/v1/projects/{project['id']}", headers=headers).status_code == 200
+
+
+def test_project_delete_records_post_commit_artifact_cleanup_failure(
+    file_backed_workbench_api_env: WorkbenchApiEnv,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = file_backed_workbench_api_env.client
+    headers = local_api_headers(client)
+    project = create_project_via_api(client, headers)
+    cleanup_calls: list[bool] = []
+
+    def fail_destructive_cleanup(*args: Any, **kwargs: Any) -> ProjectArtifactCleanupResult:
+        del args
+        dry_run = bool(kwargs.get("dry_run", False))
+        cleanup_calls.append(dry_run)
+        if dry_run:
+            return ProjectArtifactCleanupResult(removed_paths=(), missing_paths=())
+        raise OSError("simulated cleanup failure")
+
+    monkeypatch.setattr(
+        "app.services.project_deletion.cleanup_project_artifacts",
+        fail_destructive_cleanup,
+    )
+    response = client.delete(f"/api/v1/projects/{project['id']}", headers=headers)
+
+    assert response.status_code == 500
+    assert cleanup_calls == [True, False]
+    assert client.get(f"/api/v1/projects/{project['id']}", headers=headers).status_code == 404
+    events = client.get("/api/v1/audit/events", headers=headers).json()["data"]
+    delete_event = next(item for item in events if item["action"] == "project.delete")
+    assert delete_event["status"] == "failure"
+    assert delete_event["project_id"] is None
+    assert delete_event["detail"]["artifact_cleanup_status"] == "failed"
+    assert delete_event["detail"]["artifact_cleanup_error_type"] == "OSError"
 
 
 def test_workbench_project_openapi_exposes_projects_without_items() -> None:

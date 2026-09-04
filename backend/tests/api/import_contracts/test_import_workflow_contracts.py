@@ -28,6 +28,7 @@ from utils.workbench_env import (
 from utils.workbench_workflow_contracts import workflow_metadata
 
 from app import models as app_models
+from app.decision_core.identity import FINDING_SCOPE_KEY_PREFIX
 
 
 def test_decision_api_endpoints_expose_explain_summary_and_cvss_comparison(
@@ -182,7 +183,10 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     assert dedup_summary["reused_findings"] == 2
     assert dedup_summary["decision_count"] == 2
     assert {item["action"] for item in dedup_summary["decisions"]} == {"reused"}
-    assert all(item["dedup_key"].startswith("vpw019:") for item in dedup_summary["decisions"])
+    assert all(
+        item["dedup_key"].startswith(FINDING_SCOPE_KEY_PREFIX)
+        for item in dedup_summary["decisions"]
+    )
     assert all(
         item["target_ref"] in {"build-host-1", "web-tier"} for item in dedup_summary["decisions"]
     )
@@ -320,6 +324,90 @@ def test_asset_rescore_marks_and_clears_decision_evidence_v2(
     assert not any(flag["code"] == "asset_context_rescore_needed" for flag in cleared_flags)
 
 
+def test_asset_recalculate_materializes_current_context_and_rebuilds_score(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(workbench_api_env, tmp_path)
+    headers = local_api_headers(workbench_api_env.client)
+    project = create_project_via_api(workbench_api_env.client, headers)
+    content = "\n".join(
+        [
+            (
+                "cve_id,target_ref,component_name,component_version,purl,raw_severity,"
+                "owner,business_service,exposure,environment,criticality"
+            ),
+            (
+                "CVE-2024-3094,build-host-recalc,xz,5.6.0,"
+                "pkg:apk/alpine/xz@5.6.0-r0,CRITICAL,team-old,legacy,"
+                "internal,dev,low"
+            ),
+            "",
+        ]
+    ).encode()
+    imported = workbench_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={"file": ("asset-recalculate.csv", content, "text/csv")},
+    )
+    assert imported.status_code == 200, imported.text
+    _completed_run_payload(workbench_api_env, imported, headers=headers)
+    findings_response = workbench_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+    )
+    assert findings_response.status_code == 200, findings_response.text
+    finding = findings_response.json()["data"][0]
+    original_score = finding["risk_score"]
+    asset_id = finding["asset_id"]
+
+    updated = workbench_api_env.client.patch(
+        f"/api/v1/assets/{asset_id}",
+        headers=headers,
+        json={
+            "owner": "team-platform",
+            "business_service": "payments",
+            "exposure": "internet-facing",
+            "environment": "production",
+            "criticality": "critical",
+        },
+    )
+    assert updated.status_code == 200, updated.text
+    recalculated = workbench_api_env.client.post(
+        f"/api/v1/assets/{asset_id}/recalculate",
+        headers=headers,
+    )
+    assert recalculated.status_code == 200, recalculated.text
+    expected_score = min(int(original_score) + 8 + 4 + 7, 100)
+    assert recalculated.json()["operational_scores"] == [expected_score]
+
+    detail_response = workbench_api_env.client.get(
+        f"/api/v1/findings/{finding['id']}",
+        headers=headers,
+    )
+    assert detail_response.status_code == 200, detail_response.text
+    detail = detail_response.json()
+    evidence = detail["evidence"]
+    occurrence = evidence["occurrences"][0]
+    assert detail["risk_score"] == expected_score
+    assert detail["risk_score"] > original_score
+    assert occurrence["asset_owner"] == "team-platform"
+    assert occurrence["asset_business_service"] == "payments"
+    assert occurrence["asset_exposure"] == "internet-facing"
+    assert occurrence["asset_environment"] == "production"
+    assert occurrence["asset_criticality"] == "critical"
+    assert evidence["occurrence_scope"]["asset_owner"] == "team-platform"
+    lifecycle = evidence["priority_evidence"]["raw"]["asset_context"]
+    assert lifecycle["asset_key"] == "build-host-recalc"
+    assert lifecycle["rescore_needed"] is False
+    assert "recalculated_at" in lifecycle
+    reasons = evidence["priority_evidence"]["operational_score_reasons"]
+    assert "internet-facing asset context: +8" in reasons
+    assert "production asset context: +4" in reasons
+    assert "critical asset criticality: +7" in reasons
+
+
 def test_generic_import_persists_multi_fix_versions(
     workbench_api_env: WorkbenchApiEnv,
     tmp_path: Path,
@@ -390,10 +478,10 @@ def test_same_batch_duplicate_bulk_import_reuses_finding_and_appends_occurrences
     assert payload["occurrence_count"] == 1000
     assert payload["finding_count"] == 1
     assert payload["created_findings"] == 1
-    assert payload["updated_findings"] == 999
+    assert payload["updated_findings"] == 0
     assert dedup_summary["created_findings"] == 1
-    assert dedup_summary["updated_findings"] == 999
-    assert dedup_summary["reused_findings"] == 999
+    assert dedup_summary["updated_findings"] == 0
+    assert dedup_summary["reused_findings"] == 0
     assert dedup_summary["decision_count"] == 1000
     assert dedup_summary["omitted_decisions"] == 500
     assert {item["action"] for item in dedup_summary["decisions"]} == {
@@ -441,21 +529,30 @@ def test_same_cve_on_different_assets_creates_distinct_findings(
     payload = _completed_run_payload(workbench_api_env, response, headers=headers)
     assert payload["finding_count"] == 2
     metadata_payload = workflow_metadata(workbench_api_env, payload["id"], headers=headers)
-    assert metadata_payload["summary"]["analysis_semantics"] == {
-        "analysis_decision_scope": "cve_baseline_with_occurrence_overlays",
-        "persistence_scope": "asset_component_occurrence",
-        "occurrence_overlay_fields": [
-            "asset_context",
-            "component_identity",
-            "source_identity",
-            "vex_status",
-        ],
-        "finding_dedup_key_version": "vpw019-v1",
+    semantics = metadata_payload["summary"]["analysis_semantics"]
+    assert semantics == {
+        "analysis_decision_scope": "finding_scope_first",
+        "persistence_scope": "decision_graph_materialization",
+        "occurrence_overlay_fields": [],
+        "finding_dedup_key_version": "finding-scope-v2",
+        "decision_graph_schema_version": "scope-first-decision-graph.v2",
+        "normalized_input_sha256": semantics["normalized_input_sha256"],
+        "policy_sha256": semantics["policy_sha256"],
+        "shared_facts_sha256": semantics["shared_facts_sha256"],
+        "replay_sha256": semantics["replay_sha256"],
         "cve_count": 1,
         "occurrence_count": 2,
         "finding_count": 2,
         "same_cve_can_create_distinct_asset_findings": True,
     }
+    for key in (
+        "normalized_input_sha256",
+        "policy_sha256",
+        "shared_facts_sha256",
+        "replay_sha256",
+    ):
+        assert len(semantics[key]) == 64
+        int(semantics[key], 16)
     assert payload["dedup_summary"]["created_findings"] == 2
     assert {item["target_ref"] for item in payload["dedup_summary"]["decisions"]} == {
         "build-host-1",
@@ -535,3 +632,36 @@ def test_same_cve_vex_status_remains_occurrence_scoped(
     assert by_asset["log4j-open"]["suppressed_by_vex"] is False
     assert by_asset["log4j-open"]["evidence"]["governance"]["vex_statuses"] == {}
     assert by_asset["log4j-open"]["evidence"]["occurrence_scope"]["target_ref"] == ("log4j-open")
+
+    fixed_asset_id = by_asset["log4j-fixed"]["asset_id"]
+    update = workbench_api_env.client.patch(
+        f"/api/v1/assets/{fixed_asset_id}",
+        headers=headers,
+        json={
+            "owner": "fixed-owner",
+            "environment": "production",
+            "exposure": "internet-facing",
+            "criticality": "critical",
+        },
+    )
+    assert update.status_code == 200, update.text
+    recalculate = workbench_api_env.client.post(
+        f"/api/v1/assets/{fixed_asset_id}/recalculate",
+        headers=headers,
+    )
+    assert recalculate.status_code == 200, recalculate.text
+    assert recalculate.json()["operational_scores"] == [0]
+    refreshed = workbench_api_env.client.get(
+        f"/api/v1/findings/{by_asset['log4j-fixed']['id']}",
+        headers=headers,
+    )
+    assert refreshed.status_code == 200, refreshed.text
+    refreshed_payload = refreshed.json()
+    assert refreshed_payload["status"] == "fixed"
+    assert refreshed_payload["risk_score"] == 0
+    assert refreshed_payload["evidence"]["governance"]["vex_statuses"] == {"fixed": 1}
+    fixed_occurrence = refreshed_payload["evidence"]["occurrences"][0]
+    assert fixed_occurrence["vex_status"] == "fixed"
+    assert fixed_occurrence["vex_action_statement"] == (
+        "Upgrade completed for the scoped component."
+    )

@@ -15,6 +15,7 @@ payloads.
 
 | Layer | Owner | Responsibility |
 | --- | --- | --- |
+| Scope decision graph | `backend/app/decision_core/decision_graph.py`, `backend/app/decision_core/identity.py` | Separate shared CVE facts from scoped finding decisions, own versioned observation/finding identity, global ranking, and deterministic replay fingerprints. |
 | Kernel producer | `backend/app/decision_core/producer.py` | Build `DecisionRunResult` from typed import, persistence, sidecar, provider, and analysis inputs. |
 | Public contracts | `backend/app/decision_core/contracts.py` | Validate `AnalysisEvidenceV2`, `FindingDecisionEvidenceV2`, `OccurrenceEvidenceV2`, and `RunDiagnosticsV2`. |
 | Import orchestration | `backend/app/services/import_execution.py` | Store uploads, run parser/enrichment, persist findings/occurrences, call the kernel, persist evidence, and close the workflow. |
@@ -34,9 +35,10 @@ not the product kernel for successful imports.
 flowchart LR
   A["Uploaded evidence files"] --> B["Import parser and sidecar enrichment"]
   B --> C["AnalysisService"]
-  C --> D["Finding, occurrence, asset, component, vulnerability persistence"]
+  C --> S["Scope-First Decision Graph"]
+  S --> D["Finding, occurrence, asset, component, vulnerability persistence"]
   D --> E["DecisionPersistencePlan"]
-  C --> F["DecisionKernelInput"]
+  S --> F["DecisionKernelInput"]
   E --> G["producer.build_run_result"]
   F --> G
   G --> H["AnalysisEvidenceV2"]
@@ -50,6 +52,25 @@ flowchart LR
   L --> N["Historical run reports and evidence"]
   Q --> O["Current detail, governance, GitHub export"]
 ```
+
+## Scope-First Input Semantics
+
+The Decision Graph is the internal semantic input to persistence and the v2
+producer. Provider, data-quality, ATT&CK, and defensive-context facts remain
+shared by normalized CVE. The graph groups observations by normalized CVE,
+component identity, target kind, and source target reference before deriving provenance, VEX
+state, remediation, priority evidence, operational score, explanation,
+guidance, and rank. It then assigns one globally unique rank across all final
+finding scopes.
+
+This graph is not a third public decision contract. Persistence selects the
+matching scoped decision in constant time and projects it into the existing
+`FindingDecisionEvidenceV2` shape. `AnalysisEvidenceV2.analysis_semantics`
+records `finding_scope_first`, `decision_graph_materialization`, the
+`finding-scope-v2` identity version, an empty semantic overlay list, and the
+graph replay hashes. See
+[Scope-First Decision Graph](scope-first-decision-graph.md) for the identity,
+shared/scoped split, and replay rules.
 
 ## Kernel Output
 
@@ -100,6 +121,10 @@ or cancelled workflows may still expose typed diagnostics through
 
 Projection code should follow these rules:
 
+- Select the final scope decision before building evidence; do not use a
+  CVE-wide decision as a semantic fallback when a scoped graph is present.
+- Project VEX, provenance, remediation, score, explanation, guidance, and rank
+  from that one scoped decision without cross-scope overlays.
 - Run APIs read successful output facts from `AnalysisEvidenceV2`.
 - Current finding list/detail payloads read decision fields and occurrence
   evidence from `DecisionFindingView` backed by `finding_current_projection`.
@@ -122,6 +147,8 @@ Projection code should follow these rules:
 
 The kernel-first path is protected by:
 
+- `backend/tests/test_scope_first_decision_graph.py`
+- `backend/tests/api/import_contracts/test_scope_first_import_contract.py`
 - `backend/tests/api/import_contracts/test_kernel_first_import_contract.py`
 - `backend/tests/api/import_contracts/`
 - `backend/tests/api/report_contracts/`

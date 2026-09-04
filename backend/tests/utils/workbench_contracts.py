@@ -539,6 +539,8 @@ def _seed_finding(
         asset_name=asset_name,
         component_name=component_name,
         component_version=component_version,
+        component_purl=component.purl,
+        component_package_type=component.package_type or component.ecosystem,
         priority=priority,
         priority_rank=priority_rank,
         risk_score=risk_score,

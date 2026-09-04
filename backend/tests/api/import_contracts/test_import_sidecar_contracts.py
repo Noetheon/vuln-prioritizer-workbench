@@ -233,7 +233,7 @@ def test_import_upload_applies_asset_context_sidecar_to_workbench_findings(
     assert (upload_dir / sidecar_upload["path"]).read_bytes() == asset_context_csv
     assert payload["asset_context"]["loaded_rows"] == 1
     assert payload["asset_context"]["matched_occurrences"] == 1
-    assert payload["dedup_summary"]["decisions"][0]["target_ref"] == "asset-web-1"
+    assert payload["dedup_summary"]["decisions"][0]["target_ref"] == "web-tier"
 
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -264,7 +264,8 @@ def test_import_upload_applies_asset_context_sidecar_to_workbench_findings(
     assert provenance["asset_owners"] == ["team-platform"]
     assert provenance["asset_business_services"] == ["payments"]
     occurrence = detail.json()["occurrences"][0]
-    assert occurrence["target_ref"] == "asset-web-1"
+    assert occurrence["target_ref"] == "web-tier"
+    assert occurrence["asset_id"] == "asset-web-1"
     assert occurrence["asset_owner"] == "team-platform"
     assert occurrence["asset_business_service"] == "payments"
     assert occurrence["asset_exposure"] == "internet-facing"

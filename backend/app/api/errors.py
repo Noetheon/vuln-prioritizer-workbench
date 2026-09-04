@@ -14,6 +14,7 @@ from starlette.responses import JSONResponse
 
 from app.core.config import Settings
 from app.domain.engine.security_redaction import redact_text, redact_value
+from app.services.decision_scope_lock import ProjectDecisionLockError
 
 DEFAULT_ERROR_MESSAGES = {
     400: "Bad request.",
@@ -227,6 +228,23 @@ async def validation_error_handler(request: Request, exc: Exception) -> JSONResp
             code="request_validation_failed",
             message="Request validation failed.",
             detail={"errors": jsonable_encoder(exc.errors())},
+            request=request,
+        ),
+    )
+
+
+async def project_decision_lock_error_handler(
+    request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    """Map a project deleted during lock acquisition to a stable not-found response."""
+    if not isinstance(exc, ProjectDecisionLockError):
+        return internal_error_response(request)
+    return JSONResponse(
+        status_code=404,
+        content=error_response_content(
+            status_code=404,
+            detail="Project not found",
             request=request,
         ),
     )

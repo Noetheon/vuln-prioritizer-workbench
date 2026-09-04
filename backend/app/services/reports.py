@@ -9,7 +9,7 @@ from collections.abc import Callable
 from sqlmodel import Session
 
 from app.core.config import Settings
-from app.decision_core.readmodels import run_finding_decision_views
+from app.decision_core.readmodels import decision_run_view, run_finding_decision_views
 from app.models import AnalysisRun, Project, Report, WorkflowRun, WorkflowRunKind, WorkflowRunStatus
 from app.repositories import WorkflowRepository
 from app.services.report_contracts import (
@@ -82,6 +82,19 @@ __all__ = [
 ]
 
 
+def _report_provider_snapshot_id(payload: MarkdownReportPayload) -> uuid.UUID | None:
+    """Return the immutable provider identity carried by the rendered payload."""
+    value = payload.provider_snapshot.id if payload.provider_snapshot is not None else None
+    if value is None:
+        return None
+    try:
+        return uuid.UUID(value)
+    except ValueError as exc:
+        raise ReportGenerationError(
+            "Analysis evidence contains an invalid provider snapshot identity."
+        ) from exc
+
+
 class ReportService:
     """Generate and persist report artifacts for Workbench analysis runs."""
 
@@ -115,7 +128,7 @@ class ReportService:
             project=project,
             generated_at=generated_at,
             finding_count=len(findings),
-            provider_snapshot_id=run.provider_snapshot_id,
+            provider_snapshot_id=_report_provider_snapshot_id(payload),
             content=content,
             kind=REPORT_KIND_TECHNICAL_MARKDOWN,
             report_format="markdown",
@@ -148,7 +161,7 @@ class ReportService:
             project=project,
             generated_at=generated_at,
             finding_count=len(findings),
-            provider_snapshot_id=run.provider_snapshot_id,
+            provider_snapshot_id=_report_provider_snapshot_id(payload),
             content=content,
             kind=REPORT_KIND_EXECUTIVE_HTML,
             report_format="html",
@@ -181,7 +194,7 @@ class ReportService:
             project=project,
             generated_at=generated_at,
             finding_count=len(findings),
-            provider_snapshot_id=run.provider_snapshot_id,
+            provider_snapshot_id=_report_provider_snapshot_id(payload),
             content=content,
             kind=REPORT_KIND_ANALYSIS_JSON,
             report_format="json",
@@ -214,7 +227,7 @@ class ReportService:
             project=project,
             generated_at=generated_at,
             finding_count=len(findings),
-            provider_snapshot_id=run.provider_snapshot_id,
+            provider_snapshot_id=_report_provider_snapshot_id(payload),
             content=content,
             kind=REPORT_KIND_FINDINGS_CSV,
             report_format="csv",
@@ -251,7 +264,7 @@ class ReportService:
         filter_value: str = "all",
     ) -> Report:
         """Generate an ATT&CK Navigator layer without workflow bookkeeping."""
-        _payload, findings, generated_at = build_report_payload(
+        payload, findings, generated_at = build_report_payload(
             self.session,
             run=run,
             project=project,
@@ -261,7 +274,11 @@ class ReportService:
             run=run,
             project=project,
             findings=finding_views,
-            attack_contexts=run_attack_contexts(self.session, run),
+            attack_contexts=run_attack_contexts(
+                self.session,
+                run,
+                findings=finding_views,
+            ),
             generated_at=generated_at,
             filter_value=filter_value,
             include_empty=True,
@@ -276,7 +293,7 @@ class ReportService:
             project=project,
             generated_at=generated_at,
             finding_count=len(findings),
-            provider_snapshot_id=run.provider_snapshot_id,
+            provider_snapshot_id=_report_provider_snapshot_id(payload),
             content=content,
             kind=REPORT_KIND_ATTACK_NAVIGATOR,
             report_format="attack-navigator",
@@ -317,7 +334,7 @@ class ReportService:
             project=project,
             generated_at=generated_at,
             finding_count=len(findings),
-            provider_snapshot_id=run.provider_snapshot_id,
+            provider_snapshot_id=_report_provider_snapshot_id(payload),
             content=content,
             kind=REPORT_KIND_SARIF_RESULTS,
             report_format="sarif",
@@ -350,9 +367,11 @@ class ReportService:
         max_retries: int = 2,
     ) -> WorkflowRun:
         """Create a queued durable workflow for report generation."""
-        if run.status not in REPORT_SUPPORTED_RUN_STATUSES:
+        evidence = decision_run_view(run, session=self.session).evidence
+        status = evidence.status if evidence is not None else str(run.status)
+        if status not in {str(supported) for supported in REPORT_SUPPORTED_RUN_STATUSES}:
             raise ReportGenerationError(
-                f"Analysis run must be completed before reporting; current status is {run.status}."
+                f"Analysis run must be completed before reporting; status is {status}."
             )
         report_kind, _create_report = self._report_generation_target(
             run=run,
@@ -425,7 +444,11 @@ class ReportService:
             run=run,
             project=project,
             findings=finding_views,
-            attack_contexts=run_attack_contexts(self.session, run),
+            attack_contexts=run_attack_contexts(
+                self.session,
+                run,
+                findings=finding_views,
+            ),
             generated_at=generated_at,
             filter_value="all",
             include_empty=False,
@@ -441,7 +464,7 @@ class ReportService:
             project=project,
             generated_at=generated_at,
             finding_count=len(findings),
-            provider_snapshot_id=run.provider_snapshot_id,
+            provider_snapshot_id=_report_provider_snapshot_id(payload),
             content=bundle_bytes,
             kind=REPORT_KIND_EVIDENCE_BUNDLE,
             report_format="zip",

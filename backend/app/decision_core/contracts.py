@@ -83,6 +83,11 @@ class AnalysisSemanticsV2(EvidenceContractModel):
     persistence_scope: str
     occurrence_overlay_fields: list[str] = Field(default_factory=list)
     finding_dedup_key_version: str
+    decision_graph_schema_version: str | None = None
+    normalized_input_sha256: str | None = None
+    policy_sha256: str | None = None
+    shared_facts_sha256: str | None = None
+    replay_sha256: str | None = None
     cve_count: int = 0
     occurrence_count: int = 0
     finding_count: int = 0
@@ -93,8 +98,10 @@ class DedupKeyPartsV2(EvidenceContractModel):
     """Dedup key material used to form one finding identity."""
 
     project_id: str | None = None
+    cve_id: str | None = None
     source_id: str | None = None
     component_identity: str | None = None
+    target_kind: str | None = None
     target_ref: str | None = None
 
 
@@ -107,6 +114,7 @@ class DedupDecisionV2(EvidenceContractModel):
     cve_id: str
     source_id: str | None = None
     component_identity: str | None = None
+    target_kind: str | None = None
     target_ref: str | None = None
 
 
@@ -182,7 +190,10 @@ class OccurrenceScopeV2(EvidenceContractModel):
     component_name: str | None = None
     component_version: str | None = None
     purl: str | None = None
+    package_type: str | None = None
+    target_kind: str | None = None
     target_ref: str | None = None
+    asset_id: str | None = None
     asset_owner: str | None = None
     asset_business_service: str | None = None
     asset_exposure: str | None = None
@@ -198,6 +209,8 @@ class OccurrenceDedupEvidenceV2(EvidenceContractModel):
 
     key: str | None = None
     key_version: str | None = None
+    observation_key: str | None = None
+    observation_key_version: str | None = None
     action: str | None = None
     parts: DedupKeyPartsV2 | None = None
 
@@ -304,12 +317,16 @@ class OccurrenceEvidenceV2(EvidenceContractModel):
     component_name: str | None = None
     component_version: str | None = None
     purl: str | None = None
+    package_type: str | None = None
     fix_versions: list[str] | None = None
     target_kind: str | None = None
     target_ref: str | None = None
+    asset_id: str | None = None
     asset_owner: str | None = None
     asset_business_service: str | None = None
     asset_exposure: str | None = None
+    asset_environment: str | None = None
+    asset_criticality: str | None = None
     raw_severity: str | None = None
     vex_status: str | None = None
     vex_justification: str | None = None

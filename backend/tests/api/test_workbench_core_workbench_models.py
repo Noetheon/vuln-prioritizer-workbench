@@ -13,6 +13,8 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, select
 
+from app.domain.component_identity import component_scope_identity, component_storage_key
+
 CORE_WORKBENCH_TABLES = {"asset", "component", "vulnerability", "finding"}
 CORE_WORKBENCH_EXPORTS = ("Asset", "Component", "Vulnerability", "Finding")
 
@@ -110,6 +112,13 @@ def test_project_can_persist_core_workbench_graph(app_models: Any, migrated_engi
                 criticality=_enum_or_string(app_models, "AssetCriticality", "critical"),
             )
         )
+        component_material = component_scope_identity(
+            component_name="log4j-core",
+            component_version="2.14.1",
+            purl="pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+            package_type="maven",
+        )
+        assert component_material is not None
         session.add(
             app_models.Component(
                 id=component_id,
@@ -117,6 +126,8 @@ def test_project_can_persist_core_workbench_graph(app_models: Any, migrated_engi
                 version="2.14.1",
                 purl="pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
                 ecosystem="maven",
+                identity_key=component_storage_key(component_material),
+                identity_material=component_material,
             )
         )
         session.add(
@@ -184,9 +195,7 @@ def test_core_workbench_dedup_constraints_and_indexes_exist(migrated_engine: Eng
     assert CORE_WORKBENCH_TABLES.issubset(set(inspector.get_table_names()))
 
     assert _has_unique_constraint_or_index(inspector, "asset", ("project_id", "asset_key"))
-    assert _has_unique_constraint_or_index(inspector, "component", ("purl",)) or (
-        _has_unique_constraint_or_index(inspector, "component", ("name", "version", "ecosystem"))
-    )
+    assert _has_unique_constraint_or_index(inspector, "component", ("identity_key",))
     assert _has_unique_constraint_or_index(inspector, "vulnerability", ("cve_id",))
     assert _has_unique_constraint_or_index(inspector, "finding", ("project_id", "dedup_key"))
     assert not _has_unique_constraint_or_index(

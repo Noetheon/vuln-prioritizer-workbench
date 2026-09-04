@@ -3,6 +3,10 @@ import test from "node:test"
 
 import type { AssetPublic } from "../src/api-client"
 import {
+  assetFormFromAsset,
+  assetUpdateBody,
+} from "../src/components/assets/asset-form-model.ts"
+import {
   defaultAssetFilters,
   filterAssets,
   hasActiveAssetFilters,
@@ -127,6 +131,23 @@ test("assets route model derives inventory and shell state", () => {
     }),
     true,
   )
+})
+
+test("asset update omits an unchanged internal storage key", () => {
+  const internalKey = `vpw-asset-identity-v2:${"a".repeat(64)}`
+  const current = asset({ asset_key: internalKey, owner: "team-old" })
+  const form = assetFormFromAsset(current)
+  form.owner = "team-new"
+
+  assert.deepEqual(assetUpdateBody(form, current.asset_key), {
+    business_service: "payments",
+    criticality: "medium",
+    environment: "production",
+    exposure: "internal",
+    name: "asset",
+    owner: "team-new",
+    target_ref: "asset-key",
+  })
 })
 
 function asset(overrides: Partial<AssetPublic>): AssetPublic {

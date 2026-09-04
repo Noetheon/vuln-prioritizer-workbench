@@ -6,6 +6,7 @@ import re
 import uuid
 from datetime import datetime
 from typing import Literal
+from urllib.parse import urlparse
 
 from pydantic import field_validator
 from sqlalchemy import Column, DateTime, Index, Integer, String, UniqueConstraint
@@ -17,6 +18,45 @@ from app.models.enums import FindingPriority
 GITHUB_REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 GITHUB_LABEL_PREFIX_RE = re.compile(r"^[A-Za-z0-9_.:-]+$")
 ENV_NAME_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
+
+
+def normalize_github_repository(value: str) -> str:
+    """Return GitHub's case-insensitive owner/name identity."""
+    stripped = value.strip()
+    if not GITHUB_REPOSITORY_RE.fullmatch(stripped):
+        raise ValueError("repository must use owner/name format.")
+    return stripped.casefold()
+
+
+def github_issue_export_is_complete(
+    *,
+    repository: object,
+    issue_url: object,
+    issue_number: object,
+) -> bool:
+    """Return whether persisted fields prove one exact GitHub issue identity."""
+    if (
+        not isinstance(repository, str)
+        or not isinstance(issue_url, str)
+        or not isinstance(issue_number, int)
+        or isinstance(issue_number, bool)
+        or issue_number <= 0
+    ):
+        return False
+    try:
+        normalized_repository = normalize_github_repository(repository)
+    except ValueError:
+        return False
+    parsed_url = urlparse(issue_url)
+    return (
+        parsed_url.scheme == "https"
+        and parsed_url.netloc.casefold() == "github.com"
+        and parsed_url.path.casefold()
+        == f"/{normalized_repository}/issues/{issue_number}".casefold()
+        and not parsed_url.params
+        and not parsed_url.query
+        and not parsed_url.fragment
+    )
 
 
 class GitHubIssuePreviewCreate(SQLModel):
@@ -62,10 +102,7 @@ class GitHubIssueExportCreate(GitHubIssuePreviewCreate):
     @classmethod
     def validate_repository(cls, value: str) -> str:
         """Validate the repository field."""
-        stripped = value.strip()
-        if not GITHUB_REPOSITORY_RE.fullmatch(stripped):
-            raise ValueError("repository must use owner/name format.")
-        return stripped
+        return normalize_github_repository(value)
 
     @field_validator("token_env")
     @classmethod
@@ -129,6 +166,12 @@ class GitHubIssueExport(SQLModel, table=True):
             "duplicate_key",
             name="uq_github_issue_export_project_repository_duplicate",
         ),
+        UniqueConstraint(
+            "project_id",
+            "repository",
+            "finding_id",
+            name="uq_github_issue_export_project_repository_finding",
+        ),
         Index("ix_github_issue_export_project", "project_id"),
         Index("ix_github_issue_export_finding", "finding_id"),
         Index("ix_github_issue_export_created_at", "created_at"),
@@ -136,7 +179,11 @@ class GitHubIssueExport(SQLModel, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     project_id: uuid.UUID = Field(foreign_key="project.id", nullable=False, ondelete="CASCADE")
-    finding_id: uuid.UUID | None = Field(default=None, foreign_key="finding.id")
+    finding_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="finding.id",
+        ondelete="CASCADE",
+    )
     repository: str = Field(max_length=200, sa_column=Column(String(200), nullable=False))
     duplicate_key: str = Field(max_length=512, sa_column=Column(String(512), nullable=False))
     title: str = Field(max_length=500, sa_column=Column(String(500), nullable=False))

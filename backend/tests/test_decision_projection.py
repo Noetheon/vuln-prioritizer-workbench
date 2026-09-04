@@ -8,6 +8,7 @@ from utils.workbench_env import WorkbenchApiEnv, create_project_via_api, local_a
 
 from app.decision_core.contracts import (
     FindingDecisionEvidenceV2,
+    OccurrenceScopeV2,
     PriorityEvidenceV2,
 )
 from app.decision_core.readmodels import (
@@ -69,6 +70,50 @@ def test_decision_finding_view_prefers_evidence_over_stale_columns(
     assert view.risk_score == 98.0
     assert view.in_kev is True
     assert view.recommended_action == "Evidence action."
+
+
+def test_decision_finding_view_never_reads_mutable_component_when_evidence_exists(
+    workbench_api_env: WorkbenchApiEnv,
+) -> None:
+    app_models = workbench_api_env.app_models
+    finding = app_models.Finding(
+        id=uuid.uuid4(),
+        project_id=uuid.uuid4(),
+        vulnerability_id=uuid.uuid4(),
+        cve_id="CVE-2026-0003",
+        priority=app_models.FindingPriority.HIGH,
+        priority_rank=2,
+    )
+    finding.component = app_models.Component(
+        id=uuid.uuid4(),
+        name="MUTATED-SHARED-LABEL",
+        version="9999",
+        purl="pkg:pypi/mutated@9999",
+    )
+    evidence = FindingDecisionEvidenceV2(
+        finding_id=str(finding.id),
+        analysis_run_id=str(uuid.uuid4()),
+        project_id=str(finding.project_id),
+        cve_id=finding.cve_id,
+        dedup_key="evidence-component-scope",
+        status="open",
+        priority="high",
+        priority_rank=2,
+        operational_rank=1,
+        occurrence_scope=OccurrenceScopeV2(purl="pkg:pypi/django@3.0.0"),
+        priority_evidence=PriorityEvidenceV2(
+            priority_label="High",
+            priority_rank=2,
+        ),
+    )
+
+    view = decision_finding_view(finding, evidence=evidence)
+
+    assert view.component_name == "django"
+    assert view.component_version == "3.0.0"
+    assert view.component_purl == "pkg:pypi/django@3.0.0"
+    assert view.component_label == "django 3.0.0"
+    assert view.public_update()["component_name"] == "django"
 
 
 def test_successful_v2_run_without_analysis_evidence_raises_invariant(

@@ -11,8 +11,10 @@ code is shared domain logic used by the Workbench.
 The current runtime architecture keeps one invariant across all supported inputs:
 
 - normalize many source formats into occurrence-level CVE evidence
-- deduplicate to a unique CVE set for enrichment and base prioritization
-- preserve provenance, asset context, and VEX applicability as explainable context
+- deduplicate to a unique CVE set for shared provider and ATT&CK enrichment
+- group observations by normalized CVE/component/source-target finding scope
+- evaluate provenance, asset context, VEX, remediation, score, explanation, and
+  rank at that final scope
 - render the same finding model into Workbench API/UI, Markdown, JSON, SARIF,
   HTML, and evidence surfaces
 
@@ -26,12 +28,14 @@ flowchart LR
   C --> E["Asset context and VEX"]
   D --> F["NVD, EPSS, KEV enrichment"]
   D --> G["Optional ATT&CK enrichment"]
-  E --> H["Provenance aggregation"]
-  F --> I["Prioritization service"]
+  E --> H["finding-scope-v2 grouping"]
+  F --> I["Shared CVE facts"]
   G --> I
-  H --> I
-  I --> J["Finding and occurrence persistence"]
-  J --> K["Decision/Evidence Kernel"]
+  H --> J["Scope-first decision evaluation"]
+  I --> J
+  J --> R["Global operational ranking"]
+  R --> P["Finding and occurrence persistence"]
+  P --> K["Decision/Evidence Kernel"]
   K --> L["AnalysisEvidenceV2"]
   K --> M["FindingDecisionEvidenceV2"]
   L --> N["API, reports, and evidence bundle"]
@@ -104,7 +108,10 @@ adapters, or the focused parser modules under
 
 ### Provenance, asset context, and VEX
 
-`backend/app/domain/engine/services/contextualization.py` aggregates occurrence-level data into per-CVE provenance and context.
+`backend/app/domain/engine/services/contextualization.py` supplies the
+provenance aggregation rules. `backend/app/decision_core/decision_graph.py`
+applies them independently to every final finding scope while reusing shared
+CVE facts.
 
 Important current rules:
 
@@ -112,8 +119,13 @@ Important current rules:
   `target_ref` `exact`, `contains`, `regex`, and compatibility `glob`
   rules with precedence; see [Asset Context CSV](../asset-context-csv.md)
 - VEX suppression is evaluated at occurrence level with deterministic specificity-based matching
-- `suppressed_by_vex` is true only when all known occurrences are suppressed
+- observations are grouped by normalized CVE, component identity, and
+  target kind/reference before decision fields are derived
+- `suppressed_by_vex` is true only when all occurrences in that finding scope
+  are suppressed
 - `under_investigation` stays visible and is not silently removed
+- source identifiers remain observation provenance and do not split finding
+  identity
 
 This layer produces:
 
@@ -139,7 +151,10 @@ The parser/provider extension SDK is a static local contract. It documents typed
 
 ### Prioritization
 
-`backend/app/domain/engine/services/prioritization.py` builds the primary finding set.
+`backend/app/domain/engine/services/prioritization.py` supplies the transparent
+decision rules. `backend/app/decision_core/decision_graph.py` invokes those
+rules once per final scope and assigns globally unique operational ranks after
+all scoped findings are evaluated.
 
 The base `priority_label` is intentionally rule-based and transparent:
 
@@ -155,6 +170,10 @@ Current architectural boundary:
 - `priority_state` adds the lifecycle enum values `Suppressed`, `Accepted`, and `Fixed`
 - `operational_score` is a transparent 0-100 queueing score with explicit reasons; asset context can affect that score, but not the base `priority_label`
 - ATT&CK does not silently introduce a separate opaque risk score
+
+See [Scope-First Decision Graph](scope-first-decision-graph.md) for shared CVE
+facts, `observation-v1` and `finding-scope-v2` identity, replay fingerprints,
+and Decision/Evidence v2 materialization.
 
 ### Reporting
 
@@ -194,7 +213,8 @@ historical package-line material. Current Workbench explain and comparison
 routes are API projections over persisted findings and typed decision evidence,
 not a replacement source of product truth.
 
-See [Decision/Evidence Kernel](decision-evidence-kernel.md) and
+See [Scope-First Decision Graph](scope-first-decision-graph.md),
+[Decision/Evidence Kernel](decision-evidence-kernel.md), and
 [Contracts](../contracts.md) for the active evidence and report boundaries.
 
 ### Derived renderers

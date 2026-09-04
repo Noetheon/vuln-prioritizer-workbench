@@ -6,7 +6,7 @@ import os
 import re
 import uuid
 from typing import Any, Literal
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import requests
 from fastapi import HTTPException
@@ -18,9 +18,10 @@ from app.domain.engine.security_redaction import redact_text, redact_value
 from app.models.findings import Finding
 from app.models.github_issues import (
     ENV_NAME_RE,
-    GITHUB_REPOSITORY_RE,
     GitHubIssuePreviewCreate,
     GitHubIssuePreviewRecord,
+    github_issue_export_is_complete,
+    normalize_github_repository,
 )
 from app.repositories import FindingPageQuery, FindingRepository
 
@@ -34,7 +35,7 @@ GITHUB_SECRET_PATTERN = re.compile(
     r")\b"
 )
 
-GitHubIssueFailureKind = Literal["network_error", "upstream_status"]
+GitHubIssueFailureKind = Literal["invalid_response", "network_error", "upstream_status"]
 
 
 class GitHubIssueCreationError(HTTPException):
@@ -86,8 +87,11 @@ def github_export_token(token_env: str | None) -> str:
 
 def github_repository_path(repository: str) -> str:
     """Return a URL-safe GitHub repository path after owner/name validation."""
-    if not GITHUB_REPOSITORY_RE.fullmatch(repository):
+    try:
+        repository = normalize_github_repository(repository)
+    except ValueError:
         raise HTTPException(status_code=422, detail="repository must use owner/name format.")
+
     owner, name = repository.split("/", 1)
     return f"{quote(owner, safe='')}/{quote(name, safe='')}"
 
@@ -132,10 +136,35 @@ def create_github_issue(
             upstream_status_code=response.status_code,
             detail=f"GitHub issue creation failed with status {response.status_code}.",
         )
-    response_payload = response.json()
+    try:
+        response_payload = response.json()
+    except ValueError as exc:
+        raise GitHubIssueCreationError(
+            failure_kind="invalid_response",
+            upstream_status_code=201,
+            detail="GitHub issue creation returned an invalid response.",
+        ) from exc
+    if not isinstance(response_payload, dict):
+        raise GitHubIssueCreationError(
+            failure_kind="invalid_response",
+            upstream_status_code=201,
+            detail="GitHub issue creation returned an invalid response.",
+        )
+    issue_url = response_payload.get("html_url")
+    issue_number = response_payload.get("number")
+    if not github_issue_export_is_complete(
+        repository=unquote(repository_path),
+        issue_url=issue_url,
+        issue_number=issue_number,
+    ):
+        raise GitHubIssueCreationError(
+            failure_kind="invalid_response",
+            upstream_status_code=201,
+            detail="GitHub issue creation returned an invalid response.",
+        )
     return {
-        "issue_url": str(response_payload.get("html_url") or ""),
-        "issue_number": int(response_payload.get("number") or 0),
+        "issue_url": issue_url,
+        "issue_number": issue_number,
     }
 
 
@@ -235,7 +264,7 @@ def _issue_body(
             f"| CVSS | {_table_cell(_number_label(view.cvss_base_score))} |",
             f"| EPSS | {_table_cell(_epss_label(view.epss))} |",
             f"| KEV | {_table_cell('yes' if view.in_kev else 'no')} |",
-            f"| Component | {_table_cell(_component_label(finding))} |",
+            f"| Component | {_table_cell(view.component_label)} |",
             f"| Asset | {_table_cell(_asset_label(finding))} |",
             f"| Owner | {_table_cell(finding.asset.owner if finding.asset else None)} |",
             (

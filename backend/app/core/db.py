@@ -25,14 +25,16 @@ def create_db_engine(active_settings: Settings) -> Engine:
         pool_pre_ping=True,
     )
     if active_settings.SQLALCHEMY_DATABASE_URI.startswith("sqlite"):
-        _configure_sqlite_connections(
+        configure_sqlite_connections(
             active_engine,
             enable_wal=_is_file_sqlite_uri(active_settings.SQLALCHEMY_DATABASE_URI),
         )
     return active_engine
 
 
-def _configure_sqlite_connections(engine: Engine, *, enable_wal: bool) -> None:
+def configure_sqlite_connections(engine: Engine, *, enable_wal: bool) -> None:
+    """Enable the SQLite integrity and concurrency invariants on every connection."""
+
     @event.listens_for(engine, "connect")
     def set_sqlite_pragmas(dbapi_connection: Any, _connection_record: Any) -> None:
         cursor = dbapi_connection.cursor()

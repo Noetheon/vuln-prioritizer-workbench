@@ -326,6 +326,77 @@ def test_waiver_scope_matching_normalizes_asset_target_and_service_values() -> N
     assert "asset-api" in findings[0].waiver_matched_scope
 
 
+def test_apply_waivers_prefers_specific_active_rule_over_broad_review_due_rule() -> None:
+    finding = _finding("CVE-2024-0001").model_copy(
+        update={
+            "provenance": FindingProvenance(
+                asset_ids=["asset-api"],
+            )
+        }
+    )
+
+    findings, warnings = apply_waivers(
+        [finding],
+        [
+            WaiverRule(
+                id="broad-review-due",
+                cve_id="CVE-2024-0001",
+                owner="portfolio-risk",
+                reason="The broad acceptance needs review.",
+                expires_on="2026-04-25",
+                review_on="2026-04-20",
+            ),
+            WaiverRule(
+                id="specific-active",
+                cve_id="CVE-2024-0001",
+                owner="asset-risk",
+                reason="The asset-specific acceptance remains active.",
+                expires_on="2026-06-30",
+                asset_ids=["asset-api"],
+            ),
+        ],
+        today=date(2026, 4, 21),
+    )
+
+    assert findings[0].waiver_id == "specific-active"
+    assert findings[0].waiver_status == "active"
+    assert findings[0].waiver_owner == "asset-risk"
+    assert any("broad-review-due" in warning for warning in warnings)
+
+
+def test_apply_waivers_prefers_narrower_or_list_with_equal_scope_dimensions() -> None:
+    finding = _finding("CVE-2024-0001").model_copy(
+        update={"provenance": FindingProvenance(asset_ids=["asset-api"])}
+    )
+
+    findings, warnings = apply_waivers(
+        [finding],
+        [
+            WaiverRule(
+                id="broad-assets",
+                cve_id="CVE-2024-0001",
+                owner="broad-owner",
+                reason="Acceptance for either asset.",
+                expires_on="2026-06-30",
+                asset_ids=["asset-api", "asset-other"],
+            ),
+            WaiverRule(
+                id="narrow-asset",
+                cve_id="CVE-2024-0001",
+                owner="narrow-owner",
+                reason="Acceptance for this asset only.",
+                expires_on="2026-06-30",
+                asset_ids=["asset-api"],
+            ),
+        ],
+        today=date(2026, 4, 21),
+    )
+
+    assert findings[0].waiver_id == "narrow-asset"
+    assert findings[0].waiver_owner == "narrow-owner"
+    assert any("broad-assets" in warning for warning in warnings)
+
+
 def test_apply_waivers_warns_for_multiple_active_matches_and_unmatched_rules() -> None:
     findings, warnings = apply_waivers(
         [_finding("CVE-2024-0001")],

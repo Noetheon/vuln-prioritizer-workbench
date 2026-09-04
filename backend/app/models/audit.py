@@ -37,7 +37,7 @@ class AuditEventBase(SQLModel):
 
 
 class AuditEvent(AuditEventBase, table=True):
-    """Append-only Workbench audit event."""
+    """Workbench audit event, including explicitly finalized lifecycle records."""
 
     __tablename__ = "audit_event"
     __table_args__ = (

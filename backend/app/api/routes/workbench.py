@@ -27,6 +27,7 @@ from app.models.base import get_datetime_utc
 from app.repositories import RuntimeHeartbeatRepository
 from app.services.audit import record_audit_event
 from app.services.demo_workspace import (
+    DEMO_PROJECT_ID,
     DemoWorkspaceSnapshot,
     delete_demo_workspace,
     demo_workspace_enabled,
@@ -34,6 +35,14 @@ from app.services.demo_workspace import (
     seed_demo_workspace,
 )
 from app.services.import_errors import ImportServiceError
+from app.services.project_deletion import (
+    ProjectArtifactCleanupError,
+    ProjectDeletionBlockedError,
+)
+from app.services.project_lifecycle_lock import (
+    ProjectLifecycleBusyError,
+    lock_project_lifecycle,
+)
 from app.services.report_artifacts import build_report_public
 from app.services.report_models import ReportGenerationError
 from app.services.run_workflow_projection import analysis_run_public
@@ -121,32 +130,39 @@ async def create_demo_workspace(
     if not demo_workspace_enabled(active_settings):
         raise HTTPException(status_code=403, detail="Demo workspace is disabled.")
     try:
-        snapshot = await seed_demo_workspace(
-            session=session,
-            settings=active_settings,
-            local_actor=local_actor,
-            reset=payload.reset,
-        )
+        with lock_project_lifecycle(active_settings, DEMO_PROJECT_ID) as lifecycle_lease:
+            snapshot = await seed_demo_workspace(
+                session=session,
+                settings=active_settings,
+                local_actor=local_actor,
+                reset=payload.reset,
+                lifecycle_lease=lifecycle_lease,
+            )
+            record_audit_event(
+                session,
+                action="workbench.demo.reset" if payload.reset else "workbench.demo.seed",
+                resource_type="project",
+                resource_id=snapshot.project.id if snapshot.project is not None else None,
+                actor=local_actor,
+                project_id=snapshot.project.id if snapshot.project is not None else None,
+                detail={
+                    "finding_count": snapshot.finding_count,
+                    "asset_count": snapshot.asset_count,
+                    "report_count": snapshot.report_count,
+                    "waiver_count": snapshot.waiver_count,
+                },
+            )
+            session.commit()
+            response = _demo_workspace_public(snapshot, active_settings, session=session)
     except ImportServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except ReportGenerationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    record_audit_event(
-        session,
-        action="workbench.demo.reset" if payload.reset else "workbench.demo.seed",
-        resource_type="project",
-        resource_id=snapshot.project.id if snapshot.project is not None else None,
-        actor=local_actor,
-        project_id=snapshot.project.id if snapshot.project is not None else None,
-        detail={
-            "finding_count": snapshot.finding_count,
-            "asset_count": snapshot.asset_count,
-            "report_count": snapshot.report_count,
-            "waiver_count": snapshot.waiver_count,
-        },
-    )
-    session.commit()
-    return _demo_workspace_public(snapshot, active_settings, session=session)
+    except (ProjectDeletionBlockedError, ProjectLifecycleBusyError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ProjectArtifactCleanupError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return response
 
 
 @router.delete("/demo", status_code=204)
@@ -159,18 +175,28 @@ def remove_demo_workspace(
     active_settings = _request_settings(request)
     if not demo_workspace_enabled(active_settings):
         raise HTTPException(status_code=403, detail="Demo workspace is disabled.")
-    snapshot = read_demo_workspace_snapshot(session)
-    record_audit_event(
-        session,
-        action="workbench.demo.delete",
-        resource_type="project",
-        resource_id=snapshot.project.id if snapshot.project is not None else None,
-        actor=local_actor,
-        project_id=snapshot.project.id if snapshot.project is not None else None,
-        detail={"seeded": snapshot.seeded},
-    )
-    delete_demo_workspace(session=session, settings=active_settings)
-    session.commit()
+    try:
+        with lock_project_lifecycle(active_settings, DEMO_PROJECT_ID) as lifecycle_lease:
+            snapshot = read_demo_workspace_snapshot(session)
+            deleted = delete_demo_workspace(
+                session=session,
+                settings=active_settings,
+                local_actor=local_actor,
+                lifecycle_lease=lifecycle_lease,
+            )
+            if not deleted:
+                record_audit_event(
+                    session,
+                    action="workbench.demo.delete",
+                    resource_type="project",
+                    actor=local_actor,
+                    detail={"seeded": snapshot.seeded},
+                )
+                session.commit()
+    except (ProjectDeletionBlockedError, ProjectLifecycleBusyError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ProjectArtifactCleanupError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
     return Response(status_code=204)
 
 

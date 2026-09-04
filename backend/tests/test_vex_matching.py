@@ -73,6 +73,120 @@ def test_ranked_vex_matching_prefers_more_specific_statement_over_earlier_generi
     assert resolved[0].vex_status == "under_investigation"
 
 
+def test_vex_target_can_match_canonical_asset_without_overwriting_source_target() -> None:
+    occurrence = _occurrence().model_copy(update={"asset_id": "asset-prod"})
+    statement = _statement(
+        status="not_affected",
+        target_kind=occurrence.target_kind,
+        target_ref="asset-prod",
+    )
+
+    match = match_vex_statement_details(occurrence, [statement])
+
+    assert match is not None
+    assert match.specificity == "target"
+    assert occurrence.target_ref == "repo-a"
+
+
+def test_vex_target_matching_uses_shared_nfc_and_kind_whitespace_normalization() -> None:
+    occurrence = _occurrence().model_copy(
+        update={"target_kind": "kubernetes pod", "target_ref": "Caf\u00e9-tier"}
+    )
+    statement = _statement(
+        status="not_affected",
+        target_kind="  Kubernetes   Pod  ",
+        target_ref="Cafe\u0301-tier",
+    )
+
+    match = match_vex_statement_details(occurrence, [statement])
+
+    assert match is not None
+    assert match.specificity == "target"
+    assert apply_vex_statements([occurrence], [statement])[0].vex_status == "not_affected"
+
+
+def test_vex_component_matching_uses_shared_nfc_name_and_version_normalization() -> None:
+    occurrence = _occurrence().model_copy(
+        update={
+            "component_name": "Café",
+            "component_version": "vérsion",
+            "purl": None,
+            "target_ref": None,
+        }
+    )
+    statements = [
+        _statement(
+            status="fixed",
+            component_name="Café",
+            component_version="vérsion",
+        ),
+        _statement(
+            status="not_affected",
+            component_name="Café",
+            component_version="vérsion",
+        ),
+    ]
+
+    for statement in statements:
+        match = match_vex_statement_details(occurrence, [statement])
+        assert match is not None
+        assert match.specificity == "component+version"
+        assert apply_vex_statements([occurrence], [statement])[0].vex_status == statement.status
+
+
+def test_versioned_purl_is_authoritative_over_auxiliary_component_version() -> None:
+    occurrence = _occurrence().model_copy(
+        update={
+            "component_name": "xz",
+            "component_version": "5.6.0",
+            "purl": "pkg:apk/alpine/xz@5.6.0-r0",
+        }
+    )
+    purl_statement = _statement(
+        status="fixed",
+        purl="pkg:apk/alpine/xz@5.6.0-r0",
+        component_name="xz",
+        component_version="5.6.0-r0",
+    )
+    targeted_statement = purl_statement.model_copy(
+        update={
+            "target_kind": occurrence.target_kind,
+            "target_ref": occurrence.target_ref,
+        }
+    )
+    nonmatching_purl = purl_statement.model_copy(
+        update={
+            "purl": "pkg:apk/alpine/xz@5.6.0-r1",
+            "component_version": occurrence.component_version,
+        }
+    )
+
+    purl_match = match_vex_statement_details(occurrence, [purl_statement])
+    targeted_match = match_vex_statement_details(occurrence, [targeted_statement])
+    assert purl_match is not None
+    assert targeted_match is not None
+    assert purl_match.specificity == "purl"
+    assert targeted_match.specificity == "purl+target"
+    assert match_vex_statement_details(occurrence, [nonmatching_purl]) is None
+
+
+def test_unversioned_purl_keeps_separate_component_version_in_identity() -> None:
+    occurrence = _occurrence().model_copy(
+        update={"purl": "pkg:generic/libfoo", "component_version": "1.2.3"}
+    )
+    matching = _statement(
+        status="fixed",
+        purl="pkg:generic/libfoo",
+        component_version="1.2.3",
+    )
+    mismatching = matching.model_copy(update={"component_version": "9.9.9"})
+
+    match = match_vex_statement_details(occurrence, [matching])
+    assert match is not None
+    assert match.specificity == "purl"
+    assert match_vex_statement_details(occurrence, [mismatching]) is None
+
+
 def test_version_specific_vex_statement_does_not_match_unknown_occurrence_version() -> None:
     occurrence = _occurrence().model_copy(update={"component_version": None, "purl": None})
     statements = [
@@ -304,6 +418,20 @@ def test_vex_matching_canonicalizes_purls_and_component_names() -> None:
     assert match.specificity == "purl"
     assert match.statement.status == "fixed"
     assert match.candidate_count == 2
+
+
+def test_vex_matching_preserves_generic_purl_case_semantics() -> None:
+    occurrence = _occurrence().model_copy(
+        update={
+            "component_name": None,
+            "component_version": None,
+            "purl": "pkg:generic/Foo@ReleaseA",
+            "target_ref": None,
+        }
+    )
+    statement = _statement(status="fixed", purl="pkg:generic/foo@releasea")
+
+    assert match_vex_statement_details(occurrence, [statement]) is None
 
 
 def test_vex_matching_keeps_identity_qualifiers_distinct() -> None:

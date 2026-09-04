@@ -1016,11 +1016,11 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   assert.match(makefile, /\.PHONY:.*frontend-design-audit-linux-docker-update/)
   assert.match(
     makefile,
-    /frontend-design-audit:\n\t\$\(FRONTEND_NPM\) run test:design-audit/,
+    /frontend-design-audit:\n\tVPW_PYTHON=\$\(PYTHON\) \$\(FRONTEND_NPM\) run test:design-audit/,
   )
   assert.match(
     makefile,
-    /frontend-design-audit-update:\n\t\$\(FRONTEND_NPM\) run test:design-audit:update/,
+    /frontend-design-audit-update:\n\tVPW_PYTHON=\$\(PYTHON\) \$\(FRONTEND_NPM\) run test:design-audit:update/,
   )
   assert.match(
     makefile,

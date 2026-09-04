@@ -174,6 +174,12 @@ def _view(
         waived=waived,
         rationale="Risk rationale.",
         recommended_action=action,
+        occurrence_scope=SimpleNamespace(
+            component_name=component_name,
+            component_version=component_version,
+            purl=component_purl,
+            package_type=None,
+        ),
         occurrences=[],
     )
     return DecisionFindingView(finding=finding, evidence=evidence)

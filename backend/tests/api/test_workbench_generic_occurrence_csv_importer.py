@@ -73,12 +73,12 @@ def test_generic_occurrence_csv_importer_accepts_canonical_workbench_fields() ->
     header = (
         "cve_id,target_ref,component_name,component_version,fix_versions,"
         + "raw_severity,owner,business_service,criticality,exposure,environment,"
-        + "purl,source"
+        + "purl,package_type,source"
     )
     row = (
         "CVE-2022-22965,checkout-api,spring-webmvc,5.3.17,5.3.18,HIGH,"
         + "appsec,checkout,critical,public,prod,pkg:maven/spring-webmvc@5.3.17,"
-        + "spreadsheet"
+        + "maven,spreadsheet"
     )
 
     occurrences = importer.parse(
@@ -100,6 +100,7 @@ def test_generic_occurrence_csv_importer_accepts_canonical_workbench_fields() ->
     assert occurrence.raw_evidence["exposure"] == "public"
     assert occurrence.raw_evidence["environment"] == "prod"
     assert occurrence.raw_evidence["purl"] == "pkg:maven/spring-webmvc@5.3.17"
+    assert occurrence.raw_evidence["package_type"] == "maven"
     assert occurrence.source == "spreadsheet"
 
 

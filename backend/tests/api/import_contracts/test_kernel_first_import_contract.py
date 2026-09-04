@@ -39,7 +39,7 @@ def test_kernel_first_import_uses_evidence_as_report_and_workflow_truth(
     run_payload = completed_run_payload(workbench_api_env, response, headers=headers)
     evidence = run_payload["evidence"]
     assert evidence["analysis_evidence_id"]
-    assert evidence["analysis_service"]["kernel"] == "app.decision_core.producer"
+    assert evidence["analysis_service"]["kernel"] == "app.decision_core.decision_graph"
 
     with Session(workbench_api_env.engine) as session:
         run = session.get(AnalysisRun, uuid.UUID(str(run_payload["id"])))

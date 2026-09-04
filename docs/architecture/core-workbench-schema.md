@@ -12,7 +12,9 @@ second opaque scoring model.
 This page focuses on the core triage graph. The broader active schema also
 contains analysis runs, workflow rows, provider snapshots, finding occurrences,
 and the Decision/Evidence Kernel v2 tables documented in
-[Analysis Run Provider Schema](analysis-run-provider-schema.md).
+[Analysis Run Provider Schema](analysis-run-provider-schema.md). Finding
+identity and scoped decision semantics are documented in
+[Scope-First Decision Graph](scope-first-decision-graph.md).
 
 The core SQLModel tables are singular and owned by the Workbench backend:
 
@@ -22,6 +24,14 @@ The core SQLModel tables are singular and owned by the Workbench backend:
 - `finding`
 
 Workbench backend code uses `app.models` exports and `app/alembic` migrations.
+
+Intentional project deletion is database-first. The relational delete and its
+audit intent commit before managed upload/report trees are removed, so a schema
+or foreign-key failure cannot erase evidence files while leaving the project
+live. Revision `20260904_0008` makes finding-linked GitHub export history
+cascade with its finding. A project with any incomplete GitHub export
+reservation is not deletable: the API returns HTTP 409 and leaves both database
+state and artifacts intact until the operator verifies the remote outcome.
 
 ## Model Exports
 
@@ -87,11 +97,43 @@ Minimum fields:
 - `purl`
 - `ecosystem`
 - `package_type`
+- `identity_key`
+- `identity_material`
 
 Constraints and indexes:
 
-- unique dedup key on `purl` when present
-- unique fallback identity on `(name, version, ecosystem)`
+- unique bounded lookup key on `identity_key`
+
+`identity_material` is the auditable tagged canonical PURL or fallback
+name/version/package-type identity used by finding scope. `identity_key` is its
+versioned SHA-256 storage key. Repository lookups use the indexed key and then
+verify the full material, so a digest collision fails closed. Alembic revision
+`20260904_0005` plans all legacy identities before mutation, deterministically
+merges canonical aliases, backfills both fields on the survivors, and replaces
+the older `purl` and `(name, version, ecosystem)` constraints, which could not
+represent versionless PURLs with distinct versions or distinct fallback package
+types.
+A versioned valid PURL is authoritative (including distribution release
+suffixes); a separate version is included in identity material only when the
+PURL itself is versionless. Fallback coordinate text is Unicode NFC-normalized,
+and the PURL canonicalizer is frozen by an exact `packageurl-python` dependency
+pin. Changing those semantics requires a new identity version and migration.
+
+For legacy rows that become equal only after canonicalization, the survivor is
+the earliest `created_at` row, with the lexicographically smallest UUID as the
+tie-breaker. Every `finding.component_id` is re-pointed before an alias is
+deleted. Every other finding field and every occurrence, analysis-evidence,
+immutable decision-evidence, current-ledger, and GitHub-export row remain
+value-for-value unchanged. Completed GitHub exports match on their stable
+finding link within a project/repository in addition to the rendered duplicate
+key, so an alias ID retained in historical export metadata cannot trigger a
+second external issue. A true digest collision still fails closed before
+mutation. The merge, backfill, and schema change share one Alembic revision
+transaction on SQLite and PostgreSQL, so a failure rolls the complete revision
+back to `20260710_0004`. Before upgrading an existing database, stop the
+Workbench and take a consistent backup including SQLite WAL/SHM sidecars.
+Downgrading retains the merged survivor topology because deleted aliases cannot
+be reconstructed, while finding and ledger references remain intact.
 
 ### `vulnerability`
 
@@ -141,19 +183,27 @@ Constraints and indexes:
 - foreign key from `component_id` to `component.id`
 - foreign key from `vulnerability_id` to `vulnerability.id`
 - unique technical dedup key on `(project_id, dedup_key)`
-- unique dedup key on `(project_id, vulnerability_id, component_id, asset_id)`
 - index on `cve_id`
 - index on `(project_id, priority_rank)`
 - index on `(project_id, status)`
 - indexes on `(project_id, asset_id)` and `(project_id, vulnerability_id)`
 
 The import path uses `(project_id, dedup_key)` as the primary duplicate guard.
-The key is deterministic for normalized input occurrences and uses project,
-CVE/source identifier, component identity, and asset reference. PURL is the
-preferred component identity; otherwise the key falls back to component name,
-version, and package type. Missing component or asset context is represented by
-an explicit empty marker so repeated minimal CVE-list imports reuse the same
-finding instead of relying on SQL NULL uniqueness behavior.
+The key is the versioned `finding-scope-v2` hash of project, normalized CVE,
+component identity, target kind, and source target reference. PURL is the preferred component
+identity; otherwise the key falls back to component name, version, and package
+type. The source `target_ref` takes precedence over mutable `asset_id`; the asset
+ID is used only when the source has no target. Missing component or target
+context remains typed JSON `null` in canonical key material, so it cannot alias
+a literal user string. Tagged component fields prevent delimiter collisions.
+Repeated minimal CVE-list imports therefore reuse the same finding without
+relying on SQL NULL uniqueness behavior. The stored key uses the
+`vpw-finding-scope-v2:` prefix.
+
+Scanner/import `source_id` is observation provenance and is deliberately not
+part of the finding hash. A second scanner can therefore append a distinct
+`observation-v1` occurrence to the same project/CVE/component/asset finding
+without splitting its identity.
 
 Immutable per-run finding explanation, data-quality, provider, ATT&CK,
 governance, waiver, occurrence, and remediation evidence lives in
@@ -178,8 +228,12 @@ local and existence-based rather than user-owned.
 
 ## Migration Contract
 
-The Workbench Alembic head under `backend/app/alembic` is now a squashed v2
-initial migration for local-first development. It must create these four core
-Workbench tables as part of the full active schema and match SQLModel metadata
-on a fresh SQLite database. Tests use a temporary SQLite database and an Alembic
-`Config` rather than production settings.
+The Workbench Alembic chain under `backend/app/alembic` starts from the squashed
+v2 local-first schema and applies forward revisions including the Decision
+Ledger and indexed component identity. It must create these four core Workbench
+tables as part of the full active schema and match SQLModel metadata on a fresh
+SQLite database. Upgrade tests also start at the preceding revision so component
+backfill, deterministic alias merging, finding-FK re-pointing, atomic rollback,
+constraints, downgrade, and re-upgrade are exercised rather than inferred from
+fresh metadata. Tests use a temporary SQLite database and an Alembic `Config`
+rather than production settings.

@@ -6,6 +6,7 @@ import re
 from collections.abc import Iterable
 from urllib.parse import unquote
 
+from app.domain.component_identity import component_scope_identity
 from app.domain.engine.config import PRIORITY_RECOMMENDATIONS
 from app.domain.engine.models import (
     FindingProvenance,
@@ -54,7 +55,14 @@ _PACKAGE_TYPE_ECOSYSTEMS = {
     "rubygems": "rubygems",
 }
 
-_ComponentKey = tuple[str | None, str | None, str | None, str | None, str | None]
+_ComponentKey = tuple[
+    str,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+]
 
 
 class RemediationService:
@@ -194,13 +202,7 @@ def _collect_components(occurrences: list[InputOccurrence]) -> list[RemediationC
         if component is None:
             continue
 
-        key = (
-            component.name,
-            component.current_version,
-            component.package_type,
-            component.purl,
-            component.path,
-        )
+        key = _component_bucket_key(occurrence, component)
         if key not in buckets:
             buckets[key] = component
             fixed_version_sets[key] = set(component.fixed_versions)
@@ -210,6 +212,8 @@ def _collect_components(occurrences: list[InputOccurrence]) -> list[RemediationC
             owner_sets[key] = set(component.owners)
             occurrence_counts[key] = component.occurrence_count
             continue
+        if _component_display_sort_key(component) < _component_display_sort_key(buckets[key]):
+            buckets[key] = component
         fixed_version_sets[key].update(component.fixed_versions)
         target_sets[key].update(component.targets)
         asset_id_sets[key].update(component.asset_ids)
@@ -235,6 +239,43 @@ def _collect_components(occurrences: list[InputOccurrence]) -> list[RemediationC
 
     components.sort(key=_component_sort_key)
     return components
+
+
+def _component_bucket_key(
+    occurrence: InputOccurrence,
+    component: RemediationComponent,
+) -> _ComponentKey:
+    """Group display variants by the same canonical component identity."""
+    identity = component_scope_identity(
+        component_name=occurrence.component_name,
+        component_version=occurrence.component_version,
+        purl=occurrence.purl,
+        package_type=occurrence.package_type,
+    )
+    if identity is not None:
+        return ("identity", identity, component.path, None, None, None)
+    return (
+        "fallback",
+        component.name,
+        component.current_version,
+        component.package_type,
+        component.purl,
+        component.path,
+    )
+
+
+def _component_display_sort_key(component: RemediationComponent) -> tuple[tuple[bool, str], ...]:
+    """Choose an input-order-independent representative for display fields."""
+    return tuple(
+        (value is None, value or "")
+        for value in (
+            component.name,
+            component.current_version,
+            component.package_type,
+            component.purl,
+            component.path,
+        )
+    )
 
 
 def _build_component_seed(occurrence: InputOccurrence) -> RemediationComponent | None:
