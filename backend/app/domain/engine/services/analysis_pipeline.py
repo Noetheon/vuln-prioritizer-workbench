@@ -96,7 +96,11 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
 
     cve_ids = parsed_input.unique_cves
     context_profile = load_analysis_context_profile(request.policy_profile, request.policy_file)
-    waiver_rules = load_analysis_waiver_rules(request.waiver_file)
+    waiver_rules = (
+        list(request.preloaded_waiver_rules)
+        if request.preloaded_waiver_rules is not None
+        else load_analysis_waiver_rules(request.waiver_file)
+    )
     all_findings, _, enrichment = build_findings(
         cve_ids,
         policy=request.policy,

@@ -140,6 +140,12 @@
         },
         "updated_at": {
           "$ref": "#/$defs/nullableDateTime"
+        },
+        "context_source": {
+          "type": "string",
+          "enum": [
+            "current_project_projection_at_export"
+          ]
         }
       }
     },
@@ -544,6 +550,15 @@
         },
         "finding_id": {
           "$ref": "#/$defs/nullableUuid"
+        },
+        "reason": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "approval_ref": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "ticket_url": {
+          "$ref": "#/$defs/nullableString"
         }
       }
     },

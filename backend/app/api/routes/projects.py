@@ -35,8 +35,16 @@ from app.services import (
     build_project_governance_rollups_payload_from_repositories,
     build_project_summary_payload,
 )
-from app.services.artifact_cleanup import cleanup_project_artifacts
 from app.services.audit import record_audit_event
+from app.services.project_deletion import (
+    ProjectArtifactCleanupError,
+    ProjectDeletionBlockedError,
+    delete_project_with_artifact_cleanup,
+)
+from app.services.project_lifecycle_lock import (
+    ProjectLifecycleBusyError,
+    lock_project_lifecycle,
+)
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -228,24 +236,25 @@ def delete_project(
     local_actor: LocalActor,
 ) -> Response:
     """Delete a local project."""
-    repository = ProjectRepository(session)
-    project = require_project(session, project_id)
-    cleanup_result = cleanup_project_artifacts(
-        settings=workbench_settings(request),
-        project_id=project.id,
-    )
-    record_audit_event(
-        session,
-        action="project.delete",
-        resource_type="project",
-        resource_id=project.id,
-        actor=local_actor,
-        detail={
-            "name": project.name,
-            "removed_artifact_paths": list(cleanup_result.removed_paths),
-            "missing_artifact_paths": list(cleanup_result.missing_paths),
-        },
-    )
-    repository.delete_project(project)
-    session.commit()
+    active_settings = workbench_settings(request)
+    try:
+        with lock_project_lifecycle(active_settings, project_id) as lifecycle_lease:
+            project = require_project(session, project_id)
+            delete_project_with_artifact_cleanup(
+                session=session,
+                settings=active_settings,
+                project=project,
+                actor=local_actor,
+                lifecycle_lease=lifecycle_lease,
+            )
+    except (ProjectDeletionBlockedError, ProjectLifecycleBusyError) as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+    except ProjectArtifactCleanupError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=str(exc),
+        ) from exc
     return Response(status_code=204)

@@ -771,7 +771,7 @@ def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
     assert recalculated["asset_key"] == "payments-api"
     assert recalculated["recalculated_findings"] == 1
     assert recalculated["cleared_rescore_flags"] == 1
-    assert recalculated["operational_scores"] == [99]
+    assert recalculated["operational_scores"] == [96]
     assert recalculated["rescore_needed"] is False
 
     asset_response = workbench_api_env.client.get(
@@ -787,6 +787,10 @@ def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
         headers=headers,
     )
     assert explain_response.status_code == 200, explain_response.text
+    score_reasons = explain_response.json()["explanation"]["operational_score_reasons"]
+    assert "internet-facing asset context: +8" in score_reasons
+    assert "production asset context: +4" in score_reasons
+    assert "high asset criticality: +4" in score_reasons
     assert not any(
         flag["code"] == "asset_context_rescore_needed"
         for flag in explain_response.json()["data_quality_flags"]
@@ -957,6 +961,64 @@ def test_vpw042_findings_page_eager_loads_asset_and_component(
     assert len(select_statements) <= 4
 
 
+def test_asset_page_batches_finding_summaries_in_constant_queries(
+    workbench_api_env: WorkbenchApiEnv,
+) -> None:
+    headers = local_api_headers(workbench_api_env.client)
+    project = create_project_via_api(workbench_api_env.client, headers)
+    seeded = _seed_vpw042_findings(workbench_api_env, uuid.UUID(project["id"]))
+    with Session(workbench_api_env.engine) as session:
+        repository = workbench_api_env.repositories.AssetRepository(session)
+        for index in range(27):
+            repository.upsert_asset(
+                project_id=uuid.UUID(project["id"]),
+                asset_key=f"empty-{index:02d}",
+                name=f"Empty asset {index:02d}",
+            )
+        session.commit()
+
+    update_response = workbench_api_env.client.patch(
+        f"/api/v1/assets/{seeded['critical_asset']}",
+        headers=headers,
+        json={"criticality": "high"},
+    )
+    assert update_response.status_code == 200, update_response.text
+    select_statements: list[str] = []
+
+    def capture_select(
+        _conn: object,
+        _cursor: object,
+        statement: str,
+        _parameters: object,
+        _context: object,
+        _executemany: bool,
+    ) -> None:
+        if statement.lstrip().lower().startswith("select"):
+            select_statements.append(statement)
+
+    event.listen(workbench_api_env.engine, "before_cursor_execute", capture_select)
+    try:
+        response = workbench_api_env.client.get(
+            f"/api/v1/projects/{project['id']}/assets/",
+            headers=headers,
+            params={"limit": 30},
+        )
+    finally:
+        event.remove(workbench_api_env.engine, "before_cursor_execute", capture_select)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["count"] == len(payload["data"]) == 30
+    assets_by_key = {asset["asset_key"]: asset for asset in payload["data"]}
+    assert assets_by_key["payments-api"]["finding_count"] == 1
+    assert assets_by_key["payments-api"]["rescore_needed"] is True
+    assert assets_by_key["identity-api"]["finding_count"] == 1
+    assert assets_by_key["identity-api"]["rescore_needed"] is False
+    assert assets_by_key["empty-00"]["finding_count"] == 0
+    assert assets_by_key["empty-00"]["rescore_needed"] is False
+    assert len(select_statements) <= 4
+
+
 def _finding_cves(
     workbench_api_env: WorkbenchApiEnv,
     project: dict[str, Any],
@@ -1019,19 +1081,19 @@ def _seed_vpw042_findings(
         critical_component = finding_repo.upsert_component(
             name="log4j-core",
             version="2.14.1",
-            purl=f"pkg:maven/org.apache.logging.log4j/log4j-core@{uuid.uuid4().hex}",
+            purl="pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
             ecosystem="maven",
         )
         high_component = finding_repo.upsert_component(
             name="spring-webmvc",
             version="5.3.17",
-            purl=f"pkg:maven/org.springframework/spring-webmvc@{uuid.uuid4().hex}",
+            purl="pkg:maven/org.springframework/spring-webmvc@5.3.17",
             ecosystem="maven",
         )
         medium_component = finding_repo.upsert_component(
             name="php-cgi",
             version="8.3.7",
-            purl=f"pkg:deb/debian/php-cgi@{uuid.uuid4().hex}",
+            purl="pkg:deb/debian/php-cgi@8.3.7",
             ecosystem="deb",
         )
         critical_vulnerability = finding_repo.upsert_vulnerability(
@@ -1098,6 +1160,9 @@ def _seed_vpw042_findings(
                 asset_name=critical_asset.name or critical_asset.asset_key,
                 component_name=critical_component.name,
                 component_version=critical_component.version or "",
+                component_purl=critical_component.purl,
+                component_package_type=critical_component.package_type
+                or critical_component.ecosystem,
                 priority=app_models.FindingPriority.CRITICAL,
                 priority_rank=1,
                 risk_score=99.0,
@@ -1118,6 +1183,8 @@ def _seed_vpw042_findings(
                 asset_name=high_asset.name or high_asset.asset_key,
                 component_name=high_component.name,
                 component_version=high_component.version or "",
+                component_purl=high_component.purl,
+                component_package_type=high_component.package_type or high_component.ecosystem,
                 priority=app_models.FindingPriority.HIGH,
                 priority_rank=2,
                 risk_score=88.0,
@@ -1138,6 +1205,8 @@ def _seed_vpw042_findings(
                 asset_name=medium_asset.name or medium_asset.asset_key,
                 component_name=medium_component.name,
                 component_version=medium_component.version or "",
+                component_purl=medium_component.purl,
+                component_package_type=medium_component.package_type or medium_component.ecosystem,
                 priority=app_models.FindingPriority.MEDIUM,
                 priority_rank=3,
                 risk_score=42.0,

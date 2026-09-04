@@ -27,7 +27,7 @@ boundaries, but Workbench uploads must use one of the explicit values below.
 | `input_type` | Workbench import | Normalized provenance currently preserved | Notes |
 | --- | --- | --- | --- |
 | `cve-list` | yes | CVE ID, optional asset ref, component, version, source line/row | Plain TXT and minimal CSV CVE lists; see [CVE List Import](cve-list-import.md). |
-| `generic-occurrence-csv` | yes | Component, version, PURL, fix versions, target, asset context, owner, service | Additive manual-occurrence format for backlogs and spreadsheets; see [Generic Occurrence CSV Import](generic-occurrence-csv-import.md). |
+| `generic-occurrence-csv` | yes | Component, version, PURL, package type, fix versions, target, asset context, owner, service | Additive manual-occurrence format for backlogs and spreadsheets; see [Generic Occurrence CSV Import](generic-occurrence-csv-import.md). |
 | `trivy-json` | yes | Component, version, PURL, package type, path, fix versions, target image, source ID | Default target kind is `image`; see [Trivy JSON Import](trivy-json-import.md). |
 | `grype-json` | yes | Component, version, PURL, package type, path, fix versions, target image, source ID | Keeps the first artifact location as current path evidence; see [Grype JSON Import](grype-json-import.md). |
 | `cyclonedx-json` | yes | Component refs, PURLs, versions, package type, repository target, raw severity | Used for SBOM plus vulnerability exports, not plain BOMs without vulnerabilities; see [CycloneDX JSON Import](cyclonedx-json-import.md). |

@@ -371,6 +371,7 @@ def _finding_occurrence_public(
         target_kind=_string_evidence(evidence, "target_kind"),
         target_ref=_string_evidence(evidence, "target_ref")
         or (finding.asset.target_ref if finding.asset else None),
+        asset_id=_string_evidence(evidence, "asset_id"),
         asset_owner=(
             _string_evidence(evidence, "asset_owner")
             or _string_evidence(evidence, "owner")
@@ -443,6 +444,7 @@ def _evidence_occurrence_public(
         fix_versions=occurrence.fix_versions,
         target_kind=occurrence.target_kind,
         target_ref=occurrence.target_ref or (finding.asset.target_ref if finding.asset else None),
+        asset_id=occurrence.asset_id,
         asset_owner=occurrence.asset_owner
         or _string_evidence(import_evidence, "asset_owner")
         or _string_evidence(import_evidence, "owner")

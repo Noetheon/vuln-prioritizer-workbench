@@ -244,7 +244,7 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
 
     try {
       const asset = await updateAssetMutation.mutateAsync({
-        asset: assetUpdateBody(editForm),
+        asset: assetUpdateBody(editForm, selectedAsset?.asset_key),
         assetId: editingAssetId,
       })
       setEditingAssetId("")

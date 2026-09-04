@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from app.decision_core.contracts import FindingDecisionEvidenceV2
+from app.decision_core.contracts import FindingDecisionEvidenceV2, ProviderEvidenceV2
 from app.decision_core.readmodels import DecisionFindingView, decision_finding_view
 from app.models import Finding, FindingOccurrence, ProviderSnapshot
 from app.services.report_formatting import dict_value as _dict_value
@@ -115,6 +115,8 @@ def _finding_payload_from_decision_view(
 ) -> MarkdownReportFinding:
     finding = view.finding
     evidence = view.evidence
+    asset = _report_asset_projection(finding, evidence=evidence)
+    component_label, component_purl = _report_component_projection(view)
     decision_guidance = _decision_guidance(finding, evidence=evidence)
     explanation = _finding_explanation(finding, evidence=evidence)
     recommended_action = view.recommended_action
@@ -136,20 +138,20 @@ def _finding_payload_from_decision_view(
         epss=view.epss,
         cvss_base_score=view.cvss_base_score,
         in_kev=view.in_kev,
-        asset=_asset_label(finding),
-        asset_key=finding.asset.asset_key if finding.asset is not None else None,
-        owner=finding.asset.owner if finding.asset is not None else None,
-        business_service=finding.asset.business_service if finding.asset is not None else None,
-        environment=str(finding.asset.environment) if finding.asset is not None else None,
-        exposure=str(finding.asset.exposure) if finding.asset is not None else None,
-        criticality=str(finding.asset.criticality) if finding.asset is not None else None,
-        component=_component_label(finding),
-        component_purl=finding.component.purl if finding.component is not None else None,
-        attack_mapped=view.attack_mapped,
+        asset=asset["label"],
+        asset_key=asset["asset_key"],
+        owner=asset["owner"],
+        business_service=asset["business_service"],
+        environment=asset["environment"],
+        exposure=asset["exposure"],
+        criticality=asset["criticality"],
+        component=component_label,
+        component_purl=component_purl,
+        attack_mapped=evidence.attack.mapped if evidence is not None else view.attack_mapped,
         suppressed_by_vex=view.suppressed_by_vex,
         under_investigation=view.under_investigation,
         waived=view.waived,
-        vulnerability=_vulnerability_payload(finding),
+        vulnerability=_vulnerability_payload(finding, evidence=evidence),
         rationale=rationale,
         recommended_action=recommended_action,
         explanation=explanation,
@@ -168,10 +170,10 @@ def _finding_payload_from_decision_view(
         business_impact=_decision_text(decision_guidance, "business_impact"),
         decision_sla=_decision_sla(decision_guidance),
         data_quality_flags=tuple(_data_quality_flags(finding, evidence=evidence)),
-        first_seen_at=finding.first_seen_at,
-        last_seen_at=finding.last_seen_at,
-        created_at=finding.created_at,
-        updated_at=finding.updated_at,
+        first_seen_at=finding.first_seen_at if evidence is None else None,
+        last_seen_at=finding.last_seen_at if evidence is None else None,
+        created_at=finding.created_at if evidence is None else None,
+        updated_at=finding.updated_at if evidence is None else None,
     )
 
 
@@ -242,7 +244,40 @@ def _governance_detail_clause(items: Sequence[tuple[str, str | None]]) -> str:
 
 def _provider_snapshot_payload(
     snapshot: ProviderSnapshot | None,
+    *,
+    evidence: ProviderEvidenceV2 | None = None,
+    finding_evidence: Sequence[FindingDecisionEvidenceV2] = (),
 ) -> MarkdownProviderSnapshot | None:
+    if evidence is not None:
+        if evidence.provider_snapshot_id is None and evidence.provider_snapshot_hash is None:
+            return None
+        source_hashes = (
+            {"provider_snapshot": evidence.provider_snapshot_hash}
+            if evidence.provider_snapshot_hash is not None
+            else {}
+        )
+        return MarkdownProviderSnapshot(
+            id=evidence.provider_snapshot_id,
+            content_hash=evidence.provider_snapshot_hash,
+            nvd_last_sync=None,
+            epss_date=None,
+            kev_catalog_version=None,
+            created_at=None,
+            source_hashes=source_hashes,
+            source_metadata={
+                "provider_snapshot_file": evidence.provider_snapshot_file,
+                "locked_provider_data": evidence.locked_provider_data,
+                "provider_degraded": evidence.provider_degraded,
+                "provider_data_quality_flags": {
+                    source: [flag.to_jsonable() for flag in flags]
+                    for source, flags in evidence.provider_data_quality_flags.items()
+                },
+                "nvd_hits": evidence.nvd_hits,
+                "epss_hits": evidence.epss_hits,
+                "kev_hits": evidence.kev_hits,
+                "run_subset_provider_evidence": _run_subset_provider_evidence(finding_evidence),
+            },
+        )
     if snapshot is None:
         return None
     return MarkdownProviderSnapshot(
@@ -257,10 +292,81 @@ def _provider_snapshot_payload(
     )
 
 
+def _run_subset_provider_evidence(
+    evidence_items: Sequence[FindingDecisionEvidenceV2],
+) -> dict[str, Any]:
+    """Summarize immutable provider dates without claiming snapshot-wide freshness."""
+    nvd_last_modified: list[str] = []
+    epss_dates: list[str] = []
+    kev_dates_added: list[str] = []
+    for finding_evidence in evidence_items:
+        provider = dict(finding_evidence.provider.provider_evidence)
+        nvd = _dict_value(provider.get("nvd"))
+        epss = _dict_value(provider.get("epss"))
+        kev = _dict_value(provider.get("kev"))
+        if value := _clean_string(nvd.get("last_modified")):
+            nvd_last_modified.append(value)
+        if value := _clean_string(epss.get("date")):
+            epss_dates.append(value)
+        if value := _clean_string(kev.get("date_added")):
+            kev_dates_added.append(value)
+    return {
+        "scope": "selected_run_findings",
+        "derivation": "immutable_finding_decision_evidence",
+        "finding_evidence_count": len(evidence_items),
+        "nvd_last_modified_max": max(nvd_last_modified, default=None),
+        "latest_epss_date": max(epss_dates, default=None),
+        "kev_date_added_max": max(kev_dates_added, default=None),
+    }
+
+
 def _asset_label(finding: Finding) -> str | None:
     if finding.asset is None:
         return None
     return finding.asset.name or finding.asset.asset_key
+
+
+def _report_asset_projection(
+    finding: Finding,
+    *,
+    evidence: FindingDecisionEvidenceV2 | None,
+) -> dict[str, str | None]:
+    """Project asset presentation from the selected run evidence when available."""
+    if evidence is None:
+        asset = finding.asset
+        return {
+            "label": _asset_label(finding),
+            "asset_key": asset.asset_key if asset is not None else None,
+            "owner": asset.owner if asset is not None else None,
+            "business_service": asset.business_service if asset is not None else None,
+            "environment": str(asset.environment) if asset is not None else None,
+            "exposure": str(asset.exposure) if asset is not None else None,
+            "criticality": str(asset.criticality) if asset is not None else None,
+        }
+
+    scope = evidence.occurrence_scope
+    asset_key = (
+        _clean_string(scope.asset_id)
+        or _clean_string(scope.target_ref)
+        or _single_occurrence_value(evidence, "asset_id")
+        or _single_occurrence_value(evidence, "target_ref")
+        or _single_raw_list_value(evidence, "asset_ids")
+    )
+    asset_name = _single_raw_list_value(evidence, "asset_names")
+    return {
+        "label": asset_name or asset_key,
+        "asset_key": asset_key,
+        "owner": _clean_string(scope.asset_owner)
+        or _single_occurrence_value(evidence, "asset_owner"),
+        "business_service": _clean_string(scope.asset_business_service)
+        or _single_occurrence_value(evidence, "asset_business_service"),
+        "environment": _clean_string(scope.asset_environment)
+        or _single_occurrence_value(evidence, "asset_environment"),
+        "exposure": _clean_string(scope.asset_exposure)
+        or _single_occurrence_value(evidence, "asset_exposure"),
+        "criticality": _clean_string(scope.asset_criticality)
+        or _single_occurrence_value(evidence, "asset_criticality"),
+    }
 
 
 def _component_label(finding: Finding) -> str | None:
@@ -271,7 +377,38 @@ def _component_label(finding: Finding) -> str | None:
     return finding.component.name
 
 
-def _vulnerability_payload(finding: Finding) -> ReportVulnerability | None:
+def _report_component_projection(
+    view: DecisionFindingView,
+) -> tuple[str | None, str | None]:
+    """Project the same evidence-bound component identity as the decision read model."""
+    evidence = view.evidence
+    if evidence is None:
+        return view.component_label, view.component_purl
+
+    scope = evidence.occurrence_scope
+    name = (
+        _clean_string(scope.component_name)
+        or _single_occurrence_value(evidence, "component_name")
+        or _single_raw_list_value(evidence, "components")
+        or view.component_name
+    )
+    version = (
+        _clean_string(scope.component_version)
+        or _single_occurrence_value(evidence, "component_version")
+        or _single_raw_list_value(evidence, "versions")
+        or view.component_version
+    )
+    label = f"{name} {version}" if name and version else name
+    return label, view.component_purl
+
+
+def _vulnerability_payload(
+    finding: Finding,
+    *,
+    evidence: FindingDecisionEvidenceV2 | None = None,
+) -> ReportVulnerability | None:
+    if evidence is not None:
+        return _evidence_vulnerability_payload(evidence)
     vulnerability = finding.vulnerability
     if vulnerability is None:
         return None
@@ -288,6 +425,77 @@ def _vulnerability_payload(finding: Finding) -> ReportVulnerability | None:
         modified_at=vulnerability.modified_at,
         provider=dict(vulnerability.provider_json or {}),
     )
+
+
+def _evidence_vulnerability_payload(
+    evidence: FindingDecisionEvidenceV2,
+) -> ReportVulnerability:
+    provider = dict(evidence.provider.provider_evidence)
+    nvd = _dict_value(provider.get("nvd"))
+    kev = _dict_value(provider.get("kev"))
+    cwes = _string_values(nvd.get("cwes"))
+    references = tuple(_string_values(nvd.get("references")))
+    source_id = (
+        _clean_string(evidence.occurrence_scope.source_id)
+        or _single_occurrence_value(evidence, "source_id")
+        or _clean_string(nvd.get("cve_id"))
+        or evidence.cve_id
+    )
+    return ReportVulnerability(
+        id=None,
+        source_id=source_id,
+        title=_clean_string(nvd.get("title"))
+        or _clean_string(kev.get("vulnerability_name"))
+        or evidence.cve_id,
+        description=_clean_string(nvd.get("description"))
+        or _clean_string(provider.get("description"))
+        or _clean_string(kev.get("short_description")),
+        cvss_score=evidence.cvss_base_score,
+        cvss_vector=_clean_string(nvd.get("cvss_vector"))
+        or _clean_string(provider.get("cvss_vector")),
+        severity=_clean_string(nvd.get("cvss_severity")) or _clean_string(provider.get("severity")),
+        cwe=", ".join(cwes) if cwes else None,
+        published_at=_clean_string(nvd.get("published"))
+        or _clean_string(provider.get("published")),
+        modified_at=_clean_string(nvd.get("last_modified"))
+        or _clean_string(provider.get("last_modified")),
+        provider=provider,
+        references=references,
+    )
+
+
+def _single_occurrence_value(
+    evidence: FindingDecisionEvidenceV2,
+    field_name: str,
+) -> str | None:
+    values = {
+        value
+        for occurrence in evidence.occurrences
+        if (value := _clean_string(getattr(occurrence, field_name, None))) is not None
+    }
+    return next(iter(values)) if len(values) == 1 else None
+
+
+def _single_raw_list_value(
+    evidence: FindingDecisionEvidenceV2,
+    field_name: str,
+) -> str | None:
+    provenance = _dict_value(evidence.priority_evidence.raw.get("provenance"))
+    values = set(_string_values(provenance.get(field_name)))
+    return next(iter(values)) if len(values) == 1 else None
+
+
+def _string_values(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [cleaned for item in value if (cleaned := _clean_string(item)) is not None]
+
+
+def _clean_string(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    cleaned = value.strip()
+    return cleaned or None
 
 
 def _vulnerability_export(vulnerability: ReportVulnerability | None) -> dict[str, Any]:
@@ -314,7 +522,7 @@ def _report_occurrences(
     evidence: FindingDecisionEvidenceV2 | None,
     occurrences: list[FindingOccurrence],
 ) -> tuple[ReportOccurrence, ...]:
-    if evidence is not None and evidence.occurrences:
+    if evidence is not None:
         return tuple(
             ReportOccurrence(
                 id=occurrence.occurrence_id,
@@ -336,7 +544,14 @@ def _finding_explanation(
     evidence: FindingDecisionEvidenceV2 | None,
 ) -> dict[str, Any]:
     _ = finding
-    return evidence.priority_evidence.raw if evidence is not None else {}
+    if evidence is None:
+        return {}
+    explanation = dict(evidence.priority_evidence.raw)
+    attack_context = evidence.attack.to_jsonable()
+    explanation["attack_context"] = attack_context
+    if evidence.attack.technique_ids and not explanation.get("attack_techniques"):
+        explanation["attack_techniques"] = list(evidence.attack.technique_ids)
+    return explanation
 
 
 def _finding_data_quality(

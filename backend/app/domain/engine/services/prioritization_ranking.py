@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import date
 
+from app.domain.engine.config import PRIORITY_RANKS
 from app.domain.engine.explanations import build_priority_explanation
 from app.domain.engine.models import PrioritizedFinding, PriorityPolicy
 from app.domain.engine.scoring import build_operational_score, determine_priority_state
 from app.domain.engine.services.decision_guidance import DecisionGuidanceService
 from app.domain.engine.services.prioritization_sorting import descending_numeric
-from app.domain.engine.utils import iso_utc_now
 
 
 def assign_operational_ranks(
@@ -18,7 +18,7 @@ def assign_operational_ranks(
 ) -> list[PrioritizedFinding]:
     """Attach deterministic operational ranks, reasons, and decision guidance."""
     scored_findings = [_with_operational_score(finding, policy) for finding in findings]
-    ordered = sorted(scored_findings, key=_operational_sort_key)
+    ordered = sorted(scored_findings, key=operational_sort_key)
     rank_by_cve = {finding.cve_id: index for index, finding in enumerate(ordered, start=1)}
     decision_guidance_service = DecisionGuidanceService()
     ranked_findings: list[PrioritizedFinding] = []
@@ -54,9 +54,10 @@ def _with_operational_score(
     return scored.model_copy(update={"explanation": build_priority_explanation(scored, policy)})
 
 
-def _operational_sort_key(finding: PrioritizedFinding) -> tuple:
+def operational_sort_key(finding: PrioritizedFinding) -> tuple:
+    """Return the canonical deterministic work-queue order for one decision."""
     return (
-        finding.priority_rank,
+        PRIORITY_RANKS[determine_priority_state(finding).value],
         -finding.operational_score,
         _waiver_work_queue_bucket(finding),
         _kev_due_sort_key(finding),
@@ -69,6 +70,22 @@ def _operational_sort_key(finding: PrioritizedFinding) -> tuple:
         descending_numeric(finding.cvss_base_score),
         finding.cve_id,
     )
+
+
+def global_operational_sort_key(
+    finding: PrioritizedFinding,
+    scope_sort_key: tuple[object, ...],
+) -> tuple:
+    """
+    Order one final scope exactly as the global work queue does.
+
+    The CVE is already the final tie-breaker for CVE-level decisions.  A
+    scope-first queue replaces that last field with the complete canonical
+    scope, whose first field is the same normalized CVE.  Keeping this helper
+    shared prevents a later projection refresh from reordering equal scopes.
+    """
+    cve_order = operational_sort_key(finding)
+    return (*cve_order[:-1], scope_sort_key)
 
 
 def _waiver_work_queue_bucket(finding: PrioritizedFinding) -> int:
@@ -85,8 +102,11 @@ def _kev_due_sort_key(finding: PrioritizedFinding) -> tuple[int, int]:
     due_date = _parse_date(finding.provider_evidence.kev.due_date)
     if due_date is None:
         return 1, 99999999
-    today = _parse_date(iso_utc_now()) or datetime.now(UTC).date()
-    return (0 if due_date <= today else 1), due_date.toordinal()
+    # A real due date always sorts before an undated KEV item, and earlier due
+    # dates already sort before later ones.  No wall-clock bucket is needed;
+    # removing it keeps replay ordering byte-for-byte deterministic without
+    # changing the resulting queue order.
+    return 0, due_date.toordinal()
 
 
 def _parse_date(value: str | None) -> date | None:

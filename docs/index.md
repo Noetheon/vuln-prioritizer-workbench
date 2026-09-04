@@ -18,6 +18,7 @@ submission material.
 - [GitHub open source readiness](github-open-source-readiness.md)
 - [External user documentation guide](user_documentation.md)
 - [Current product architecture](architecture.md)
+- [Scope-first decision graph](architecture/scope-first-decision-graph.md)
 - [Scoring methodology](scoring-methodology.md)
 - [ATT&CK/TTP methodology](attack-ttp-methodology.md)
 - [Reports and evidence](reports-and-evidence.md)
@@ -88,6 +89,9 @@ deprecated one-release compatibility path documented in the
 - Read [architecture/decision-evidence-kernel.md](architecture/decision-evidence-kernel.md)
   for the kernel-first import/evidence flow, projection rules, and workflow
   result boundary.
+- Read [architecture/scope-first-decision-graph.md](architecture/scope-first-decision-graph.md)
+  for shared CVE facts, per-finding decisions, versioned identities, global
+  ranks, replay fingerprints, and the compatible Evidence v2 projection.
 - Read [architecture/decision-ledger.md](architecture/decision-ledger.md) for
   immutable history, materialized current state, dual-write, backfill, and
   parity rules.

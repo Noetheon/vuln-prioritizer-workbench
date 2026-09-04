@@ -139,6 +139,12 @@ def render_html_executive_report_helper(
         "exceptions and evidence confidence for the current analysis run."
     )
     provider_snapshot_id = identity.provider_snapshot_id or "N/A"
+    project_context_row = (
+        "        <div><dt>Project Context</dt><dd>Current at export time; "
+        "not immutable run evidence</dd></div>\n"
+        if payload.project_context_source
+        else ""
+    )
     provider_snapshot_html = _html_provider_snapshot_helper(
         snapshot,
         generated_at_dt,
@@ -170,6 +176,7 @@ def render_html_executive_report_helper(
         '      <dl class="meta-grid">\n'
         f"        <div><dt>Report</dt><dd>{_safe_html(identity.report_type)}</dd></div>\n"
         f"        <div><dt>Project ID</dt><dd>{_safe_html(identity.project_id)}</dd></div>\n"
+        f"{project_context_row}"
         "        <div><dt>Run ID</dt><dd>"
         f"{_safe_html(identity.analysis_run_id)}</dd></div>\n"
         f"        <div><dt>Generated</dt><dd>{generated_at}</dd></div>\n"

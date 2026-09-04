@@ -136,6 +136,7 @@ class ReportPayload(StrictModel):
     project_description: str | None = None
     project_created_at: datetime | None = None
     project_updated_at: datetime | None = None
+    project_context_source: str | None = None
     run_started_at: datetime | None = None
     run_finished_at: datetime | None = None
     run_error: str | None = None

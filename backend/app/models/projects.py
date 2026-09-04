@@ -1,9 +1,9 @@
 """Project domain models for the Workbench."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, Date, DateTime
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.base import get_datetime_utc
@@ -40,6 +40,10 @@ class Project(ProjectBase, table=True):
     updated_at: datetime = Field(
         default_factory=get_datetime_utc,
         sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    waiver_evaluated_on: date | None = Field(
+        default_factory=lambda: get_datetime_utc().date(),
+        sa_column=Column(Date, nullable=True),
     )
     assets: list["Asset"] = Relationship(back_populates="project", cascade_delete=True)  # type: ignore[name-defined]  # noqa: F821
     findings: list["Finding"] = Relationship(back_populates="project", cascade_delete=True)  # type: ignore[name-defined]  # noqa: F821

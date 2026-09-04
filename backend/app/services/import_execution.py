@@ -6,20 +6,29 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from sqlmodel import Session
+from sqlmodel import Session, col, func, select
 
 from app.core.config import Settings
 from app.core.local_actor import LocalWorkbenchActor
+from app.decision_core.ledger import DecisionLedgerInvariantError
 from app.decision_core.producer import (
     DecisionKernelInput,
     DecisionPersistencePlan,
     build_run_result,
 )
 from app.importers import ImporterParseError, ImporterValidationError
-from app.models import AnalysisRun, AnalysisRunStatus, WorkflowRunKind, WorkflowRunStatus
+from app.models import (
+    AnalysisRun,
+    AnalysisRunStatus,
+    Finding,
+    WorkflowRunKind,
+    WorkflowRunStatus,
+)
 from app.repositories import EvidenceRepository, RunRepository, WaiverRepository, WorkflowRepository
 from app.services.analysis import AnalysisService, WorkbenchAnalysisError
+from app.services.decision_scope_lock import lock_project_decision_scope
 from app.services.import_execution_context import (
+    _apply_persisted_project_asset_context,
     _apply_workbench_asset_context,
     _apply_workbench_vex,
     _parse_errors,
@@ -27,6 +36,9 @@ from app.services.import_execution_context import (
 )
 from app.services.import_execution_failures import (
     raise_analysis_failure as _raise_analysis_failure,
+)
+from app.services.import_execution_failures import (
+    raise_persisted_context_failure as _raise_persisted_context_failure,
 )
 from app.services.import_execution_parse_failures import (
     raise_parse_failure as _raise_parse_failure,
@@ -292,6 +304,45 @@ async def execute_project_import_upload(
                 exc=exc,
             )
 
+    lock_project_decision_scope(session, project_id)
+    try:
+        occurrences = _apply_persisted_project_asset_context(
+            occurrences,
+            session=session,
+            project_id=project_id,
+        )
+    except DecisionLedgerInvariantError as exc:
+        public_message = "Persisted project decision context is inconsistent."
+        context.fail(
+            stage="persisted_asset_context",
+            message=public_message,
+            progress_current=3,
+            progress_total=6,
+            diagnostics={
+                "stage": "persisted_asset_context",
+                "message": public_message,
+                "error_type": exc.__class__.__name__,
+                "asset_context_error": {
+                    "message": public_message,
+                    "stage": "persisted_asset_context",
+                    "error_type": exc.__class__.__name__,
+                },
+                "ignored_lines": failure_context.ignored_lines,
+                "created_findings": 0,
+                "updated_findings": 0,
+            },
+            terminal_code="persisted_context_invariant",
+        )
+        _raise_persisted_context_failure(
+            session=failure_context.session,
+            run_repo=failure_context.run_repo,
+            run=failure_context.run,
+            local_actor=failure_context.local_actor,
+            project_id=failure_context.project_id,
+            input_type=failure_context.input_type,
+            exc=exc,
+        )
+
     vex_summary: dict[str, Any] | None = None
     if artifacts.vex_path is not None:
         try:
@@ -523,7 +574,19 @@ async def execute_project_import_upload(
             analysis_run_id=finished_run.id,
             evidence_items=decision_result.finding_evidence,
         )
-    WaiverRepository(session).sync_project_waivers(project_id)
+    project_finding_count = int(
+        session.exec(
+            select(func.count()).select_from(Finding).where(col(Finding.project_id) == project_id)
+        ).one()
+    )
+    # The decision graph already ranked every finding when this run covers the
+    # whole project. Force the heavier project-wide convergence only when older
+    # findings sit outside the run; existing waivers still trigger the normal
+    # synchronization path regardless of this flag.
+    WaiverRepository(session).sync_project_waivers(
+        project_id,
+        force=project_finding_count > int(persist_summary.get("finding_count") or 0),
+    )
     session.flush()
     finished_run.risk_index = project_risk_index_from_projection(session, project_id)
     context.succeed(

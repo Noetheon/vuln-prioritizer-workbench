@@ -10,8 +10,9 @@ from typing import Any
 from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 
 from app.api.deps import LocalActor, SessionDep
-from app.api.routes.workbench_access import require_project
+from app.api.routes.workbench_access import lock_existing_project_resource, require_project
 from app.core.app_state import workbench_settings
+from app.domain.asset_identity import validate_asset_key_update, validate_operator_asset_key
 from app.domain.engine.inputs.loader import load_asset_context_file
 from app.models import (
     Asset,
@@ -23,7 +24,9 @@ from app.models import (
     AssetUpdate,
 )
 from app.repositories import AssetRepository, WaiverRepository
+from app.repositories.assets import AssetFindingSummary
 from app.services.audit import record_audit_event
+from app.services.decision_scope_lock import lock_project_decision_scope
 
 router = APIRouter(tags=["assets"])
 
@@ -59,8 +62,16 @@ def read_project_assets(
         limit=limit,
         offset=offset,
     )
+    summaries = repository.finding_summaries_for_assets([asset.id for asset in assets])
     return AssetsPublic(
-        data=[_asset_public(asset, repository=repository) for asset in assets],
+        data=[
+            _asset_public(
+                asset,
+                repository=repository,
+                finding_summary=summaries[asset.id],
+            )
+            for asset in assets
+        ],
         count=count,
     )
 
@@ -75,6 +86,10 @@ def create_project_asset(
 ) -> AssetPublic:
     """Create or upsert an asset for a visible project."""
     require_project(session, project_id)
+    lock_project_decision_scope(session, project_id)
+    asset_in = asset_in.model_copy(
+        update={"asset_key": _validate_operator_asset_key(asset_in.asset_key)}
+    )
     repository = AssetRepository(session)
     existing = repository.get_project_asset_by_key(project_id, asset_in.asset_key)
     before_context = _asset_context(existing) if existing is not None else None
@@ -141,10 +156,14 @@ async def import_project_assets(
             detail=f"Asset context CSV import failed: {exc}",
         ) from exc
 
-    result = AssetRepository(session).import_asset_context_catalog(
-        project_id=project_id,
-        catalog=catalog,
-    )
+    try:
+        lock_project_decision_scope(session, project_id)
+        result = AssetRepository(session).import_asset_context_catalog(
+            project_id=project_id,
+            catalog=catalog,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     WaiverRepository(session).sync_project_waivers(project_id)
     record_audit_event(
         session,
@@ -171,7 +190,22 @@ def update_asset(
     asset = repository.get_asset(asset_id)
     if asset is None:
         raise HTTPException(status_code=404, detail="Asset not found")
-    require_project(session, asset.project_id)
+    asset = lock_existing_project_resource(
+        session,
+        model=Asset,
+        resource_id=asset_id,
+        project_id=asset.project_id,
+        not_found_detail="Asset not found",
+    )
+    if asset_in.asset_key is not None:
+        asset_in = asset_in.model_copy(
+            update={
+                "asset_key": _validate_asset_key_update(
+                    asset_in.asset_key,
+                    current_asset_key=asset.asset_key,
+                )
+            }
+        )
     before_context = _asset_context(asset)
     updated = repository.update_asset(asset, asset_in)
     after_context = _asset_context(updated)
@@ -211,9 +245,16 @@ def recalculate_asset(
     asset = repository.get_asset(asset_id)
     if asset is None:
         raise HTTPException(status_code=404, detail="Asset not found")
-    require_project(session, asset.project_id)
+    asset = lock_existing_project_resource(
+        session,
+        model=Asset,
+        resource_id=asset_id,
+        project_id=asset.project_id,
+        not_found_detail="Asset not found",
+    )
     result = repository.recalculate_asset_findings(asset)
-    WaiverRepository(session).sync_project_waivers(asset.project_id)
+    WaiverRepository(session).sync_project_waivers(asset.project_id, force=True)
+    result["operational_scores"] = repository.linked_finding_operational_scores(asset.id)
     record_audit_event(
         session,
         action="asset.recalculate",
@@ -228,14 +269,18 @@ def recalculate_asset(
     return AssetRecalculatePublic.model_validate(result)
 
 
-def _asset_public(asset: Asset, *, repository: AssetRepository) -> AssetPublic:
+def _asset_public(
+    asset: Asset,
+    *,
+    repository: AssetRepository,
+    finding_summary: AssetFindingSummary | None = None,
+) -> AssetPublic:
     """Return asset DTO with lightweight finding context for the Assets page."""
+    summary = finding_summary or repository.finding_summaries_for_assets([asset.id])[asset.id]
     return AssetPublic.model_validate(asset).model_copy(
         update={
-            "finding_count": len(asset.findings),
-            "rescore_needed": any(
-                repository.finding_rescore_needed(finding) for finding in asset.findings
-            ),
+            "finding_count": summary.finding_count,
+            "rescore_needed": summary.rescore_needed,
         }
     )
 
@@ -264,3 +309,17 @@ def _reject_unsafe_upload_filename(filename: str) -> None:
         raise HTTPException(status_code=422, detail="Upload filename is not allowed.")
     if any(ord(character) < 32 for character in filename):
         raise HTTPException(status_code=422, detail="Upload filename is not allowed.")
+
+
+def _validate_operator_asset_key(value: str) -> str:
+    try:
+        return validate_operator_asset_key(value)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+def _validate_asset_key_update(value: str, *, current_asset_key: str) -> str:
+    try:
+        return validate_asset_key_update(value, current_asset_key=current_asset_key)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

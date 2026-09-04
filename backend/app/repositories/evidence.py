@@ -128,9 +128,23 @@ class EvidenceRepository:
         evidence_items: Iterable[FindingDecisionEvidenceV2],
     ) -> list[FindingDecisionEvidence]:
         """Append immutable finding evidence and atomically advance current projections."""
+        items = list(evidence_items)
         records: list[FindingDecisionEvidence] = []
         projection_items: list[tuple[FindingDecisionEvidence, FindingDecisionEvidenceV2]] = []
-        for item in evidence_items:
+        finding_ids = [uuid.UUID(item.finding_id) for item in items]
+        existing_records: dict[uuid.UUID, FindingDecisionEvidence] = {}
+        unique_finding_ids = list(dict.fromkeys(finding_ids))
+        for index in range(0, len(unique_finding_ids), 500):
+            statement = select(FindingDecisionEvidence).where(
+                FindingDecisionEvidence.analysis_run_id == analysis_run_id,
+                col(FindingDecisionEvidence.finding_id).in_(
+                    unique_finding_ids[index : index + 500]
+                ),
+            )
+            for record in self.session.exec(statement).all():
+                existing_records[record.finding_id] = record
+
+        for item, finding_id in zip(items, finding_ids, strict=True):
             if item.project_id != str(project_id):
                 raise DecisionLedgerInvariantError(
                     "Finding decision evidence project does not match its persistence envelope."
@@ -139,11 +153,7 @@ class EvidenceRepository:
                 raise DecisionLedgerInvariantError(
                     "Finding decision evidence run does not match its persistence envelope."
                 )
-            finding_id = uuid.UUID(item.finding_id)
-            existing = self.get_finding_decision_evidence_record(
-                finding_id=finding_id,
-                analysis_run_id=analysis_run_id,
-            )
+            existing = existing_records.get(finding_id)
             payload_json = item.to_jsonable()
             if existing is not None:
                 if (
@@ -176,15 +186,26 @@ class EvidenceRepository:
             record.schema_version = FINDING_DECISION_EVIDENCE_SCHEMA_VERSION
             record.payload_json = payload_json
             self.session.add(record)
+            existing_records[finding_id] = record
             records.append(record)
             projection_items.append((record, item))
         self.session.flush()
         projection_repository = FindingCurrentProjectionRepository(self.session)
+        projections_by_finding_id = {
+            projection.finding_id: projection
+            for projection in projection_repository.records_for_findings(finding_ids)
+        }
         for record, item in projection_items:
-            projection_repository.upsert_from_evidence_record(
+            finding_id = uuid.UUID(item.finding_id)
+            projection = projection_repository.upsert_from_evidence_record(
                 source_record=record,
                 evidence=item,
+                existing_record=projections_by_finding_id.get(finding_id),
+                lookup_existing=False,
+                flush=False,
             )
+            projections_by_finding_id[finding_id] = projection
+        self.session.flush()
         return records
 
     def get_analysis_evidence_record(

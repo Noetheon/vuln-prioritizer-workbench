@@ -11,6 +11,8 @@ When two pages appear to conflict, use this order:
 
 1. [Current Product State](current-product-state.md)
 2. [Product Architecture](architecture.md) and
+   [Scope-First Decision Graph](architecture/scope-first-decision-graph.md),
+   [Decision/Evidence Kernel](architecture/decision-evidence-kernel.md), and
    [Decision Ledger Architecture](architecture/decision-ledger.md)
 3. [Contracts](contracts.md) and [Support Matrix](support_matrix.md)
 4. [User Documentation Guide](user_documentation.md)
@@ -29,11 +31,11 @@ current tests, current contracts, or current local validation evidence.
 
 | Category | Pages | Owner | Rules |
 | --- | --- | --- | --- |
-| Current product truth | `current-product-state.md`, `architecture.md`, `architecture/decision-evidence-kernel.md`, `architecture/decision-ledger.md`, `documentation-map.md`, `workbench-information-architecture.md`, `workbench-ui-system.md` | Maintainers | Must describe the active Workbench-first runtime only. |
+| Current product truth | `current-product-state.md`, `architecture.md`, `architecture/scope-first-decision-graph.md`, `architecture/decision-evidence-kernel.md`, `architecture/decision-ledger.md`, `documentation-map.md`, `workbench-information-architecture.md`, `workbench-ui-system.md` | Maintainers | Must describe the active Workbench-first runtime only. |
 | Evidence-backed claim routing | `documentation-evidence-matrix.md` | Maintainers | Must map major claims to code, tests, schemas, commands, archive artifacts, or external primary sources before wording is strengthened. |
 | User and operator docs | `user_documentation.md`, `use_cases.md`, `demo-readiness.md`, `workbench-offline-demo.md`, `single-process-runtime-transition.md`, `playbooks.md`, `playbooks/**` | Product/docs owner | Must favor external-user paths, make `vpw serve` the standard, and mark repo-checkout/compatibility commands. |
-| Methodology | `methodology.md`, `scoring-methodology.md`, `attack-ttp-methodology.md`, `workbench-attack-methodology.md`, `benchmarking.md`, `risk-reduction-opportunities.md` | Domain owner | Must keep scoring, ATT&CK, VEX, asset-context, and risk-reduction semantics transparent. |
-| Contracts | `contracts.md`, `support_matrix.md`, `architecture/decision-evidence-kernel.md`, `asset-context-csv.md`, import format pages, `integrations/reporting_and_ci.md`, examples, schemas | API/report owners | Must change with tests and generated/example artifacts when contracts change. |
+| Methodology | `methodology.md`, `scoring-methodology.md`, `architecture/scope-first-decision-graph.md`, `attack-ttp-methodology.md`, `workbench-attack-methodology.md`, `benchmarking.md`, `risk-reduction-opportunities.md` | Domain owner | Must keep scoring, identity, ATT&CK, VEX, asset-context, and risk-reduction semantics transparent. |
+| Contracts | `contracts.md`, `support_matrix.md`, `architecture/scope-first-decision-graph.md`, `architecture/decision-evidence-kernel.md`, `asset-context-csv.md`, import format pages, `integrations/reporting_and_ci.md`, examples, schemas | API/report owners | Must change with tests and generated/example artifacts when contracts change. |
 | Security and deployment | `workbench-threat-model.md`, `workbench-public-deployment.md`, `release_operations.md` | Security/release owner | Must keep local/private operation as the default and treat public or shared deployment evidence as candidate-specific exception evidence. |
 | Package maturity | `backend/pyproject.toml`, `README.md`, `current-product-state.md`, `dependency-and-package-policy.md`, `release_operations.md` | Release owner | Must use the same readiness level; today that level is `Development Status :: 4 - Beta` for local-first/self-hosted readiness without public/shared deployment certification. |
 | Open-source repository health | `github-open-source-readiness.md`, `community_repository_setup.md`, root `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `MAINTAINERS.md`, `CHANGELOG.md`, `.github/**` templates | Maintainers | Must route public questions, contributions, security reports, conduct issues, ownership, and GitHub-side settings without overstating what repo files configure. |

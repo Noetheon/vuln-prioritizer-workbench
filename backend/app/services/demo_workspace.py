@@ -31,12 +31,17 @@ from app.models.base import get_datetime_utc
 from app.models.enums import FindingStatus
 from app.repositories import RunRepository, WaiverRepository
 from app.repositories.waivers import waiver_lifecycle_status
-from app.services.artifact_cleanup import cleanup_project_artifacts
 from app.services.finding_status import update_finding_workflow_status
 from app.services.import_execution import (
     ImportUploadContent,
     ProjectImportUploadRequest,
     execute_project_import_upload,
+)
+from app.services.project_deletion import delete_project_with_artifact_cleanup
+from app.services.project_lifecycle_lock import (
+    ProjectLifecycleLease,
+    lock_project_lifecycle,
+    validate_project_lifecycle_lease,
 )
 from app.services.report_artifacts import (
     ReportArtifactChecksumError,
@@ -191,15 +196,53 @@ async def seed_demo_workspace(
     settings: Settings,
     local_actor: LocalWorkbenchActor,
     reset: bool = False,
+    lifecycle_lease: ProjectLifecycleLease | None = None,
 ) -> DemoWorkspaceSnapshot:
     """Create the deterministic local demo workspace using normal import/report services."""
+    if lifecycle_lease is None:
+        with lock_project_lifecycle(settings, DEMO_PROJECT_ID) as acquired_lease:
+            return await _seed_demo_workspace_locked(
+                session=session,
+                settings=settings,
+                local_actor=local_actor,
+                reset=reset,
+                lifecycle_lease=acquired_lease,
+            )
+    return await _seed_demo_workspace_locked(
+        session=session,
+        settings=settings,
+        local_actor=local_actor,
+        reset=reset,
+        lifecycle_lease=lifecycle_lease,
+    )
+
+
+async def _seed_demo_workspace_locked(
+    *,
+    session: Session,
+    settings: Settings,
+    local_actor: LocalWorkbenchActor,
+    reset: bool,
+    lifecycle_lease: ProjectLifecycleLease,
+) -> DemoWorkspaceSnapshot:
+    """Seed or reset the demo while its explicit lifecycle lease is held."""
+    validate_project_lifecycle_lease(
+        lifecycle_lease,
+        settings=settings,
+        project_id=DEMO_PROJECT_ID,
+    )
     snapshot = read_demo_workspace_snapshot(session)
     if snapshot.canonical and _report_artifacts_available(snapshot, settings) and not reset:
         return snapshot
 
     if snapshot.project is not None:
-        delete_demo_workspace(session=session, settings=settings)
-        session.commit()
+        delete_demo_workspace(
+            session=session,
+            settings=settings,
+            local_actor=local_actor,
+            audit_action="workbench.demo.reset.delete_existing",
+            lifecycle_lease=lifecycle_lease,
+        )
 
     project = _create_demo_project(session)
     session.commit()
@@ -229,16 +272,42 @@ async def seed_demo_workspace(
     return read_demo_workspace_snapshot(session)
 
 
-def delete_demo_workspace(*, session: Session, settings: Settings) -> None:
-    """Remove the deterministic demo workspace and owned artifacts without committing."""
+def delete_demo_workspace(
+    *,
+    session: Session,
+    settings: Settings,
+    local_actor: LocalWorkbenchActor,
+    audit_action: str = "workbench.demo.delete",
+    lifecycle_lease: ProjectLifecycleLease | None = None,
+) -> bool:
+    """Remove the demo workspace through the shared locked deletion boundary."""
+    if lifecycle_lease is None:
+        with lock_project_lifecycle(settings, DEMO_PROJECT_ID) as acquired_lease:
+            return delete_demo_workspace(
+                session=session,
+                settings=settings,
+                local_actor=local_actor,
+                audit_action=audit_action,
+                lifecycle_lease=acquired_lease,
+            )
+    validate_project_lifecycle_lease(
+        lifecycle_lease,
+        settings=settings,
+        project_id=DEMO_PROJECT_ID,
+    )
     project = session.get(Project, DEMO_PROJECT_ID)
     if project is None:
-        return
-    cleanup_project_artifacts(settings=settings, project_id=project.id)
-    for report in session.exec(select(Report).where(Report.project_id == project.id)):
-        session.delete(report)
-    session.delete(project)
-    session.flush()
+        return False
+    delete_project_with_artifact_cleanup(
+        session=session,
+        settings=settings,
+        project=project,
+        actor=local_actor,
+        audit_action=audit_action,
+        audit_detail={"demo_workspace": True},
+        lifecycle_lease=lifecycle_lease,
+    )
+    return True
 
 
 class ReportServiceSnapshot:

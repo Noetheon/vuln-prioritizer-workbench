@@ -160,7 +160,7 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
         == payload["provider_snapshot_id"]
     )
     assert metadata_payload["summary"]["analysis_service"]["pipeline"] == (
-        "parse-persist-enrich-score-explain"
+        "parse-enrich-scope-evaluate-persist"
     )
     assert metadata_payload["error"] is None
 

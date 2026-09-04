@@ -5,7 +5,8 @@ from __future__ import annotations
 import importlib
 import uuid
 from collections.abc import Callable, Generator, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -16,6 +17,7 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.core.config import settings
+from app.core.db import configure_sqlite_connections, create_db_engine
 from app.core.local_actor import LocalWorkbenchActor, configured_local_actor
 from app.core.migration_bootstrap import ALEMBIC_HEAD
 from app.core.rate_limit import InMemoryRateLimiter
@@ -48,7 +50,7 @@ DEMO_CVE_XZ = "CVE-2024-3094"
 
 @dataclass(frozen=True)
 class WorkbenchApiEnv:
-    """FastAPI client plus its isolated in-memory Workbench database."""
+    """FastAPI client plus its isolated Workbench database."""
 
     client: TestClient
     engine: Engine
@@ -84,6 +86,16 @@ def workbench_api_env() -> Iterator[WorkbenchApiEnv]:
 def secondary_workbench_api_env() -> Iterator[WorkbenchApiEnv]:
     """Yield a secondary local Workbench API environment."""
     env, cleanup = create_workbench_api_env()
+    try:
+        yield env
+    finally:
+        cleanup()
+
+
+@pytest.fixture()
+def file_backed_workbench_api_env(tmp_path: Path) -> Iterator[WorkbenchApiEnv]:
+    """Yield a Workbench API environment backed by a disposable SQLite file."""
+    env, cleanup = create_workbench_api_env(database_path=tmp_path / "workbench.db")
     try:
         yield env
     finally:
@@ -154,23 +166,37 @@ def workbench_analysis_run_model(
     )
 
 
-def create_workbench_api_env() -> tuple[WorkbenchApiEnv, Callable[[], None]]:
-    """Create a TestClient wired to a disposable in-memory SQLModel database."""
+def create_workbench_api_env(
+    *,
+    database_path: Path | None = None,
+) -> tuple[WorkbenchApiEnv, Callable[[], None]]:
+    """Create a TestClient wired to a disposable SQLModel database."""
     from app.api import deps
 
     previous_settings = getattr(app.state, "workbench_settings", settings)
     app.dependency_overrides.clear()
     app.state.rate_limiter = InMemoryRateLimiter()
-    app.state.workbench_settings = settings
     app_models = importlib.import_module("app.models")
     app_models.import_table_models()
     repositories = importlib.import_module("app.repositories")
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+    if database_path is None:
+        active_settings = settings
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        configure_sqlite_connections(engine, enable_wal=False)
+    else:
+        resolved_database_path = database_path.resolve()
+        resolved_database_path.parent.mkdir(parents=True, exist_ok=True)
+        database_uri = f"sqlite:///{resolved_database_path.as_posix()}"
+        active_settings = replace(settings, SQLALCHEMY_DATABASE_URI=database_uri)
+        engine = create_db_engine(active_settings)
+    app.state.workbench_settings = active_settings
     SQLModel.metadata.create_all(engine)
+    with engine.connect() as connection:
+        assert connection.exec_driver_sql("PRAGMA foreign_keys").scalar_one() == 1
     stamp_test_alembic_head(engine)
 
     def override_get_db() -> Generator[Session, None, None]:
@@ -512,6 +538,8 @@ def seed_finding_pair(
                     asset_name=asset.name or asset.asset_key,
                     component_name=component.name,
                     component_version=component.version or "",
+                    component_purl=component.purl,
+                    component_package_type=component.package_type or component.ecosystem,
                     priority=app_models.FindingPriority.CRITICAL,
                     priority_rank=1,
                     risk_score=98.6,
@@ -532,6 +560,8 @@ def seed_finding_pair(
                     asset_name=asset.name or asset.asset_key,
                     component_name=component.name,
                     component_version=component.version or "",
+                    component_purl=component.purl,
+                    component_package_type=component.package_type or component.ecosystem,
                     priority=app_models.FindingPriority.HIGH,
                     priority_rank=2,
                     risk_score=72.4,

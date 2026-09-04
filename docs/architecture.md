@@ -86,7 +86,12 @@ report stack is split into view-model assembly, campaign modeling/rendering,
 provider freshness, evidence-package, governance/decision, and document
 composition modules.
 
-Decision production remains centralized in the Decision/Evidence Kernel v2:
+Decision production remains centralized in the Decision/Evidence Kernel v2.
+`backend/app/decision_core/decision_graph.py` and
+`backend/app/decision_core/identity.py` first separate shared CVE facts from
+decisions scoped to normalized CVE, component, and source target kind/reference. They own
+versioned observation/finding identity, deterministic replay fingerprints, and
+globally unique operational ranks. The compatible evidence boundary remains
 `backend/app/decision_core/producer.py`,
 `backend/app/decision_core/readmodels.py`,
 `backend/app/decision_core/contracts.py`, `analysis_evidence`, and
@@ -102,8 +107,10 @@ actions never rewrite run evidence.
 `workflow_run.result_ref_json` remains an internal lifecycle/ref payload, not the
 source of product truth.
 
-See [Decision/Evidence Kernel](architecture/decision-evidence-kernel.md) for
-the kernel input/output contract, projection rules, and the exact successful
+See [Scope-First Decision Graph](architecture/scope-first-decision-graph.md) for
+shared facts, scoped evaluation, identity, ranking, and replay semantics. See
+[Decision/Evidence Kernel](architecture/decision-evidence-kernel.md) for the
+kernel input/output contract, projection rules, and the exact successful
 workflow result boundary. See [Decision Ledger](architecture/decision-ledger.md)
 for history/current invariants, dual-write, backfill, and parity.
 

@@ -186,6 +186,33 @@ def test_record_audit_event_bounds_detail_json(session: Session) -> None:
     assert len(event.detail_json["nested"]["note"]) == 1024
 
 
+def test_update_audit_event_merges_and_bounds_lifecycle_detail(session: Session) -> None:
+    from app.services.audit import record_audit_event, update_audit_event
+
+    event = record_audit_event(
+        session,
+        action="audit.lifecycle",
+        resource_type="audit_event",
+        detail={"phase": "pending"},
+    )
+    session.commit()
+
+    updated = update_audit_event(
+        session,
+        event.id,
+        status="failure",
+        detail_patch={"note": "n" * 5000},
+    )
+    session.commit()
+
+    assert updated is not None
+    assert updated.status == "failure"
+    assert updated.detail_json["phase"] == "pending"
+    assert len(updated.detail_json["note"]) == 1024
+    serialized = json.dumps(updated.detail_json, separators=(",", ":"), sort_keys=True)
+    assert len(serialized.encode("utf-8")) <= 4096
+
+
 def test_project_repository_lists_all_local_projects_and_leaves_commit_to_caller(
     app_models: Any,
     repository_classes: Any,

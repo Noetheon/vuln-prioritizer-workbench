@@ -9,6 +9,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, overload
 
+from app.domain.asset_identity import (
+    ASSET_IDENTITY_NORMALIZATION_VERSION,
+    normalize_asset_identity_value,
+    normalize_asset_target_kind,
+)
 from app.domain.engine.models import AssetContextRecord
 
 from . import _occurrence_support
@@ -130,12 +135,18 @@ def load_asset_context_file(
         duplicate_exact_rows = 0
         competing_rule_rows = 0
         seen_signatures: set[tuple[str, str, str, int]] = set()
+        raw_pattern_by_normalized: dict[
+            tuple[str, str, str],
+            tuple[str, str, int],
+        ] = {}
 
         for order, row in enumerate(reader, start=1):
             total_rows += 1
-            target_kind = (row.get("target_kind") or "").strip().lower()
-            target_ref = (row.get("target_ref") or "").strip()
-            asset_id = (row.get("asset_id") or "").strip()
+            raw_target_kind = (row.get("target_kind") or "").strip()
+            raw_target_ref = (row.get("target_ref") or "").strip()
+            target_kind = normalize_asset_target_kind(raw_target_kind)
+            target_ref = normalize_asset_identity_value(raw_target_ref)
+            asset_id = normalize_asset_identity_value((row.get("asset_id") or "").strip())
             if not target_kind or not target_ref or not asset_id:
                 skipped_rows += 1
                 continue
@@ -167,6 +178,21 @@ def load_asset_context_file(
             else:
                 precedence = order
             rule_id = (row.get("rule_id") or "").strip() or f"asset-rule:{order}"
+            normalized_pattern = (target_kind, target_ref, match_mode)
+            previous_pattern = raw_pattern_by_normalized.get(normalized_pattern)
+            if previous_pattern is not None and previous_pattern[:2] != (
+                raw_target_kind,
+                raw_target_ref,
+            ):
+                raise ValueError(
+                    "Asset context CSV rows "
+                    f"{previous_pattern[2]} and {order} collide after "
+                    f"{ASSET_IDENTITY_NORMALIZATION_VERSION} normalization."
+                )
+            raw_pattern_by_normalized.setdefault(
+                normalized_pattern,
+                (raw_target_kind, raw_target_ref, order),
+            )
             signature = (target_kind, target_ref, match_mode, precedence)
             if basic_schema and match_mode == "exact" and (target_kind, target_ref) in records:
                 duplicate_exact_rows += 1

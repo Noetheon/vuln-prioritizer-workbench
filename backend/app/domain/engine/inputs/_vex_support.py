@@ -4,8 +4,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal, overload
-from urllib.parse import parse_qsl, unquote
 
+from packageurl import PackageURL
+
+from app.domain.asset_identity import (
+    normalize_asset_identity_value,
+    normalize_asset_target_kind,
+)
+from app.domain.component_identity import (
+    canonicalize_package_url,
+    normalize_component_name,
+    normalize_component_version,
+)
 from app.domain.engine.models import InputOccurrence, VexStatement
 from app.domain.engine.utils import normalize_cve_id
 
@@ -348,13 +358,28 @@ def _statement_specificity(
 ) -> tuple[str, int] | None:
     if statement.cve_id != occurrence.cve_id:
         return None
+
+    purl_matches = _purl_matches(statement, occurrence)
+    versioned_statement_purl = bool(statement.purl and _purl_has_embedded_version(statement.purl))
+    if (
+        purl_matches
+        and not versioned_statement_purl
+        and _has_version_fields(statement)
+        and not _component_version_matches(statement, occurrence)
+    ):
+        return None
+    if purl_matches and _target_matches(statement, occurrence):
+        return "purl+target", _specificity_rank("purl+target")
+    if purl_matches and not _has_target_fields(statement):
+        return "purl", _specificity_rank("purl")
+    # A versioned PURL is the authoritative component identity. Its auxiliary
+    # scanner/VEX version may legitimately use a different upstream or distro
+    # spelling. Conversely, a non-matching PURL must never fall back to looser
+    # component coordinates.
+    if statement.purl:
+        return None
     if _has_version_fields(statement) and not _component_version_matches(statement, occurrence):
         return None
-
-    if _purl_matches(statement, occurrence) and _target_matches(statement, occurrence):
-        return "purl+target", _specificity_rank("purl+target")
-    if _purl_matches(statement, occurrence) and not _has_target_fields(statement):
-        return "purl", _specificity_rank("purl")
     if (
         _component_name_matches(statement, occurrence)
         and statement.component_version is not None
@@ -423,41 +448,57 @@ def _component_version_matches(statement: VexStatement, occurrence: InputOccurre
         return True
     if occurrence.component_version is None:
         return False
-    return statement.component_version.strip() == occurrence.component_version.strip()
+    return normalize_component_version(statement.component_version) == normalize_component_version(
+        occurrence.component_version
+    )
 
 
 def _target_matches(statement: VexStatement, occurrence: InputOccurrence) -> bool:
-    return bool(
-        statement.target_kind
-        and statement.target_ref
-        and occurrence.target_ref
-        and statement.target_kind.lower() == occurrence.target_kind.lower()
-        and _canonical_target_ref(statement.target_ref)
-        == _canonical_target_ref(occurrence.target_ref)
+    if (
+        not statement.target_kind
+        or not statement.target_ref
+        or normalize_asset_target_kind(statement.target_kind)
+        != normalize_asset_target_kind(occurrence.target_kind)
+    ):
+        return False
+    expected = _canonical_target_ref(statement.target_ref)
+    return any(
+        expected == _canonical_target_ref(candidate)
+        for candidate in (occurrence.target_ref, occurrence.asset_id)
+        if candidate
     )
 
 
 def _canonical_purl(value: str) -> _CanonicalPurl:
-    normalized = value.strip()
-    before_subpath, separator, raw_subpath = normalized.partition("#")
-    before_qualifiers, _, raw_qualifiers = before_subpath.partition("?")
-    core = unquote(before_qualifiers)
-    if core.startswith("pkg:"):
-        core = core[:4] + core[4:].casefold()
-    else:
-        core = core.casefold()
+    canonical = canonicalize_package_url(value) or value.strip()
+    try:
+        parsed = PackageURL.from_string(canonical)
+    except ValueError:
+        # Invalid PURLs compare conservatively by their exact trimmed spelling.
+        return _CanonicalPurl(core=canonical, qualifiers=(), subpath=None)
+    core = PackageURL(
+        type=parsed.type,
+        namespace=parsed.namespace,
+        name=parsed.name,
+        version=parsed.version,
+    ).to_string()
     qualifiers = tuple(
         sorted(
-            (
-                unquote(key).strip().casefold(),
-                unquote(qualifier_value).strip().casefold(),
-            )
-            for key, qualifier_value in parse_qsl(raw_qualifiers, keep_blank_values=True)
-            if unquote(key).strip().casefold() not in _NON_IDENTITY_PURL_QUALIFIERS
+            (key, qualifier_value)
+            for key, qualifier_value in parsed.qualifiers.items()
+            if key not in _NON_IDENTITY_PURL_QUALIFIERS
         )
     )
-    subpath = unquote(raw_subpath).strip().casefold() if separator else None
-    return _CanonicalPurl(core=core, qualifiers=qualifiers, subpath=subpath or None)
+    return _CanonicalPurl(core=core, qualifiers=qualifiers, subpath=parsed.subpath)
+
+
+def _purl_has_embedded_version(value: str) -> bool:
+    """Return whether a valid canonical PURL carries its own version identity."""
+    canonical = canonicalize_package_url(value) or value.strip()
+    try:
+        return PackageURL.from_string(canonical).version is not None
+    except ValueError:
+        return False
 
 
 def _canonical_purls_match(statement: _CanonicalPurl, occurrence: _CanonicalPurl) -> bool:
@@ -471,11 +512,11 @@ def _canonical_purls_match(statement: _CanonicalPurl, occurrence: _CanonicalPurl
 
 
 def _canonical_component_name(value: str) -> str:
-    return " ".join(value.strip().casefold().split())
+    return normalize_component_name(value) or ""
 
 
 def _canonical_target_ref(value: str) -> str:
-    return value.strip()
+    return normalize_asset_identity_value(value)
 
 
 def _has_target_fields(statement: VexStatement) -> bool:

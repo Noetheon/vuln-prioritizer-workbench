@@ -107,10 +107,10 @@ playwright-install: frontend-install
 	$(FRONTEND_NPM) exec -- playwright install --with-deps chromium firefox webkit
 
 playwright-check: playwright-install
-	$(FRONTEND_NPM) run test
+	VPW_PYTHON=$(PYTHON) $(FRONTEND_NPM) run test
 
 playwright-check-without-design-audit: playwright-install
-	$(FRONTEND_NPM) run test -- --grep-invert "design audit matches VPW visual regression baselines"
+	VPW_PYTHON=$(PYTHON) $(FRONTEND_NPM) run test -- --grep-invert "design audit matches VPW visual regression baselines"
 
 frontend-install:
 	$(FRONTEND_NPM) ci
@@ -137,13 +137,13 @@ frontend-test-unit-coverage:
 	$(FRONTEND_NPM) run test:unit:coverage
 
 frontend-generate-client:
-	bash scripts/generate-client.sh
+	VPW_PYTHON=$(PYTHON) bash scripts/generate-client.sh
 
 frontend-design-audit:
-	$(FRONTEND_NPM) run test:design-audit
+	VPW_PYTHON=$(PYTHON) $(FRONTEND_NPM) run test:design-audit
 
 frontend-design-audit-update:
-	$(FRONTEND_NPM) run test:design-audit:update
+	VPW_PYTHON=$(PYTHON) $(FRONTEND_NPM) run test:design-audit:update
 
 frontend-design-audit-linux-docker:
 	bash scripts/frontend-design-audit-linux-docker.sh verify
@@ -152,20 +152,20 @@ frontend-design-audit-linux-docker-update:
 	bash scripts/frontend-design-audit-linux-docker.sh update
 
 demo-screenshot: playwright-install
-	VPW_UPDATE_DOCS_EVIDENCE=1 $(FRONTEND_NPM) run test -- tests/ui-evidence-screenshots.spec.ts --project=chromium
+	VPW_PYTHON=$(PYTHON) VPW_UPDATE_DOCS_EVIDENCE=1 $(FRONTEND_NPM) run test -- tests/ui-evidence-screenshots.spec.ts --project=chromium
 
 api-client-drift-check:
+	@set -e; \
 	before=$$(mktemp); after=$$(mktemp); \
+	trap 'rm -f "$$before" "$$after"' EXIT; \
 	find frontend/src/client -type f -print | sort | xargs shasum -a 256 > "$$before"; \
 	$(MAKE) frontend-generate-client; \
 	find frontend/src/client -type f -print | sort | xargs shasum -a 256 > "$$after"; \
 	if ! diff -u "$$before" "$$after"; then \
 		echo "Generated frontend client changed. Run 'make frontend-generate-client' and commit the result." >&2; \
 		git diff -- frontend/src/client; \
-		rm -f "$$before" "$$after"; \
 		exit 1; \
-	fi; \
-	rm -f "$$before" "$$after"
+	fi
 
 frontend-audit:
 	$(FRONTEND_NPM) audit --audit-level=high

@@ -6,7 +6,7 @@ import hashlib
 import json
 from typing import Any
 
-FINDING_CURRENT_PROJECTION_SCHEMA_VERSION = "finding-current-projection.v1"
+FINDING_CURRENT_PROJECTION_SCHEMA_VERSION = "finding-current-projection.v2"
 
 
 class DecisionLedgerInvariantError(RuntimeError):

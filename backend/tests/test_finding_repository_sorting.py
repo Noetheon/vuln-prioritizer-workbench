@@ -85,6 +85,65 @@ def test_operational_findings_page_uses_database_projection_without_evidence_sca
     assert literal_count == 1
 
 
+def test_legacy_findings_without_projection_keep_component_query_fallback(
+    workbench_api_env: WorkbenchApiEnv,
+) -> None:
+    project = create_project_via_api(
+        workbench_api_env.client,
+        local_api_headers(workbench_api_env.client),
+    )
+    project_id = uuid.UUID(project["id"])
+    with Session(workbench_api_env.engine) as session:
+        asset = create_asset(
+            session,
+            workbench_api_env.app_models,
+            workbench_api_env.repositories,
+            project_id=project_id,
+        )
+        for cve_id, component_name in (
+            ("CVE-2024-8001", "legacy-zulu"),
+            ("CVE-2024-8002", "legacy-alpha"),
+        ):
+            component = create_component(
+                session,
+                workbench_api_env.repositories,
+                name=component_name,
+            )
+            vulnerability = create_vulnerability(
+                session,
+                workbench_api_env.repositories,
+                cve_id=cve_id,
+            )
+            create_finding(
+                session,
+                workbench_api_env.app_models,
+                workbench_api_env.repositories,
+                project_id=project_id,
+                vulnerability_id=vulnerability.id,
+                component_id=component.id,
+                asset_id=asset.id,
+                cve_id=cve_id,
+            )
+        session.commit()
+
+    with Session(workbench_api_env.engine) as session:
+        matches, count = finding_queries.list_project_findings_query(
+            session,
+            FindingPageQuery(project_id=project_id, query="legacy-alpha"),
+        )
+        ordered, _ = finding_queries.list_project_findings_query(
+            session,
+            FindingPageQuery(project_id=project_id, sort="component", direction="asc"),
+        )
+
+    assert count == 1
+    assert [finding.cve_id for finding in matches] == ["CVE-2024-8002"]
+    assert [finding.cve_id for finding in ordered] == [
+        "CVE-2024-8002",
+        "CVE-2024-8001",
+    ]
+
+
 def test_numeric_sort_keeps_missing_projection_values_last_in_both_directions(
     workbench_api_env: WorkbenchApiEnv,
 ) -> None:

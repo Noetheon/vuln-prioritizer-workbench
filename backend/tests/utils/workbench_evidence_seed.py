@@ -91,6 +91,8 @@ def _seed_finding_evidence(
     asset_name: str,
     component_name: str,
     component_version: str,
+    component_purl: str | None = None,
+    component_package_type: str | None = None,
     priority: Any,
     priority_rank: int,
     risk_score: float,
@@ -133,7 +135,13 @@ def _seed_finding_evidence(
         waived=bool(getattr(finding, "waived", False)),
         rationale=rationale,
         recommended_action=action,
-        occurrence_scope={"target_ref": asset_key},
+        occurrence_scope={
+            "target_ref": asset_key,
+            "component_name": component_name,
+            "component_version": component_version or None,
+            "purl": component_purl,
+            "package_type": component_package_type,
+        },
         priority_evidence=PriorityEvidenceV2(
             priority_label=priority_label,
             priority_rank=priority_rank,
