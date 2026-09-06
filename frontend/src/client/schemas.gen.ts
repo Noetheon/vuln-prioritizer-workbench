@@ -102,6 +102,16 @@ export const AnalysisEvidenceV2Schema = {
                 }
             ]
         },
+        evaluation: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/EvaluationMetadataV1'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         filename: {
             anyOf: [
                 {
@@ -485,6 +495,16 @@ export const AnalysisRunSummaryPublicSchema = {
             default: 0,
             title: 'Created Findings',
             type: 'integer'
+        },
+        decision_summary: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/RunDecisionSummaryPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         },
         diagnostics: {
             anyOf: [
@@ -1230,6 +1250,11 @@ export const AssetRecalculatePublicSchema = {
             default: false,
             title: 'Rescore Needed',
             type: 'boolean'
+        },
+        unreplayable_findings: {
+            default: 0,
+            title: 'Unreplayable Findings',
+            type: 'integer'
         }
     },
     required: [
@@ -1363,6 +1388,134 @@ export const AssetsPublicSchema = {
     type: 'object'
 } as const;
 
+export const AttackDataSchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Attack Data.',
+    properties: {
+        attack_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Attack Note'
+        },
+        attack_rationale: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Attack Rationale'
+        },
+        attack_relevance: {
+            default: 'Unmapped',
+            title: 'Attack Relevance',
+            type: 'string'
+        },
+        attack_tactics: {
+            items: {
+                type: 'string'
+            },
+            title: 'Attack Tactics',
+            type: 'array'
+        },
+        attack_techniques: {
+            items: {
+                type: 'string'
+            },
+            title: 'Attack Techniques',
+            type: 'array'
+        },
+        attack_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Attack Version'
+        },
+        capability_groups: {
+            items: {
+                type: 'string'
+            },
+            title: 'Capability Groups',
+            type: 'array'
+        },
+        cve_id: {
+            title: 'Cve Id',
+            type: 'string'
+        },
+        domain: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Domain'
+        },
+        mapped: {
+            default: false,
+            title: 'Mapped',
+            type: 'boolean'
+        },
+        mapping_types: {
+            items: {
+                type: 'string'
+            },
+            title: 'Mapping Types',
+            type: 'array'
+        },
+        mappings: {
+            items: {
+                $ref: '#/components/schemas/AttackMapping'
+            },
+            title: 'Mappings',
+            type: 'array'
+        },
+        source: {
+            default: 'none',
+            title: 'Source',
+            type: 'string'
+        },
+        source_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Version'
+        },
+        techniques: {
+            items: {
+                $ref: '#/components/schemas/AttackTechnique'
+            },
+            title: 'Techniques',
+            type: 'array'
+        }
+    },
+    required: [
+        'cve_id'
+    ],
+    title: 'AttackData',
+    type: 'object'
+} as const;
+
 export const AttackEvidenceV2Schema = {
     additionalProperties: false,
     description: 'Finding ATT&CK evidence used by details, reports, and Navigator export.',
@@ -1442,6 +1595,167 @@ export const AttackEvidenceV2Schema = {
     type: 'object'
 } as const;
 
+export const AttackMappingSchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Attack Mapping.',
+    properties: {
+        attack_object_id: {
+            title: 'Attack Object Id',
+            type: 'string'
+        },
+        attack_object_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Attack Object Name'
+        },
+        capability_description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Capability Description'
+        },
+        capability_group: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Capability Group'
+        },
+        capability_id: {
+            title: 'Capability Id',
+            type: 'string'
+        },
+        comments: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Comments'
+        },
+        confidence: {
+            anyOf: [
+                {
+                    enum: [
+                        'low',
+                        'medium',
+                        'high'
+                    ],
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Confidence'
+        },
+        defensive_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Defensive Note'
+        },
+        mapping_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Mapping Type'
+        },
+        references: {
+            items: {
+                type: 'string'
+            },
+            title: 'References',
+            type: 'array'
+        },
+        review_status: {
+            anyOf: [
+                {
+                    enum: [
+                        'unreviewed',
+                        'needs_review',
+                        'reviewed',
+                        'rejected',
+                        'stale'
+                    ],
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Review Status'
+        },
+        reviewed_at: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reviewed At'
+        },
+        reviewer: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reviewer'
+        },
+        source: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source'
+        }
+    },
+    required: [
+        'capability_id',
+        'attack_object_id'
+    ],
+    title: 'AttackMapping',
+    type: 'object'
+} as const;
+
 export const AttackSourceCapabilityPublicSchema = {
     description: 'Supported ATT&CK import source metadata.',
     properties: {
@@ -1474,6 +1788,55 @@ export const AttackSourceCapabilityPublicSchema = {
         'detail'
     ],
     title: 'AttackSourceCapabilityPublic',
+    type: 'object'
+} as const;
+
+export const AttackTechniqueSchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Attack Technique.',
+    properties: {
+        attack_object_id: {
+            title: 'Attack Object Id',
+            type: 'string'
+        },
+        deprecated: {
+            default: false,
+            title: 'Deprecated',
+            type: 'boolean'
+        },
+        name: {
+            title: 'Name',
+            type: 'string'
+        },
+        revoked: {
+            default: false,
+            title: 'Revoked',
+            type: 'boolean'
+        },
+        tactics: {
+            items: {
+                type: 'string'
+            },
+            title: 'Tactics',
+            type: 'array'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        }
+    },
+    required: [
+        'attack_object_id',
+        'name'
+    ],
+    title: 'AttackTechnique',
     type: 'object'
 } as const;
 
@@ -1674,6 +2037,75 @@ export const Body_imports_import_project_uploadSchema = {
     type: 'object'
 } as const;
 
+export const BusinessImpactBlockSchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Business Impact Block.',
+    properties: {
+        drivers: {
+            items: {
+                type: 'string'
+            },
+            title: 'Drivers',
+            type: 'array'
+        },
+        level: {
+            enum: [
+                'critical',
+                'high',
+                'medium',
+                'low',
+                'governance'
+            ],
+            title: 'Level',
+            type: 'string'
+        },
+        text: {
+            title: 'Text',
+            type: 'string'
+        }
+    },
+    required: [
+        'level',
+        'text'
+    ],
+    title: 'BusinessImpactBlock',
+    type: 'object'
+} as const;
+
+export const ContextPolicyProfileSchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Context Policy Profile.',
+    properties: {
+        enterprise_escalation: {
+            default: false,
+            title: 'Enterprise Escalation',
+            type: 'boolean'
+        },
+        internet_facing_boost: {
+            default: false,
+            title: 'Internet Facing Boost',
+            type: 'boolean'
+        },
+        name: {
+            default: 'default',
+            title: 'Name',
+            type: 'string'
+        },
+        narrative_only: {
+            default: true,
+            title: 'Narrative Only',
+            type: 'boolean'
+        },
+        prod_asset_boost: {
+            default: false,
+            title: 'Prod Asset Boost',
+            type: 'boolean'
+        }
+    },
+    title: 'ContextPolicyProfile',
+    type: 'object'
+} as const;
+
 export const DashboardEpssBucketsPublicSchema = {
     description: 'EPSS bucket counts for the Workbench dashboard.',
     properties: {
@@ -1720,6 +2152,177 @@ export const DashboardSignalCountsPublicSchema = {
         }
     },
     title: 'DashboardSignalCountsPublic',
+    type: 'object'
+} as const;
+
+export const DecisionRevisionPublicSchema = {
+    description: 'One immutable historical decision, compared with its predecessor.',
+    properties: {
+        analysis_run_id: {
+            format: 'uuid',
+            title: 'Analysis Run Id',
+            type: 'string'
+        },
+        cause: {
+            title: 'Cause',
+            type: 'string'
+        },
+        changed_fields: {
+            items: {
+                type: 'string'
+            },
+            title: 'Changed Fields',
+            type: 'array'
+        },
+        engine_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Engine Version'
+        },
+        evaluated_at: {
+            format: 'date-time',
+            title: 'Evaluated At',
+            type: 'string'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        input_sha256: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Input Sha256'
+        },
+        is_current: {
+            title: 'Is Current',
+            type: 'boolean'
+        },
+        observed_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Observed At'
+        },
+        operational_rank: {
+            title: 'Operational Rank',
+            type: 'integer'
+        },
+        priority: {
+            title: 'Priority',
+            type: 'string'
+        },
+        provider_snapshot_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Snapshot Id'
+        },
+        rationale: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Rationale'
+        },
+        recommended_action: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Recommended Action'
+        },
+        replay_status: {
+            enum: [
+                'available',
+                'legacy_unavailable'
+            ],
+            title: 'Replay Status',
+            type: 'string'
+        },
+        risk_score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Risk Score'
+        },
+        status: {
+            title: 'Status',
+            type: 'string'
+        }
+    },
+    required: [
+        'id',
+        'analysis_run_id',
+        'evaluated_at',
+        'cause',
+        'replay_status',
+        'priority',
+        'status',
+        'operational_rank',
+        'is_current'
+    ],
+    title: 'DecisionRevisionPublic',
+    type: 'object'
+} as const;
+
+export const DecisionRevisionsPublicSchema = {
+    description: 'Paginated immutable history, newest first.',
+    properties: {
+        count: {
+            title: 'Count',
+            type: 'integer'
+        },
+        data: {
+            items: {
+                $ref: '#/components/schemas/DecisionRevisionPublic'
+            },
+            title: 'Data',
+            type: 'array'
+        }
+    },
+    required: [
+        'data',
+        'count'
+    ],
+    title: 'DecisionRevisionsPublic',
     type: 'object'
 } as const;
 
@@ -1926,6 +2529,173 @@ export const DedupSummaryV2Schema = {
     type: 'object'
 } as const;
 
+export const DefensiveContextSchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Defensive Context.',
+    properties: {
+        automatable: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Automatable'
+        },
+        cve_id: {
+            title: 'Cve Id',
+            type: 'string'
+        },
+        cvss_score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cvss Score'
+        },
+        exploitation: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Exploitation'
+        },
+        modified: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Modified'
+        },
+        published: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Published'
+        },
+        references: {
+            items: {
+                type: 'string'
+            },
+            title: 'References',
+            type: 'array'
+        },
+        severity: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Severity'
+        },
+        source: {
+            title: 'Source',
+            type: 'string'
+        },
+        source_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Id'
+        },
+        ssvc_decision: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ssvc Decision'
+        },
+        summary: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Summary'
+        },
+        tags: {
+            items: {
+                type: 'string'
+            },
+            title: 'Tags',
+            type: 'array'
+        },
+        technical_impact: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Technical Impact'
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        }
+    },
+    required: [
+        'cve_id',
+        'source'
+    ],
+    title: 'DefensiveContext',
+    type: 'object'
+} as const;
+
 export const DemoWorkspaceCreateSchema = {
     description: 'Request payload for creating or resetting the local demo workspace.',
     properties: {
@@ -2126,6 +2896,180 @@ export const DemoWorkspaceStatusPublicSchema = {
     type: 'object'
 } as const;
 
+export const EpssDataSchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Epss Data.',
+    properties: {
+        cve_id: {
+            title: 'Cve Id',
+            type: 'string'
+        },
+        date: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Date'
+        },
+        epss: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Epss'
+        },
+        percentile: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Percentile'
+        }
+    },
+    required: [
+        'cve_id'
+    ],
+    title: 'EpssData',
+    type: 'object'
+} as const;
+
+export const EvaluationCreateSchema = {
+    additionalProperties: false,
+    description: 'Choose existing observations and optional recorded provider facts.',
+    properties: {
+        finding_ids: {
+            anyOf: [
+                {
+                    items: {
+                        format: 'uuid',
+                        type: 'string'
+                    },
+                    maxItems: 10000,
+                    minItems: 1,
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Finding Ids'
+        },
+        provider_snapshot_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Snapshot Id'
+        },
+        reason: {
+            anyOf: [
+                {
+                    maxLength: 1000,
+                    minLength: 1,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reason'
+        }
+    },
+    title: 'EvaluationCreate',
+    type: 'object'
+} as const;
+
+export const EvaluationMetadataV1Schema = {
+    additionalProperties: false,
+    description: 'Evaluation provenance distinct from scanner observation provenance.',
+    properties: {
+        base_project_revision: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Base Project Revision'
+        },
+        cause: {
+            title: 'Cause',
+            type: 'string'
+        },
+        engine_version: {
+            title: 'Engine Version',
+            type: 'string'
+        },
+        evaluated_at: {
+            title: 'Evaluated At',
+            type: 'string'
+        },
+        input_sha256: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Input Sha256'
+        },
+        observed_at: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Observed At'
+        },
+        replay_status: {
+            default: 'available',
+            enum: [
+                'available',
+                'legacy_unavailable'
+            ],
+            title: 'Replay Status',
+            type: 'string'
+        },
+        schema_version: {
+            const: 'evaluation-metadata.v1',
+            default: 'evaluation-metadata.v1',
+            title: 'Schema Version',
+            type: 'string'
+        }
+    },
+    required: [
+        'cause',
+        'evaluated_at',
+        'engine_version'
+    ],
+    title: 'EvaluationMetadataV1',
+    type: 'object'
+} as const;
+
 export const EvidenceUploadRefSchema = {
     additionalProperties: false,
     description: 'Managed upload metadata without local filesystem paths.',
@@ -2220,6 +3164,58 @@ export const EvidenceUploadRefSchema = {
         }
     },
     title: 'EvidenceUploadRef',
+    type: 'object'
+} as const;
+
+export const ExecutiveFindingDecisionPublicSchema = {
+    description: 'One recorded decision with its original scope and guidance.',
+    properties: {
+        component: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component'
+        },
+        cve_id: {
+            title: 'Cve Id',
+            type: 'string'
+        },
+        finding_id: {
+            format: 'uuid',
+            title: 'Finding Id',
+            type: 'string'
+        },
+        guidance: {
+            $ref: '#/components/schemas/FindingDecisionGuidance'
+        },
+        status: {
+            title: 'Status',
+            type: 'string'
+        },
+        target: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target'
+        }
+    },
+    required: [
+        'finding_id',
+        'cve_id',
+        'status',
+        'guidance'
+    ],
+    title: 'ExecutiveFindingDecisionPublic',
     type: 'object'
 } as const;
 
@@ -2568,6 +3564,26 @@ export const FindingDecisionEvidenceV2Schema = {
             ],
             title: 'Epss'
         },
+        evaluation: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/EvaluationMetadataV1'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        evaluation_input: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/ScopeEvaluationInput'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         finding_id: {
             title: 'Finding Id',
             type: 'string'
@@ -2687,6 +3703,64 @@ export const FindingDecisionEvidenceV2Schema = {
         'priority_evidence'
     ],
     title: 'FindingDecisionEvidenceV2',
+    type: 'object'
+} as const;
+
+export const FindingDecisionGuidanceSchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Finding Decision Guidance.',
+    properties: {
+        business_impact: {
+            $ref: '#/components/schemas/BusinessImpactBlock'
+        },
+        decision_statement: {
+            title: 'Decision Statement',
+            type: 'string'
+        },
+        reason_codes: {
+            items: {
+                type: 'string'
+            },
+            title: 'Reason Codes',
+            type: 'array'
+        },
+        recommendation: {
+            enum: [
+                'patch',
+                'mitigate',
+                'monitor',
+                'review',
+                'waiver'
+            ],
+            title: 'Recommendation',
+            type: 'string'
+        },
+        recommendation_label: {
+            title: 'Recommendation Label',
+            type: 'string'
+        },
+        sla: {
+            $ref: '#/components/schemas/SlaTarget'
+        },
+        visibility: {
+            title: 'Visibility',
+            type: 'string'
+        },
+        wording_policy: {
+            default: 'defensive_no_exploit_steps',
+            title: 'Wording Policy',
+            type: 'string'
+        }
+    },
+    required: [
+        'recommendation',
+        'recommendation_label',
+        'sla',
+        'business_impact',
+        'decision_statement',
+        'visibility'
+    ],
+    title: 'FindingDecisionGuidance',
     type: 'object'
 } as const;
 
@@ -4719,6 +5793,605 @@ export const ImportFormatCapabilityPublicSchema = {
     type: 'object'
 } as const;
 
+export const InputOccurrenceSchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Input Occurrence.',
+    properties: {
+        asset_business_service: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Business Service'
+        },
+        asset_criticality: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Criticality'
+        },
+        asset_environment: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Environment'
+        },
+        asset_exposure: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Exposure'
+        },
+        asset_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Id'
+        },
+        asset_match_candidate_count: {
+            default: 0,
+            title: 'Asset Match Candidate Count',
+            type: 'integer'
+        },
+        asset_match_mode: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Match Mode'
+        },
+        asset_match_pattern: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Match Pattern'
+        },
+        asset_match_precedence: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Match Precedence'
+        },
+        asset_match_row: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Match Row'
+        },
+        asset_match_rule_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Match Rule Id'
+        },
+        asset_owner: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Owner'
+        },
+        component_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Name'
+        },
+        component_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Version'
+        },
+        cve_id: {
+            title: 'Cve Id',
+            type: 'string'
+        },
+        dependency_path: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Dependency Path'
+        },
+        file_path: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'File Path'
+        },
+        fix_versions: {
+            items: {
+                type: 'string'
+            },
+            title: 'Fix Versions',
+            type: 'array'
+        },
+        package_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Package Type'
+        },
+        purl: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Purl'
+        },
+        raw_severity: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Raw Severity'
+        },
+        source_format: {
+            default: 'cve-list',
+            title: 'Source Format',
+            type: 'string'
+        },
+        source_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Id'
+        },
+        source_record_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Record Id'
+        },
+        target_kind: {
+            default: 'generic',
+            title: 'Target Kind',
+            type: 'string'
+        },
+        target_ref: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target Ref'
+        },
+        vex_action_statement: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Action Statement'
+        },
+        vex_candidate_count: {
+            default: 0,
+            title: 'Vex Candidate Count',
+            type: 'integer'
+        },
+        vex_justification: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Justification'
+        },
+        vex_match_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Match Type'
+        },
+        vex_source_format: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Source Format'
+        },
+        vex_source_path: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Source Path'
+        },
+        vex_source_record_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Source Record Id'
+        },
+        vex_status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Status'
+        }
+    },
+    required: [
+        'cve_id'
+    ],
+    title: 'InputOccurrence',
+    type: 'object'
+} as const;
+
+export const KevDataSchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Kev Data.',
+    properties: {
+        cve_id: {
+            title: 'Cve Id',
+            type: 'string'
+        },
+        date_added: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Date Added'
+        },
+        due_date: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Due Date'
+        },
+        in_kev: {
+            default: false,
+            title: 'In Kev',
+            type: 'boolean'
+        },
+        known_ransomware_campaign_use: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Known Ransomware Campaign Use'
+        },
+        notes: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Notes'
+        },
+        product: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Product'
+        },
+        required_action: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Required Action'
+        },
+        short_description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Short Description'
+        },
+        vendor_project: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vendor Project'
+        },
+        vulnerability_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vulnerability Name'
+        }
+    },
+    required: [
+        'cve_id'
+    ],
+    title: 'KevData',
+    type: 'object'
+} as const;
+
+export const NvdDataSchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Nvd Data.',
+    properties: {
+        cve_id: {
+            title: 'Cve Id',
+            type: 'string'
+        },
+        cvss_base_score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cvss Base Score'
+        },
+        cvss_severity: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cvss Severity'
+        },
+        cvss_vector: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cvss Vector'
+        },
+        cvss_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cvss Version'
+        },
+        cwes: {
+            items: {
+                type: 'string'
+            },
+            title: 'Cwes',
+            type: 'array'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        last_modified: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last Modified'
+        },
+        published: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Published'
+        },
+        reference_tags: {
+            additionalProperties: {
+                items: {
+                    type: 'string'
+                },
+                type: 'array'
+            },
+            title: 'Reference Tags',
+            type: 'object'
+        },
+        references: {
+            items: {
+                type: 'string'
+            },
+            title: 'References',
+            type: 'array'
+        },
+        vulnerability_status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vulnerability Status'
+        }
+    },
+    required: [
+        'cve_id'
+    ],
+    title: 'NvdData',
+    type: 'object'
+} as const;
+
 export const OccurrenceDedupEvidenceV2Schema = {
     additionalProperties: false,
     description: 'Typed dedup evidence attached to a persisted occurrence.',
@@ -5683,6 +7356,45 @@ export const PriorityExplanationV2Schema = {
     type: 'object'
 } as const;
 
+export const PriorityPolicySchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Priority Policy.',
+    properties: {
+        critical_cvss_threshold: {
+            default: 7,
+            title: 'Critical Cvss Threshold',
+            type: 'number'
+        },
+        critical_epss_threshold: {
+            default: 0.7,
+            title: 'Critical Epss Threshold',
+            type: 'number'
+        },
+        high_cvss_threshold: {
+            default: 9,
+            title: 'High Cvss Threshold',
+            type: 'number'
+        },
+        high_epss_threshold: {
+            default: 0.4,
+            title: 'High Epss Threshold',
+            type: 'number'
+        },
+        medium_cvss_threshold: {
+            default: 7,
+            title: 'Medium Cvss Threshold',
+            type: 'number'
+        },
+        medium_epss_threshold: {
+            default: 0.1,
+            title: 'Medium Epss Threshold',
+            type: 'number'
+        }
+    },
+    title: 'PriorityPolicy',
+    type: 'object'
+} as const;
+
 export const ProjectAttackSummaryPublicSchema = {
     description: 'Project-level ATT&CK summary for the React dashboard widget.',
     properties: {
@@ -6217,6 +7929,11 @@ export const ProjectRiskReductionPublicSchema = {
             title: 'Current Actionable Risk',
             type: 'number'
         },
+        current_risk_index: {
+            default: 0,
+            title: 'Current Risk Index',
+            type: 'number'
+        },
         governance_debt_risk: {
             default: 0,
             title: 'Governance Debt Risk',
@@ -6240,8 +7957,14 @@ export const ProjectRiskReductionPublicSchema = {
             ]
         },
         methodology: {
-            default: 'Simulates score reduction by removing open actionable findings when their remediation opportunity is completed.',
+            default: 'The risk index is the mean score of remaining actionable findings. Simulation removes both their scores and their count. Total score burden falls when findings are closed; the remaining average can rise. Historical imports can cover different evidence and are not proof of remediation.',
             title: 'Methodology',
+            type: 'string'
+        },
+        metric: {
+            const: 'mean-actionable-score.v1',
+            default: 'mean-actionable-score.v1',
+            title: 'Metric',
             type: 'string'
         },
         residual_steps: {
@@ -6319,6 +8042,53 @@ export const ProjectsPublicSchema = {
     type: 'object'
 } as const;
 
+export const ProviderDataQualityFlagSchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Provider Data Quality Flag.',
+    properties: {
+        code: {
+            title: 'Code',
+            type: 'string'
+        },
+        cve_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cve Id'
+        },
+        message: {
+            title: 'Message',
+            type: 'string'
+        },
+        severity: {
+            default: 'warning',
+            enum: [
+                'info',
+                'warning',
+                'error'
+            ],
+            title: 'Severity',
+            type: 'string'
+        },
+        source: {
+            title: 'Source',
+            type: 'string'
+        }
+    },
+    required: [
+        'source',
+        'code',
+        'message'
+    ],
+    title: 'ProviderDataQualityFlag',
+    type: 'object'
+} as const;
+
 export const ProviderDataQualityFlagEvidenceV2Schema = {
     additionalProperties: false,
     description: 'Provider quality flag preserved in the decision evidence contract.',
@@ -6392,6 +8162,36 @@ export const ProviderDataQualityFlagEvidenceV2Schema = {
         'message'
     ],
     title: 'ProviderDataQualityFlagEvidenceV2',
+    type: 'object'
+} as const;
+
+export const ProviderEvidenceSchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Provider Evidence.',
+    properties: {
+        defensive_contexts: {
+            items: {
+                $ref: '#/components/schemas/DefensiveContext'
+            },
+            title: 'Defensive Contexts',
+            type: 'array'
+        },
+        epss: {
+            $ref: '#/components/schemas/EpssData'
+        },
+        kev: {
+            $ref: '#/components/schemas/KevData'
+        },
+        nvd: {
+            $ref: '#/components/schemas/NvdData'
+        }
+    },
+    required: [
+        'nvd',
+        'epss',
+        'kev'
+    ],
+    title: 'ProviderEvidence',
     type: 'object'
 } as const;
 
@@ -7239,6 +9039,11 @@ export const ReportsPublicSchema = {
 export const ResidualRiskStepPublicSchema = {
     description: 'One step in the dashboard residual-risk ladder.',
     properties: {
+        actionable_finding_count: {
+            default: 0,
+            title: 'Actionable Finding Count',
+            type: 'integer'
+        },
         label: {
             title: 'Label',
             type: 'string'
@@ -7246,6 +9051,11 @@ export const ResidualRiskStepPublicSchema = {
         reduction: {
             default: 0,
             title: 'Reduction',
+            type: 'number'
+        },
+        risk_index: {
+            default: 0,
+            title: 'Risk Index',
             type: 'number'
         },
         risk_score: {
@@ -7361,6 +9171,17 @@ export const RiskReductionOpportunityPublicSchema = {
             ],
             title: 'Component'
         },
+        component_identity: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Identity'
+        },
         cve_id: {
             title: 'Cve Id',
             type: 'string'
@@ -7374,6 +9195,14 @@ export const RiskReductionOpportunityPublicSchema = {
             default: 0,
             title: 'Finding Count',
             type: 'integer'
+        },
+        finding_ids: {
+            items: {
+                format: 'uuid',
+                type: 'string'
+            },
+            title: 'Finding Ids',
+            type: 'array'
         },
         id: {
             title: 'Id',
@@ -7520,6 +9349,58 @@ export const RunCountsV2Schema = {
         }
     },
     title: 'RunCountsV2',
+    type: 'object'
+} as const;
+
+export const RunDecisionSummaryPublicSchema = {
+    description: 'Executive facts derived solely from one run\'s immutable decisions.',
+    properties: {
+        actionable_finding_count: {
+            default: 0,
+            title: 'Actionable Finding Count',
+            type: 'integer'
+        },
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
+        findings_with_guidance: {
+            default: 0,
+            title: 'Findings With Guidance',
+            type: 'integer'
+        },
+        missing_guidance_count: {
+            default: 0,
+            title: 'Missing Guidance Count',
+            type: 'integer'
+        },
+        recommendation_counts: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Recommendation Counts',
+            type: 'object'
+        },
+        shortest_actionable_sla: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/SlaTarget'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        top_decisions: {
+            items: {
+                $ref: '#/components/schemas/ExecutiveFindingDecisionPublic'
+            },
+            title: 'Top Decisions',
+            type: 'array'
+        }
+    },
+    title: 'RunDecisionSummaryPublic',
     type: 'object'
 } as const;
 
@@ -7728,6 +9609,97 @@ export const RunParseErrorV2Schema = {
     type: 'object'
 } as const;
 
+export const ScopeEvaluationInputSchema = {
+    additionalProperties: false,
+    description: 'Immutable-in-storage inputs sufficient for a complete offline scope replay.',
+    properties: {
+        attack_data: {
+            $ref: '#/components/schemas/AttackData'
+        },
+        context_profile: {
+            $ref: '#/components/schemas/ContextPolicyProfile'
+        },
+        cve_id: {
+            title: 'Cve Id',
+            type: 'string'
+        },
+        data_quality_confidence: {
+            default: 'high',
+            title: 'Data Quality Confidence',
+            type: 'string'
+        },
+        data_quality_flags: {
+            items: {
+                $ref: '#/components/schemas/ProviderDataQualityFlag'
+            },
+            title: 'Data Quality Flags',
+            type: 'array'
+        },
+        defensive_contexts: {
+            items: {
+                $ref: '#/components/schemas/DefensiveContext'
+            },
+            title: 'Defensive Contexts',
+            type: 'array'
+        },
+        engine_version: {
+            default: 'scope-evaluator.v1',
+            title: 'Engine Version',
+            type: 'string'
+        },
+        evaluation_date: {
+            format: 'date',
+            title: 'Evaluation Date',
+            type: 'string'
+        },
+        observations: {
+            items: {
+                $ref: '#/components/schemas/InputOccurrence'
+            },
+            title: 'Observations',
+            type: 'array'
+        },
+        priority_policy: {
+            $ref: '#/components/schemas/PriorityPolicy'
+        },
+        provider_evidence: {
+            $ref: '#/components/schemas/ProviderEvidence'
+        },
+        schema_version: {
+            const: 'scope-evaluation-input.v1',
+            default: 'scope-evaluation-input.v1',
+            title: 'Schema Version',
+            type: 'string'
+        },
+        waiver_rules: {
+            items: {
+                $ref: '#/components/schemas/WaiverRule'
+            },
+            title: 'Waiver Rules',
+            type: 'array'
+        },
+        workbench_waiver: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/WaiverRule'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    required: [
+        'cve_id',
+        'observations',
+        'provider_evidence',
+        'attack_data',
+        'evaluation_date'
+    ],
+    title: 'ScopeEvaluationInput',
+    type: 'object'
+} as const;
+
 export const SidecarUploadCapabilityPublicSchema = {
     description: 'Supported optional import sidecar metadata.',
     properties: {
@@ -7774,6 +9746,59 @@ export const SidecarUploadCapabilityPublicSchema = {
         'description'
     ],
     title: 'SidecarUploadCapabilityPublic',
+    type: 'object'
+} as const;
+
+export const SlaTargetSchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Sla Target.',
+    properties: {
+        guidance: {
+            title: 'Guidance',
+            type: 'string'
+        },
+        label: {
+            title: 'Label',
+            type: 'string'
+        },
+        priority: {
+            title: 'Priority',
+            type: 'string'
+        },
+        source: {
+            default: 'default-priority-sla',
+            title: 'Source',
+            type: 'string'
+        },
+        target_days: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target Days'
+        },
+        target_hours: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target Hours'
+        }
+    },
+    required: [
+        'priority',
+        'label',
+        'guidance'
+    ],
+    title: 'SlaTarget',
     type: 'object'
 } as const;
 
@@ -8151,6 +10176,102 @@ export const WaiverPublicSchema = {
         'status'
     ],
     title: 'WaiverPublic',
+    type: 'object'
+} as const;
+
+export const WaiverRuleSchema = {
+    additionalProperties: false,
+    description: 'Data representation and logic for Waiver Rule.',
+    properties: {
+        approval_ref: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Approval Ref'
+        },
+        asset_ids: {
+            items: {
+                type: 'string'
+            },
+            title: 'Asset Ids',
+            type: 'array'
+        },
+        cve_id: {
+            title: 'Cve Id',
+            type: 'string'
+        },
+        expires_on: {
+            title: 'Expires On',
+            type: 'string'
+        },
+        id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Id'
+        },
+        owner: {
+            title: 'Owner',
+            type: 'string'
+        },
+        reason: {
+            title: 'Reason',
+            type: 'string'
+        },
+        review_on: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Review On'
+        },
+        services: {
+            items: {
+                type: 'string'
+            },
+            title: 'Services',
+            type: 'array'
+        },
+        targets: {
+            items: {
+                type: 'string'
+            },
+            title: 'Targets',
+            type: 'array'
+        },
+        ticket_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ticket Url'
+        }
+    },
+    required: [
+        'cve_id',
+        'owner',
+        'reason',
+        'expires_on'
+    ],
+    title: 'WaiverRule',
     type: 'object'
 } as const;
 
@@ -8641,7 +10762,8 @@ export const WorkflowRunKindSchema = {
     enum: [
         'import',
         'provider_update',
-        'report_generation'
+        'report_generation',
+        'reevaluation'
     ],
     title: 'WorkflowRunKind',
     type: 'string'

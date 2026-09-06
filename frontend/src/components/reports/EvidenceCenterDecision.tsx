@@ -1,4 +1,3 @@
-import { Link } from "@/lib/router"
 import type {
   AnalysisRunPublic,
   AnalysisRunSummaryPublic,
@@ -21,16 +20,16 @@ import {
   type ArtifactCard,
   artifactCardForFormat,
 } from "@/lib/report-capability-catalog"
+import { Link } from "@/lib/router"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   artifactVerificationLabel,
   contextCoverageFacts,
   evidenceBundleReport,
-  priorityCount,
   providerSnapshotShortId,
   reportForFormat,
-  summaryOpenFindings,
 } from "./evidence-center-model"
+import { executiveDecisionFacts } from "./executive-decision-model"
 
 type DecisionProps = {
   projectSummary: ProjectDecisionSummaryPublic | null
@@ -46,73 +45,62 @@ type DecisionProps = {
 export function ExecutiveDecision({
   onCreateReport,
   onDownloadReport,
-  projectSummary,
   reports,
   selectedProject,
   selectedReportRun,
   selectedRunSummary,
   artifactCards,
 }: DecisionProps) {
-  const effectiveSummary = selectedRunSummary ?? projectSummary
   const effectiveReports = reports
-  const critical = priorityCount(effectiveSummary, "critical")
-  const high = priorityCount(effectiveSummary, "high")
-  const kevHits = effectiveSummary?.kev_hits ?? 0
-  const totalFindings = effectiveSummary?.finding_count ?? 0
-  const openFindings = summaryOpenFindings(effectiveSummary)
+  const facts = executiveDecisionFacts(selectedRunSummary)
   const executiveReport = reportForFormat(effectiveReports, "html")
   const bundle = evidenceBundleReport(effectiveReports)
   const htmlCard = artifactCardForFormat(artifactCards, "html")
   const zipCard = artifactCardForFormat(artifactCards, "zip")
-  const problem =
-    totalFindings > 0
-      ? `${critical + high} critical/high findings across ${totalFindings} total; ${kevHits} known-exploited KEV entries.`
-      : "No findings data available for this run."
-  const businessImpact =
-    critical > 0
-      ? "Active exploitation risk across production or exposed services."
-      : high > 0
-        ? "Elevated remediation risk requiring owner follow-up."
-        : "No urgent vulnerability cluster is visible in this run."
-  const recommendation =
-    critical + high > 0
-      ? "Assign remediation owners, patch KEV-backed critical findings first, and validate fixed or VEX states."
-      : "Maintain the standard remediation cadence and re-run after the next deployment cycle."
-  const priority = critical > 0 ? "Immediate" : high > 0 ? "High" : "Routine"
-  const priorityTone: VpwBadgeTone =
-    critical > 0 ? "critical" : high > 0 ? "warning" : "success"
   const runId = selectedReportRun?.id.slice(0, 8) ?? "not selected"
   const providerSnapshotId = providerSnapshotShortId(selectedReportRun, null)
 
   return (
     <VpwPanel className="flex flex-col gap-5 p-5">
       <VpwSectionHeader
-        description="Risk translated to business language for review."
+        description="Recorded decision guidance for the selected evaluation."
         eyebrow="Decision Summary"
         title="Executive Decision Summary"
       />
       <VpwGrid columns={2}>
-        <DecisionBlock label="Problem" value={problem} />
-        <DecisionBlock label="Business impact" value={businessImpact} />
-        <DecisionBlock
-          label="Recommended owner action"
-          value={recommendation}
-        />
-        <DecisionBlock
-          label="Priority / SLA"
-          tone={priorityTone}
-          value={
-            critical > 0
-              ? `${priority} / 48 hours for critical KEV-backed findings`
-              : priority
-          }
-        />
+        <DecisionBlock label="Recorded findings" value={facts.problem} />
+        <DecisionBlock label="Recommendations" value={facts.recommendations} />
+        <DecisionBlock label="Shortest actionable SLA" value={facts.sla} />
+        <DecisionBlock label="Guidance coverage" value={facts.coverage} />
       </VpwGrid>
-      <VpwStatusBanner title="Decision statement" tone="info">
-        {openFindings} open findings require remediation owner assignment.
-        Evidence artifacts for run{" "}
-        <span data-vpw-visual-mask="true">{runId}</span> are available for
-        audit review.
+      {facts.decisions.map((decision) => (
+        <div
+          key={decision.finding_id}
+          className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] p-4"
+        >
+          <Link
+            to="/findings/$findingId"
+            params={{ findingId: decision.finding_id }}
+            search={selectedProjectRouteSearch(selectedProject?.id ?? "")}
+            className="text-sm font-semibold underline underline-offset-4"
+          >
+            {decision.cve_id} · {decision.component ?? "Component not recorded"}{" "}
+            · {decision.target ?? "Target not recorded"}
+          </Link>
+          <p className="mt-2 text-sm">{decision.guidance.decision_statement}</p>
+          <p className="mt-2 text-sm text-[var(--vpw-text-secondary)]">
+            {decision.guidance.business_impact.text}
+          </p>
+          <p className="mt-2 text-xs text-[var(--vpw-text-muted)]">
+            {decision.guidance.recommendation_label} ·{" "}
+            {decision.guidance.sla.label}
+          </p>
+        </div>
+      ))}
+      <VpwStatusBanner title="Evidence scope" tone="info">
+        These statements describe the selected run at evaluation time. Current
+        finding detail may contain later decisions. KEV catalog membership alone
+        does not confirm an incident in this project.
       </VpwStatusBanner>
       <VpwKeyValueList
         items={[
@@ -120,11 +108,11 @@ export function ExecutiveDecision({
             label: "Evidence basis",
             value: (
               <>
-                Run <span data-vpw-visual-mask="true">{runId}</span> ·
-                Provider snapshot{" "}
+                Run <span data-vpw-visual-mask="true">{runId}</span> · Provider
+                snapshot{" "}
                 <span data-vpw-visual-mask="true">{providerSnapshotId}</span> ·
-                CVSS/EPSS/KEV · Asset context when supplied ·
-                VEX/accepted-risk where available
+                CVSS/EPSS/KEV · Asset context when supplied · VEX/accepted-risk
+                where available
               </>
             ),
           },
@@ -227,9 +215,7 @@ export function QualityFacts({
   const htmlReport = reportForFormat(effectiveReports, "html")
   const markdownReport = reportForFormat(effectiveReports, "markdown")
   const providerSnapshotDescription =
-    providerStatus?.snapshot.id ??
-    selectedReportRun?.provider_snapshot_id ??
-    "No snapshot ID recorded"
+    selectedReportRun?.provider_snapshot_id ?? "No snapshot ID recorded"
   const verificationLabel = artifactVerificationLabel({
     report: bundle,
     verificationLoading,
@@ -245,7 +231,11 @@ export function QualityFacts({
           density="compact"
           items={[
             {
-              label: "Freshness",
+              label: "Selected run snapshot",
+              value: providerSnapshotDescription,
+            },
+            {
+              label: "Current provider inventory",
               tone: providerStatus?.status === "ok" ? "success" : "warning",
               value: providerStatus?.status ?? "Unavailable",
               description: (
@@ -256,7 +246,8 @@ export function QualityFacts({
                       : "true"
                   }
                 >
-                  {providerSnapshotDescription}
+                  {providerStatus?.snapshot.id ??
+                    "No current snapshot recorded"}
                 </span>
               ),
             },

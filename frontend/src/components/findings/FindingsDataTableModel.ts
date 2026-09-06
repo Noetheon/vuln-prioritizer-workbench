@@ -1,14 +1,18 @@
-import type { FindingPriority, FindingPublic } from "@/api-client"
+import type { FindingPublic } from "@/api-client"
 import {
   componentLabel,
-  ownerLabel,
-  serviceLabel,
   type FindingsDirection,
+  ownerLabel,
   type QueueSort,
+  serviceLabel,
 } from "./remediation-queue-model"
 
 export { formatDateTime, formatShortDate } from "../../lib/date-format.ts"
-export { findingWhyNow, findingWhyNowCompact } from "../../lib/finding-urgency-summary.ts"
+export { findingSlaLabel } from "../../lib/finding-recorded-guidance"
+export {
+  findingWhyNow,
+  findingWhyNowCompact,
+} from "../../lib/finding-urgency-summary.ts"
 export { componentLabel, ownerLabel, serviceLabel }
 
 export function assetLabel(finding: FindingPublic) {
@@ -25,21 +29,6 @@ export function findingActionLabel(finding: FindingPublic) {
     .filter((value) => value && value !== "Unknown component")
     .join(" on ")
   return scope ? `${finding.cve_id} for ${scope}` : finding.cve_id
-}
-
-export function findingSlaLabel(priority: FindingPriority | undefined) {
-  switch (priority) {
-    case "critical":
-      return "24h SLA"
-    case "high":
-      return "7d SLA"
-    case "medium":
-      return "30d SLA"
-    case "low":
-      return "90d SLA"
-    default:
-      return "Triage SLA"
-  }
 }
 
 export function sortAriaState(

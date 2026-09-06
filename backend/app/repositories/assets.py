@@ -11,6 +11,7 @@ from typing import Any
 from sqlmodel import Session, col, func, select
 
 from app.decision_core.contracts import FindingDecisionEvidenceV2
+from app.decision_core.evaluation import ScopeEvaluationInput
 from app.domain.asset_context_projection import (
     _asset_criticality,
     _asset_environment,
@@ -27,6 +28,11 @@ from app.domain.asset_identity import (
     validate_operator_asset_key,
 )
 from app.domain.engine.inputs.loader import AssetContextCatalog
+from app.domain.engine.inputs.parsers.common import (
+    normalize_asset_criticality,
+    normalize_asset_environment,
+    normalize_asset_exposure,
+)
 from app.models import (
     Asset,
     AssetCreate,
@@ -577,13 +583,26 @@ class AssetRepository:
         findings = list(self.session.exec(statement).all())
         projection_repository = FindingCurrentProjectionRepository(self.session)
         cleared_flags = 0
+        unreplayable_findings = 0
         scores: list[int] = []
         for finding in findings:
             finding.updated_at = timestamp
             self.session.add(finding)
             current_payload = projection_repository.current_payload(finding.id)
             operational_score = 0
-            if current_payload is not None:
+            if current_payload is None or not current_payload.get("evaluation_input"):
+                # Historical outputs remain readable but do not prove complete
+                # inputs for a new evaluation. Never clear their stale marker.
+                unreplayable_findings += 1
+                if current_payload is not None:
+                    current_payload = _mark_decision_evidence_rescore_needed(
+                        current_payload,
+                        asset_id=asset.id,
+                        changed_fields=["evaluation_input_unavailable"],
+                        changed_at=timestamp,
+                    )
+                    projection_repository.update_current_payload(finding.id, current_payload)
+            else:
                 updated_payload, cleared = _clear_decision_evidence_rescore_needed(
                     current_payload,
                     asset=asset,
@@ -599,10 +618,11 @@ class AssetRepository:
         return {
             "asset_id": asset.id,
             "asset_key": asset.asset_key,
-            "recalculated_findings": len(findings),
+            "recalculated_findings": len(findings) - unreplayable_findings,
+            "unreplayable_findings": unreplayable_findings,
             "cleared_rescore_flags": cleared_flags,
             "operational_scores": scores,
-            "rescore_needed": False,
+            "rescore_needed": unreplayable_findings > 0,
         }
 
     def finding_rescore_needed(self, finding: Finding) -> bool:
@@ -686,6 +706,29 @@ def _clear_decision_evidence_rescore_needed(
         for item in candidate.get("occurrences", [])
         if isinstance(item, dict)
     ]
+    if candidate.get("evaluation_input"):
+        inputs = ScopeEvaluationInput.model_validate(candidate["evaluation_input"])
+        observations = [
+            item.model_copy(
+                update={
+                    "asset_owner": asset.owner,
+                    "asset_business_service": asset.business_service,
+                    "asset_environment": normalize_asset_environment(
+                        _enum_value(asset.environment), warnings=[], row_number=0
+                    ),
+                    "asset_exposure": normalize_asset_exposure(
+                        _enum_value(asset.exposure), warnings=[], row_number=0
+                    ),
+                    "asset_criticality": normalize_asset_criticality(
+                        _enum_value(asset.criticality), warnings=[], row_number=0
+                    ),
+                }
+            )
+            for item in inputs.observations
+        ]
+        candidate["evaluation_input"] = inputs.model_copy(
+            update={"observations": observations}
+        ).model_dump(mode="json")
     candidate["risk_score"] = float(candidate.get("risk_score") or 0)
     return FindingDecisionEvidenceV2.model_validate(candidate).to_jsonable(), cleared
 

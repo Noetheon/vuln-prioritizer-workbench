@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.decision_core.evaluation import ScopeEvaluationInput
+
 ANALYSIS_EVIDENCE_SCHEMA_VERSION: Literal["analysis-evidence.v2"] = "analysis-evidence.v2"
 FINDING_DECISION_EVIDENCE_SCHEMA_VERSION: Literal["finding-decision-evidence.v2"] = (
     "finding-decision-evidence.v2"
@@ -340,6 +342,19 @@ class OccurrenceEvidenceV2(EvidenceContractModel):
     dedup: OccurrenceDedupEvidenceV2 = Field(default_factory=OccurrenceDedupEvidenceV2)
 
 
+class EvaluationMetadataV1(EvidenceContractModel):
+    """Evaluation provenance distinct from scanner observation provenance."""
+
+    schema_version: Literal["evaluation-metadata.v1"] = "evaluation-metadata.v1"
+    cause: str
+    evaluated_at: str
+    observed_at: str | None = None
+    engine_version: str
+    input_sha256: str | None = None
+    base_project_revision: int | None = None
+    replay_status: Literal["available", "legacy_unavailable"] = "available"
+
+
 class FindingDecisionEvidenceV2(EvidenceContractModel):
     """Current decision and evidence graph for one finding in one run."""
 
@@ -372,6 +387,8 @@ class FindingDecisionEvidenceV2(EvidenceContractModel):
     attack: AttackEvidenceV2 = Field(default_factory=AttackEvidenceV2)
     remediation: RemediationEvidenceV2 = Field(default_factory=RemediationEvidenceV2)
     occurrences: list[OccurrenceEvidenceV2] = Field(default_factory=list)
+    evaluation_input: ScopeEvaluationInput | None = None
+    evaluation: EvaluationMetadataV1 | None = None
 
 
 class RunParseErrorV2(EvidenceContractModel):
@@ -432,3 +449,4 @@ class AnalysisEvidenceV2(EvidenceContractModel):
     dedup_summary: DedupSummaryV2 | None = None
     attack: AttackEvidenceV2 = Field(default_factory=AttackEvidenceV2)
     diagnostics: RunDiagnosticsV2 | None = None
+    evaluation: EvaluationMetadataV1 | None = None

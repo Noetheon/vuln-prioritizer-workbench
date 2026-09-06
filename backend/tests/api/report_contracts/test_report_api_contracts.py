@@ -263,7 +263,7 @@ def test_report_generation_prunes_oldest_reports_for_run(
             "format": "markdown",
             "kind": "technical-markdown",
             "filename": "technical-report.md",
-            "artifact_deleted": True,
+            "artifact_deletion": "scheduled_after_commit",
             "max_reports_per_run": 2,
         }
         assert not (report_dir / project["id"] / str(run_id) / created[0]["id"]).exists()

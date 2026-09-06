@@ -728,7 +728,7 @@ def test_asset_post_upsert_marks_existing_asset_findings_for_rescore(
     assert payload["rescore_needed"] is True
 
 
-def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
+def test_vpw063_asset_filters_and_recalculation_keep_legacy_evidence_stale(
     workbench_api_env: WorkbenchApiEnv,
 ) -> None:
     headers = local_api_headers(workbench_api_env.client)
@@ -769,10 +769,11 @@ def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
     recalculated = recalculate_response.json()
     assert recalculated["asset_id"] == str(seeded["critical_asset"])
     assert recalculated["asset_key"] == "payments-api"
-    assert recalculated["recalculated_findings"] == 1
-    assert recalculated["cleared_rescore_flags"] == 1
-    assert recalculated["operational_scores"] == [96]
-    assert recalculated["rescore_needed"] is False
+    assert recalculated["recalculated_findings"] == 0
+    assert recalculated["unreplayable_findings"] == 1
+    assert recalculated["cleared_rescore_flags"] == 0
+    assert recalculated["operational_scores"] == [80]
+    assert recalculated["rescore_needed"] is True
 
     asset_response = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/assets/",
@@ -780,7 +781,7 @@ def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
         params={"owner": "platform"},
     )
     assert asset_response.status_code == 200
-    assert asset_response.json()["data"][0]["rescore_needed"] is False
+    assert asset_response.json()["data"][0]["rescore_needed"] is True
 
     explain_response = workbench_api_env.client.get(
         f"/api/v1/findings/{seeded['critical']}/explain",
@@ -788,10 +789,8 @@ def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
     )
     assert explain_response.status_code == 200, explain_response.text
     score_reasons = explain_response.json()["explanation"]["operational_score_reasons"]
-    assert "internet-facing asset context: +8" in score_reasons
-    assert "production asset context: +4" in score_reasons
-    assert "high asset criticality: +4" in score_reasons
-    assert not any(
+    assert not any("asset criticality:" in reason for reason in score_reasons)
+    assert any(
         flag["code"] == "asset_context_rescore_needed"
         for flag in explain_response.json()["data_quality_flags"]
     )
@@ -1397,7 +1396,7 @@ def test_vpw202_project_dashboard_aggregate_replaces_dashboard_query_fanout(
 ) -> None:
     headers = local_api_headers(workbench_api_env.client)
     project = create_project_via_api(workbench_api_env.client, headers)
-    _seed_vpw042_findings(workbench_api_env, uuid.UUID(project["id"]))
+    seeded = _seed_vpw042_findings(workbench_api_env, uuid.UUID(project["id"]))
 
     response = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/dashboard",
@@ -1450,8 +1449,13 @@ def test_vpw202_project_dashboard_aggregate_replaces_dashboard_query_fanout(
         "high_count": 0,
         "kev_count": 1,
     }
+    component_identity = (
+        'component-identity-v1:["purl","pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"]'
+    )
     assert payload["risk_reduction"]["top_opportunities"][0] == {
-        "id": "CVE-2021-44228|log4j-core-2-14-1|upgrade-log4j-core-to-a-fixed-version",
+        "id": f"CVE-2021-44228|{component_identity}|upgrade-log4j-core-to-a-fixed-version",
+        "component_identity": component_identity,
+        "finding_ids": [str(seeded["critical"])],
         "label": "CVE-2021-44228 on log4j-core 2.14.1",
         "cve_id": DEMO_CVE_LOG4SHELL,
         "component": "log4j-core 2.14.1",
@@ -1468,10 +1472,34 @@ def test_vpw202_project_dashboard_aggregate_replaces_dashboard_query_fanout(
         "search_query": DEMO_CVE_LOG4SHELL,
     }
     assert payload["risk_reduction"]["residual_steps"] == [
-        {"label": "Current", "risk_score": 99.0, "reduction": 0.0},
-        {"label": "After top 1", "risk_score": 0.0, "reduction": 99.0},
-        {"label": "After top 3", "risk_score": 0.0, "reduction": 99.0},
-        {"label": "Remaining", "risk_score": 0.0, "reduction": 99.0},
+        {
+            "label": "Current",
+            "risk_score": 99.0,
+            "reduction": 0.0,
+            "actionable_finding_count": 1,
+            "risk_index": 99.0,
+        },
+        {
+            "label": "After top 1",
+            "risk_score": 0.0,
+            "reduction": 99.0,
+            "actionable_finding_count": 0,
+            "risk_index": 0.0,
+        },
+        {
+            "label": "After top 3",
+            "risk_score": 0.0,
+            "reduction": 99.0,
+            "actionable_finding_count": 0,
+            "risk_index": 0.0,
+        },
+        {
+            "label": "Remaining",
+            "risk_score": 0.0,
+            "reduction": 99.0,
+            "actionable_finding_count": 0,
+            "risk_index": 0.0,
+        },
     ]
 
 

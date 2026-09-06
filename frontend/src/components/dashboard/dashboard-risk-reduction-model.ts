@@ -11,6 +11,7 @@ export type RiskPostureProjectionStep = {
   label: string
   mode: "actual" | "simulated"
   reductionScore: number
+  remainingFindingCount: number
   riskIndex: number
   riskScore: number
 }
@@ -38,7 +39,7 @@ export type RiskReductionSummary = {
 }
 
 const DEFAULT_METHODOLOGY =
-  "Simulates score reduction by removing open actionable findings when their remediation opportunity is completed."
+  "The risk index is the mean score of remaining actionable findings. Completing a group removes its scores and finding count. The average may rise even when total score burden falls. Historical runs can contain different scopes and evidence; a change alone does not prove remediation."
 
 // The risk posture panel renders exactly this many reducers; the same list
 // drives the checked-plan simulation so nothing hidden can stay selected.
@@ -54,7 +55,9 @@ export function buildRiskReductionSummary(
   const residualSteps = riskReduction?.residual_steps ?? []
   const currentRisk = riskReduction?.current_actionable_risk ?? 0
   const actionableFindingCount = riskReduction?.actionable_finding_count ?? 0
-  const currentRiskIndex = riskScoreToIndex(currentRisk, actionableFindingCount)
+  const currentRiskIndex =
+    riskReduction?.current_risk_index ??
+    riskScoreToIndex(currentRisk, actionableFindingCount)
   return {
     actionableFindingCount,
     currentRisk,
@@ -95,6 +98,7 @@ export function buildRiskPostureProjection(
       label: "Current",
       mode: "actual",
       reductionScore: 0,
+      removedFindingCount: 0,
       summary,
     }),
     projectionStep({
@@ -102,6 +106,7 @@ export function buildRiskPostureProjection(
       label: "After checked top 1",
       mode: "simulated",
       reductionScore: topOneReduction,
+      removedFindingCount: findingCountForFirst(selected, 1),
       summary,
     }),
     projectionStep({
@@ -109,6 +114,7 @@ export function buildRiskPostureProjection(
       label: "After checked top 3",
       mode: "simulated",
       reductionScore: topThreeReduction,
+      removedFindingCount: findingCountForFirst(selected, 3),
       summary,
     }),
     projectionStep({
@@ -116,6 +122,7 @@ export function buildRiskPostureProjection(
       label: "Checked plan",
       mode: "simulated",
       reductionScore: checkedPlanReduction,
+      removedFindingCount: findingCountForFirst(selected, selected.length),
       summary,
     }),
   ]
@@ -130,13 +137,14 @@ export function selectedRiskPostureReducers(
 export function buildRiskPostureHistorySteps(
   history: readonly RiskIndexHistoryPointPublic[],
 ): RiskPostureHistoryStep[] {
-  // The newest persisted run reflects the same evidence as the live
-  // "Current" bar, so it is dropped to avoid showing the value twice.
-  const past = history.slice(0, -1)
-  return past.map((point) => ({
+  // Current governance and asset changes can differ from the newest run.
+  // Keep every immutable measurement instead of guessing equivalence.
+  return history.map((point) => ({
     key: `history-${point.run_id}`,
     label: riskPostureHistoryLabel(point.finished_at),
-    riskIndex: roundRiskIndex(Math.min(100, Math.max(0, point.risk_index ?? 0))),
+    riskIndex: roundRiskIndex(
+      Math.min(100, Math.max(0, point.risk_index ?? 0)),
+    ),
   }))
 }
 
@@ -228,23 +236,39 @@ function projectionStep({
   label,
   mode,
   reductionScore,
+  removedFindingCount,
   summary,
 }: {
   key: string
   label: string
   mode: RiskPostureProjectionStep["mode"]
   reductionScore: number
+  removedFindingCount: number
   summary: RiskReductionSummary
 }): RiskPostureProjectionStep {
   const riskScore = Math.max(summary.currentRisk - reductionScore, 0)
+  const remainingFindingCount = Math.max(
+    summary.actionableFindingCount - removedFindingCount,
+    0,
+  )
   return {
     key,
     label,
     mode,
     reductionScore,
-    riskIndex: riskScoreToIndex(riskScore, summary.actionableFindingCount),
+    remainingFindingCount,
+    riskIndex: riskScoreToIndex(riskScore, remainingFindingCount),
     riskScore,
   }
+}
+
+function findingCountForFirst(
+  opportunities: readonly RiskReductionOpportunityPublic[],
+  count: number,
+) {
+  return opportunities
+    .slice(0, count)
+    .reduce((total, opportunity) => total + (opportunity.finding_count ?? 0), 0)
 }
 
 function reductionForFirst(
@@ -253,7 +277,10 @@ function reductionForFirst(
 ) {
   return opportunities
     .slice(0, count)
-    .reduce((total, opportunity) => total + (opportunity.expected_reduction ?? 0), 0)
+    .reduce(
+      (total, opportunity) => total + (opportunity.expected_reduction ?? 0),
+      0,
+    )
 }
 
 function roundRiskIndex(value: number) {

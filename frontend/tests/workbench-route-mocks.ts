@@ -501,6 +501,8 @@ export async function routeWorkbenchShell(
       body: JSON.stringify({ data: projects, count: projects.length }),
     }),
   )
+  await page.route("**/api/v1/projects/*/evaluations?*", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ data: [], count: 0 }) }))
+  await page.route("**/api/v1/findings/*/decision-revisions?*", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ data: [], count: 0 }) }))
   await page.route("**/api/v1/projects/?*", (route) =>
     route.fulfill({
       contentType: "application/json",
@@ -916,6 +918,7 @@ function mockRiskReduction(findings: MockFinding[]): ProjectRiskReductionPublic 
     max_epss: finding.epss,
     owners: [finding.owner].filter(Boolean),
     recommended_action: finding.recommended_action,
+    finding_ids: [finding.id],
     residual_after: Math.max(currentRisk - finding.risk_score, 0),
     search_query: finding.cve_id,
   }))

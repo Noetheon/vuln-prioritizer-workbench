@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Iterable
+from datetime import UTC, timedelta
 
 from sqlmodel import Session, col, func, select
 
@@ -144,6 +145,11 @@ class EvidenceRepository:
             for record in self.session.exec(statement).all():
                 existing_records[record.finding_id] = record
 
+        projection_repository = FindingCurrentProjectionRepository(self.session)
+        projections_by_finding_id = {
+            projection.finding_id: projection
+            for projection in projection_repository.records_for_findings(finding_ids)
+        }
         for item, finding_id in zip(items, finding_ids, strict=True):
             if item.project_id != str(project_id):
                 raise DecisionLedgerInvariantError(
@@ -183,6 +189,19 @@ class EvidenceRepository:
                 priority=item.priority,
                 status=item.status,
             )
+            current = projections_by_finding_id.get(finding_id)
+            if current is not None:
+                # Append order must survive equal/frozen clocks and wall-clock
+                # rollback. Older evidence timestamps themselves remain unchanged.
+                previous_at = current.source_created_at
+                previous_at = (
+                    previous_at.replace(tzinfo=UTC)
+                    if previous_at.tzinfo is None
+                    else previous_at.astimezone(UTC)
+                )
+                if record.created_at <= previous_at:
+                    record.created_at = previous_at + timedelta(microseconds=1)
+                    record.updated_at = record.created_at
             record.schema_version = FINDING_DECISION_EVIDENCE_SCHEMA_VERSION
             record.payload_json = payload_json
             self.session.add(record)
@@ -190,11 +209,6 @@ class EvidenceRepository:
             records.append(record)
             projection_items.append((record, item))
         self.session.flush()
-        projection_repository = FindingCurrentProjectionRepository(self.session)
-        projections_by_finding_id = {
-            projection.finding_id: projection
-            for projection in projection_repository.records_for_findings(finding_ids)
-        }
         for record, item in projection_items:
             finding_id = uuid.UUID(item.finding_id)
             projection = projection_repository.upsert_from_evidence_record(

@@ -23,9 +23,10 @@ from app.models import (
     AssetsPublic,
     AssetUpdate,
 )
-from app.repositories import AssetRepository, WaiverRepository
+from app.repositories import AssetRepository
 from app.repositories.assets import AssetFindingSummary
 from app.services.audit import record_audit_event
+from app.services.decision_projection_sync import DecisionProjectionService
 from app.services.decision_scope_lock import lock_project_decision_scope
 
 router = APIRouter(tags=["assets"])
@@ -109,7 +110,7 @@ def create_project_asset(
             changed_fields=changed_fields,
         )
     if WAIVER_MATCH_CONTEXT_FIELDS.intersection(changed_fields):
-        WaiverRepository(session).sync_project_waivers(project_id)
+        DecisionProjectionService(session).sync_project_waivers(project_id)
     record_audit_event(
         session,
         action="asset.create",
@@ -164,7 +165,7 @@ async def import_project_assets(
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    WaiverRepository(session).sync_project_waivers(project_id)
+    DecisionProjectionService(session).sync_project_waivers(project_id)
     record_audit_event(
         session,
         action="asset.import",
@@ -218,7 +219,7 @@ def update_asset(
             changed_fields=changed_fields,
         )
     if WAIVER_MATCH_CONTEXT_FIELDS.intersection(changed_fields):
-        WaiverRepository(session).sync_project_waivers(updated.project_id)
+        DecisionProjectionService(session).sync_project_waivers(updated.project_id)
     record_audit_event(
         session,
         action="asset.update",
@@ -253,7 +254,9 @@ def recalculate_asset(
         not_found_detail="Asset not found",
     )
     result = repository.recalculate_asset_findings(asset)
-    WaiverRepository(session).sync_project_waivers(asset.project_id, force=True)
+    DecisionProjectionService(session).sync_project_waivers(
+        asset.project_id, force=True, revision_cause="asset_context"
+    )
     result["operational_scores"] = repository.linked_finding_operational_scores(asset.id)
     record_audit_event(
         session,

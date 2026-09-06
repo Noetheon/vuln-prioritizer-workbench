@@ -11,6 +11,7 @@ from app.api.deps import get_local_actor, get_websocket_local_actor
 from app.api.routes import (
     assets,
     audit,
+    evaluations,
     findings,
     github_issues,
     imports,
@@ -35,6 +36,7 @@ PUBLIC_API_ROUTE_SUFFIXES = frozenset(
 
 api_router = APIRouter()
 api_router.include_router(audit.router)
+api_router.include_router(evaluations.router)
 api_router.include_router(projects.router)
 api_router.include_router(assets.router)
 api_router.include_router(providers.router)

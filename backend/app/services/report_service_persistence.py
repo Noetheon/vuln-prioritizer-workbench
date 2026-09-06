@@ -13,6 +13,7 @@ from sqlmodel import Session
 
 from app.core.config import Settings
 from app.models import AnalysisRun, Project, Report
+from app.services.report_artifact_transactions import track_report_artifact_creation
 from app.services.report_models import ReportGenerationError
 from app.services.report_service_records import create_report_record
 from app.services.report_service_retention import prune_run_reports
@@ -33,6 +34,7 @@ def persist_text_report(
     filename: str,
     content_type: str,
     extra_metadata: dict[str, Any] | None = None,
+    before_publication: Callable[[], None] | None = None,
 ) -> Report:
     """Persist text report function."""
     content_bytes = content.encode("utf-8")
@@ -51,6 +53,7 @@ def persist_text_report(
         filename=filename,
         content_type=content_type,
         extra_metadata=extra_metadata,
+        before_publication=before_publication,
     )
 
 
@@ -69,6 +72,7 @@ def persist_binary_report(
     filename: str,
     content_type: str,
     extra_metadata: dict[str, Any] | None = None,
+    before_publication: Callable[[], None] | None = None,
 ) -> Report:
     """Persist binary report function."""
     return _persist_report_artifact(
@@ -86,6 +90,7 @@ def persist_binary_report(
         filename=filename,
         content_type=content_type,
         extra_metadata=extra_metadata,
+        before_publication=before_publication,
     )
 
 
@@ -105,6 +110,7 @@ def _persist_report_artifact(
     filename: str,
     content_type: str,
     extra_metadata: dict[str, Any] | None,
+    before_publication: Callable[[], None] | None,
 ) -> Report:
     """Persist report artifact function."""
     _ensure_report_size_allowed(settings, content_size=len(content_bytes), filename=filename)
@@ -119,6 +125,9 @@ def _persist_report_artifact(
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
         write_artifact(path)
+        if before_publication is not None:
+            before_publication()
+        track_report_artifact_creation(session, settings, path)
         report = create_report_record(
             session,
             report_id=report_id,

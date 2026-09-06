@@ -9,6 +9,7 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from app.decision_core.contracts import AnalysisEvidenceV2, RunDiagnosticsV2, RunParseErrorV2
 from app.models.base import get_datetime_utc
+from app.models.decision_summary import RunDecisionSummaryPublic
 from app.models.enums import AnalysisRunStatus
 from app.models.workflows import WorkflowRunPublic
 
@@ -198,6 +199,7 @@ class AnalysisRunSummaryPublic(SQLModel):
     analysis_decision_scope: str | None = None
     persistence_scope: str | None = None
     workflow: WorkflowRunPublic | None = None
+    decision_summary: RunDecisionSummaryPublic | None = None
 
 
 class FindingOccurrenceBase(SQLModel):

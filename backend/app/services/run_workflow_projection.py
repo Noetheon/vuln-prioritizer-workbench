@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from sqlalchemy.orm import object_session
 from sqlmodel import Session
 
 from app.decision_core.readmodels import decision_run_view
@@ -11,6 +12,7 @@ from app.models import (
     AnalysisRunSummaryPublic,
     WorkflowRunPublic,
 )
+from app.services.decision_guidance_summary import run_decision_summary
 from app.services.run_workflow_metadata import redact_public_payload
 
 
@@ -52,6 +54,7 @@ def analysis_run_summary_public(
     """Return the public run-summary response from Evidence v2."""
     view = decision_run_view(run, session=session)
     counts = view.counts
+    active_session = session or object_session(run)
     return AnalysisRunSummaryPublic(
         id=run.id,
         project_id=run.project_id,
@@ -79,4 +82,9 @@ def analysis_run_summary_public(
         analysis_decision_scope=view.analysis_decision_scope,
         persistence_scope=view.persistence_scope,
         workflow=workflow,
+        decision_summary=(
+            run_decision_summary(active_session, run.id)
+            if isinstance(active_session, Session) and view.evidence is not None
+            else None
+        ),
     )

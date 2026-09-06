@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react"
+import { ReevaluateControl } from "@/components/evaluations/ReevaluateControl"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Callout } from "@/components/vpw"
 import { formatProviderFreshness } from "@/lib/provider-format"
-import { DashboardSetupEmptyState } from "./DashboardEmptyState"
 import { DashboardContextBar } from "./DashboardContextBar"
+import { DashboardSetupEmptyState } from "./DashboardEmptyState"
 import { DashboardMetricStrip } from "./DashboardMetricStrip"
 import { DashboardProviderWarning } from "./DashboardProviderWarning"
 import { DashboardRemediationSection } from "./DashboardRemediationSection"
@@ -136,6 +137,13 @@ export function RiskOperationsDashboard({
       ) : null}
 
       {staleProvider ? <DashboardProviderWarning /> : null}
+      {selectedProjectId ? (
+        <ReevaluateControl
+          key={selectedProjectId}
+          projectId={selectedProjectId}
+          latestProviderSnapshotId={providerStatus?.snapshot.id}
+        />
+      ) : null}
 
       {showEmptyState ? (
         <DashboardSetupEmptyState

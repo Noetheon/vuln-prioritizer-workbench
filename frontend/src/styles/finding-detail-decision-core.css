@@ -1,11 +1,15 @@
 .finding-detail-backbar {
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   justify-content: flex-start;
   margin-bottom: -4px;
 }
 
 .finding-decision-workflow {
   display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
   max-width: none;
   gap: 18px;

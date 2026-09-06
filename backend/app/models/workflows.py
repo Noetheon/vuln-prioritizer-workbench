@@ -29,6 +29,7 @@ class WorkflowRunKind(StrEnum):
     IMPORT = "import"
     PROVIDER_UPDATE = "provider_update"
     REPORT_GENERATION = "report_generation"
+    REEVALUATION = "reevaluation"
 
 
 class WorkflowRunStatus(StrEnum):

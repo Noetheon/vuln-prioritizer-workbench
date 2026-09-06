@@ -133,8 +133,9 @@ contract is rehydrated from immutable source evidence plus that overlay rather
 than duplicating the full payload. History and current projection are written
 in the same transaction.
 Run reads use the immutable tables; current reads use the indexed projection.
-Status and waiver actions change current state and append their existing audit
-history without rewriting run evidence. Hash, identity, payload, materialized
+Manual status actions update the lifecycle overlay. Replayable asset and waiver
+recalculations append new decision revisions and audit history without rewriting
+older run evidence. Hash, identity, payload, materialized
 column, and coverage checks define the Shadow-Read parity contract. These
 tables hold the active product truth used by run
 projection, finding detail, dashboard rollups, waiver/governance views, and
@@ -147,6 +148,16 @@ stable public DTOs. Successful v2 imports must not rebuild decision facts from
 
 The internal producer and projection rules are documented in
 [Decision/Evidence Kernel](architecture/decision-evidence-kernel.md).
+
+New per-finding payloads optionally include `evaluation_input`
+(`scope-evaluation-input.v1`) and `evaluation` (`evaluation-metadata.v1`). These
+record the complete offline evaluation input, engine version, input SHA-256,
+cause and separate observation/evaluation timestamps. Historical v2 JSON remains
+unchanged. Native evaluation uses `POST /api/v1/projects/{project_id}/evaluations`;
+the corresponding GET lists runs and
+`GET /api/v1/findings/{finding_id}/decision-revisions` provides paginated history
+and changed fields. A legacy finding without replay inputs cannot be natively
+reevaluated. See [Evaluation Revisions](architecture/evaluation-revisions.md).
 
 `AnalysisEvidenceV2` intentionally does not embed the full finding list.
 Per-finding decision graphs are validated and stored as

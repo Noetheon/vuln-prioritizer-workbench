@@ -151,9 +151,9 @@ omit = [
 [tool.mutmut]
 paths_to_mutate = [
   "app/decision_core/builders.py",
-  "app/services/report_bundle_archive_verification.py",
   "app/services/report_sarif_validation.py",
-  "app/domain/engine/services/analysis_pipeline.py",
+  "app/domain/engine/services/analysis_quality.py",
+  "app/domain/engine/services/analysis_snapshot.py",
 ]
 also_copy = [
   "app",

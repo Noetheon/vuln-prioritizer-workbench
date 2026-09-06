@@ -12,6 +12,7 @@ from app.core.config import Settings
 from app.decision_core.readmodels import decision_run_view, run_finding_decision_views
 from app.models import AnalysisRun, Project, Report, WorkflowRun, WorkflowRunKind, WorkflowRunStatus
 from app.repositories import WorkflowRepository
+from app.repositories.workflows import WorkflowLeaseLostError
 from app.services.report_contracts import (
     EVIDENCE_BUNDLE_MANIFEST_SCHEMA_VERSION,
     REPORT_CONTENT_TYPE_CSV,
@@ -61,7 +62,7 @@ from app.services.report_service_persistence import (
     persist_binary_report,
     persist_text_report,
 )
-from app.services.workflow_execution import WorkflowExecutionContext
+from app.services.workflow_execution import WorkflowCancellationRequested, WorkflowExecutionContext
 
 __all__ = [
     "EXECUTIVE_REPORT_CSS",
@@ -102,6 +103,7 @@ class ReportService:
         """Initialize a new instance of ReportService."""
         self.session = session
         self.settings = settings
+        self._before_publication: Callable[[], None] | None = None
 
     def create_markdown_report(self, *, run: AnalysisRun, project: Project) -> Report:
         """Generate a Markdown technical report and persist its metadata."""
@@ -124,6 +126,7 @@ class ReportService:
         return persist_text_report(
             self.session,
             self.settings,
+            before_publication=self._before_publication,
             run=run,
             project=project,
             generated_at=generated_at,
@@ -157,6 +160,7 @@ class ReportService:
         return persist_text_report(
             self.session,
             self.settings,
+            before_publication=self._before_publication,
             run=run,
             project=project,
             generated_at=generated_at,
@@ -190,6 +194,7 @@ class ReportService:
         return persist_text_report(
             self.session,
             self.settings,
+            before_publication=self._before_publication,
             run=run,
             project=project,
             generated_at=generated_at,
@@ -223,6 +228,7 @@ class ReportService:
         return persist_text_report(
             self.session,
             self.settings,
+            before_publication=self._before_publication,
             run=run,
             project=project,
             generated_at=generated_at,
@@ -289,6 +295,7 @@ class ReportService:
         return persist_text_report(
             self.session,
             self.settings,
+            before_publication=self._before_publication,
             run=run,
             project=project,
             generated_at=generated_at,
@@ -330,6 +337,7 @@ class ReportService:
         return persist_text_report(
             self.session,
             self.settings,
+            before_publication=self._before_publication,
             run=run,
             project=project,
             generated_at=generated_at,
@@ -460,6 +468,7 @@ class ReportService:
         return persist_binary_report(
             self.session,
             self.settings,
+            before_publication=self._before_publication,
             run=run,
             project=project,
             generated_at=generated_at,
@@ -522,8 +531,12 @@ class ReportService:
             progress_current=1,
             progress_total=3,
         )
+        context.begin_compute()
+        self._before_publication = context.begin_publication
         try:
             report = create_report()
+        except (WorkflowCancellationRequested, WorkflowLeaseLostError):
+            raise
         except Exception as exc:
             context.fail(
                 stage="failed",
@@ -534,6 +547,8 @@ class ReportService:
                 terminal_code="report_generation_failed",
             )
             raise
+        finally:
+            self._before_publication = None
         context.stage(
             "persist",
             f"Persisted {report_format} report metadata.",

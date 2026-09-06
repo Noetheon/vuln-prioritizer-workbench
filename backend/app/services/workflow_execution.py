@@ -22,6 +22,9 @@ class WorkflowExecutionContext:
     workflow_id: uuid.UUID
     worker_id: str | None = None
     lease_seconds: int = 300
+    attempt_count: int | None = None
+    _compute: bool = False
+    _publishing: bool = False
 
     @classmethod
     def for_workflow(
@@ -38,11 +41,43 @@ class WorkflowExecutionContext:
             workflow_id=workflow_id,
             worker_id=worker_id,
             lease_seconds=max(1, lease_seconds),
+            attempt_count=repository.require_workflow(workflow_id).attempt_count
+            if worker_id is not None
+            else None,
         )
 
     def workflow(self) -> WorkflowRun:
         """Return the current workflow row."""
         return self.repository.require_workflow(self.workflow_id)
+
+    def begin_compute(self) -> None:
+        """Publish setup and use short committed checkpoints during computation."""
+        self._compute = True
+        self._publishing = False
+        self.checkpoint()
+
+    def checkpoint(self) -> None:
+        """Observe cancellation and end a computation transaction before slow work."""
+        self.check_cancelled()
+        self.repository.session.commit()
+
+    def begin_publication(self) -> None:
+        """Fence the final atomic domain/evidence/result transaction."""
+        if self._compute:
+            self.checkpoint()
+        self._compute = False
+        self.repository.lock_workflow_control(
+            self.workflow_id,
+            worker_id=self.worker_id,
+            attempt_count=self.attempt_count,
+        )
+        self.check_cancelled()
+        self._publishing = True
+
+    def _after_progress(self) -> None:
+        self.check_cancelled()
+        if self._compute:
+            self.repository.session.commit()
 
     def start(
         self,
@@ -63,7 +98,7 @@ class WorkflowExecutionContext:
             progress_total=progress_total,
             metadata_json=details,
         )
-        self.check_cancelled()
+        self._after_progress()
         return workflow
 
     def stage(
@@ -85,7 +120,7 @@ class WorkflowExecutionContext:
             progress_total=progress_total,
             metadata_json=details,
         )
-        self.check_cancelled()
+        self._after_progress()
         return event
 
     def progress(
@@ -108,34 +143,21 @@ class WorkflowExecutionContext:
 
     def heartbeat(self) -> WorkflowRun | None:
         """Renew the worker lease when this context owns one."""
-        if self.worker_id is None:
-            return None
-        workflow = self.workflow()
-        if workflow.locked_by != self.worker_id or workflow.status != WorkflowRunStatus.RUNNING:
+        if self.worker_id is None or self._publishing:
             return None
         return self.repository.record_worker_heartbeat(
             self.workflow_id,
             worker_id=self.worker_id,
             lease_seconds=self.lease_seconds,
+            attempt_count=self.attempt_count,
         )
 
     def check_cancelled(self) -> None:
-        """Raise after making cancellation terminal when requested."""
-        workflow = self.workflow()
-        if not workflow.cancellation_requested:
+        """Observe the database control flag without accepting a cached ORM value."""
+        if not self.repository.cancellation_is_requested(self.workflow_id):
             return
-        self.repository.finish_workflow(
-            self.workflow_id,
-            status=WorkflowRunStatus.CANCELLED,
-            stage="cancelled",
-            message="Workflow cancelled by user request.",
-            diagnostics_json={
-                "stage": workflow.current_stage or "cancelled",
-                "error_type": "WorkflowCancellationRequested",
-            },
-            terminal_code="cancelled",
-            metadata_json={"cooperative_cancel": True},
-        )
+        # The worker rolls back the attempted domain publication before making
+        # cancellation terminal in its own short transaction.
         raise WorkflowCancellationRequested("Workflow cancelled by user request.")
 
     def artifact(
@@ -155,7 +177,7 @@ class WorkflowExecutionContext:
             report_id=report_id,
             metadata_json=details,
         )
-        self.check_cancelled()
+        self._after_progress()
         return event
 
     def output(
@@ -175,7 +197,7 @@ class WorkflowExecutionContext:
             artifact_refs_json=artifact_refs,
             metadata_json=details,
         )
-        self.check_cancelled()
+        self._after_progress()
         return workflow
 
     def succeed(
@@ -192,6 +214,7 @@ class WorkflowExecutionContext:
     ) -> WorkflowRun:
         """Finish the workflow successfully with v2 output."""
         self.heartbeat()
+        self.check_cancelled()
         return self.repository.finish_workflow(
             self.workflow_id,
             status=WorkflowRunStatus.SUCCEEDED,
