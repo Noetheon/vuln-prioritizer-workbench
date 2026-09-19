@@ -24,7 +24,6 @@ from app.models import (
     WorkflowRunKind,
 )
 from app.models.base import get_datetime_utc
-from app.repositories.workflows import WorkflowLeaseLostError, WorkflowRepository
 from app.services import import_execution, provider_update_snapshot, reports
 from app.services.analysis import AnalysisService
 from app.services.decision_scope_lock import lock_project_decision_scope
@@ -93,7 +92,7 @@ def test_real_import_exposes_progress_and_accepts_concurrent_cancellation(
                     )
                 )
             )
-        except BaseException as exc:
+        except Exception as exc:
             outcomes["error"] = exc
 
     worker = threading.Thread(target=run)
@@ -131,7 +130,10 @@ def test_real_import_exposes_progress_and_accepts_concurrent_cancellation(
             threading.Event().wait(0.05)
         assert renewed, "Lease was not renewed during computation"
         with Session(env.engine) as lease_observer:
-            assert WorkflowRepository(lease_observer).release_expired_leases() == []
+            assert (
+                workflow_repository.WorkflowRepository(lease_observer).release_expired_leases()
+                == []
+            )
             heartbeat = lease_observer.get(
                 RuntimeServiceHeartbeat, ("workflow-worker", "concurrent-import-worker")
             )
@@ -221,7 +223,7 @@ def test_other_workflow_families_cancel_during_computation_without_artifact_publ
                     )
                 )
             )
-        except BaseException as exc:
+        except Exception as exc:
             outcomes["error"] = exc
 
     worker = threading.Thread(target=run)
@@ -292,7 +294,7 @@ def test_committed_cancellation_bypasses_worker_identity_cache(
 ) -> None:
     engine = file_backed_workbench_api_env.engine
     with Session(engine) as session:
-        repo = WorkflowRepository(session)
+        repo = workflow_repository.WorkflowRepository(session)
         workflow = repo.create_workflow_run(
             kind=WorkflowRunKind.IMPORT, title="Cancel", handler="test"
         )
@@ -302,11 +304,11 @@ def test_committed_cancellation_bypasses_worker_identity_cache(
         session.commit()
     with Session(engine) as worker:
         context = WorkflowExecutionContext.for_workflow(
-            WorkflowRepository(worker), identity, worker_id="owner"
+            workflow_repository.WorkflowRepository(worker), identity, worker_id="owner"
         )
         cached = context.workflow()
         with Session(engine) as api:
-            WorkflowRepository(api).request_cancel(identity)
+            workflow_repository.WorkflowRepository(api).request_cancel(identity)
             api.commit()
         assert cached.cancellation_requested is False
         with pytest.raises(WorkflowCancellationRequested):
@@ -319,7 +321,7 @@ def test_reused_worker_id_cannot_publish_a_superseded_attempt(
     engine = file_backed_workbench_api_env.engine
     now = get_datetime_utc()
     with Session(engine) as session:
-        repo = WorkflowRepository(session)
+        repo = workflow_repository.WorkflowRepository(session)
         workflow = repo.create_workflow_run(
             kind=WorkflowRunKind.IMPORT, title="Fence", handler="test", max_attempts=2
         )
@@ -329,18 +331,18 @@ def test_reused_worker_id_cannot_publish_a_superseded_attempt(
         session.commit()
     with Session(engine) as old:
         context = WorkflowExecutionContext.for_workflow(
-            WorkflowRepository(old), identity, worker_id="reused"
+            workflow_repository.WorkflowRepository(old), identity, worker_id="reused"
         )
         assert context.attempt_count == 1
         old.commit()
         with Session(engine) as newer:
-            repo = WorkflowRepository(newer)
+            repo = workflow_repository.WorkflowRepository(newer)
             repo.release_expired_leases(now=now + timedelta(seconds=2))
             repo.claim_due_workflows(
                 worker_id="reused", lease_seconds=300, now=now + timedelta(seconds=2)
             )
             newer.commit()
-        with pytest.raises(WorkflowLeaseLostError):
+        with pytest.raises(workflow_repository.WorkflowLeaseLostError):
             context.begin_publication()
         old.rollback()
     with Session(engine) as reader:
@@ -397,7 +399,7 @@ def test_superseded_worker_cannot_finalize_successor_cancellation(
 ) -> None:
     env = file_backed_workbench_api_env
     with Session(env.engine) as session:
-        workflow = WorkflowRepository(session).create_workflow_run(
+        workflow = workflow_repository.WorkflowRepository(session).create_workflow_run(
             kind=WorkflowRunKind.REPORT_GENERATION, title="Cancellation fence", handler="test"
         )
         identity = workflow.id

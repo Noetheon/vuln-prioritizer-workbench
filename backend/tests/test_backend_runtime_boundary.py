@@ -12,6 +12,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any
 
+import pytest
 import yaml
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -327,6 +328,39 @@ def test_codeql_installs_python_dependencies_only_for_python_analysis() -> None:
     )
     assert 'python -m pip install -e "backend[dev]"' in workflow
     assert "language: javascript-typescript" in workflow
+
+
+@pytest.mark.parametrize(
+    ("event", "changed_path", "expected"),
+    [
+        ("pull_request", "backend/tests/test_workflow.py", "true"),
+        ("pull_request", "frontend/tests/evaluations.spec.ts", "true"),
+        ("pull_request", "frontend/scripts/check.mjs", "true"),
+        ("pull_request", "scripts/build_release_bundle.py", "true"),
+        ("pull_request", "frontend/package-lock.json", "true"),
+        ("pull_request", "docs/guide.md", "false"),
+        ("push", "docs/guide.md", "true"),
+    ],
+)
+def test_codeql_scope_runs_analysis_for_tests_and_scripts(
+    tmp_path: Path, event: str, changed_path: str, expected: str
+) -> None:
+    workflow = yaml.safe_load(_read_repo_text(".github/workflows/codeql.yml"))
+    step = next(
+        step for step in workflow["jobs"]["analyze"]["steps"] if step.get("id") == "codeql-scope"
+    )
+    script = step["run"].replace("${{ github.event_name }}", event)
+    script = script.replace("${{ github.event.pull_request.base.sha }}", "fixture-base")
+    output = tmp_path / "github-output"
+    # Exercise the actual workflow shell, supplying only Git's changed-path input.
+    subprocess.run(
+        ["bash", "-c", 'git() { printf "%s\\n" "$CHANGED_PATH"; }\n' + script],
+        env={**os.environ, "CHANGED_PATH": changed_path, "GITHUB_OUTPUT": str(output)},
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert output.read_text().splitlines() == [f"run-codeql={expected}"]
 
 
 def test_import_service_modules_do_not_import_http_or_route_boundaries() -> None:

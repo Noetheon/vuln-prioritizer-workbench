@@ -1,4 +1,3 @@
-import { mkdir, writeFile } from "node:fs/promises"
 import { expect, test } from "@playwright/test"
 import { validCveList, waitForRunSucceeded } from "./workbench-e2e-helpers"
 import {
@@ -57,7 +56,7 @@ test("reevaluation selects provider evidence explicitly and reports legacy confl
 
 test("history renders recorded provenance and adjacent decision differences on mobile", async ({
   page,
-}) => {
+}, testInfo) => {
   await routeWorkbenchShell(page, {
     findings: [mockFinding],
     projects: [mockProject],
@@ -119,10 +118,9 @@ test("history renders recorded provenance and adjacent decision differences on m
         document.documentElement.clientWidth,
     ),
   ).toBeLessThanOrEqual(1)
-  await mkdir("/tmp/vpw-evaluation-ui", { recursive: true })
-  await page.screenshot({
-    path: "/tmp/vpw-evaluation-ui/revision-history-mobile.png",
-    fullPage: true,
+  await testInfo.attach("revision-history-mobile", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
   })
 })
 
@@ -190,7 +188,7 @@ test("GitHub preview is reviewable and creates only the explicitly scoped issue"
 
 test("a real native evaluation appends history while preserving observation time", async ({
   page,
-}) => {
+}, testInfo) => {
   test.setTimeout(120_000)
   const errors: string[] = []
   page.on("pageerror", (error) => errors.push(error.message))
@@ -254,18 +252,16 @@ test("a real native evaluation appends history while preserving observation time
       { headers },
     )
   ).json()
-  await mkdir("/tmp/vpw-evaluation-ui", { recursive: true })
-  await writeFile(
-    "/tmp/vpw-evaluation-ui/native-revisions.json",
-    JSON.stringify(revisions, null, 2),
-  )
+  await testInfo.attach("native-revisions", {
+    body: JSON.stringify(revisions, null, 2),
+    contentType: "application/json",
+  })
   expect(revisions.data[0].observed_at).toBe(revisions.data[1].observed_at)
   expect(revisions.data[0].is_current).toBe(true)
   expect(revisions.data[0].replay_status).toBe("available")
-  await mkdir("/tmp/vpw-evaluation-ui", { recursive: true })
-  await page.screenshot({
-    path: "/tmp/vpw-evaluation-ui/native-evaluation-desktop.png",
-    fullPage: true,
+  await testInfo.attach("native-evaluation-desktop", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
   })
   expect(errors).toEqual([])
 })
