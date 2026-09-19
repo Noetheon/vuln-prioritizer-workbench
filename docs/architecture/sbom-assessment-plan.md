@@ -103,7 +103,7 @@ Independent reviews found and fixed these concrete issues:
 The scanner/process, rescan/ZIP, timestamp, sidecar, report and frontend slices
 received separate review. The final quality-gate record is completed below.
 
-## Final quality gates
+## Initial implementation quality gates
 
 | Gate | Result |
 | --- | --- |
@@ -126,14 +126,17 @@ is claimed. The live browser's vulnerable case used unlocked provider fallback
 and could fetch missing provider data; it is distinct from the request-blocked
 deterministic API tests. Scanner database downloads were off in both cases.
 
-Detailed current logs are local build artifacts:
+Detailed logs for this initial validation are local build artifacts:
 `build/sbom-validation/backend-check.log`, `docs-check.log`, the browser evidence
-directories and frontend validation records. All implementation changes are
-on `codex/local-sbom-assessment`; no push, merge or release was performed.
+directories and frontend validation records. At this initial validation point,
+all implementation changes were local to `codex/local-sbom-assessment`; no push,
+merge or release had been performed. GitHub delivery is a separate verification
+step and is recorded by the pull request and its checks.
 
-## Starting state
+## Historical starting state
 
-The working tree already contains unrelated dependency, CI and Decision Ledger
-changes. Preserve them. The existing Grype importer reads CVE aliases from an
-incorrect nesting level; empty CVE collections are rejected by both input and
-analysis stages. The current runtime has no scanner subprocess supervision.
+At the start of implementation, the working tree already contained unrelated
+dependency, CI and Decision Ledger changes, which were preserved. The Grype
+importer read CVE aliases from an incorrect nesting level; empty CVE collections
+were rejected by both input and analysis stages. The runtime had no scanner
+subprocess supervision. These were the baseline issues addressed by this work.

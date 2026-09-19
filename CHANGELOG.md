@@ -19,6 +19,9 @@ exact git tag output when release wording needs to be verified.
 
 ### Added
 
+- Optional local Grype assessments for CycloneDX and SPDX inventory uploads,
+  with retained SBOM/scanner evidence, explicit partial and zero-match results,
+  and rescans that preserve the original observation and decision history.
 - Native evaluation runs without new uploads, versioned replay inputs and immutable
   decision revisions with separate observation/evaluation timestamps and UI history.
 - Explicit provider-snapshot adoption, stale-publication protection and an additive
@@ -41,6 +44,10 @@ exact git tag output when release wording needs to be verified.
 
 ### Fixed
 
+- Import project selection remains stable when the hidden form select emits an
+  empty value during initialization of a project-specific import URL.
+- Grype match-level CVE aliases and Trivy target identity are normalized correctly;
+  queued imports publish their complete worker payload atomically.
 - Pinned Lucide React to `1.41.0` to avoid unused property reads introduced by
   its [1.42.0 shared icon-build refactor](https://github.com/lucide-icons/lucide/releases/tag/1.42.0)
   in generated assets. The temporary pin can be removed once a newer package
