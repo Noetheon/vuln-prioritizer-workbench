@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from collections.abc import Callable, Iterable
 from copy import deepcopy
@@ -9,6 +10,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+from pydantic import ValidationError
 from sqlalchemy import func
 from sqlmodel import Session, col, select
 
@@ -86,9 +88,7 @@ class FindingCurrentProjectionRepository:
                 raise DecisionLedgerInvariantError(
                     f"Current projection {projection.finding_id} has no immutable source."
                 )
-            result[projection.finding_id] = FindingDecisionEvidenceV2.model_validate(
-                _effective_projection_payload(projection, source)
-            )
+            result[projection.finding_id] = _effective_projection_evidence(projection, source)
         return result
 
     def source_records_for_records(
@@ -524,16 +524,41 @@ def _effective_projection_payload(
     projection: FindingCurrentProjection,
     source: FindingDecisionEvidence,
 ) -> dict[str, Any]:
+    _assert_projection_source_identity(projection, source)
+    return _apply_top_level_overlay(
+        dict(source.payload_json or {}),
+        dict(projection.lifecycle_overlay_json or {}),
+    )
+
+
+def _effective_projection_evidence(
+    projection: FindingCurrentProjection,
+    source: FindingDecisionEvidence,
+) -> FindingDecisionEvidenceV2:
+    """Validate persisted JSON into an isolated contract without copying it first."""
+    _assert_projection_source_identity(projection, source)
+    payload = dict(source.payload_json or {}) | dict(projection.lifecycle_overlay_json or {})
+    try:
+        # JSON parsing owns every nested value, including untyped raw evidence.
+        return FindingDecisionEvidenceV2.model_validate_json(json.dumps(payload))
+    except ValidationError:
+        # Preserve valid legacy raw evidence beyond the JSON parser's depth limit,
+        # and retain the existing validation failures for invalid contracts.
+        return FindingDecisionEvidenceV2.model_validate(
+            _effective_projection_payload(projection, source)
+        )
+
+
+def _assert_projection_source_identity(
+    projection: FindingCurrentProjection,
+    source: FindingDecisionEvidence,
+) -> None:
     if source.finding_id != projection.finding_id:
         raise ValueError("Projection source finding identity mismatch.")
     if source.project_id != projection.project_id:
         raise ValueError("Projection source project identity mismatch.")
     if source.analysis_run_id != projection.source_analysis_run_id:
         raise ValueError("Projection source run identity mismatch.")
-    return _apply_top_level_overlay(
-        dict(source.payload_json or {}),
-        dict(projection.lifecycle_overlay_json or {}),
-    )
 
 
 def _top_level_overlay(

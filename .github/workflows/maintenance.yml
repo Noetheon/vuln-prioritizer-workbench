@@ -94,6 +94,15 @@ jobs:
       - name: Run 10/10 quality gate
         run: make quality-10-check
 
+      - name: Upload performance measurements
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: maintenance-performance
+          if-no-files-found: ignore
+          retention-days: 3
+          path: build/vpw-072-performance-smoke.json
+
       - name: Upload maintenance debug artifacts on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

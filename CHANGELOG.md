@@ -38,6 +38,8 @@ exact git tag output when release wording needs to be verified.
 
 ### Fixed
 
+- Current decision reads avoid redundant deep copies while preserving validation
+  and isolation, including deeply nested historical evidence.
 - Stale rationale after asset edits, cleared context values returning through
   legacy fallbacks, expired source-file waivers and missing provider origins.
 - Worker progress/cancellation visibility across SQLite connections, lease and
