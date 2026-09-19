@@ -991,6 +991,10 @@ test("Workbench feedback states use VPW primitives instead of generic cards", ()
 test("VPW design audit stays exposed as a named local and CI gate", () => {
   const packageJson = JSON.parse(readProjectFile("package.json")) as {
     scripts: Record<string, string>
+    devDependencies: Record<string, string>
+  }
+  const packageLock = JSON.parse(readProjectFile("package-lock.json")) as {
+    packages: Record<string, { version: string }>
   }
   const makefile = readRepoFile("Makefile")
   const ci = readRepoFile(".github/workflows/ci.yml")
@@ -1080,9 +1084,17 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   assert.match(makefile, /frontend-design-audit-update/)
   assert.match(makefile, /frontend-design-audit-linux-docker/)
   assert.match(dockerRunner, /DOCKER_DEFAULT_PLATFORM=linux\/amd64/)
-  assert.match(
-    playwrightDockerfile,
-    /mcr\.microsoft\.com\/playwright:v1\.60\.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948/,
+  const runnerVersion =
+    packageLock.packages["node_modules/@playwright/test"].version
+  const browserImage = playwrightDockerfile.match(
+    /mcr\.microsoft\.com\/playwright:v([0-9.]+)-noble@sha256:[a-f0-9]{64}/,
+  )
+  assert.ok(browserImage)
+  assert.equal(packageJson.devDependencies["@playwright/test"], runnerVersion)
+  assert.equal(browserImage[1], runnerVersion)
+  assert.equal(
+    dockerRunner.match(/PLAYWRIGHT_DOCKER_IMAGE:-([^}]+)/)?.[1],
+    browserImage[0],
   )
   assert.match(dockerRunner, /DOCKER_DEFAULT_PLATFORM/)
   assert.match(dockerRunner, /linux\/amd64/)

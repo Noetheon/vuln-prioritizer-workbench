@@ -144,13 +144,14 @@ def main() -> int:
     except (OSError, ValueError, subprocess.CalledProcessError) as exc:
         parser.error(str(exc))
 
-    zip_hash = _sha256_file(zip_path)
-    manifest_copy_path.write_text(
-        json.dumps({**manifest, "bundle_sha256": zip_hash}, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    sha256_path.write_text(f"{zip_hash}  {zip_path.name}\n", encoding="utf-8")
-    print(zip_path)
+    else:
+        zip_hash = _sha256_file(zip_path)
+        manifest_copy_path.write_text(
+            json.dumps({**manifest, "bundle_sha256": zip_hash}, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        sha256_path.write_text(f"{zip_hash}  {zip_path.name}\n", encoding="utf-8")
+        print(zip_path)
     return 0
 
 

@@ -4,6 +4,7 @@ import json
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
+from unittest.mock import Mock
 from uuid import UUID
 
 import pytest
@@ -889,7 +890,6 @@ def test_workbench_github_issue_export_retains_invalid_201_response_as_unresolve
         project_id=UUID(project["id"]),
         with_decision_evidence=True,
     )["finding_ids"][0]
-    post_attempts = 0
 
     class InvalidCreatedResponse:
         status_code = 201
@@ -899,14 +899,9 @@ def test_workbench_github_issue_export_retains_invalid_201_response_as_unresolve
                 raise ValueError("malformed upstream JSON")
             return {}
 
-    def invalid_post(*args: Any, **kwargs: Any) -> InvalidCreatedResponse:
-        nonlocal post_attempts
-        _ = args, kwargs
-        post_attempts += 1
-        return InvalidCreatedResponse()
-
+    post_request = Mock(return_value=InvalidCreatedResponse())
     monkeypatch.setenv("VPW_GITHUB_TOKEN", "ghp_test_value")
-    monkeypatch.setattr("app.services.github_issues.requests.post", invalid_post)
+    monkeypatch.setattr("app.services.github_issues.requests.post", post_request)
     failed = client.post(
         f"/api/v1/projects/{project['id']}/github/issues/export",
         headers=headers,
@@ -919,7 +914,7 @@ def test_workbench_github_issue_export_retains_invalid_201_response_as_unresolve
     )
 
     assert failed.status_code == 502, failed.text
-    assert post_attempts == 1
+    post_request.assert_called_once()
     with Session(workbench_api_env.engine) as session:
         reservation = session.exec(select(app_models.GitHubIssueExport)).one()
         assert reservation.issue_url is None
@@ -929,11 +924,8 @@ def test_workbench_github_issue_export_retains_invalid_201_response_as_unresolve
     assert failure_event["detail"]["failure_kind"] == "invalid_response"
     assert failure_event["detail"]["reservation_outcome"] == "retained_unresolved"
 
-    monkeypatch.setattr(
-        "app.services.github_issues.requests.post",
-        lambda *args, **kwargs: (_ for _ in ()).throw(
-            AssertionError("An invalid-response reservation must prevent another POST")
-        ),
+    post_request.side_effect = AssertionError(
+        "An invalid-response reservation must prevent another POST"
     )
     retry = client.post(
         f"/api/v1/projects/{project['id']}/github/issues/export",
@@ -946,7 +938,7 @@ def test_workbench_github_issue_export_retains_invalid_201_response_as_unresolve
         },
     )
     assert retry.status_code == 409, retry.text
-    assert post_attempts == 1
+    post_request.assert_called_once()
 
 
 def test_workbench_github_issue_export_blocks_unresolved_empty_reservation(

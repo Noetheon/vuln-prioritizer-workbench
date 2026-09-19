@@ -270,7 +270,7 @@ jobs:
               backend/pyproject.toml|pyproject.toml|Makefile)
                 run_frontend=true
                 ;;
-              scripts/generate-client.sh|.github/workflows/ci.yml)
+              scripts/generate-client.sh|scripts/frontend-design-audit-linux-docker.sh|.github/workflows/ci.yml)
                 run_frontend=true
                 ;;
             esac
@@ -280,6 +280,11 @@ jobs:
                 run_browser=true
                 ;;
               frontend/index.html|frontend/components.json|frontend/playwright.config.ts)
+                run_browser=true
+                run_design_audit=true
+                run_full_browser_suite=true
+                ;;
+              frontend/Dockerfile.playwright|scripts/frontend-design-audit-linux-docker.sh)
                 run_browser=true
                 run_design_audit=true
                 run_full_browser_suite=true
@@ -306,6 +311,7 @@ jobs:
                 ;;
               frontend/package.json|frontend/package-lock.json|frontend/vite.config.*|frontend/tsconfig*.json)
                 run_browser=true
+                run_design_audit=true
                 run_full_browser_suite=true
                 ;;
               .github/workflows/ci.yml)
