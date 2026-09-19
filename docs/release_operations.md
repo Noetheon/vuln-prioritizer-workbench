@@ -204,6 +204,20 @@ Compose compatibility files, source tree, and `BUNDLE-MANIFEST.json`. Run the
 Docker compatibility smoke when Docker is available; this is not the standard
 new-install runtime.
 
+The source ZIP builder selects regular files from the Git index and the release
+allowlist. Untracked local notes, configuration, uploads, and generated files are
+not release inputs. Stage intended new source files before building; missing or
+symlinked tracked sources fail the build. The manifest hashes the bytes actually
+written into the archive.
+
+To rebuild an extracted source bundle without Git, explicitly provide its
+manifest. Only its listed files are included, and every size and SHA-256 must
+still match:
+
+```bash
+python3 scripts/build_release_bundle.py --source-manifest BUNDLE-MANIFEST.json --output dist
+```
+
 3. Verify the documented wheel and GitHub tag install paths, including the
    installed runtime command:
 

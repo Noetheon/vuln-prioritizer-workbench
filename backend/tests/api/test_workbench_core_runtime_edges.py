@@ -477,7 +477,7 @@ def test_analysis_service_error_and_snapshot_edge_paths(
             captured_request["nvd_api_key_env"] = getattr(request, "nvd_api_key_env", None)
             raise ValueError("bad workbench input")
 
-        monkeypatch.setattr("app.services.analysis.prepare_analysis", raise_input_error)
+        monkeypatch.setattr("app.services.analysis.prepare_enriched_analysis", raise_input_error)
         with pytest.raises(WorkbenchAnalysisError, match="bad workbench input"):
             service.analyze_import(
                 input_path=tmp_path / "input.txt",

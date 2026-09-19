@@ -18,6 +18,7 @@ from app.models import (
 )
 from app.models.base import get_datetime_utc
 from app.repositories import RunRepository, WorkflowRepository
+from app.repositories.workflows import WorkflowLeaseLostError
 from app.services.provider_update_constants import (
     PROVIDER_UPDATE_INPUT_TYPE,
     PROVIDER_UPDATE_LOCK_FILE,
@@ -56,7 +57,7 @@ from app.services.provider_update_snapshot import (
     _provider_source_metadata,
     _write_provider_snapshot,
 )
-from app.services.workflow_execution import WorkflowExecutionContext
+from app.services.workflow_execution import WorkflowCancellationRequested, WorkflowExecutionContext
 
 
 def create_provider_update_job(
@@ -262,6 +263,7 @@ def _execute_provider_update_run(
         progress_current=1,
         progress_total=3,
     )
+    context.begin_compute()
     try:
         with _provider_update_lock(settings.provider_snapshot_dir_path):
             context.stage(
@@ -280,7 +282,10 @@ def _execute_provider_update_run(
                 selected_sources=selected_sources,
                 cve_ids=cve_ids,
                 cache_only=cache_only,
+                before_publication=context.begin_publication,
             )
+    except (WorkflowCancellationRequested, WorkflowLeaseLostError):
+        raise
     except ProviderUpdateConflict as exc:
         if fail_conflicts:
             context.fail(

@@ -90,7 +90,7 @@ test("builds selected risk posture projection without negative residuals", () =>
   assert.equal(riskScoreToIndex(150, 3), 50)
   assert.deepEqual(
     projection.map((step) => step.riskIndex),
-    [50, 20, 0, 0],
+    [50, 30, 0, 0],
   )
   assert.deepEqual(
     projection.map((step) => step.riskScore),
@@ -143,11 +143,12 @@ function opportunityFixture(
     label: "CVE-2024-0001 on component",
     recommended_action: "Upgrade component.",
     search_query: "CVE-2024-0001",
+    finding_count: 1,
     ...value,
   }
 }
 
-test("builds history steps without the newest persisted run", () => {
+test("preserves the newest immutable run when current state can differ", () => {
   const steps = buildRiskPostureHistorySteps([
     {
       finished_at: "2026-04-02T10:00:00Z",
@@ -175,10 +176,11 @@ test("builds history steps without the newest persisted run", () => {
     { key: "history-run-1", label: "Apr 02", riskIndex: 100 },
     { key: "history-run-2", label: "May 07", riskIndex: 71.6 },
     { key: "history-run-3", label: "run", riskIndex: 0 },
+    { key: "history-run-4", label: "Jun 12", riskIndex: 66.2 },
   ])
 })
 
-test("builds no history steps from zero or one persisted run", () => {
+test("preserves one persisted run and handles empty history", () => {
   assert.deepEqual(buildRiskPostureHistorySteps([]), [])
   assert.deepEqual(
     buildRiskPostureHistorySteps([
@@ -188,8 +190,27 @@ test("builds no history steps from zero or one persisted run", () => {
         run_id: "run-1",
       },
     ]),
-    [],
+    [{ key: "history-run-1", label: "Jun 12", riskIndex: 88.1 }],
   )
+})
+
+test("simulation matches remaining actionable average and distinguishes burden", () => {
+  const summary = buildRiskReductionSummary({
+    actionable_finding_count: 2,
+    current_actionable_risk: 150,
+    top_opportunities: [
+      opportunityFixture({ id: "high", expected_reduction: 100 }),
+      opportunityFixture({ id: "low", expected_reduction: 50 }),
+    ],
+  })
+  const closeHigh = buildRiskPostureProjection(summary, new Set(["high"])).at(
+    -1,
+  )
+  const closeLow = buildRiskPostureProjection(summary, new Set(["low"])).at(-1)
+  assert.equal(closeHigh?.riskIndex, 50)
+  assert.equal(closeHigh?.remainingFindingCount, 1)
+  assert.equal(closeLow?.riskIndex, 100)
+  assert.equal(closeLow?.riskScore, 100)
 })
 
 test("summary exposes persisted history points", () => {

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import cast
@@ -13,7 +14,12 @@ from app.domain.engine.inputs import (
 )
 from app.domain.engine.models import (
     AnalysisContext,
+    ContextPolicyProfile,
+    EnrichmentResult,
+    ParsedInput,
     PrioritizedFinding,
+    ProviderSnapshotReport,
+    WaiverRule,
 )
 from app.domain.engine.services.analysis_attack import (
     build_attack_summary_from_findings,
@@ -23,7 +29,7 @@ from app.domain.engine.services.analysis_filters import (
     build_active_filters,
     normalize_priority_filters,
 )
-from app.domain.engine.services.analysis_findings import build_findings
+from app.domain.engine.services.analysis_findings import build_findings, enrich_analysis_inputs
 from app.domain.engine.services.analysis_inputs import (
     load_analysis_context_profile,
     load_analysis_provider_snapshot,
@@ -53,6 +59,7 @@ from app.domain.engine.services.analysis_snapshot import (
     _provider_snapshot_hash,
     _provider_snapshot_metadata_path,
 )
+from app.domain.engine.services.attack_enrichment import AttackEnrichmentService
 from app.domain.engine.services.defensive_context import (
     defensive_context_hit_count,
 )
@@ -63,8 +70,30 @@ from app.domain.engine.services.waivers import (
 from app.domain.engine.utils import iso_utc_now
 
 
-def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding], AnalysisContext]:
-    """Prepare analysis function."""
+@dataclass(frozen=True, slots=True)
+class AnalysisInputs:
+    """Validated source inputs and configuration before provider enrichment."""
+
+    parsed_input: ParsedInput
+    provider_snapshot: ProviderSnapshotReport | None
+    context_profile: ContextPolicyProfile
+    waiver_rules: tuple[WaiverRule, ...]
+    attack_enabled: bool
+    attack_source: str
+    attack_mapping_file: Path | None
+    attack_metadata_file: Path | None
+
+
+@dataclass(frozen=True, slots=True)
+class EnrichedAnalysis:
+    """Provider facts and provenance ready for a caller's decision scope."""
+
+    inputs: AnalysisInputs
+    enrichment: EnrichmentResult
+    context: AnalysisContext
+
+
+def _prepare_analysis_inputs(request: AnalysisRequest) -> AnalysisInputs:
     attack_enabled, resolved_attack_source, resolved_mapping_file, resolved_metadata_file = (
         resolve_attack_options(
             no_attack=request.no_attack,
@@ -94,13 +123,74 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
     except (ValidationError, ValueError) as exc:
         raise AnalysisInputError(str(exc)) from exc
 
-    cve_ids = parsed_input.unique_cves
     context_profile = load_analysis_context_profile(request.policy_profile, request.policy_file)
     waiver_rules = (
         list(request.preloaded_waiver_rules)
         if request.preloaded_waiver_rules is not None
         else load_analysis_waiver_rules(request.waiver_file)
     )
+    return AnalysisInputs(
+        parsed_input=parsed_input,
+        provider_snapshot=provider_snapshot,
+        context_profile=context_profile,
+        waiver_rules=tuple(waiver_rules),
+        attack_enabled=attack_enabled,
+        attack_source=resolved_attack_source,
+        attack_mapping_file=resolved_mapping_file,
+        attack_metadata_file=resolved_metadata_file,
+    )
+
+
+def prepare_enriched_analysis(request: AnalysisRequest) -> EnrichedAnalysis:
+    """Parse and enrich without evaluating any CVE or finding decision."""
+    inputs = _prepare_analysis_inputs(request)
+    parsed_input = inputs.parsed_input
+    cve_ids = parsed_input.unique_cves
+    if not cve_ids:
+        raise AnalysisNoFindingsError("No findings could be generated from the provided CVEs.")
+    enrichment = enrich_analysis_inputs(
+        cve_ids,
+        parsed_input=parsed_input,
+        attack_enabled=inputs.attack_enabled,
+        attack_source=inputs.attack_source,
+        attack_mapping_file=inputs.attack_mapping_file,
+        attack_technique_metadata_file=inputs.attack_metadata_file,
+        offline_kev_file=request.offline_kev_file,
+        offline_attack_file=request.offline_attack_file,
+        defensive_context_file=request.defensive_context_file,
+        nvd_api_key_env=request.nvd_api_key_env,
+        no_cache=request.no_cache,
+        cache_dir=request.cache_dir,
+        cache_ttl_hours=request.cache_ttl_hours,
+        provider_snapshot=inputs.provider_snapshot,
+        locked_provider_data=request.locked_provider_data,
+    )
+    context = _analysis_context(request, inputs, enrichment, [], [], [])
+    attack_summary = AttackEnrichmentService().summarize(list(enrichment.attack.values()))
+    context = context.model_copy(
+        update={
+            "attack_summary": attack_summary,
+            "attack_hits": attack_summary.mapped_cves,
+            "defensive_context_hits": sum(
+                bool(enrichment.defensive_contexts.get(cve_id)) for cve_id in cve_ids
+            ),
+        }
+    )
+    return EnrichedAnalysis(inputs=inputs, enrichment=enrichment, context=context)
+
+
+def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding], AnalysisContext]:
+    """Prepare legacy CVE-scoped outputs from the shared input/enrichment stages."""
+    inputs = _prepare_analysis_inputs(request)
+    parsed_input = inputs.parsed_input
+    cve_ids = parsed_input.unique_cves
+    context_profile = inputs.context_profile
+    waiver_rules = list(inputs.waiver_rules)
+    provider_snapshot = inputs.provider_snapshot
+    attack_enabled = inputs.attack_enabled
+    resolved_attack_source = inputs.attack_source
+    resolved_mapping_file = inputs.attack_mapping_file
+    resolved_metadata_file = inputs.attack_metadata_file
     all_findings, _, enrichment = build_findings(
         cve_ids,
         policy=request.policy,
@@ -141,6 +231,25 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         filtered_findings,
         sort_by=cast(SortField, _enum_value(request.sort_by)),
     )
+    return findings, _analysis_context(
+        request, inputs, enrichment, findings, all_findings, waiver_warnings
+    )
+
+
+def _analysis_context(
+    request: AnalysisRequest,
+    inputs: AnalysisInputs,
+    enrichment: EnrichmentResult,
+    findings: list[PrioritizedFinding],
+    all_findings: list[PrioritizedFinding],
+    waiver_warnings: list[str],
+) -> AnalysisContext:
+    parsed_input = inputs.parsed_input
+    provider_snapshot = inputs.provider_snapshot
+    context_profile = inputs.context_profile
+    attack_enabled = inputs.attack_enabled
+    cve_ids = parsed_input.unique_cves
+    prioritizer = PrioritizationService(policy=request.policy)
     warnings = parsed_input.warnings + enrichment.warnings + waiver_warnings
     attack_summary = build_attack_summary_from_findings(findings)
     generated_at = iso_utc_now()
@@ -257,7 +366,7 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         cache_dir=str(request.cache_dir) if not request.no_cache else None,
     )
 
-    return findings, context
+    return context
 
 
 def prepare_explain(request: ExplainRequest) -> ExplainResult:

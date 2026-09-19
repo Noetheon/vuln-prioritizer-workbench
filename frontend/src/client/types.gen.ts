@@ -41,6 +41,7 @@ export type AnalysisEvidenceV2 = {
     counts?: RunCountsV2;
     dedup_summary?: DedupSummaryV2 | null;
     diagnostics?: RunDiagnosticsV2 | null;
+    evaluation?: EvaluationMetadataV1 | null;
     /**
      * Filename
      */
@@ -243,6 +244,7 @@ export type AnalysisRunSummaryPublic = {
      * Created Findings
      */
     created_findings?: number;
+    decision_summary?: RunDecisionSummaryPublic | null;
     diagnostics?: RunDiagnosticsV2 | null;
     evidence?: AnalysisEvidenceV2 | null;
     /**
@@ -660,6 +662,10 @@ export type AssetRecalculatePublic = {
      * Rescore Needed
      */
     rescore_needed?: boolean;
+    /**
+     * Unreplayable Findings
+     */
+    unreplayable_findings?: number;
 };
 
 /**
@@ -710,6 +716,74 @@ export type AssetsPublic = {
 };
 
 /**
+ * AttackData
+ *
+ * Data representation and logic for Attack Data.
+ */
+export type AttackData = {
+    /**
+     * Attack Note
+     */
+    attack_note?: string | null;
+    /**
+     * Attack Rationale
+     */
+    attack_rationale?: string | null;
+    /**
+     * Attack Relevance
+     */
+    attack_relevance?: string;
+    /**
+     * Attack Tactics
+     */
+    attack_tactics?: Array<string>;
+    /**
+     * Attack Techniques
+     */
+    attack_techniques?: Array<string>;
+    /**
+     * Attack Version
+     */
+    attack_version?: string | null;
+    /**
+     * Capability Groups
+     */
+    capability_groups?: Array<string>;
+    /**
+     * Cve Id
+     */
+    cve_id: string;
+    /**
+     * Domain
+     */
+    domain?: string | null;
+    /**
+     * Mapped
+     */
+    mapped?: boolean;
+    /**
+     * Mapping Types
+     */
+    mapping_types?: Array<string>;
+    /**
+     * Mappings
+     */
+    mappings?: Array<AttackMapping>;
+    /**
+     * Source
+     */
+    source?: string;
+    /**
+     * Source Version
+     */
+    source_version?: string | null;
+    /**
+     * Techniques
+     */
+    techniques?: Array<AttackTechnique>;
+};
+
+/**
  * AttackEvidenceV2
  *
  * Finding ATT&CK evidence used by details, reports, and Navigator export.
@@ -756,6 +830,70 @@ export type AttackEvidenceV2 = {
 };
 
 /**
+ * AttackMapping
+ *
+ * Data representation and logic for Attack Mapping.
+ */
+export type AttackMapping = {
+    /**
+     * Attack Object Id
+     */
+    attack_object_id: string;
+    /**
+     * Attack Object Name
+     */
+    attack_object_name?: string | null;
+    /**
+     * Capability Description
+     */
+    capability_description?: string | null;
+    /**
+     * Capability Group
+     */
+    capability_group?: string | null;
+    /**
+     * Capability Id
+     */
+    capability_id: string;
+    /**
+     * Comments
+     */
+    comments?: string | null;
+    /**
+     * Confidence
+     */
+    confidence?: 'low' | 'medium' | 'high' | null;
+    /**
+     * Defensive Note
+     */
+    defensive_note?: string | null;
+    /**
+     * Mapping Type
+     */
+    mapping_type?: string | null;
+    /**
+     * References
+     */
+    references?: Array<string>;
+    /**
+     * Review Status
+     */
+    review_status?: 'unreviewed' | 'needs_review' | 'reviewed' | 'rejected' | 'stale' | null;
+    /**
+     * Reviewed At
+     */
+    reviewed_at?: string | null;
+    /**
+     * Reviewer
+     */
+    reviewer?: string | null;
+    /**
+     * Source
+     */
+    source?: string | null;
+};
+
+/**
  * AttackSourceCapabilityPublic
  *
  * Supported ATT&CK import source metadata.
@@ -781,6 +919,38 @@ export type AttackSourceCapabilityPublic = {
      * Value
      */
     value: string;
+};
+
+/**
+ * AttackTechnique
+ *
+ * Data representation and logic for Attack Technique.
+ */
+export type AttackTechnique = {
+    /**
+     * Attack Object Id
+     */
+    attack_object_id: string;
+    /**
+     * Deprecated
+     */
+    deprecated?: boolean;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Revoked
+     */
+    revoked?: boolean;
+    /**
+     * Tactics
+     */
+    tactics?: Array<string>;
+    /**
+     * Url
+     */
+    url?: string | null;
 };
 
 /**
@@ -894,6 +1064,54 @@ export type BodyImportsImportProjectUpload = {
 };
 
 /**
+ * BusinessImpactBlock
+ *
+ * Data representation and logic for Business Impact Block.
+ */
+export type BusinessImpactBlock = {
+    /**
+     * Drivers
+     */
+    drivers?: Array<string>;
+    /**
+     * Level
+     */
+    level: 'critical' | 'high' | 'medium' | 'low' | 'governance';
+    /**
+     * Text
+     */
+    text: string;
+};
+
+/**
+ * ContextPolicyProfile
+ *
+ * Data representation and logic for Context Policy Profile.
+ */
+export type ContextPolicyProfile = {
+    /**
+     * Enterprise Escalation
+     */
+    enterprise_escalation?: boolean;
+    /**
+     * Internet Facing Boost
+     */
+    internet_facing_boost?: boolean;
+    /**
+     * Name
+     */
+    name?: string;
+    /**
+     * Narrative Only
+     */
+    narrative_only?: boolean;
+    /**
+     * Prod Asset Boost
+     */
+    prod_asset_boost?: boolean;
+};
+
+/**
  * DashboardEpssBucketsPublic
  *
  * EPSS bucket counts for the Workbench dashboard.
@@ -932,6 +1150,98 @@ export type DashboardSignalCountsPublic = {
      * Internet Facing Criticals
      */
     internet_facing_criticals?: number;
+};
+
+/**
+ * DecisionRevisionPublic
+ *
+ * One immutable historical decision, compared with its predecessor.
+ */
+export type DecisionRevisionPublic = {
+    /**
+     * Analysis Run Id
+     */
+    analysis_run_id: string;
+    /**
+     * Cause
+     */
+    cause: string;
+    /**
+     * Changed Fields
+     */
+    changed_fields?: Array<string>;
+    /**
+     * Engine Version
+     */
+    engine_version?: string | null;
+    /**
+     * Evaluated At
+     */
+    evaluated_at: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Input Sha256
+     */
+    input_sha256?: string | null;
+    /**
+     * Is Current
+     */
+    is_current: boolean;
+    /**
+     * Observed At
+     */
+    observed_at?: string | null;
+    /**
+     * Operational Rank
+     */
+    operational_rank: number;
+    /**
+     * Priority
+     */
+    priority: string;
+    /**
+     * Provider Snapshot Id
+     */
+    provider_snapshot_id?: string | null;
+    /**
+     * Rationale
+     */
+    rationale?: string | null;
+    /**
+     * Recommended Action
+     */
+    recommended_action?: string | null;
+    /**
+     * Replay Status
+     */
+    replay_status: 'available' | 'legacy_unavailable';
+    /**
+     * Risk Score
+     */
+    risk_score?: number | null;
+    /**
+     * Status
+     */
+    status: string;
+};
+
+/**
+ * DecisionRevisionsPublic
+ *
+ * Paginated immutable history, newest first.
+ */
+export type DecisionRevisionsPublic = {
+    /**
+     * Count
+     */
+    count: number;
+    /**
+     * Data
+     */
+    data: Array<DecisionRevisionPublic>;
 };
 
 /**
@@ -1044,6 +1354,78 @@ export type DedupSummaryV2 = {
      * Updated Findings
      */
     updated_findings?: number;
+};
+
+/**
+ * DefensiveContext
+ *
+ * Data representation and logic for Defensive Context.
+ */
+export type DefensiveContext = {
+    /**
+     * Automatable
+     */
+    automatable?: string | null;
+    /**
+     * Cve Id
+     */
+    cve_id: string;
+    /**
+     * Cvss Score
+     */
+    cvss_score?: number | null;
+    /**
+     * Exploitation
+     */
+    exploitation?: string | null;
+    /**
+     * Modified
+     */
+    modified?: string | null;
+    /**
+     * Published
+     */
+    published?: string | null;
+    /**
+     * References
+     */
+    references?: Array<string>;
+    /**
+     * Severity
+     */
+    severity?: string | null;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * Source Id
+     */
+    source_id?: string | null;
+    /**
+     * Ssvc Decision
+     */
+    ssvc_decision?: string | null;
+    /**
+     * Summary
+     */
+    summary?: string | null;
+    /**
+     * Tags
+     */
+    tags?: Array<string>;
+    /**
+     * Technical Impact
+     */
+    technical_impact?: string | null;
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Url
+     */
+    url?: string | null;
 };
 
 /**
@@ -1161,6 +1543,90 @@ export type DemoWorkspaceStatusPublic = {
 };
 
 /**
+ * EpssData
+ *
+ * Data representation and logic for Epss Data.
+ */
+export type EpssData = {
+    /**
+     * Cve Id
+     */
+    cve_id: string;
+    /**
+     * Date
+     */
+    date?: string | null;
+    /**
+     * Epss
+     */
+    epss?: number | null;
+    /**
+     * Percentile
+     */
+    percentile?: number | null;
+};
+
+/**
+ * EvaluationCreate
+ *
+ * Choose existing observations and optional recorded provider facts.
+ */
+export type EvaluationCreate = {
+    /**
+     * Finding Ids
+     */
+    finding_ids?: Array<string> | null;
+    /**
+     * Provider Snapshot Id
+     */
+    provider_snapshot_id?: string | null;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+};
+
+/**
+ * EvaluationMetadataV1
+ *
+ * Evaluation provenance distinct from scanner observation provenance.
+ */
+export type EvaluationMetadataV1 = {
+    /**
+     * Base Project Revision
+     */
+    base_project_revision?: number | null;
+    /**
+     * Cause
+     */
+    cause: string;
+    /**
+     * Engine Version
+     */
+    engine_version: string;
+    /**
+     * Evaluated At
+     */
+    evaluated_at: string;
+    /**
+     * Input Sha256
+     */
+    input_sha256?: string | null;
+    /**
+     * Observed At
+     */
+    observed_at?: string | null;
+    /**
+     * Replay Status
+     */
+    replay_status?: 'available' | 'legacy_unavailable';
+    /**
+     * Schema Version
+     */
+    schema_version?: 'evaluation-metadata.v1';
+};
+
+/**
  * EvidenceUploadRef
  *
  * Managed upload metadata without local filesystem paths.
@@ -1198,6 +1664,35 @@ export type EvidenceUploadRef = {
      * Stored Filename
      */
     stored_filename?: string | null;
+};
+
+/**
+ * ExecutiveFindingDecisionPublic
+ *
+ * One recorded decision with its original scope and guidance.
+ */
+export type ExecutiveFindingDecisionPublic = {
+    /**
+     * Component
+     */
+    component?: string | null;
+    /**
+     * Cve Id
+     */
+    cve_id: string;
+    /**
+     * Finding Id
+     */
+    finding_id: string;
+    guidance: FindingDecisionGuidance;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Target
+     */
+    target?: string | null;
 };
 
 /**
@@ -1379,6 +1874,8 @@ export type FindingDecisionEvidenceV2 = {
      * Epss
      */
     epss?: number | null;
+    evaluation?: EvaluationMetadataV1 | null;
+    evaluation_input?: ScopeEvaluationInput | null;
     /**
      * Finding Id
      */
@@ -1444,6 +1941,40 @@ export type FindingDecisionEvidenceV2 = {
      * Waived
      */
     waived?: boolean;
+};
+
+/**
+ * FindingDecisionGuidance
+ *
+ * Data representation and logic for Finding Decision Guidance.
+ */
+export type FindingDecisionGuidance = {
+    business_impact: BusinessImpactBlock;
+    /**
+     * Decision Statement
+     */
+    decision_statement: string;
+    /**
+     * Reason Codes
+     */
+    reason_codes?: Array<string>;
+    /**
+     * Recommendation
+     */
+    recommendation: 'patch' | 'mitigate' | 'monitor' | 'review' | 'waiver';
+    /**
+     * Recommendation Label
+     */
+    recommendation_label: string;
+    sla: SlaTarget;
+    /**
+     * Visibility
+     */
+    visibility: string;
+    /**
+     * Wording Policy
+     */
+    wording_policy?: string;
 };
 
 /**
@@ -2538,6 +3069,260 @@ export type ImportFormatCapabilityPublic = {
 };
 
 /**
+ * InputOccurrence
+ *
+ * Data representation and logic for Input Occurrence.
+ */
+export type InputOccurrence = {
+    /**
+     * Asset Business Service
+     */
+    asset_business_service?: string | null;
+    /**
+     * Asset Criticality
+     */
+    asset_criticality?: string | null;
+    /**
+     * Asset Environment
+     */
+    asset_environment?: string | null;
+    /**
+     * Asset Exposure
+     */
+    asset_exposure?: string | null;
+    /**
+     * Asset Id
+     */
+    asset_id?: string | null;
+    /**
+     * Asset Match Candidate Count
+     */
+    asset_match_candidate_count?: number;
+    /**
+     * Asset Match Mode
+     */
+    asset_match_mode?: string | null;
+    /**
+     * Asset Match Pattern
+     */
+    asset_match_pattern?: string | null;
+    /**
+     * Asset Match Precedence
+     */
+    asset_match_precedence?: number | null;
+    /**
+     * Asset Match Row
+     */
+    asset_match_row?: number | null;
+    /**
+     * Asset Match Rule Id
+     */
+    asset_match_rule_id?: string | null;
+    /**
+     * Asset Owner
+     */
+    asset_owner?: string | null;
+    /**
+     * Component Name
+     */
+    component_name?: string | null;
+    /**
+     * Component Version
+     */
+    component_version?: string | null;
+    /**
+     * Cve Id
+     */
+    cve_id: string;
+    /**
+     * Dependency Path
+     */
+    dependency_path?: string | null;
+    /**
+     * File Path
+     */
+    file_path?: string | null;
+    /**
+     * Fix Versions
+     */
+    fix_versions?: Array<string>;
+    /**
+     * Package Type
+     */
+    package_type?: string | null;
+    /**
+     * Purl
+     */
+    purl?: string | null;
+    /**
+     * Raw Severity
+     */
+    raw_severity?: string | null;
+    /**
+     * Source Format
+     */
+    source_format?: string;
+    /**
+     * Source Id
+     */
+    source_id?: string | null;
+    /**
+     * Source Record Id
+     */
+    source_record_id?: string | null;
+    /**
+     * Target Kind
+     */
+    target_kind?: string;
+    /**
+     * Target Ref
+     */
+    target_ref?: string | null;
+    /**
+     * Vex Action Statement
+     */
+    vex_action_statement?: string | null;
+    /**
+     * Vex Candidate Count
+     */
+    vex_candidate_count?: number;
+    /**
+     * Vex Justification
+     */
+    vex_justification?: string | null;
+    /**
+     * Vex Match Type
+     */
+    vex_match_type?: string | null;
+    /**
+     * Vex Source Format
+     */
+    vex_source_format?: string | null;
+    /**
+     * Vex Source Path
+     */
+    vex_source_path?: string | null;
+    /**
+     * Vex Source Record Id
+     */
+    vex_source_record_id?: string | null;
+    /**
+     * Vex Status
+     */
+    vex_status?: string | null;
+};
+
+/**
+ * KevData
+ *
+ * Data representation and logic for Kev Data.
+ */
+export type KevData = {
+    /**
+     * Cve Id
+     */
+    cve_id: string;
+    /**
+     * Date Added
+     */
+    date_added?: string | null;
+    /**
+     * Due Date
+     */
+    due_date?: string | null;
+    /**
+     * In Kev
+     */
+    in_kev?: boolean;
+    /**
+     * Known Ransomware Campaign Use
+     */
+    known_ransomware_campaign_use?: string | null;
+    /**
+     * Notes
+     */
+    notes?: string | null;
+    /**
+     * Product
+     */
+    product?: string | null;
+    /**
+     * Required Action
+     */
+    required_action?: string | null;
+    /**
+     * Short Description
+     */
+    short_description?: string | null;
+    /**
+     * Vendor Project
+     */
+    vendor_project?: string | null;
+    /**
+     * Vulnerability Name
+     */
+    vulnerability_name?: string | null;
+};
+
+/**
+ * NvdData
+ *
+ * Data representation and logic for Nvd Data.
+ */
+export type NvdData = {
+    /**
+     * Cve Id
+     */
+    cve_id: string;
+    /**
+     * Cvss Base Score
+     */
+    cvss_base_score?: number | null;
+    /**
+     * Cvss Severity
+     */
+    cvss_severity?: string | null;
+    /**
+     * Cvss Vector
+     */
+    cvss_vector?: string | null;
+    /**
+     * Cvss Version
+     */
+    cvss_version?: string | null;
+    /**
+     * Cwes
+     */
+    cwes?: Array<string>;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Last Modified
+     */
+    last_modified?: string | null;
+    /**
+     * Published
+     */
+    published?: string | null;
+    /**
+     * Reference Tags
+     */
+    reference_tags?: {
+        [key: string]: Array<string>;
+    };
+    /**
+     * References
+     */
+    references?: Array<string>;
+    /**
+     * Vulnerability Status
+     */
+    vulnerability_status?: string | null;
+};
+
+/**
  * OccurrenceDedupEvidenceV2
  *
  * Typed dedup evidence attached to a persisted occurrence.
@@ -2945,6 +3730,38 @@ export type PriorityExplanationV2 = {
 };
 
 /**
+ * PriorityPolicy
+ *
+ * Data representation and logic for Priority Policy.
+ */
+export type PriorityPolicy = {
+    /**
+     * Critical Cvss Threshold
+     */
+    critical_cvss_threshold?: number;
+    /**
+     * Critical Epss Threshold
+     */
+    critical_epss_threshold?: number;
+    /**
+     * High Cvss Threshold
+     */
+    high_cvss_threshold?: number;
+    /**
+     * High Epss Threshold
+     */
+    high_epss_threshold?: number;
+    /**
+     * Medium Cvss Threshold
+     */
+    medium_cvss_threshold?: number;
+    /**
+     * Medium Epss Threshold
+     */
+    medium_epss_threshold?: number;
+};
+
+/**
  * ProjectAttackSummaryPublic
  *
  * Project-level ATT&CK summary for the React dashboard widget.
@@ -3310,6 +4127,10 @@ export type ProjectRiskReductionPublic = {
      */
     current_actionable_risk?: number;
     /**
+     * Current Risk Index
+     */
+    current_risk_index?: number;
+    /**
      * Governance Debt Risk
      */
     governance_debt_risk?: number;
@@ -3322,6 +4143,10 @@ export type ProjectRiskReductionPublic = {
      * Methodology
      */
     methodology?: string;
+    /**
+     * Metric
+     */
+    metric?: 'mean-actionable-score.v1';
     /**
      * Residual Steps
      */
@@ -3365,6 +4190,34 @@ export type ProjectsPublic = {
 };
 
 /**
+ * ProviderDataQualityFlag
+ *
+ * Data representation and logic for Provider Data Quality Flag.
+ */
+export type ProviderDataQualityFlag = {
+    /**
+     * Code
+     */
+    code: string;
+    /**
+     * Cve Id
+     */
+    cve_id?: string | null;
+    /**
+     * Message
+     */
+    message: string;
+    /**
+     * Severity
+     */
+    severity?: 'info' | 'warning' | 'error';
+    /**
+     * Source
+     */
+    source: string;
+};
+
+/**
  * ProviderDataQualityFlagEvidenceV2
  *
  * Provider quality flag preserved in the decision evidence contract.
@@ -3402,6 +4255,21 @@ export type ProviderDataQualityFlagEvidenceV2 = {
      * Source
      */
     source: string;
+};
+
+/**
+ * ProviderEvidence
+ *
+ * Data representation and logic for Provider Evidence.
+ */
+export type ProviderEvidence = {
+    /**
+     * Defensive Contexts
+     */
+    defensive_contexts?: Array<DefensiveContext>;
+    epss: EpssData;
+    kev: KevData;
+    nvd: NvdData;
 };
 
 /**
@@ -3905,6 +4773,10 @@ export type ReportsPublic = {
  */
 export type ResidualRiskStepPublic = {
     /**
+     * Actionable Finding Count
+     */
+    actionable_finding_count?: number;
+    /**
      * Label
      */
     label: string;
@@ -3912,6 +4784,10 @@ export type ResidualRiskStepPublic = {
      * Reduction
      */
     reduction?: number;
+    /**
+     * Risk Index
+     */
+    risk_index?: number;
     /**
      * Risk Score
      */
@@ -3993,6 +4869,10 @@ export type RiskReductionOpportunityPublic = {
      */
     component?: string | null;
     /**
+     * Component Identity
+     */
+    component_identity?: string | null;
+    /**
      * Cve Id
      */
     cve_id: string;
@@ -4004,6 +4884,10 @@ export type RiskReductionOpportunityPublic = {
      * Finding Count
      */
     finding_count?: number;
+    /**
+     * Finding Ids
+     */
+    finding_ids?: Array<string>;
     /**
      * Id
      */
@@ -4109,6 +4993,41 @@ export type RunCountsV2 = {
 };
 
 /**
+ * RunDecisionSummaryPublic
+ *
+ * Executive facts derived solely from one run's immutable decisions.
+ */
+export type RunDecisionSummaryPublic = {
+    /**
+     * Actionable Finding Count
+     */
+    actionable_finding_count?: number;
+    /**
+     * Finding Count
+     */
+    finding_count?: number;
+    /**
+     * Findings With Guidance
+     */
+    findings_with_guidance?: number;
+    /**
+     * Missing Guidance Count
+     */
+    missing_guidance_count?: number;
+    /**
+     * Recommendation Counts
+     */
+    recommendation_counts?: {
+        [key: string]: number;
+    };
+    shortest_actionable_sla?: SlaTarget | null;
+    /**
+     * Top Decisions
+     */
+    top_decisions?: Array<ExecutiveFindingDecisionPublic>;
+};
+
+/**
  * RunDiagnosticsV2
  *
  * Typed terminal diagnostics for failed or degraded runs.
@@ -4204,6 +5123,55 @@ export type RunParseErrorV2 = {
 };
 
 /**
+ * ScopeEvaluationInput
+ *
+ * Immutable-in-storage inputs sufficient for a complete offline scope replay.
+ */
+export type ScopeEvaluationInput = {
+    attack_data: AttackData;
+    context_profile?: ContextPolicyProfile;
+    /**
+     * Cve Id
+     */
+    cve_id: string;
+    /**
+     * Data Quality Confidence
+     */
+    data_quality_confidence?: string;
+    /**
+     * Data Quality Flags
+     */
+    data_quality_flags?: Array<ProviderDataQualityFlag>;
+    /**
+     * Defensive Contexts
+     */
+    defensive_contexts?: Array<DefensiveContext>;
+    /**
+     * Engine Version
+     */
+    engine_version?: string;
+    /**
+     * Evaluation Date
+     */
+    evaluation_date: string;
+    /**
+     * Observations
+     */
+    observations: Array<InputOccurrence>;
+    priority_policy?: PriorityPolicy;
+    provider_evidence: ProviderEvidence;
+    /**
+     * Schema Version
+     */
+    schema_version?: 'scope-evaluation-input.v1';
+    /**
+     * Waiver Rules
+     */
+    waiver_rules?: Array<WaiverRule>;
+    workbench_waiver?: WaiverRule | null;
+};
+
+/**
  * SidecarUploadCapabilityPublic
  *
  * Supported optional import sidecar metadata.
@@ -4237,6 +5205,38 @@ export type SidecarUploadCapabilityPublic = {
      * Required
      */
     required?: boolean;
+};
+
+/**
+ * SlaTarget
+ *
+ * Data representation and logic for Sla Target.
+ */
+export type SlaTarget = {
+    /**
+     * Guidance
+     */
+    guidance: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Priority
+     */
+    priority: string;
+    /**
+     * Source
+     */
+    source?: string;
+    /**
+     * Target Days
+     */
+    target_days?: number | null;
+    /**
+     * Target Hours
+     */
+    target_hours?: number | null;
 };
 
 /**
@@ -4417,6 +5417,58 @@ export type WaiverPublic = {
      * Updated At
      */
     updated_at: string;
+};
+
+/**
+ * WaiverRule
+ *
+ * Data representation and logic for Waiver Rule.
+ */
+export type WaiverRule = {
+    /**
+     * Approval Ref
+     */
+    approval_ref?: string | null;
+    /**
+     * Asset Ids
+     */
+    asset_ids?: Array<string>;
+    /**
+     * Cve Id
+     */
+    cve_id: string;
+    /**
+     * Expires On
+     */
+    expires_on: string;
+    /**
+     * Id
+     */
+    id?: string | null;
+    /**
+     * Owner
+     */
+    owner: string;
+    /**
+     * Reason
+     */
+    reason: string;
+    /**
+     * Review On
+     */
+    review_on?: string | null;
+    /**
+     * Services
+     */
+    services?: Array<string>;
+    /**
+     * Targets
+     */
+    targets?: Array<string>;
+    /**
+     * Ticket Url
+     */
+    ticket_url?: string | null;
 };
 
 /**
@@ -4683,7 +5735,7 @@ export type WorkflowEventsPublic = {
  *
  * Durable workflow families owned by the Workbench core.
  */
-export type WorkflowRunKind = 'import' | 'provider_update' | 'report_generation';
+export type WorkflowRunKind = 'import' | 'provider_update' | 'report_generation' | 'reevaluation';
 
 /**
  * WorkflowRunPublic
@@ -4958,6 +6010,45 @@ export type GetApiV1FindingsByFindingIdResponses = {
 };
 
 export type GetApiV1FindingsByFindingIdResponse = GetApiV1FindingsByFindingIdResponses[keyof GetApiV1FindingsByFindingIdResponses];
+
+export type GetApiV1FindingsByFindingIdDecisionRevisionsData = {
+    body?: never;
+    path: {
+        /**
+         * Finding Id
+         */
+        finding_id: string;
+    };
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
+    url: '/api/v1/findings/{finding_id}/decision-revisions';
+};
+
+export type GetApiV1FindingsByFindingIdDecisionRevisionsErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1FindingsByFindingIdDecisionRevisionsError = GetApiV1FindingsByFindingIdDecisionRevisionsErrors[keyof GetApiV1FindingsByFindingIdDecisionRevisionsErrors];
+
+export type GetApiV1FindingsByFindingIdDecisionRevisionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: DecisionRevisionsPublic;
+};
+
+export type GetApiV1FindingsByFindingIdDecisionRevisionsResponse = GetApiV1FindingsByFindingIdDecisionRevisionsResponses[keyof GetApiV1FindingsByFindingIdDecisionRevisionsResponses];
 
 export type GetApiV1FindingsByFindingIdExplainData = {
     body?: never;
@@ -5378,6 +6469,78 @@ export type GetApiV1ProjectsByProjectIdDashboardResponses = {
 };
 
 export type GetApiV1ProjectsByProjectIdDashboardResponse = GetApiV1ProjectsByProjectIdDashboardResponses[keyof GetApiV1ProjectsByProjectIdDashboardResponses];
+
+export type GetApiV1ProjectsByProjectIdEvaluationsData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
+    url: '/api/v1/projects/{project_id}/evaluations';
+};
+
+export type GetApiV1ProjectsByProjectIdEvaluationsErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1ProjectsByProjectIdEvaluationsError = GetApiV1ProjectsByProjectIdEvaluationsErrors[keyof GetApiV1ProjectsByProjectIdEvaluationsErrors];
+
+export type GetApiV1ProjectsByProjectIdEvaluationsResponses = {
+    /**
+     * Successful Response
+     */
+    200: AnalysisRunsPublic;
+};
+
+export type GetApiV1ProjectsByProjectIdEvaluationsResponse = GetApiV1ProjectsByProjectIdEvaluationsResponses[keyof GetApiV1ProjectsByProjectIdEvaluationsResponses];
+
+export type PostApiV1ProjectsByProjectIdEvaluationsData = {
+    /**
+     * Body
+     */
+    body?: EvaluationCreate | null;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/evaluations';
+};
+
+export type PostApiV1ProjectsByProjectIdEvaluationsErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type PostApiV1ProjectsByProjectIdEvaluationsError = PostApiV1ProjectsByProjectIdEvaluationsErrors[keyof PostApiV1ProjectsByProjectIdEvaluationsErrors];
+
+export type PostApiV1ProjectsByProjectIdEvaluationsResponses = {
+    /**
+     * Successful Response
+     */
+    200: AnalysisRunPublic;
+};
+
+export type PostApiV1ProjectsByProjectIdEvaluationsResponse = PostApiV1ProjectsByProjectIdEvaluationsResponses[keyof PostApiV1ProjectsByProjectIdEvaluationsResponses];
 
 export type GetApiV1ProjectsByProjectIdFindingsData = {
     body?: never;

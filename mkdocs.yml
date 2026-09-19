@@ -2,6 +2,8 @@ site_name: Vuln Prioritizer Workbench
 site_description: Local-first Workbench for explainable CVE prioritization from scanner, SBOM, VEX, and asset-context evidence.
 repo_url: https://github.com/Noetheon/vuln-prioritizer-workbench
 repo_name: Noetheon/vuln-prioritizer-workbench
+exclude_docs: |
+  audits/
 theme:
   name: mkdocs
 nav:
@@ -41,6 +43,8 @@ nav:
   - Benchmarking: benchmarking.md
   - Architecture:
       - Overview: architecture/index.md
+      - Evaluation Revisions: architecture/evaluation-revisions.md
+      - Evaluation Revisions Plan: architecture/evaluation-revisions-plan.md
       - Scope-First Decision Graph: architecture/scope-first-decision-graph.md
       - Decision/Evidence Kernel: architecture/decision-evidence-kernel.md
       - Model Import Registry: architecture/model-imports.md

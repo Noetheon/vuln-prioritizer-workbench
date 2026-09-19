@@ -22,11 +22,13 @@ simulation, not a business-loss model and not a NIST maturity assessment.
 The backend groups opportunities deterministically by:
 
 1. `cve_id`
-2. component identity, preferring component name and version over PURL
+2. canonical component identity, including package ecosystem, name, and version
+   from the recorded scope or PURL
 3. normalized recommended action
 
-Completing an opportunity is modeled as removing the open `risk_score` from the
-affected actionable findings. Opportunities are sorted by expected reduction,
+Completing an opportunity is modeled as removing both the stored `risk_score`
+and the finding count of its affected actionable findings. Opportunities are
+sorted by expected reduction in total score burden,
 then KEV presence, maximum EPSS, maximum CVSS, and stable CVE/component/action
 keys.
 
@@ -35,27 +37,42 @@ The backend residual-risk ladder exposes four fixed steps:
 - `Current`
 - `After top 1`
 - `After top 3`
-- `Remaining`
+- `Remaining` after all returned top opportunities
 
-Each step is clamped at zero so the dashboard never shows negative residual
-risk. The frontend maps the same reduction model into a compact risk-index
-projection with selectable top reducers.
+The metric `mean-actionable-score.v1` divides the remaining total score by the
+remaining actionable finding count. An empty actionable set has index zero;
+the index is capped at 100. For example, scores of 100 and 50 give an index of
+75. Removing the finding scored 100 leaves one finding and an index of 50,
+not 25. Removing the finding scored 50 instead leaves an index of 100 even
+though the total score burden falls.
+
+The frontend uses the same denominator when simulating selectable reducers.
+It shows the remaining average and the removed total score burden separately.
+The simulation does not change finding status or establish that remediation
+has occurred. Historical run points retain their recorded values: imports can
+cover different evidence, so a lower historical index alone is not proof of a
+fix. Native evaluations are described in
+[Reproducible evaluation revisions](architecture/evaluation-revisions.md).
 
 ## Dashboard Contract
 
 The dashboard API exposes `risk_reduction` in
 `/api/v1/projects/{project_id}/dashboard` with these public DTOs:
 
-- `ProjectRiskReductionPublic`
-- `RiskReductionOpportunityPublic`
+- `ProjectRiskReductionPublic`, including `current_risk_index`, `metric`, and
+  `current_actionable_risk` (the total score burden)
+- `RiskReductionOpportunityPublic`, including canonical `component_identity`
+  and exact `finding_ids`
 - `RiskContributionPublic`
-- `ResidualRiskStepPublic`
+- `ResidualRiskStepPublic`, including remaining `actionable_finding_count`,
+  `risk_index`, and total `risk_score`
 
 The frontend renders the section before the metric strip so the current posture,
 largest risk driver, simulated reduction, and top remediation groups become the
-primary dashboard readout. Each opportunity links to the Findings route with a
-search query for the CVE, falling back to the component or recommended action
-when no CVE is available.
+primary dashboard readout. A single-finding opportunity opens that finding
+directly. A group opens a list of its exact finding IDs, preserving its
+component and action scope. If those IDs are unavailable, the UI asks for a
+dashboard refresh instead of opening a broader CVE search.
 
 ## Method References
 

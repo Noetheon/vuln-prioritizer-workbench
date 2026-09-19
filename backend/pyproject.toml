@@ -82,7 +82,7 @@ dev = [
   "pytest-cov>=5.0,<8.0",
   "respx>=0.21,<1.0",
   "ruff>=0.5,<1.0",
-  "twine>=6.0,<7.0",
+  "twine>=6.0,<8.0",
   "types-PyYAML>=6.0,<7.0",
   "types-requests>=2.32,<3.0",
 ]
@@ -151,9 +151,9 @@ omit = [
 [tool.mutmut]
 paths_to_mutate = [
   "app/decision_core/builders.py",
-  "app/services/report_bundle_archive_verification.py",
   "app/services/report_sarif_validation.py",
-  "app/domain/engine/services/analysis_pipeline.py",
+  "app/domain/engine/services/analysis_quality.py",
+  "app/domain/engine/services/analysis_snapshot.py",
 ]
 also_copy = [
   "app",

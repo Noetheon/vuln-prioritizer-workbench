@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from sqlmodel import Field, SQLModel
 
@@ -49,6 +50,8 @@ class RiskReductionOpportunityPublic(SQLModel):
     label: str
     cve_id: str
     component: str | None = None
+    component_identity: str | None = None
+    finding_ids: list[uuid.UUID] = Field(default_factory=list)
     recommended_action: str
     expected_reduction: float = 0.0
     residual_after: float = 0.0
@@ -68,6 +71,8 @@ class ResidualRiskStepPublic(SQLModel):
     label: str
     risk_score: float = 0.0
     reduction: float = 0.0
+    actionable_finding_count: int = 0
+    risk_index: float = 0.0
 
 
 class RiskIndexHistoryPointPublic(SQLModel):
@@ -82,6 +87,8 @@ class ProjectRiskReductionPublic(SQLModel):
     """Risk-reduction opportunities for the project dashboard."""
 
     current_actionable_risk: float = 0.0
+    current_risk_index: float = 0.0
+    metric: Literal["mean-actionable-score.v1"] = "mean-actionable-score.v1"
     actionable_finding_count: int = 0
     largest_driver: RiskContributionPublic | None = None
     top_opportunities: list[RiskReductionOpportunityPublic] = Field(default_factory=list)
@@ -89,8 +96,10 @@ class ProjectRiskReductionPublic(SQLModel):
     history: list[RiskIndexHistoryPointPublic] = Field(default_factory=list)
     governance_debt_risk: float = 0.0
     methodology: str = (
-        "Simulates score reduction by removing open actionable findings when "
-        "their remediation opportunity is completed."
+        "The risk index is the mean score of remaining actionable findings. "
+        "Simulation removes both their scores and their count. Total score burden "
+        "falls when findings are closed; the remaining average can rise. "
+        "Historical imports can cover different evidence and are not proof of remediation."
     )
 
 

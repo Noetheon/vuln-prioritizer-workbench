@@ -94,7 +94,7 @@ export function FindingGovernanceTab({
             items={[
               {
                 label: "SLA",
-                value: findingSlaLabel(finding.priority),
+                value: findingSlaLabel(finding),
               },
               {
                 label: "Acceptance",

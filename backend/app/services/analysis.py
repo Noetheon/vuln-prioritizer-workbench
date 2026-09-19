@@ -15,15 +15,21 @@ from app.core.config import Settings
 from app.decision_core.decision_graph import (
     DecisionGraph,
     ScopedFindingDecision,
+    SharedCveFacts,
     build_scoped_decision_graph,
 )
 from app.domain.engine.config import DEFAULT_CACHE_TTL_HOURS
 from app.domain.engine.inputs.loader import InputSpec
 from app.domain.engine.models import (
     AnalysisContext,
+    AttackData,
+    EpssData,
+    KevData,
+    NvdData,
     ParsedInput,
     PrioritizedFinding,
     PriorityPolicy,
+    ProviderEvidence,
 )
 from app.domain.engine.options import AttackSource, InputFormat, OutputFormat, SortBy
 from app.domain.engine.provider_snapshot import load_provider_snapshot
@@ -32,7 +38,11 @@ from app.domain.engine.services.analysis import (
     AnalysisNoFindingsError,
     AnalysisRequest,
     load_analysis_waiver_rules,
-    prepare_analysis,
+)
+from app.domain.engine.services.analysis_pipeline import EnrichedAnalysis, prepare_enriched_analysis
+from app.domain.engine.services.analysis_quality import (
+    _finding_data_quality_confidence,
+    _finding_data_quality_flags,
 )
 from app.repositories import RunRepository
 
@@ -85,6 +95,7 @@ class AnalysisService:
         waiver_file: Path | None = None,
         vex_files: list[Path] | None = None,
         parsed_input: ParsedInput | None = None,
+        persist_snapshot: bool = True,
     ) -> WorkbenchAnalysisResult:
         """Run parse/enrich/score/explain for one uploaded Workbench import."""
         snapshot_path = provider_snapshot_file or self.default_provider_snapshot_file()
@@ -132,7 +143,7 @@ class AnalysisService:
             preloaded_waiver_rules=tuple(waiver_rules),
         )
         try:
-            findings, context = prepare_analysis(request)
+            enriched = prepare_enriched_analysis(request)
         except (
             OSError,
             ValidationError,
@@ -142,22 +153,15 @@ class AnalysisService:
         ) as exc:
             raise WorkbenchAnalysisError(str(exc)) from exc
 
-        findings_by_cve = {finding.cve_id: finding for finding in findings}
-        if len(findings_by_cve) != len(findings):
-            raise WorkbenchAnalysisError("Decision analysis produced duplicate CVE keys.")
-        graph_occurrences = (
-            list(parsed_input.occurrences)
-            if parsed_input is not None
-            else [
-                occurrence for finding in findings for occurrence in finding.provenance.occurrences
-            ]
-        )
+        context = enriched.context
+        graph_occurrences = list(enriched.inputs.parsed_input.occurrences)
         try:
             decision_graph = build_scoped_decision_graph(
-                findings_by_cve=findings_by_cve,
+                shared_facts_by_cve=_shared_cve_facts(enriched),
                 occurrences=graph_occurrences,
                 context=context,
-                waiver_rules=waiver_rules,
+                context_profile=enriched.inputs.context_profile,
+                waiver_rules=list(enriched.inputs.waiver_rules),
             )
         except (ValidationError, ValueError) as exc:
             raise WorkbenchAnalysisError(str(exc)) from exc
@@ -177,12 +181,13 @@ class AnalysisService:
                 ),
             }
         )
-        snapshot_id = self.persist_provider_snapshot(
-            snapshot_path,
-            locked_provider_data=use_locked_snapshot,
+        snapshot_id = (
+            self.persist_provider_snapshot(snapshot_path, locked_provider_data=use_locked_snapshot)
+            if persist_snapshot
+            else None
         )
         return WorkbenchAnalysisResult(
-            findings_by_cve=findings_by_cve,
+            findings_by_cve={},
             context=context,
             provider_snapshot_id=snapshot_id,
             provider_snapshot_hash=context.provider_snapshot_hash,
@@ -275,6 +280,32 @@ class AnalysisService:
             source_metadata_json=metadata_json,
         )
         return snapshot.id
+
+
+def _shared_cve_facts(prepared: EnrichedAnalysis) -> dict[str, SharedCveFacts]:
+    """Translate provider records into evaluator inputs without preliminary scoring."""
+    enrichment = prepared.enrichment
+    all_flags = [
+        flag for flags in enrichment.provider_data_quality_flags.values() for flag in flags
+    ]
+    facts: dict[str, SharedCveFacts] = {}
+    for cve_id in prepared.inputs.parsed_input.unique_cves:
+        flags = _finding_data_quality_flags(cve_id=cve_id, flags=all_flags)
+        defensive_contexts = list(enrichment.defensive_contexts.get(cve_id, ()))
+        facts[cve_id] = SharedCveFacts(
+            cve_id=cve_id,
+            provider_evidence=ProviderEvidence(
+                nvd=enrichment.nvd.get(cve_id, NvdData(cve_id=cve_id)),
+                epss=enrichment.epss.get(cve_id, EpssData(cve_id=cve_id)),
+                kev=enrichment.kev.get(cve_id, KevData(cve_id=cve_id, in_kev=False)),
+                defensive_contexts=defensive_contexts,
+            ),
+            attack_data=enrichment.attack.get(cve_id, AttackData(cve_id=cve_id)),
+            data_quality_flags=flags,
+            data_quality_confidence=_finding_data_quality_confidence(flags),
+            defensive_contexts=defensive_contexts,
+        )
+    return facts
 
 
 def _replace_superseded_waiver_warnings(

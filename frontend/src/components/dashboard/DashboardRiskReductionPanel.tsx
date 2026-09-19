@@ -1,5 +1,3 @@
-import type { CSSProperties } from "react"
-import { useEffect, useMemo, useRef, useState } from "react"
 import {
   ArrowUpRight,
   CheckSquare2,
@@ -7,7 +5,10 @@ import {
   Square,
   Target,
   TrendingDown,
+  TrendingUp,
 } from "lucide-react"
+import type { CSSProperties } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import type {
   ProjectDecisionSummaryPublic,
@@ -27,19 +28,19 @@ import {
 import { findingsByPriorityChartData } from "@/lib/chart-data"
 import { Link } from "@/lib/router"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
+import { DashboardOpportunityScope } from "./DashboardOpportunityScope"
 import {
   buildRiskPostureHistorySteps,
   buildRiskPostureProjection,
   buildRiskReductionSummary,
   formatRiskReductionScore,
-  riskReducerMetaLabel,
-  riskReductionPercent,
-  riskScoreToIndex,
-  selectedRiskPostureReducers,
-  shortContextList,
   type RiskPostureHistoryStep,
   type RiskPostureProjectionStep,
   type RiskReductionSummary,
+  riskReducerMetaLabel,
+  riskReductionPercent,
+  selectedRiskPostureReducers,
+  shortContextList,
 } from "./dashboard-risk-reduction-model"
 
 type DashboardRiskReductionPanelProps = {
@@ -78,10 +79,9 @@ export function DashboardRiskReductionPanel({
     [summary.history],
   )
   const checkedPlan = projection[projection.length - 1] ?? projection[0] ?? null
-  const checkedReductionIndex = Math.max(
-    summary.currentRiskIndex - (checkedPlan?.riskIndex ?? 0),
-    0,
-  )
+  const checkedReductionIndex =
+    summary.currentRiskIndex -
+    (checkedPlan?.riskIndex ?? summary.currentRiskIndex)
 
   return (
     <VpwSurface
@@ -146,6 +146,14 @@ export function DashboardRiskReductionPanel({
           />
         )}
       </VpwSurfaceBody>
+      {!isLoading ? (
+        <details className="mx-5 mb-4 text-xs text-[var(--vpw-text-secondary)]">
+          <summary className="cursor-pointer">
+            How this metric and simulation work
+          </summary>
+          <p className="mt-2 max-w-4xl leading-5">{summary.methodology}</p>
+        </details>
+      ) : null}
     </VpwSurface>
   )
 }
@@ -187,12 +195,17 @@ function RiskPostureSummary({
         {formatRiskReductionScore(summary.currentRiskIndex)}
       </div>
       <div className="dashboard-risk-posture-index-change">
-        <TrendingDown aria-hidden="true" className="size-4" />
+        {checkedReductionIndex >= 0 ? (
+          <TrendingDown aria-hidden="true" className="size-4" />
+        ) : (
+          <TrendingUp aria-hidden="true" className="size-4" />
+        )}
         <span className="dashboard-risk-posture-index-change-value">
-          {formatRiskReductionScore(checkedReductionIndex)}
+          {formatRiskReductionScore(Math.abs(checkedReductionIndex))}
         </span>
         <span className="dashboard-risk-posture-index-change-label">
-          index reduction planned
+          average {checkedReductionIndex >= 0 ? "decrease" : "increase"}{" "}
+          simulated
         </span>
       </div>
       <RiskIndexScale value={summary.currentRiskIndex} />
@@ -267,7 +280,6 @@ function RiskPostureSeverityStrip({
 }
 
 type RiskPostureChartBar = {
-  detail: string
   key: string
   label: string
   riskIndex: number
@@ -319,7 +331,6 @@ function RiskPostureProjection({
   const tickValues = [100, 75, 50, 25, 0]
   const allBars: RiskPostureChartBar[] = [
     ...historySteps.map((step) => ({
-      detail: "",
       key: step.key,
       label: step.label,
       riskIndex: step.riskIndex,
@@ -327,10 +338,6 @@ function RiskPostureProjection({
       tone: "history" as const,
     })),
     ...projection.map((step) => ({
-      detail:
-        step.reductionScore > 0
-          ? `-${formatRiskReductionScore(step.reductionScore)} score`
-          : "open risk",
       key: step.key,
       label: projectionStepDisplayLabel(step.label),
       riskIndex: step.riskIndex,
@@ -342,7 +349,9 @@ function RiskPostureProjection({
   // no history it still separates "Current" from the simulated plan.
   const dividerIndex = historySteps.length > 0 ? historySteps.length : 1
   const slotWidth =
-    allBars.length > 0 ? (chartRight - chartLeft - todayGap) / allBars.length : 0
+    allBars.length > 0
+      ? (chartRight - chartLeft - todayGap) / allBars.length
+      : 0
   const barWidth = Math.round(Math.min(108, Math.max(34, slotWidth * 0.56)))
   const barCenterAt = (index: number) =>
     chartLeft +
@@ -406,31 +415,29 @@ function RiskPostureProjection({
                 "success",
                 "history",
               ] as const
-            ).map(
-              (tone) => (
-                <linearGradient
-                  id={`vpw-risk-posture-grad-${tone}`}
-                  key={tone}
-                  x1="0"
-                  x2="0"
-                  y1="0"
-                  y2="1"
-                >
-                  <stop
-                    className={`dashboard-risk-posture-grad-stop dashboard-risk-posture-grad-stop--${tone}`}
-                    offset="0"
-                    stopOpacity={
-                      tone === "projected" || tone === "history" ? 0.2 : 0.34
-                    }
-                  />
-                  <stop
-                    className={`dashboard-risk-posture-grad-stop dashboard-risk-posture-grad-stop--${tone}`}
-                    offset="1"
-                    stopOpacity="0.05"
-                  />
-                </linearGradient>
-              ),
-            )}
+            ).map((tone) => (
+              <linearGradient
+                id={`vpw-risk-posture-grad-${tone}`}
+                key={tone}
+                x1="0"
+                x2="0"
+                y1="0"
+                y2="1"
+              >
+                <stop
+                  className={`dashboard-risk-posture-grad-stop dashboard-risk-posture-grad-stop--${tone}`}
+                  offset="0"
+                  stopOpacity={
+                    tone === "projected" || tone === "history" ? 0.2 : 0.34
+                  }
+                />
+                <stop
+                  className={`dashboard-risk-posture-grad-stop dashboard-risk-posture-grad-stop--${tone}`}
+                  offset="1"
+                  stopOpacity="0.05"
+                />
+              </linearGradient>
+            ))}
           </defs>
           {tickValues.map((tick) => {
             const y = chartBottom - tick * chartScale
@@ -547,15 +554,6 @@ function RiskPostureProjection({
                 >
                   {bar.label}
                 </text>
-                {bar.detail ? (
-                  <text
-                    className="dashboard-risk-posture-chart-x-detail"
-                    x={bar.center}
-                    y="308"
-                  >
-                    {bar.detail}
-                  </text>
-                ) : null}
               </g>
             )
           })}
@@ -593,9 +591,9 @@ function RiskPosturePlanReadout({
 }) {
   const finalStep = projection[projection.length - 1] ?? null
   const finalIndex = finalStep?.riskIndex ?? currentRiskIndex
-  const dropPercent =
+  const changePercent =
     currentRiskIndex > 0
-      ? Math.round(((currentRiskIndex - finalIndex) / currentRiskIndex) * 100)
+      ? Math.round(((finalIndex - currentRiskIndex) / currentRiskIndex) * 100)
       : 0
   const reachedStep = projection.find((step) => step.riskIndex <= targetIndex)
   return (
@@ -604,16 +602,21 @@ function RiskPosturePlanReadout({
         {selectedCount} action{selectedCount === 1 ? "" : "s"} planned
       </span>
       <span className="dashboard-risk-posture-readout-text">
-        Completing the checked plan takes the index{" "}
+        Completing the checked plan changes the remaining average{" "}
         <strong>
           {formatRiskReductionScore(currentRiskIndex)} →{" "}
           {formatRiskReductionScore(finalIndex)}
         </strong>{" "}
-        (−{dropPercent}%)
+        ({changePercent > 0 ? "+" : ""}
+        {changePercent}%).{" "}
+        {formatRiskReductionScore(finalStep?.reductionScore ?? 0)} score burden
+        removed; {finalStep?.remainingFindingCount ?? 0} actionable findings
+        remain.
         {reachedStep ? (
           <>
             {" "}
-            — target reached <strong>{planReadoutStepLabel(reachedStep)}</strong>
+            — target reached{" "}
+            <strong>{planReadoutStepLabel(reachedStep)}</strong>
           </>
         ) : (
           <>
@@ -622,7 +625,7 @@ function RiskPosturePlanReadout({
             <strong className="dashboard-risk-posture-readout-warn">
               target not reached
             </strong>
-            ; check more reducers
+            . The average may rise even when total score burden falls.
           </>
         )}
       </span>
@@ -672,10 +675,6 @@ function RiskPostureReducers({
       <ol>
         {reducers.map((opportunity, index) => {
           const isSelected = selectedOpportunityIds.has(opportunity.id)
-          const reductionIndex = riskScoreToIndex(
-            opportunity.expected_reduction ?? 0,
-            summary.actionableFindingCount,
-          )
           return (
             <li
               className="dashboard-risk-posture-reducer"
@@ -707,19 +706,17 @@ function RiskPostureReducers({
                   )}
                 </Button>
                 <div className="dashboard-risk-posture-reducer-copy">
-                  <Link
+                  <DashboardOpportunityScope
                     className="dashboard-risk-posture-reducer-link"
-                    search={opportunityRouteSearch(
-                      opportunity,
-                      selectedProjectId,
-                    )}
-                    to="/findings"
+                    opportunity={opportunity}
+                    selectedProjectId={selectedProjectId}
                   >
                     {reducerTitle(opportunity)}
-                  </Link>
+                  </DashboardOpportunityScope>
                 </div>
                 <div className="dashboard-risk-posture-reducer-impact">
-                  -{formatRiskReductionScore(reductionIndex)}
+                  -{formatRiskReductionScore(opportunity.expected_reduction)}
+                  <span className="sr-only"> score burden</span>
                 </div>
               </div>
               <div className="dashboard-risk-posture-reducer-meta">
@@ -794,25 +791,6 @@ function toggleReducer(
     next.add(opportunityId)
   }
   setSelectedOpportunityIds(next)
-}
-
-function opportunityRouteSearch(
-  opportunity: {
-    component?: string | null
-    cve_id: string
-    search_query: string
-  },
-  selectedProjectId: string,
-) {
-  const query =
-    opportunity.search_query ||
-    opportunity.cve_id ||
-    opportunity.component ||
-    ""
-  return {
-    ...selectedProjectRouteSearch(selectedProjectId),
-    ...(query ? { query } : {}),
-  }
 }
 
 function reducerTitle(opportunity: {

@@ -46,7 +46,7 @@ test("dashboard renders risk reduction opportunities across breakpoints", async 
     await expect(panel.getByText(/governance debt/i)).toBeVisible()
     await expect(
       panel.getByRole("link", { name: /Patch xz|CVE-2024-3094 on xz/ }),
-    ).toHaveAttribute("href", /query=CVE-2024-3094/)
+    ).toHaveAttribute("href", /\/findings\/finding-1\?projectId=project-1/)
     await expect(
       page.getByRole("complementary", { name: "Dashboard context rail" }),
     ).toHaveCount(0)
@@ -60,9 +60,9 @@ test("dashboard renders risk reduction opportunities across breakpoints", async 
     .getByRole("link", { name: /Patch xz|CVE-2024-3094 on xz/ })
     .click()
 
-  await expect(page).toHaveURL(/\/findings\?.*query=CVE-2024-3094/)
+  await expect(page).toHaveURL(/\/findings\/finding-1\?projectId=project-1/)
   await expect(
-    page.getByRole("table", { name: "Findings remediation queue" }),
+    page.getByRole("region", { name: "Finding priority decision" }),
   ).toContainText("CVE-2024-3094")
 })
 

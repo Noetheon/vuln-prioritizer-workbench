@@ -14,6 +14,7 @@ from typing import Any, Literal
 
 from app.decision_core.contracts import (
     AttackEvidenceV2,
+    EvaluationMetadataV1,
     FindingDecisionEvidenceV2,
     GovernanceEvidenceV2,
     OccurrenceDedupEvidenceV2,
@@ -30,6 +31,7 @@ from app.decision_core.contracts import (
     WorkflowArtifactRefV2,
     WorkflowResultRefV2,
 )
+from app.decision_core.evaluation import ScopeEvaluationInput
 
 
 def build_run_diagnostics(payload: Mapping[str, Any] | None) -> RunDiagnosticsV2:
@@ -80,6 +82,13 @@ def build_finding_decision_evidence(
     provider_payload: Mapping[str, Any],
     occurrence_scope: Mapping[str, Any],
     occurrence_evidence: list[OccurrenceEvidenceV2],
+    evaluation_input: ScopeEvaluationInput | None = None,
+    evaluated_at: str | None = None,
+    observed_at: str | None = None,
+    provider_snapshot_id: str | None = None,
+    provider_snapshot_hash: str | None = None,
+    provider_snapshot_file: str | None = None,
+    locked_provider_data: bool = False,
 ) -> FindingDecisionEvidenceV2:
     """Build finding-level evidence from scoring and persistence decisions."""
     decision = _dict_value(decision_payload)
@@ -105,6 +114,16 @@ def build_finding_decision_evidence(
         waived=waived,
         rationale=rationale,
         recommended_action=recommended_action,
+        evaluation_input=evaluation_input,
+        evaluation=EvaluationMetadataV1(
+            cause="import",
+            evaluated_at=evaluated_at or evaluation_input.evaluation_date.isoformat(),
+            observed_at=observed_at,
+            engine_version=evaluation_input.engine_version,
+            input_sha256=evaluation_input.fingerprint(),
+        )
+        if evaluation_input is not None
+        else None,
         occurrence_scope=OccurrenceScopeV2.model_validate(_dict_value(occurrence_scope)),
         priority_evidence=PriorityEvidenceV2(
             priority_label=_str_value(decision.get("priority_label")) or priority.title(),
@@ -125,7 +144,11 @@ def build_finding_decision_evidence(
             raw=decision,
         ),
         provider=ProviderEvidenceV2(
-            provider_snapshot_hash=_str_value(provenance.get("provider_snapshot_hash")),
+            provider_snapshot_id=provider_snapshot_id,
+            provider_snapshot_hash=provider_snapshot_hash
+            or _str_value(provenance.get("provider_snapshot_hash")),
+            provider_snapshot_file=provider_snapshot_file,
+            locked_provider_data=locked_provider_data,
             provider_evidence=_dict_value(provider_payload),
         ),
         governance=GovernanceEvidenceV2(
