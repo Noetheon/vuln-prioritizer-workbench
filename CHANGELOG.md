@@ -41,6 +41,10 @@ exact git tag output when release wording needs to be verified.
 
 ### Fixed
 
+- Pinned Lucide React to `1.41.0` to avoid unused property reads introduced by
+  its [1.42.0 shared icon-build refactor](https://github.com/lucide-icons/lucide/releases/tag/1.42.0)
+  in generated assets. The temporary pin can be removed once a newer package
+  passes the unchanged build, browser, audit, and CodeQL gates.
 - CodeQL PR analysis includes tests and helper scripts. Browser-test artifacts use
   isolated Playwright attachments, and release manifests are consumed only after
   a successful bundle build.

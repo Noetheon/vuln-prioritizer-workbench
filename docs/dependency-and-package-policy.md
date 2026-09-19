@@ -187,6 +187,15 @@ Revisit it when the generator supports TypeScript 7, and require
 `make api-client-drift-check` as well as build and type checks before upgrading.
 See Microsoft's [TypeScript 7 migration guidance](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-6-0).
 
+Lucide React is temporarily pinned to `1.41.0`. The published ESM icon modules
+in `1.42.0` through `1.47.0` contain unused `__iconData.node` expressions after
+the [shared icon-build refactor](https://github.com/lucide-icons/lucide/releases/tag/1.42.0).
+The conservative Vite/Oxc build preserves these expressions, producing CodeQL
+`js/useless-expression` findings in packaged assets. Keep the normal minifier
+and property-read side-effect handling unchanged. Remove this compatibility pin
+when a newer published package builds without these expressions and passes the
+dependency audit, frontend checks, browser/visual checks, and CodeQL analysis.
+
 The root workspace uses npm workspace scripts only. There is no tracked
 `bun.lock`; adding one would need a package-manager policy change and should not
 be used as release evidence unless that policy changes.

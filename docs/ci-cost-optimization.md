@@ -20,8 +20,8 @@ Ready pull requests keep the merge-safety checks that are required on `main`:
   otherwise outside frontend/API/runtime scope. Frontend static/unit checks can
   run without browser installation for non-browser-impacting backend changes.
   API/runtime or route changes use Chromium and mobile Chromium; UI, style,
-  browser-config, `main`, and manual runs keep the full browser and
-  visual-regression path.
+  frontend dependencies, build/browser configuration, `main`, and manual runs
+  keep the full browser and visual-regression path.
 - `compose-smoke` runs as a required Docker workflow job. For runtime-impacting
   Docker inputs, it runs the demo Compose smoke. Production-like Compose and
   image security scans run for production, container, dependency, security, CI,

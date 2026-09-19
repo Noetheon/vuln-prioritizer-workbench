@@ -363,6 +363,45 @@ def test_codeql_scope_runs_analysis_for_tests_and_scripts(
     assert output.read_text().splitlines() == [f"run-codeql={expected}"]
 
 
+@pytest.mark.parametrize(
+    ("changed_path", "draft", "expected"),
+    [
+        ("frontend/package.json", False, "true"),
+        ("frontend/package-lock.json", False, "true"),
+        ("frontend/vite.config.ts", False, "true"),
+        ("frontend/tsconfig.json", False, "true"),
+        ("frontend/Dockerfile.playwright", False, "true"),
+        ("scripts/frontend-design-audit-linux-docker.sh", False, "true"),
+        ("docs/guide.md", False, "false"),
+        ("frontend/package.json", True, "false"),
+    ],
+)
+def test_frontend_scope_includes_visuals_for_dependency_and_browser_changes(
+    tmp_path: Path, changed_path: str, draft: bool, expected: str
+) -> None:
+    workflow = yaml.safe_load(_read_repo_text(".github/workflows/ci.yml"))
+    step = next(
+        step for step in workflow["jobs"]["frontend"]["steps"] if step.get("id") == "frontend-scope"
+    )
+    script = step["run"].replace("${{ github.event_name }}", "pull_request")
+    script = script.replace("${{ github.event.pull_request.base.sha }}", "fixture-base")
+    script = script.replace("${{ github.event.pull_request.draft }}", str(draft).lower())
+    output = tmp_path / "github-output"
+    subprocess.run(
+        ["bash", "-c", 'git() { printf "%s\\n" "$CHANGED_PATH"; }\n' + script],
+        env={**os.environ, "CHANGED_PATH": changed_path, "GITHUB_OUTPUT": str(output)},
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    outputs = dict(line.split("=", 1) for line in output.read_text().splitlines())
+    for gate in ("run-frontend", "run-browser", "run-design-audit"):
+        assert outputs[gate] == expected, outputs
+    if expected == "true":
+        assert outputs["playwright-browsers"] == "chromium firefox webkit"
+        assert outputs["playwright-projects"] == ""
+
+
 def test_import_service_modules_do_not_import_http_or_route_boundaries() -> None:
     violations: dict[str, list[str]] = {}
     blocked_prefixes = ("fastapi", "starlette", "app.api")
