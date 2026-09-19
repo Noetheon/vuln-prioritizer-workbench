@@ -262,7 +262,8 @@ class FindingCurrentProjectionRepository:
             )
         normalized = evidence.to_jsonable()
         overlay = _top_level_overlay(source_payload, normalized)
-        reconstructed = _apply_top_level_overlay(source_payload, overlay)
+        # This temporary is only compared, never returned or persisted.
+        reconstructed = source_payload | overlay
         if reconstructed != normalized:
             raise DecisionLedgerInvariantError(
                 "Lifecycle overlay could not reproduce the validated current payload."

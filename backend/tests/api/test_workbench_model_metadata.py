@@ -1840,8 +1840,6 @@ def _assert_component_merge_state(
                 identities = connection.execute(
                     text("SELECT identity_key, identity_material FROM component ORDER BY id")
                 ).all()
-            else:
-                identities = []
         parity = None
         if identity_columns_expected:
             with Session(engine) as session:

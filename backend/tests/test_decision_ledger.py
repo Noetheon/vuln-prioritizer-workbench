@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from copy import deepcopy
 from datetime import timedelta
 
 import pytest
@@ -16,8 +17,9 @@ from utils.workbench_env import (
     seed_finding_pair,
 )
 
-from app.decision_core.ledger import DecisionLedgerInvariantError
+from app.decision_core.ledger import DecisionLedgerInvariantError, canonical_payload_sha256
 from app.models import FindingCurrentProjection, FindingDecisionEvidence
+from app.repositories.current_projections import _apply_top_level_overlay
 from app.services.risk_reduction import project_risk_index, project_risk_index_from_projection
 
 
@@ -106,6 +108,89 @@ def test_decision_ledger_rejects_denormalized_history_column_drift(
                 analysis_run_id=source.analysis_run_id,
                 evidence_items=[contract],
             )
+
+
+def test_decision_ledger_nested_overlay_preserves_nulls_and_isolates_history_and_callers(
+    workbench_api_env: WorkbenchApiEnv,
+) -> None:
+    finding_id = _seed_decision_ledger(workbench_api_env)[0]
+
+    with Session(workbench_api_env.engine) as session:
+        repository = workbench_api_env.repositories.FindingCurrentProjectionRepository(session)
+        projection = repository.get_record(finding_id)
+        assert projection is not None
+        source = session.get(FindingDecisionEvidence, projection.source_finding_evidence_id)
+        assert source is not None
+        original_source = deepcopy(source.payload_json)
+        original_hash = projection.source_payload_sha256
+        payload = repository.current_payload(finding_id)
+        assert payload is not None
+        replacement = {"nested": {"replacement": [None, {"value": "new"}]}}
+        assert payload["priority_evidence"]["raw"] != replacement
+        payload["priority_evidence"]["raw"] = deepcopy(replacement)
+        expected = deepcopy(payload)
+
+        repository.update_current_payload(finding_id, payload)
+        payload["priority_evidence"]["raw"]["nested"]["replacement"][1]["value"] = "caller mutation"
+
+        assert projection.lifecycle_overlay_json["priority_evidence"]["raw"] == replacement
+        assert projection.source_payload_sha256 == original_hash
+        assert projection.projection_payload_sha256 == canonical_payload_sha256(expected)
+        assert source.payload_json == original_source
+        session.commit()
+        session.refresh(source)
+        session.refresh(projection)
+        current = repository.current_payload(finding_id)
+        assert current == expected
+        current["priority_evidence"]["raw"]["nested"]["replacement"][1]["value"] = "read mutation"
+        assert repository.current_payload(finding_id) == expected
+        assert source.payload_json == original_source
+        assert repository.verify_source_parity([projection]).matches
+
+
+@pytest.mark.parametrize("clear_mode", ["remove", "explicit_null"])
+def test_decision_ledger_rejects_unrepresentable_top_level_deletion(
+    workbench_api_env: WorkbenchApiEnv, clear_mode: str
+) -> None:
+    finding_id = _seed_decision_ledger(workbench_api_env)[0]
+
+    with Session(workbench_api_env.engine) as session:
+        repository = workbench_api_env.repositories.FindingCurrentProjectionRepository(session)
+        projection = repository.get_record(finding_id)
+        assert projection is not None
+        before = deepcopy(projection.model_dump())
+        payload = repository.current_payload(finding_id)
+        assert payload is not None
+        original = deepcopy(payload)
+        assert payload["risk_score"] is not None
+        if clear_mode == "remove":
+            payload.pop("risk_score")
+        else:
+            payload["risk_score"] = None
+
+        # Normalization omits optional nulls. A sparse replacement overlay must
+        # reject deleting a source key instead of silently keeping its old value.
+        with pytest.raises(DecisionLedgerInvariantError, match="could not reproduce"):
+            repository.update_current_payload(finding_id, payload)
+
+        assert projection.model_dump() == before
+        assert repository.current_payload(finding_id) == original
+        assert repository.verify_source_parity([projection]).matches
+
+
+def test_decision_ledger_overlay_reader_copies_nested_values_and_replaces_top_level_nulls() -> None:
+    source = {"unchanged": {"items": [1]}, "replaced": {"old": [2]}, "cleared": {"old": 3}}
+    overlay = {"replaced": {"new": [None]}, "cleared": None}
+    original_source = deepcopy(source)
+    original_overlay = deepcopy(overlay)
+
+    current = _apply_top_level_overlay(source, overlay)
+
+    assert current == {"unchanged": {"items": [1]}, "replaced": {"new": [None]}, "cleared": None}
+    current["unchanged"]["items"].append(4)
+    current["replaced"]["new"].append(5)
+    assert source == original_source
+    assert overlay == original_overlay
 
 
 def test_decision_ledger_rejects_cross_envelope_contract_identity(

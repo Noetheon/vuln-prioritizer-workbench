@@ -27,6 +27,8 @@ exact git tag output when release wording needs to be verified.
 
 ### Changed
 
+- Refreshed the coordinated Python dependency locks and pinned GitHub Actions
+  updates to resolve security advisories and consolidate pending dependency PRs.
 - Import, asset recalculation and waiver lifecycle share a complete pure evaluator;
   unchanged scopes use a bounded ranking path during incremental imports.
 - Executive guidance and SLA displays use recorded evidence. Risk simulations

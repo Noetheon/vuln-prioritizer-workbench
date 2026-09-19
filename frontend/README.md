@@ -32,6 +32,14 @@ wrapper unless a Make target already covers the command. Volta and mise are
 supported through `.tool-versions` and the frontend package metadata; the
 wrapper also recognizes asdf and nvm.
 
+The root `.npmrc` permits dependency resolution with GitHub Dependabot's managed
+Node 24/npm 11 updater. This allows it to propose lockfile changes; Workbench
+installs, production builds, and CI still use Node 22/npm 10 with the explicit
+`--engine-strict=true` commands above. The existing Playwright-only containers
+use their pinned browser image's toolchain and remain a separate test helper.
+See the [dependency policy](../docs/dependency-and-package-policy.md#frontend-dependencies)
+for these boundaries.
+
 ## Dependency Audit Notes
 
 `npx --yes depcheck frontend` is the dependency drift check for this workspace.
