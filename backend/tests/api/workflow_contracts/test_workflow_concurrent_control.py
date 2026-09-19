@@ -4,7 +4,7 @@ import threading
 import time
 import uuid
 from dataclasses import asdict, replace
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +13,7 @@ from sqlmodel import Session, func, select
 from utils.workbench_env import WorkbenchApiEnv
 from utils.workbench_workflow_contracts import configure_workflow_context, post_import
 
+import app.repositories.workflows as workflow_repository
 from app.models import (
     AnalysisEvidence,
     Finding,
@@ -44,11 +45,14 @@ def test_real_import_exposes_progress_and_accepts_concurrent_cancellation(
     context = configure_workflow_context(env, tmp_path)
     entered, release = threading.Event(), threading.Event()
     outcomes: dict[str, Any] = {}
+    lease_clock_started_at: float | None = None
     target = import_execution if pause_stage == "parse_upload" else AnalysisService
     method = "_parse_prepared_upload" if pause_stage == "parse_upload" else "analyze_import"
     original = getattr(target, method)
 
     def paused(*args: Any, **kwargs: Any) -> Any:
+        nonlocal lease_clock_started_at
+        lease_clock_started_at = time.monotonic()
         entered.set()
         assert release.wait(5), "Concurrent API inspection exceeded its safety bound"
         return original(*args, **kwargs)
@@ -66,6 +70,16 @@ def test_real_import_exposes_progress_and_accepts_concurrent_cancellation(
         files={"file": ("sample.txt", b"CVE-2021-44228\n", "text/plain")},
     )
     identity = queued["workflow"]["id"]
+    lease_clock_origin = get_datetime_utc()
+
+    def lease_now() -> datetime:
+        # A one-second lease measures renewal during the paused computation,
+        # not unrelated scheduler or initialization delays before it begins.
+        started_at = lease_clock_started_at
+        elapsed = 0.0 if started_at is None else time.monotonic() - started_at
+        return lease_clock_origin + timedelta(seconds=elapsed)
+
+    monkeypatch.setattr(workflow_repository, "get_datetime_utc", lease_now)
 
     def run() -> None:
         try:
@@ -85,7 +99,12 @@ def test_real_import_exposes_progress_and_accepts_concurrent_cancellation(
     worker = threading.Thread(target=run)
     worker.start()
     try:
-        assert entered.wait(3), outcomes
+        assert entered.wait(3), {
+            "worker": dict(outcomes),
+            "workflow": env.client.get(
+                f"/api/v1/workflows/{identity}", headers=context.headers
+            ).json(),
+        }
         visible = env.client.get(f"/api/v1/workflows/{identity}", headers=context.headers)
         assert visible.status_code == 200
         assert visible.json()["current_stage"] == pause_stage
