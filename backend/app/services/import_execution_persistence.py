@@ -5,6 +5,7 @@ from __future__ import annotations
 # ruff: noqa: F401
 import uuid
 from dataclasses import replace
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlmodel import Session, col, select
@@ -386,14 +387,19 @@ def _persist_workbench_occurrences(
     occurrences: list[NormalizedOccurrence],
     analysis_result: WorkbenchAnalysisResult,
     analysis_evidence_id: uuid.UUID | None = None,
+    observed_at: datetime | None = None,
 ) -> dict[str, Any]:
-    bulk_summary = _persist_workbench_occurrences_bulk_insert(
-        session=session,
-        project_id=project_id,
-        run_id=run_id,
-        occurrences=occurrences,
-        analysis_result=analysis_result,
-        analysis_evidence_id=analysis_evidence_id,
+    bulk_summary = (
+        None
+        if observed_at is not None
+        else _persist_workbench_occurrences_bulk_insert(
+            session=session,
+            project_id=project_id,
+            run_id=run_id,
+            occurrences=occurrences,
+            analysis_result=analysis_result,
+            analysis_evidence_id=analysis_evidence_id,
+        )
     )
     if bulk_summary is not None:
         return bulk_summary
@@ -680,6 +686,9 @@ def _persist_workbench_occurrences(
                     "parts": dedup_parts,
                 },
             }
+            previous_last_seen = (
+                existing_finding.last_seen_at if existing_finding is not None else None
+            )
             finding = finding_repo.create_or_update_finding(
                 project_id=project_id,
                 vulnerability_id=vulnerability.id,
@@ -701,6 +710,12 @@ def _persist_workbench_occurrences(
                 ),
                 flush=False,
             )
+            if observed_at is not None:
+                observation = observed_at.astimezone(UTC).replace(tzinfo=None)
+                previous = previous_last_seen.replace(tzinfo=None) if previous_last_seen else None
+                finding.last_seen_at = max(previous, observation) if previous else observation
+                if action == "created":
+                    finding.first_seen_at = observation
             findings_by_dedup_key[dedup_key] = finding
             if action == "created":
                 session.flush()
@@ -790,12 +805,14 @@ def _persist_workbench_occurrences(
                     provider_snapshot_hash=analysis_result.provider_snapshot_hash,
                     provider_snapshot_file=analysis_result.provider_snapshot_file,
                     locked_provider_data=analysis_result.locked_provider_data,
-                    observed_at=finding.last_seen_at.isoformat(),
+                    observed_at=(observed_at or finding.last_seen_at).isoformat(),
                 )
             else:
                 existing_evidence.occurrences.append(occurrence_evidence)
                 if existing_evidence.evaluation is not None:
-                    existing_evidence.evaluation.observed_at = finding.last_seen_at.isoformat()
+                    existing_evidence.evaluation.observed_at = (
+                        observed_at or finding.last_seen_at
+                    ).isoformat()
             if len(decisions) < DEDUP_DECISION_SAMPLE_LIMIT:
                 decisions.append(
                     {

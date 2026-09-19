@@ -563,6 +563,27 @@ class WorkflowRepository:
         self.session.refresh(workflow, attribute_names=["last_heartbeat_at", "lease_expires_at"])
         return workflow
 
+    def assert_worker_lease(
+        self,
+        workflow_id: uuid.UUID,
+        *,
+        worker_id: str,
+        attempt_count: int | None,
+    ) -> None:
+        """Read the live attempt fence without taking SQLite's writer lock."""
+        with self.session.no_autoflush:
+            active_claim = self.session.exec(
+                select(WorkflowRun.id).where(
+                    WorkflowRun.id == workflow_id,
+                    WorkflowRun.status == WorkflowRunStatus.RUNNING,
+                    WorkflowRun.locked_by == worker_id,
+                    WorkflowRun.attempt_count == attempt_count,
+                    col(WorkflowRun.lease_expires_at) > get_datetime_utc(),
+                )
+            ).first()
+        if active_claim is None:
+            raise WorkflowLeaseLostError("Workflow claim expired or belongs to another attempt.")
+
     def lock_workflow_control(
         self,
         workflow_id: uuid.UUID,

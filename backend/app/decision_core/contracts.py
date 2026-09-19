@@ -6,6 +6,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.contracts.sbom import SbomAssessmentV1
 from app.decision_core.evaluation import ScopeEvaluationInput
 
 ANALYSIS_EVIDENCE_SCHEMA_VERSION: Literal["analysis-evidence.v2"] = "analysis-evidence.v2"
@@ -450,3 +451,4 @@ class AnalysisEvidenceV2(EvidenceContractModel):
     attack: AttackEvidenceV2 = Field(default_factory=AttackEvidenceV2)
     diagnostics: RunDiagnosticsV2 | None = None
     evaluation: EvaluationMetadataV1 | None = None
+    sbom_assessment: SbomAssessmentV1 | None = None

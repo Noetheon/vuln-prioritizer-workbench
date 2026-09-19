@@ -66,6 +66,22 @@ export function ReviewImportStep({
   const settingsItems = [
     { label: "Project", value: selectedProject?.name ?? "Required" },
     { label: "Input type", value: format?.label ?? "Required" },
+    ...(importWizard.sbomScanner === "grype"
+      ? [
+          { label: "SBOM scan", value: "Grype" },
+          {
+            label: "SBOM subject",
+            value: importWizard.sbomTargetRef || "Required",
+          },
+          {
+            label: "Database updates",
+            value:
+              importWizard.sbomDbUpdate === false
+                ? "Disabled; installed database only"
+                : "Allowed",
+          },
+        ]
+      : []),
     {
       label: "Evidence file",
       value: evidenceFileLabel,

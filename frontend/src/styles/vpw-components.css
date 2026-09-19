@@ -1289,7 +1289,6 @@
     .imports-wizard-layout.grid {
       gap: 1rem;
       grid-template-columns: 220px minmax(0, 1fr) 260px;
-      --imports-wizard-panel-height: calc(100dvh - 6.5rem);
       min-height: var(--imports-wizard-panel-height);
     }
 
@@ -1306,7 +1305,6 @@
     .imports-wizard-layout.grid {
       gap: 1.25rem;
       grid-template-columns: 240px minmax(0, 1fr) 320px;
-      --imports-wizard-panel-height: calc(100dvh - 6.5rem);
       min-height: var(--imports-wizard-panel-height);
     }
 
@@ -1319,7 +1317,6 @@
     .imports-wizard-layout.grid {
       gap: 1.5rem;
       grid-template-columns: 270px minmax(720px, 1fr) 360px;
-      --imports-wizard-panel-height: calc(100dvh - 6.5rem);
       min-height: var(--imports-wizard-panel-height);
     }
   }

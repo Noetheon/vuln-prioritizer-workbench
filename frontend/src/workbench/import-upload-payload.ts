@@ -41,6 +41,14 @@ export function buildImportUploadFormData({
       : {}),
     file: selectedFile,
     input_type: importWizard.inputType,
+    ...(importWizard.sbomScanner === "grype" &&
+    ["cyclonedx-json", "spdx-json"].includes(importWizard.inputType)
+      ? {
+          sbom_scanner: "grype" as const,
+          sbom_target_ref: importWizard.sbomTargetRef.trim(),
+          sbom_db_update: importWizard.sbomDbUpdate,
+        }
+      : {}),
     locked_provider_data: importWizard.lockedProviderData,
     ...(importWizard.providerSnapshotFile.trim()
       ? {

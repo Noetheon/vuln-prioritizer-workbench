@@ -268,7 +268,8 @@ def test_import_upload_route_delegates_to_application_service() -> None:
     parsing_source = (ROOT / "app/services/import_execution_parsing.py").read_text(encoding="utf-8")
     route_imports = _imported_modules("app/api/routes/imports.py")
 
-    assert "app.services.import_execution" in route_imports
+    assert "app.services.import_queue" in route_imports
+    assert "app.services.import_execution" in _imported_modules("app/services/import_queue.py")
     assert "AnalysisService" not in route_source
     assert "build_importer_registry" not in route_source
     assert "RunRepository" not in route_source
@@ -620,7 +621,8 @@ def test_workbench_import_validation_and_storage_are_split_from_route_facade() -
     upload_source = (ROOT / "app/services/import_uploads.py").read_text(encoding="utf-8")
     artifact_source = (ROOT / "app/services/import_artifacts.py").read_text(encoding="utf-8")
 
-    assert "app.services.import_execution" in imports
+    assert "app.services.import_queue" in imports
+    assert "app.services.import_execution" in _imported_modules("app/services/import_queue.py")
     assert "app.api.routes.import_uploads" in imports
     assert "app.services.import_uploads" in upload_helper_imports
     assert "app.services.import_artifacts" not in imports

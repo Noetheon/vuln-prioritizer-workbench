@@ -15,6 +15,7 @@ from app.services.import_artifacts import (
 from app.services.import_artifacts import (
     validate_attack_import_options as _validate_attack_import_options,
 )
+from app.services.import_errors import ImportServiceError
 from app.services.import_execution_types import (
     ImportUploadContent,
     PreparedImportUpload,
@@ -76,6 +77,18 @@ def prepare_import_upload(
     """Validate and normalize a Workbench import upload request."""
     input_type = _normalize_input_type(upload.input_type)
     _validate_input_type(input_type)
+    if upload.sbom_scanner not in {"none", "grype"}:
+        raise ImportServiceError(status_code=422, detail="Unsupported SBOM scanner.")
+    if upload.sbom_scanner != "none" and input_type not in {"cyclonedx-json", "spdx-json"}:
+        raise ImportServiceError(
+            status_code=422, detail="SBOM scanning requires CycloneDX or SPDX JSON."
+        )
+    if upload.sbom_target_ref is not None and (
+        not upload.sbom_target_ref.strip() or len(upload.sbom_target_ref) > 1000
+    ):
+        raise ImportServiceError(
+            status_code=422, detail="SBOM target must contain 1 to 1000 characters."
+        )
     file = upload.file
     original_filename = file.filename or "upload"
     _reject_unsafe_upload_filename(original_filename)
@@ -129,6 +142,11 @@ def prepare_import_upload(
         attack_metadata_path=attack_metadata_path,
         attack_source=attack_source,
         locked_provider_data=upload.locked_provider_data,
+        sbom_scanner=upload.sbom_scanner,
+        sbom_target_ref=upload.sbom_target_ref.strip() if upload.sbom_target_ref else None,
+        sbom_db_update=upload.sbom_db_update,
+        sbom_source_run_id=upload.sbom_source_run_id,
+        sbom_observed_at=upload.sbom_observed_at,
     )
 
 

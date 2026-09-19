@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, replace
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -74,8 +75,10 @@ from app.services.import_execution_uploads import (
 from app.services.import_execution_uploads import (
     store_prepared_uploads as _store_prepared_uploads,
 )
+from app.services.import_queue_payload import import_queue_payload
 from app.services.import_uploads import sanitize_parser_error_message as _sanitize_error_message
 from app.services.risk_reduction import project_risk_index_from_projection
+from app.services.sbom_import import empty_sbom_analysis, scan_prepared_sbom
 from app.services.workflow_execution import WorkflowExecutionContext
 
 __all__ = [
@@ -163,6 +166,12 @@ async def execute_project_import_upload(
     )
     context.output(result=initial_result_payload)
     if defer_execution:
+        workflow_repo.set_workflow_payload(
+            workflow.id,
+            payload_json=import_queue_payload(upload, run_id=run.id),
+            queue_name="default",
+            max_retries=2,
+        )
         session.commit()
         session.refresh(run)
         return run
@@ -192,8 +201,18 @@ async def execute_project_import_upload(
         input_type=prepared.input_type,
     )
 
+    sbom_assessment = None
     try:
-        parsed_upload = _parse_prepared_upload(prepared)
+        if prepared.sbom_scanner == "grype":
+            parsed_upload, sbom_assessment = scan_prepared_sbom(
+                prepared,
+                artifacts,
+                settings=settings,
+                context=context,
+                observed_at=run.started_at,
+            )
+        else:
+            parsed_upload = _parse_prepared_upload(prepared)
         occurrences = parsed_upload.occurrences
         context.stage(
             "parse_upload",
@@ -423,19 +442,27 @@ async def execute_project_import_upload(
             base_parsed_input=parsed_upload.parsed_input.parsed_input,
             asset_context_summary=asset_context_summary,
             vex_summary=vex_summary,
+            allow_empty=sbom_assessment is not None,
         )
-        analysis_result = AnalysisService(session, settings).analyze_import(
-            input_path=artifacts.upload_path,
-            input_type=prepared.input_type,
-            asset_context_file=None,
-            provider_snapshot_file=prepared.provider_snapshot_path,
-            locked_provider_data=prepared.locked_provider_data,
-            attack_source=prepared.attack_source,
-            attack_mapping_file=prepared.attack_mapping_path,
-            attack_technique_metadata_file=prepared.attack_metadata_path,
-            vex_files=[],
-            parsed_input=parsed_input,
-            persist_snapshot=False,
+        analysis_result = (
+            empty_sbom_analysis(
+                input_path=artifacts.upload_path,
+                assessment=sbom_assessment,
+            )
+            if sbom_assessment is not None and not occurrences
+            else AnalysisService(session, settings).analyze_import(
+                input_path=artifacts.upload_path,
+                input_type=prepared.input_type,
+                asset_context_file=None,
+                provider_snapshot_file=prepared.provider_snapshot_path,
+                locked_provider_data=prepared.locked_provider_data,
+                attack_source=prepared.attack_source,
+                attack_mapping_file=prepared.attack_mapping_path,
+                attack_technique_metadata_file=prepared.attack_metadata_path,
+                vex_files=[],
+                parsed_input=parsed_input,
+                persist_snapshot=False,
+            )
         )
     except ValueError as exc:
         analysis_error = {
@@ -553,6 +580,9 @@ async def execute_project_import_upload(
         occurrences=occurrences,
         analysis_result=analysis_result,
         analysis_evidence_id=prepared_evidence_record.id,
+        observed_at=datetime.fromisoformat(sbom_assessment.observed_at)
+        if sbom_assessment is not None and sbom_assessment.observed_at
+        else None,
     )
     run.provider_snapshot_id = analysis_result.provider_snapshot_id
     finished_run = run_repo.finish_analysis_run(
@@ -574,6 +604,7 @@ async def execute_project_import_upload(
             analysis_result=analysis_result,
             asset_context_summary=asset_context_summary,
             vex_summary=vex_summary,
+            sbom_assessment=sbom_assessment,
         ),
         persistence_plan=persistence_plan,
     )

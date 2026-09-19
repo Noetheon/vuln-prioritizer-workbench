@@ -19,6 +19,7 @@ from app.services.report_html_provider_freshness import _html_provider_snapshot_
 from app.services.report_html_risk_projection import _html_risk_scenario_panel_helper
 from app.services.report_html_view_model import build_executive_report_view_model
 from app.services.report_models import EvidencePackageContext, MarkdownReportPayload
+from app.services.report_sbom import html_sbom_assessment
 
 
 def render_html_executive_report_helper(
@@ -193,6 +194,7 @@ def render_html_executive_report_helper(
         '      <h2 id="decision-brief">Decision Brief</h2>\n'
         f"{risk_scenario_panel}\n"
         f"{verdict_banner}\n"
+        f"{html_sbom_assessment(payload)}"
         f"{decision_grid}\n"
         f"{signoff_panel}\n"
         "    </section>\n"

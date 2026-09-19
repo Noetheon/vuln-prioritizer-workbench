@@ -28,10 +28,10 @@ boundaries, but Workbench uploads must use one of the explicit values below.
 | --- | --- | --- | --- |
 | `cve-list` | yes | CVE ID, optional asset ref, component, version, source line/row | Plain TXT and minimal CSV CVE lists; see [CVE List Import](cve-list-import.md). |
 | `generic-occurrence-csv` | yes | Component, version, PURL, package type, fix versions, target, asset context, owner, service | Additive manual-occurrence format for backlogs and spreadsheets; see [Generic Occurrence CSV Import](generic-occurrence-csv-import.md). |
-| `trivy-json` | yes | Component, version, PURL, package type, path, fix versions, target image, source ID | Default target kind is `image`; see [Trivy JSON Import](trivy-json-import.md). |
+| `trivy-json` | yes | Component, version, PURL, package type, path, fix versions, target image, source ID | ArtifactType determines target kind (compatibility default `image`); see [Trivy JSON Import](trivy-json-import.md). |
 | `grype-json` | yes | Component, version, PURL, package type, path, fix versions, target image, source ID | Keeps the first artifact location as current path evidence; see [Grype JSON Import](grype-json-import.md). |
-| `cyclonedx-json` | yes | Component refs, PURLs, versions, package type, repository target, raw severity | Used for SBOM plus vulnerability exports, not plain BOMs without vulnerabilities; see [CycloneDX JSON Import](cyclonedx-json-import.md). |
-| `spdx-json` | yes | Package names, versions, PURLs, package purpose, file/download location, raw severity | Current support is JSON only; see [SPDX JSON Import](spdx-json-import.md). |
+| `cyclonedx-json` | yes | Component refs, PURLs, versions, package type, repository target, raw severity | Embedded vulnerability exports or plain inventories with optional local Grype assessment; see [CycloneDX JSON Import](cyclonedx-json-import.md). |
+| `spdx-json` | yes | Package names, versions, PURLs, package purpose, file/download location, raw severity | SPDX 2.x inventories with optional local Grype, or embedded vulnerability exports; see [SPDX JSON Import](spdx-json-import.md). |
 | `dependency-check-json` | yes | File name, file path, raw severity, first project reference | Current support is JSON only; see [Dependency-Check JSON Import](dependency-check-json-import.md). |
 | `github-alerts-json` | yes | Advisory CVE, package name, ecosystem, manifest path, fix version, source severity | Contract assumes a pinned JSON export shape, not arbitrary API responses; see [GitHub Alerts JSON Import](github-alerts-json-import.md). |
 | `nessus-xml` | yes | Host target, plugin name, service/port label, severity, source record ID | Safe local XML parsing for pinned Nessus exports; see [Nessus XML Import](nessus-xml-import.md). |

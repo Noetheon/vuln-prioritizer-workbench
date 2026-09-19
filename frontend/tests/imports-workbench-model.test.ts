@@ -692,6 +692,94 @@ test("demo provider snapshot preset enables deterministic replay", () => {
   assert.equal(state.providerSnapshotFile, demoProviderSnapshotFile)
 })
 
+test("SBOM scanning is explicit and preserves the database update choice", () => {
+  const file = new File(
+    ['{"bomFormat":"CycloneDX","components":[]}'],
+    "sbom.json",
+  )
+  const scanWizard = {
+    ...defaultImportWizardState,
+    inputType: "cyclonedx-json" as const,
+    sbomScanner: "grype" as const,
+    sbomTargetRef: " payments@1.0 ",
+    sbomDbUpdate: false,
+  }
+  const payload = buildImportUploadFormData({
+    importWizard: scanWizard,
+    selectedAssetContextFile: null,
+    selectedFile: file,
+    selectedVexFile: null,
+  })
+  assert.equal(payload.sbom_scanner, "grype")
+  assert.equal(payload.sbom_target_ref, "payments@1.0")
+  assert.equal(payload.sbom_db_update, false)
+  for (const importWizard of [
+    { ...scanWizard, sbomScanner: "none" as const },
+    { ...scanWizard, inputType: "trivy-json" as const },
+  ]) {
+    const normalPayload = buildImportUploadFormData({
+      importWizard,
+      selectedAssetContextFile: null,
+      selectedFile: file,
+      selectedVexFile: null,
+    })
+    assert.equal("sbom_scanner" in normalPayload, false)
+    assert.equal("sbom_db_update" in normalPayload, false)
+    assert.equal("sbom_target_ref" in normalPayload, false)
+  }
+})
+
+test("SBOM scan readiness requires a stable subject only when scanning", () => {
+  const input = {
+    evidenceFile: new File(["{}"], "sbom.json"),
+    formats: TEST_SUPPORTED_FORMATS,
+    inputType: "spdx-json",
+    parserPreview: { ...initialParserPreview(), state: "passed" as const },
+    projectId: "project-1",
+    providerAvailable: true,
+    sbomScanner: "grype" as const,
+    sbomTargetRef: " ",
+  }
+  const missing = buildImportReadinessChecks(input)
+  assert.equal(readinessBlocksImport(missing), true)
+  assert.equal(readinessCopyForStep(2, missing), "Needs SBOM subject")
+  assert.equal(
+    readinessBlocksImport(
+      buildImportReadinessChecks({ ...input, sbomTargetRef: "payments@1" }),
+    ),
+    false,
+  )
+  assert.equal(
+    readinessBlocksImport(
+      buildImportReadinessChecks({ ...input, sbomScanner: "none" }),
+    ),
+    false,
+  )
+})
+
+test("inventory preview distinguishes embedded findings from a pending SBOM scan", async () => {
+  const file = new File(
+    ['{"bomFormat":"CycloneDX","components":[{"name":"example"}]}'],
+    "sbom.json",
+  )
+  const importOnly = await buildParserPreview(
+    TEST_SUPPORTED_FORMATS,
+    file,
+    "cyclonedx-json",
+  )
+  assert.equal(importOnly.state, "warning")
+  assert.match(importOnly.warnings[0], /Enable Scan SBOM with Grype/)
+  const scan = await buildParserPreview(
+    TEST_SUPPORTED_FORMATS,
+    file,
+    "cyclonedx-json",
+    { sbomScanner: "grype" },
+  )
+  assert.equal(scan.state, "passed")
+  assert.equal(scan.candidateRows, undefined)
+  assert.match(scan.warnings[0], /after the Grype scan/)
+})
+
 test("import submit stays disabled until project and source file are ready", () => {
   const readyWizard = {
     ...defaultImportWizardState,

@@ -75,6 +75,20 @@ def parse_payload_with_input_loader_result(
     if strict_invalid_cve_warnings:
         _raise_invalid_cve_warnings(input_type, parsed_input.warnings)
 
+    return normalize_parsed_input(
+        parsed_input,
+        input_type=input_type,
+        prefer_asset_id_as_target_ref=prefer_asset_id_as_target_ref,
+    )
+
+
+def normalize_parsed_input(
+    parsed_input: ParsedInput,
+    *,
+    input_type: str,
+    prefer_asset_id_as_target_ref: bool = True,
+) -> ParsedWorkbenchInput:
+    """Normalize a validated parsed input, including a completed empty assessment."""
     return ParsedWorkbenchInput(
         parsed_input=parsed_input,
         occurrences=[

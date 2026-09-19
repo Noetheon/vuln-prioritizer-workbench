@@ -9,6 +9,33 @@ import { mockProject, routeWorkbenchShell } from "./workbench-route-mocks"
 const runOne = importRun("run-1", "historical-import-one.txt", 2)
 const runTwo = importRun("run-2", "historical-import-two.txt", 4)
 
+test("new import retains its explicit project through an empty native select event", async ({
+  page,
+}) => {
+  const otherProject = { ...mockProject, id: "project-other", name: "Other project" }
+  await routeWorkbenchShell(page, { projects: [otherProject, mockProject] })
+  await page.addInitScript((id) => {
+    localStorage.setItem("vpw.selectedProjectId", id)
+  }, otherProject.id)
+  await page.goto(`/imports/new?projectId=${mockProject.id}`)
+  const projectSelect = page.getByRole("combobox", { name: "Import project" })
+  await expect(projectSelect).toHaveText(mockProject.name)
+
+  // Radix can emit an empty native value while its form options are registering.
+  await page.locator('select[name="importProject"]').evaluate((element) => {
+    const select = element as HTMLSelectElement
+    select.value = ""
+    select.dispatchEvent(new Event("change", { bubbles: true }))
+  })
+  await expect(projectSelect).toHaveText(mockProject.name)
+  await expect(page).toHaveURL(`/imports/new?projectId=${mockProject.id}`)
+
+  await projectSelect.click()
+  await page.getByRole("option", { name: otherProject.name, exact: true }).click()
+  await expect(projectSelect).toHaveText(otherProject.name)
+  await expect(page).toHaveURL(`/imports/new?projectId=${otherProject.id}`)
+})
+
 test("imports center opens run detail and diagnostics drawer", async ({
   page,
 }) => {
@@ -562,6 +589,11 @@ test("new import wizard keeps desktop and mobile layouts within the viewport", a
   expect(macbookLayoutBox).not.toBeNull()
   expect(macbookSummaryBox).not.toBeNull()
   expect(commandBarBox).not.toBeNull()
+  expect(
+    await page
+      .getByRole("region", { name: "Workbench page content" })
+      .evaluate((element) => element.scrollTop),
+  ).toBe(0)
   expect(
     Math.abs((macbookSummaryBox?.y ?? 0) - (macbookLayoutBox?.y ?? 0)),
   ).toBeLessThanOrEqual(1)

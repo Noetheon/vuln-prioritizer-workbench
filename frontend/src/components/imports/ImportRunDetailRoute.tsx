@@ -28,6 +28,7 @@ import {
   runTone,
   type ImportsWorkbenchProps,
 } from "./imports-workbench-model"
+import { ImportSbomAssessment } from "./ImportSbomAssessment"
 
 type ImportRunDetailRouteProps = ImportsWorkbenchProps & {
   onOpenDiagnostics: (runId: string) => void
@@ -41,6 +42,12 @@ export function ImportRunDetailRoute({
   selectedRunId,
   selectedRunSummary,
   selectedProject,
+  onSbomRescan,
+  sbomRescanError,
+  sbomRescanLoading,
+  onSbomEvidenceDownload,
+  sbomDownloadLoading,
+  sbomDownloadError,
 }: ImportRunDetailRouteProps) {
   if (runDetailLoading) {
     return (
@@ -138,6 +145,17 @@ export function ImportRunDetailRoute({
           <MetricStrip metrics={metrics} minCardWidth="10rem" />
         </VpwCommandPanel>
       </VpwSection>
+
+      <ImportSbomAssessment
+        assessment={selectedRunSummary.evidence?.sbom_assessment}
+        key={selectedRunId}
+        onRescan={onSbomRescan}
+        rescanError={sbomRescanError}
+        rescanLoading={sbomRescanLoading}
+        onDownload={onSbomEvidenceDownload}
+        downloadLoading={sbomDownloadLoading}
+        downloadError={sbomDownloadError}
+      />
 
       <Tabs defaultValue="overview">
         <TabsList

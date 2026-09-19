@@ -4,8 +4,9 @@ The `spdx-json` input format imports known CVE occurrences from SPDX JSON
 documents that include vulnerability records. Use it when an SPDX producer or
 normalization step can attach vulnerability evidence to SPDX package inventory.
 
-Plain SPDX package inventories without vulnerability records create no
-prioritized occurrences because there is no CVE evidence to prioritize.
+For plain SPDX 2.x inventories, enable the optional [local Grype assessment](sbom-assessment.md).
+Without it, this evidence-import mode requires the nonstandard vulnerability
+records described below; standard SPDX inventories do not inherently contain CVEs.
 
 See `examples/spdx-demo.json` for a checked-in synthetic sample adapted from
 `data/input_fixtures/spdx_bom.json`.

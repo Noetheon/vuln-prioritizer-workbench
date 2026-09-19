@@ -128,16 +128,16 @@ IMPORT_FORMAT_CAPABILITIES: tuple[ImportFormatCapabilityPublic, ...] = (
         category_label=FORMAT_CATEGORY_LABELS["sbom"],
         extensions=[".json"],
         accepted_mime_types=["application/json", "text/json"],
-        best_for="Software inventory with vulnerability references.",
-        expected_shape="CycloneDX JSON with vulnerability records.",
-        minimum_fields=["vulnerabilities[].id"],
+        best_for="Software inventory or embedded vulnerability evidence.",
+        expected_shape="CycloneDX inventory with Grype enabled, or embedded CVE records.",
+        minimum_fields=["components/packages with Grype enabled, or vulnerabilities[].id"],
         optional_fields=["components[].bom-ref", "components[].purl", "affects", "ratings"],
         context_support="component-vulnerability-context",
         example_snippet=(
             '{"bomFormat":"CycloneDX","components":[],"vulnerabilities":[{"id":"CVE-2024-3094"}]}'
         ),
-        notes=["Plain SBOM-only BOM without vulnerabilities is not sufficient."],
-        short_description="CycloneDX SBOM plus vulnerabilities.",
+        notes=["Enable local Grype matching for a plain inventory without CVE records."],
+        short_description="CycloneDX inventory with optional local matching.",
     ),
     ImportFormatCapabilityPublic(
         input_type=InputFormat.spdx_json.value,
@@ -146,16 +146,16 @@ IMPORT_FORMAT_CAPABILITIES: tuple[ImportFormatCapabilityPublic, ...] = (
         category_label=FORMAT_CATEGORY_LABELS["sbom"],
         extensions=[".json"],
         accepted_mime_types=["application/json", "text/json"],
-        best_for="SPDX package inventory with vulnerability references.",
-        expected_shape="SPDX JSON with vulnerability records.",
-        minimum_fields=["vulnerabilities[].id"],
+        best_for="SPDX 2.x inventory or embedded vulnerability evidence.",
+        expected_shape="SPDX 2.x inventory with Grype enabled, or embedded CVE records.",
+        minimum_fields=["components/packages with Grype enabled, or vulnerabilities[].id"],
         optional_fields=["packages[].SPDXID", "externalRefs", "affects", "severity"],
         context_support="component-context",
         example_snippet=(
             '{"spdxVersion":"SPDX-2.3","packages":[],"vulnerabilities":[{"id":"CVE-2024-3094"}]}'
         ),
-        notes=["SPDX vulnerability records are required to create prioritized occurrences."],
-        short_description="SPDX JSON plus vulnerabilities.",
+        notes=["Enable local Grype matching for a standard SPDX package inventory."],
+        short_description="SPDX inventory with optional local matching.",
     ),
     ImportFormatCapabilityPublic(
         input_type=InputFormat.dependency_check_json.value,

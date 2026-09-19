@@ -54,7 +54,12 @@ export function ChooseSourceStep({
         <Select
           disabled={projectListLoading || projects.length === 0}
           name="importProject"
-          onValueChange={onProjectChange}
+          onValueChange={(projectId) => {
+            // The hidden form select can emit an empty value before its options register.
+            if (projects.some((project) => project.id === projectId)) {
+              onProjectChange(projectId)
+            }
+          }}
           value={selectedProjectId}
         >
           <SelectTrigger
