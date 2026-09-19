@@ -20,8 +20,8 @@ PYTHON_RUNTIME_LOCK = ROOT / "backend" / "requirements.runtime.lock.txt"
 PYTHON_LOCK = ROOT / "uv.lock"
 LEDGER = ROOT / "docs" / "public-production-release-evidence-ledger.md"
 WORKFLOW_DIR = ROOT / ".github" / "workflows"
-RUNTIME_PYTHON_VERSION = "3.13"
-SUPPORTED_PYTHON_VERSIONS = ("3.11", "3.12", RUNTIME_PYTHON_VERSION)
+RUNTIME_PYTHON_VERSION = "3.14"
+SUPPORTED_PYTHON_VERSIONS = ("3.11", "3.12", "3.13", RUNTIME_PYTHON_VERSION)
 SETUP_PYTHON_MATRIX_EXPRESSION = "${{ matrix.python-version }}"
 RUNTIME_LOCK_FORBIDDEN_PACKAGES = {
     "build",
@@ -338,7 +338,7 @@ def _check_python_runtime_lock(
     for expected_fragment in (
         "--package vuln-prioritizer-workbench",
         "--no-dev",
-        "--python 3.13",
+        f"--python {RUNTIME_PYTHON_VERSION}",
         "backend/requirements.runtime.lock.txt",
     ):
         if expected_fragment not in runtime_lock_text:
