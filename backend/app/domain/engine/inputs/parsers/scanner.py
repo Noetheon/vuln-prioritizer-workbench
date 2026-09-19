@@ -25,6 +25,7 @@ def parse_trivy_json(path: Path) -> ParsedInput:
     warnings: list[str] = []
     occurrences: list[InputOccurrence] = []
     total_rows = 0
+    target_kind = _trivy_target_kind(document)
 
     for result_index, result in enumerate(dict_items(document.get("Results")), start=1):
         target = first_present_string(result.get("Target"), document.get("ArtifactName"))
@@ -57,7 +58,7 @@ def parse_trivy_json(path: Path) -> ParsedInput:
                             cve_count=len(cve_ids),
                         ),
                         raw_severity=vulnerability.get("Severity"),
-                        target_kind="image",
+                        target_kind=target_kind,
                         target_ref=target,
                     )
                 )
@@ -68,6 +69,20 @@ def parse_trivy_json(path: Path) -> ParsedInput:
         occurrences=occurrences,
         warnings=warnings,
     )
+
+
+def _trivy_target_kind(document: dict) -> str:
+    """Keep explicit artifact kinds without guessing an SBOM's scanned subject."""
+    artifact_type = first_present_string(document.get("ArtifactType"))
+    return {
+        "container_image": "image",
+        "filesystem": "filesystem",
+        "repository": "repository",
+        "cyclonedx": "sbom",
+        "spdx": "sbom",
+        "aws_account": "aws_account",
+        "vm": "vm",
+    }.get((artifact_type or "").strip().lower(), "image")
 
 
 def _trivy_cve_candidates(vulnerability: dict) -> list[str | None]:
@@ -114,7 +129,7 @@ def parse_grype_json(path: Path) -> ParsedInput:
             warnings.append(f"Ignored Grype match {match_number} without a vulnerability object.")
             continue
         source_id = first_present_string(vulnerability.get("id"))
-        cve_ids = _cve_support.all_normalized_cves(_grype_cve_candidates(vulnerability))
+        cve_ids = _cve_support.all_normalized_cves(_grype_cve_candidates(vulnerability, match_item))
         if not cve_ids:
             _warn_non_cve_grype_id(source_id, warnings)
             continue
@@ -179,8 +194,8 @@ def _grype_match_items(value: object, *, warnings: list[str]) -> tuple[int, list
     return len(value), matches
 
 
-def _grype_cve_candidates(vulnerability: dict) -> list[str | None]:
-    """Grype cve candidates function."""
+def _grype_cve_candidates(vulnerability: dict, match: dict) -> list[str | None]:
+    """Read native match-level aliases and accepted nested compatibility fields."""
     candidates: list[str | None] = []
     for field_name in ("id", "cve", "cve_id", "CVE", "CVEs", "aliases", "relatedVulnerabilities"):
         value = vulnerability.get(field_name)
@@ -189,6 +204,9 @@ def _grype_cve_candidates(vulnerability: dict) -> list[str | None]:
             continue
         if isinstance(value, list):
             candidates.extend(_grype_related_id(item) for item in value)
+    related = match.get("relatedVulnerabilities")
+    if isinstance(related, list):
+        candidates.extend(_grype_related_id(item) for item in related)
     return candidates
 
 

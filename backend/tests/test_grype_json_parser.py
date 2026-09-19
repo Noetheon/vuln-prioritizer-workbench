@@ -131,6 +131,69 @@ def test_grype_json_emits_all_valid_related_cves(tmp_path: Path) -> None:
     ]
 
 
+def test_grype_json_reads_native_match_aliases_without_duplicate_cves(tmp_path: Path) -> None:
+    # Native shape: anchore/grype at 41a43d8a85c10a4980572bed94377a120587dd76,
+    # grype/presenter/models/match.go: Match.RelatedVulnerabilities is a sibling
+    # of Vulnerability. Nested aliases remain accepted for existing exports.
+    document = {
+        "source": {"type": "directory", "target": {"path": "/workspace/app", "name": "app"}},
+        "matches": [
+            {
+                "vulnerability": {
+                    "id": "GHSA-9m7r-4c2v-9j5j",
+                    "aliases": ["CVE-2024-0001"],
+                    "relatedVulnerabilities": [{"id": "CVE-2024-0001"}],
+                    "severity": "High",
+                    "fix": {"versions": ["2.0.0"]},
+                },
+                "relatedVulnerabilities": [
+                    {"id": "CVE-2024-0001", "namespace": "nvd:cpe"},
+                    {"id": "CVE-2024-0002", "namespace": "nvd:cpe"},
+                    {"id": "CVE-2024-0002"},
+                    {"id": "GHSA-9m7r-4c2v-9j5j"},
+                    None,
+                ],
+                "matchDetails": [],
+                "artifact": {
+                    "name": "demo-package",
+                    "version": "1.0.0",
+                    "type": "npm",
+                    "purl": "pkg:npm/demo-package@1.0.0",
+                },
+            },
+            {
+                "vulnerability": {"id": "GHSA-2m57-hf25-phgg"},
+                "relatedVulnerabilities": [{"id": "CVE-2024-0003"}],
+                "matchDetails": [],
+                "artifact": {"name": "other-package", "version": "1.0.0", "type": "npm"},
+            },
+        ],
+    }
+    payload = json.dumps(document)
+    input_file = tmp_path / "grype.json"
+    input_file.write_text(payload, encoding="utf-8")
+
+    parsed = InputLoader().load(input_file, input_format="grype-json")
+    occurrences = build_importer_registry().parse("grype-json", payload, filename="grype.json")
+
+    assert parsed.warnings == []
+    assert parsed.total_rows == 2
+    assert parsed.unique_cves == ["CVE-2024-0001", "CVE-2024-0002", "CVE-2024-0003"]
+    assert [item.cve_id for item in occurrences] == parsed.unique_cves
+    assert [item.raw_evidence["source_record_id"] for item in occurrences] == [
+        "match:1:cve:1",
+        "match:1:cve:2",
+        "match:2",
+    ]
+    assert [item.raw_evidence["source_id"] for item in occurrences] == [
+        "GHSA-9m7r-4c2v-9j5j",
+        "GHSA-9m7r-4c2v-9j5j",
+        "GHSA-2m57-hf25-phgg",
+    ]
+    assert occurrences[1].raw_evidence["purl"] == "pkg:npm/demo-package@1.0.0"
+    assert occurrences[1].fix_version == "2.0.0"
+
+
 def test_grype_json_warns_about_unexpected_match_shapes(tmp_path: Path) -> None:
     input_file = tmp_path / "grype.json"
     input_file.write_text(

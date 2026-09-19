@@ -72,6 +72,8 @@ export function NewImportRoute(props: NewImportRouteProps) {
       parserPreview,
       projectId: props.selectedProjectId,
       providerAvailable: props.providerStatus?.status === "ok",
+      sbomScanner: props.importWizard.sbomScanner,
+      sbomTargetRef: props.importWizard.sbomTargetRef,
     })
     const optionalChecks = optionalContextReadiness({
       attackMappingFile: props.importWizard.attackMappingFile,
@@ -91,6 +93,8 @@ export function NewImportRoute(props: NewImportRouteProps) {
     props.importWizard.attackSource,
     props.importWizard.file,
     props.importWizard.inputType,
+    props.importWizard.sbomScanner,
+    props.importWizard.sbomTargetRef,
     props.importWizard.vexFile,
     props.providerStatus?.status,
     props.selectedProjectId,
@@ -108,6 +112,9 @@ export function NewImportRoute(props: NewImportRouteProps) {
         step,
         inputType: props.importWizard.inputType,
         evidenceFile: props.importWizard.file,
+        sbomTargetMissing: readiness.some(
+          (check) => check.id === "sbom-target" && check.status === "missing",
+        ),
       })
 
   useEffect(() => {
@@ -121,13 +128,19 @@ export function NewImportRoute(props: NewImportRouteProps) {
       props.supportedFormats,
       props.importWizard.file,
       props.importWizard.inputType,
+      { sbomScanner: props.importWizard.sbomScanner },
     ).then((preview) => {
       if (!cancelled) setParserPreview(preview)
     })
     return () => {
       cancelled = true
     }
-  }, [props.importWizard.file, props.importWizard.inputType, props.supportedFormats])
+  }, [
+    props.importWizard.file,
+    props.importWizard.inputType,
+    props.importWizard.sbomScanner,
+    props.supportedFormats,
+  ])
 
   useEffect(() => {
     if (step < 1) return

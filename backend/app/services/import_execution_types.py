@@ -30,6 +30,11 @@ class ProjectImportUploadRequest:
     attack_source: str = "none"
     attack_mapping_file: str | None = None
     attack_technique_metadata_file: str | None = None
+    sbom_scanner: str = "none"
+    sbom_target_ref: str | None = None
+    sbom_db_update: bool = True
+    sbom_source_run_id: str | None = None
+    sbom_observed_at: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,6 +68,11 @@ class PreparedImportUpload:
     attack_metadata_path: Path | None
     attack_source: str
     locked_provider_data: bool
+    sbom_scanner: str = "none"
+    sbom_target_ref: str | None = None
+    sbom_db_update: bool = True
+    sbom_source_run_id: str | None = None
+    sbom_observed_at: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

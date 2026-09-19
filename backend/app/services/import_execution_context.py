@@ -597,6 +597,7 @@ def _parsed_input_from_workbench_occurrences(
     input_path: Path,
     input_type: str,
     base_parsed_input: ParsedInput | None = None,
+    allow_empty: bool = False,
     asset_context_summary: dict[str, Any] | None,
     vex_summary: dict[str, Any] | None,
 ) -> ParsedInput:
@@ -616,6 +617,7 @@ def _parsed_input_from_workbench_occurrences(
     )
     return finalize_occurrences(
         input_occurrences,
+        allow_empty=allow_empty,
         input_format=base_parsed_input.input_format
         if base_parsed_input is not None
         else input_type,

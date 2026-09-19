@@ -6,17 +6,23 @@ import {
   VpwSectionHeader,
 } from "@/components/vpw"
 import type { ImportRunSummary } from "./ImportRunDetailTabShared"
+import { sbomAssessmentOutcome } from "./sbom-assessment-model"
 
 export function FindingsTab({ summary }: { summary: ImportRunSummary }) {
   const findingsCount =
     summary.finding_count ??
     (summary.created_findings ?? 0) + (summary.updated_findings ?? 0)
   if (findingsCount <= 0) {
+    const assessment = summary.evidence?.sbom_assessment
+    const outcome = assessment ? sbomAssessmentOutcome(assessment) : null
     return (
       <VpwPanel className="flex flex-col gap-4">
         <VpwSectionHeader
-          description="Parser diagnostics may explain why this import did not create or update findings."
-          title="No findings created"
+          description={
+            outcome?.description ??
+            "Parser diagnostics may explain why this import did not create or update findings."
+          }
+          title={outcome?.title ?? "No findings created"}
         />
         <div className="flex flex-wrap gap-2">
           <Button asChild>

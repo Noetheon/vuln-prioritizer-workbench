@@ -8,6 +8,7 @@ import {
 } from "@/lib/import-format-metadata"
 import { FileUploadField } from "./ImportsWorkbenchFileUploadField"
 import type { ImportsWorkbenchProps } from "./imports-workbench-model"
+import { SbomScanOptions } from "./NewImportSbomOptions"
 import {
   AcceptedTypeChips,
   ParserPreviewPanel,
@@ -20,14 +21,27 @@ export function UploadFileStep({
   onFileChange,
   parserPreview,
   supportedFormats,
-}: Pick<ImportsWorkbenchProps, "importWizard" | "onFileChange"> & {
+  onSbomScannerChange,
+  onSbomTargetRefChange,
+  onSbomDbUpdateChange,
+}: Pick<
+  ImportsWorkbenchProps,
+  | "importWizard"
+  | "onFileChange"
+  | "onSbomScannerChange"
+  | "onSbomTargetRefChange"
+  | "onSbomDbUpdateChange"
+> & {
   format: ImportsWorkbenchProps["supportedFormats"][number] | undefined
   parserPreview: ParserPreview
   supportedFormats: ImportsWorkbenchProps["supportedFormats"]
 }) {
-  const uploadRequirement = format
-    ? uploadRequirementCopy(format)
-    : "Attach the main evidence file."
+  const uploadRequirement =
+    importWizard.sbomScanner === "grype"
+      ? "Component inventory; vulnerability records are optional when scanning."
+      : format
+        ? uploadRequirementCopy(format)
+        : "Attach the main evidence file."
 
   return (
     <section className="flex flex-col gap-4">
@@ -65,6 +79,12 @@ export function UploadFileStep({
           <AcceptedTypeChips extensions={format.extensions} />
         ) : null}
       </div>
+      <SbomScanOptions
+        importWizard={importWizard}
+        onSbomDbUpdateChange={onSbomDbUpdateChange}
+        onSbomScannerChange={onSbomScannerChange}
+        onSbomTargetRefChange={onSbomTargetRefChange}
+      />
       <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-3">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>

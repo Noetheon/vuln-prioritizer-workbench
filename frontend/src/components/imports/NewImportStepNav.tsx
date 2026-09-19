@@ -29,7 +29,8 @@ export function StepNav({
     canReachStep2 &&
     checkPassed(readiness, "evidence-file") &&
     checkPassed(readiness, "file-type") &&
-    parserReady
+    parserReady &&
+    !checkHasStatus(readiness, "sbom-target", "missing")
   const canReachStep4 = canReachStep3
 
   return (

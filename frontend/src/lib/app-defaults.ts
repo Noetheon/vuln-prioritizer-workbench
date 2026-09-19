@@ -30,6 +30,9 @@ export type ImportWizardState = {
   inputType: ImportFormat | ""
   lockedProviderData: boolean
   providerSnapshotFile: string
+  sbomScanner: "none" | "grype"
+  sbomTargetRef: string
+  sbomDbUpdate: boolean
   vexFile: File | null
 }
 
@@ -44,6 +47,9 @@ export const defaultImportWizardState: ImportWizardState = {
   inputType: "",
   lockedProviderData: false,
   providerSnapshotFile: "",
+  sbomScanner: "none",
+  sbomTargetRef: "",
+  sbomDbUpdate: true,
   vexFile: null,
 }
 

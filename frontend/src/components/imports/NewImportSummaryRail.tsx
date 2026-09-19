@@ -50,6 +50,22 @@ export function SummaryRail({
             label: "Evidence file",
             value: props.importWizard.file?.name ?? "Next: upload evidence file",
           },
+          ...(props.importWizard.sbomScanner === "grype"
+            ? [
+                { label: "SBOM scan", value: "Grype" },
+                {
+                  label: "SBOM subject",
+                  value: props.importWizard.sbomTargetRef || "Required",
+                },
+                {
+                  label: "Database updates",
+                  value:
+                    props.importWizard.sbomDbUpdate === false
+                      ? "Disabled"
+                      : "Allowed",
+                },
+              ]
+            : []),
           {
             label: "Asset context",
             value: props.importWizard.assetContextFile?.name ?? "Not selected",

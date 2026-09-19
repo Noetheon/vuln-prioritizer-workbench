@@ -38,6 +38,7 @@ Each match may include:
 | Field | Required | Notes |
 | --- | --- | --- |
 | `vulnerability.id` | yes | Raw Grype vulnerability identifier. CVE IDs are normalized to uppercase for prioritization and preserved as `source_id`. |
+| `relatedVulnerabilities` | no | Official match-level CVE aliases, alongside `vulnerability`; original advisory IDs remain preserved. |
 | `vulnerability.aliases` / `vulnerability.relatedVulnerabilities` | no | Compatibility fields checked for CVE IDs when `vulnerability.id` is a GHSA, OSV, vendor advisory, or other source identifier. |
 | `vulnerability.severity` | no | Raw scanner severity. Preserved as source context; it does not replace CVSS, EPSS, KEV, or policy scoring. |
 | `vulnerability.fix.versions` | no | Compatibility fallback when fixed versions are not present at the match level. |
