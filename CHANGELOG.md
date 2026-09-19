@@ -46,6 +46,9 @@ exact git tag output when release wording needs to be verified.
 
 - Import project selection remains stable when the hidden form select emits an
   empty value during initialization of a project-specific import URL.
+- The import wizard keeps its initial scroll position and sizes its desktop
+  panels to the available Workbench space, keeping actions visible in both
+  production builds and development Strict Mode.
 - Grype match-level CVE aliases and Trivy target identity are normalized correctly;
   queued imports publish their complete worker payload atomically.
 - Pinned Lucide React to `1.41.0` to avoid unused property reads introduced by

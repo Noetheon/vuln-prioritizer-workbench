@@ -590,6 +590,11 @@ test("new import wizard keeps desktop and mobile layouts within the viewport", a
   expect(macbookSummaryBox).not.toBeNull()
   expect(commandBarBox).not.toBeNull()
   expect(
+    await page
+      .getByRole("region", { name: "Workbench page content" })
+      .evaluate((element) => element.scrollTop),
+  ).toBe(0)
+  expect(
     Math.abs((macbookSummaryBox?.y ?? 0) - (macbookLayoutBox?.y ?? 0)),
   ).toBeLessThanOrEqual(1)
   expect(macbookSummaryBox?.x ?? 0).toBeGreaterThan(
