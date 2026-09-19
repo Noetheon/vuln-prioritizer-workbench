@@ -29,6 +29,9 @@ exact git tag output when release wording needs to be verified.
 
 - Refreshed the coordinated Python dependency locks and pinned GitHub Actions
   updates to resolve security advisories and consolidate pending dependency PRs.
+- Refreshed compatible frontend dependencies and aligned the pinned Playwright
+  browser images with the test runner; TypeScript 6 remains pinned for OpenAPI
+  generator compatibility.
 - Import, asset recalculation and waiver lifecycle share a complete pure evaluator;
   unchanged scopes use a bounded ranking path during incremental imports.
 - Executive guidance and SLA displays use recorded evidence. Risk simulations
@@ -38,6 +41,9 @@ exact git tag output when release wording needs to be verified.
 
 ### Fixed
 
+- CodeQL PR analysis includes tests and helper scripts. Browser-test artifacts use
+  isolated Playwright attachments, and release manifests are consumed only after
+  a successful bundle build.
 - Current decision reads avoid redundant deep copies while preserving validation
   and isolation, including deeply nested historical evidence.
 - Stale rationale after asset edits, cleared context values returning through

@@ -28,7 +28,8 @@ Ready pull requests keep the merge-safety checks that are required on `main`:
   `main`, and manual inputs; unrelated paths exit with a clear skip message.
 - `Analyze Python` CodeQL remains a visible required branch-protection context,
   but docs-only/non-source PRs skip the CodeQL initialization and analysis steps
-  inside the job.
+  inside the job. Python, JavaScript, and TypeScript changes include tests and
+  helper scripts, so findings in those files are checked before merge too.
 
 ## Main checks
 
@@ -121,9 +122,10 @@ can affect UI rendering, browser behavior, or visual baselines. Docker PRs run
 the production-like smoke and image scans only when the changed paths can affect
 production routing, image contents, or scan policy.
 
-CodeQL keeps required check names on PRs, but source-scopes the expensive
-analysis steps and relies on `main`, weekly schedule, and manual runs for full
-repository security analysis outside PR source changes.
+CodeQL keeps required check names on PRs and runs its repository analysis when
+Python, JavaScript, TypeScript, or relevant dependency/configuration inputs
+change. Test and helper-script changes count as source changes. `main`, weekly
+schedule, and manual runs always perform full repository security analysis.
 
 ## Measuring impact
 

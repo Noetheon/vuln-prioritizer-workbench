@@ -178,6 +178,15 @@ dependencies from the committed lockfile. Do not exclude dev dependencies from
 release or CI evidence unless the dependency policy is changed in the same
 review.
 
+TypeScript is pinned to `6.0.3` while the pinned `@hey-api/openapi-ts@0.99.0`
+generator requires the classic TypeScript compiler API. TypeScript 7 removes
+that API from its main entry point; its broad generator peer range currently
+allows an install that fails at `ts.SyntaxKind.AnyKeyword` during client
+generation. This compatibility pin keeps one compiler for builds and generation.
+Revisit it when the generator supports TypeScript 7, and require
+`make api-client-drift-check` as well as build and type checks before upgrading.
+See Microsoft's [TypeScript 7 migration guidance](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-6-0).
+
 The root workspace uses npm workspace scripts only. There is no tracked
 `bun.lock`; adding one would need a package-manager policy change and should not
 be used as release evidence unless that policy changes.
