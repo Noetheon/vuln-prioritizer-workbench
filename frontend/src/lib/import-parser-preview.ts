@@ -19,6 +19,7 @@ export async function buildParserPreview(
   formats: readonly SupportedFormat[],
   file: File | null,
   inputType: string | null | undefined,
+  options: { sbomScanner?: "none" | "grype" } = {},
 ): Promise<ParserPreview> {
   if (!file || !isImportInputType(formats, inputType)) {
     return initialParserPreview()
@@ -80,7 +81,24 @@ export async function buildParserPreview(
 
   if (inputType.endsWith("-json")) {
     try {
-      JSON.parse(await file.text())
+      const document = JSON.parse(await file.text())
+      if (
+        ["cyclonedx-json", "spdx-json"].includes(inputType) &&
+        document &&
+        typeof document === "object" &&
+        (!Array.isArray(document.vulnerabilities) ||
+          document.vulnerabilities.length === 0)
+      ) {
+        return {
+          ...base,
+          state: options.sbomScanner === "grype" ? "passed" : "warning",
+          warnings: [
+            options.sbomScanner === "grype"
+              ? "Inventory received. Vulnerability matches and assessment limitations will be available after the Grype scan."
+              : "No vulnerability records are present. Enable Scan SBOM with Grype to assess this inventory, or upload a file with vulnerability records.",
+          ],
+        }
+      }
       return {
         ...base,
         warnings: ["Full parser results will be available after import."],

@@ -55,6 +55,7 @@ export type ImportReadinessCheck = {
     | "asset-context"
     | "vex"
     | "attack-context"
+    | "sbom-target"
   label: string
   status: ReadinessStatus
   message?: string

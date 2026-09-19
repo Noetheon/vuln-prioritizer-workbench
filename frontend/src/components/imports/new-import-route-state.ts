@@ -32,6 +32,7 @@ export function disabledReasonForStep({
   parserPreview,
   selectedProjectId,
   step,
+  sbomTargetMissing = false,
 }: {
   canStartImport: boolean
   evidenceFile: File | null
@@ -40,6 +41,7 @@ export function disabledReasonForStep({
   parserPreview: ParserPreview
   selectedProjectId: string
   step: StepId
+  sbomTargetMissing?: boolean
 }) {
   if (importLoading) return "Import is running."
   if (step === 1) {
@@ -48,9 +50,13 @@ export function disabledReasonForStep({
     return ""
   }
   if (step === 2) {
-    if (!evidenceFile) return "Continue is unavailable until an evidence file is selected."
-    if (parserPreview.state === "not-started") return "File check has not started yet."
-    if (parserPreview.state === "checking") return "File check is still running."
+    if (sbomTargetMissing) return "Enter a stable SBOM subject before scanning."
+    if (!evidenceFile)
+      return "Continue is unavailable until an evidence file is selected."
+    if (parserPreview.state === "not-started")
+      return "File check has not started yet."
+    if (parserPreview.state === "checking")
+      return "File check is still running."
     if (parserPreview.state === "error") {
       return parserPreview.errors[0] ?? "Fix the file before continuing."
     }
@@ -120,7 +126,10 @@ export function readinessCopyForStep(
     return "Can continue"
   }
   if (step === 2) {
-    if (evidenceMissing || parserPending || blocked) return "Needs evidence file"
+    if (checkHasStatus(readiness, "sbom-target", "missing"))
+      return "Needs SBOM subject"
+    if (evidenceMissing || parserPending || blocked)
+      return "Needs evidence file"
     return "Can continue"
   }
   if (step === 3) {
@@ -152,7 +161,13 @@ export function readinessToneForStep(
   const parserPending = checkHasStatus(readiness, "parser-preview", "pending")
   if (step === 4 && !readinessBlocksImport(readiness)) return "success" as const
   if (step === 1 && !projectMissing && !inputMissing) return "success" as const
-  if (step === 2 && !evidenceMissing && !parserPending) return "success" as const
+  if (
+    step === 2 &&
+    !evidenceMissing &&
+    !parserPending &&
+    !readinessBlocksImport(readiness)
+  )
+    return "success" as const
   if (step === 3 && !readinessBlocksImport(readiness)) return "success" as const
   if (
     readiness.some(

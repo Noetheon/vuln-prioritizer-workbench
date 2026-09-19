@@ -63,6 +63,7 @@ export type AnalysisEvidenceV2 = {
      */
     project_id: string;
     provider?: ProviderEvidenceV2;
+    sbom_assessment?: SbomAssessmentV1 | null;
     /**
      * Schema Version
      */
@@ -1057,6 +1058,18 @@ export type BodyImportsImportProjectUpload = {
      * Provider Snapshot File
      */
     provider_snapshot_file?: string | null;
+    /**
+     * Sbom Db Update
+     */
+    sbom_db_update?: boolean;
+    /**
+     * Sbom Scanner
+     */
+    sbom_scanner?: 'none' | 'grype';
+    /**
+     * Sbom Target Ref
+     */
+    sbom_target_ref?: string | null;
     /**
      * Vex File
      */
@@ -5123,6 +5136,122 @@ export type RunParseErrorV2 = {
 };
 
 /**
+ * SbomAssessmentV1
+ *
+ * Separate scanner observation and coverage from downstream prioritization.
+ */
+export type SbomAssessmentV1 = {
+    /**
+     * Artifact Refs
+     */
+    artifact_refs?: {
+        [key: string]: string;
+    };
+    /**
+     * Component Count
+     */
+    component_count: number;
+    /**
+     * Database Built At
+     */
+    database_built_at?: string | null;
+    /**
+     * Database Metadata
+     */
+    database_metadata?: {
+        [key: string]: string | number | boolean;
+    };
+    /**
+     * Database Sha256
+     */
+    database_sha256?: string | null;
+    /**
+     * Identified Component Count
+     */
+    identified_component_count: number;
+    /**
+     * Input Format
+     */
+    input_format: 'cyclonedx-json' | 'spdx-json';
+    /**
+     * Input Sha256
+     */
+    input_sha256: string;
+    /**
+     * Observed At
+     */
+    observed_at?: string | null;
+    /**
+     * Output Sha256
+     */
+    output_sha256: string;
+    /**
+     * Prioritized Match Count
+     */
+    prioritized_match_count: number;
+    /**
+     * Scanned At
+     */
+    scanned_at: string;
+    /**
+     * Scanner
+     */
+    scanner?: 'grype';
+    /**
+     * Scanner Match Count
+     */
+    scanner_match_count: number;
+    /**
+     * Scanner Version
+     */
+    scanner_version: string;
+    /**
+     * Schema Version
+     */
+    schema_version?: 'sbom-assessment.v1';
+    /**
+     * Source Run Id
+     */
+    source_run_id?: string | null;
+    /**
+     * Status
+     */
+    status?: 'complete' | 'partial';
+    /**
+     * Target Kind
+     */
+    target_kind?: 'sbom';
+    /**
+     * Target Ref
+     */
+    target_ref: string;
+    /**
+     * Unassigned Match Count
+     */
+    unassigned_match_count: number;
+    /**
+     * Version Missing Count
+     */
+    version_missing_count: number;
+    /**
+     * Warnings
+     */
+    warnings?: Array<string>;
+};
+
+/**
+ * SbomRescanCreate
+ *
+ * Choose whether the scanner may update its local vulnerability database.
+ */
+export type SbomRescanCreate = {
+    /**
+     * Sbom Db Update
+     */
+    sbom_db_update?: boolean;
+};
+
+/**
  * ScopeEvaluationInput
  *
  * Immutable-in-storage inputs sufficient for a complete offline scope replay.
@@ -7149,6 +7278,69 @@ export type GetApiV1RunsByRunIdReportsResponses = {
 };
 
 export type GetApiV1RunsByRunIdReportsResponse = GetApiV1RunsByRunIdReportsResponses[keyof GetApiV1RunsByRunIdReportsResponses];
+
+export type GetApiV1RunsByRunIdSbomEvidenceData = {
+    body?: never;
+    path: {
+        /**
+         * Run Id
+         */
+        run_id: string;
+    };
+    query?: never;
+    url: '/api/v1/runs/{run_id}/sbom-evidence';
+};
+
+export type GetApiV1RunsByRunIdSbomEvidenceErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1RunsByRunIdSbomEvidenceError = GetApiV1RunsByRunIdSbomEvidenceErrors[keyof GetApiV1RunsByRunIdSbomEvidenceErrors];
+
+export type GetApiV1RunsByRunIdSbomEvidenceResponses = {
+    /**
+     * Successful Response
+     */
+    200: Blob | File;
+};
+
+export type GetApiV1RunsByRunIdSbomEvidenceResponse = GetApiV1RunsByRunIdSbomEvidenceResponses[keyof GetApiV1RunsByRunIdSbomEvidenceResponses];
+
+export type PostApiV1RunsByRunIdSbomRescansData = {
+    /**
+     * Body
+     */
+    body?: SbomRescanCreate | null;
+    path: {
+        /**
+         * Run Id
+         */
+        run_id: string;
+    };
+    query?: never;
+    url: '/api/v1/runs/{run_id}/sbom-rescans';
+};
+
+export type PostApiV1RunsByRunIdSbomRescansErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type PostApiV1RunsByRunIdSbomRescansError = PostApiV1RunsByRunIdSbomRescansErrors[keyof PostApiV1RunsByRunIdSbomRescansErrors];
+
+export type PostApiV1RunsByRunIdSbomRescansResponses = {
+    /**
+     * Successful Response
+     */
+    202: AnalysisRunPublic;
+};
+
+export type PostApiV1RunsByRunIdSbomRescansResponse = PostApiV1RunsByRunIdSbomRescansResponses[keyof PostApiV1RunsByRunIdSbomRescansResponses];
 
 export type GetApiV1RunsByRunIdSummaryData = {
     body?: never;

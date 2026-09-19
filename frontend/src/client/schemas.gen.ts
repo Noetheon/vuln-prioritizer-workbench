@@ -152,6 +152,16 @@ export const AnalysisEvidenceV2Schema = {
         provider: {
             $ref: '#/components/schemas/ProviderEvidenceV2'
         },
+        sbom_assessment: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/SbomAssessmentV1'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         schema_version: {
             const: 'analysis-evidence.v2',
             default: 'analysis-evidence.v2',
@@ -2015,6 +2025,31 @@ export const Body_imports_import_project_uploadSchema = {
                 }
             ],
             title: 'Provider Snapshot File'
+        },
+        sbom_db_update: {
+            default: true,
+            title: 'Sbom Db Update',
+            type: 'boolean'
+        },
+        sbom_scanner: {
+            default: 'none',
+            enum: [
+                'none',
+                'grype'
+            ],
+            title: 'Sbom Scanner',
+            type: 'string'
+        },
+        sbom_target_ref: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Sbom Target Ref'
         },
         vex_file: {
             anyOf: [
@@ -9606,6 +9641,203 @@ export const RunParseErrorV2Schema = {
         'error_type'
     ],
     title: 'RunParseErrorV2',
+    type: 'object'
+} as const;
+
+export const SbomAssessmentV1Schema = {
+    additionalProperties: false,
+    description: 'Separate scanner observation and coverage from downstream prioritization.',
+    properties: {
+        artifact_refs: {
+            additionalProperties: {
+                type: 'string'
+            },
+            title: 'Artifact Refs',
+            type: 'object'
+        },
+        component_count: {
+            minimum: 0,
+            title: 'Component Count',
+            type: 'integer'
+        },
+        database_built_at: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Database Built At'
+        },
+        database_metadata: {
+            additionalProperties: {
+                anyOf: [
+                    {
+                        type: 'string'
+                    },
+                    {
+                        type: 'integer'
+                    },
+                    {
+                        type: 'boolean'
+                    }
+                ]
+            },
+            title: 'Database Metadata',
+            type: 'object'
+        },
+        database_sha256: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Database Sha256'
+        },
+        identified_component_count: {
+            minimum: 0,
+            title: 'Identified Component Count',
+            type: 'integer'
+        },
+        input_format: {
+            enum: [
+                'cyclonedx-json',
+                'spdx-json'
+            ],
+            title: 'Input Format',
+            type: 'string'
+        },
+        input_sha256: {
+            title: 'Input Sha256',
+            type: 'string'
+        },
+        observed_at: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Observed At'
+        },
+        output_sha256: {
+            title: 'Output Sha256',
+            type: 'string'
+        },
+        prioritized_match_count: {
+            minimum: 0,
+            title: 'Prioritized Match Count',
+            type: 'integer'
+        },
+        scanned_at: {
+            title: 'Scanned At',
+            type: 'string'
+        },
+        scanner: {
+            const: 'grype',
+            default: 'grype',
+            title: 'Scanner',
+            type: 'string'
+        },
+        scanner_match_count: {
+            minimum: 0,
+            title: 'Scanner Match Count',
+            type: 'integer'
+        },
+        scanner_version: {
+            title: 'Scanner Version',
+            type: 'string'
+        },
+        schema_version: {
+            const: 'sbom-assessment.v1',
+            default: 'sbom-assessment.v1',
+            title: 'Schema Version',
+            type: 'string'
+        },
+        source_run_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Run Id'
+        },
+        status: {
+            default: 'complete',
+            enum: [
+                'complete',
+                'partial'
+            ],
+            title: 'Status',
+            type: 'string'
+        },
+        target_kind: {
+            const: 'sbom',
+            default: 'sbom',
+            title: 'Target Kind',
+            type: 'string'
+        },
+        target_ref: {
+            title: 'Target Ref',
+            type: 'string'
+        },
+        unassigned_match_count: {
+            minimum: 0,
+            title: 'Unassigned Match Count',
+            type: 'integer'
+        },
+        version_missing_count: {
+            minimum: 0,
+            title: 'Version Missing Count',
+            type: 'integer'
+        },
+        warnings: {
+            items: {
+                type: 'string'
+            },
+            title: 'Warnings',
+            type: 'array'
+        }
+    },
+    required: [
+        'scanner_version',
+        'scanned_at',
+        'input_sha256',
+        'output_sha256',
+        'target_ref',
+        'input_format',
+        'component_count',
+        'identified_component_count',
+        'version_missing_count',
+        'scanner_match_count',
+        'prioritized_match_count',
+        'unassigned_match_count'
+    ],
+    title: 'SbomAssessmentV1',
+    type: 'object'
+} as const;
+
+export const SbomRescanCreateSchema = {
+    additionalProperties: false,
+    description: 'Choose whether the scanner may update its local vulnerability database.',
+    properties: {
+        sbom_db_update: {
+            default: true,
+            title: 'Sbom Db Update',
+            type: 'boolean'
+        }
+    },
+    title: 'SbomRescanCreate',
     type: 'object'
 } as const;
 

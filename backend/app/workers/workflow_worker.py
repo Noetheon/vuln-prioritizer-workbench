@@ -25,6 +25,7 @@ from app.models import (
 )
 from app.repositories import RuntimeHeartbeatRepository, WorkflowRepository
 from app.repositories.workflows import WorkflowLeaseLostError
+from app.services.workflow_execution import WorkflowShutdownRequested
 from app.services.workflows import finish_cancelled_workflow
 from app.workers.workflow_handlers import (
     WorkflowCancelled,
@@ -53,8 +54,11 @@ def run_worker_once(
     lease_seconds: int = 300,
     retry_delay_seconds: int = 30,
     limit: int = 1,
+    stop_event: threading.Event | None = None,
 ) -> WorkerTickResult:
     """Claim and execute at most ``limit`` due workflow jobs."""
+    if stop_event is not None and stop_event.is_set():
+        return WorkerTickResult()
     with Session(engine) as session:
         _record_worker_service_heartbeat_in_session(
             session,
@@ -84,6 +88,7 @@ def run_worker_once(
             workflow_id=workflow_id,
             lease_seconds=lease_seconds,
             retry_delay_seconds=retry_delay_seconds,
+            stop_event=stop_event,
         )
         if outcome == "completed":
             completed += 1
@@ -130,6 +135,7 @@ def run_worker_loop(
             queue_names=queue_names,
             lease_seconds=lease_seconds,
             retry_delay_seconds=retry_delay_seconds,
+            stop_event=stop_event,
         )
         processed += result.completed + result.cancelled + result.retried_or_failed
         if result.claimed == 0:
@@ -149,6 +155,7 @@ def _execute_claimed_workflow(
     workflow_id: uuid.UUID,
     lease_seconds: int,
     retry_delay_seconds: int,
+    stop_event: threading.Event | None = None,
 ) -> str:
     attempt_count: int | None = None
     try:
@@ -180,11 +187,33 @@ def _execute_claimed_workflow(
                     workflow=workflow,
                     worker_id=worker_id,
                     lease_seconds=lease_seconds,
+                    stop_event=stop_event,
                 )
                 session.commit()
                 return "completed"
     except WorkflowLeaseLostError:
         # A superseded attempt has no authority to retry or finish its successor.
+        return "retried_or_failed"
+    except WorkflowShutdownRequested as exc:
+        with Session(engine) as session:
+            repository = WorkflowRepository(session)
+            try:
+                workflow = repository.lock_workflow_control(
+                    workflow_id, worker_id=worker_id, attempt_count=attempt_count
+                )
+            except WorkflowLeaseLostError:
+                return "retried_or_failed"
+            # Shutdown is an interruption, not a failed attempt or user cancel.
+            # Preserve the remaining retry allowance when releasing the claim.
+            workflow.max_attempts += 1
+            session.add(workflow)
+            repository.schedule_retry_or_fail(
+                workflow_id,
+                error_message=str(exc),
+                error_json={"error_type": "WorkflowShutdownRequested"},
+                delay_seconds=0,
+            )
+            session.commit()
         return "retried_or_failed"
     except WorkflowNonRetryableError as exc:
         with Session(engine) as session:

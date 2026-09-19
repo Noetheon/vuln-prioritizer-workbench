@@ -55,6 +55,9 @@ class Settings:
     REPORT_DIR: str = DEFAULT_REPORT_DIR
     PROVIDER_SNAPSHOT_DIR: str = "data"
     PROVIDER_CACHE_DIR: str = DEFAULT_PROVIDER_CACHE_DIR
+    SBOM_GRYPE_EXECUTABLE: str = "grype"
+    SBOM_SCAN_TIMEOUT_SECONDS: int = 300
+    SBOM_SCAN_MAX_OUTPUT_MB: int = 64
     NVD_API_KEY_ENV: str = DEFAULT_NVD_API_KEY_ENV
     ATTACK_ARTIFACT_DIR: str = "data/attack"
     DEMO_PROVIDER_SNAPSHOT_ENABLED: bool = False
@@ -215,6 +218,9 @@ def load_settings() -> Settings:
         REPORT_DIR=environ.get("REPORT_DIR", DEFAULT_REPORT_DIR),
         PROVIDER_SNAPSHOT_DIR=environ.get("PROVIDER_SNAPSHOT_DIR", "data"),
         PROVIDER_CACHE_DIR=environ.get("PROVIDER_CACHE_DIR", DEFAULT_PROVIDER_CACHE_DIR),
+        SBOM_GRYPE_EXECUTABLE=environ.get("SBOM_GRYPE_EXECUTABLE", "grype"),
+        SBOM_SCAN_TIMEOUT_SECONDS=_positive_int_from_env("SBOM_SCAN_TIMEOUT_SECONDS", 300),
+        SBOM_SCAN_MAX_OUTPUT_MB=_positive_int_from_env("SBOM_SCAN_MAX_OUTPUT_MB", 64),
         NVD_API_KEY_ENV=environ.get(
             "WORKBENCH_NVD_API_KEY_ENV",
             DEFAULT_NVD_API_KEY_ENV,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
+from threading import Event
 from typing import Any
 
 from app.models import WorkflowEvent, WorkflowRun, WorkflowRunStatus
@@ -12,6 +13,10 @@ from app.repositories import WorkflowRepository
 
 class WorkflowCancellationRequested(RuntimeError):
     """Raised when cooperative workflow cancellation has been requested."""
+
+
+class WorkflowShutdownRequested(RuntimeError):
+    """Raised when a worker must release unfinished work during shutdown."""
 
 
 @dataclass(slots=True)
@@ -23,6 +28,7 @@ class WorkflowExecutionContext:
     worker_id: str | None = None
     lease_seconds: int = 300
     attempt_count: int | None = None
+    stop_event: Event | None = None
     _compute: bool = False
     _publishing: bool = False
 
@@ -34,6 +40,7 @@ class WorkflowExecutionContext:
         *,
         worker_id: str | None = None,
         lease_seconds: int = 300,
+        stop_event: Event | None = None,
     ) -> WorkflowExecutionContext:
         """Construct a context for one persisted workflow."""
         return cls(
@@ -44,6 +51,7 @@ class WorkflowExecutionContext:
             attempt_count=repository.require_workflow(workflow_id).attempt_count
             if worker_id is not None
             else None,
+            stop_event=stop_event,
         )
 
     def workflow(self) -> WorkflowRun:
@@ -57,8 +65,14 @@ class WorkflowExecutionContext:
         self.checkpoint()
 
     def checkpoint(self) -> None:
-        """Observe cancellation and end a computation transaction before slow work."""
+        """Check worker control and end a computation transaction before slow work."""
         self.check_cancelled()
+        if self.worker_id is not None:
+            self.repository.assert_worker_lease(
+                self.workflow_id,
+                worker_id=self.worker_id,
+                attempt_count=self.attempt_count,
+            )
         self.repository.session.commit()
 
     def begin_publication(self) -> None:
@@ -153,12 +167,13 @@ class WorkflowExecutionContext:
         )
 
     def check_cancelled(self) -> None:
-        """Observe the database control flag without accepting a cached ORM value."""
-        if not self.repository.cancellation_is_requested(self.workflow_id):
-            return
-        # The worker rolls back the attempted domain publication before making
-        # cancellation terminal in its own short transaction.
-        raise WorkflowCancellationRequested("Workflow cancelled by user request.")
+        """Observe user cancellation and worker shutdown without cached control state."""
+        if self.repository.cancellation_is_requested(self.workflow_id):
+            # The worker rolls back the attempted domain publication before making
+            # cancellation terminal in its own short transaction.
+            raise WorkflowCancellationRequested("Workflow cancelled by user request.")
+        if self.stop_event is not None and self.stop_event.is_set():
+            raise WorkflowShutdownRequested("Workflow interrupted by worker shutdown.")
 
     def artifact(
         self,

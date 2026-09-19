@@ -16,6 +16,8 @@ export function buildImportReadinessChecks({
   parserPreview,
   projectId,
   providerAvailable,
+  sbomScanner,
+  sbomTargetRef,
 }: {
   evidenceFile: File | null
   formats: readonly SupportedFormat[]
@@ -23,6 +25,8 @@ export function buildImportReadinessChecks({
   parserPreview: ParserPreview
   projectId: string
   providerAvailable: boolean
+  sbomScanner?: "none" | "grype"
+  sbomTargetRef?: string
 }): ImportReadinessCheck[] {
   const hasInputType = isImportInputType(formats, inputType)
   const hasFile = Boolean(evidenceFile)
@@ -34,7 +38,7 @@ export function buildImportReadinessChecks({
     parserPreview.state === "not-started" || parserPreview.state === "checking"
   const parserBlocking = parserPreview.state === "error"
 
-  return [
+  const checks: ImportReadinessCheck[] = [
     {
       id: "project",
       label: "Project selected",
@@ -118,6 +122,20 @@ export function buildImportReadinessChecks({
       targetStep: 3,
     },
   ]
+  if (
+    sbomScanner === "grype" &&
+    ["cyclonedx-json", "spdx-json"].includes(inputType ?? "")
+  ) {
+    checks.push({
+      id: "sbom-target",
+      label: "SBOM subject",
+      status: sbomTargetRef?.trim() ? "passed" : "missing",
+      message:
+        sbomTargetRef?.trim() || "Enter a stable SBOM subject before scanning.",
+      targetStep: 2,
+    })
+  }
+  return checks
 }
 
 export function readinessBlocksImport(checks: readonly ImportReadinessCheck[]) {

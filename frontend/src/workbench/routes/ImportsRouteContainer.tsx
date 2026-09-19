@@ -22,6 +22,7 @@ import {
   withDemoProviderSnapshot,
 } from "../../lib/app-defaults"
 import { buildImportUploadFormData } from "../import-upload-payload"
+import { startReportDownload } from "../report-download"
 import {
   importInputTypeFromSearch,
   importRunRouteIdNeedsCanonicalRedirect,
@@ -131,6 +132,30 @@ export function ImportsRouteContainer() {
         project_id: projectId,
       }),
   })
+  const sbomRescanMutation = useMutation({
+    mutationFn: ({
+      runId,
+      updateDatabase,
+    }: {
+      runId: string
+      updateDatabase: boolean
+    }) =>
+      ImportsService.rescanSbom({
+        run_id: runId,
+        body: { sbom_db_update: updateDatabase },
+      }),
+  })
+  const sbomDownloadMutation = useMutation({
+    mutationFn: async (runId: string) => {
+      const blob: unknown = await ImportsService.downloadSbomEvidence(
+        { run_id: runId },
+        { parseAs: "blob" },
+      )
+      if (!(blob instanceof Blob))
+        throw new Error("The SBOM evidence response was not a file.")
+      startReportDownload({ blob, filename: `sbom-evidence-${runId}.zip` })
+    },
+  })
 
   const selectRunId = useCallback((nextRunId: string) => {
     setSelectedRunId(nextRunId)
@@ -191,7 +216,13 @@ export function ImportsRouteContainer() {
     ) {
       return
     }
-    setImportWizard((state) => ({ ...state, inputType }))
+    setImportWizard((state) => ({
+      ...state,
+      inputType,
+      sbomScanner: ["cyclonedx-json", "spdx-json"].includes(inputType)
+        ? state.sbomScanner
+        : "none",
+    }))
   }, [importWizard.inputType, importsView, location.searchStr, supportedFormats])
 
   useEffect(() => {
@@ -366,6 +397,31 @@ export function ImportsRouteContainer() {
     selectRunId("")
   }
 
+  async function rescanSbom(updateDatabase: boolean) {
+    const source = runDetailQuery.data?.run
+    if (!source) return
+    try {
+      const nextRun = await sbomRescanMutation.mutateAsync({
+        runId: source.id,
+        updateDatabase,
+      })
+      setPendingSelectableRunId(nextRun.id)
+      selectRunId(nextRun.id)
+      void navigate({
+        params: { runId: nextRun.id },
+        search: selectedProjectRouteSearch(source.project_id),
+        to: "/imports/runs/$runId",
+      })
+      await Promise.all([
+        refreshProjects(source.project_id),
+        refreshProjectRuns(nextRun.id),
+        invalidateProjectScopedWorkbenchQueries(queryClient, source.project_id),
+      ])
+    } catch {
+      // The mutation error is displayed beside the rescan action.
+    }
+  }
+
   return (
     <ImportsWorkbench
       failedImportRunId={failedImportRunId}
@@ -390,6 +446,9 @@ export function ImportsRouteContainer() {
           inputType: isImportInputType(supportedFormats, value)
             ? (value as ImportFormat)
             : "",
+          sbomScanner: ["cyclonedx-json", "spdx-json"].includes(value)
+            ? state.sbomScanner
+            : "none",
         }))
       }
       onLockedProviderDataChange={(value) =>
@@ -422,6 +481,34 @@ export function ImportsRouteContainer() {
       }
       onVexFileChange={(file) =>
         setImportWizard((state) => ({ ...state, vexFile: file }))
+      }
+      onSbomScannerChange={(value) =>
+        setImportWizard((state) => ({ ...state, sbomScanner: value }))
+      }
+      onSbomTargetRefChange={(value) =>
+        setImportWizard((state) => ({ ...state, sbomTargetRef: value }))
+      }
+      onSbomDbUpdateChange={(value) =>
+        setImportWizard((state) => ({ ...state, sbomDbUpdate: value }))
+      }
+      onSbomRescan={(updateDatabase) => void rescanSbom(updateDatabase)}
+      sbomRescanLoading={sbomRescanMutation.isPending}
+      sbomRescanError={
+        sbomRescanMutation.isError &&
+        sbomRescanMutation.variables?.runId === selectedRunId
+          ? apiErrorMessage("SBOM rescan failed", sbomRescanMutation.error)
+          : ""
+      }
+      onSbomEvidenceDownload={() => sbomDownloadMutation.mutate(selectedRunId)}
+      sbomDownloadLoading={sbomDownloadMutation.isPending}
+      sbomDownloadError={
+        sbomDownloadMutation.isError &&
+        sbomDownloadMutation.variables === selectedRunId
+          ? apiErrorMessage(
+              "Evidence download failed",
+              sbomDownloadMutation.error,
+            )
+          : ""
       }
       projectListLoading={projectListLoading}
       projectListError={projectListError}

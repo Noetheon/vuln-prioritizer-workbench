@@ -119,3 +119,10 @@ make docs-check
 For behavior, API, frontend, or release-adjacent documentation changes, also run
 the relevant backend, frontend, Docker, and release gates described in
 [Release Operations](release_operations.md).
+
+## Local SBOM assessments
+
+[Local SBOM Assessment](sbom-assessment.md) owns operator setup, supported
+inventories, coverage limits and rescans. The
+[implementation record](architecture/sbom-assessment-plan.md) owns design and
+validation evidence; existing format pages still describe evidence-import mode.

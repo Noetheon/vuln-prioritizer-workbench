@@ -19,6 +19,7 @@ from app.api.routes import (
     providers,
     reports,
     runs,
+    sbom,
     utils,
     waivers,
     workbench,
@@ -43,6 +44,7 @@ api_router.include_router(providers.router)
 api_router.include_router(runs.router)
 api_router.include_router(reports.router)
 api_router.include_router(imports.router)
+api_router.include_router(sbom.router)
 api_router.include_router(findings.router)
 api_router.include_router(github_issues.router)
 api_router.include_router(waivers.router)

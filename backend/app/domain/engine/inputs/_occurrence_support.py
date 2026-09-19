@@ -308,6 +308,7 @@ def finalize_occurrences(
     merged_input_count: int = 1,
     asset_match_conflict_count: int = 0,
     vex_conflict_count: int = 0,
+    allow_empty: bool = False,
 ) -> ParsedInput:
     """Deduplicate, truncate, and package normalized occurrences."""
     duplicate_cve_count = sum(
@@ -333,7 +334,7 @@ def finalize_occurrences(
         unique_cves = unique_cves[:max_cves]
         occurrences = [occurrence for occurrence in occurrences if occurrence.cve_id in allowed]
 
-    if not unique_cves:
+    if not unique_cves and not allow_empty:
         raise ValueError("No valid CVE identifiers were found in the provided input.")
 
     if merged_input_count > 1 and duplicate_cve_count:

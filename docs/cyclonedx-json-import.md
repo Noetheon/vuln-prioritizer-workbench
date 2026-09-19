@@ -5,9 +5,10 @@ CycloneDX JSON documents that include vulnerability records. Use it when an
 SBOM producer emits component inventory and vulnerability references in the
 same JSON file.
 
-Plain BOMs without top-level vulnerability records are accepted as JSON, but
-they create no prioritized occurrences because there is no CVE evidence to
-prioritize.
+For plain inventories without vulnerability records, enable the optional
+[local Grype assessment](sbom-assessment.md). Without that option, this parser
+requires embedded CVE vulnerability records. The following parser details
+describe the existing evidence-import mode.
 
 See `examples/cyclonedx-demo.json` for a checked-in synthetic sample adapted
 from `data/input_fixtures/cyclonedx_bom.json`.

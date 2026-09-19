@@ -30,6 +30,9 @@ export type ImportWizardStateLike = {
   inputType: ImportInputType | ""
   lockedProviderData?: boolean
   providerSnapshotFile?: string
+  sbomScanner?: "none" | "grype"
+  sbomTargetRef?: string
+  sbomDbUpdate?: boolean
   vexFile: File | null
 }
 
@@ -58,6 +61,15 @@ export type ImportsWorkbenchProps = {
   onAttackSourceChange: (value: string) => void
   onAttackTechniqueMetadataFileChange: (value: string) => void
   onVexFileChange: (file: File | null) => void
+  onSbomScannerChange: (value: "none" | "grype") => void
+  onSbomTargetRefChange: (value: string) => void
+  onSbomDbUpdateChange: (value: boolean) => void
+  onSbomRescan: (updateDatabase: boolean) => void
+  sbomRescanLoading: boolean
+  sbomRescanError: string
+  onSbomEvidenceDownload: () => void
+  sbomDownloadLoading: boolean
+  sbomDownloadError: string
   projectListLoading: boolean
   projectListError: string
   projectRuns: AnalysisRunPublic[]

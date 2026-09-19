@@ -184,6 +184,11 @@ class DecisionRunView:
             "asset_context": payload.get("asset_context"),
             "vex": payload.get("vex"),
             "dedup_summary": payload.get("dedup_summary"),
+            **(
+                {"sbom_assessment": payload["sbom_assessment"]}
+                if payload.get("sbom_assessment")
+                else {}
+            ),
         }
 
     @property

@@ -52,7 +52,9 @@ CVE is found there, the occurrence keeps the original `VulnerabilityID` as
 
 ## Normalization
 
-- The default target kind is `image`.
+- `ArtifactType` maps container images to `image`, CycloneDX/SPDX to `sbom`,
+  and preserves filesystem/repository/VM/AWS-account targets. Missing or unknown
+  artifact types retain the compatibility default `image`.
 - `Result.Target` becomes the occurrence `target_ref`.
 - `Result.Type` becomes package type provenance.
 - `VulnerabilityID` must contain a CVE identifier to create a prioritized

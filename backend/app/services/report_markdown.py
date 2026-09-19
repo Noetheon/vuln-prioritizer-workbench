@@ -17,6 +17,7 @@ from app.services.report_renderer_common import (
     _priority_label,
     _redacted_bundle_payload,
 )
+from app.services.report_sbom import markdown_sbom_assessment
 
 
 def render_markdown_report(payload: MarkdownReportPayload) -> str:
@@ -52,6 +53,7 @@ def render_markdown_report(payload: MarkdownReportPayload) -> str:
         )
     if payload.governance_rollups:
         lines.extend(_markdown_governance_section(payload.governance_rollups, payload.findings))
+    lines.extend(markdown_sbom_assessment(payload))
     if payload.detection_coverage:
         lines.extend(_markdown_detection_coverage_section(payload.detection_coverage))
     lines.extend(

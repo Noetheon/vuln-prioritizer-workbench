@@ -249,3 +249,12 @@ make public-production-evidence-check
 - Provider live smokes prove only that the sampled NVD, EPSS, and KEV contract
   paths worked at the time of the run. Deterministic tests must still use
   fixtures.
+
+## Local SBOM matching
+
+Optional Grype matching and assessment provenance are owned by
+`backend/app/services/sbom_scanner.py`, `sbom_import.py`, `sbom_rescans.py` and
+`backend/app/contracts/sbom.py`. Deterministic coverage lives in
+`backend/tests/test_sbom_scanner.py` and the SBOM import/rescan API contracts.
+The [validation record](architecture/sbom-assessment-plan.md) distinguishes
+real executable/database examples from deterministic application tests.

@@ -26,6 +26,7 @@ nav:
       - ATT&CK/TTP Methodology: attack-ttp-methodology.md
       - Workbench ATT&CK Methodology: workbench-attack-methodology.md
       - Reports and Evidence: reports-and-evidence.md
+      - Local SBOM Assessment: sbom-assessment.md
       - Demo Readiness: demo-readiness.md
       - Demo Walkthrough: demo-walkthrough.md
       - Offline Demo Runbook: workbench-offline-demo.md
@@ -45,6 +46,7 @@ nav:
       - Overview: architecture/index.md
       - Evaluation Revisions: architecture/evaluation-revisions.md
       - Evaluation Revisions Plan: architecture/evaluation-revisions-plan.md
+      - SBOM Assessment Plan: architecture/sbom-assessment-plan.md
       - Scope-First Decision Graph: architecture/scope-first-decision-graph.md
       - Decision/Evidence Kernel: architecture/decision-evidence-kernel.md
       - Model Import Registry: architecture/model-imports.md

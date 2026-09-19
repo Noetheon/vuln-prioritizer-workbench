@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from app.contracts.sbom import SbomAssessmentV1
 from app.decision_core.builders import workflow_ref_payload
 from app.decision_core.contracts import (
     AnalysisEvidenceUploadsV2,
@@ -304,6 +305,7 @@ class DecisionKernelInput:
     analysis_result: _DecisionAnalysisResult
     asset_context_summary: dict[str, Any] | None = None
     vex_summary: dict[str, Any] | None = None
+    sbom_assessment: SbomAssessmentV1 | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -362,13 +364,21 @@ def build_run_result(
         asset_context=_dict_or_none(kernel_input.asset_context_summary),
         vex=_dict_or_none(kernel_input.vex_summary),
         dedup_summary=persistence_plan.dedup_summary,
+        sbom_assessment=kernel_input.sbom_assessment,
         attack=AttackEvidenceV2(
             mapped=counts.attack_mapped_cves > 0,
             source=str(analysis_result.context.attack_source or "none"),
             technique_ids=_finding_technique_ids(persistence_plan.finding_evidence),
         ),
     )
-    artifact_refs: list[WorkflowArtifactRefV2] = []
+    artifact_refs = [
+        WorkflowArtifactRefV2(kind=f"sbom-{kind}", path=path)
+        for kind, path in (
+            kernel_input.sbom_assessment.artifact_refs.items()
+            if kernel_input.sbom_assessment
+            else []
+        )
+    ]
     return DecisionRunResult(
         analysis_evidence=evidence,
         finding_evidence=list(persistence_plan.finding_evidence),

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import uuid
 from pathlib import Path
+from threading import Event
 from typing import Any
 
 from sqlmodel import Session
@@ -52,6 +54,7 @@ def execute_workflow_handler(
     workflow: WorkflowRun,
     worker_id: str | None = None,
     lease_seconds: int = 300,
+    stop_event: Event | None = None,
 ) -> None:
     """Dispatch a claimed workflow to the concrete family handler."""
     repository = WorkflowRepository(session)
@@ -60,8 +63,10 @@ def execute_workflow_handler(
         workflow.id,
         worker_id=worker_id,
         lease_seconds=lease_seconds,
+        stop_event=stop_event,
     )
     try:
+        context.checkpoint()
         _raise_if_cancelled(repository, workflow.id)
         if workflow.kind == WorkflowRunKind.IMPORT:
             _execute_import_workflow(session, settings=settings, workflow=workflow, context=context)
@@ -226,6 +231,11 @@ def _stored_import_upload_request(
     vex_upload = _dict_value(summary.get("vex_upload"))
     return ProjectImportUploadRequest(
         input_type=str(payload.get("input_type") or run.input_type),
+        sbom_scanner=str(payload.get("sbom_scanner") or "none"),
+        sbom_target_ref=_optional_string(payload.get("sbom_target_ref")),
+        sbom_db_update=bool(payload.get("sbom_db_update", True)),
+        sbom_source_run_id=_optional_string(payload.get("sbom_source_run_id")),
+        sbom_observed_at=_optional_string(payload.get("sbom_observed_at")),
         file=_upload_content(settings, input_upload),
         asset_context_file=_optional_upload_content(settings, asset_context_upload),
         vex_file=_optional_upload_content(settings, vex_upload),
@@ -243,10 +253,14 @@ def _upload_content(settings: Settings, upload: dict[str, Any]) -> ImportUploadC
     storage_ref = _optional_string(upload.get("storage_ref") or upload.get("path"))
     if storage_ref is None:
         raise WorkflowHandlerError("Stored upload reference is missing.")
+    content = _read_upload_ref(settings, storage_ref)
+    expected_hash = _optional_string(upload.get("sha256"))
+    if expected_hash is not None and hashlib.sha256(content).hexdigest() != expected_hash:
+        raise WorkflowNonRetryableError("Stored upload failed its SHA256 integrity check.")
     return ImportUploadContent(
         filename=_optional_string(upload.get("original_filename") or upload.get("stored_filename")),
         content_type=_optional_string(upload.get("content_type")),
-        content=_read_upload_ref(settings, storage_ref),
+        content=content,
     )
 
 
@@ -266,7 +280,12 @@ def _read_upload_ref(settings: Settings, storage_ref: str) -> bytes:
         raise WorkflowHandlerError("Stored upload reference escapes upload root.")
     if not path.is_file():
         raise WorkflowHandlerError(f"Stored upload not found: {Path(storage_ref).name}")
-    return path.read_bytes()
+    limit = settings.MAX_UPLOAD_MB * 1024 * 1024
+    with path.open("rb") as stream:
+        content = stream.read(limit + 1)
+    if len(content) > limit:
+        raise WorkflowNonRetryableError("Stored upload exceeds the configured size limit.")
+    return content
 
 
 def _raise_if_cancelled(repository: WorkflowRepository, workflow_id: uuid.UUID) -> None:

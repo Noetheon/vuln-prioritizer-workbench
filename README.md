@@ -7,7 +7,7 @@
 
 Vuln Prioritizer Workbench turns existing vulnerability evidence into an
 explainable local remediation queue. It imports CVE lists, scanner exports, SBOM
-vulnerability exports, VEX statements, and asset context, then explains priority
+inventories with optional local Grype matching, vulnerability exports, VEX statements, and asset context, then explains priority
 with transparent signals such as CVSS, EPSS, CISA KEV, provider freshness,
 reviewed ATT&CK/TTP context, lifecycle state, waivers, and evidence artifacts.
 It does not scan systems or invent exploitability; the decision trail stays
@@ -163,8 +163,8 @@ The current package metadata is `Development Status :: 4 - Beta`: local-first
 self-hosted Workbench readiness, without public/shared deployment
 certification.
 
-VPW is defensive prioritization software. It is not a vulnerability scanner,
-exploit framework, PoC generator, active probing tool, credential tester,
+VPW is defensive prioritization software with optional [local SBOM matching](docs/sbom-assessment.md).
+It is not a host/network scanner, exploit framework, PoC generator, active probing tool, credential tester,
 autopatcher, hosted SaaS product, ML/AI black-box scoring system, or automatic
 ATT&CK inference engine. Curated ATT&CK/TTP mappings are defensive context only
 and are not proof of compromise.

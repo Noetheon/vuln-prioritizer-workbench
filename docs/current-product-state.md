@@ -8,15 +8,16 @@ older page.
 ## Product Identity
 
 Vuln Prioritizer Workbench is a local-first, single-user Workbench for
-prioritizing already-known CVEs from supplied evidence. It accepts CVE lists,
+prioritizing CVEs from supplied evidence and optional local SBOM matching. It accepts CVE lists,
 scanner exports, SBOM outputs, VEX statements, and asset context, then explains
 priority using transparent signals such as CVSS, EPSS, CISA KEV, provider
 freshness, reviewed ATT&CK/TTP context, lifecycle state, waivers, and evidence
 artifacts.
 
-The product is intentionally defensive. It is not a vulnerability scanner, not
-an exploit framework, not an active probing tool, not an autopatcher, and not a
-hosted SaaS product.
+The product is intentionally defensive. Its optional local Grype adapter matches
+uploaded inventories without scanning hosts or networks. It is not an exploit
+framework, active probing tool, autopatcher, or hosted SaaS product. See
+[Local SBOM Assessment](sbom-assessment.md) for setup, coverage limits and rescans.
 
 ## Active Stack
 

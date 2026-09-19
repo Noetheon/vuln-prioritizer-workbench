@@ -8,6 +8,7 @@ import pytest
 from app.domain.engine.inputs.loader import InputLoader
 from app.domain.engine.inputs.parsers.scanner import parse_trivy_json
 from app.domain.engine.models import InputOccurrence
+from app.importers import build_importer_registry
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DIR = PROJECT_ROOT / "data" / "input_fixtures"
@@ -183,6 +184,61 @@ def test_trivy_json_tolerates_missing_optional_fields(tmp_path: Path) -> None:
     assert occurrence.fix_versions == []
     assert occurrence.target_kind == "image"
     assert occurrence.target_ref is None
+
+
+@pytest.mark.parametrize(
+    ("artifact_type", "expected_kind"),
+    [
+        ("container_image", "image"),
+        ("filesystem", "filesystem"),
+        ("repository", "repository"),
+        ("cyclonedx", "sbom"),
+        ("spdx", "sbom"),
+        ("aws_account", "aws_account"),
+        ("vm", "vm"),
+        (None, "image"),
+        ("unknown-legacy-kind", "image"),
+    ],
+)
+def test_trivy_json_preserves_explicit_artifact_kind(
+    tmp_path: Path, artifact_type: str | None, expected_kind: str
+) -> None:
+    # Artifact types: aquasecurity/trivy at b830ddf931ba1f5c12af06281abb919d101538b7,
+    # pkg/fanal/types/artifact.go. An SBOM format alone does not establish that
+    # its subject is an image; the SBOM workflow supplies its own stable subject.
+    document = {
+        "SchemaVersion": 2,
+        "ArtifactName": "application",
+        "Results": [
+            {
+                "Target": "app/requirements.txt",
+                "Class": "lang-pkgs",
+                "Type": "pip",
+                "Vulnerabilities": [
+                    {
+                        "VulnerabilityID": "CVE-2024-0001",
+                        "PkgName": "demo-package",
+                        "InstalledVersion": "1.0.0",
+                    }
+                ],
+            }
+        ],
+    }
+    if artifact_type is not None:
+        document["ArtifactType"] = artifact_type
+    payload = json.dumps(document)
+    input_file = tmp_path / "trivy.json"
+    input_file.write_text(payload, encoding="utf-8")
+
+    parsed = parse_trivy_json(input_file)
+    occurrence = build_importer_registry().parse("trivy-json", payload, filename="trivy.json")[0]
+
+    assert parsed.warnings == []
+    assert parsed.occurrences[0].target_kind == expected_kind
+    assert occurrence.target_kind == expected_kind
+    assert occurrence.target_ref == "app/requirements.txt"
+    assert occurrence.raw_evidence["target_kind"] == expected_kind
+    assert occurrence.raw_evidence["source_id"] == "CVE-2024-0001"
 
 
 def test_trivy_json_rejects_broken_json_with_clear_error(tmp_path: Path) -> None:

@@ -1,5 +1,12 @@
 import { Link } from "@/lib/router"
-import { type FormEventHandler, useEffect, useMemo, useRef, useState } from "react"
+import {
+  type FormEventHandler,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { Button } from "@/components/ui/button"
 import { VpwPanel, VpwStatusBanner } from "@/components/vpw"
 import {
@@ -51,9 +58,10 @@ export function NewImportRoute(props: NewImportRouteProps) {
   const [optionalContextValidation, setOptionalContextValidation] =
     useState<OptionalContextValidationMap>({ assetContext: null, vex: null })
   const submitRequestedRef = useRef(false)
+  const layoutRef = useRef<HTMLDivElement | null>(null)
   const stepPanelRef = useRef<HTMLDivElement | null>(null)
   const stepContentRef = useRef<HTMLDivElement | null>(null)
-  const initialStepRenderRef = useRef(true)
+  const previousStepRef = useRef(step)
   const format = selectedFormat(props.supportedFormats, props.importWizard.inputType)
   const metadataFormat = getImportFormat(
     props.supportedFormats,
@@ -72,6 +80,8 @@ export function NewImportRoute(props: NewImportRouteProps) {
       parserPreview,
       projectId: props.selectedProjectId,
       providerAvailable: props.providerStatus?.status === "ok",
+      sbomScanner: props.importWizard.sbomScanner,
+      sbomTargetRef: props.importWizard.sbomTargetRef,
     })
     const optionalChecks = optionalContextReadiness({
       attackMappingFile: props.importWizard.attackMappingFile,
@@ -91,6 +101,8 @@ export function NewImportRoute(props: NewImportRouteProps) {
     props.importWizard.attackSource,
     props.importWizard.file,
     props.importWizard.inputType,
+    props.importWizard.sbomScanner,
+    props.importWizard.sbomTargetRef,
     props.importWizard.vexFile,
     props.providerStatus?.status,
     props.selectedProjectId,
@@ -108,6 +120,9 @@ export function NewImportRoute(props: NewImportRouteProps) {
         step,
         inputType: props.importWizard.inputType,
         evidenceFile: props.importWizard.file,
+        sbomTargetMissing: readiness.some(
+          (check) => check.id === "sbom-target" && check.status === "missing",
+        ),
       })
 
   useEffect(() => {
@@ -121,27 +136,71 @@ export function NewImportRoute(props: NewImportRouteProps) {
       props.supportedFormats,
       props.importWizard.file,
       props.importWizard.inputType,
+      { sbomScanner: props.importWizard.sbomScanner },
     ).then((preview) => {
       if (!cancelled) setParserPreview(preview)
     })
     return () => {
       cancelled = true
     }
-  }, [props.importWizard.file, props.importWizard.inputType, props.supportedFormats])
+  }, [
+    props.importWizard.file,
+    props.importWizard.inputType,
+    props.importWizard.sbomScanner,
+    props.supportedFormats,
+  ])
+
+  useLayoutEffect(() => {
+    const layout = layoutRef.current
+    const content = layout?.closest<HTMLElement>(
+      'section[aria-label="Workbench page content"]',
+    )
+    const container = layout?.closest<HTMLElement>(".vpw-page-container")
+    if (!layout || !content || !container) return
+    const updatePanelHeight = () => {
+      if (!window.matchMedia("(min-width: 1440px)").matches) {
+        layout.style.removeProperty("--imports-wizard-panel-height")
+        return
+      }
+      const bottomPadding = Number.parseFloat(
+        getComputedStyle(container).paddingBottom,
+      )
+      // Include the wizard header and shell, independent of the current scroll.
+      const availableHeight =
+        content.getBoundingClientRect().bottom -
+        layout.getBoundingClientRect().top -
+        content.scrollTop -
+        bottomPadding
+      layout.style.setProperty(
+        "--imports-wizard-panel-height",
+        `${Math.max(0, availableHeight)}px`,
+      )
+    }
+    updatePanelHeight()
+    const observer = new ResizeObserver(updatePanelHeight)
+    observer.observe(content)
+    observer.observe(container)
+    window.addEventListener("resize", updatePanelHeight)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener("resize", updatePanelHeight)
+    }
+  }, [])
 
   useEffect(() => {
     if (step < 1) return
-    const isInitialRender = initialStepRenderRef.current
-    initialStepRenderRef.current = false
-    window.requestAnimationFrame(() => {
+    const stepChanged = previousStepRef.current !== step
+    previousStepRef.current = step
+    const frame = window.requestAnimationFrame(() => {
       stepContentRef.current?.scrollTo({ left: 0, top: 0 })
-      if (!isInitialRender) {
+      if (stepChanged) {
         stepPanelRef.current?.scrollIntoView({
           block: "start",
           inline: "nearest",
         })
       }
     })
+    return () => window.cancelAnimationFrame(frame)
   }, [step])
 
   useEffect(() => {
@@ -233,7 +292,7 @@ export function NewImportRoute(props: NewImportRouteProps) {
           </Link>
         </Button>
       </div>
-      <div className="imports-wizard-layout grid min-w-0 gap-6">
+      <div className="imports-wizard-layout grid min-w-0 gap-6" ref={layoutRef}>
         <StepNav currentStep={step} onStepChange={setStep} readiness={readiness} />
         <div className="min-w-0 lg:h-full" ref={stepPanelRef}>
           <VpwPanel className="flex min-w-0 flex-col overflow-hidden p-0 lg:h-full lg:max-h-[var(--imports-wizard-panel-height)]">

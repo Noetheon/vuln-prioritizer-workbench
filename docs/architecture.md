@@ -7,7 +7,8 @@ route, design-system, evidence, and CI cleanup work.
 ## Runtime Shape
 
 VPW is a local-first application for prioritizing already-known CVEs from
-uploaded inputs. It is not a scanner and it does not actively probe systems.
+uploaded inputs. An optional local Grype adapter matches SBOM inventories; it does
+not actively probe systems. See [Local SBOM Assessment](sbom-assessment.md).
 
 The repository now uses a focused FastAPI backend plus React Workbench shape for
 the active local product surface:
