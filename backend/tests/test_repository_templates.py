@@ -161,6 +161,7 @@ def test_default_ci_splits_full_quality_from_python_compatibility() -> None:
         {"python-version": "3.11", "gate": "full"},
         {"python-version": "3.12", "gate": "compatibility"},
         {"python-version": "3.13", "gate": "compatibility"},
+        {"python-version": "3.14", "gate": "compatibility"},
     ]
 
     check_block = CI_WORKFLOW.read_text(encoding="utf-8").split(

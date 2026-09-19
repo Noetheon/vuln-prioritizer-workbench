@@ -7,7 +7,8 @@ temporary Docker Compose compatibility path.
 
 ## Requirements
 
-- Python 3.11, 3.12, or 3.13.
+- Python 3.11, 3.12, 3.13, or 3.14; Python 3.14 is recommended for new
+  installations and is the pinned Docker runtime.
 - `pipx` for an isolated installation. Install it through your operating
   system package manager or `python3 -m pip install --user pipx`.
 - A current browser.

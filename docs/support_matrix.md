@@ -5,6 +5,15 @@ analytical CLI, composite GitHub Action, runtime-config discovery, and
 snapshot/rollup commands are no longer supported product paths. The new `vpw`
 command is a thin Workbench runtime, Ledger, and migration launcher only.
 
+## Python Versions
+
+The package supports Python 3.11, 3.12, 3.13, and 3.14. CI runs the full Python
+quality gate on 3.11 and backend compatibility checks on 3.12, 3.13, and 3.14.
+Python 3.14 is recommended for new local installations and is used by the
+Docker runtime and single-version release, audit, and maintenance jobs.
+Use current security patches; package compatibility does not certify every
+interpreter patch release against known vulnerabilities.
+
 ## Workbench Surfaces
 
 | Surface | Status | Notes |

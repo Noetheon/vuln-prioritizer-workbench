@@ -38,6 +38,8 @@ jobs:
             gate: compatibility
           - python-version: "3.13"
             gate: compatibility
+          - python-version: "3.14"
+            gate: compatibility
 
     steps:
       - name: Check out repository
@@ -191,7 +193,7 @@ jobs:
         if: steps.dependency-scope.outputs.run-dependency-audit == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.13"
+          python-version: "3.14"
           cache: pip
           cache-dependency-path: |
             pyproject.toml
@@ -348,7 +350,7 @@ jobs:
         if: steps.frontend-scope.outputs.run-frontend == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.13"
+          python-version: "3.14"
           cache: pip
           cache-dependency-path: |
             pyproject.toml
