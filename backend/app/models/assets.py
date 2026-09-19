@@ -120,6 +120,7 @@ class AssetRecalculatePublic(SQLModel):
     asset_id: uuid.UUID
     asset_key: str
     recalculated_findings: int = 0
+    unreplayable_findings: int = 0
     cleared_rescore_flags: int = 0
     operational_scores: list[int] = Field(default_factory=list)
     rescore_needed: bool = False

@@ -2,15 +2,15 @@ import type {
   FindingDetailPublic,
   FindingExplanationPublic,
 } from "@/api-client"
-import { formatEpss, formatNullableNumber } from "@/lib/risk-format"
 import {
-  VpwCommandPanel,
   MetricStrip,
   type MetricStripMetric,
   RiskBadge,
   SignalChip,
   StatusLozenge,
+  VpwCommandPanel,
 } from "@/components/vpw"
+import { formatEpss, formatNullableNumber } from "@/lib/risk-format"
 
 import {
   compactFindingText,
@@ -42,7 +42,9 @@ export function FindingDetailContext({
   )
   const riskMetrics: MetricStripMetric[] = [
     {
-      description: governanceStatus ? "Residual signal score" : "Operational priority",
+      description: governanceStatus
+        ? "Residual signal score"
+        : "Operational priority",
       label: "Risk score",
       tone: governanceStatus ? "info" : "critical",
       value: formatNullableNumber(finding.risk_score),
@@ -63,7 +65,7 @@ export function FindingDetailContext({
       description: governanceStatus ? "Governance state" : "Response target",
       label: "SLA",
       tone: "success",
-      value: findingSlaLabel(finding.priority, finding.status),
+      value: findingSlaLabel(finding),
     },
   ]
 

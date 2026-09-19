@@ -22,7 +22,11 @@ from utils.workbench_env import (
 
 from app.decision_core.contracts import OccurrenceEvidenceV2
 from app.decision_core.ledger import canonical_payload_sha256
-from app.repositories.waivers import _projection_scope_sort_key, _recompute_projection_decision
+from app.decision_core.projection_evaluation import (
+    _projection_scope_sort_key,
+    _recompute_projection_decision,
+)
+from app.services.decision_projection_sync import DecisionProjectionService
 
 
 def test_vpw064_workbench_waiver_lifecycle_and_report_visibility(
@@ -320,7 +324,7 @@ def test_forced_waiver_sync_preserves_scope_first_tie_break_order(
         }
         assert before == {"a-target": 1, "b-target": 2}
 
-        workbench_api_env.repositories.WaiverRepository(session).sync_project_waivers(
+        DecisionProjectionService(session).sync_project_waivers(
             project_id,
             force=True,
         )
@@ -404,7 +408,7 @@ def test_forced_waiver_sync_preserves_package_type_component_scopes(
             package_type: evidence.operational_rank
             for package_type, evidence in by_package_type.items()
         }
-        workbench_api_env.repositories.WaiverRepository(session).sync_project_waivers(
+        DecisionProjectionService(session).sync_project_waivers(
             project_id,
             force=True,
         )
@@ -968,7 +972,15 @@ def test_workbench_expired_waiver_sync_updates_v2_evidence_with_string_status(
         ).get_evidence(finding_id)
         assert historical_evidence is not None
         assert current_evidence is not None
-        assert historical_evidence.governance.waiver == {}
+        assert historical_evidence.governance.waiver["waiver_status"] == "expired"
+        original_record = session.exec(
+            select(workbench_api_env.app_models.FindingDecisionEvidence).where(
+                workbench_api_env.app_models.FindingDecisionEvidence.finding_id == finding_id,
+                workbench_api_env.app_models.FindingDecisionEvidence.analysis_run_id
+                == uuid.UUID(run_payload["id"]),
+            )
+        ).one()
+        assert original_record.payload_json["governance"]["waiver"] == {}
         assert current_evidence.status == "open"
         assert current_evidence.governance.waived is False
         waiver_record = {
@@ -1031,6 +1043,8 @@ def test_waiver_recompute_preserves_asset_context_from_pre_typed_v2_evidence(
         )
         assert source is not None
         legacy_payload = deepcopy(source.payload_json)
+        legacy_payload.pop("evaluation_input", None)
+        legacy_payload.pop("evaluation", None)
         for occurrence in legacy_payload["occurrences"]:
             occurrence.pop("target_kind", None)
             occurrence.pop("asset_id", None)

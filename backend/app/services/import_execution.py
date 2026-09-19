@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Any
 
 from sqlmodel import Session, col, func, select
@@ -24,9 +25,10 @@ from app.models import (
     WorkflowRunKind,
     WorkflowRunStatus,
 )
-from app.repositories import EvidenceRepository, RunRepository, WaiverRepository, WorkflowRepository
+from app.repositories import EvidenceRepository, RunRepository, WorkflowRepository
 from app.services.analysis import AnalysisService, WorkbenchAnalysisError
-from app.services.decision_scope_lock import lock_project_decision_scope
+from app.services.decision_projection_sync import DecisionProjectionService
+from app.services.decision_scope_lock import lock_project_decision_scope, project_decision_revision
 from app.services.import_execution_context import (
     _apply_persisted_project_asset_context,
     _apply_workbench_asset_context,
@@ -177,6 +179,7 @@ async def execute_project_import_upload(
         job_history=resolved_run.job_history,
     )
     session.flush()
+    context.begin_compute()
     failure_context = _ImportFailureContext(
         session=session,
         run_repo=run_repo,
@@ -304,13 +307,14 @@ async def execute_project_import_upload(
                 exc=exc,
             )
 
-    lock_project_decision_scope(session, project_id)
+    input_revision = project_decision_revision(session, project_id)
     try:
         occurrences = _apply_persisted_project_asset_context(
             occurrences,
             session=session,
             project_id=project_id,
         )
+        context.checkpoint()
     except DecisionLedgerInvariantError as exc:
         public_message = "Persisted project decision context is inconsistent."
         context.fail(
@@ -431,6 +435,7 @@ async def execute_project_import_upload(
             attack_technique_metadata_file=prepared.attack_metadata_path,
             vex_files=[],
             parsed_input=parsed_input,
+            persist_snapshot=False,
         )
     except ValueError as exc:
         analysis_error = {
@@ -524,6 +529,17 @@ async def execute_project_import_upload(
         progress_total=6,
         details={"occurrence_count": len(occurrences)},
     )
+    context.begin_publication()
+    lock_project_decision_scope(session, project_id, expected_revision=input_revision)
+    analysis_result = replace(
+        analysis_result,
+        provider_snapshot_id=AnalysisService(session, settings).persist_provider_snapshot(
+            Path(analysis_result.provider_snapshot_file)
+            if analysis_result.provider_snapshot_file is not None
+            else None,
+            locked_provider_data=analysis_result.locked_provider_data,
+        ),
+    )
     evidence_repo = EvidenceRepository(session)
     prepared_evidence_record = evidence_repo.prepare_analysis_evidence_record(
         project_id=project_id,
@@ -583,7 +599,7 @@ async def execute_project_import_upload(
     # whole project. Force the heavier project-wide convergence only when older
     # findings sit outside the run; existing waivers still trigger the normal
     # synchronization path regardless of this flag.
-    WaiverRepository(session).sync_project_waivers(
+    DecisionProjectionService(session).sync_project_waivers(
         project_id,
         force=project_finding_count > int(persist_summary.get("finding_count") or 0),
     )

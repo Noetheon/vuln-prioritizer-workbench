@@ -114,6 +114,13 @@ kernel input/output contract, projection rules, and the exact successful
 workflow result boundary. See [Decision Ledger](architecture/decision-ledger.md)
 for history/current invariants, dual-write, backfill, and parity.
 
+`decision_core/evaluation.py` owns the complete pure scope evaluation and its
+versioned inputs. Import, asset and waiver paths share it. Queued native evaluation
+replays stored inputs without an upload, appends immutable revisions and uses a
+project revision precondition to reject stale publication. See
+[Evaluation Revisions](architecture/evaluation-revisions.md) for input ownership,
+observation timestamps, provider adoption and legacy compatibility.
+
 The old Workbench runtime packages, runtime database package, provider
 scheduler, and `web`/`db` CLI entrypoints have been removed. The active
 repository no longer ships a second FastAPI Workbench stack. `backend/app` must

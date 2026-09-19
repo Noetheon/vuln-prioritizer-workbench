@@ -50,7 +50,7 @@ from app.services.report_renderer_common import _dict_list
 
 def _risk_index_helper(
     findings: Sequence[MarkdownReportFinding],
-) -> tuple[int | None, str, int]:
+) -> tuple[float, str, int]:
     """
     Compute the mean risk score across open, non-accepted findings as a 0-100 index.
 
@@ -59,13 +59,13 @@ def _risk_index_helper(
     severity band and the population it was averaged over.
     """
     scores = [
-        finding.risk_score
+        max(float(finding.risk_score or 0.0), 0.0)
         for finding in findings
-        if _is_actionable_finding(finding) and finding.risk_score is not None
+        if _is_actionable_finding(finding)
     ]
     if not scores:
-        return None, "none", 0
-    index = round(sum(scores) / len(scores))
+        return 0.0, "none", 0
+    index = round(min(sum(scores) / len(scores), 100.0), 3)
     if index >= 70:
         band = "critical"
     elif index >= 40:

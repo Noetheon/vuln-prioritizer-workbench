@@ -15,6 +15,8 @@ from app.decision_core.decision_graph import (
 from app.domain.engine.models import (
     AnalysisContext,
     AttackData,
+    ContextPolicyProfile,
+    EnrichmentResult,
     EpssData,
     InputOccurrence,
     KevData,
@@ -24,6 +26,7 @@ from app.domain.engine.models import (
     PriorityPolicy,
     WaiverRule,
 )
+from app.domain.engine.services.analysis_pipeline import AnalysisInputs, EnrichedAnalysis
 from app.domain.engine.services.contextualization import aggregate_provenance
 from app.domain.engine.services.prioritization import PrioritizationService
 from app.services import analysis as workbench_analysis
@@ -479,7 +482,17 @@ def test_replay_fingerprint_and_decisions_are_input_order_independent() -> None:
     assert graph.fingerprint.replay_sha256 == reversed_graph.fingerprint.replay_sha256
     assert graph.fingerprint.policy_sha256 == reversed_graph.fingerprint.policy_sha256
     assert graph.fingerprint.evaluation_time != reversed_graph.fingerprint.evaluation_time
-    assert graph.scoped_decisions == reversed_graph.scoped_decisions
+    assert [item.decision for item in graph.scoped_decisions] == [
+        item.decision for item in reversed_graph.scoped_decisions
+    ]
+    # The outputs are independent of evaluation time without date-sensitive
+    # rules; the new replay inputs still record the actual evaluation date.
+    assert graph.scoped_decisions[0].evaluation_input is not None
+    assert reversed_graph.scoped_decisions[0].evaluation_input is not None
+    assert (
+        graph.scoped_decisions[0].evaluation_input.evaluation_date
+        != reversed_graph.scoped_decisions[0].evaluation_input.evaluation_date
+    )
 
 
 def test_workbench_analysis_result_exposes_additive_scoped_decisions(
@@ -494,8 +507,26 @@ def test_workbench_analysis_result_exposes_additive_scoped_decisions(
     )
     monkeypatch.setattr(
         workbench_analysis,
-        "prepare_analysis",
-        lambda request: ([baseline], _context()),
+        "prepare_enriched_analysis",
+        lambda request: EnrichedAnalysis(
+            inputs=AnalysisInputs(
+                parsed_input=parsed,
+                provider_snapshot=None,
+                context_profile=ContextPolicyProfile(),
+                waiver_rules=(),
+                attack_enabled=False,
+                attack_source="none",
+                attack_mapping_file=None,
+                attack_metadata_file=None,
+            ),
+            enrichment=EnrichmentResult(
+                nvd={CVE_ID: baseline.provider_evidence.nvd},
+                epss={CVE_ID: baseline.provider_evidence.epss},
+                kev={CVE_ID: baseline.provider_evidence.kev},
+                attack={CVE_ID: AttackData(cve_id=CVE_ID)},
+            ),
+            context=_context(),
+        ),
     )
     service = AnalysisService(cast(Session, object()), Settings())
 
@@ -505,7 +536,7 @@ def test_workbench_analysis_result_exposes_additive_scoped_decisions(
         parsed_input=parsed,
     )
 
-    assert result.findings_by_cve == {CVE_ID: baseline}
+    assert result.findings_by_cve == {}
     assert result.decision_graph is not None
     assert len(result.scoped_decisions) == 2
     assert result.scoped_decisions == tuple(result.decision_graph.scoped_decisions)

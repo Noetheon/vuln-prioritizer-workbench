@@ -62,6 +62,57 @@ def _finding(**overrides: object) -> MarkdownReportFinding:
     return MarkdownReportFinding(**values)  # type: ignore[arg-type]
 
 
+def test_html_risk_projection_removes_scores_and_findings_from_the_mean() -> None:
+    from app.services.report_html_risk_projection import _risk_projection_helper
+
+    projection = _risk_projection_helper(
+        [
+            _finding(cve_id="CVE-2026-0001", risk_score=100),
+            _finding(cve_id="CVE-2026-0002", risk_score=50),
+        ]
+    )
+    assert projection.current_index == 75
+    assert [(step.value, step.remaining_count) for step in projection.steps] == [
+        (75, 2),
+        (50, 1),
+        (0, 0),
+        (0, 0),
+    ]
+
+
+def test_html_risk_projection_can_increase_mean_while_lowering_total_burden() -> None:
+    from app.services.report_html_risk_projection import _risk_projection_helper
+
+    findings = [_finding(cve_id="CVE-2026-0001", risk_score=40) for _ in range(5)] + [
+        _finding(cve_id=f"CVE-2026-{index:04d}", risk_score=score)
+        for index, score in enumerate((90, 80, 70, 60), 2)
+    ]
+    projection = _risk_projection_helper(findings)
+    assert projection.current_risk == 500
+    assert projection.current_index == 55.556
+    assert projection.steps[1].value == 75
+    assert projection.plan_index == 60
+    assert projection.planned_reduction_index < 0
+    html = renderers.render_html_executive_report(_payload(findings))
+    assert "average increase planned" in html
+    assert "200 score" in html
+
+
+def test_html_risk_mean_counts_unknown_scores_and_excludes_governance() -> None:
+    from app.services.report_html_risk_projection import _risk_projection_helper
+    from app.services.report_html_view_model import _risk_index_helper
+
+    findings = [
+        _finding(risk_score=100),
+        _finding(risk_score=None),
+        _finding(risk_score=100, status="accepted"),
+        _finding(risk_score=100, status="fixed"),
+    ]
+    assert _risk_projection_helper(findings).current_index == 50
+    assert _risk_index_helper(findings)[0] == 50
+    assert _risk_projection_helper([]).current_index == 0
+
+
 def test_report_models_reject_unknown_fields_and_do_not_share_defaults() -> None:
     with pytest.raises(ValidationError):
         _finding(unexpected_field="blocked")
@@ -406,7 +457,7 @@ def test_executive_html_groups_campaigns_and_interprets_freshness() -> None:
         reducer.select_one(".risk-scenario-reducer-main strong").get_text(" ", strip=True)
         for reducer in risk_scenario.select(".risk-scenario-reducer")
     ]
-    assert reducer_impacts[:2] == ["-43.8", "-26.3"]
+    assert reducer_impacts[:2] == ["350 score", "210 score"]
 
     top_risk_cells = [
         card.select_one(".risk-card-cve").get_text(" ", strip=True)

@@ -13,6 +13,7 @@ from app.core.config import Settings
 from app.core.local_actor import configured_local_actor
 from app.models import (
     AnalysisRun,
+    AnalysisRunStatus,
     Project,
     ProviderUpdateJobCreate,
     WorkflowRun,
@@ -24,12 +25,12 @@ from app.services.import_errors import ImportServiceError
 from app.services.import_execution import execute_project_import_upload
 from app.services.import_execution_types import ImportUploadContent, ProjectImportUploadRequest
 from app.services.provider_updates import resume_provider_update_job
+from app.services.reevaluation_execution import execute_reevaluation_workflow
 from app.services.reports import ReportGenerationError, ReportService
 from app.services.workflow_execution import (
     WorkflowCancellationRequested,
     WorkflowExecutionContext,
 )
-from app.services.workflows import finish_cancelled_workflow
 
 
 class WorkflowCancelled(RuntimeError):
@@ -78,6 +79,10 @@ def execute_workflow_handler(
                 workflow=workflow,
                 context=context,
             )
+        elif workflow.kind == WorkflowRunKind.REEVALUATION:
+            execute_reevaluation_workflow(
+                session, settings=settings, workflow=workflow, context=context
+            )
         else:  # pragma: no cover - enum exhaustiveness guard
             raise WorkflowHandlerError(f"Unsupported workflow kind: {workflow.kind}")
         _raise_if_cancelled(repository, workflow.id)
@@ -86,6 +91,11 @@ def execute_workflow_handler(
     refreshed = repository.require_workflow(workflow.id)
     if refreshed.status == WorkflowRunStatus.FAILED:
         raise WorkflowHandlerError(refreshed.error_message or "Workflow execution failed.")
+    if refreshed.status not in {
+        WorkflowRunStatus.SUCCEEDED,
+        WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+    }:
+        raise WorkflowHandlerError("Workflow handler returned without a terminal result.")
 
 
 def _execute_import_workflow(
@@ -110,6 +120,16 @@ def _execute_import_workflow(
         workflow=workflow,
         payload=workflow.payload_json,
     )
+    if workflow.parent_workflow_run_id is not None and run.status in {
+        AnalysisRunStatus.FAILED,
+        AnalysisRunStatus.CANCELLED,
+    }:
+        # A manual retry explicitly resumes an unpublished failed/cancelled run.
+        # Completed runs remain immutable and are never imported a second time.
+        run.status = AnalysisRunStatus.PENDING
+        run.error_message = None
+        run.finished_at = None
+        session.add(run)
     try:
         asyncio.run(
             execute_project_import_upload(
@@ -250,13 +270,7 @@ def _read_upload_ref(settings: Settings, storage_ref: str) -> bytes:
 
 
 def _raise_if_cancelled(repository: WorkflowRepository, workflow_id: uuid.UUID) -> None:
-    workflow = repository.require_workflow(workflow_id)
-    if workflow.cancellation_requested:
-        finish_cancelled_workflow(
-            repository.session,
-            workflow_id,
-            message="Workflow cancelled by user request.",
-        )
+    if repository.cancellation_is_requested(workflow_id):
         raise WorkflowCancelled("Workflow cancelled by user request.")
 
 

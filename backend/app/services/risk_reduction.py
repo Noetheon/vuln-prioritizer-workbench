@@ -15,6 +15,7 @@ from app.decision_core.readmodels import (
     DecisionFindingView,
     decision_views_for_findings,
 )
+from app.domain.component_identity import component_scope_identity
 from app.models import (
     AnalysisRun,
     Finding,
@@ -54,10 +55,11 @@ def build_project_risk_reduction_payload(
     top_opportunities = all_opportunities[: max(1, min(opportunity_limit, 20))]
     return ProjectRiskReductionPublic(
         current_actionable_risk=current_risk,
+        current_risk_index=_risk_index(current_risk, len(actionable)),
         actionable_finding_count=len(actionable),
         largest_driver=_largest_driver(actionable),
         top_opportunities=top_opportunities,
-        residual_steps=_residual_steps(current_risk, top_opportunities),
+        residual_steps=_residual_steps(current_risk, top_opportunities, len(actionable)),
         history=risk_index_history(runs),
         governance_debt_risk=_round_score(sum(_risk_score(finding) for finding in governance_debt)),
     )
@@ -78,7 +80,7 @@ def risk_index_history(
         for run in runs
         if run.risk_index is not None
         and run.finished_at is not None
-        and run.status == AnalysisRunStatus.SUCCEEDED
+        and run.status in {AnalysisRunStatus.SUCCEEDED, AnalysisRunStatus.COMPLETED}
     ]
     points.sort(key=lambda point: point.finished_at)
     return points[-max(1, limit) :]
@@ -194,6 +196,8 @@ def _opportunity_for_findings(
         label=label,
         cve_id=cve_id,
         component=component,
+        component_identity=component_key if component_key != "unknown-component" else None,
+        finding_ids=sorted((finding.finding.id for finding in findings), key=str),
         recommended_action=recommended_action,
         expected_reduction=expected_reduction,
         residual_after=_round_score(max(current_risk - expected_reduction, 0.0)),
@@ -274,28 +278,34 @@ def _contribution_for_findings(
 def _residual_steps(
     current_risk: float,
     opportunities: Sequence[RiskReductionOpportunityPublic],
+    actionable_finding_count: int,
 ) -> list[ResidualRiskStepPublic]:
-    top_one_reduction = _reduction_for_first(opportunities, 1)
-    top_three_reduction = _reduction_for_first(opportunities, 3)
-    displayed_reduction = _reduction_for_first(opportunities, len(opportunities))
-    return [
-        ResidualRiskStepPublic(label="Current", risk_score=current_risk, reduction=0.0),
-        ResidualRiskStepPublic(
-            label="After top 1",
-            risk_score=_round_score(max(current_risk - top_one_reduction, 0.0)),
-            reduction=_round_score(top_one_reduction),
-        ),
-        ResidualRiskStepPublic(
-            label="After top 3",
-            risk_score=_round_score(max(current_risk - top_three_reduction, 0.0)),
-            reduction=_round_score(top_three_reduction),
-        ),
-        ResidualRiskStepPublic(
-            label="Remaining",
-            risk_score=_round_score(max(current_risk - displayed_reduction, 0.0)),
-            reduction=_round_score(displayed_reduction),
-        ),
-    ]
+    steps = []
+    for label, count in (
+        ("Current", 0),
+        ("After top 1", 1),
+        ("After top 3", 3),
+        ("Remaining", len(opportunities)),
+    ):
+        reduction = _reduction_for_first(opportunities, count)
+        remaining_count = max(
+            actionable_finding_count - sum(item.finding_count for item in opportunities[:count]), 0
+        )
+        risk_score = _round_score(max(current_risk - reduction, 0.0))
+        steps.append(
+            ResidualRiskStepPublic(
+                label=label,
+                risk_score=risk_score,
+                reduction=_round_score(reduction),
+                actionable_finding_count=remaining_count,
+                risk_index=_risk_index(risk_score, remaining_count),
+            )
+        )
+    return steps
+
+
+def _risk_index(score: float, count: int) -> float:
+    return _round_score(min(score / count, 100.0)) if count > 0 else 0.0
 
 
 def _reduction_for_first(
@@ -306,14 +316,20 @@ def _reduction_for_first(
 
 
 def _normalized_component_key(finding: DecisionFindingView) -> str:
-    component_label = _component_label(finding)
-    if component_label:
-        return _slug(component_label)
     component = getattr(finding.finding, "component", None)
-    purl = getattr(component, "purl", None)
-    if purl:
-        return _slug(str(purl))
-    return _slug("unknown-component")
+    scope = getattr(finding.evidence, "occurrence_scope", None)
+    return (
+        component_scope_identity(
+            component_name=getattr(scope, "component_name", None)
+            or getattr(component, "name", None),
+            component_version=getattr(scope, "component_version", None)
+            or getattr(component, "version", None),
+            purl=getattr(scope, "purl", None) or getattr(component, "purl", None),
+            package_type=getattr(scope, "package_type", None)
+            or getattr(component, "package_type", None),
+        )
+        or "unknown-component"
+    )
 
 
 def _normalized_action_key(value: str | None) -> str:

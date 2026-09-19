@@ -52,6 +52,7 @@ class _ProjectionStep:
     value: float
     reduction: float
     mode: str
+    remaining_count: int
 
 
 @dataclass(frozen=True)
@@ -78,11 +79,8 @@ def _html_risk_scenario_panel_helper(
     index_html = _risk_index_value_html(projection)
     gauge_html = _risk_index_gauge_html(projection)
     foot = _risk_index_footnote(projection)
-    planned_reduction = (
-        _format_score(projection.planned_reduction_index)
-        if projection.planned_reduction_index is not None
-        else "0"
-    )
+    change = projection.planned_reduction_index or 0.0
+    planned_change_label = "average decrease planned" if change >= 0 else "average increase planned"
     chart_html = _html_projection_chart(projection)
     reducers_html = _html_top_reducers(projection)
     return (
@@ -93,7 +91,7 @@ def _html_risk_scenario_panel_helper(
         f"          {index_html}\n"
         f'          <p class="risk-index-band">{_safe_html(label)}</p>\n'
         '          <p class="risk-scenario-change">'
-        f"<strong>{_safe_html(planned_reduction)}</strong> index reduction planned</p>\n"
+        f"<strong>{_safe_html(_format_score(abs(change)))}</strong> {planned_change_label}</p>\n"
         f"          {gauge_html}\n"
         '          <div class="risk-gauge-scale"><span>0</span><span>moderate</span>'
         "<span>100</span></div>\n"
@@ -115,28 +113,32 @@ def _risk_projection_helper(
     current_index = _index_from_score(current_risk, actionable_count)
     reducers = tuple(_risk_reducers(actionable, current_risk=current_risk)[:_REDUCER_LIMIT])
 
-    top_one = _reduction_for_first(reducers, 1)
-    top_three = _reduction_for_first(reducers, 3)
-    plan = _reduction_for_first(reducers, len(reducers))
-    steps = tuple(
-        _ProjectionStep(
-            key=key,
-            label=label,
-            value=_index_from_score(max(current_risk - reduction, 0.0), actionable_count) or 0.0,
-            reduction=_round_score(reduction),
-            mode=mode,
+    steps_list = []
+    for key, label, count, mode in (
+        ("current", "Now", 0, "actual"),
+        ("top-1", "Top 1", 1, "projected"),
+        ("top-3", "Top 3", 3, "projected"),
+        ("plan", "Plan", len(reducers), "projected"),
+    ):
+        reduction = _reduction_for_first(reducers, count)
+        remaining_count = max(
+            0, actionable_count - sum(reducer.finding_count for reducer in reducers[:count])
         )
-        for key, label, reduction, mode in (
-            ("current", "Now", 0.0, "actual"),
-            ("top-1", "Top 1", top_one, "projected"),
-            ("top-3", "Top 3", top_three, "projected"),
-            ("plan", "Plan", plan, "projected"),
+        steps_list.append(
+            _ProjectionStep(
+                key=key,
+                label=label,
+                value=_index_from_score(max(current_risk - reduction, 0.0), remaining_count),
+                reduction=_round_score(reduction),
+                mode=mode,
+                remaining_count=remaining_count,
+            )
         )
-    )
+    steps = tuple(steps_list)
     plan_index = steps[-1].value if reducers else current_index
     target_index = _round_index(current_index * 0.5) if current_index is not None else None
     planned_reduction_index = (
-        _round_index(max(current_index - (plan_index or 0.0), 0.0))
+        _round_score(current_index - (plan_index or 0.0))
         if current_index is not None and plan_index is not None
         else None
     )
@@ -320,8 +322,9 @@ def _html_projection_chart(projection: _RiskProjection) -> str:
         "          </svg>\n"
         f"{_html_projection_readout(projection)}\n"
         '          <p class="risk-scenario-note">Static what-if simulation from this run: '
-        "current open actionable findings minus the shown remediation reducers. It is not "
-        "a measured run-history curve.</p>\n"
+        "the mean score of actionable findings remaining after each shown action. "
+        "Closing lower-score findings can raise the mean while reducing total score burden. "
+        "This is not a measured run-history curve.</p>\n"
         "        </section>"
     )
 
@@ -333,6 +336,7 @@ def _html_projection_readout(projection: _RiskProjection) -> str:
         return ""
 
     drop_percent = _projection_drop_percent(current_index, final_index)
+    percentage_change = f"{-drop_percent:+d}%" if drop_percent else "0%"
     reached_step = _target_reached_step(projection)
     if reached_step is None:
         outcome = (
@@ -352,7 +356,7 @@ def _html_projection_readout(projection: _RiskProjection) -> str:
         "the index "
         f"<strong>{_safe_html(_format_score(current_index))} -&gt; "
         f"{_safe_html(_format_score(final_index))}</strong> "
-        f"(-{drop_percent}%) - {outcome}</span>"
+        f"({percentage_change}) - {outcome}</span>"
         "</div>"
     )
 
@@ -374,7 +378,6 @@ def _html_top_reducers(projection: _RiskProjection) -> str:
     )
     rows = []
     for index, reducer in enumerate(projection.reducers):
-        reduction_index = _index_from_score(reducer.expected_reduction, projection.actionable_count)
         meta = _reducer_meta(reducer)
         context = _reducer_context(reducer)
         tags = _reducer_signal_tags(reducer)
@@ -384,7 +387,7 @@ def _html_top_reducers(projection: _RiskProjection) -> str:
             '<li class="risk-scenario-reducer">'
             '<div class="risk-scenario-reducer-main">'
             f'<span class="risk-scenario-reducer-title">{_safe_html(reducer.title)}</span>'
-            f"<strong>-{_safe_html(_format_score(reduction_index))}</strong>"
+            f"<strong>{_safe_html(_format_score(reducer.expected_reduction))} score</strong>"
             "</div>"
             '<div class="risk-scenario-reducer-meta">'
             f"{biggest}<span>{_safe_html(meta)}</span>{tags}</div>"
@@ -401,7 +404,7 @@ def _html_top_reducers(projection: _RiskProjection) -> str:
         '            <span class="status-label">Top risk reducers</span>\n'
         "          </div>\n"
         '          <p class="risk-scenario-reducer-lede">'
-        "Expected index reduction if completed.</p>\n"
+        "Summed finding scores removed if completed; this is not the change in the mean.</p>\n"
         f"          <ol>{''.join(rows)}</ol>\n"
         "        </section>"
     )
@@ -411,7 +414,7 @@ def _risk_index_label_and_tone(
     projection: _RiskProjection,
     risk_posture: RiskPosture,
 ) -> tuple[str, str]:
-    if projection.current_index is None:
+    if projection.actionable_count == 0 or projection.current_index is None:
         return _RISK_INDEX_BANDS["none"]
     band = _band_for_index(projection.current_index)
     fallback = _RISK_INDEX_BANDS.get(risk_posture.risk_index_band, _RISK_INDEX_BANDS["none"])
@@ -439,7 +442,7 @@ def _risk_index_gauge_html(projection: _RiskProjection) -> str:
 
 
 def _risk_index_footnote(projection: _RiskProjection) -> str:
-    if projection.current_index is None:
+    if projection.actionable_count == 0:
         return "No open, non-accepted finding carries actionable risk for this run."
     return (
         "Mean risk score across "
@@ -514,7 +517,7 @@ def _projection_bar_tone(step: _ProjectionStep, target_index: float | None) -> s
 def _projection_drop_percent(current_index: float, final_index: float) -> int:
     if current_index <= 0:
         return 0
-    return max(0, round(((current_index - final_index) / current_index) * 100))
+    return round(((current_index - final_index) / current_index) * 100)
 
 
 def _target_reached_step(projection: _RiskProjection) -> _ProjectionStep | None:
@@ -537,9 +540,7 @@ def _readout_step_label(step: _ProjectionStep) -> str:
 
 
 def _step_detail(step: _ProjectionStep) -> str:
-    if step.reduction <= 0:
-        return "open risk"
-    return f"-{_format_score(step.reduction)} score"
+    return f"{step.remaining_count} remaining"
 
 
 def _band_for_index(value: float) -> str:
@@ -554,10 +555,10 @@ def _risk_score(finding: MarkdownReportFinding) -> float:
     return max(float(finding.risk_score or 0.0), 0.0)
 
 
-def _index_from_score(score: float, finding_count: int) -> float | None:
+def _index_from_score(score: float, finding_count: int) -> float:
     if finding_count <= 0:
-        return None
-    return _round_index(min(max(score, 0.0) / finding_count, 100.0))
+        return 0.0
+    return _round_score(min(max(score, 0.0) / finding_count, 100.0))
 
 
 def _reduction_for_first(reducers: Sequence[_RiskReducer], count: int) -> float:

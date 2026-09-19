@@ -141,9 +141,10 @@ scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=tru
 scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true audit --audit-level=high
 ```
 
-Frontend commands must run on Node 22 with npm 10. The repository carries the
+Workbench frontend installs, builds, and CI gates run on Node 22 with npm 10.
+The repository carries the
 same policy in `.tool-versions`, root `package.json`, `frontend/package.json`,
-GitHub Actions `setup-node`, root `.npmrc`, and the root-owned Make frontend
+GitHub Actions `setup-node`, and the root-owned Make frontend
 command wrapper. Run ad hoc frontend npm commands from the repository root with
 `scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true`
 or the equivalent Make target so the frontend package's engine policy is
@@ -154,6 +155,23 @@ and emits warning noise instead of improving enforcement.
 Docker frontend builds must use the same explicit engine-strict install and
 build flags so container evidence cannot silently diverge from CI/local npm
 policy.
+
+The root `.npmrc` uses `engine-strict=false` only as the default for dependency
+resolution. GitHub's managed Dependabot updater currently generates npm
+lockfile candidates with Node 24/npm 11; it does not select the Workbench
+runtime from `package.json`. A globally strict setting prevents it from
+generating those candidates. Normal Workbench commands retain the explicit
+`--engine-strict=true` flags above, the declared Node 22/npm 10 engine ranges,
+and the same CI validation before an update can merge. The updater's toolchain
+is not a supported Workbench runtime. Do not relax the install/build gates to
+accept a candidate that requires a newer runtime.
+
+The existing Playwright-only container paths are a bounded exception:
+`frontend/Dockerfile.playwright` and
+`scripts/frontend-design-audit-linux-docker.sh` use the pinned Microsoft
+browser-test image and its bundled Node/npm. The latter already explicitly
+disables engine strictness for its screenshot runner. These test containers
+do not replace the Node 22/npm 10 production build or frontend CI gates.
 
 The frontend audit intentionally covers both runtime and dev/build-chain
 dependencies from the committed lockfile. Do not exclude dev dependencies from

@@ -12,6 +12,7 @@ from app.api.routes.workbench_access import lock_existing_project_resource, requ
 from app.models import Waiver, WaiverCreate, WaiverPublic, WaiversPublic, WaiverUpdate
 from app.repositories import AssetRepository, FindingRepository, WaiverRepository
 from app.services.audit import record_audit_event
+from app.services.decision_projection_sync import DecisionProjectionService
 from app.services.decision_scope_lock import lock_project_decision_scope
 
 router = APIRouter(tags=["waivers"])
@@ -61,7 +62,7 @@ def create_project_waiver(
     _validate_project_scope(session, project_id=project_id, waiver_in=waiver_in)
     repository = WaiverRepository(session)
     waiver = repository.create_project_waiver(project_id=project_id, waiver_in=waiver_in)
-    repository.sync_project_waivers(project_id)
+    DecisionProjectionService(session).sync_project_waivers(project_id, revision_cause="waiver")
     record_audit_event(
         session,
         action="waiver.create",
@@ -89,7 +90,9 @@ def update_waiver(
     waiver = _lock_existing_waiver(session, waiver_id=waiver_id, repository=repository)
     _validate_project_scope(session, project_id=waiver.project_id, waiver_in=waiver_in)
     updated = repository.update_waiver(waiver, waiver_in)
-    repository.sync_project_waivers(updated.project_id)
+    DecisionProjectionService(session).sync_project_waivers(
+        updated.project_id, revision_cause="waiver"
+    )
     record_audit_event(
         session,
         action="waiver.update",
@@ -121,7 +124,9 @@ def delete_waiver(
         "days_remaining": days_remaining,
     }
     repository.delete_waiver(waiver)
-    repository.sync_project_waivers(project_id, force=True)
+    DecisionProjectionService(session).sync_project_waivers(
+        project_id, force=True, revision_cause="waiver"
+    )
     record_audit_event(
         session,
         action="waiver.delete",
@@ -145,7 +150,9 @@ def expire_waiver(
     repository = WaiverRepository(session)
     waiver = _lock_existing_waiver(session, waiver_id=waiver_id, repository=repository)
     expired = repository.expire_waiver(waiver)
-    repository.sync_project_waivers(expired.project_id)
+    DecisionProjectionService(session).sync_project_waivers(
+        expired.project_id, revision_cause="waiver_expiry"
+    )
     record_audit_event(
         session,
         action="waiver.expire",

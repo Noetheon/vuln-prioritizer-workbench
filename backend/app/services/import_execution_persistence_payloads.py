@@ -6,6 +6,7 @@ import json
 from collections.abc import Sequence
 from typing import Any
 
+from app.decision_core.evaluation import ScopeEvaluationInput
 from app.decision_core.identity import FINDING_SCOPE_KEY_VERSION
 from app.domain.asset_identity import normalize_asset_identity_value
 from app.domain.engine.models import PrioritizedFinding
@@ -379,6 +380,20 @@ def _decision_for_occurrence(
     if decision is None:
         raise WorkbenchAnalysisError(f"Decision analysis did not produce {occurrence.cve_id}.")
     return decision
+
+
+def _evaluation_input_for_occurrence(
+    analysis_result: WorkbenchAnalysisResult,
+    occurrence: NormalizedOccurrence,
+) -> ScopeEvaluationInput | None:
+    if analysis_result.decision_graph is None:
+        return None
+    scoped = analysis_result.decision_graph.decision_for_occurrence(
+        input_occurrence_from_workbench_occurrence(occurrence)
+    )
+    if scoped is None:
+        raise WorkbenchAnalysisError(f"Missing evaluation input for {occurrence.cve_id}.")
+    return scoped.evaluation_input
 
 
 def _decision_priority(decision: PrioritizedFinding) -> FindingPriority:

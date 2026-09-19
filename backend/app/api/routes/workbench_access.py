@@ -13,6 +13,7 @@ from app.models import Project
 from app.models.base import get_datetime_utc
 from app.repositories import ProjectRepository
 from app.services.audit import record_audit_event
+from app.services.decision_projection_sync import DecisionProjectionService
 from app.services.decision_scope_lock import (
     ProjectDecisionLockError,
     lock_project_decision_scope,
@@ -67,7 +68,10 @@ def _refresh_stale_project_waivers(session: Session, project: Project) -> None:
                 col(Project.waiver_evaluated_on) != evaluated_on,
             ),
         )
-        .values(waiver_evaluated_on=evaluated_on)
+        .values(
+            waiver_evaluated_on=evaluated_on,
+            decision_revision=col(Project.decision_revision) + 1,
+        )
         .execution_options(synchronize_session=False)
     )
     if claim.rowcount != 1:
@@ -77,13 +81,13 @@ def _refresh_stale_project_waivers(session: Session, project: Project) -> None:
         return
 
     # Import lazily to keep the shared route dependency free of repository cycles.
-    from app.repositories.waivers import WaiverRepository
 
     try:
         changed_finding_ids: set[uuid.UUID] = set()
-        WaiverRepository(session).sync_project_waivers(
+        DecisionProjectionService(session).sync_project_waivers(
             project.id,
             changed_finding_ids=changed_finding_ids,
+            revision_cause="waiver_expiry",
         )
         project.waiver_evaluated_on = evaluated_on
         session.add(project)

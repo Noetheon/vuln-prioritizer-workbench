@@ -31,6 +31,7 @@ from app.models.base import get_datetime_utc
 from app.models.enums import FindingStatus
 from app.repositories import RunRepository, WaiverRepository
 from app.repositories.waivers import waiver_lifecycle_status
+from app.services.decision_projection_sync import DecisionProjectionService
 from app.services.finding_status import update_finding_workflow_status
 from app.services.import_execution import (
     ImportUploadContent,
@@ -509,7 +510,7 @@ def _create_demo_waivers(session: Session, *, project_id: uuid.UUID) -> None:
     waiver_repo = WaiverRepository(session)
     for waiver in _demo_waivers():
         waiver_repo.create_project_waiver(project_id=project_id, waiver_in=waiver)
-    waiver_repo.sync_project_waivers(project_id)
+    DecisionProjectionService(session).sync_project_waivers(project_id)
 
 
 def _demo_waivers() -> tuple[WaiverCreate, ...]:

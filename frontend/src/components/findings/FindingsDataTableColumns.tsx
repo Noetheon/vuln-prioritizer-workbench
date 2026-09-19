@@ -200,7 +200,7 @@ export function buildFindingsDataTableColumns({
             {formatShortDate(finding.last_seen_at)}
           </span>
           <div className="finding-meta-tags">
-            <MetaTag label={findingSlaLabel(finding.priority)} />
+            <MetaTag label={findingSlaLabel(finding)} />
             {finding.under_investigation ? (
               <MetaTag label="Under review" />
             ) : null}

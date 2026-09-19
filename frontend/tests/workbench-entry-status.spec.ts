@@ -764,12 +764,8 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(occurrencesTable).toContainText("build-host-1")
   await expect(occurrencesTable).toContainText("team-platform")
   await expect(occurrencesTable).toContainText("payments")
-  await expect(findingDetail).toContainText(
-    "team-platform <img src=x onerror=window.__vpwXss=1>",
-  )
-  await expect(findingDetail).toContainText(
-    "payments <script>window.__vpwXss=1</script>",
-  )
+  await expect(findingDetail).toContainText("team-platform-updated")
+  await expect(findingDetail).toContainText("payments-runtime")
   await expect(page.locator('img[src="x"]')).toHaveCount(0)
   await expect(
     page.locator("script", { hasText: "window.__vpwXss" }),

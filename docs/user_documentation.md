@@ -26,9 +26,9 @@ path only after the matching package publication is confirmed.
 Open `http://127.0.0.1:8765`, create or select a project, and upload your
 evidence through Imports. Choose the input type explicitly so parsing does not
 depend on filename detection.
-The supervised worker starts with the browser runtime. Imports, Providers, and
-Reports enqueue durable Workflow v2 jobs and do not complete inside the initial
-HTTP request.
+The supervised worker starts with the browser runtime. Imports, provider
+refreshes, reports, and native re-evaluations enqueue durable Workflow v2 jobs
+and do not complete inside the initial HTTP request.
 
 Use the [support matrix](support_matrix.md) before wiring imports or reports
 into local automation. It lists supported input formats, output contracts, and
@@ -90,6 +90,8 @@ DOCKER_DEMO_BACKEND_PORT=18081 DOCKER_DEMO_FRONTEND_PORT=15175 make docker-demo-
 | Import formats | [Support matrix](support_matrix.md), [CVE list](cve-list-import.md), [Generic occurrence CSV](generic-occurrence-csv-import.md), [Trivy JSON](trivy-json-import.md), [Grype JSON](grype-json-import.md), [CycloneDX JSON](cyclonedx-json-import.md), [SPDX JSON](spdx-json-import.md), [Dependency-Check JSON](dependency-check-json-import.md), [GitHub alerts JSON](github-alerts-json-import.md), [Nessus XML](nessus-xml-import.md), [OpenVAS XML](openvas-xml-import.md) | Supported file formats, preserved provenance, parser safety boundaries, and CI guidance. |
 | Providers and replay | [Provider cache and snapshots](architecture/vpw-022-provider-cache-status-snapshots.md), [Provider snapshot replay](architecture/vpw-026-provider-snapshot-replay.md), [Provider data quality flags](architecture/vpw-027-provider-data-quality-flags.md) | NVD, EPSS, KEV, cache state, locked snapshots, confidence/freshness flags, and replay behavior. |
 | Scoring and explanation | [Methodology](methodology.md), [Contracts](contracts.md) | Base priority from CVSS, EPSS, and KEV; operational score; decision guidance; comparison and explain semantics. |
+| Re-evaluation and decision history | [Evaluation revisions](architecture/evaluation-revisions.md) | Re-evaluate stored observations, explicitly adopt a provider snapshot, and compare immutable decisions without changing the original observation time. |
+| Dashboard risk simulation | [Risk reduction opportunities](risk-reduction-opportunities.md) | Mean actionable score, exact opportunity scope, remaining finding count, and the distinction between simulation and verified remediation. |
 | Reports and evidence | [Support matrix](support_matrix.md), [Contracts](contracts.md), [Evidence archive](evidence.md) | Markdown, JSON, SARIF, HTML, CSV, evidence ZIP manifests, verification, and governance artifacts. |
 | ATT&CK boundaries | [ATT&CK/TTP methodology](attack-ttp-methodology.md), [Workbench ATT&CK methodology](workbench-attack-methodology.md), [Methodology](methodology.md) | CTID/local mapping sources, confidence, no heuristic mappings, tactic/technique/procedure boundary, and report wording rules. |
 | Security and deployment limits | [Workbench threat model](workbench-threat-model.md), [Local/private deployment runbook](workbench-public-deployment.md) | Local-first assumptions, upload/download controls, secret redaction, public-exposure blockers, Docker and dependency evidence. |
@@ -118,6 +120,38 @@ The base priority remains transparent:
 Asset context, defensive context, ATT&CK, VEX, waivers, and governance state add
 explanation, routing, visibility, or applicability context. They do not become a
 hidden replacement for the base CVSS, EPSS, and KEV decision rule.
+
+## Re-evaluation And Recorded Decisions
+
+Use **Re-evaluate** on the project dashboard to evaluate the project's findings,
+or on a finding to evaluate that finding. It uses stored observations with the
+current asset and governance context. Keep the recorded provider evidence
+or explicitly choose the latest available provider snapshot, add an optional
+reason, and select **Start re-evaluation**. The status beside the control tracks
+the background evaluation and shows failures. Refreshing provider data alone
+does not adopt it into existing decisions; re-evaluation uses the chosen stored
+snapshot and does not fetch live providers.
+
+Open **History** in Finding Detail to review decision revisions. Each revision
+distinguishes when the decision was evaluated from when its scanner evidence
+was last observed, identifies the current decision and its provenance, and
+shows changes from the preceding revision. Re-evaluation does not perform a
+new scan, advance the observation time, or prove that a finding was fixed.
+Legacy revisions without complete replay inputs remain readable; a new import
+is required before those findings can be re-evaluated.
+
+SLA labels in the finding views come from recorded decision guidance, including
+recorded hours or days when available. Missing guidance is shown explicitly.
+The Evidence Center's Decision Summary likewise uses the selected run's stored
+recommendations and SLA guidance. A critical finding count or KEV membership
+alone does not establish production exposure or an incident in the project.
+
+The dashboard's remediation simulation removes selected findings from both the
+total score and the actionable finding count. The remaining average can rise
+while the total score burden falls. Selecting simulated actions does not mark
+findings fixed. See [Risk reduction opportunities](risk-reduction-opportunities.md)
+for the calculation and [Evaluation revisions](architecture/evaluation-revisions.md)
+for replay, provenance, and compatibility details.
 
 ## Reports And Evidence Path
 

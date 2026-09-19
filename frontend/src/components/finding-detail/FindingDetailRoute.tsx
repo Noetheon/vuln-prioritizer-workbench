@@ -1,13 +1,12 @@
-import { Link } from "@/lib/router"
 import { ArrowLeft, RefreshCcw } from "lucide-react"
 import { useState } from "react"
-
 import type {
   FindingDetailPublic,
   FindingExplanationPublic,
   FindingStatus,
 } from "@/api-client"
 import { FindingsService } from "@/api-client"
+import { ReevaluateControl } from "@/components/evaluations/ReevaluateControl"
 import type { FindingsUrlSearch } from "@/components/findings/findings-search-state"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,29 +27,30 @@ import {
   VpwStatusBanner,
 } from "@/components/vpw"
 import type { FindingDetailTab } from "@/lib/app-defaults"
+import { Link } from "@/lib/router"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 import { findingWaiverEvidence } from "@/lib/waiver-view"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
-
-import { FindingDetailContext } from "./FindingDetailContext"
 import { FindingDecisionTab } from "./FindingDecisionTab"
+import { FindingDetailContext } from "./FindingDetailContext"
 import { FindingEvidenceTab } from "./FindingEvidenceTab"
+import { FindingGitHubIssue } from "./FindingGitHubIssue"
 import { FindingGovernanceTab } from "./FindingGovernanceTab"
 import { FindingHistoryTab } from "./FindingHistoryTab"
 import { FindingOccurrencesTab } from "./FindingOccurrencesTab"
 import { FindingTtpContextTab } from "./FindingTtpContextTab"
 import {
+  findingComponentDetailLabel,
   findingDataQualityRows,
   findingDecisionReasonRows,
   findingEvidenceRows,
   findingHistoryRows,
-  findingOccurrenceRows,
-  findingProviderGaps,
-  findingComponentDetailLabel,
   findingNextStepLabel,
+  findingOccurrenceRows,
   findingOwnerDetailLabel,
-  findingSlaLabel,
+  findingProviderGaps,
   findingReasonRows,
+  findingSlaLabel,
 } from "./finding-detail-model"
 
 export type FindingDetailRouteProps = {
@@ -58,6 +58,7 @@ export type FindingDetailRouteProps = {
   explanation: FindingExplanationPublic | null
   explanationWarning: string
   finding: FindingDetailPublic | null
+  latestProviderSnapshotId?: string | null
   findingsBackSearch: FindingsUrlSearch
   loading: boolean
   tab: FindingDetailTab
@@ -70,6 +71,7 @@ export function FindingDetailRoute({
   explanation,
   explanationWarning,
   finding,
+  latestProviderSnapshotId,
   findingsBackSearch,
   loading,
   onRefresh,
@@ -108,6 +110,21 @@ export function FindingDetailRoute({
             <span>Back to Triage</span>
           </Link>
         </Button>
+        {finding ? (
+          <ReevaluateControl
+            key={finding.id}
+            projectId={finding.project_id}
+            findingIds={[finding.id]}
+            latestProviderSnapshotId={latestProviderSnapshotId}
+          />
+        ) : null}
+        {finding ? (
+          <FindingGitHubIssue
+            key={`github:${finding.id}`}
+            findingId={finding.id}
+            projectId={finding.project_id}
+          />
+        ) : null}
       </div>
 
       {error ? <VpwStatusBanner title={error} tone="critical" /> : null}
@@ -226,7 +243,10 @@ export function FindingDetailRoute({
                   className="finding-detail-tab-panel"
                   value="history"
                 >
-                  <FindingHistoryTab historyRows={historyRows} />
+                  <FindingHistoryTab
+                    findingId={finding.id}
+                    historyRows={historyRows}
+                  />
                 </TabsContent>
 
                 <TabsContent
@@ -291,7 +311,7 @@ function FindingDetailActionRail({
   const decisionRows = [
     {
       label: "SLA",
-      value: findingSlaLabel(finding.priority, finding.status),
+      value: findingSlaLabel(finding),
     },
     {
       label: "Status",
@@ -369,7 +389,10 @@ function FindingDetailActionRail({
   )
 }
 
-const WORKFLOW_STATUS_OPTIONS: readonly { label: string; value: FindingStatus }[] = [
+const WORKFLOW_STATUS_OPTIONS: readonly {
+  label: string
+  value: FindingStatus
+}[] = [
   { label: "Open", value: "open" },
   { label: "In review", value: "in_review" },
   { label: "Remediating", value: "remediating" },

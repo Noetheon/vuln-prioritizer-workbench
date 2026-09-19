@@ -8,10 +8,7 @@ import {
   useState,
 } from "react"
 
-import {
-  type AssetPublic,
-  AssetsService,
-} from "../../api-client"
+import { type AssetPublic, AssetsService } from "../../api-client"
 import type {
   AssetDrawerMode,
   AssetsWorkbenchProps,
@@ -24,12 +21,13 @@ import {
   emptyAssetForm,
   validateAssetForm,
 } from "../../components/assets/asset-model"
-import { useWorkbenchContext } from "../WorkbenchContext"
 import {
   useAssetFindingsQuery,
   useProjectAssetsQuery,
 } from "../useWorkbenchQueries"
+import { useWorkbenchContext } from "../WorkbenchContext"
 import { invalidateProjectScopedWorkbenchQueries } from "../workbench-query-keys"
+import { useAssetFilterState } from "./assets-route-filter-state"
 import {
   activeProjectLabel,
   assetActionLoading as assetActionLoadingFromState,
@@ -40,7 +38,6 @@ import {
   selectedAssetForId,
   selectedHighestPriority,
 } from "./assets-route-model"
-import { useAssetFilterState } from "./assets-route-filter-state"
 
 export function useAssetsRouteState(): AssetsWorkbenchProps {
   const queryClient = useQueryClient()
@@ -63,8 +60,7 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
   const [editError, setEditError] = useState("")
   const [editingAssetId, setEditingAssetId] = useState("")
   const [selectedAssetId, setSelectedAssetId] = useState("")
-  const [assetDrawerMode, setAssetDrawerMode] =
-    useState<AssetDrawerMode>(null)
+  const [assetDrawerMode, setAssetDrawerMode] = useState<AssetDrawerMode>(null)
   const previousProjectId = useRef(selectedProjectId)
   const assetsQuery = useProjectAssetsQuery({ projectId: selectedProjectId })
   const allAssets = assetsQuery.data?.data ?? []
@@ -135,7 +131,10 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
         setSelectedAssetId("")
         return
       }
-      await invalidateProjectScopedWorkbenchQueries(queryClient, selectedProjectId)
+      await invalidateProjectScopedWorkbenchQueries(
+        queryClient,
+        selectedProjectId,
+      )
     },
     [queryClient, selectedProjectId],
   )
@@ -262,7 +261,7 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
     try {
       const result = await recalculateAssetMutation.mutateAsync(asset.id)
       setAssetMessage(
-        `Recalculated ${result.recalculated_findings} finding(s) for ${asset.name}.`,
+        `Recalculated ${result.recalculated_findings} finding(s) for ${asset.name}.${result.rescore_needed ? ` ${result.unreplayable_findings ?? "Some"} finding(s) still require a new import because replay inputs are unavailable.` : ""}`,
       )
       await refreshAssets(asset.id)
     } catch (caught) {

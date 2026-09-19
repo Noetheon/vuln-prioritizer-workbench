@@ -18,6 +18,7 @@ from utils.workbench_env import (
 from app.api.routes.workbench_access import _refresh_stale_project_waivers
 from app.models import FindingStatus
 from app.repositories.waivers import WaiverRepository
+from app.services.decision_projection_sync import DecisionProjectionService
 
 
 def test_zero_waiver_sync_returns_before_loading_project_findings(
@@ -29,14 +30,15 @@ def test_zero_waiver_sync_returns_before_loading_project_findings(
     project_id = uuid.UUID(project["id"])
 
     with Session(workbench_api_env.engine) as session:
-        repository = WaiverRepository(session)
+        service = DecisionProjectionService(session)
+        repository = service.repository
 
         def fail_if_loaded(_project_id: uuid.UUID) -> list[Any]:
             raise AssertionError("zero-waiver sync loaded project findings")
 
         monkeypatch.setattr(repository, "_project_findings", fail_if_loaded)
 
-        assert repository.sync_project_waivers(project_id) == {}
+        assert service.sync_project_waivers(project_id) == {}
 
 
 def test_waiver_project_findings_load_asset_context_in_one_batch(
@@ -117,15 +119,16 @@ def test_delete_last_waiver_forces_projection_rebuild(
     )
     assert created.status_code == 200, created.text
 
-    original_sync = WaiverRepository.sync_project_waivers
+    original_sync = DecisionProjectionService.sync_project_waivers
     force_values: list[bool] = []
 
     def counted_sync(
-        repository: WaiverRepository,
+        repository: DecisionProjectionService,
         project_id: uuid.UUID,
         *,
         force: bool = False,
         changed_finding_ids: set[uuid.UUID] | None = None,
+        revision_cause: str | None = None,
     ) -> dict[uuid.UUID, int]:
         force_values.append(force)
         return original_sync(
@@ -133,9 +136,10 @@ def test_delete_last_waiver_forces_projection_rebuild(
             project_id,
             force=force,
             changed_finding_ids=changed_finding_ids,
+            revision_cause=revision_cause,
         )
 
-    monkeypatch.setattr(WaiverRepository, "sync_project_waivers", counted_sync)
+    monkeypatch.setattr(DecisionProjectionService, "sync_project_waivers", counted_sync)
     deleted = workbench_api_env.client.delete(
         f"/api/v1/waivers/{created.json()['id']}",
         headers=headers,
@@ -188,15 +192,16 @@ def test_stale_project_read_expires_waiver_once_per_utc_day(
     assert accepted.json()["waived"] is True
 
     monkeypatch.setenv("WORKBENCH_FIXED_NOW", "2026-09-03T00:01:00+00:00")
-    original_sync = WaiverRepository.sync_project_waivers
+    original_sync = DecisionProjectionService.sync_project_waivers
     sync_count = 0
 
     def counted_sync(
-        repository: WaiverRepository,
+        repository: DecisionProjectionService,
         requested_project_id: uuid.UUID,
         *,
         force: bool = False,
         changed_finding_ids: set[uuid.UUID] | None = None,
+        revision_cause: str | None = None,
     ) -> dict[uuid.UUID, int]:
         nonlocal sync_count
         sync_count += 1
@@ -205,9 +210,10 @@ def test_stale_project_read_expires_waiver_once_per_utc_day(
             requested_project_id,
             force=force,
             changed_finding_ids=changed_finding_ids,
+            revision_cause=revision_cause,
         )
 
-    monkeypatch.setattr(WaiverRepository, "sync_project_waivers", counted_sync)
+    monkeypatch.setattr(DecisionProjectionService, "sync_project_waivers", counted_sync)
     expired = workbench_api_env.client.get(
         f"/api/v1/findings/{finding_id}",
         headers=headers,
@@ -250,11 +256,12 @@ def test_two_stale_sessions_claim_only_one_daily_waiver_refresh(
     sync_count = 0
 
     def counted_sync(
-        repository: WaiverRepository,
+        repository: DecisionProjectionService,
         requested_project_id: uuid.UUID,
         *,
         force: bool = False,
         changed_finding_ids: set[uuid.UUID] | None = None,
+        revision_cause: str | None = None,
     ) -> dict[uuid.UUID, int]:
         nonlocal sync_count
         _ = repository, force
@@ -264,7 +271,7 @@ def test_two_stale_sessions_claim_only_one_daily_waiver_refresh(
         changed_finding_ids.add(uuid.UUID(int=1))
         return {}
 
-    monkeypatch.setattr(WaiverRepository, "sync_project_waivers", counted_sync)
+    monkeypatch.setattr(DecisionProjectionService, "sync_project_waivers", counted_sync)
     with (
         Session(workbench_api_env.engine) as first_session,
         Session(workbench_api_env.engine) as stale_session,
@@ -310,15 +317,18 @@ def test_stale_read_rolls_back_projection_and_freshness_marker_together(
     monkeypatch.setenv("WORKBENCH_FIXED_NOW", "2026-09-02T00:01:00+00:00")
 
     def fail_after_flush(
-        repository: WaiverRepository,
+        repository: DecisionProjectionService,
         requested_project_id: uuid.UUID,
         *,
         force: bool = False,
         changed_finding_ids: set[uuid.UUID] | None = None,
+        revision_cause: str | None = None,
     ) -> dict[uuid.UUID, int]:
         _ = force, changed_finding_ids
-        finding = repository.session.get(workbench_api_env.app_models.Finding, finding_id)
-        persisted_project = repository.session.get(
+        finding = repository.repository.session.get(
+            workbench_api_env.app_models.Finding, finding_id
+        )
+        persisted_project = repository.repository.session.get(
             workbench_api_env.app_models.Project,
             requested_project_id,
         )
@@ -326,12 +336,12 @@ def test_stale_read_rolls_back_projection_and_freshness_marker_together(
         assert persisted_project is not None
         finding.status = FindingStatus.ACCEPTED
         persisted_project.waiver_evaluated_on = date(2026, 9, 2)
-        repository.session.add(finding)
-        repository.session.add(persisted_project)
-        repository.session.flush()
+        repository.repository.session.add(finding)
+        repository.repository.session.add(persisted_project)
+        repository.repository.session.flush()
         raise RuntimeError("synthetic waiver refresh failure")
 
-    monkeypatch.setattr(WaiverRepository, "sync_project_waivers", fail_after_flush)
+    monkeypatch.setattr(DecisionProjectionService, "sync_project_waivers", fail_after_flush)
     with pytest.raises(RuntimeError, match="synthetic waiver refresh failure"):
         workbench_api_env.client.get(
             f"/api/v1/findings/{finding_id}",

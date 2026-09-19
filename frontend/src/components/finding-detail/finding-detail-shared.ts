@@ -2,11 +2,12 @@ import type {
   FindingDetailPublic,
   FindingExplanationPublic,
   FindingOccurrencePublic,
-  FindingPriority,
 } from "@/api-client"
 import { joinedValues, objectRecord, stringValue } from "@/lib/app-errors"
 import { formatEpss, formatNullableNumber } from "@/lib/risk-format"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
+
+export { findingSlaLabel } from "../../lib/finding-recorded-guidance"
 
 export type FindingAttackContext = NonNullable<
   FindingDetailPublic["attack_context"]
@@ -33,9 +34,9 @@ type DataQualityDedupRow = {
   source?: string | null
 }
 
-export function uniqueFindingDataQualityRows<
-  TRow extends DataQualityDedupRow,
->(rows: readonly TRow[]) {
+export function uniqueFindingDataQualityRows<TRow extends DataQualityDedupRow>(
+  rows: readonly TRow[],
+) {
   const seen = new Set<string>()
   return rows.filter((row) => {
     const key = `${row.severity}:${row.source ?? ""}:${row.message}`
@@ -300,33 +301,6 @@ export function findingOwnerDetailLabel(
   return (
     finding?.owner ?? stringValue(occurrences[0]?.asset_owner) ?? "Unassigned"
   )
-}
-
-export function findingSlaLabel(
-  priority: FindingPriority | undefined,
-  status?: FindingDetailPublic["status"],
-) {
-  if (status === "suppressed") {
-    return "None - suppressed"
-  }
-  if (status === "accepted") {
-    return "Waiver review date"
-  }
-  if (status === "fixed") {
-    return "Resolved"
-  }
-  switch (priority) {
-    case "critical":
-      return "24 hours"
-    case "high":
-      return "7 days"
-    case "medium":
-      return "30 days"
-    case "low":
-      return "90 days"
-    default:
-      return "Define during triage"
-  }
 }
 
 export function findingGovernanceStatus(

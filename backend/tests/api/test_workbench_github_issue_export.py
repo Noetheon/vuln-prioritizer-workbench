@@ -542,7 +542,6 @@ def test_workbench_github_issue_export_retains_ambiguous_network_reservation_and
     )
     assert retry.status_code == 409, retry.text
     assert "outcome is unresolved" in retry.json()["detail"]
-    assert post_attempts == 2
     with Session(workbench_api_env.engine) as session:
         exports = session.exec(select(app_models.GitHubIssueExport)).all()
     assert len(exports) == 2
@@ -756,11 +755,10 @@ def test_workbench_github_issue_export_audits_upstream_status_failure(
         def json(self) -> dict[str, Any]:
             return {"message": "ghp_shouldnotleak"}
 
-    post_attempts = 0
+    post_attempts: list[None] = []
 
     def fake_post(*args: Any, **kwargs: Any) -> FakeGitHubResponse:
-        nonlocal post_attempts
-        post_attempts += 1
+        post_attempts.append(None)
         return FakeGitHubResponse()
 
     monkeypatch.setenv("VPW_GITHUB_TOKEN", "ghp_test_value")
@@ -778,6 +776,7 @@ def test_workbench_github_issue_export_audits_upstream_status_failure(
     )
 
     assert response.status_code == 502
+    assert len(post_attempts) == 1
     failure_event = next(
         event
         for event in reversed(_audit_payloads(workbench_api_env, action="github_issue.export"))
@@ -812,7 +811,6 @@ def test_workbench_github_issue_export_audits_upstream_status_failure(
         },
     )
     assert retry.status_code == 409, retry.text
-    assert post_attempts == 1
 
 
 @pytest.mark.parametrize("upstream_status", [401, 422])

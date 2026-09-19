@@ -1,11 +1,28 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
 from app.decision_core.readmodels import DecisionFindingView
-from app.models.enums import FindingStatus
-from app.services.risk_reduction import build_project_risk_reduction_payload
+from app.models import AnalysisRun
+from app.models.enums import AnalysisRunStatus, FindingStatus
+from app.services.risk_reduction import build_project_risk_reduction_payload, risk_index_history
+
+
+def test_risk_history_includes_successful_native_evaluations() -> None:
+    now = datetime(2026, 9, 6, tzinfo=UTC)
+    native = AnalysisRun(
+        project_id=uuid.uuid4(),
+        input_type="reevaluation",
+        status=AnalysisRunStatus.COMPLETED,
+        risk_index=42,
+        finished_at=now,
+    )
+    points = risk_index_history([native])
+    assert len(points) == 1
+    assert points[0].run_id == native.id
+    assert points[0].risk_index == 42
 
 
 def test_risk_reduction_sums_actionable_findings_and_residual_steps() -> None:
@@ -44,10 +61,34 @@ def test_risk_reduction_sums_actionable_findings_and_residual_steps() -> None:
     assert payload.largest_driver.dimension == "service"
     assert payload.largest_driver.label == "payments"
     assert [step.model_dump() for step in payload.residual_steps] == [
-        {"label": "Current", "risk_score": 187.0, "reduction": 0.0},
-        {"label": "After top 1", "risk_score": 88.0, "reduction": 99.0},
-        {"label": "After top 3", "risk_score": 0.0, "reduction": 187.0},
-        {"label": "Remaining", "risk_score": 0.0, "reduction": 187.0},
+        {
+            "label": "Current",
+            "risk_score": 187.0,
+            "reduction": 0.0,
+            "actionable_finding_count": 2,
+            "risk_index": 93.5,
+        },
+        {
+            "label": "After top 1",
+            "risk_score": 88.0,
+            "reduction": 99.0,
+            "actionable_finding_count": 1,
+            "risk_index": 88.0,
+        },
+        {
+            "label": "After top 3",
+            "risk_score": 0.0,
+            "reduction": 187.0,
+            "actionable_finding_count": 0,
+            "risk_index": 0.0,
+        },
+        {
+            "label": "Remaining",
+            "risk_score": 0.0,
+            "reduction": 187.0,
+            "actionable_finding_count": 0,
+            "risk_index": 0.0,
+        },
     ]
 
 
@@ -115,6 +156,40 @@ def test_risk_reduction_sorts_equal_reductions_by_threat_signals() -> None:
         "CVE-2024-0001",
         "CVE-2024-0002",
     ]
+
+
+def test_projected_risk_index_matches_actual_remaining_finding_average() -> None:
+    findings = [
+        _view("CVE-2024-0001", risk_score=100),
+        _view("CVE-2024-0002", risk_score=50),
+    ]
+    before = build_project_risk_reduction_payload(findings)
+    after = build_project_risk_reduction_payload(findings[1:])
+    assert before.current_risk_index == 75
+    assert before.residual_steps[1].risk_index == after.current_risk_index == 50
+    assert before.top_opportunities[0].finding_ids == [findings[0].finding.id]
+
+
+def test_risk_opportunities_preserve_distinct_canonical_components() -> None:
+    findings = [
+        _view(
+            "CVE-2024-0001",
+            risk_score=70,
+            component_name="shared",
+            component_purl="pkg:npm/shared@1.0",
+        ),
+        _view(
+            "CVE-2024-0001",
+            risk_score=60,
+            component_name="shared",
+            component_purl="pkg:pypi/shared@1.0",
+        ),
+    ]
+    opportunities = build_project_risk_reduction_payload(findings).top_opportunities
+    assert len(opportunities) == 2
+    assert opportunities[0].component_identity != opportunities[1].component_identity
+    assert opportunities[0].finding_ids == [findings[0].finding.id]
+    assert opportunities[1].finding_ids == [findings[1].finding.id]
 
 
 def _view(

@@ -58,6 +58,7 @@ class PrioritizationService:
         attack_data: dict[str, AttackData],
         provenance_by_cve: dict[str, FindingProvenance] | None = None,
         context_profile: ContextPolicyProfile | None = None,
+        finalize: bool = True,
     ) -> tuple[list[PrioritizedFinding], dict[str, int]]:
         """Prioritize method for PrioritizationService."""
         findings: list[PrioritizedFinding] = []
@@ -130,7 +131,9 @@ class PrioritizationService:
                 )
             )
 
-        ranked_findings = self.assign_operational_ranks(findings)
+        # Scope evaluation attaches governance and quality evidence before
+        # finishing score/explanation/guidance in one pass.
+        ranked_findings = self.assign_operational_ranks(findings) if finalize else findings
         sorted_findings = self.sort_findings(ranked_findings, sort_by="priority")
         return sorted_findings, self.count_by_priority(sorted_findings)
 

@@ -17,6 +17,35 @@ exact git tag output when release wording needs to be verified.
 
 ## [Unreleased]
 
+### Added
+
+- Native evaluation runs without new uploads, versioned replay inputs and immutable
+  decision revisions with separate observation/evaluation timestamps and UI history.
+- Explicit provider-snapshot adoption, stale-publication protection and an additive
+  project revision migration that preserves historical evidence.
+- Finding-scoped GitHub issue preview and explicit export controls in the UI.
+
+### Changed
+
+- Refreshed the coordinated Python dependency locks and pinned GitHub Actions
+  updates to resolve security advisories and consolidate pending dependency PRs.
+- Import, asset recalculation and waiver lifecycle share a complete pure evaluator;
+  unchanged scopes use a bounded ranking path during incremental imports.
+- Executive guidance and SLA displays use recorded evidence. Risk simulations
+  consistently calculate the mean of the remaining actionable findings.
+- Release bundles select allowlisted tracked files or verify an explicit source
+  manifest; local audit and runtime files are excluded.
+
+### Fixed
+
+- Current decision reads avoid redundant deep copies while preserving validation
+  and isolation, including deeply nested historical evidence.
+- Stale rationale after asset edits, cleared context values returning through
+  legacy fallbacks, expired source-file waivers and missing provider origins.
+- Worker progress/cancellation visibility across SQLite connections, lease and
+  attempt fencing, retry execution and report-file rollback/retention behavior.
+- Mutation checks now require a result for every configured target pattern.
+
 ## [1.3.0] - 2026-07-12
 
 ### Added

@@ -1060,7 +1060,17 @@ def test_github_export_identity_migration_preserves_history_and_prefers_complete
     incomplete_id = uuid.UUID(int=2)
     completed_id = uuid.UUID(int=1)
     with Session(engine) as session:
-        session.add(Project(id=project_id, name="GitHub identity migration"))
+        session.execute(
+            text(
+                "INSERT INTO project (id, name, created_at, updated_at) "
+                "VALUES (:id, :name, :now, :now)"
+            ),
+            {
+                "id": project_id.hex,
+                "name": "GitHub identity migration",
+                "now": "2026-09-04T00:00:00",
+            },
+        )
         session.add(
             Vulnerability(
                 id=vulnerability_id,
@@ -1830,8 +1840,6 @@ def _assert_component_merge_state(
                 identities = connection.execute(
                     text("SELECT identity_key, identity_material FROM component ORDER BY id")
                 ).all()
-            else:
-                identities = []
         parity = None
         if identity_columns_expected:
             with Session(engine) as session:
@@ -2177,3 +2185,69 @@ def _run_alembic_operation(config: Config, operation: str, revision: str) -> Non
         command.downgrade(config, revision)
         return
     raise AssertionError(f"Unsupported Alembic operation: {operation}")
+
+
+def test_decision_revision_migration_keeps_historical_evidence_unchanged(tmp_path: Path) -> None:
+    config = _alembic_config(tmp_path)
+    command.upgrade(config, "20260904_0009")
+    engine = create_engine(config.get_main_option("sqlalchemy.url"))
+    project_id, run_id = uuid.uuid4(), uuid.uuid4()
+    legacy_payload = {
+        "schema_version": "analysis-evidence.v2",
+        "analysis_run_id": str(run_id),
+        "project_id": str(project_id),
+        "input_type": "generic-occurrence-csv",
+        "status": "succeeded",
+        "counts": {"finding_count": 0},
+    }
+    try:
+        with Session(engine) as session:
+            session.execute(
+                text(
+                    "INSERT INTO project (id, name, created_at, updated_at) "
+                    "VALUES (:id, 'Legacy project', :now, :now)"
+                ),
+                {"id": project_id.hex, "now": "2026-09-04T00:00:00"},
+            )
+            session.add(
+                AnalysisRun(id=run_id, project_id=project_id, input_type="generic-occurrence-csv")
+            )
+            session.flush()
+            session.add(
+                AnalysisEvidence(
+                    project_id=project_id, analysis_run_id=run_id, payload_json=legacy_payload
+                )
+            )
+            session.commit()
+        with engine.connect() as connection:
+            original_bytes = connection.execute(
+                text("SELECT payload_json FROM analysis_evidence")
+            ).scalar_one()
+    finally:
+        engine.dispose()
+    command.upgrade(config, "head")
+    upgraded = create_engine(config.get_main_option("sqlalchemy.url"))
+    try:
+        with upgraded.connect() as connection:
+            assert (
+                connection.execute(text("SELECT decision_revision FROM project")).scalar_one() == 0
+            )
+            assert (
+                connection.execute(text("SELECT payload_json FROM analysis_evidence")).scalar_one()
+                == original_bytes
+            )
+    finally:
+        upgraded.dispose()
+    command.downgrade(config, "20260904_0009")
+    downgraded = create_engine(config.get_main_option("sqlalchemy.url"))
+    try:
+        assert "decision_revision" not in {
+            column["name"] for column in inspect(downgraded).get_columns("project")
+        }
+        with downgraded.connect() as connection:
+            assert (
+                connection.execute(text("SELECT payload_json FROM analysis_evidence")).scalar_one()
+                == original_bytes
+            )
+    finally:
+        downgraded.dispose()

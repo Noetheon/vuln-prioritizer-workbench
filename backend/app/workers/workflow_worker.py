@@ -16,16 +16,22 @@ from sqlmodel import Session
 
 from app.core.config import Settings, load_settings
 from app.core.db import create_db_engine
-from app.models import WorkflowRunStatus
+from app.models import (
+    AnalysisRun,
+    AnalysisRunStatus,
+    WorkflowRun,
+    WorkflowRunKind,
+    WorkflowRunStatus,
+)
 from app.repositories import RuntimeHeartbeatRepository, WorkflowRepository
+from app.repositories.workflows import WorkflowLeaseLostError
 from app.services.workflows import finish_cancelled_workflow
 from app.workers.workflow_handlers import (
     WorkflowCancelled,
     WorkflowNonRetryableError,
     execute_workflow_handler,
 )
-
-WORKFLOW_WORKER_SERVICE_NAME = "workflow-worker"
+from app.workers.workflow_heartbeat import WORKFLOW_WORKER_SERVICE_NAME, maintain_workflow_lease
 
 
 @dataclass(frozen=True, slots=True)
@@ -144,18 +150,30 @@ def _execute_claimed_workflow(
     lease_seconds: int,
     retry_delay_seconds: int,
 ) -> str:
+    attempt_count: int | None = None
     try:
         with Session(engine) as session:
             repository = WorkflowRepository(session)
             workflow = repository.require_workflow(workflow_id)
             if workflow.locked_by != worker_id or workflow.status != WorkflowRunStatus.RUNNING:
                 return "skipped"
+            attempt_count = workflow.attempt_count
             repository.record_worker_heartbeat(
                 workflow.id,
                 worker_id=worker_id,
                 lease_seconds=lease_seconds,
+                attempt_count=attempt_count,
             )
-            try:
+            session.commit()
+        with maintain_workflow_lease(
+            engine=engine,
+            workflow_id=workflow_id,
+            worker_id=worker_id,
+            attempt_count=attempt_count,
+            lease_seconds=lease_seconds,
+        ):
+            with Session(engine) as session:
+                workflow = WorkflowRepository(session).require_workflow(workflow_id)
                 execute_workflow_handler(
                     session,
                     settings=settings,
@@ -163,11 +181,11 @@ def _execute_claimed_workflow(
                     worker_id=worker_id,
                     lease_seconds=lease_seconds,
                 )
-            except WorkflowNonRetryableError:
                 session.commit()
-                return "retried_or_failed"
-            session.commit()
-            return "completed"
+                return "completed"
+    except WorkflowLeaseLostError:
+        # A superseded attempt has no authority to retry or finish its successor.
+        return "retried_or_failed"
     except WorkflowNonRetryableError as exc:
         with Session(engine) as session:
             repository = WorkflowRepository(session)
@@ -175,7 +193,15 @@ def _execute_claimed_workflow(
             if (
                 current_workflow is not None
                 and current_workflow.status == WorkflowRunStatus.RUNNING
+                and current_workflow.locked_by == worker_id
+                and current_workflow.attempt_count == attempt_count
             ):
+                try:
+                    repository.lock_workflow_control(
+                        workflow_id, worker_id=worker_id, attempt_count=attempt_count
+                    )
+                except WorkflowLeaseLostError:
+                    return "retried_or_failed"
                 repository.finish_workflow(
                     workflow_id,
                     status=WorkflowRunStatus.FAILED,
@@ -192,10 +218,18 @@ def _execute_claimed_workflow(
                     },
                     terminal_code="non_retryable_failed",
                 )
+                _finish_failed_analysis_run(session, current_workflow)
             session.commit()
         return "retried_or_failed"
     except WorkflowCancelled:
         with Session(engine) as session:
+            repository = WorkflowRepository(session)
+            try:
+                repository.lock_workflow_control(
+                    workflow_id, worker_id=worker_id, attempt_count=attempt_count
+                )
+            except WorkflowLeaseLostError:
+                return "retried_or_failed"
             finish_cancelled_workflow(
                 session,
                 workflow_id,
@@ -211,17 +245,45 @@ def _execute_claimed_workflow(
                 WorkflowRunStatus.SUCCEEDED,
                 WorkflowRunStatus.COMPLETED_WITH_ERRORS,
                 WorkflowRunStatus.CANCELLED,
+                WorkflowRunStatus.FAILED,
             }:
                 session.commit()
                 return "retried_or_failed"
-            repository.schedule_retry_or_fail(
+            if (
+                current_workflow.locked_by != worker_id
+                or current_workflow.attempt_count != attempt_count
+            ):
+                return "retried_or_failed"
+            try:
+                repository.lock_workflow_control(
+                    workflow_id, worker_id=worker_id, attempt_count=attempt_count
+                )
+            except WorkflowLeaseLostError:
+                return "retried_or_failed"
+            finished = repository.schedule_retry_or_fail(
                 workflow_id,
                 error_message=str(exc),
                 error_json={"error_type": exc.__class__.__name__},
                 delay_seconds=retry_delay_seconds,
             )
+            _finish_failed_analysis_run(session, finished)
             session.commit()
         return "retried_or_failed"
+
+
+def _finish_failed_analysis_run(session: Session, workflow: WorkflowRun) -> None:
+    if (
+        workflow.status != WorkflowRunStatus.FAILED
+        or workflow.kind == WorkflowRunKind.REPORT_GENERATION
+        or workflow.analysis_run_id is None
+    ):
+        return
+    run = session.get(AnalysisRun, workflow.analysis_run_id)
+    if run is not None and run.status in {AnalysisRunStatus.PENDING, AnalysisRunStatus.RUNNING}:
+        run.status = AnalysisRunStatus.FAILED
+        run.error_message = workflow.error_message
+        run.finished_at = workflow.finished_at
+        session.add(run)
 
 
 def _record_worker_service_heartbeat(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +42,7 @@ def _write_provider_snapshot(
     selected_sources: list[str],
     cve_ids: list[str],
     cache_only: bool,
+    before_publication: Callable[[], None] | None = None,
 ) -> tuple[Any, dict[str, Any]]:
     snapshot_id = uuid.uuid4().hex
     snapshot_root = settings.provider_snapshot_dir_path
@@ -150,6 +152,8 @@ def _write_provider_snapshot(
         }
     )
     try:
+        if before_publication is not None:
+            before_publication()
         snapshot = repository.get_or_create_provider_snapshot(
             content_hash=content_hash,
             nvd_last_sync=_latest_nvd_sync(nvd_results.values()),

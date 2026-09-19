@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from types import MappingProxyType
+
 import pytest
 from pydantic import ValidationError
 
+from app.decision_core.builders import build_run_diagnostics
 from app.decision_core.contracts import (
     ANALYSIS_EVIDENCE_SCHEMA_VERSION,
     FINDING_DECISION_EVIDENCE_SCHEMA_VERSION,
@@ -182,3 +185,167 @@ def test_run_diagnostics_v2_is_typed_and_strict() -> None:
                 "legacy_reason": "not allowed",
             }
         )
+
+
+def test_run_diagnostics_builder_preserves_distinct_failures_and_normalizes_lists() -> None:
+    parse_error = {
+        "input_type": "generic-occurrence-csv",
+        "filename": "scan.csv",
+        "message": "Invalid CVE identifier",
+        "error_type": "ImporterParseError",
+        "line": 7,
+        "field": "cve_id",
+        "value": "NOT-A-CVE",
+    }
+    second_parse_error = {
+        "input_type": "trivy",
+        "message": "Missing vulnerability ID",
+        "error_type": "ImporterParseError",
+        "filename": None,
+        "line": None,
+        "field": None,
+        "value": None,
+    }
+    failures = {
+        "analysis_error": {
+            "message": "Provider snapshot unavailable",
+            "stage": "enrich_score_explain",
+            "error_type": "ProviderUnavailable",
+            "filename": "snapshot.json",
+        },
+        "asset_context_error": {
+            "message": "Unknown asset column",
+            "stage": "parse_asset_context",
+            "error_type": "AssetContextParseError",
+            "filename": "assets.csv",
+        },
+        "vex_error": {
+            "message": "Invalid VEX document",
+            "stage": "parse_vex",
+            "error_type": "VexParseError",
+            "filename": "statement.json",
+        },
+    }
+    diagnostics = build_run_diagnostics(
+        MappingProxyType(
+            {
+                "stage": "parse_upload",
+                "message": "Import failed",
+                "error_type": "ImportServiceError",
+                "parse_errors": [parse_error, None, "invalid entry", second_parse_error],
+                **failures,
+                "warnings": ["", None, "Cached data", 0, "Partial context", "Cached data"],
+                "analysis_run_id": "run-1",
+                "ignored_lines": 2,
+            }
+        )
+    )
+
+    assert diagnostics.model_dump() == {
+        "schema_version": RUN_DIAGNOSTICS_SCHEMA_VERSION,
+        "stage": "parse_upload",
+        "message": "Import failed",
+        "error_type": "ImportServiceError",
+        "parse_errors": [parse_error, second_parse_error],
+        **failures,
+        "warnings": ["Cached data", "Partial context", "Cached data"],
+    }
+    assert diagnostics.to_jsonable()["parse_errors"][1] == {
+        "input_type": "trivy",
+        "message": "Missing vulnerability ID",
+        "error_type": "ImporterParseError",
+    }
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        None,
+        {},
+        {
+            "stage": None,
+            "message": None,
+            "error_type": None,
+            "parse_errors": None,
+            "analysis_error": None,
+            "asset_context_error": {},
+            "vex_error": None,
+            "warnings": None,
+        },
+        {
+            "stage": "",
+            "message": 42,
+            "error_type": [],
+            "parse_errors": "not a list",
+            "analysis_error": [],
+            "asset_context_error": "not a mapping",
+            "vex_error": False,
+            "warnings": "not a list",
+        },
+    ],
+    ids=["absent", "empty", "null-fields", "non-diagnostic-values"],
+)
+def test_run_diagnostics_builder_defaults_do_not_fabricate_failures(
+    payload: dict[str, object] | None,
+) -> None:
+    diagnostics = build_run_diagnostics(payload)
+
+    assert diagnostics.model_dump() == {
+        "schema_version": RUN_DIAGNOSTICS_SCHEMA_VERSION,
+        "stage": None,
+        "message": None,
+        "error_type": None,
+        "parse_errors": [],
+        "analysis_error": None,
+        "asset_context_error": None,
+        "vex_error": None,
+        "warnings": [],
+    }
+    assert diagnostics.to_jsonable() == {
+        "schema_version": RUN_DIAGNOSTICS_SCHEMA_VERSION,
+        "parse_errors": [],
+        "warnings": [],
+    }
+
+
+@pytest.mark.parametrize("failure_field", ["analysis_error", "asset_context_error", "vex_error"])
+@pytest.mark.parametrize(
+    "failure, error_field, error_type",
+    [
+        ({"message": "Failure without a stage"}, "stage", "missing"),
+        (
+            {"message": "Failure", "stage": "parse_upload", "legacy_detail": "not allowed"},
+            "legacy_detail",
+            "extra_forbidden",
+        ),
+    ],
+)
+def test_run_diagnostics_builder_rejects_invalid_structured_failures(
+    failure_field: str, failure: dict[str, str], error_field: str, error_type: str
+) -> None:
+    with pytest.raises(ValidationError) as captured:
+        build_run_diagnostics({failure_field: failure})
+
+    assert [(error["loc"], error["type"]) for error in captured.value.errors()] == [
+        ((error_field,), error_type)
+    ]
+
+
+def test_run_diagnostics_builder_rejects_invalid_parse_error_records() -> None:
+    with pytest.raises(ValidationError) as captured:
+        build_run_diagnostics(
+            {
+                "parse_errors": [
+                    {
+                        "input_type": "trivy",
+                        "message": "Invalid JSON",
+                        "error_type": "ImporterParseError",
+                        "line": "not a line number",
+                    }
+                ]
+            }
+        )
+
+    assert [(error["loc"], error["type"]) for error in captured.value.errors()] == [
+        (("line",), "int_parsing")
+    ]

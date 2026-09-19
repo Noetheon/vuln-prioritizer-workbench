@@ -54,14 +54,22 @@ def main(argv: list[str]) -> int:
         print(f"No mutmut metadata found under {mutants_dir}", file=sys.stderr)
         return 1
 
+    unmatched_patterns = [
+        pattern
+        for pattern in patterns
+        if not any(fnmatch.fnmatchcase(name, pattern) for name in exit_codes)
+    ]
+    if unmatched_patterns:
+        print("Mutation gate has no results for configured patterns:", file=sys.stderr)
+        for pattern in unmatched_patterns:
+            print(f"  {pattern}", file=sys.stderr)
+        return 1
+
     selected = {
         name: exit_code
         for name, exit_code in exit_codes.items()
-        if any(fnmatch.fnmatch(name, pattern) for pattern in patterns)
+        if any(fnmatch.fnmatchcase(name, pattern) for pattern in patterns)
     }
-    if not selected:
-        print("No mutants matched the configured mutation-check patterns.", file=sys.stderr)
-        return 1
 
     counts = Counter(_mutant_status(code) for code in selected.values())
     failures = {

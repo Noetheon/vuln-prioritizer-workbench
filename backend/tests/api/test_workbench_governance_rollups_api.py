@@ -14,6 +14,7 @@ from utils.workbench_env import (
 )
 
 from app.models.base import get_datetime_utc
+from app.services.decision_projection_sync import DecisionProjectionService
 
 
 def test_vpw067_governance_rollups_count_owner_service_environment_and_waiver_debt(
@@ -271,7 +272,7 @@ def _seed_vpw067_governance_graph(
                 approval_ref="CAB-067-B",
             ),
         )
-        waiver_repo.sync_project_waivers(project_id)
+        DecisionProjectionService(session).sync_project_waivers(project_id)
         session.commit()
 
 

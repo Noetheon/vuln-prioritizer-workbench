@@ -1,6 +1,16 @@
-import { Link } from "@/lib/router"
 import { ShieldCheck } from "lucide-react"
 import type { FindingDetailPublic, FindingPublic } from "@/api-client"
+import {
+  attackConfidenceLabel,
+  attackTacticsLabel,
+  compactFindingText,
+  type FindingAttackContext,
+  type FindingDetailRow,
+  type FindingOccurrenceRow,
+  findingRecommendedActionParts,
+  findingSlaLabel,
+  uniqueFindingDataQualityRows,
+} from "@/components/finding-detail/finding-detail-model"
 import { Button } from "@/components/ui/button"
 import {
   Callout,
@@ -11,17 +21,7 @@ import {
   StatusLozenge,
   VpwBadge,
 } from "@/components/vpw"
-import {
-  attackConfidenceLabel,
-  attackTacticsLabel,
-  findingSlaLabel,
-  compactFindingText,
-  findingRecommendedActionParts,
-  type FindingAttackContext,
-  type FindingDetailRow,
-  type FindingOccurrenceRow,
-  uniqueFindingDataQualityRows,
-} from "@/components/finding-detail/finding-detail-model"
+import { Link } from "@/lib/router"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 import type { ProjectUrlSearch } from "@/workbench/selected-project-search"
 import {
@@ -73,8 +73,7 @@ function signalItems(finding: QuickViewFinding) {
           tone: "warning" as const,
         }
       : null,
-    finding.cvss_base_score !== null &&
-    finding.cvss_base_score !== undefined
+    finding.cvss_base_score !== null && finding.cvss_base_score !== undefined
       ? {
           detail: "Impact severity score from vulnerability provider data.",
           label: `CVSS ${cvssText(finding)}`,
@@ -174,7 +173,7 @@ export function QuickViewDecisionSummary({
     { label: "Owner", value: optionalText(finding.owner) },
     { label: "Service", value: optionalText(finding.business_service) },
     { label: "Asset", value: drawerAssetLabel(finding) },
-    { label: "SLA", value: findingSlaLabel(finding.priority) },
+    { label: "SLA", value: findingSlaLabel(finding) },
   ]
 
   return (
@@ -283,7 +282,10 @@ export function QuickViewOccurrencesPreview({
   occurrences: readonly FindingOccurrenceRow[]
 }) {
   return (
-    <section aria-label="Occurrences preview" className="finding-drawer-section">
+    <section
+      aria-label="Occurrences preview"
+      className="finding-drawer-section"
+    >
       <h3>Affected scope</h3>
       {occurrences.length > 0 ? (
         <DefinitionList

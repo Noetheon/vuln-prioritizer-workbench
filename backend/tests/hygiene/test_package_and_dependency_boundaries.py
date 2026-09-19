@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from configparser import ConfigParser
 
 from utils.hygiene import REPO_ROOT, ROOT
 
@@ -66,13 +67,20 @@ def test_frontend_npm_engine_policy_is_enforced_for_local_and_ci_commands() -> N
         path.read_text(encoding="utf-8")
         for path in sorted((REPO_ROOT / ".github" / "workflows").glob("*.yml"))
     )
+    npmrc = ConfigParser()
+    npmrc.read_string("[npm]\n" + (REPO_ROOT / ".npmrc").read_text(encoding="utf-8"))
+    frontend_dockerfile = (REPO_ROOT / "frontend" / "Dockerfile").read_text(encoding="utf-8")
+    client_generator = (REPO_ROOT / "scripts" / "generate-client.sh").read_text(encoding="utf-8")
 
     assert (REPO_ROOT / ".nvmrc").read_text(encoding="utf-8").strip() == "22"
-    assert (REPO_ROOT / ".npmrc").read_text(encoding="utf-8").strip() == "engine-strict=true"
+    # GitHub's managed resolver may generate candidate locks with a newer
+    # toolchain; every supported install/build entry point still validates them.
+    assert npmrc.getboolean("npm", "engine-strict") is False
     assert not (REPO_ROOT / "frontend" / ".npmrc").exists()
     assert root_package["engines"] == {"node": ">=22 <23", "npm": ">=10.9 <11"}
     assert frontend_package["engines"] == {"node": ">=22 <23", "npm": ">=10.9 <11"}
     assert "NPM ?= scripts/frontend-npm.sh" in makefile
+    assert "FRONTEND_NPM_ENGINE_STRICT ?= true" in makefile
     frontend_npm_command = (
         "FRONTEND_NPM := $(NPM) --prefix frontend --workspaces=false "
         "--engine-strict=$(FRONTEND_NPM_ENGINE_STRICT)"
@@ -86,6 +94,11 @@ def test_frontend_npm_engine_policy_is_enforced_for_local_and_ci_commands() -> N
         if "frontend" in command and "generate-client" not in command
     )
     assert 'node-version: "22"' in workflow_sources
+    assert "FROM node:22-alpine@sha256:" in frontend_dockerfile
+    assert "npm ci --workspaces=false --engine-strict=true" in frontend_dockerfile
+    assert "npm --workspaces=false --engine-strict=true run build" in frontend_dockerfile
+    assert 'engine_strict="${FRONTEND_NPM_ENGINE_STRICT:-true}"' in client_generator
+    assert '--engine-strict="$engine_strict" run generate-client' in client_generator
     assert (
         "scripts/frontend-npm.sh --prefix frontend --workspaces=false --engine-strict=true"
         in workflow_sources

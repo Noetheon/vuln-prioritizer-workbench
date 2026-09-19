@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from datetime import datetime, timedelta
 from typing import Any
 
+from sqlalchemy import update
 from sqlmodel import Session, col, func, select
 
 from app.domain.engine.security_redaction import redact_value
@@ -18,6 +19,10 @@ from app.models import (
     WorkflowRunStatus,
 )
 from app.models.base import get_datetime_utc
+
+
+class WorkflowLeaseLostError(RuntimeError):
+    """Raised when an expired or superseded worker attempts to publish work."""
 
 
 def _public_payload(payload: dict[str, Any] | None) -> dict[str, Any]:
@@ -486,21 +491,34 @@ class WorkflowRepository:
         )
         if self.session.bind is not None and self.session.bind.dialect.name == "postgresql":
             statement = statement.with_for_update(skip_locked=True)
-        workflows = list(self.session.exec(statement).all())
+        candidates = list(self.session.exec(statement).all())
+        workflows: list[WorkflowRun] = []
         lease_expires_at = ready_at + timedelta(seconds=max(1, lease_seconds))
-        for workflow in workflows:
-            workflow.status = WorkflowRunStatus.RUNNING
-            workflow.attempt_count += 1
-            workflow.locked_by = worker_id
-            workflow.locked_at = ready_at
-            workflow.lease_expires_at = lease_expires_at
-            workflow.last_heartbeat_at = ready_at
-            workflow.attempt_started_at = ready_at
-            workflow.started_at = workflow.started_at or ready_at
-            workflow.updated_at = ready_at
-            workflow.current_stage = workflow.current_stage or "claimed"
-            self.session.add(workflow)
-            self.session.flush()
+        for workflow in candidates:
+            claimed = self.session.connection().execute(
+                update(WorkflowRun)
+                .where(
+                    col(WorkflowRun.id) == workflow.id,
+                    col(WorkflowRun.status) == WorkflowRunStatus.PENDING,
+                    col(WorkflowRun.cancellation_requested).is_(False),
+                )
+                .values(
+                    status=WorkflowRunStatus.RUNNING,
+                    attempt_count=col(WorkflowRun.attempt_count) + 1,
+                    locked_by=worker_id,
+                    locked_at=ready_at,
+                    lease_expires_at=lease_expires_at,
+                    last_heartbeat_at=ready_at,
+                    attempt_started_at=ready_at,
+                    started_at=workflow.started_at or ready_at,
+                    updated_at=ready_at,
+                    current_stage=workflow.current_stage or "claimed",
+                )
+            )
+            if claimed.rowcount != 1:
+                continue
+            self.session.refresh(workflow)
+            workflows.append(workflow)
             self.record_event(
                 workflow.id,
                 event_type=WorkflowEventType.STAGE,
@@ -518,18 +536,78 @@ class WorkflowRepository:
         worker_id: str,
         lease_seconds: int,
         now: datetime | None = None,
+        attempt_count: int | None = None,
     ) -> WorkflowRun:
-        """Extend the active worker lease if the same worker still owns it."""
-        workflow = self.require_workflow(workflow_id)
-        if workflow.locked_by != worker_id:
-            raise RuntimeError("Workflow is not locked by this worker.")
+        """Renew only a still-live claim; the attempt number fences worker reuse."""
         timestamp = now or get_datetime_utc()
-        workflow.last_heartbeat_at = timestamp
-        workflow.lease_expires_at = timestamp + timedelta(seconds=max(1, lease_seconds))
-        workflow.updated_at = timestamp
-        self.session.add(workflow)
-        self.session.flush()
+        conditions: list[Any] = [
+            col(WorkflowRun.id) == workflow_id,
+            WorkflowRun.status == WorkflowRunStatus.RUNNING,
+            WorkflowRun.locked_by == worker_id,
+            col(WorkflowRun.lease_expires_at) > timestamp,
+        ]
+        if attempt_count is not None:
+            conditions.append(WorkflowRun.attempt_count == attempt_count)
+        result = self.session.connection().execute(
+            update(WorkflowRun)
+            .where(*conditions)
+            .values(
+                last_heartbeat_at=timestamp,
+                lease_expires_at=timestamp + timedelta(seconds=max(1, lease_seconds)),
+                updated_at=timestamp,
+            )
+        )
+        if result.rowcount != 1:
+            raise WorkflowLeaseLostError("Workflow claim expired or belongs to another attempt.")
+        workflow = self.require_workflow(workflow_id)
+        self.session.refresh(workflow, attribute_names=["last_heartbeat_at", "lease_expires_at"])
         return workflow
+
+    def lock_workflow_control(
+        self,
+        workflow_id: uuid.UUID,
+        *,
+        worker_id: str | None = None,
+        attempt_count: int | None = None,
+    ) -> WorkflowRun:
+        """Serialize publication/cancellation and validate the active worker fence."""
+        conditions: list[Any] = [col(WorkflowRun.id) == workflow_id]
+        if worker_id is not None:
+            conditions.extend(
+                (
+                    WorkflowRun.status == WorkflowRunStatus.RUNNING,
+                    WorkflowRun.locked_by == worker_id,
+                    WorkflowRun.attempt_count == attempt_count,
+                    col(WorkflowRun.lease_expires_at) > get_datetime_utc(),
+                )
+            )
+        result = self.session.connection().execute(
+            update(WorkflowRun).where(*conditions).values(updated_at=col(WorkflowRun.updated_at))
+        )
+        if result.rowcount != 1:
+            raise WorkflowLeaseLostError("Workflow claim expired or belongs to another attempt.")
+        workflow = self.require_workflow(workflow_id)
+        self.session.refresh(
+            workflow,
+            attribute_names=[
+                "status",
+                "locked_by",
+                "attempt_count",
+                "lease_expires_at",
+                "cancellation_requested",
+                "cancel_requested_at",
+            ],
+        )
+        return workflow
+
+    def cancellation_is_requested(self, workflow_id: uuid.UUID) -> bool:
+        """Read cancellation from the database, bypassing the ORM identity cache."""
+        with self.session.no_autoflush:
+            return bool(
+                self.session.exec(
+                    select(WorkflowRun.cancellation_requested).where(WorkflowRun.id == workflow_id)
+                ).one()
+            )
 
     def request_cancel(
         self,
@@ -538,7 +616,7 @@ class WorkflowRepository:
         message: str | None = None,
     ) -> WorkflowRun:
         """Request cooperative cancellation or cancel a pending workflow immediately."""
-        workflow = self.require_workflow(workflow_id)
+        workflow = self.lock_workflow_control(workflow_id)
         if _is_terminal_status(workflow.status):
             return workflow
         timestamp = get_datetime_utc()
@@ -573,7 +651,7 @@ class WorkflowRepository:
         message: str = "Workflow cancelled.",
     ) -> WorkflowRun | None:
         """Finish a workflow as cancelled when a cooperative cancel was requested."""
-        workflow = self.require_workflow(workflow_id)
+        workflow = self.lock_workflow_control(workflow_id)
         if not workflow.cancellation_requested or _is_terminal_status(workflow.status):
             return None
         return self.finish_workflow(
@@ -664,6 +742,19 @@ class WorkflowRepository:
         expired = list(self.session.exec(statement).all())
         released: list[WorkflowRun] = []
         for workflow in expired:
+            expired_claim = self.session.connection().execute(
+                update(WorkflowRun)
+                .where(
+                    col(WorkflowRun.id) == workflow.id,
+                    col(WorkflowRun.status) == WorkflowRunStatus.RUNNING,
+                    col(WorkflowRun.attempt_count) == workflow.attempt_count,
+                    col(WorkflowRun.lease_expires_at) <= timestamp,
+                )
+                .values(updated_at=col(WorkflowRun.updated_at))
+            )
+            if expired_claim.rowcount != 1:
+                continue
+            self.session.refresh(workflow)
             released.append(
                 self.schedule_retry_or_fail(
                     workflow.id,
@@ -683,7 +774,7 @@ class WorkflowRepository:
     ) -> WorkflowRun:
         """Create a new queued workflow using a previous workflow payload."""
         workflow = self.require_workflow(workflow_id)
-        return self.create_workflow_run(
+        retry = self.create_workflow_run(
             kind=workflow.kind,
             title=workflow.title,
             handler=workflow.handler,
@@ -704,6 +795,12 @@ class WorkflowRepository:
             max_retries=workflow.max_retries,
             max_attempts=workflow.max_attempts,
         )
+        # Import replay reads its immutable managed uploads from this reference.
+        # The previous attempt's diagnostics and terminal state remain separate.
+        retry.result_ref_json = _public_payload(workflow.result_ref_json)
+        self.session.add(retry)
+        self.session.flush()
+        return retry
 
     def require_workflow(self, workflow_id: uuid.UUID) -> WorkflowRun:
         """Return a workflow or raise ``LookupError``."""

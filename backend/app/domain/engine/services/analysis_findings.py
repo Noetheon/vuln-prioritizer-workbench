@@ -44,12 +44,10 @@ def validate_requested_attack_mode(
     )
 
 
-def build_findings(
+def enrich_analysis_inputs(
     cve_ids: list[str],
     *,
-    policy: PriorityPolicy,
     parsed_input: ParsedInput,
-    context_profile: ContextPolicyProfile,
     attack_enabled: bool,
     attack_source: str,
     attack_mapping_file: Path | None,
@@ -63,8 +61,8 @@ def build_findings(
     cache_ttl_hours: int,
     provider_snapshot: ProviderSnapshotReport | None = None,
     locked_provider_data: bool = False,
-) -> tuple[list[PrioritizedFinding], dict[str, int], EnrichmentResult]:
-    """Build enriched, prioritized findings from parsed CVE input."""
+) -> EnrichmentResult:
+    """Collect provider and defensive facts without evaluating priority or scope."""
     validate_requested_attack_mode(
         attack_enabled=attack_enabled,
         attack_source=attack_source,
@@ -107,6 +105,47 @@ def build_findings(
         str(defensive_context_file) if defensive_context_file else None
     )
     enrichment.warnings.extend(defensive_context_result.warnings)
+    return enrichment
+
+
+def build_findings(
+    cve_ids: list[str],
+    *,
+    policy: PriorityPolicy,
+    parsed_input: ParsedInput,
+    context_profile: ContextPolicyProfile,
+    attack_enabled: bool,
+    attack_source: str,
+    attack_mapping_file: Path | None,
+    attack_technique_metadata_file: Path | None,
+    offline_kev_file: Path | None,
+    offline_attack_file: Path | None,
+    defensive_context_file: Path | None,
+    nvd_api_key_env: str,
+    no_cache: bool,
+    cache_dir: Path,
+    cache_ttl_hours: int,
+    provider_snapshot: ProviderSnapshotReport | None = None,
+    locked_provider_data: bool = False,
+) -> tuple[list[PrioritizedFinding], dict[str, int], EnrichmentResult]:
+    """Build enriched, prioritized findings from parsed CVE input."""
+    enrichment = enrich_analysis_inputs(
+        cve_ids,
+        parsed_input=parsed_input,
+        attack_enabled=attack_enabled,
+        attack_source=attack_source,
+        attack_mapping_file=attack_mapping_file,
+        attack_technique_metadata_file=attack_technique_metadata_file,
+        offline_kev_file=offline_kev_file,
+        offline_attack_file=offline_attack_file,
+        defensive_context_file=defensive_context_file,
+        nvd_api_key_env=nvd_api_key_env,
+        no_cache=no_cache,
+        cache_dir=cache_dir,
+        cache_ttl_hours=cache_ttl_hours,
+        provider_snapshot=provider_snapshot,
+        locked_provider_data=locked_provider_data,
+    )
     provenance_by_cve = aggregate_provenance(parsed_input.unique_cves, parsed_input.occurrences)
 
     prioritizer = PrioritizationService(policy=policy)

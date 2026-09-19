@@ -35,9 +35,19 @@ A source record that is older than the current projection cannot move current
 state backwards. Repeating the same source is idempotent and must preserve the
 same canonical hash.
 
-Status changes, waiver synchronization, and asset-driven lifecycle updates
-mutate the current projection only. They increment `revision` and
-`lifecycle_revision`; they do not alter the source payload or its hash.
+Manual status changes and stale-context markers update the current lifecycle
+overlay and its revision counters. Complete asset recalculation, effective waiver
+changes/expiry and explicitly queued reevaluations append new immutable decision
+revisions when canonical inputs are available, then advance the current source.
+Neither path rewrites an older source payload or its hash. Legacy rows without
+replay inputs keep the explicit compatibility path and cannot claim complete
+recalculation.
+
+New decision sources retain versioned evaluation inputs, their fingerprint and
+separate observed/evaluated timestamps. The project `decision_revision` token
+fences publication against concurrent edits. See
+[Evaluation Revisions](evaluation-revisions.md) for the evaluator, API and
+historical compatibility contract.
 
 The projection intentionally does not store a second copy of the full finding
 payload. The effective current contract is reconstructed from the immutable

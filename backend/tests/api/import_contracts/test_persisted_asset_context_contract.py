@@ -1257,3 +1257,90 @@ def _asset_context_csv(
 def _has_asset_rescore_flag(finding: dict[str, Any]) -> bool:
     flags = finding["evidence"]["priority_evidence"]["data_quality_flags"]
     return any(flag.get("code") == "asset_context_rescore_needed" for flag in flags)
+
+
+def test_asset_recalculation_matches_fresh_evaluation_and_appends_immutable_revision(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    configure_upload_dir(workbench_api_env, tmp_path)
+    headers = local_api_headers(workbench_api_env.client)
+    project = create_project_via_api(workbench_api_env.client, headers)
+    _run_import(
+        workbench_api_env,
+        project["id"],
+        headers=headers,
+        asset_context=_asset_context_csv(
+            asset_id=_ASSET_ID,
+            owner="old-owner",
+            service="old-service",
+            criticality="low",
+            exposure="internal",
+            environment="test",
+        ),
+    )
+    before = _only_finding(workbench_api_env, project["id"], headers=headers)
+    with Session(workbench_api_env.engine) as session:
+        row = session.exec(select(workbench_api_env.app_models.FindingDecisionEvidence)).one()
+        immutable_id, immutable_hash = row.id, canonical_payload_sha256(row.payload_json)
+        observed_at = session.get(
+            workbench_api_env.app_models.Finding, uuid.UUID(before["id"])
+        ).last_seen_at
+    patched = workbench_api_env.client.patch(
+        f"/api/v1/assets/{before['asset_id']}",
+        headers=headers,
+        json={
+            "owner": "new-owner",
+            "business_service": "new-service",
+            "criticality": "critical",
+            "exposure": "internet-facing",
+            "environment": "production",
+        },
+    )
+    assert patched.status_code == 200, patched.text
+    recalculated = workbench_api_env.client.post(
+        f"/api/v1/assets/{before['asset_id']}/recalculate",
+        headers=headers,
+    )
+    assert recalculated.status_code == 200, recalculated.text
+    assert recalculated.json()["rescore_needed"] is False
+    after = _only_finding(workbench_api_env, project["id"], headers=headers)
+    comparator = create_project_via_api(workbench_api_env.client, headers)
+    _run_import(
+        workbench_api_env,
+        comparator["id"],
+        headers=headers,
+        asset_context=_asset_context_csv(
+            asset_id=_ASSET_ID,
+            owner="new-owner",
+            service="new-service",
+            criticality="critical",
+            exposure="public",
+            environment="prod",
+        ),
+    )
+    fresh = _only_finding(workbench_api_env, comparator["id"], headers=headers)
+    for field in ("risk_score", "priority", "rationale", "recommended_action"):
+        assert after[field] == fresh[field], field
+    for field in ("context_summary", "context_recommendation", "operational_score_reasons"):
+        assert (
+            after["evidence"]["priority_evidence"]["raw"][field]
+            == fresh["evidence"]["priority_evidence"]["raw"][field]
+        ), field
+    assert "old-owner" not in after["rationale"]
+    with Session(workbench_api_env.engine) as session:
+        old = session.get(workbench_api_env.app_models.FindingDecisionEvidence, immutable_id)
+        assert canonical_payload_sha256(old.payload_json) == immutable_hash
+        finding = session.get(workbench_api_env.app_models.Finding, uuid.UUID(before["id"]))
+        assert finding.last_seen_at == observed_at
+    history = workbench_api_env.client.get(
+        f"/api/v1/findings/{before['id']}/decision-revisions",
+        headers=headers,
+    )
+    assert history.status_code == 200, history.text
+    revisions = history.json()["data"]
+    assert len(revisions) == 2
+    assert revisions[0]["cause"] == "asset_context"
+    assert revisions[0]["replay_status"] == "available"
+    assert revisions[0]["is_current"] is True
+    assert "rationale" in revisions[0]["changed_fields"]

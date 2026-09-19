@@ -3,7 +3,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Column, Date, DateTime
+from sqlalchemy import Column, Date, DateTime, Integer
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.base import get_datetime_utc
@@ -33,6 +33,9 @@ class Project(ProjectBase, table=True):
     __tablename__ = "project"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    decision_revision: int = Field(
+        default=0, sa_column=Column(Integer, nullable=False, server_default="0")
+    )
     created_at: datetime = Field(
         default_factory=get_datetime_utc,
         sa_column=Column(DateTime(timezone=True), nullable=False),

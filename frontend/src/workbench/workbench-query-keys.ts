@@ -29,13 +29,26 @@ export const workbenchQueryKeys = {
     [...workbenchQueryKeys.all, "project-dashboard", projectId] as const,
   findingDetail: (findingId: string | null) =>
     [...workbenchQueryKeys.all, "finding-detail", findingId ?? "none"] as const,
+  findingRevisions: (findingId: string, offset: number) =>
+    [
+      ...workbenchQueryKeys.all,
+      "finding-revisions",
+      findingId,
+      offset,
+    ] as const,
+  projectEvaluations: (projectId: string) =>
+    [...workbenchQueryKeys.all, "project-evaluations", projectId] as const,
   findingsRoot: () => [...workbenchQueryKeys.all, "findings"] as const,
   findings: (params: Record<string, unknown>) =>
     [...workbenchQueryKeys.findingsRoot(), params] as const,
   projectAttackSummary: (projectId: string) =>
     [...workbenchQueryKeys.all, "project-attack-summary", projectId] as const,
   projectGovernanceRollups: (projectId: string) =>
-    [...workbenchQueryKeys.all, "project-governance-rollups", projectId] as const,
+    [
+      ...workbenchQueryKeys.all,
+      "project-governance-rollups",
+      projectId,
+    ] as const,
   projectSummariesRoot: () =>
     [...workbenchQueryKeys.all, "project-summaries"] as const,
   projectRuns: (projectId: string) =>
@@ -96,6 +109,9 @@ export async function invalidateProjectScopedWorkbenchQueries(
     }),
     queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.projectRuns(projectId),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: workbenchQueryKeys.projectEvaluations(projectId),
     }),
     queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.findingsRoot(),

@@ -12,6 +12,7 @@ from typing import Any, Literal, overload
 
 from pydantic import Field
 
+from app.decision_core.evaluation import ScopeEvaluationInput, evaluate_scope_with_diagnostics
 from app.decision_core.identity import finding_scope_parts
 from app.decision_core.ledger import canonical_payload_sha256
 from app.domain.engine.model_base import StrictModel
@@ -30,7 +31,6 @@ from app.domain.engine.models import (
     WaiverRule,
 )
 from app.domain.engine.services.contextualization import (
-    aggregate_provenance,
     load_context_profile,
 )
 from app.domain.engine.services.decision_guidance import DecisionGuidanceService
@@ -133,6 +133,7 @@ class ScopedFindingDecision(StrictModel):
     scope_key: ScopeKey
     decision: PrioritizedFinding
     observation_source_ids: list[str] = Field(default_factory=list)
+    evaluation_input: ScopeEvaluationInput | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -317,14 +318,17 @@ class DecisionGraph:
 
 def build_scoped_decision_graph(
     *,
-    findings_by_cve: Mapping[str, PrioritizedFinding],
+    findings_by_cve: Mapping[str, PrioritizedFinding] | None = None,
+    shared_facts_by_cve: Mapping[str, SharedCveFacts] | None = None,
     occurrences: Sequence[InputOccurrence],
     context: AnalysisContext,
     context_profile: ContextPolicyProfile | None = None,
     waiver_rules: Sequence[WaiverRule] = (),
 ) -> DecisionGraph:
     """Re-evaluate decision semantics after grouping observations by final scope."""
-    baselines = _normalized_baselines(findings_by_cve)
+    if (findings_by_cve is None) == (shared_facts_by_cve is None):
+        raise ValueError("Supply exactly one source of shared CVE facts.")
+    baselines = _normalized_baselines(findings_by_cve or {})
     active_waiver_rules = list(waiver_rules)
     if not active_waiver_rules and any(_has_waiver_state(item) for item in baselines.values()):
         raise ValueError(
@@ -333,11 +337,15 @@ def build_scoped_decision_graph(
         )
     active_context_profile = context_profile or _context_profile_from_context(context)
     waiver_evaluation_date = _evaluation_date(context)
-    shared_facts = {
-        cve_id: _shared_facts(baseline) for cve_id, baseline in sorted(baselines.items())
-    }
+    shared_facts = (
+        dict(shared_facts_by_cve)
+        if shared_facts_by_cve is not None
+        else {cve_id: _shared_facts(baseline) for cve_id, baseline in sorted(baselines.items())}
+    )
+    if any(key != facts.cve_id for key, facts in shared_facts.items()):
+        raise ValueError("Shared fact key must equal the CVE identity.")
     grouped = _group_occurrences_by_scope(
-        baselines=baselines,
+        cve_ids=set(shared_facts),
         occurrences=occurrences,
     )
     prioritizer = PrioritizationService(policy=context.priority_policy)
@@ -416,19 +424,19 @@ def _normalized_baselines(
 
 def _group_occurrences_by_scope(
     *,
-    baselines: Mapping[str, PrioritizedFinding],
+    cve_ids: set[str],
     occurrences: Sequence[InputOccurrence],
 ) -> dict[ScopeKey, list[InputOccurrence]]:
     grouped: defaultdict[ScopeKey, list[InputOccurrence]] = defaultdict(list)
     seen_cves: set[str] = set()
     for occurrence in _sorted_occurrences(occurrences):
         scope_key = ScopeKey.from_occurrence(occurrence)
-        if scope_key.cve_id not in baselines:
+        if scope_key.cve_id not in cve_ids:
             raise ValueError(f"Occurrence scope {scope_key.cve_id} has no shared decision facts.")
         grouped[scope_key].append(occurrence)
         seen_cves.add(scope_key.cve_id)
 
-    for cve_id in sorted(set(baselines) - seen_cves):
+    for cve_id in sorted(cve_ids - seen_cves):
         synthetic = InputOccurrence(cve_id=cve_id)
         grouped[ScopeKey.from_occurrence(synthetic)].append(synthetic)
     return dict(grouped)
@@ -444,32 +452,20 @@ def _evaluate_scope(
     waiver_rules: list[WaiverRule],
     waiver_evaluation_date: date,
 ) -> tuple[ScopedFindingDecision, list[str], set[str]]:
-    cve_id = scope_key.cve_id
-    provenance = aggregate_provenance([cve_id], occurrences)[cve_id]
-    provider = shared_facts.provider_evidence
-    decisions, _ = prioritizer.prioritize(
-        [cve_id],
-        nvd_data={cve_id: provider.nvd},
-        epss_data={cve_id: provider.epss},
-        kev_data={cve_id: provider.kev},
-        attack_data={cve_id: shared_facts.attack_data},
-        provenance_by_cve={cve_id: provenance},
+    inputs = ScopeEvaluationInput(
+        cve_id=scope_key.cve_id,
+        observations=occurrences,
+        provider_evidence=shared_facts.provider_evidence,
+        attack_data=shared_facts.attack_data,
+        priority_policy=prioritizer.policy,
         context_profile=context_profile,
+        waiver_rules=waiver_rules,
+        evaluation_date=waiver_evaluation_date,
+        data_quality_flags=shared_facts.data_quality_flags,
+        data_quality_confidence=shared_facts.data_quality_confidence,
+        defensive_contexts=shared_facts.defensive_contexts,
     )
-    decision = decisions[0]
-    scoped_provider = decision.provider_evidence or provider
-    scoped_provider = scoped_provider.model_copy(
-        update={"defensive_contexts": list(shared_facts.defensive_contexts)}
-    )
-    decision = decision.model_copy(
-        update={
-            "provider_evidence": scoped_provider,
-            "defensive_contexts": list(shared_facts.defensive_contexts),
-            "data_quality_flags": list(shared_facts.data_quality_flags),
-            "data_quality_confidence": shared_facts.data_quality_confidence,
-        }
-    )
-    waiver_warnings: list[str] = []
+    decision, waiver_warnings = evaluate_scope_with_diagnostics(inputs)
     matched_labels: set[str] = set()
     if waiver_rules:
         matched_labels = {
@@ -477,18 +473,11 @@ def _evaluate_scope(
             for rule in waiver_rules
             if waiver_matches_finding(rule, decision)
         }
-        scoped_with_waivers, waiver_warnings = apply_waivers(
-            [decision],
-            waiver_rules,
-            today=waiver_evaluation_date,
-            include_unmatched_warnings=False,
-        )
-        decision = scoped_with_waivers[0]
-    decision = prioritizer.assign_operational_ranks([decision])[0]
     return (
         ScopedFindingDecision(
             scope_key=scope_key,
             decision=decision,
+            evaluation_input=inputs,
             observation_source_ids=sorted(
                 {occurrence.source_id for occurrence in occurrences if occurrence.source_id}
             ),

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import uuid
-from datetime import timedelta
+from copy import deepcopy
+from datetime import date, timedelta
 
 import pytest
+from pydantic import ValidationError
 from sqlmodel import Session, select
 from utils.workbench_env import (
     WorkbenchApiEnv,
@@ -16,8 +18,13 @@ from utils.workbench_env import (
     seed_finding_pair,
 )
 
-from app.decision_core.ledger import DecisionLedgerInvariantError
+from app.decision_core.contracts import FindingDecisionEvidenceV2
+from app.decision_core.ledger import DecisionLedgerInvariantError, canonical_payload_sha256
 from app.models import FindingCurrentProjection, FindingDecisionEvidence
+from app.repositories.current_projections import (
+    _apply_top_level_overlay,
+    _effective_projection_payload,
+)
 from app.services.risk_reduction import project_risk_index, project_risk_index_from_projection
 
 
@@ -106,6 +113,232 @@ def test_decision_ledger_rejects_denormalized_history_column_drift(
                 analysis_run_id=source.analysis_run_id,
                 evidence_items=[contract],
             )
+
+
+def test_decision_ledger_nested_overlay_preserves_nulls_and_isolates_history_and_callers(
+    workbench_api_env: WorkbenchApiEnv,
+) -> None:
+    finding_id = _seed_decision_ledger(workbench_api_env)[0]
+
+    with Session(workbench_api_env.engine) as session:
+        repository = workbench_api_env.repositories.FindingCurrentProjectionRepository(session)
+        projection = repository.get_record(finding_id)
+        assert projection is not None
+        source = session.get(FindingDecisionEvidence, projection.source_finding_evidence_id)
+        assert source is not None
+        original_source = deepcopy(source.payload_json)
+        original_hash = projection.source_payload_sha256
+        payload = repository.current_payload(finding_id)
+        assert payload is not None
+        replacement = {"nested": {"replacement": [None, {"value": "new"}]}}
+        assert payload["priority_evidence"]["raw"] != replacement
+        payload["priority_evidence"]["raw"] = deepcopy(replacement)
+        expected = deepcopy(payload)
+
+        repository.update_current_payload(finding_id, payload)
+        payload["priority_evidence"]["raw"]["nested"]["replacement"][1]["value"] = "caller mutation"
+
+        assert projection.lifecycle_overlay_json["priority_evidence"]["raw"] == replacement
+        assert projection.source_payload_sha256 == original_hash
+        assert projection.projection_payload_sha256 == canonical_payload_sha256(expected)
+        assert source.payload_json == original_source
+        session.commit()
+        session.refresh(source)
+        session.refresh(projection)
+        current = repository.current_payload(finding_id)
+        assert current == expected
+        current["priority_evidence"]["raw"]["nested"]["replacement"][1]["value"] = "read mutation"
+        assert repository.current_payload(finding_id) == expected
+        assert source.payload_json == original_source
+        assert repository.verify_source_parity([projection]).matches
+
+
+@pytest.mark.parametrize("clear_mode", ["remove", "explicit_null"])
+def test_decision_ledger_rejects_unrepresentable_top_level_deletion(
+    workbench_api_env: WorkbenchApiEnv, clear_mode: str
+) -> None:
+    finding_id = _seed_decision_ledger(workbench_api_env)[0]
+
+    with Session(workbench_api_env.engine) as session:
+        repository = workbench_api_env.repositories.FindingCurrentProjectionRepository(session)
+        projection = repository.get_record(finding_id)
+        assert projection is not None
+        before = deepcopy(projection.model_dump())
+        payload = repository.current_payload(finding_id)
+        assert payload is not None
+        original = deepcopy(payload)
+        assert payload["risk_score"] is not None
+        if clear_mode == "remove":
+            payload.pop("risk_score")
+        else:
+            payload["risk_score"] = None
+
+        # Normalization omits optional nulls. A sparse replacement overlay must
+        # reject deleting a source key instead of silently keeping its old value.
+        with pytest.raises(DecisionLedgerInvariantError, match="could not reproduce"):
+            repository.update_current_payload(finding_id, payload)
+
+        assert projection.model_dump() == before
+        assert repository.current_payload(finding_id) == original
+        assert repository.verify_source_parity([projection]).matches
+
+
+def test_decision_ledger_overlay_reader_copies_nested_values_and_replaces_top_level_nulls() -> None:
+    source = {"unchanged": {"items": [1]}, "replaced": {"old": [2]}, "cleared": {"old": 3}}
+    overlay = {"replaced": {"new": [None]}, "cleared": None}
+    original_source = deepcopy(source)
+    original_overlay = deepcopy(overlay)
+
+    current = _apply_top_level_overlay(source, overlay)
+
+    assert current == {"unchanged": {"items": [1]}, "replaced": {"new": [None]}, "cleared": None}
+    current["unchanged"]["items"].append(4)
+    current["replaced"]["new"].append(5)
+    assert source == original_source
+    assert overlay == original_overlay
+
+
+def test_decision_ledger_contract_reader_preserves_json_values_and_isolates_nested_graphs(
+    workbench_api_env: WorkbenchApiEnv,
+) -> None:
+    finding_id = _seed_decision_ledger(workbench_api_env)[0]
+
+    with Session(workbench_api_env.engine) as session:
+        repository = workbench_api_env.repositories.FindingCurrentProjectionRepository(session)
+        projection = repository.get_record(finding_id)
+        assert projection is not None
+        source = session.get(FindingDecisionEvidence, projection.source_finding_evidence_id)
+        assert source is not None
+        payload = deepcopy(source.payload_json)
+        payload["remediation"]["raw"] = {"source": {"items": [None, "Größe, 東京, 🛡️\u0000"]}}
+        payload["evaluation_input"] = {
+            "cve_id": source.cve_id,
+            "observations": [{"cve_id": source.cve_id, "fix_versions": ["2.0"]}],
+            "provider_evidence": {
+                name: {"cve_id": source.cve_id} for name in ("nvd", "epss", "kev")
+            },
+            "attack_data": {"cve_id": source.cve_id},
+            "evaluation_date": "2026-09-19",
+        }
+        source.payload_json = FindingDecisionEvidenceV2.model_validate(payload).to_jsonable()
+        projection.lifecycle_overlay_json = {
+            "rationale": "Current decision rationale",
+            "priority_evidence": source.payload_json["priority_evidence"]
+            | {"raw": {"overlay": {"items": [None, 2**256, 0.12345678912345678]}}},
+        }
+        original_source = deepcopy(source.payload_json)
+        original_overlay = deepcopy(projection.lifecycle_overlay_json)
+        expected = FindingDecisionEvidenceV2.model_validate(
+            _effective_projection_payload(projection, source)
+        )
+        projection.source_payload_sha256 = canonical_payload_sha256(source.payload_json)
+        projection.projection_payload_sha256 = canonical_payload_sha256(expected.to_jsonable())
+        projection.rationale = expected.rationale
+        projection.lifecycle_revision = 1
+        projection.revision += 1
+        assert repository.verify_source_parity([projection]).matches
+
+        current = repository.evidence_for_records([projection], source_records={source.id: source})[
+            finding_id
+        ]
+
+        assert current.model_dump() == expected.model_dump()
+        assert current.rationale == "Current decision rationale"
+        assert current.priority_evidence.raw == original_overlay["priority_evidence"]["raw"]
+        assert current.evaluation_input is not None
+        assert current.evaluation_input.evaluation_date == date(2026, 9, 19)
+        current.evaluation_input.observations[0].fix_versions.append("3.0")
+        current.remediation.raw["source"]["items"].append("source mutation")
+        current.priority_evidence.raw["overlay"]["items"].append("overlay mutation")
+
+        again = repository.evidence_for_records([projection], source_records={source.id: source})[
+            finding_id
+        ]
+        assert again.model_dump() == expected.model_dump()
+        assert source.payload_json == original_source
+        assert projection.lifecycle_overlay_json == original_overlay
+
+
+def test_decision_ledger_contract_reader_retains_deep_persistable_raw_evidence(
+    workbench_api_env: WorkbenchApiEnv,
+) -> None:
+    finding_id = _seed_decision_ledger(workbench_api_env)[0]
+
+    with Session(workbench_api_env.engine) as session:
+        repository = workbench_api_env.repositories.FindingCurrentProjectionRepository(session)
+        projection = repository.get_record(finding_id)
+        assert projection is not None
+        source = session.get(FindingDecisionEvidence, projection.source_finding_evidence_id)
+        assert source is not None
+        nested: dict[str, object] = {"items": [None, "deep evidence"]}
+        for _ in range(199):
+            nested = {"nested": nested}
+        payload = deepcopy(source.payload_json)
+        payload["priority_evidence"]["raw"] = nested
+        persisted = FindingDecisionEvidenceV2.model_validate(payload).to_jsonable()
+        source.payload_json = persisted
+        original_hash = canonical_payload_sha256(source.payload_json)
+        projection.source_payload_sha256 = original_hash
+        projection.projection_payload_sha256 = original_hash
+        session.add(source)
+        session.add(projection)
+        session.flush()
+        session.refresh(source)
+        session.refresh(projection)
+        assert source.payload_json == persisted
+        assert repository.verify_source_parity([projection]).matches
+
+        current = repository.evidence_for_records([projection], source_records={source.id: source})[
+            finding_id
+        ]
+
+        assert current.to_jsonable() == persisted
+        current.priority_evidence.raw["nested"]["reader mutation"] = True
+        assert canonical_payload_sha256(source.payload_json) == original_hash
+
+
+@pytest.mark.parametrize("invalid_field", ["risk_score", "unknown_field"])
+def test_decision_ledger_contract_reader_still_rejects_invalid_overlay_fields(
+    workbench_api_env: WorkbenchApiEnv, invalid_field: str
+) -> None:
+    finding_id = _seed_decision_ledger(workbench_api_env)[0]
+
+    with Session(workbench_api_env.engine) as session:
+        repository = workbench_api_env.repositories.FindingCurrentProjectionRepository(session)
+        projection = repository.get_record(finding_id)
+        assert projection is not None
+        source = session.get(FindingDecisionEvidence, projection.source_finding_evidence_id)
+        assert source is not None
+        projection.lifecycle_overlay_json = {invalid_field: {"invalid": [None]}}
+
+        with pytest.raises(ValidationError) as old_error:
+            FindingDecisionEvidenceV2.model_validate(
+                _effective_projection_payload(projection, source)
+            )
+        with pytest.raises(ValidationError) as current_error:
+            repository.evidence_for_records([projection], source_records={source.id: source})
+
+        assert current_error.value.errors() == old_error.value.errors()
+
+
+@pytest.mark.parametrize("identity", ["finding_id", "project_id", "analysis_run_id"])
+def test_decision_ledger_both_readers_reject_mismatched_source_identity(
+    workbench_api_env: WorkbenchApiEnv, identity: str
+) -> None:
+    finding_id = _seed_decision_ledger(workbench_api_env)[0]
+
+    with Session(workbench_api_env.engine) as session:
+        repository = workbench_api_env.repositories.FindingCurrentProjectionRepository(session)
+        projection = repository.get_record(finding_id)
+        assert projection is not None
+        source = session.get(FindingDecisionEvidence, projection.source_finding_evidence_id)
+        assert source is not None
+        setattr(source, identity, uuid.uuid4())
+
+        with pytest.raises(ValueError, match="identity mismatch"):
+            _effective_projection_payload(projection, source)
+        with pytest.raises(ValueError, match="identity mismatch"):
+            repository.evidence_for_records([projection], source_records={source.id: source})
 
 
 def test_decision_ledger_rejects_cross_envelope_contract_identity(

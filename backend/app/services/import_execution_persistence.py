@@ -65,6 +65,7 @@ from app.services.import_execution_persistence_payloads import (
     _decision_priority,
     _decision_provider_json,
     _decision_published,
+    _evaluation_input_for_occurrence,
     _finding_status_for_occurrence,
     _jsonable_model,
     _priority_state_for_occurrence,
@@ -781,9 +782,20 @@ def _persist_workbench_occurrences(
                     provider_payload=_decision_provider_json(decision),
                     occurrence_scope=occurrence_scope,
                     occurrence_evidence=[occurrence_evidence],
+                    evaluation_input=_evaluation_input_for_occurrence(analysis_result, occurrence),
+                    evaluated_at=analysis_result.context.generated_at,
+                    provider_snapshot_id=str(analysis_result.provider_snapshot_id)
+                    if analysis_result.provider_snapshot_id
+                    else None,
+                    provider_snapshot_hash=analysis_result.provider_snapshot_hash,
+                    provider_snapshot_file=analysis_result.provider_snapshot_file,
+                    locked_provider_data=analysis_result.locked_provider_data,
+                    observed_at=finding.last_seen_at.isoformat(),
                 )
             else:
                 existing_evidence.occurrences.append(occurrence_evidence)
+                if existing_evidence.evaluation is not None:
+                    existing_evidence.evaluation.observed_at = finding.last_seen_at.isoformat()
             if len(decisions) < DEDUP_DECISION_SAMPLE_LIMIT:
                 decisions.append(
                     {

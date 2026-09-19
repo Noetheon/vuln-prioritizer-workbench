@@ -113,7 +113,7 @@ export function FindingsMobileCards({
                   {formatShortDate(finding.last_seen_at)}
                 </small>
                 <div className="finding-meta-tags">
-                  <MetaTag label={findingSlaLabel(finding.priority)} />
+                  <MetaTag label={findingSlaLabel(finding)} />
                 </div>
               </div>
             </div>
