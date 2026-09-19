@@ -17,11 +17,9 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "types": ["vite/client"],
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    },
-    "ignoreDeprecations": "6.0"
+    }
   },
   "include": ["src", "vite.config.ts", "openapi-ts.config.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]

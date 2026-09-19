@@ -29,6 +29,9 @@ exact git tag output when release wording needs to be verified.
 
 - Refreshed the coordinated Python dependency locks and pinned GitHub Actions
   updates to resolve security advisories and consolidate pending dependency PRs.
+- Refreshed compatible frontend dependencies and aligned the pinned Playwright
+  browser images with the test runner; TypeScript 6 remains pinned for OpenAPI
+  generator compatibility.
 - Import, asset recalculation and waiver lifecycle share a complete pure evaluator;
   unchanged scopes use a bounded ranking path during incremental imports.
 - Executive guidance and SLA displays use recorded evidence. Risk simulations
@@ -38,6 +41,13 @@ exact git tag output when release wording needs to be verified.
 
 ### Fixed
 
+- Pinned Lucide React to `1.41.0` to avoid unused property reads introduced by
+  its [1.42.0 shared icon-build refactor](https://github.com/lucide-icons/lucide/releases/tag/1.42.0)
+  in generated assets. The temporary pin can be removed once a newer package
+  passes the unchanged build, browser, audit, and CodeQL gates.
+- CodeQL PR analysis includes tests and helper scripts. Browser-test artifacts use
+  isolated Playwright attachments, and release manifests are consumed only after
+  a successful bundle build.
 - Current decision reads avoid redundant deep copies while preserving validation
   and isolation, including deeply nested historical evidence.
 - Stale rationale after asset edits, cleared context values returning through
