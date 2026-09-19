@@ -80,17 +80,17 @@ dependency-audit input is `backend/requirements.lock.txt`, exported from
 `uv.lock` with exact pins and hashes for runtime plus maintainer dependencies.
 The backend Docker install input is the separate
 `backend/requirements.runtime.lock.txt`, exported from the same `uv.lock` for
-Python 3.13 without dev extras. Keep all three committed together when Python
+Python 3.14 without dev extras. Keep all three committed together when Python
 dependency metadata changes. The backend Docker image installs the local backend
 package from `backend/pyproject.toml` with `--no-deps` after installing the
 runtime lock, so runtime containers do not carry test, docs, or maintainer
 tooling. `backend/requirements.lock.txt` remains the audited candidate
 dependency set for release evidence.
 
-GitHub workflows use Python 3.13 for single-version release, audit,
+GitHub workflows use Python 3.14 for single-version release, audit,
 maintenance, provider-live, frontend, and CodeQL jobs so workflow evidence stays
 aligned with the current Docker runtime. The CI Python matrix remains the
-compatibility gate for every supported package version: 3.11, 3.12, and 3.13.
+compatibility gate for every supported package version: 3.11, 3.12, 3.13, and 3.14.
 `make python-lock-check` enforces both the runtime lock export version and this
 workflow Python policy.
 
@@ -109,7 +109,7 @@ uv export --format requirements.txt --all-packages --all-extras \
   --python 3.11 --output-file backend/requirements.lock.txt --no-progress
 uv export --format requirements.txt --package vuln-prioritizer-workbench --no-dev \
   --no-emit-project --no-emit-workspace --locked \
-  --python 3.13 --output-file backend/requirements.runtime.lock.txt --no-progress
+  --python 3.14 --output-file backend/requirements.runtime.lock.txt --no-progress
 ```
 
 The drift and lock checks are enforced by:
@@ -220,6 +220,8 @@ upstream base-image findings remain visible in the uploaded reports for
 maintainer triage without making the required PR smoke permanently red. Public
 production release evidence still needs candidate-specific image digests and
 any required signing/provenance attestation for those exact images.
+The security artifacts are uploaded after a failed scan gate as well, provided
+the workflow was not cancelled; the gate still fails the job.
 
 The same Docker workflow also runs weekly in full mode. That scheduled run is
 the CVE-drift backstop for pinned base images: normal PRs only pay for image
@@ -227,10 +229,11 @@ security when Docker, dependency, Compose, Grype, or build-policy inputs change,
 while new fixable high/critical findings are still surfaced without waiting for
 the next container-related pull request.
 
-Any Grype ignore in `.grype.yaml` must be narrow, documented, and temporary.
-Use it only for upstream base-image findings where the scanner reports a fix
-outside the repository's current stable runtime policy, such as a beta-only
-Python fix while the Docker runtime remains pinned to stable Python 3.13.
+There are currently no vulnerability waivers in `.grype.yaml`. Any future
+Grype ignore must be narrow, documented, and temporary, with advisory evidence
+and the exact affected package/version recorded. A fix in a newer stable Python
+branch is a reason to evaluate a runtime upgrade, not evidence that a finding
+is a false positive. The current Docker runtime is pinned to stable Python 3.14.
 
 ## Dependabot Labels
 

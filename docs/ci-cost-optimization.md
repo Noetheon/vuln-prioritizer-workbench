@@ -10,7 +10,7 @@ leave branch protection waiting for a check that never starts.
 Ready pull requests keep the merge-safety checks that are required on `main`:
 
 - `check (3.11)` runs the local-equivalent Python workflow gate.
-- `check (3.12)` and `check (3.13)` run backend compatibility tests without
+- `check (3.12)`, `check (3.13)`, and `check (3.14)` run backend compatibility tests without
   duplicating coverage, static analysis, packaging, or docs gates.
 - Docs-only PRs keep the required Python check contexts visible, but only
   `check (3.11)` installs the docs toolchain and runs `make docs-check`;
@@ -35,8 +35,8 @@ Ready pull requests keep the merge-safety checks that are required on `main`:
 
 Pushes to `main` run the full merge validation:
 
-- Full Python workflow gate on 3.11 plus backend compatibility tests on 3.12
-  and 3.13.
+- Full Python workflow gate on 3.11 plus backend compatibility tests on 3.12,
+  3.13, and 3.14.
 - Full frontend Playwright suite and visual-regression baseline.
 - Demo and production-like Docker compose smokes plus image security scans,
   including the Compose Postgres Alembic/schema/repository check inside the
@@ -50,8 +50,8 @@ Pushes to `main` run the full merge validation:
 
 `workflow_dispatch` remains the full validation escape hatch:
 
-- CI runs the full Python workflow gate on 3.11, compatibility tests on 3.12
-  and 3.13, and the full frontend Playwright/visual-regression gate.
+- CI runs the full Python workflow gate on 3.11, compatibility tests on 3.12,
+  3.13, and 3.14, and the full frontend Playwright/visual-regression gate.
 - Docker runs both Compose smokes and image security scans regardless of
   changed paths.
 - CodeQL can be started manually.
@@ -115,8 +115,8 @@ high/critical image vulnerabilities that appear after a PR has already merged.
 
 The main tradeoff is that compatibility-sensitive changes still pay for multiple
 Python runtimes and Docker-relevant changes still build containers before merge.
-The 3.12/3.13 legs now run a high-signal runtime/parser/API compatibility
-subset, not a second and third copy of the full docs/static/coverage gate.
+The 3.12/3.13/3.14 legs run a high-signal runtime/parser/API compatibility
+subset without duplicating the full docs/static/coverage gate.
 Frontend/API PRs use representative browser coverage unless the changed paths
 can affect UI rendering, browser behavior, or visual baselines. Docker PRs run
 the production-like smoke and image scans only when the changed paths can affect

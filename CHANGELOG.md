@@ -30,6 +30,9 @@ exact git tag output when release wording needs to be verified.
 
 ### Changed
 
+- Upgraded the Docker runtime and single-version CI jobs to Python 3.14,
+  added 3.14 to the package compatibility matrix, and removed the obsolete
+  Python 3.13 vulnerability waiver.
 - Refreshed the coordinated Python dependency locks and pinned GitHub Actions
   updates to resolve security advisories and consolidate pending dependency PRs.
 - Refreshed compatible frontend dependencies and aligned the pinned Playwright
@@ -44,6 +47,8 @@ exact git tag output when release wording needs to be verified.
 
 ### Fixed
 
+- Container security artifacts remain available after a failed vulnerability
+  gate so the complete scanner evidence can be reviewed.
 - Import project selection remains stable when the hidden form select emits an
   empty value during initialization of a project-specific import URL.
 - The import wizard keeps its initial scroll position and sizes its desktop

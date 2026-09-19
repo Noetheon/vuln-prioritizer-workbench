@@ -953,6 +953,19 @@ def test_ci_docker_gate_tiers_demo_full_and_image_security_work() -> None:
     assert "needs.changes.outputs.docker-smoke-mode == 'full'" in workflow
     assert "needs.changes.outputs.run-image-security == 'true'" in workflow
 
+    steps = yaml.safe_load(workflow)["jobs"]["compose-smoke"]["steps"]
+    upload = next(step for step in steps if step["name"] == "Upload container security artifacts")
+    gate = next(
+        step
+        for step in steps
+        if step["name"] == "Fail on fixable high and critical image vulnerabilities"
+    )
+    assert upload["if"] == (
+        "${{ !cancelled() && needs.changes.outputs.run-image-security == 'true' }}"
+    )
+    assert "--only-fixed --fail-on high" in gate["run"]
+    assert not gate.get("continue-on-error", False)
+
 
 def test_ci_cost_report_workflow_tracks_runner_minutes_without_write_tokens() -> None:
     workflow = _read_repo_text(".github/workflows/ci-cost-report.yml")
