@@ -27,8 +27,9 @@ unlocked installation. [PR #650](https://github.com/Noetheon/vuln-prioritizer-wo
 added bounded security minimums and a main-branch submission of the actual
 `uv.lock` graph. Its post-merge submission passed an offline lock consistency
 check and GitHub accepted 128 resolved dependencies. A fresh GitHub SBOM export
-then showed only the patched versions of AnyIO, SoupSieve, pip, cryptography,
-and msgpack. The nine affected Dependabot alerts (#65, #66, #67, #75, #83,
+then showed no historic vulnerable versions of AnyIO, SoupSieve, pip,
+cryptography, or msgpack; every versioned entry for these five packages was
+patched. The nine affected Dependabot alerts (#65, #66, #67, #75, #83,
 #84, #85, #96, #97) all had state `fixed`, a non-null `fixed_at`, and null
 `dismissed_at`; the open Dependabot, Code Scanning, and Secret Scanning counts
 were each zero. This verifies repository alert closure, not that every
