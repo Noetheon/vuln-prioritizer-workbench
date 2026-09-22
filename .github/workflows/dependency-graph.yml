@@ -14,6 +14,11 @@ on:
 permissions:
   contents: read
 
+# A superseded main commit must not publish its older resolution last.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   submit-python-lock:
     if: github.ref == 'refs/heads/main'
