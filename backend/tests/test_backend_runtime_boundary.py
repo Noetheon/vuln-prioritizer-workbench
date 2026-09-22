@@ -4,6 +4,7 @@ import ast
 import json
 import os
 import sqlite3
+import stat
 import subprocess
 import sys
 import tarfile
@@ -669,6 +670,111 @@ def test_backup_script_uses_workbench_artifacts_only_by_default(tmp_path: Path) 
         )
     finally:
         restored.close()
+
+
+def test_backup_is_private_and_restorable_with_permissive_caller_umask(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    source_root.mkdir()
+    database_path = source_root / "workbench.db"
+    database = sqlite3.connect(database_path)
+    try:
+        database.execute("CREATE TABLE backup_probe (value TEXT NOT NULL)")
+        database.execute("INSERT INTO backup_probe (value) VALUES ('private-backup')")
+        database.commit()
+    finally:
+        database.close()
+    imports = source_root / "imports"
+    imports.mkdir()
+    (imports / "upload.txt").write_text("private upload", encoding="utf-8")
+
+    backup_dir = tmp_path / "backups" / "private"
+    subprocess.run(
+        ["sh", "-c", 'umask 022; exec "$1"', "sh", str(REPO_ROOT / "scripts/workbench-backup.sh")],
+        capture_output=True,
+        check=True,
+        env={
+            **os.environ,
+            "BACKUP_DIR": str(backup_dir),
+            "SQLITE_DATABASE_PATH": str(database_path),
+            "WORKBENCH_ARTIFACT_ROOT": str(source_root),
+        },
+        text=True,
+    )
+
+    assert stat.S_IMODE(backup_dir.stat().st_mode) == 0o700
+    assert stat.S_IMODE((backup_dir / "workbench.db").stat().st_mode) == 0o600
+    assert stat.S_IMODE((backup_dir / "artifacts.tar").stat().st_mode) == 0o600
+
+    restore_root = tmp_path / "restored"
+    restore_root.mkdir()
+    destination = restore_root / "workbench.db"
+    subprocess.run(
+        [
+            "sh",
+            "-c",
+            'umask 022; exec "$@"',
+            "sh",
+            str(REPO_ROOT / "scripts/workbench-restore.sh"),
+            str(backup_dir),
+        ],
+        capture_output=True,
+        check=True,
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(destination),
+            "ARTIFACT_RESTORE_ROOT": str(restore_root),
+        },
+        text=True,
+    )
+    database = sqlite3.connect(destination)
+    try:
+        assert database.execute("SELECT value FROM backup_probe").fetchone() == ("private-backup",)
+    finally:
+        database.close()
+    assert (restore_root / "imports" / "upload.txt").read_text(encoding="utf-8") == (
+        "private upload"
+    )
+
+
+@pytest.mark.parametrize("existing_kind", ("directory", "file", "symlink"))
+def test_backup_refuses_existing_destination(tmp_path: Path, existing_kind: str) -> None:
+    database_path = tmp_path / "workbench.db"
+    database = sqlite3.connect(database_path)
+    try:
+        database.execute("CREATE TABLE backup_probe (value TEXT NOT NULL)")
+        database.commit()
+    finally:
+        database.close()
+
+    backup_dir = tmp_path / "backup"
+    if existing_kind == "directory":
+        backup_dir.mkdir()
+        sentinel = backup_dir / "existing.txt"
+    elif existing_kind == "file":
+        sentinel = backup_dir
+    else:
+        redirect = tmp_path / "redirect"
+        redirect.mkdir()
+        sentinel = redirect / "existing.txt"
+        backup_dir.symlink_to(redirect, target_is_directory=True)
+    sentinel.write_text("preserve me", encoding="utf-8")
+
+    result = subprocess.run(
+        [str(REPO_ROOT / "scripts/workbench-backup.sh")],
+        capture_output=True,
+        check=False,
+        env={
+            **os.environ,
+            "BACKUP_DIR": str(backup_dir),
+            "SQLITE_DATABASE_PATH": str(database_path),
+            "WORKBENCH_ARTIFACT_MODE": "none",
+        },
+        text=True,
+    )
+
+    assert result.returncode == 2
+    assert "Backup destination must be a new directory" in result.stderr
+    assert sentinel.read_text(encoding="utf-8") == "preserve me"
 
 
 def test_sqlite_restore_is_verified_and_refuses_active_wal_destination(tmp_path: Path) -> None:
