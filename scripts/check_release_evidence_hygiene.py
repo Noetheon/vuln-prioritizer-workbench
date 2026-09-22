@@ -403,7 +403,18 @@ def _requirement_key(requirement: str) -> RequirementKey:
 def _uv_requirement_key(requirement: dict[str, object]) -> RequirementKey:
     name = str(requirement["name"])
     extras = tuple(sorted(_package_name(str(extra)) for extra in requirement.get("extras", [])))
-    return (_package_name(name), extras, str(requirement.get("specifier", "")))
+    specifier = str(requirement.get("specifier", ""))
+    # uv includes the optional-dependency group in requires-dist markers. Remove
+    # that generated selector while retaining the requirement's platform marker.
+    marker_terms = [
+        term
+        for term in str(requirement.get("marker", "")).split(" and ")
+        if term not in {"extra == 'dev'", 'extra == "dev"'}
+    ]
+    marker = " and ".join(marker_terms)
+    if marker:
+        specifier += ";" + _normalize_requirement(marker)
+    return (_package_name(name), extras, specifier)
 
 
 def _format_requirement_key(requirement: RequirementKey) -> str:

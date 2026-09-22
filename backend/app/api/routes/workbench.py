@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from sqlalchemy import inspect, text
@@ -18,6 +19,7 @@ from app.models import (
     DemoWorkspaceCreate,
     DemoWorkspacePublic,
     DemoWorkspaceStatusPublic,
+    ProjectPublic,
     WorkbenchCapabilitiesPublic,
     WorkbenchHealth,
     WorkbenchStatus,
@@ -237,7 +239,7 @@ def _demo_workspace_public(
         raise HTTPException(status_code=500, detail="Demo workspace seed did not complete.")
     return DemoWorkspacePublic(
         **_demo_workspace_status(snapshot, enabled=demo_workspace_enabled(settings)).model_dump(),
-        project=snapshot.project,
+        project=ProjectPublic.model_validate(snapshot.project),
         latest_run=analysis_run_public(
             snapshot.latest_run,
             session=session,
@@ -290,7 +292,9 @@ def _runtime_mode(settings: Settings) -> str:
     return f"{settings.ENVIRONMENT}-single-user"
 
 
-def _worker_readiness(session: Session) -> tuple[str, datetime | None]:
+def _worker_readiness(
+    session: Session,
+) -> tuple[Literal["ready", "not_ready", "unknown"], datetime | None]:
     try:
         heartbeat = RuntimeHeartbeatRepository(session).latest_for_service(
             WORKFLOW_WORKER_SERVICE_NAME,

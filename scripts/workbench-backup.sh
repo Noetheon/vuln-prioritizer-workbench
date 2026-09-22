@@ -3,7 +3,14 @@ set -eu
 
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 BACKUP_DIR="${BACKUP_DIR:-./backups/workbench-$(date -u +%Y%m%dT%H%M%SZ)}"
-mkdir -p "$BACKUP_DIR"
+# Backups contain database rows and uploaded artifacts. Create a new private
+# destination so an existing directory, file, or symlink cannot be overwritten.
+umask 077
+mkdir -p -- "$(dirname -- "$BACKUP_DIR")"
+if ! mkdir -m 700 -- "$BACKUP_DIR"; then
+  echo "Backup destination must be a new directory: $BACKUP_DIR" >&2
+  exit 2
+fi
 DEFAULT_ARTIFACT_PATHS="data/workbench-import-uploads data/workbench-reports data/workbench-provider-cache data/provider-snapshots"
 DEFAULT_COMPOSE_ARTIFACT_PATHS="workbench-import-uploads workbench-reports provider-snapshots workbench-provider-cache"
 

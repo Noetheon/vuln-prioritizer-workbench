@@ -1,0 +1,63 @@
+name: Python dependency graph
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - uv.lock
+      - backend/pyproject.toml
+      - scripts/build_dependency_graph_snapshot.py
+      - .github/workflows/dependency-graph.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A superseded main commit must not publish its older resolution last.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  submit-python-lock:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the exact commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.11.31"
+          enable-cache: false
+
+      - name: Reject a stale or incomplete lock
+        run: uv lock --check --offline --python 3.14
+
+      - name: Build snapshot from committed lock
+        run: |
+          python scripts/build_dependency_graph_snapshot.py \
+            --sha "$GITHUB_SHA" \
+            --ref "$GITHUB_REF" \
+            --job-id "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            --output "$RUNNER_TEMP/vpw-dependency-snapshot.json"
+
+      - name: Submit resolved Python dependencies
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method POST \
+            "repos/$GITHUB_REPOSITORY/dependency-graph/snapshots" \
+            --input "$RUNNER_TEMP/vpw-dependency-snapshot.json"

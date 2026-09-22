@@ -118,6 +118,17 @@ The drift and lock checks are enforced by:
 make python-lock-check
 ```
 
+The main-branch `Python dependency graph` workflow submits resolved Python
+dependencies from `uv.lock` to GitHub's dependency graph under the backend
+package manifest. It retains the distinction between runtime and development
+dependencies and includes the union of supported platform resolutions. This
+submission first rejects a stale or incomplete lock with a pinned, offline uv
+check. It is versioned by its stable detector and correlator; a changed lock
+must produce a new snapshot rather than leave an old transitive version in the
+graph. The workflow's result and actual Dependabot alert states must be checked
+after an alert remediation; a green package audit alone does not close a GitHub
+alert.
+
 Current audit command:
 
 ```bash

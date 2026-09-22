@@ -25,7 +25,7 @@ def test_dependency_audit_requirements_include_dev_gate_tools() -> None:
     assert {"mkdocs", "pytest-cov"}.issubset(package_names)
     assert "playwright" not in package_names
     assert {"rich", "typer"}.isdisjoint(package_names)
-    exact_input_pins = {line for line in requirements if "==" in line}
+    exact_input_pins = {line for line in requirements if "==" in line.split(";", 1)[0]}
     assert exact_input_pins == {"packageurl-python==0.17.6"}
     assert all("--hash" not in line for line in requirements)
     assert 'name = "vuln-prioritizer-workbench"' in uv_lock

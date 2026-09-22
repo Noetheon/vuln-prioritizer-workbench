@@ -49,7 +49,11 @@ def provider_status_payload(
     metadata = _snapshot_metadata(snapshot)
     production_safe = _production_safe(active_settings)
     public_metadata = _provider_public_metadata(metadata, production_safe=production_safe)
-    warnings = [_public_text(item) for item in _string_list(metadata.get("warnings"))]
+    warnings = [
+        warning
+        for item in _string_list(metadata.get("warnings"))
+        if (warning := _public_text(item)) is not None
+    ]
     failed_update_error = _failed_update_error(latest_update_run)
     workflow_update_error = _workflow_update_error(latest_update_workflow)
     raw_last_error = failed_update_error or workflow_update_error or _last_error(metadata)

@@ -287,7 +287,10 @@ responses expose managed artifact IDs or relative references rather than
 container filesystem paths.
 
 The script writes a timestamped directory under `./backups` unless `BACKUP_DIR`
-is set. Artifact paths are packed into `artifacts.tar`. Restore validates the
+is set. It creates a new private directory (`0700`) and private backup files
+(`0600`); an existing `BACKUP_DIR`, including a symlink, is refused. Choose a
+new path for each run, and retain the backup on storage protected from loss of
+the workstation. Artifact paths are packed into `artifacts.tar`. Restore validates the
 tar member list before extraction and refuses absolute paths, `..` traversal,
 symlink members, and hardlink members.
 
