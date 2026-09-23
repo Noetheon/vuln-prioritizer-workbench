@@ -189,6 +189,15 @@ def _check_workflow_python_versions() -> list[str]:
                             f"{list(SUPPORTED_PYTHON_VERSIONS)!r}."
                         )
                     continue
+                # The audit job also needs the 3.11 interpreter to reproduce
+                # the committed 3.11 requirements export entirely offline.
+                if (
+                    workflow.name == "ci.yml"
+                    and job_name == "dependency-audit"
+                    and step.get("name") == "Set up Python 3.11 for the offline audit-lock export"
+                    and python_version == "3.11"
+                ):
+                    continue
                 if python_version != RUNTIME_PYTHON_VERSION:
                     failures.append(
                         f"{location} must use Python {RUNTIME_PYTHON_VERSION!r} or "

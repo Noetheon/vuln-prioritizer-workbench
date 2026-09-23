@@ -9,6 +9,12 @@ and [SLSA 1.2](https://slsa.dev/spec/v1.2/). A full control-by-control complianc
 assessment would require more evidence and is not needed for the current
 deployment model.
 
+The original priorities below were revisited after
+[PR #652](https://github.com/Noetheon/vuln-prioritizer-workbench/pull/652)
+merged into `main` on 2026-09-23. The status section distinguishes implemented
+controls from a successful preflight and from proof that still requires an
+actual release or operator backup.
+
 ## Controls already in place
 
 | Area | Current evidence |
@@ -16,7 +22,7 @@ deployment model.
 | Disclosure and repository access | `SECURITY.md` names supported versions and a private reporting route. Live GitHub settings on the review date showed private vulnerability reporting, Dependabot security updates, secret scanning, push protection, and strict protected-branch checks enabled. CodeQL runs for Python and TypeScript. |
 | Known dependencies | `uv.lock`, two hashed Python requirement exports, and the npm lock support reproducible installs and `make dependency-audit`. Actions and container base images use digest or commit pins. |
 | Container vulnerability evidence | `.github/workflows/docker.yml` generates SPDX inventories and Grype reports and retains them for 14 days. Its gate focuses on Critical or fixable High findings; a passing gate does not mean zero vulnerabilities. |
-| Release and runtime | The release workflow verifies packages, runs smoke tests, creates SHA-256 checksums, and publishes GitHub assets as a draft. Configured PyPI publishing uses OIDC; whether a particular PyPI release was published and attested must be verified for that release. SQLite backups use an integrity-checked copy, and restore rejects unsafe archive members and active WAL destinations. |
+| Release and runtime | The release workflow verifies packages, runs smoke tests, creates SHA-256 checksums, and can publish GitHub assets as a draft from a release tag. It now builds from the reviewed Python lock and generates archive-specific SPDX inventories and signed attestations. Configured PyPI publishing uses OIDC; whether a particular PyPI release was published and attested must be verified for that release. SQLite backup and restore include integrity checks and a synthetic full-restore rehearsal. |
 
 ## Dependency alert closure verified on main
 
@@ -37,32 +43,35 @@ container or upstream OS vulnerability has a fix. See GitHub's
 [snapshot precedence rules](https://docs.github.com/en/rest/dependency-graph/dependency-submission)
 for why the lock-derived submission was needed.
 
-## Remaining work, in order of practical value
+## Follow-up status after PR #652
 
-1. **Bind inventories to delivered release artifacts.** The container workflow
-   scans its images, but the wheel, source archive, and local release ZIP do
-   not yet ship with their own retained SBOM and artifact-linked provenance.
-   For the next public release, generate a machine-readable inventory from the
-   actual built artifact, publish it alongside its digest, and verify the
-   published asset against the intended commit. This is more useful here than
-   adopting every possible SBOM format or a full SLSA level claim.
-2. **Rehearse an operator restore with retained evidence.** The scripts and
-   synthetic tests protect backup and restore logic, but there is no current
-   dated proof that an operator's complete database, original uploads, and
-   generated reports can be restored together. Set a practical recovery goal,
-   keep a protected copy outside the workstation, then restore into an empty
-   directory and verify the Decision Ledger and artifact hashes. Do not put
-   real private backup content in CI or public release evidence.
-3. **Align the release build with the audited Python resolution.** The release
-   workflow currently installs `backend[dev]` from bounded metadata and builds
-   in isolation, so its tooling can differ from the hashed audit export.
-   Resolve release tooling from the reviewed lock and record the versions used
-   for the exact published artifact. Keep package metadata ranges bounded so
-   downstream users can receive compatible security fixes.
-4. **Maintain pinned images and scanner versions.** Dependabot currently tracks
-   pip, npm, and Actions. Add an update path for Docker base images and a
-   periodic review of Syft/Grype pins; carry unfixed OS findings forward with
-   their scanner and database version until an upstream fix is available.
+1. **Artifact-linked inventories and provenance: implemented, preflight
+   verified.** The wheel, source archive, and local release ZIP receive SPDX
+   inventories generated from their actual archive bytes, checksums, and signed
+   GitHub provenance and SBOM attestations. The manual
+   [Release preflight](https://github.com/Noetheon/vuln-prioritizer-workbench/actions/runs/35818889455)
+   retained all three archives and their evidence. Their hashes, inventories,
+   and attestations verified against the exact source commit and signer. The
+   preflight commit has the same tree as merged `main`. No public release was
+   published by this branch run; the tag-push upload and downloaded-asset checks
+   remain to be verified on the next real release.
+2. **Operator recovery: synthetic rehearsal passed; offsite proof outstanding.**
+   The recovery script restored a current-schema synthetic database with its
+   uploads and reports into an empty directory and checked its ledger and file
+   integrity. There is still no dated restore proof for private operator data
+   and no configured protected copy outside the workstation. Choose a backup
+   destination and recovery objective, then retain a private restore record.
+   Do not put private backup content in CI or public release evidence.
+3. **Audited release build: implemented, preflight verified.** The workflow now
+   checks `uv.lock`, installs the reviewed resolution, constrains the build with
+   hashed requirements, and records tool versions and inputs for the built
+   artifacts. The manual Release preflight passed this path. Publication of a
+   specific version still requires its own release evidence.
+4. **Pinned image and scanner maintenance: implemented, ongoing.** Dependabot
+   now tracks Dockerfile and Compose images, and the scheduled Docker workflow
+   checks pinned tag digests for changes. Image SBOMs and Grype reports remain
+   retained. A passing gate does not erase unfixed OS findings; keep them in
+   the scan evidence until an upstream fix is available.
 
 SSO, role management, a second general-purpose scanner, and blanket VEX files
 would add complexity without addressing these gaps for a trusted single

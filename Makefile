@@ -183,6 +183,7 @@ public-production-evidence-check:
 
 python-lock-check:
 	$(PYTHON) scripts/check_release_evidence_hygiene.py
+	$(PYTHON) scripts/check_python_lock_exports.py
 
 docker-base-image-check:
 	$(PYTHON) scripts/check_dockerfile_base_digests.py

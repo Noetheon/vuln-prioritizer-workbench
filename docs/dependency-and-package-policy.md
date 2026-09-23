@@ -98,8 +98,10 @@ GitHub workflows use Python 3.14 for single-version release, audit,
 maintenance, provider-live, frontend, and CodeQL jobs so workflow evidence stays
 aligned with the current Docker runtime. The CI Python matrix remains the
 compatibility gate for every supported package version: 3.11, 3.12, 3.13, and 3.14.
-`make python-lock-check` enforces both the runtime lock export version and this
-workflow Python policy.
+The dependency-audit job also makes Python 3.11 available solely to reproduce
+the universal audit-lock export offline; its audit tooling still runs on 3.14.
+`make python-lock-check` enforces both export versions and this workflow Python
+policy.
 
 Regenerate or refresh the audit input by reconciling the union of
 `project.dependencies` and `project.optional-dependencies.dev` from
@@ -111,10 +113,10 @@ identity version and migration. Then refresh the lock artifacts:
 
 ```bash
 uv lock --python 3.11
-uv export --format requirements.txt --all-packages --all-extras \
+uv export --offline --format requirements.txt --all-packages --all-extras \
   --no-emit-project --no-emit-workspace --locked \
   --python 3.11 --output-file backend/requirements.lock.txt --no-progress
-uv export --format requirements.txt --package vuln-prioritizer-workbench --no-dev \
+uv export --offline --format requirements.txt --package vuln-prioritizer-workbench --no-dev \
   --no-emit-project --no-emit-workspace --locked \
   --python 3.14 --output-file backend/requirements.runtime.lock.txt --no-progress
 ```
@@ -124,6 +126,16 @@ The drift and lock checks are enforced by:
 ```bash
 make python-lock-check
 ```
+
+Dependabot uses the root `uv` ecosystem because `uv.lock` is the source of
+truth. A Python update proposal must refresh and commit both generated exports
+with the commands above before it can pass `make python-lock-check`; Dependabot
+does not regenerate these repository-specific exports itself. Python version
+updates are currently kept as individual PRs so an unrelated package cannot
+be carried through by a grouped lock change. Treat a bot PR as a candidate:
+review any widened package bound and the full `uv.lock` diff before refreshing
+the exports. Security advisories and dependency audits remain active even when
+a proposed version is incompatible with the Workbench.
 
 The main-branch `Python dependency graph` workflow submits resolved Python
 dependencies from `uv.lock` to GitHub's dependency graph under the backend
@@ -230,6 +242,12 @@ The conservative Vite/Oxc build preserves these expressions, producing CodeQL
 and property-read side-effect handling unchanged. Remove this compatibility pin
 when a newer published package builds without these expressions and passes the
 dependency audit, frontend checks, browser/visual checks, and CodeQL analysis.
+
+Dependabot groups routine frontend minor and patch updates, but opens major
+updates and `lucide-react` changes separately. This keeps known compatibility
+boundaries visible without letting one incompatible proposal block unrelated
+updates. Do not merge an update by relaxing Node engine, OpenAPI generation,
+or CodeQL checks; review the compatibility pin and its removal criteria first.
 
 The root workspace uses npm workspace scripts only. There is no tracked
 `bun.lock`; adding one would need a package-manager policy change and should not

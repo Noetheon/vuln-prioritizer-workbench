@@ -169,7 +169,7 @@ jobs:
               compose.yml|compose.traefik.yml|Makefile|.grype.yaml)
                 run_dependency_audit=true
                 ;;
-              scripts/check_release_evidence_hygiene.py|scripts/check_dockerfile_base_digests.py)
+              scripts/check_release_evidence_hygiene.py|scripts/check_python_lock_exports.py|scripts/check_dockerfile_base_digests.py)
                 run_dependency_audit=true
                 ;;
               .github/dependabot.yml|.github/workflows/ci.yml)
@@ -189,6 +189,12 @@ jobs:
         if: steps.dependency-scope.outputs.run-dependency-audit != 'true'
         run: echo "Dependency audit skipped; no dependency-impacting files changed."
 
+      - name: Set up Python 3.11 for the offline audit-lock export
+        if: steps.dependency-scope.outputs.run-dependency-audit == 'true'
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
       - name: Set up Python
         if: steps.dependency-scope.outputs.run-dependency-audit == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -199,6 +205,13 @@ jobs:
             pyproject.toml
             backend/pyproject.toml
             backend/requirements.lock.txt
+
+      - name: Set up pinned uv for lock export verification
+        if: steps.dependency-scope.outputs.run-dependency-audit == 'true'
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.11.31"
+          enable-cache: false
 
       - name: Set up Node
         if: steps.dependency-scope.outputs.run-dependency-audit == 'true'
