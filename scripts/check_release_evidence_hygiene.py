@@ -23,6 +23,11 @@ WORKFLOW_DIR = ROOT / ".github" / "workflows"
 RUNTIME_PYTHON_VERSION = "3.14"
 SUPPORTED_PYTHON_VERSIONS = ("3.11", "3.12", "3.13", RUNTIME_PYTHON_VERSION)
 SETUP_PYTHON_MATRIX_EXPRESSION = "${{ matrix.python-version }}"
+AUDIT_EXPORT_JOBS = {
+    ("ci.yml", "dependency-audit"),
+    ("release.yml", "build-and-release"),
+}
+AUDIT_EXPORT_SETUP_NAME = "Set up Python 3.11 for the offline audit-lock export"
 RUNTIME_LOCK_FORBIDDEN_PACKAGES = {
     "build",
     "mkdocs",
@@ -171,6 +176,7 @@ def _check_workflow_python_versions() -> list[str]:
             steps = job.get("steps", [])
             if not isinstance(steps, list):
                 continue
+            setup_versions: list[tuple[int, str]] = []
             for index, step in enumerate(steps, 1):
                 if not isinstance(step, dict):
                     continue
@@ -181,6 +187,8 @@ def _check_workflow_python_versions() -> list[str]:
                 python_version = (
                     with_config.get("python-version") if isinstance(with_config, dict) else None
                 )
+                if isinstance(python_version, str):
+                    setup_versions.append((index, python_version))
                 location = f"{workflow.relative_to(ROOT)}:jobs.{job_name}.steps[{index}]"
                 if python_version == SETUP_PYTHON_MATRIX_EXPRESSION:
                     if matrix_versions != SUPPORTED_PYTHON_VERSIONS:
@@ -189,12 +197,11 @@ def _check_workflow_python_versions() -> list[str]:
                             f"{list(SUPPORTED_PYTHON_VERSIONS)!r}."
                         )
                     continue
-                # The audit job also needs the 3.11 interpreter to reproduce
-                # the committed 3.11 requirements export entirely offline.
+                # Both the audit and release jobs reproduce the committed 3.11
+                # requirements export entirely offline before using Python 3.14.
                 if (
-                    workflow.name == "ci.yml"
-                    and job_name == "dependency-audit"
-                    and step.get("name") == "Set up Python 3.11 for the offline audit-lock export"
+                    (workflow.name, job_name) in AUDIT_EXPORT_JOBS
+                    and step.get("name") == AUDIT_EXPORT_SETUP_NAME
                     and python_version == "3.11"
                 ):
                     continue
@@ -202,6 +209,16 @@ def _check_workflow_python_versions() -> list[str]:
                     failures.append(
                         f"{location} must use Python {RUNTIME_PYTHON_VERSION!r} or "
                         f"{SETUP_PYTHON_MATRIX_EXPRESSION!r} for the supported-version matrix."
+                    )
+            if (workflow.name, job_name) in AUDIT_EXPORT_JOBS:
+                audit_steps = [index for index, version in setup_versions if version == "3.11"]
+                runtime_steps = [
+                    index for index, version in setup_versions if version == RUNTIME_PYTHON_VERSION
+                ]
+                if not audit_steps or not runtime_steps or min(audit_steps) >= min(runtime_steps):
+                    failures.append(
+                        f"{workflow.relative_to(ROOT)}:jobs.{job_name} must set up Python 3.11 "
+                        f"before Python {RUNTIME_PYTHON_VERSION} for the offline audit-lock export."
                     )
 
     if not failures:

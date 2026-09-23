@@ -33,28 +33,40 @@ def test_uv_metadata_dev_selector_does_not_change_unmarked_requirement() -> None
     ) == _requirement_key("pip>=26.2,<27.0")
 
 
-def test_only_ci_audit_export_setup_may_use_python_311(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    ("filename", "job"),
+    [("ci.yml", "dependency-audit"), ("release.yml", "build-and-release")],
+)
+def test_audit_export_jobs_set_up_python_311_before_runtime(
+    filename: str, job: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(hygiene, "ROOT", tmp_path)
     monkeypatch.setattr(hygiene, "WORKFLOW_DIR", tmp_path)
-    workflow = tmp_path / "ci.yml"
+    workflow = tmp_path / filename
 
-    def write_workflow(job: str, name: str) -> None:
-        workflow.write_text(
-            f"jobs:\n  {job}:\n    steps:\n"
-            f"      - name: {name}\n"
+    def write_workflow(
+        versions: tuple[str, ...], name: str = hygiene.AUDIT_EXPORT_SETUP_NAME
+    ) -> None:
+        steps = "".join(
+            f"      - name: {name if version == '3.11' else 'Set up Python'}\n"
             "        uses: actions/setup-python@pinned\n"
-            "        with:\n          python-version: '3.11'\n",
+            f"        with:\n          python-version: '{version}'\n"
+            for version in versions
+        )
+        workflow.write_text(
+            f"jobs:\n  {job}:\n    steps:\n{steps}",
             encoding="utf-8",
         )
 
-    expected_name = "Set up Python 3.11 for the offline audit-lock export"
-    write_workflow("dependency-audit", expected_name)
+    write_workflow(("3.11", "3.14"))
     assert hygiene._check_workflow_python_versions() == []
 
-    write_workflow("check", expected_name)
-    assert "must use Python '3.14'" in hygiene._check_workflow_python_versions()[0]
+    write_workflow(("3.14", "3.11"))
+    ordering_error = "must set up Python 3.11 before Python 3.14"
+    assert ordering_error in hygiene._check_workflow_python_versions()[0]
 
-    write_workflow("dependency-audit", "Set up Python for regular audit")
+    write_workflow(("3.14",))
+    assert ordering_error in hygiene._check_workflow_python_versions()[0]
+
+    write_workflow(("3.11", "3.14"), "Set up Python for regular audit")
     assert "must use Python '3.14'" in hygiene._check_workflow_python_versions()[0]
