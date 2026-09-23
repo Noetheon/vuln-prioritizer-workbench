@@ -64,6 +64,25 @@ backup_compose_database() {
 if [ -n "${SQLITE_DATABASE_PATH:-}" ]; then
   python3 "$SCRIPT_DIR/sqlite_backup.py" \
     backup "$SQLITE_DATABASE_PATH" "$BACKUP_DIR/workbench.db"
+  report_root="${WORKBENCH_REPORT_ROOT:-}"
+  upload_root="${WORKBENCH_UPLOAD_ROOT:-}"
+  if [ -n "${WORKBENCH_ARTIFACT_PATHS:-}" ]; then
+    for path in $WORKBENCH_ARTIFACT_PATHS; do
+      case "$(basename -- "$path")" in
+        reports|workbench-reports) report_root="${report_root:-$path}" ;;
+        imports|workbench-import-uploads) upload_root="${upload_root:-$path}" ;;
+      esac
+    done
+  else
+    artifact_root="${WORKBENCH_ARTIFACT_ROOT:-$(dirname -- "$SQLITE_DATABASE_PATH")}"
+    report_root="${report_root:-$artifact_root/reports}"
+    upload_root="${upload_root:-$artifact_root/imports}"
+  fi
+  if [ -n "$report_root" ]; then
+    python3 "$SCRIPT_DIR/restore_report_paths.py" manifest \
+      "$report_root" "$BACKUP_DIR/backup-manifest.json" \
+      --upload-root "${upload_root:-$(dirname -- "$report_root")/imports}"
+  fi
 elif [ -n "${DATABASE_URL:-}" ]; then
   pg_dump --format=custom --file="$BACKUP_DIR/workbench.dump" "$DATABASE_URL"
 elif [ "${WORKBENCH_DATABASE_MODE:-host}" = "compose" ]; then
@@ -81,9 +100,10 @@ else
 fi
 
 backup_host_artifacts() {
-  host_artifact_paths | while IFS= read -r path; do
+host_artifact_paths | while IFS= read -r path; do
     if [ -e "$path" ]; then
-      tar -C "$(dirname "$path")" -rf "$BACKUP_DIR/artifacts.tar" "$(basename "$path")"
+      python3 "$SCRIPT_DIR/archive_workbench_artifacts.py" \
+        "$BACKUP_DIR/artifacts.tar" "$path"
     fi
   done
 }
@@ -114,4 +134,5 @@ case "${WORKBENCH_ARTIFACT_MODE:-host}" in
     ;;
 esac
 
+python3 "$SCRIPT_DIR/verify_backup_checksums.py" create "$BACKUP_DIR"
 printf '%s\n' "$BACKUP_DIR"

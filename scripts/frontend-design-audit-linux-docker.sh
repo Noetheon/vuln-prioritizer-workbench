@@ -25,7 +25,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 host_arch="$(uname -m)"
 docker_server_arch="$(docker version --format '{{.Server.Arch}}')"
 docker_server_os="$(docker version --format '{{.Server.Os}}')"
-playwright_image="${PLAYWRIGHT_DOCKER_IMAGE:-mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27}"
+playwright_image="${PLAYWRIGHT_DOCKER_IMAGE:-$(awk 'toupper($1) == "FROM" { print $2; exit }' "${repo_root}/frontend/Dockerfile.playwright")}"
 
 git_common_dir="$(git -C "${repo_root}" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
 git_dir="$(git -C "${repo_root}" rev-parse --path-format=absolute --git-dir 2>/dev/null || true)"

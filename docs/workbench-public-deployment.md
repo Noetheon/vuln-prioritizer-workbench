@@ -293,10 +293,31 @@ new path for each run, and retain the backup on storage protected from loss of
 the workstation. Artifact paths are packed into `artifacts.tar`. Restore validates the
 tar member list before extraction and refuses absolute paths, `..` traversal,
 symlink members, and hardlink members.
+Host backups omit symlinks inside reconstructible provider cache/snapshot roots
+and report how many were skipped. They reject symlinks in uploads or reports,
+which must remain complete original evidence.
+SQLite backups also contain a private `backup-manifest.json` with the original
+managed report root. Keep it with `workbench.db` and `artifacts.tar`: a restore
+into another data directory uses it to rewrite absolute report paths. If a
+custom `WORKBENCH_ARTIFACT_PATHS` layout is used, the script recognizes
+`reports` or `workbench-reports` as the report root and records it in the
+manifest. Set `WORKBENCH_REPORT_ROOT` explicitly for any other custom path;
+its final directory name must still be `reports` or `workbench-reports`.
+Managed upload roots must be named `imports` or `workbench-import-uploads`.
+Old backups without a manifest can restore at the same known report root but
+cannot safely relocate report paths.
+The private `backup-checksums.json` records SHA-256 for the database, artifact
+archive, and report-root manifest. Restore verifies it before extracting or
+activating anything. This detects changed or missing backup files; because the
+checksum list is stored beside them, it is not a signature against someone who
+can modify the entire backup. Older backups without this file remain readable
+but receive a warning.
 
 ## Restore
 
-Restore into an empty or intentionally replaced environment.
+Restore SQLite into a new or empty data directory. Preserve any existing data
+directory separately before restoring; the restore script refuses a nonempty
+SQLite target and does not overwrite it.
 Stop `vpw serve` before a SQLite restore. The restore refuses a destination
 with WAL sidecars or one it cannot lock exclusively, validates any artifact
 archive before changing the database, and activates the integrity-checked copy
@@ -311,6 +332,18 @@ ARTIFACT_RESTORE_ROOT="./vpw-data" \
 scripts/workbench-restore.sh backups/<backup-dir>
 vpw ledger verify --strict --data-dir ./vpw-data
 ```
+
+For SQLite, restoration first prepares a private database copy and verifies
+each persisted report against a regular archived file, including size and
+SHA-256. It rejects report paths outside the recorded source root and a missing
+or changed archived report before replacing the destination database. On a
+successful restore into a new data directory, stored report paths point to its
+recorded managed report directory (`reports` or `workbench-reports`). Artifact
+extraction finishes in the empty target before
+the prepared database is activated, so an extraction failure cannot leave a
+new active database pointing at missing artifacts. Keep the backup directory
+private and do not publish the manifest, database, or archive as release
+evidence.
 
 Docker Compose named volumes:
 
@@ -341,6 +374,36 @@ The public health response should only report a minimal OK status. Verify
 `/api/v1/workbench/status` before promoting the restored environment; that local
 readiness response should report `database_status=ready` and
 `schema_status=ready`.
+
+### Private recovery rehearsal
+
+Stop `vpw serve`, then rehearse a same-version SQLite backup and restore in an
+isolated temporary directory:
+
+```bash
+.venv/bin/python scripts/rehearse_workbench_restore.py \
+  --data-dir "/path/to/vpw-data" \
+  --source-kind operator
+```
+
+`--source-kind operator` is an operator assertion; use `synthetic` for test data
+or omit it when the source is not classified. The rehearsal verifies the SQLite
+integrity and foreign keys, checks every copied artifact byte-for-byte against
+its source, checks persisted report and original-upload size/hash references,
+and runs strict Decision Ledger parity verification on the restored copy. The
+temporary database, uploads, reports, and backup are removed when the run
+ends. A private, content-free `result.json` is kept under the ignored
+`build/recovery-rehearsals/` directory with counts, duration, and pass/fail
+stage. Provider-cache symlinks are counted as skipped because the cache can be
+rebuilt; upload and report symlinks fail the rehearsal. A passed run with zero
+reports or zero uploads does not demonstrate
+their recovery. Retain dated results separately from the backup itself and
+repeat after storage, schema, or release-process changes.
+
+This local rehearsal does not prove an off-workstation copy or a recovery time
+after workstation loss. Choose and test an operator-controlled protected
+destination and retention schedule before making that claim; no destination is
+configured by the project.
 
 ## Release Evidence
 

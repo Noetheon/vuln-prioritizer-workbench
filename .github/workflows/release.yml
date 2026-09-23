@@ -18,6 +18,11 @@ permissions:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     outputs:
       release_notes_body_path: ${{ steps.release_notes.outputs.body_path }}
 
@@ -25,17 +30,30 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Require a release tag to reference merged main history
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main; then
+            echo "Release tag commit is not part of main history." >&2
+            exit 1
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.14"
-          cache: pip
-          cache-dependency-path: |
-            pyproject.toml
-            backend/pyproject.toml
-            .pre-commit-config.yaml
+
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.11.31"
+          enable-cache: false
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -44,8 +62,25 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install project and dev dependencies
-        run: python -m pip install -e "backend[dev]"
+      - name: Install the reviewed Python resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv lock --check --offline --python 3.14
+          UV_BUILD_CONSTRAINT=backend/requirements.lock.txt \
+            uv sync --locked --all-packages --all-extras --python 3.14
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: Record the release build toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence_dir="$RUNNER_TEMP/workflow-artifacts/release-readiness"
+          mkdir -p "$evidence_dir"
+          python scripts/record_release_build_inputs.py \
+            --output "$evidence_dir/build-inputs.json" \
+            --commit "$GITHUB_SHA" --ref "$GITHUB_REF" \
+            --run-url "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
       - name: Verify tag matches package version
         if: startsWith(github.ref, 'refs/tags/v')
@@ -72,8 +107,16 @@ jobs:
           } | tee "$RUNNER_TEMP/workflow-artifacts/release-readiness/release-readiness-metadata.txt"
           make release-readiness-check 2>&1 | tee "$RUNNER_TEMP/workflow-artifacts/release-readiness/release-readiness-check.log"
 
+      - name: Reject tracked source drift before building release artifacts
+        run: |
+          git diff --exit-code
+          git diff --cached --exit-code
+
       - name: Build source and wheel distributions
-        run: rm -rf dist && python -m build backend --outdir dist
+        run: |
+          uv build --clear --no-build-logs --python 3.14 \
+            --build-constraints backend/requirements.lock.txt --require-hashes \
+            --out-dir dist backend
 
       - name: Validate built distributions
         run: python -m twine check dist/*
@@ -81,16 +124,83 @@ jobs:
       - name: Build local Workbench release bundle
         run: make release-bundle
 
+      - name: Build and verify artifact-specific SPDX inventories
+        id: inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/workflow-artifacts/release-readiness/artifact-evidence"
+          python scripts/build_release_artifact_evidence.py \
+            --dist dist --output "$output" \
+            --commit "$GITHUB_SHA" --ref "$GITHUB_REF" \
+            --run-url "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --build-inputs "$RUNNER_TEMP/workflow-artifacts/release-readiness/build-inputs.json"
+          python scripts/build_release_artifact_evidence.py \
+            --dist dist --output "$output" --verify
+          shopt -s nullglob
+          wheel=( "$output"/*.whl.spdx.json )
+          sdist=( "$output"/*.tar.gz.spdx.json )
+          bundle=( "$output"/*.zip.spdx.json )
+          [[ ${#wheel[@]} -eq 1 && ${#sdist[@]} -eq 1 && ${#bundle[@]} -eq 1 ]]
+          {
+            echo "wheel_sbom=${wheel[0]}"
+            echo "sdist_sbom=${sdist[0]}"
+            echo "bundle_sbom=${bundle[0]}"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Record release artifact hashes
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/workflow-artifacts/release-readiness"
-          shasum -a 256 dist/* | tee "$RUNNER_TEMP/workflow-artifacts/release-readiness/dist-sha256.txt"
+          (cd dist && sha256sum ./*) | tee "$RUNNER_TEMP/workflow-artifacts/release-readiness/dist-sha256.txt"
           if [[ -f build/v1.0-demo-evidence-bundle-verification.json ]]; then
             cp build/v1.0-demo-evidence-bundle-verification.json \
               "$RUNNER_TEMP/workflow-artifacts/release-readiness/evidence-bundle-verification.json"
           fi
+
+      - name: Stage and verify the complete GitHub release asset set
+        shell: bash
+        run: |
+          set -euo pipefail
+          staged="$RUNNER_TEMP/workflow-artifacts/github-release-assets"
+          mkdir -p "$staged"
+          cp dist/* "$staged/"
+          cp "$RUNNER_TEMP/workflow-artifacts/release-readiness/dist-sha256.txt" "$staged/"
+          cp "$RUNNER_TEMP/workflow-artifacts/release-readiness/artifact-evidence/"* "$staged/"
+          (cd "$staged" && sha256sum --check dist-sha256.txt)
+          verify_dir="$RUNNER_TEMP/workflow-artifacts/release-stage-evidence-check"
+          mkdir -p "$verify_dir"
+          cp "$staged/"*.spdx.json "$staged/release-artifact-evidence.json" \
+            "$staged/build-inputs.json" "$verify_dir/"
+          python scripts/build_release_artifact_evidence.py \
+            --dist "$staged" --output "$verify_dir" --verify
+
+      - name: Attest build provenance for the delivered archives
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-path: |
+            dist/*.whl
+            dist/*.tar.gz
+            dist/*.zip
+
+      - name: Attest the wheel SPDX inventory
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-path: dist/*.whl
+          sbom-path: ${{ steps.inventory.outputs.wheel_sbom }}
+
+      - name: Attest the source distribution SPDX inventory
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-path: dist/*.tar.gz
+          sbom-path: ${{ steps.inventory.outputs.sdist_sbom }}
+
+      - name: Attest the local ZIP SPDX inventory
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-path: dist/*.zip
+          sbom-path: ${{ steps.inventory.outputs.bundle_sbom }}
 
       - name: Smoke test built wheel
         shell: bash
@@ -126,7 +236,9 @@ jobs:
         with:
           name: release-dist
           retention-days: 3
-          path: dist/*
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
 
       - name: Upload release-readiness evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -134,6 +246,13 @@ jobs:
           name: release-readiness-evidence
           retention-days: 14
           path: ${{ runner.temp }}/workflow-artifacts/release-readiness/**
+
+      - name: Upload complete GitHub release assets for review and recovery
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: github-release-assets
+          retention-days: 14
+          path: ${{ runner.temp }}/workflow-artifacts/github-release-assets/*
 
       - name: Upload release debug artifacts on failure
         if: failure()
@@ -153,28 +272,47 @@ jobs:
             frontend/test-results/**
 
       - name: Publish GitHub release from checked-in notes
-        if: startsWith(github.ref, 'refs/tags/v') && steps.release_notes.outputs.body_path != ''
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && steps.release_notes.outputs.body_path != ''
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           body_path: ${{ steps.release_notes.outputs.body_path }}
           draft: true
-          files: |
-            dist/*
-            ${{ runner.temp }}/workflow-artifacts/release-readiness/dist-sha256.txt
+          files: ${{ runner.temp }}/workflow-artifacts/github-release-assets/*
 
       - name: Publish GitHub release with generated notes
-        if: startsWith(github.ref, 'refs/tags/v') && steps.release_notes.outputs.body_path == ''
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && steps.release_notes.outputs.body_path == ''
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           generate_release_notes: true
           draft: true
-          files: |
-            dist/*
-            ${{ runner.temp }}/workflow-artifacts/release-readiness/dist-sha256.txt
+          files: ${{ runner.temp }}/workflow-artifacts/github-release-assets/*
+
+      - name: Verify uploaded release asset bytes
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          downloaded="$RUNNER_TEMP/workflow-artifacts/release-downloaded"
+          staged="$RUNNER_TEMP/workflow-artifacts/github-release-assets"
+          mkdir -p "$downloaded"
+          gh release download "$GITHUB_REF_NAME" --dir "$downloaded"
+          diff -u <(find "$staged" -maxdepth 1 -type f -printf '%f\n' | sort) \
+            <(find "$downloaded" -maxdepth 1 -type f -printf '%f\n' | sort)
+          cmp "$staged/dist-sha256.txt" "$downloaded/dist-sha256.txt"
+          (cd "$downloaded" && sha256sum --check dist-sha256.txt)
+          cmp "$staged/release-artifact-evidence.json" "$downloaded/release-artifact-evidence.json"
+          verify_dir="$RUNNER_TEMP/workflow-artifacts/release-downloaded-evidence-check"
+          mkdir -p "$verify_dir"
+          cp "$downloaded/"*.spdx.json "$downloaded/release-artifact-evidence.json" \
+            "$downloaded/build-inputs.json" "$verify_dir/"
+          python scripts/build_release_artifact_evidence.py \
+            --dist "$downloaded" --output "$verify_dir" --verify
 
   publish-pypi:
     needs: build-and-release
-    if: startsWith(github.ref, 'refs/tags/v') && vars.PYPI_PUBLISH_ENABLED == 'true'
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && vars.PYPI_PUBLISH_ENABLED == 'true'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -192,7 +330,7 @@ jobs:
 
   verify-pypi-install:
     needs: publish-pypi
-    if: startsWith(github.ref, 'refs/tags/v') && vars.PYPI_PUBLISH_ENABLED == 'true'
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && vars.PYPI_PUBLISH_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository fixtures
