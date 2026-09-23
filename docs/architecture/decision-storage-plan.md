@@ -1,6 +1,6 @@
 # Decision storage and scalable current views
 
-Status: implementation in progress. Baseline: `0d654697effc07e3774429b43972c23b7e0ef468`.
+Status: implemented; local acceptance complete. Baseline: `0d654697effc07e3774429b43972c23b7e0ef468`.
 
 ## Decision
 
@@ -130,18 +130,63 @@ verification and measured results as implementation proceeds.
   Other renderers reject oversized inputs during batched construction. Historical
   membership, redaction, rollback cleanup and publication fencing remain shared.
 
-Validation so far: 233 baseline import/report/workflow contracts; 200 tests after
-queue/governance changes; 155 import/compact-read contracts after the list change;
-186 frontend unit tests and frontend typechecking. These are slice checks, not
-the final acceptance run. Storage sharing adds corruption, project-isolation,
-transaction rollback and reversible-migration coverage; 83 storage, revision,
-workflow and report contracts pass after integration. Reports, complete gates and
-final measurements remain in progress. The asset
-change passes 178 import/migration contracts and its targeted read-budget check.
-Schema/startup validation passes 68 tests, including injected copy failure and
-rejection of missing columns, missing history and unknown schema revisions.
-Temporal maintenance passes 74 revision/workflow/waiver contracts plus a targeted
-failure-isolation/retry test. Frontend coverage remains above the configured gates.
+Acceptance on the implemented application: `make check` passes 1,513 tests,
+with seven optional live/scanner/performance checks skipped and the critical
+coverage gate passing. The optional 10k performance test was then run separately
+and passed. `make frontend-check` passes 189 unit tests, typechecks, build, packaged
+asset parity and generated-client drift checks. `make docs-check` passes. Six
+focused Chromium browser scenarios pass, including automatic pending-view recovery
+and generating/downloading a full gzip export through the Evidence Center.
+
+The source distribution and wheel build successfully; package contents pass and a
+fresh isolated installation applies all migrations through `20260923_0015` and
+mounts the packaged frontend. Migration tests cover history-preserving round trips,
+partial failures, rollback/retry, foreign keys and the identity expression index.
+Live provider and Grype tests were not needed for these offline changes. PostgreSQL
+was not executed locally because no Docker daemon was available; dialect-compatible
+implementation and existing contracts do not substitute for that integration test.
+
+### Measured comparison
+
+Same fixed workload and provider snapshot on the same 16-GiB ARM64 machine.
+Baseline: `0d654697`; measured implementation: `8491989b`, with no tracked diff.
+Each number is a single observed run, not a portable performance promise.
+
+| 5,000-scope workload | Baseline | Implemented |
+| --- | ---: | ---: |
+| Initial import | 19.41 s | 11.82 s |
+| Identical reimports, second / third | 43.90 / 59.38 s | 24.85 / 25.26 s |
+| Additional scope | 61.27 s | 0.48 s |
+| One-scope waiver | 133.34 s | 0.62 s |
+| New historical decisions for that waiver | 5,000 | 1 |
+| Reimport with waiver | 183.72 s | 25.46 s |
+| Dashboard, first / repeated | 18.02 / 28.98 s | 0.53 / 0.53 s |
+| List of 100 findings | 0.76 s; about 4.6 MB | 0.038 s; 206,663 B |
+| Database growth per identical reimport | about 223 MiB | about 38 MiB |
+| Final database after the fixed workload | 1,138.7 MiB | 192.5 MiB |
+| Plain JSON over the 50-MiB limit | late failure, 56.46 s | bounded failure, 4.11 s |
+| Full JSON (gzip) | unavailable | succeeds, 29.14 s; 21,542,037 B |
+
+At 1,000 scopes: import 2.37 s; repeated imports 4.58 / 4.57 s; an additional
+scope 0.10 s; one-scope waiver 0.11 s; dashboard 0.10 s. At both scales the number
+and compressed bytes of shared sections remain exactly unchanged across identical
+reimports. The stale-day read performs zero mutations and returns its explicit
+pending response. The 5k worker refresh with the stale marker takes 0.34 s; this
+case invalidates the marker, not every waiver's actual expiration date. Expiration
+semantics are covered separately by worker and source-waiver tests.
+
+The independent 10k smoke records a 24.01 s import, 1.07 s additional scope,
+0.10 s tail page and 266.9 MiB increase in process peak RSS (398.7 MiB total).
+The repeated-import 5k workload still reaches about 1,352 MiB cumulative process
+peak RSS. This is a real remaining limit: imports and native full reevaluations
+still materialize substantial graphs. Current dashboard aggregation is linear in
+compact findings. This implementation establishes tested behavior at these scales,
+not a 50k-scope capacity guarantee or a universal 15–20x reduction.
+
+The before/after probe output and validation logs are retained with the task's
+`vpw-decision-storage-implementation/final` artifact. Repository-owned work budgets
+and the reproduction command below protect the behavior independently of those
+local timing observations.
 
 ### Daily maintenance operations
 
