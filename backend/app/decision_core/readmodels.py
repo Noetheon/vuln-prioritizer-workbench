@@ -525,9 +525,15 @@ def current_finding_read_views(
     session: Session, findings: list[Finding]
 ) -> list[DecisionFindingView]:
     """Read current list/aggregate fields without hydrating historical evidence."""
-    records = FindingCurrentProjectionRepository(session).read_records_for_findings(
-        finding.id for finding in findings
-    )
+    repository = FindingCurrentProjectionRepository(session)
+    records = repository.read_records_for_findings(finding.id for finding in findings)
+    if settings.DECISION_LEDGER_SHADOW_READ:
+        # Diagnostic policy still applies to compact reads. Load full columns
+        # only for the configured sample, never for every dashboard finding.
+        sample = records[: max(0, settings.DECISION_LEDGER_SHADOW_SAMPLE_SIZE)]
+        _shadow_check_current_projections(
+            repository, repository.records_for_findings(record.finding_id for record in sample)
+        )
     projections = {record.finding_id: record for record in records}
     missing = [finding.id for finding in findings if finding.id not in projections]
     legacy = (

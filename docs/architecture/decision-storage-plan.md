@@ -95,6 +95,8 @@ verification and measured results as implementation proceeds.
 - Finding lists default to compact current columns and a recorded `sla` summary.
   `include_evidence=true` explicitly expands a page; the finding detail endpoint
   still returns the full evidence contract. The frontend reads the compact SLA.
+  Configured shadow checks still verify a bounded sample, including strict failure
+  on drift; the remaining rows do not hydrate full evidence.
 - Dashboard aggregates consume the same compact read model. Full evidence remains
   available for historical reports and detailed explanations. Summary migration
   tests cover exact history preservation, failure rollback and successful retry.
@@ -209,6 +211,9 @@ pages are reusable by subsequent writes. Historical JSON values and canonical
 hashes are preserved, although physical JSON ordering and on-disk representation
 change. The section encoding is versioned independently of the public contract;
 keep its v1 decoder available for old data and migration rollback.
+Downgrade through `20260923_0011` also restores current rank and top-five wording
+inside the legacy lifecycle overlay. Historical payloads remain unchanged; the
+conversion is transactional and covered by an injected-failure/retry test.
 
 ### Reproducing the workload
 
@@ -228,7 +233,7 @@ not be interpreted as the streaming report's isolated peak. Run scales sequentia
 without concurrent test/build workloads when comparing timings.
 
 Normal CI tests guard semantic work budgets: displaced peers retain history and
-overlays, unchanged queue reads avoid hydration, one-scope waivers create one
+overlays, rank-only synchronization avoids hydration, one-scope waivers create one
 revision, repeated sections do not grow, asset proofs use indexed distinct facts,
 and report readers stop at a fixed batch/input budget. The optional 10k performance
 smoke reduces the one-additional-finding allowance from 60 to 3 seconds. Initial

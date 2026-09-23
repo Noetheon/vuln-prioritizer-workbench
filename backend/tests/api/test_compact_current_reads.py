@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -11,10 +12,59 @@ from utils.workbench_env import WorkbenchApiEnv, create_project_via_api, seed_fi
 
 from app.repositories import FindingRepository, RunRepository, WaiverRepository
 from app.repositories.current_projections import FindingCurrentProjectionRepository
+from app.repositories.evidence_payloads import EvidencePayloadStore
 from app.services.dashboard import build_project_dashboard_payload
 
 
-def test_compact_list_and_dashboard_preserve_sla_without_hydrating_evidence(
+@pytest.mark.parametrize("strict", [False, True])
+def test_compact_reads_honor_configured_sampled_parity(
+    workbench_api_env: WorkbenchApiEnv,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    strict: bool,
+) -> None:
+    from app.decision_core import readmodels
+
+    env = workbench_api_env
+    project = create_project_via_api(env.client, {})
+    project_id = uuid.UUID(project["id"])
+    seeded = seed_finding_pair(
+        env.engine,
+        env.app_models,
+        env.repositories,
+        project_id=project_id,
+        with_decision_evidence=True,
+    )
+    monkeypatch.setattr(
+        readmodels,
+        "settings",
+        replace(
+            readmodels.settings,
+            DECISION_LEDGER_SHADOW_READ=True,
+            DECISION_LEDGER_STRICT_PARITY=strict,
+            DECISION_LEDGER_SHADOW_SAMPLE_SIZE=1,
+        ),
+    )
+    with Session(env.engine) as session:
+        repository = FindingCurrentProjectionRepository(session)
+        for record in repository.records_for_findings(seeded["finding_ids"]):
+            record.source_payload_sha256 = "0" * 64
+            session.add(record)
+        session.commit()
+        findings = [session.get(env.app_models.Finding, key) for key in seeded["finding_ids"]]
+        if strict:
+            with pytest.raises(
+                readmodels.DecisionEvidenceInvariantError, match="source-hash"
+            ) as caught:
+                readmodels.current_finding_read_views(session, findings)
+            assert str(caught.value).count(":source-hash") == 1
+        else:
+            views = readmodels.current_finding_read_views(session, findings)
+            assert len(views) == 2
+            assert caplog.text.count(":source-hash") == 1
+
+
+def test_compact_reads_without_shadow_checks_preserve_sla_without_evidence_hydration(
     workbench_api_env: WorkbenchApiEnv,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -49,9 +99,15 @@ def test_compact_list_and_dashboard_preserve_sla_without_hydrating_evidence(
         pytest.fail("A compact current read must not hydrate historical finding evidence")
 
     with monkeypatch.context() as patch:
+        from app.decision_core import readmodels
+
+        patch.setattr(
+            readmodels, "settings", replace(readmodels.settings, DECISION_LEDGER_SHADOW_READ=False)
+        )
         patch.setattr(
             FindingCurrentProjectionRepository, "evidence_for_records", unexpected_hydration
         )
+        patch.setattr(EvidencePayloadStore, "load_records", unexpected_hydration)
         compact = env.client.get(endpoint + "/findings/")
         assert compact.status_code == 200, compact.text
         rows = compact.json()["data"]
