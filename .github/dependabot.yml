@@ -1,8 +1,11 @@
 version: 2
 updates:
-  # The root uv.lock is authoritative; requirements*.lock.txt are exports.
+  # The root uv.lock is authoritative; backend/requirements*.txt are derived
+  # exports or a bounded audit input, not independent update manifests.
   - package-ecosystem: "uv"
     directory: "/"
+    exclude-paths:
+      - "backend/requirements*.txt"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
