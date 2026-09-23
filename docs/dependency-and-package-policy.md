@@ -128,9 +128,13 @@ make python-lock-check
 ```
 
 Dependabot uses the root `uv` ecosystem because `uv.lock` is the source of
-truth. A Python update proposal must refresh and commit both generated exports
-with the commands above before it can pass `make python-lock-check`; Dependabot
-does not regenerate these repository-specific exports itself. Python version
+truth. Its update scan excludes `backend/requirements*.txt`: the two hashed
+exports and the bounded audit input are maintained from the reviewed
+`backend/pyproject.toml` and `uv.lock`, not updated as separate manifests.
+Without this exclusion, the `uv` updater proposed changes to the generated
+exports alone, including incompatible transitive versions. A Python update
+proposal must refresh and commit both generated exports with the commands
+above before it can pass `make python-lock-check`. Python version
 updates are currently kept as individual PRs so an unrelated package cannot
 be carried through by a grouped lock change. Treat a bot PR as a candidate:
 review any widened package bound and the full `uv.lock` diff before refreshing
