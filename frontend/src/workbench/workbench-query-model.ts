@@ -10,6 +10,7 @@ import type {
   ReportPublic,
 } from "../api-client"
 import type { DashboardSignalCounts } from "../components/dashboard/dashboard-model"
+import { decisionRefreshPollingInterval } from "../lib/decision-freshness.ts"
 import { workflowNeedsPolling } from "./workflow-model.ts"
 
 export type RunDetailQueryData = {
@@ -25,6 +26,7 @@ export type FindingDetailQueryData = {
 
 export type ProjectSummariesQueryData = {
   failedProjectIds: string[]
+  refreshPendingProjectIds?: string[]
   summaries: Record<string, ProjectDecisionSummaryPublic>
 }
 
@@ -107,6 +109,7 @@ export async function readProjectSummariesWithLimit(
 ): Promise<ProjectSummariesQueryData> {
   const summaries: Record<string, ProjectDecisionSummaryPublic> = {}
   const failedProjectIds: string[] = []
+  const refreshPendingProjectIds: string[] = []
   let nextIndex = 0
 
   async function readNextProject() {
@@ -127,6 +130,9 @@ export async function readProjectSummariesWithLimit(
           throw caught
         }
         failedProjectIds.push(projectId)
+        if (decisionRefreshPollingInterval(caught)) {
+          refreshPendingProjectIds.push(projectId)
+        }
       }
     }
   }
@@ -137,7 +143,11 @@ export async function readProjectSummariesWithLimit(
       readNextProject,
     ),
   )
-  return { failedProjectIds, summaries }
+  return {
+    failedProjectIds,
+    summaries,
+    ...(refreshPendingProjectIds.length ? { refreshPendingProjectIds } : {}),
+  }
 }
 
 export function dashboardSignalCountsFromApi(

@@ -8,7 +8,10 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 
 from app.api.deps import LocalActor, SessionDep
-from app.api.routes.workbench_access import lock_existing_project_resource, require_project
+from app.api.routes.workbench_access import (
+    lock_existing_project_resource,
+    require_current_decisions,
+)
 from app.decision_core.finding_queries import list_project_findings_query
 from app.decision_core.readmodels import current_finding_read_views, project_finding_decision_views
 from app.models import (
@@ -80,7 +83,7 @@ def read_project_findings(
     ),
 ) -> FindingsPublic:
     """List a paginated page of findings for a visible project."""
-    require_project(session, project_id)
+    require_current_decisions(session, project_id)
     findings, count = list_project_findings_query(
         session,
         FindingPageQuery(
@@ -122,7 +125,7 @@ def read_finding(
     finding = FindingRepository(session).get_finding(finding_id)
     if finding is None:
         raise HTTPException(status_code=404, detail="Finding not found")
-    require_project(session, finding.project_id)
+    require_current_decisions(session, finding.project_id)
     return _finding_detail_public_with_attack_context(session, finding)
 
 
@@ -144,6 +147,7 @@ def update_finding_status(
         project_id=finding.project_id,
         not_found_detail="Finding not found",
     )
+    require_current_decisions(session, finding.project_id)
     try:
         updated = update_finding_workflow_status(
             session,
@@ -168,7 +172,7 @@ def explain_finding(
     finding = FindingRepository(session).get_finding(finding_id)
     if finding is None:
         raise HTTPException(status_code=404, detail="Finding not found")
-    require_project(session, finding.project_id)
+    require_current_decisions(session, finding.project_id)
     try:
         return build_finding_explanation_payload(finding)
     except DecisionDataUnavailableError as exc:

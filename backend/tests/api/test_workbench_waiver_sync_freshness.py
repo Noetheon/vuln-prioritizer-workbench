@@ -15,10 +15,11 @@ from utils.workbench_env import (
     seed_finding_pair,
 )
 
-from app.api.routes.workbench_access import _refresh_stale_project_waivers
 from app.models import FindingStatus
 from app.repositories.waivers import WaiverRepository
+from app.services.decision_maintenance import refresh_project_decisions
 from app.services.decision_projection_sync import DecisionProjectionService
+from app.workers.workflow_worker import run_worker_once
 
 
 def test_zero_waiver_sync_returns_before_loading_project_findings(
@@ -156,7 +157,7 @@ def test_delete_last_waiver_forces_projection_rebuild(
     assert detail.json()["waived"] is False
 
 
-def test_stale_project_read_expires_waiver_once_per_utc_day(
+def test_stale_project_reads_are_read_only_until_worker_expires_waiver(
     workbench_api_env: WorkbenchApiEnv,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -214,6 +215,40 @@ def test_stale_project_read_expires_waiver_once_per_utc_day(
         )
 
     monkeypatch.setattr(DecisionProjectionService, "sync_project_waivers", counted_sync)
+    writes = []
+
+    def observed_write(_connection, _cursor, statement, _parameters, _context, _many):
+        if statement.lstrip().split()[0].upper() in {"INSERT", "UPDATE", "DELETE"}:
+            writes.append(statement)
+
+    event.listen(workbench_api_env.engine, "before_cursor_execute", observed_write)
+    try:
+        for endpoint in (
+            f"/api/v1/findings/{finding_id}",
+            f"/api/v1/projects/{project_id}/findings/",
+            f"/api/v1/projects/{project_id}/dashboard",
+        ):
+            pending = workbench_api_env.client.get(endpoint, headers=headers)
+            assert pending.status_code == 503, pending.text
+            assert pending.json()["detail"]["code"] == "decision_refresh_pending"
+            assert pending.headers["Retry-After"] == "2"
+        assert (
+            workbench_api_env.client.get(
+                f"/api/v1/projects/{project_id}", headers=headers
+            ).status_code
+            == 200
+        )
+        assert writes == []
+        assert sync_count == 0
+    finally:
+        event.remove(workbench_api_env.engine, "before_cursor_execute", observed_write)
+    tick = run_worker_once(
+        engine=workbench_api_env.engine,
+        settings=workbench_api_env.client.app.state.workbench_settings,
+        worker_id="governance-maintenance-test",
+    )
+    assert tick.refreshed_projects == 1
+    assert tick.failed_project_refreshes == 0
     expired = workbench_api_env.client.get(
         f"/api/v1/findings/{finding_id}",
         headers=headers,
@@ -283,8 +318,8 @@ def test_two_stale_sessions_claim_only_one_daily_waiver_refresh(
         assert first_project.waiver_evaluated_on == date(2026, 9, 1)
         assert stale_project.waiver_evaluated_on == date(2026, 9, 1)
 
-        _refresh_stale_project_waivers(first_session, first_project)
-        _refresh_stale_project_waivers(stale_session, stale_project)
+        assert refresh_project_decisions(first_session, first_project)
+        assert not refresh_project_decisions(stale_session, stale_project)
 
         assert first_project.waiver_evaluated_on == date(2026, 9, 2)
         assert stale_project.waiver_evaluated_on == date(2026, 9, 2)
@@ -300,7 +335,7 @@ def test_two_stale_sessions_claim_only_one_daily_waiver_refresh(
         assert len(lifecycle_events) == 1
 
 
-def test_stale_read_rolls_back_projection_and_freshness_marker_together(
+def test_failed_worker_refresh_rolls_back_projection_and_freshness_marker_together(
     workbench_api_env: WorkbenchApiEnv,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -342,11 +377,15 @@ def test_stale_read_rolls_back_projection_and_freshness_marker_together(
         raise RuntimeError("synthetic waiver refresh failure")
 
     monkeypatch.setattr(DecisionProjectionService, "sync_project_waivers", fail_after_flush)
-    with pytest.raises(RuntimeError, match="synthetic waiver refresh failure"):
-        workbench_api_env.client.get(
-            f"/api/v1/findings/{finding_id}",
-            headers=headers,
-        )
+    tick = run_worker_once(
+        engine=workbench_api_env.engine,
+        settings=workbench_api_env.client.app.state.workbench_settings,
+        worker_id="failing-governance-maintenance-test",
+    )
+    assert tick.failed_project_refreshes == 1
+    assert tick.refreshed_projects == 0
+    pending = workbench_api_env.client.get(f"/api/v1/findings/{finding_id}", headers=headers)
+    assert pending.status_code == 503
 
     with Session(workbench_api_env.engine) as session:
         finding = session.get(workbench_api_env.app_models.Finding, finding_id)
@@ -407,3 +446,42 @@ def test_waiver_create_and_delete_preserve_legacy_terminal_status_without_projec
     )
     assert after_delete.status_code == 200, after_delete.text
     assert after_delete.json()["status"] == terminal_status.value
+
+
+def test_failed_project_maintenance_does_not_block_other_projects_or_next_retry(
+    workbench_api_env: WorkbenchApiEnv, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.services import decision_maintenance
+
+    env = workbench_api_env
+    monkeypatch.setenv("WORKBENCH_FIXED_NOW", "2026-09-01T12:00:00+00:00")
+    first = create_project_via_api(env.client, {})
+    second = create_project_via_api(env.client, {})
+    first_id, second_id = uuid.UUID(first["id"]), uuid.UUID(second["id"])
+    monkeypatch.setenv("WORKBENCH_FIXED_NOW", "2026-09-02T12:00:00+00:00")
+    original = decision_maintenance.refresh_project_decisions
+
+    def fail_one(session, project):
+        if project.id == first_id:
+            raise RuntimeError("one broken project")
+        return original(session, project)
+
+    monkeypatch.setattr(decision_maintenance, "refresh_project_decisions", fail_one)
+    tick = run_worker_once(
+        engine=env.engine,
+        settings=env.client.app.state.workbench_settings,
+        worker_id="independent-maintenance-test",
+    )
+    assert (tick.refreshed_projects, tick.failed_project_refreshes) == (1, 1)
+    with Session(env.engine) as session:
+        assert session.get(env.app_models.Project, first_id).waiver_evaluated_on == date(2026, 9, 1)
+        assert session.get(env.app_models.Project, second_id).waiver_evaluated_on == date(
+            2026, 9, 2
+        )
+    monkeypatch.setattr(decision_maintenance, "refresh_project_decisions", original)
+    retried = run_worker_once(
+        engine=env.engine,
+        settings=env.client.app.state.workbench_settings,
+        worker_id="independent-maintenance-test",
+    )
+    assert (retried.refreshed_projects, retried.failed_project_refreshes) == (1, 0)

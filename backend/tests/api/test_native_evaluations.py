@@ -611,6 +611,9 @@ def test_daily_refresh_expires_source_file_waiver_without_upload(
         )
         session.commit()
     monkeypatch.setenv("WORKBENCH_FIXED_NOW", f"{today + timedelta(days=1)}T12:00:00+00:00")
+    pending = env.client.get(f"/api/v1/findings/{finding_id}")
+    assert pending.status_code == 503
+    assert _worker(env).refreshed_projects == 1
     detail = env.client.get(f"/api/v1/findings/{finding_id}")
     assert detail.status_code == 200, detail.text
     assert detail.json()["waived"] is False

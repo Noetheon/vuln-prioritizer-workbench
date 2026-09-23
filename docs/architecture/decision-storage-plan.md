@@ -116,17 +116,37 @@ verification and measured results as implementation proceeds.
   or unknown schema are not silently recreated/stamped. Supported legacy table
   rebuilds are transactional, preserve child foreign-key targets, restore SQLite
   pragmas on failure and recreate expression indexes correctly.
+- The workflow worker owns UTC-day governance maintenance, with the existing
+  atomic project publication fence. GETs do not claim or commit refreshes. Current
+  decisions return `503 decision_refresh_pending` with `Retry-After: 2` until a
+  stale project is refreshed; project metadata, history and reports stay readable.
+  Failed projects roll back and retry independently on a later worker tick. The
+  frontend invalidates open views at the UTC day boundary and polls only this
+  pending condition until current decisions are available.
 
 Validation so far: 233 baseline import/report/workflow contracts; 200 tests after
 queue/governance changes; 155 import/compact-read contracts after the list change;
 186 frontend unit tests and frontend typechecking. These are slice checks, not
 the final acceptance run. Storage sharing adds corruption, project-isolation,
 transaction rollback and reversible-migration coverage; 83 storage, revision,
-workflow and report contracts pass after integration. Temporal maintenance, asset
-reports, complete gates and final measurements remain in progress. The asset
+workflow and report contracts pass after integration. Reports, complete gates and
+final measurements remain in progress. The asset
 change passes 178 import/migration contracts and its targeted read-budget check.
 Schema/startup validation passes 68 tests, including injected copy failure and
 rejection of missing columns, missing history and unknown schema revisions.
+Temporal maintenance passes 74 revision/workflow/waiver contracts plus a targeted
+failure-isolation/retry test. Frontend coverage remains above the configured gates.
+
+### Daily maintenance operations
+
+`vpw serve` runs maintenance in its in-process worker. Deployments with an external
+worker must keep it running even when no imports/reports are queued. A pending
+current view does not itself enqueue or perform a write. A persistent
+`decision_refresh_pending` response means the project's daily maintenance has not
+committed: check worker health and its `Daily decision refresh failed` log before
+retrying. Successful refreshes retain immutable evaluation revisions and the
+`waiver.lifecycle_refresh` audit event. Historical reports remain available during
+this condition. A project without findings can still return an empty current view.
 
 ### Storage migration operations
 
