@@ -78,6 +78,13 @@ can still land without a source release for every transitive patch.
 The reproducible Python resolution artifact is the root `uv.lock`. The release
 dependency-audit input is `backend/requirements.lock.txt`, exported from
 `uv.lock` with exact pins and hashes for runtime plus maintainer dependencies.
+The release and TestPyPI workflows synchronize their test/tool environment with
+`uv sync --locked --all-packages --all-extras`. The final wheel and sdist use
+`uv build` with `backend/requirements.lock.txt` as a hash-checked build
+constraint, so their `setuptools` and `wheel` build backends resolve to the
+reviewed versions. These two build tools are explicit dev dependencies and
+therefore part of the audited lock. A normal downstream installation still
+resolves the bounded package metadata for its own platform.
 The backend Docker install input is the separate
 `backend/requirements.runtime.lock.txt`, exported from the same `uv.lock` for
 Python 3.14 without dev extras. Keep all three committed together when Python
@@ -183,6 +190,23 @@ The existing Playwright-only container paths are a bounded exception:
 browser-test image and its bundled Node/npm. The latter already explicitly
 disables engine strictness for its screenshot runner. These test containers
 do not replace the Node 22/npm 10 production build or frontend CI gates.
+
+Dockerfile base images, Compose service images, and the Syft/Grype scanner
+images in `docker/security-tools/Dockerfile` are digest-pinned. Dependabot
+checks the Dockerfile and Compose manifests weekly and proposes version updates
+for review. The Docker workflow builds and runs the scanner targets from that
+Dockerfile, so a scanner update goes through the same smoke and image-security
+gate as an application image update. Neither Dependabot nor this workflow
+automatically merges an image update.
+
+The scheduled Docker workflow also runs
+`scripts/check_container_image_pin_freshness.py`. It compares the committed
+multi-platform digest of each static image reference with the current digest
+of its registry tag. This catches same-tag rebuilds, such as OS-package fixes,
+that may not generate a Dependabot version PR. A failure should be resolved by
+reviewing the registry change, updating the pinned digest, and rerunning the
+Docker smoke and Grype report. Keep the scanner report when a vulnerability has
+no upstream fix; do not remove it with a blanket ignore rule.
 
 The frontend audit intentionally covers both runtime and dev/build-chain
 dependencies from the committed lockfile. Do not exclude dev dependencies from

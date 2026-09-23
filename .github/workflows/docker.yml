@@ -146,9 +146,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: changes
-    env:
-      GRYPE_IMAGE: docker.io/anchore/grype:v0.106.0@sha256:f6fa9ac31f97591957edb13b7c7c24fd172cf11b6e2a2df5dd3464ebb8eefefc
-      SYFT_IMAGE: docker.io/anchore/syft:v1.40.0@sha256:11a68ff5cd49a1579e1f05b061a96edf0a5add161ea5f38d62fc979704c46918
 
     steps:
       - name: Skip Docker smoke for non-runtime PR
@@ -169,6 +166,14 @@ jobs:
         if: needs.changes.outputs.docker-smoke-mode == 'full'
         run: make docker-production-smoke
 
+      - name: Build pinned scanner images
+        if: needs.changes.outputs.run-image-security == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build --pull --target syft -t vpw-syft:ci -f docker/security-tools/Dockerfile docker/security-tools
+          docker build --pull --target grype -t vpw-grype:ci -f docker/security-tools/Dockerfile docker/security-tools
+
       - name: Generate image SBOMs
         if: needs.changes.outputs.run-image-security == 'true'
         shell: bash
@@ -178,13 +183,13 @@ jobs:
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$PWD/build/docker-sbom:/output" \
-            "$SYFT_IMAGE" \
+            vpw-syft:ci \
             vuln-prioritizer-workbench-backend:local \
             -o spdx-json=/output/backend.spdx.json
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$PWD/build/docker-sbom:/output" \
-            "$SYFT_IMAGE" \
+            vpw-syft:ci \
             vuln-prioritizer-workbench-frontend:local \
             -o spdx-json=/output/frontend.spdx.json
 
@@ -193,18 +198,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p build/docker-sbom
+          mkdir -p build/docker-sbom/grype-cache
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$PWD/.grype.yaml:/grype.yaml:ro" \
-            "$GRYPE_IMAGE" \
+            -v "$PWD/build/docker-sbom/grype-cache:/grype-cache" \
+            -e GRYPE_DB_CACHE_DIR=/grype-cache \
+            vpw-grype:ci \
             -c /grype.yaml \
             vuln-prioritizer-workbench-backend:local \
             -o json > build/docker-sbom/backend.grype.json
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$PWD/.grype.yaml:/grype.yaml:ro" \
-            "$GRYPE_IMAGE" \
+            -v "$PWD/build/docker-sbom/grype-cache:/grype-cache" \
+            -e GRYPE_DB_CACHE_DIR=/grype-cache \
+            vpw-grype:ci \
             -c /grype.yaml \
             vuln-prioritizer-workbench-frontend:local \
             -o json > build/docker-sbom/frontend.grype.json
@@ -221,7 +230,9 @@ jobs:
             docker run --rm \
               -v /var/run/docker.sock:/var/run/docker.sock \
               -v "$PWD/.grype.yaml:/grype.yaml:ro" \
-              "$GRYPE_IMAGE" \
+              -v "$PWD/build/docker-sbom/grype-cache:/grype-cache" \
+              -e GRYPE_DB_CACHE_DIR=/grype-cache \
+              vpw-grype:ci \
               -c /grype.yaml \
               "$image" --only-fixed --fail-on high
           done
@@ -235,6 +246,10 @@ jobs:
           path: |
             build/docker-sbom/*.spdx.json
             build/docker-sbom/*.grype.json
+
+      - name: Review pinned image digests against registry tags
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+        run: python3 scripts/check_container_image_pin_freshness.py
 
       - name: Show compose status and logs on failure
         if: failure() && needs.changes.outputs.run-docker == 'true'

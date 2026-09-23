@@ -15,6 +15,7 @@ DOCKERFILES = (
     ROOT / "backend" / "Dockerfile",
     ROOT / "frontend" / "Dockerfile",
     ROOT / "frontend" / "Dockerfile.playwright",
+    ROOT / "docker" / "security-tools" / "Dockerfile",
 )
 COMPOSE_FILES = (
     ROOT / "compose.yml",

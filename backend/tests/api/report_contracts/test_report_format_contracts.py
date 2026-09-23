@@ -3,6 +3,8 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import os
+import subprocess
 import uuid
 import zipfile
 from datetime import UTC, date, datetime
@@ -34,8 +36,11 @@ from utils.workbench_env import (
     create_project_via_api,
     local_api_headers,
 )
+from utils.workbench_evidence_seed import _SEED_UPLOAD_CONTENT
 
+from app.api import deps
 from app.core.config import Settings
+from app.core.db import create_db_engine
 from app.decision_core.contracts import FindingDecisionEvidenceV2
 from app.decision_core.readmodels import DecisionFindingView, run_finding_decision_views
 from app.domain.engine.sarif_contract import (
@@ -223,6 +228,84 @@ def test_vpw048_markdown_report_create_downloads_for_completed_run(
     assert "<img" not in body
     assert "[open](" not in body
     assert "&lt;script&gt;" in body
+
+
+def test_report_download_survives_sqlite_restore_to_new_data_root(
+    file_backed_workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    source = file_backed_workbench_api_env
+    _configure_report_dir(source, tmp_path)
+    source.client.app.state.workbench_settings = replace(
+        source.client.app.state.workbench_settings,
+        REPORT_DIR=str(tmp_path / "reports"),
+    )
+    headers = local_api_headers(source.client)
+    project = create_project_via_api(source.client, headers)
+    run_id = _seed_reportable_run(source, uuid.UUID(project["id"]))
+    uploaded = tmp_path / "imports" / project["id"] / str(run_id) / "known-cves.txt"
+    uploaded.parent.mkdir(parents=True)
+    uploaded.write_bytes(_SEED_UPLOAD_CONTENT)
+    created = _create_report_via_worker(
+        source, run_id, headers=headers, payload={"format": "markdown"}
+    )
+    expected = source.client.get(created["download_url"], headers=headers)
+    assert expected.status_code == 200
+
+    repo_root = Path(__file__).resolve().parents[4]
+    backup = tmp_path / "backup"
+    subprocess.run(
+        [str(repo_root / "scripts/workbench-backup.sh")],
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(tmp_path / "workbench.db"),
+            "WORKBENCH_ARTIFACT_ROOT": str(tmp_path),
+            "BACKUP_DIR": str(backup),
+        },
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    relocated = tmp_path / "relocated"
+    relocated.mkdir()
+    restored_process = subprocess.run(
+        [str(repo_root / "scripts/workbench-restore.sh"), str(backup)],
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(relocated / "workbench.db"),
+            "ARTIFACT_RESTORE_ROOT": str(relocated),
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert restored_process.returncode == 0, restored_process.stderr
+
+    active_settings = source.client.app.state.workbench_settings
+    active_override = app.dependency_overrides[deps.get_db]
+    restored_settings = replace(
+        active_settings,
+        SQLALCHEMY_DATABASE_URI=f"sqlite:///{(relocated / 'workbench.db').as_posix()}",
+        REPORT_DIR=str(relocated / "reports"),
+    )
+    restored_engine = create_db_engine(restored_settings)
+
+    def restored_session():
+        with Session(restored_engine) as session:
+            yield session
+
+    app.dependency_overrides[deps.get_db] = restored_session
+    app.state.workbench_settings = restored_settings
+    try:
+        response = source.client.get(
+            created["download_url"], headers=local_api_headers(source.client)
+        )
+        assert response.status_code == 200
+        assert response.content == expected.content
+    finally:
+        app.dependency_overrides[deps.get_db] = active_override
+        app.state.workbench_settings = active_settings
+        restored_engine.dispose()
 
 
 def test_vpw049_html_report_create_downloads_executive_report(

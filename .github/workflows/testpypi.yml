@@ -15,6 +15,11 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     outputs:
       package_version: ${{ steps.package_version.outputs.version }}
 
@@ -28,11 +33,12 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.14"
-          cache: pip
-          cache-dependency-path: |
-            pyproject.toml
-            backend/pyproject.toml
-            .pre-commit-config.yaml
+
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.11.31"
+          enable-cache: false
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -41,17 +47,49 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install project and dev dependencies
-        run: python -m pip install -e "backend[dev]"
+      - name: Install the reviewed Python resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv lock --check --offline --python 3.14
+          UV_BUILD_CONSTRAINT=backend/requirements.lock.txt \
+            uv sync --locked --all-packages --all-extras --python 3.14
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: Record the TestPyPI build toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence_dir="$RUNNER_TEMP/workflow-artifacts/testpypi-build"
+          mkdir -p "$evidence_dir"
+          python scripts/record_release_build_inputs.py \
+            --output "$evidence_dir/build-inputs.json" \
+            --commit "$GITHUB_SHA" --ref "$GITHUB_REF" \
+            --run-url "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
 
       - name: Run release-readiness local checks
         run: make release-readiness-check
 
+      - name: Reject tracked source drift before building distributions
+        run: |
+          git diff --exit-code
+          git diff --cached --exit-code
+
       - name: Build source and wheel distributions
-        run: python -m build backend --outdir dist
+        run: |
+          uv build --clear --no-build-logs --python 3.14 \
+            --build-constraints backend/requirements.lock.txt --require-hashes \
+            --out-dir dist backend
 
       - name: Validate built distributions
         run: python -m twine check dist/*
+
+      - name: Attest build provenance for the distributions
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        with:
+          subject-path: |
+            dist/*.whl
+            dist/*.tar.gz
 
       - name: Smoke test built wheel
         shell: bash
@@ -68,6 +106,13 @@ jobs:
           name: release-dist
           retention-days: 3
           path: dist/*
+
+      - name: Upload TestPyPI build evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: testpypi-build-evidence
+          retention-days: 14
+          path: ${{ runner.temp }}/workflow-artifacts/testpypi-build/**
 
       - name: Upload TestPyPI build debug artifacts on failure
         if: failure()
