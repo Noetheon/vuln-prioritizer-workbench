@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Query
 from app.api.deps import LocalActor, SessionDep
 from app.api.routes.workbench_access import lock_existing_project_resource, require_project
 from app.decision_core.finding_queries import list_project_findings_query
-from app.decision_core.readmodels import project_finding_decision_views
+from app.decision_core.readmodels import current_finding_read_views, project_finding_decision_views
 from app.models import (
     AssetExposure,
     Finding,
@@ -72,6 +72,12 @@ def read_project_findings(
     epss_max: float | None = Query(default=None, ge=0, le=1),
     cvss_min: float | None = Query(default=None, ge=0, le=10),
     cvss_max: float | None = Query(default=None, ge=0, le=10),
+    include_evidence: bool = Query(
+        default=False,
+        description=(
+            "Expand full decision evidence for this page. Detail views include it by default."
+        ),
+    ),
 ) -> FindingsPublic:
     """List a paginated page of findings for a visible project."""
     require_project(session, project_id)
@@ -98,7 +104,11 @@ def read_project_findings(
             cvss_max=cvss_max,
         ),
     )
-    views = project_finding_decision_views(session, findings)
+    views = (
+        project_finding_decision_views(session, findings)
+        if include_evidence
+        else current_finding_read_views(session, findings)
+    )
     return FindingsPublic(data=[_finding_public_from_view(view) for view in views], count=count)
 
 

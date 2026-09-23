@@ -21,6 +21,7 @@ from app.decision_core.contracts import (
     OccurrenceEvidenceV2,
     RunDiagnosticsV2,
 )
+from app.decision_core.read_summary import decision_read_summary
 from app.domain.engine.security_redaction import redact_value
 from app.models import (
     AnalysisRun,
@@ -30,6 +31,7 @@ from app.models import (
     AnalysisRunUploadsPublic,
     AssetExposure,
     Finding,
+    FindingCurrentProjection,
     FindingPriority,
     FindingStatus,
     WorkflowRunKind,
@@ -220,6 +222,18 @@ class DecisionFindingView:
     finding: Finding
     evidence: FindingDecisionEvidenceV2 | None = None
 
+    projection: FindingCurrentProjection | None = None
+
+    @property
+    def decision(self) -> FindingDecisionEvidenceV2 | FindingCurrentProjection | None:
+        return self.evidence if self.evidence is not None else self.projection
+
+    @property
+    def read_summary(self) -> dict[str, Any]:
+        if self.evidence is not None:
+            return decision_read_summary(self.evidence)
+        return self.projection.read_summary_json if self.projection is not None else {}
+
     @property
     def finding_id(self) -> uuid.UUID:
         return self.finding.id
@@ -230,23 +244,27 @@ class DecisionFindingView:
 
     @property
     def cve_id(self) -> str:
-        return self.evidence.cve_id if self.evidence is not None else self.finding.cve_id
+        decision = self.decision
+        return decision.cve_id if decision is not None else self.finding.cve_id
 
     @property
     def dedup_key(self) -> str:
-        return self.evidence.dedup_key if self.evidence is not None else self.finding.dedup_key
+        decision = self.decision
+        return decision.dedup_key if decision is not None else self.finding.dedup_key
 
     @property
     def status(self) -> FindingStatus:
-        if self.evidence is None:
+        decision = self.decision
+        if decision is None:
             return self.finding.status
-        return _status_value(self.evidence.status)
+        return _status_value(decision.status)
 
     @property
     def priority(self) -> FindingPriority:
-        if self.evidence is None:
+        decision = self.decision
+        if decision is None:
             return FindingPriority.MEDIUM
-        return _priority_value(self.evidence.priority)
+        return _priority_value(decision.priority)
 
     @property
     def priority_label(self) -> str:
@@ -254,51 +272,63 @@ class DecisionFindingView:
 
     @property
     def priority_rank(self) -> int:
-        return self.evidence.priority_rank if self.evidence is not None else 99
+        decision = self.decision
+        return decision.priority_rank if decision is not None else 99
 
     @property
     def risk_score(self) -> float | None:
-        return self.evidence.risk_score if self.evidence is not None else None
+        decision = self.decision
+        return decision.risk_score if decision is not None else None
 
     @property
     def operational_rank(self) -> int:
-        return self.evidence.operational_rank if self.evidence is not None else 0
+        decision = self.decision
+        return decision.operational_rank if decision is not None else 0
 
     @property
     def in_kev(self) -> bool:
-        return self.evidence.in_kev if self.evidence is not None else False
+        decision = self.decision
+        return decision.in_kev if decision is not None else False
 
     @property
     def epss(self) -> float | None:
-        return self.evidence.epss if self.evidence is not None else None
+        decision = self.decision
+        return decision.epss if decision is not None else None
 
     @property
     def cvss_base_score(self) -> float | None:
-        return self.evidence.cvss_base_score if self.evidence is not None else None
+        decision = self.decision
+        return decision.cvss_base_score if decision is not None else None
 
     @property
     def attack_mapped(self) -> bool:
-        return self.evidence.attack_mapped if self.evidence is not None else False
+        decision = self.decision
+        return decision.attack_mapped if decision is not None else False
 
     @property
     def suppressed_by_vex(self) -> bool:
-        return self.evidence.suppressed_by_vex if self.evidence is not None else False
+        decision = self.decision
+        return decision.suppressed_by_vex if decision is not None else False
 
     @property
     def under_investigation(self) -> bool:
-        return self.evidence.under_investigation if self.evidence is not None else False
+        decision = self.decision
+        return decision.under_investigation if decision is not None else False
 
     @property
     def waived(self) -> bool:
-        return self.evidence.waived if self.evidence is not None else False
+        decision = self.decision
+        return decision.waived if decision is not None else False
 
     @property
     def rationale(self) -> str | None:
-        return self.evidence.rationale if self.evidence is not None else None
+        decision = self.decision
+        return decision.rationale if decision is not None else None
 
     @property
     def recommended_action(self) -> str | None:
-        return self.evidence.recommended_action if self.evidence is not None else None
+        decision = self.decision
+        return decision.recommended_action if decision is not None else None
 
     @property
     def occurrence_views(self) -> list[DecisionOccurrenceView]:
@@ -321,6 +351,8 @@ class DecisionFindingView:
     def component_name(self) -> str | None:
         if self.evidence is not None:
             return project_component_decision(self.evidence).name
+        if self.projection is not None:
+            return self.projection.component_name
         component = self.finding.component
         return component.name if component is not None else None
 
@@ -328,6 +360,8 @@ class DecisionFindingView:
     def component_version(self) -> str | None:
         if self.evidence is not None:
             return project_component_decision(self.evidence).version
+        if self.projection is not None:
+            return self.projection.component_version
         component = self.finding.component
         return component.version if component is not None else None
 
@@ -335,6 +369,8 @@ class DecisionFindingView:
     def component_purl(self) -> str | None:
         if self.evidence is not None:
             return project_component_decision(self.evidence).purl
+        if self.projection is not None:
+            return self.projection.component_purl
         component = self.finding.component
         return component.purl if component is not None else None
 
@@ -346,12 +382,22 @@ class DecisionFindingView:
         return asset.name or asset.asset_key
 
     @property
+    def component_package_type(self) -> str | None:
+        if self.evidence is not None:
+            return project_component_decision(self.evidence).package_type
+        if self.projection is not None:
+            return self.projection.component_package_type
+        component = self.finding.component
+        return component.package_type if component is not None else None
+
+    @property
     def evidence_payload(self) -> dict[str, Any]:
         return self.evidence.to_jsonable() if self.evidence is not None else {}
 
     def public_update(self) -> dict[str, object]:
         update: dict[str, object] = {
             "evidence": self.evidence,
+            "sla": self.read_summary.get("sla"),
             "component_name": self.component_name,
             "component_version": self.component_version,
             "component_purl": self.component_purl,
@@ -364,7 +410,7 @@ class DecisionFindingView:
             "business_service": self.finding.asset.business_service if self.finding.asset else None,
             "exposure": self.finding.asset.exposure if self.finding.asset else None,
         }
-        if self.evidence is not None:
+        if self.decision is not None:
             update.update(
                 {
                     "cve_id": self.cve_id,
@@ -471,6 +517,28 @@ def project_finding_decision_views(
         )
     return [
         DecisionFindingView(finding=finding, evidence=evidence_by_finding.get(finding.id))
+        for finding in findings
+    ]
+
+
+def current_finding_read_views(
+    session: Session, findings: list[Finding]
+) -> list[DecisionFindingView]:
+    """Read current list/aggregate fields without hydrating historical evidence."""
+    records = FindingCurrentProjectionRepository(session).read_records_for_findings(
+        finding.id for finding in findings
+    )
+    projections = {record.finding_id: record for record in records}
+    missing = [finding.id for finding in findings if finding.id not in projections]
+    legacy = (
+        EvidenceRepository(session).latest_finding_decision_evidence_for_findings(missing)
+        if missing
+        else {}
+    )
+    return [
+        DecisionFindingView(
+            finding=finding, projection=projections.get(finding.id), evidence=legacy.get(finding.id)
+        )
         for finding in findings
     ]
 

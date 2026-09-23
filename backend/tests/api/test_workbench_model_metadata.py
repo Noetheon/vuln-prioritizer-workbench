@@ -2251,3 +2251,74 @@ def test_decision_revision_migration_keeps_historical_evidence_unchanged(tmp_pat
             )
     finally:
         downgraded.dispose()
+
+
+def test_current_read_summary_migration_is_atomic_and_preserves_history(tmp_path: Path) -> None:
+    from utils.workbench_env import seed_finding_pair
+
+    from app import models, repositories
+
+    config = _alembic_config(tmp_path)
+    command.upgrade(config, "head")
+    engine = create_engine(config.get_main_option("sqlalchemy.url"))
+    with Session(engine) as session:
+        project = Project(name="Compact read migration")
+        session.add(project)
+        session.commit()
+        project_id = project.id
+    seeded = seed_finding_pair(
+        engine, models, repositories, project_id=project_id, with_decision_evidence=True
+    )
+    with engine.connect() as connection:
+        history = connection.execute(
+            text("SELECT id, payload_json FROM finding_decision_evidence ORDER BY id")
+        ).all()
+    with Session(engine) as session:
+        expected = {
+            record.finding_id: record.read_summary_json
+            for record in FindingCurrentProjectionRepository(session).records_for_findings(
+                seeded["finding_ids"]
+            )
+        }
+    engine.dispose()
+    command.downgrade(config, "20260923_0012")
+
+    def fail_backfill(_connection, _cursor, statement, _parameters, _context, _executemany):
+        if statement.startswith("UPDATE finding_current_projection SET read_summary_json="):
+            raise RuntimeError("injected summary backfill failure")
+
+    event.listen(Engine, "before_cursor_execute", fail_backfill)
+    try:
+        with pytest.raises(RuntimeError, match="injected summary backfill failure"):
+            command.upgrade(config, "head")
+    finally:
+        event.remove(Engine, "before_cursor_execute", fail_backfill)
+    engine = create_engine(config.get_main_option("sqlalchemy.url"))
+    try:
+        assert "read_summary_json" not in {
+            column["name"] for column in inspect(engine).get_columns("finding_current_projection")
+        }
+        with engine.connect() as connection:
+            assert (
+                connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+                == "20260923_0012"
+            )
+    finally:
+        engine.dispose()
+    command.upgrade(config, "head")
+    engine = create_engine(config.get_main_option("sqlalchemy.url"))
+    try:
+        with engine.connect() as connection:
+            assert (
+                connection.execute(
+                    text("SELECT id, payload_json FROM finding_decision_evidence ORDER BY id")
+                ).all()
+                == history
+            )
+        with Session(engine) as session:
+            repository = FindingCurrentProjectionRepository(session)
+            records = repository.records_for_findings(seeded["finding_ids"])
+            assert {row.finding_id: row.read_summary_json for row in records} == expected
+            assert repository.verify_source_parity(records).matches
+    finally:
+        engine.dispose()

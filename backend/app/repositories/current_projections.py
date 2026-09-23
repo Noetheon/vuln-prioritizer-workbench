@@ -12,6 +12,7 @@ from typing import Any
 
 from pydantic import ValidationError
 from sqlalchemy import bindparam, func
+from sqlalchemy.orm import defer
 from sqlmodel import Session, col, select
 
 from app.decision_core.component_projection import project_component_decision
@@ -23,6 +24,7 @@ from app.decision_core.ledger import (
     DecisionLedgerInvariantError,
     canonical_payload_sha256,
 )
+from app.decision_core.read_summary import decision_read_summary
 from app.models import FindingCurrentProjection, FindingDecisionEvidence
 from app.models.base import get_datetime_utc
 
@@ -128,6 +130,35 @@ class FindingCurrentProjectionRepository:
                 self.session.exec(
                     select(FindingCurrentProjection).where(
                         col(FindingCurrentProjection.finding_id).in_(ids[index : index + 500])
+                    )
+                ).all()
+            )
+        return records
+
+    def read_records_for_findings(
+        self, finding_ids: Iterable[uuid.UUID]
+    ) -> list[FindingCurrentProjection]:
+        """Read compact columns only; reject accidental lazy evidence-overlay loads."""
+        ids = list(dict.fromkeys(finding_ids))
+        records: list[FindingCurrentProjection] = []
+        for offset in range(0, len(ids), 500):
+            records.extend(
+                self.session.exec(
+                    select(FindingCurrentProjection)
+                    .where(col(FindingCurrentProjection.finding_id).in_(ids[offset : offset + 500]))
+                    .options(
+                        defer(
+                            getattr(FindingCurrentProjection, "lifecycle_overlay_json"),
+                            raiseload=True,
+                        ),
+                        defer(
+                            getattr(FindingCurrentProjection, "operational_sort_key_json"),
+                            raiseload=True,
+                        ),
+                        defer(
+                            getattr(FindingCurrentProjection, "governance_sync_json"),
+                            raiseload=True,
+                        ),
                     )
                 ).all()
             )
@@ -520,6 +551,7 @@ def projection_insert_values(
         "operational_rank": evidence.operational_rank,
         "operational_sort_key_json": decision_sort_key(evidence),
         "governance_sync_json": governance_sync_state(evidence),
+        "read_summary_json": decision_read_summary(evidence),
         "in_kev": evidence.in_kev,
         "epss": evidence.epss,
         "cvss_base_score": evidence.cvss_base_score,
@@ -558,6 +590,7 @@ def _apply_projection_columns(
     record.operational_rank = evidence.operational_rank
     record.operational_sort_key_json = decision_sort_key(evidence)
     record.governance_sync_json = governance_sync_state(evidence)
+    record.read_summary_json = decision_read_summary(evidence)
     record.in_kev = evidence.in_kev
     record.epss = evidence.epss
     record.cvss_base_score = evidence.cvss_base_score
@@ -682,6 +715,7 @@ def _projection_columns_match_evidence(
         and projection.component_purl == component.purl
         and projection.component_package_type == component.package_type
         and projection.component_ecosystem == component.ecosystem
+        and projection.read_summary_json == decision_read_summary(evidence)
     )
 
 

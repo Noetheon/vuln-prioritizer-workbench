@@ -83,3 +83,24 @@ waiver created 5,000 evidence revisions. Timings are observations on a busy
 The full baseline and reproducible probes are retained in the task artifact
 `vpw-independent-review`. This plan will be completed with repository-owned
 verification and measured results as implementation proceeds.
+
+## Implemented slices
+
+- Current rank updates use compact sort keys and executemany column updates.
+  Historical payload hashes and lifecycle overlays do not change for displaced
+  peers. Current detail wording adapts its top-five prefix without reevaluation.
+- Governance synchronization compares compact input state before hydrating a
+  scope. A one-scope waiver evaluates and publishes one scope; queue peers retain
+  their original evidence. Native selected reevaluations follow the same rule.
+- Finding lists default to compact current columns and a recorded `sla` summary.
+  `include_evidence=true` explicitly expands a page; the finding detail endpoint
+  still returns the full evidence contract. The frontend reads the compact SLA.
+- Dashboard aggregates consume the same compact read model. Full evidence remains
+  available for historical reports and detailed explanations. Summary migration
+  tests cover exact history preservation, failure rollback and successful retry.
+
+Validation so far: 233 baseline import/report/workflow contracts; 200 tests after
+queue/governance changes; 155 import/compact-read contracts after the list change;
+186 frontend unit tests and frontend typechecking. These are slice checks, not
+the final acceptance run. Storage sharing, temporal maintenance, asset identity,
+reports, complete gates and final performance measurements remain in progress.

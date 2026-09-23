@@ -77,7 +77,8 @@ def _import(
     run = completed_run_payload(env, response, headers={})
     assert run["status"] == "succeeded", run
     findings = env.client.get(f"/api/v1/projects/{project['id']}/findings/").json()["data"]
-    return project["id"], findings[0], run
+    detail = env.client.get(f"/api/v1/findings/{findings[0]['id']}").json()
+    return project["id"], detail, run
 
 
 def _worker(env: WorkbenchApiEnv):
@@ -499,7 +500,9 @@ def test_selected_snapshot_change_reranks_peer_without_replacing_its_facts(
         tmp_path,
         extra_rows=b"CVE-2024-4577,critical-web,critical-web,owner,payments,internet-facing,production,critical\n",
     )
-    before = env.client.get(f"/api/v1/projects/{project_id}/findings/").json()["data"]
+    before = env.client.get(
+        f"/api/v1/projects/{project_id}/findings/", params={"include_evidence": True}
+    ).json()["data"]
     selected, peer = sorted(before, key=lambda item: item["operational_rank"])
     assert selected["risk_score"] > peer["risk_score"]
     with Session(env.engine) as session:

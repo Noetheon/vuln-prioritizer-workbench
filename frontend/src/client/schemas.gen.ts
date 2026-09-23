@@ -4089,6 +4089,16 @@ export const FindingDetailPublicSchema = {
             ],
             title: 'Risk Score'
         },
+        sla: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/FindingSlaPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         status: {
             $ref: '#/components/schemas/FindingStatus',
             default: 'open'
@@ -4876,6 +4886,16 @@ export const FindingPublicSchema = {
             ],
             title: 'Risk Score'
         },
+        sla: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/FindingSlaPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         status: {
             $ref: '#/components/schemas/FindingStatus',
             default: 'open'
@@ -4919,6 +4939,43 @@ export const FindingPublicSchema = {
         'updated_at'
     ],
     title: 'FindingPublic',
+    type: 'object'
+} as const;
+
+export const FindingSlaPublicSchema = {
+    description: 'Recorded SLA fields needed by the compact work queue.',
+    properties: {
+        label: {
+            title: 'Label',
+            type: 'string'
+        },
+        target_days: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target Days'
+        },
+        target_hours: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target Hours'
+        }
+    },
+    required: [
+        'label'
+    ],
+    title: 'FindingSlaPublic',
     type: 'object'
 } as const;
 

@@ -206,14 +206,18 @@ class WaiverRepository:
         """Count project findings with the exact effective matcher semantics."""
         return self.matching_finding_counts([waiver]).get(waiver.id, 0)
 
-    def matching_finding_counts(self, waivers: list[Waiver]) -> dict[uuid.UUID, int]:
+    def matching_finding_counts(
+        self, waivers: list[Waiver], *, findings: list[Finding] | None = None
+    ) -> dict[uuid.UUID, int]:
         """Count a page of waivers from one batched finding/asset snapshot."""
         if not waivers:
             return {}
         project_ids = {waiver.project_id for waiver in waivers}
         if len(project_ids) != 1:
             raise ValueError("Waiver match counts require one project scope.")
-        findings = self._project_findings(next(iter(project_ids)))
+        findings = (
+            findings if findings is not None else self._project_findings(next(iter(project_ids)))
+        )
         return {
             waiver.id: sum(_waiver_matches_finding(waiver, finding) for finding in findings)
             for waiver in waivers

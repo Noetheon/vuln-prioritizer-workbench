@@ -123,7 +123,7 @@ def scope_first_import_contract(
         findings_response = workbench_api_env.client.get(
             f"/api/v1/projects/{project['id']}/findings/",
             headers=headers,
-            params={"sort": "operational", "direction": "asc"},
+            params={"sort": "operational", "direction": "asc", "include_evidence": True},
         )
         assert findings_response.status_code == 200, findings_response.text
         assert findings_response.json()["count"] == 2
@@ -259,7 +259,7 @@ def test_separate_imports_converge_to_one_project_wide_operational_queue(
         findings_response = workbench_api_env.client.get(
             f"/api/v1/projects/{project['id']}/findings/",
             headers=headers,
-            params={"sort": "operational", "direction": "asc"},
+            params={"sort": "operational", "direction": "asc", "include_evidence": True},
         )
         assert findings_response.status_code == 200, findings_response.text
         findings = findings_response.json()["data"]
@@ -319,6 +319,7 @@ def test_shared_component_label_cannot_drift_across_projects(
             response = workbench_api_env.client.get(
                 f"/api/v1/projects/{first_project['id']}/findings/",
                 headers=headers,
+                params={"include_evidence": True},
             )
             assert response.status_code == 200, response.text
             assert response.json()["count"] == 1

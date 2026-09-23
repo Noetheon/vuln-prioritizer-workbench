@@ -167,6 +167,7 @@ def test_new_scope_with_explicit_asset_id_inherits_safe_relational_context_befor
     response = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
         headers=headers,
+        params={"include_evidence": True},
     )
     assert response.status_code == 200, response.text
     findings = {item["cve_id"]: item for item in response.json()["data"]}
@@ -255,6 +256,7 @@ def test_new_scope_does_not_hydrate_from_manually_renamed_conflicting_asset(
     response = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
         headers=headers,
+        params={"include_evidence": True},
     )
     assert response.status_code == 200, response.text
     findings = {item["cve_id"]: item for item in response.json()["data"]}
@@ -330,6 +332,7 @@ def test_partial_import_marks_untouched_shared_asset_finding_stale_until_recalcu
     current_response = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
         headers=headers,
+        params={"include_evidence": True},
     )
     assert current_response.status_code == 200, current_response.text
     current_findings = {item["cve_id"]: item for item in current_response.json()["data"]}
@@ -363,6 +366,7 @@ def test_partial_import_marks_untouched_shared_asset_finding_stale_until_recalcu
     refreshed_response = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
         headers=headers,
+        params={"include_evidence": True},
     )
     assert refreshed_response.status_code == 200, refreshed_response.text
     refreshed = {item["cve_id"]: item for item in refreshed_response.json()["data"]}[
@@ -1227,7 +1231,11 @@ def _only_finding(
     assert response.status_code == 200, response.text
     payload = response.json()
     assert payload["count"] == 1
-    return payload["data"][0]
+    detail = workbench_api_env.client.get(
+        f"/api/v1/findings/{payload['data'][0]['id']}", headers=headers
+    )
+    assert detail.status_code == 200, detail.text
+    return detail.json()
 
 
 def _asset_context_csv(
