@@ -111,6 +111,11 @@ verification and measured results as implementation proceeds.
   index follows the original JSON, including contradictory legacy facts; there is
   no second mutable identity certificate. A work-budget test covers repeated
   shared-asset imports, use of the index, and detection of an altered old fact.
+- Startup and readiness validate all required columns, including nullable ones,
+  and require exactly the supported migration head. Missing tables in a populated
+  or unknown schema are not silently recreated/stamped. Supported legacy table
+  rebuilds are transactional, preserve child foreign-key targets, restore SQLite
+  pragmas on failure and recreate expression indexes correctly.
 
 Validation so far: 233 baseline import/report/workflow contracts; 200 tests after
 queue/governance changes; 155 import/compact-read contracts after the list change;
@@ -120,6 +125,8 @@ transaction rollback and reversible-migration coverage; 83 storage, revision,
 workflow and report contracts pass after integration. Temporal maintenance, asset
 reports, complete gates and final measurements remain in progress. The asset
 change passes 178 import/migration contracts and its targeted read-budget check.
+Schema/startup validation passes 68 tests, including injected copy failure and
+rejection of missing columns, missing history and unknown schema revisions.
 
 ### Storage migration operations
 
