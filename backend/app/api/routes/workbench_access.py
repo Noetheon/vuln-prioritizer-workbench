@@ -6,18 +6,12 @@ import uuid
 from typing import TypeVar
 
 from fastapi import HTTPException
-from sqlalchemy import or_, update
-from sqlmodel import Session, SQLModel, col
+from sqlmodel import Session, SQLModel, select
 
-from app.models import Project
+from app.models import Finding, Project
 from app.models.base import get_datetime_utc
 from app.repositories import ProjectRepository
-from app.services.audit import record_audit_event
-from app.services.decision_projection_sync import DecisionProjectionService
-from app.services.decision_scope_lock import (
-    ProjectDecisionLockError,
-    lock_project_decision_scope,
-)
+from app.services.decision_scope_lock import lock_project_decision_scope
 
 _ProjectResource = TypeVar("_ProjectResource", bound=SQLModel)
 
@@ -27,7 +21,29 @@ def require_project(session: Session, project_id: uuid.UUID) -> Project:
     project = ProjectRepository(session).get_project(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
-    _refresh_stale_project_waivers(session, project)
+    return project
+
+
+def require_current_decisions(session: Session, project_id: uuid.UUID) -> Project:
+    """Read-only freshness gate; the worker owns all daily decision mutations."""
+    project = require_project(session, project_id)
+    if project.waiver_evaluated_on != get_datetime_utc().date():
+        has_findings = session.exec(
+            select(Finding.id).where(Finding.project_id == project_id).limit(1)
+        ).first()
+        if has_findings is not None:
+            raise HTTPException(
+                status_code=503,
+                headers={"Retry-After": "2", "Cache-Control": "no-store"},
+                detail={
+                    "code": "decision_refresh_pending",
+                    "message": "Current decisions are awaiting today's governance update. "
+                    "Retry shortly; if this persists, check the worker status.",
+                    "evaluated_on": project.waiver_evaluated_on.isoformat()
+                    if project.waiver_evaluated_on is not None
+                    else None,
+                },
+            )
     return project
 
 
@@ -46,66 +62,3 @@ def lock_existing_project_resource(
     if current is None or getattr(current, "project_id", None) != project_id:
         raise HTTPException(status_code=404, detail=not_found_detail)
     return current
-
-
-def _refresh_stale_project_waivers(session: Session, project: Project) -> None:
-    """Refresh date-sensitive waiver decisions once per UTC calendar day."""
-    evaluated_on = get_datetime_utc().date()
-    if project.waiver_evaluated_on == evaluated_on:
-        return
-
-    # Claim this project's UTC-day refresh with one compare-and-set write. Two
-    # requests may both have loaded yesterday's ORM state, but only the first
-    # transaction whose database predicate still matches is allowed to rebuild
-    # projections. The claim intentionally shares the refresh transaction so a
-    # failed rebuild rolls the marker back as well.
-    claim = session.connection().execute(
-        update(Project)
-        .where(
-            col(Project.id) == project.id,
-            or_(
-                col(Project.waiver_evaluated_on).is_(None),
-                col(Project.waiver_evaluated_on) != evaluated_on,
-            ),
-        )
-        .values(
-            waiver_evaluated_on=evaluated_on,
-            decision_revision=col(Project.decision_revision) + 1,
-        )
-        .execution_options(synchronize_session=False)
-    )
-    if claim.rowcount != 1:
-        current = session.get(Project, project.id, populate_existing=True)
-        if current is None:
-            raise ProjectDecisionLockError(f"Project {project.id} does not exist.")
-        return
-
-    # Import lazily to keep the shared route dependency free of repository cycles.
-
-    try:
-        changed_finding_ids: set[uuid.UUID] = set()
-        DecisionProjectionService(session).sync_project_waivers(
-            project.id,
-            changed_finding_ids=changed_finding_ids,
-            revision_cause="waiver_expiry",
-        )
-        project.waiver_evaluated_on = evaluated_on
-        session.add(project)
-        if changed_finding_ids:
-            record_audit_event(
-                session,
-                action="waiver.lifecycle_refresh",
-                resource_type="project",
-                resource_id=project.id,
-                project_id=project.id,
-                detail={
-                    "evaluated_on": evaluated_on.isoformat(),
-                    "changed_finding_count": len(changed_finding_ids),
-                    "changed_finding_ids": sorted(str(item) for item in changed_finding_ids),
-                },
-            )
-        session.commit()
-        session.refresh(project)
-    except Exception:
-        session.rollback()
-        raise

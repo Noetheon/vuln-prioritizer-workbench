@@ -81,6 +81,7 @@ from app.models.enums import (
 from app.models.evidence import (
     AnalysisEvidence,
     AnalysisEvidenceBase,
+    EvidenceSection,
     FindingCurrentProjection,
     FindingCurrentProjectionBase,
     FindingDecisionEvidence,
@@ -196,6 +197,7 @@ __all__ = [
     "AnalysisRunCountsPublic",
     "AnalysisEvidence",
     "AnalysisEvidenceBase",
+    "EvidenceSection",
     "AnalysisRunProviderSnapshotRefPublic",
     "AnalysisRunPublic",
     "AnalysisRunSummaryPublic",

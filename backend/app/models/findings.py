@@ -94,6 +94,14 @@ class Finding(FindingBase, table=True):
     )
 
 
+class FindingSlaPublic(SQLModel):
+    """Recorded SLA fields needed by the compact work queue."""
+
+    label: str
+    target_hours: int | None = None
+    target_days: int | None = None
+
+
 class FindingPublic(FindingBase):
     """Public finding response shape."""
 
@@ -130,6 +138,7 @@ class FindingPublic(FindingBase):
     owner: str | None = None
     business_service: str | None = None
     exposure: str | None = None
+    sla: FindingSlaPublic | None = None
     evidence: FindingDecisionEvidenceV2 | None = None
 
 

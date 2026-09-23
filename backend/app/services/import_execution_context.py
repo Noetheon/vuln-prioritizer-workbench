@@ -258,12 +258,14 @@ def _existing_assets_by_explicit_import_identity(
         )
         if asset is None:
             continue
+        identity_evidence = repository.import_identity_evidence(asset.id)
         if all(
             repository.asset_matches_import_identity(
                 asset,
                 asset_id=occurrence.asset_id,
                 target_kind=occurrence.target_kind,
                 target_ref=occurrence.target_ref,
+                identity_evidence=identity_evidence,
             )
             for occurrence in identity_occurrences
         ):

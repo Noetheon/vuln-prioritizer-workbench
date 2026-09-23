@@ -316,17 +316,12 @@ def _reduction_for_first(
 
 
 def _normalized_component_key(finding: DecisionFindingView) -> str:
-    component = getattr(finding.finding, "component", None)
-    scope = getattr(finding.evidence, "occurrence_scope", None)
     return (
         component_scope_identity(
-            component_name=getattr(scope, "component_name", None)
-            or getattr(component, "name", None),
-            component_version=getattr(scope, "component_version", None)
-            or getattr(component, "version", None),
-            purl=getattr(scope, "purl", None) or getattr(component, "purl", None),
-            package_type=getattr(scope, "package_type", None)
-            or getattr(component, "package_type", None),
+            component_name=finding.component_name,
+            component_version=finding.component_version,
+            purl=finding.component_purl,
+            package_type=finding.component_package_type,
         )
         or "unknown-component"
     )

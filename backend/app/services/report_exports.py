@@ -28,6 +28,11 @@ from app.services.report_renderer_common import (
 
 def render_analysis_result_json(payload: MarkdownReportPayload) -> str:
     """Render the stable machine-readable analysis-result.v2 JSON export."""
+    return json.dumps(analysis_result_value(payload), indent=2, sort_keys=True) + "\n"
+
+
+def analysis_result_value(payload: MarkdownReportPayload) -> dict:
+    """Return the stable JSON contract, also used for streamed run headers."""
     payload, _redactions = _redacted_bundle_payload(payload)
     result_model = AnalysisResultV2(
         schema=ANALYSIS_RESULT_SCHEMA,
@@ -78,7 +83,7 @@ def render_analysis_result_json(payload: MarkdownReportPayload) -> str:
         result.pop("governance_rollups")
     if result["detection_coverage"] is None:
         result.pop("detection_coverage")
-    return json.dumps(result, indent=2, sort_keys=True) + "\n"
+    return result
 
 
 def render_findings_csv(payload: MarkdownReportPayload) -> str:

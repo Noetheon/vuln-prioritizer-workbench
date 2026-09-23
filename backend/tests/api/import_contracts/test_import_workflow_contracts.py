@@ -620,6 +620,7 @@ def test_same_cve_vex_status_remains_occurrence_scoped(
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
         headers=headers,
+        params={"include_evidence": True},
     )
     assert findings.status_code == 200, findings.text
     by_asset = {item["asset_key"]: item for item in findings.json()["data"]}

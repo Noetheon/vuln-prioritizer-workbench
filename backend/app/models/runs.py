@@ -11,6 +11,10 @@ from app.decision_core.contracts import AnalysisEvidenceV2, RunDiagnosticsV2, Ru
 from app.models.base import get_datetime_utc
 from app.models.decision_summary import RunDecisionSummaryPublic
 from app.models.enums import AnalysisRunStatus
+from app.models.occurrence_identity import (
+    OCCURRENCE_IDENTITY_INDEX,
+    occurrence_identity_expressions,
+)
 from app.models.workflows import WorkflowRunPublic
 
 
@@ -235,3 +239,13 @@ class FindingOccurrence(FindingOccurrenceBase, table=True):
     )
     finding: Optional["Finding"] = Relationship(back_populates="occurrences")  # type: ignore[name-defined]  # noqa: F821
     analysis_run: AnalysisRun | None = Relationship(back_populates="occurrences")
+
+
+# The index tracks the actual immutable JSON, including malformed legacy values;
+# no separate identity certificate needs synchronization on writes or restores.
+_occurrence_table = getattr(FindingOccurrence, "__table__")
+Index(
+    OCCURRENCE_IDENTITY_INDEX,
+    _occurrence_table.c.finding_id,
+    *occurrence_identity_expressions(_occurrence_table.c.evidence_json),
+)

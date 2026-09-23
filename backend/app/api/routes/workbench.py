@@ -6,14 +6,15 @@ from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request, Response
-from sqlalchemy import inspect, text
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel import Session, SQLModel
+from sqlmodel import Session
 
 from app.api.deps import LocalActor, SessionDep
 from app.core.app_state import workbench_settings
 from app.core.config import Settings
 from app.core.migration_bootstrap import ALEMBIC_HEAD
+from app.core.schema_smoke import assert_migrated_connection
 from app.domain.engine import __version__
 from app.models import (
     DemoWorkspaceCreate,
@@ -53,10 +54,6 @@ from app.services.workflows import latest_analysis_workflow_public, latest_repor
 
 router = APIRouter(prefix="/workbench", tags=["workbench"])
 
-REQUIRED_SCHEMA_TABLES = frozenset(
-    table_name for table_name in SQLModel.metadata.tables if table_name != "alembic_version"
-)
-REQUIRED_ALEMBIC_TABLE = "alembic_version"
 WORKFLOW_WORKER_SERVICE_NAME = "workflow-worker"
 WORKFLOW_WORKER_HEARTBEAT_TTL_SECONDS = 300
 
@@ -263,23 +260,12 @@ def _demo_workspace_public(
 def _database_readiness(session: Session) -> tuple[str, str]:
     try:
         session.execute(text("SELECT 1")).one()
-        inspector = inspect(session.get_bind())
-        table_names = set(inspector.get_table_names())
-        if not REQUIRED_SCHEMA_TABLES.issubset(table_names):
-            return "ready", "not_ready"
-        if REQUIRED_ALEMBIC_TABLE not in table_names:
-            return "ready", "not_ready"
-        if not _alembic_head_is_current(session):
-            return "ready", "not_ready"
+        assert_migrated_connection(session.connection())
+    except RuntimeError:
+        return "ready", "not_ready"
     except SQLAlchemyError:
         return "unavailable", "not_ready"
     return "ready", "ready"
-
-
-def _alembic_head_is_current(session: Session) -> bool:
-    rows = session.execute(text("SELECT version_num FROM alembic_version")).all()
-    versions = {str(row[0]) for row in rows}
-    return ALEMBIC_HEAD in versions
 
 
 def _runtime_mode(settings: Settings) -> str:

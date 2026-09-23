@@ -101,10 +101,20 @@ globally unique operational ranks. The compatible evidence boundary remains
 plus per-finding immutable `FindingDecisionEvidenceV2` records and atomically
 advance one materialized current projection per finding before the workflow is
 terminal. Run-wide evidence deliberately does not embed every finding decision.
-Historical run views hydrate from `finding_decision_evidence`; current finding,
-dashboard, waiver, governance, GitHub preview, and query paths hydrate from the
-indexed current projection through `decision_core/readmodels.py`. Lifecycle
-actions never rewrite run evidence.
+Historical run views hydrate from `finding_decision_evidence` and the project-scoped
+`evidence_section` store. The versioned storage codec reconstructs the unchanged
+public contract and verifies content hashes. Current lists and the dashboard read
+compact projection columns and recorded SLA/context summaries; detail and explain
+endpoints hydrate full evidence. Lists accept `include_evidence=true` when an
+integration explicitly needs it. Current queue rank updates do not copy evidence
+or create new historical decisions. Lifecycle actions never rewrite run evidence.
+
+The workflow worker performs daily governance maintenance. Current decision APIs
+return `503 decision_refresh_pending` while their project is awaiting the UTC-day
+refresh, with `Retry-After: 2`. GET requests perform no decision writes; historical
+run reports remain available. The UI invalidates queries at the day boundary and
+polls pending decisions. See [Decision storage](architecture/decision-storage-plan.md)
+for storage migration, freshness operations and measured acceptance.
 `workflow_run.result_ref_json` remains an internal lifecycle/ref payload, not the
 source of product truth.
 
@@ -136,35 +146,27 @@ components:
 
 | Route | Main owner | Notes |
 | --- | --- | --- |
-| Dashboard | `components/dashboard/RiskOperationsDashboard.tsx` | Subcomponents own the context bar, metric strip, charts, queue, and detail rail. Recharts is lazy-loaded through `DashboardSignalOverview`. |
-| Projects | `components/projects/ProjectsWorkbench.tsx` | Project CRUD UI; data and handlers are still supplied by `WorkbenchShell`. |
+| Dashboard | `components/dashboard/RiskOperationsDashboard.tsx` | Subcomponents own the context bar, metric strip, charts, queue, and detail rail. |
+| Projects | `components/projects/ProjectsWorkbench.tsx` | Project CRUD UI; route state is owned by `workbench/routes/ProjectsRoute.tsx`. |
 | Imports | `workbench/routes/ImportsRouteContainer.tsx` + `components/imports/ImportsWorkbench.tsx` | Import wizard, route canonicalization, upload mutation, run selection, parse errors, and run detail UI. |
 | Findings | `components/findings/RemediationQueue.tsx` | Uses `useFindingsRouteState` for filters/sort/pagination and `FindingsDataTable` for the table surface. |
 | Finding Detail | `components/finding-detail/FindingDetailRoute.tsx` | Context summary, priority explanation, evidence, governance, occurrences, TTP Context, and history are extracted from `WorkbenchShell`. |
-| Waivers | `components/waivers/WaiversWorkbench.tsx` | VPW-based waiver register and governance workflow; handlers remain shell-owned. |
+| Waivers | `components/waivers/WaiversWorkbench.tsx` | VPW-based waiver register and governance workflow; handlers belong to `workbench/routes/WaiversRoute.tsx` and its route state. |
 | Assets | `workbench/routes/AssetsRoute.tsx` + `components/assets/*` | Assets module owns route state, filters, forms, asset table, service rollup, linked findings panel, and helpers. |
 | Providers | `components/providers/ProvidersRouteContainer.tsx` | Typed container over `ProvidersWorkbench`; provider status remains shared state. |
 | Reports | `components/reports/EvidenceCenter.tsx` | Evidence Center for report generation, download, verification, and bundle metadata. |
-| Settings | `components/settings/SettingsRouteContainer.tsx` | Typed wrapper over `SettingsWorkbench`; local runtime/provider status remains shell-owned. |
+| Settings | `components/settings/SettingsRouteContainer.tsx` | Typed wrapper over `SettingsWorkbench`; local runtime/provider status is shared through `WorkbenchContext`. |
 
 There is no mounted login route, redirect shim, or credential screen in the
 active local single-user Workbench.
 
 ## WorkbenchShell Role
 
-`frontend/src/workbench/WorkbenchShell.tsx` is still the app-level Workbench
-composition root. It intentionally owns cross-route concerns:
-
-- selected project state and project list refresh
-- provider status and Workbench status
-- dashboard, findings, finding detail, report, project, waiver, and settings API
-  effects that are still shared or navigation-sensitive
-- route-level lazy component boundaries
-- status strip and app shell props
-
-Recent refactors moved large route rendering surfaces out of the shell without
-moving high-risk global state. Future state extraction should stay route-by-route
-and preserve API timing plus selected project behavior.
+`frontend/src/workbench/WorkbenchShell.tsx` composes `WorkbenchProvider`,
+`ProductAppShell`, suspense and the route error boundary. `WorkbenchContext` owns
+selected project state, shared status/provider data, query invalidation and
+cross-route access. Route components and their state hooks own mutations and
+local UI state. The shell itself does not issue every route's API requests.
 
 `useWorkbenchQueries` owns query hook wiring, cache keys, and TanStack Query
 integration. Pure paging, fan-out, and API projection helpers belong in
@@ -215,7 +217,7 @@ Provider and status state is intentionally shared:
   WebSocket stream; the frontend prefers streaming and falls back to polling
   when WebSocket connectivity is unavailable.
 
-Keeping this state in `WorkbenchShell` avoids duplicate provider requests and
+Keeping this state in `WorkbenchContext` avoids duplicate provider requests and
 keeps refresh behavior consistent across routes.
 
 ## Explicit Non-Contracts

@@ -27,7 +27,7 @@ framework, active probing tool, autopatcher, or hosted SaaS product. See
 | Local runtime | `backend/app/cli.py`, `backend/app/main.py` | `vpw serve` is the standard entrypoint: one loopback FastAPI process, packaged same-origin browser UI, migrations, SQLite WAL database, and supervised worker. |
 | Worker runtime | `backend/app/workers` | Durable database queue with leases, retries, cancellation, and events. It runs in-process under `vpw serve`; the deprecated Compose path keeps the same worker as a separate process. |
 | Decision evaluation | `backend/app/decision_core/decision_graph.py`, `backend/app/decision_core/identity.py` | Scope-first internal graph: provider and ATT&CK facts stay shared by CVE, while provenance, VEX, remediation, score, explanation, and global rank are evaluated per CVE/component/source-target finding scope. |
-| Decision Ledger | `analysis_evidence`, `finding_decision_evidence`, `finding_current_projection`, `backend/app/repositories/current_projections.py` | Immutable run history plus one materialized current row per finding, transactional dual-write, idempotent backfill, hashes, revisions, and shadow/full parity checks. |
+| Decision Ledger | `analysis_evidence`, `finding_decision_evidence`, `evidence_section`, `finding_current_projection`, `backend/app/repositories/current_projections.py` | Immutable run history with shared hash-verified sections, compact current decisions and independent queue ranks, transactional publication, and sampled/full parity checks. |
 | Frontend runtime | `frontend`, packaged under `backend/app/static` | React, Vite, TypeScript, TanStack Query, local route adapter, Playwright tests, and the same-origin packaged Workbench UI. |
 | Generated client | `frontend/src/client/**` | Generated from backend OpenAPI. Do not edit generated files manually. |
 | Frontend integration wrapper | `frontend/src/api-client.ts` | Handwritten wrapper over generated client code. Normal app code should use this boundary. |
@@ -85,7 +85,19 @@ archive artifacts, or external primary sources own the major documentation
 claims. A passing docs build is necessary, but it is not sufficient proof that a
 provider, release, deployment, or archived-evidence statement is current.
 
-The current-tree pass on 2026-09-06 adds native evaluation revisions: import,
+The storage pass on 2026-09-23 separates current queue ranks from historical
+decision payloads. Scope-local governance changes no longer create revisions for
+unchanged peers. Lists and dashboards use compact projections, while configurable
+shadow checks hydrate only their bounded sample. Immutable sections are shared
+within each project and verified on reconstruction. JSON/CSV exports stream
+historical batches; `json-gzip` supports larger complete JSON exports within
+compressed and expanded limits. The worker owns UTC-day maintenance; current
+decision reads return `503 decision_refresh_pending` until it finishes, without
+writing to the database. Historical reports remain readable. Migrations preserve
+recorded values, and downgrade restores current rank wording in the legacy overlay
+format. See the [storage plan and measured limits](architecture/decision-storage-plan.md).
+
+The preceding pass on 2026-09-06 added native evaluation revisions: import,
 asset recalculation and waiver changes use one complete pure scope evaluator.
 New evidence stores versioned inputs, a fingerprint and separate observed/evaluated
 times. Dashboard and finding views can reevaluate recorded findings without a new
@@ -131,8 +143,8 @@ recomputes scores, guidance, statuses, and global ranks through the canonical
 evaluator, appending a revision without rewriting older run history. Unreplayable
 legacy findings remain marked stale. Waiver mutations use the same evaluator,
 deletion is audit-backed, and revision
-`20260904_0006` records the last UTC lifecycle evaluation per project. A stale
-project read performs at most one logical daily refresh and emits a
+`20260904_0006` records the last UTC lifecycle evaluation per project. The original
+read-triggered refresh is now worker-owned and emits a
 `waiver.lifecycle_refresh` audit event only when current finding decisions
 materially change. Imports without waivers retain the bounded fast path.
 When a project-wide refresh is required, exact global ranks are rebuilt through

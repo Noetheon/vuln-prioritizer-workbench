@@ -36,6 +36,7 @@ The current report surface supports:
 | HTML | Executive browser report with priority summary and evidence links. |
 | Markdown | Technical handoff for analysts, PR notes, and audit review. |
 | JSON | Machine-readable `analysis-result.v2.json` analysis and report data. |
+| JSON (gzip) | The same complete historical JSON values in `analysis-result.v2.json.gz`, suitable for larger runs. |
 | CSV | Finding table export for spreadsheets and ticket routing. |
 | SARIF | Code-scanning and CI evidence workflows. |
 | ATT&CK Navigator | Defensive layer for mapped techniques when ATT&CK context exists. |
@@ -44,6 +45,29 @@ The current report surface supports:
 Available formats depend on the selected run and report action state. The local
 demo workspace is seeded through the backend and should be treated as sample
 evidence, not production evidence.
+
+## Large runs and limits
+
+JSON, JSON (gzip), and CSV exports hydrate historical evidence in batches of 25.
+JSON keeps compact governance summaries in memory and spools the per-CVE
+explanations map to a temporary file. Finding order, redaction, selected-run
+membership and full evidence values match the existing v2 contract; whitespace
+and object-key order are not contractual. A gzip download has content type
+`application/gzip`; decompress it to read ordinary v2 JSON.
+
+`MAX_REPORT_MB` limits the final artifact while it is written (default 50 MiB).
+For gzip, expanded JSON is also capped at 20 times that value (default 1,000 MiB).
+The worker checks cancellation/ownership between batches and before publication.
+A failure removes partial artifacts and closes the temporary explanation file;
+only completed files receive database records and checksums.
+
+HTML, Markdown, SARIF, Navigator and Evidence ZIP still need a complete rendering
+payload. Their serialized input budget is `MAX_REPORT_MB`; they stop loading at
+that budget and recommend streaming JSON (gzip) or CSV. This is a bound on input
+bytes, not an exact resident-memory guarantee: Python objects and rendering copies
+cost additional memory. These formats deliberately fail early for oversized runs
+instead of constructing an unbounded graph. Large audit exports should use JSON
+(gzip); an Evidence ZIP has additional member/archive limits.
 
 ## Evidence ZIP Bundle
 

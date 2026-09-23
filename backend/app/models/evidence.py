@@ -14,6 +14,7 @@ from sqlalchemy import (
     Float,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -26,6 +27,22 @@ from app.decision_core.contracts import (
 )
 from app.decision_core.ledger import FINDING_CURRENT_PROJECTION_SCHEMA_VERSION
 from app.models.base import get_datetime_utc
+
+
+class EvidenceSection(SQLModel, table=True):
+    """
+    Immutable JSON shared within a project's decision history.
+
+    Sections live for the project's lifetime, including any historical imports;
+    deleting the project removes them atomically through the foreign key.
+    """
+
+    __tablename__ = "evidence_section"
+
+    project_id: uuid.UUID = Field(primary_key=True, foreign_key="project.id", ondelete="CASCADE")
+    sha256: str = Field(primary_key=True, max_length=64)
+    decoded_size: int = Field(sa_column=Column(Integer, nullable=False))
+    payload_zlib: bytes = Field(sa_column=Column(LargeBinary, nullable=False))
 
 
 class AnalysisEvidenceBase(SQLModel):
@@ -163,6 +180,15 @@ class FindingCurrentProjectionBase(SQLModel):
     priority_rank: int = Field(default=99, sa_column=Column(Integer, nullable=False))
     risk_score: float | None = Field(default=None, sa_column=Column(Float, nullable=True))
     operational_rank: int = Field(default=0, sa_column=Column(Integer, nullable=False))
+    operational_sort_key_json: list[Any] | None = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
+    governance_sync_json: dict[str, Any] | None = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
+    read_summary_json: dict[str, Any] = Field(
+        default_factory=dict, sa_column=Column(JSON, nullable=False)
+    )
     in_kev: bool = Field(default=False, sa_column=Column(Boolean, nullable=False))
     epss: float | None = Field(default=None, sa_column=Column(Float, nullable=True))
     cvss_base_score: float | None = Field(default=None, sa_column=Column(Float, nullable=True))

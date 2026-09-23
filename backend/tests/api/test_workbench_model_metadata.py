@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 import uuid
 from pathlib import Path
 
@@ -85,6 +86,17 @@ def test_workbench_alembic_head_matches_model_metadata(tmp_path: Path) -> None:
             version = connection.execute(
                 text("SELECT version_num FROM alembic_version")
             ).scalar_one()
+            # SQLAlchemy cannot reflect SQLite expression indexes. Verify the
+            # migrated identity index explicitly through the actual query plan.
+            from app.models.occurrence_identity import occurrence_identity_expressions
+
+            occurrence = SQLModel.metadata.tables["finding_occurrence"]
+            identity_query = select(
+                *occurrence_identity_expressions(occurrence.c.evidence_json)
+            ).where(occurrence.c.finding_id == uuid.UUID(int=1))
+            sql = str(identity_query.compile(connection, compile_kwargs={"literal_binds": True}))
+            plan = connection.exec_driver_sql("EXPLAIN QUERY PLAN " + sql).all()
+            assert any("ix_finding_occurrence_identity" in row[-1] for row in plan), plan
     finally:
         engine.dispose()
 
@@ -1788,10 +1800,22 @@ def _component_merge_evidence_snapshot(
     }
     try:
         with engine.connect() as connection:
-            return {
+            snapshot = {
                 name: tuple(tuple(row) for row in connection.execute(text(statement)))
                 for name, statement in queries.items()
             }
+            # Storage migrations may share/reorder JSON, while every historical
+            # value and hash must remain identical across component migrations.
+            from app.repositories.evidence_payloads import EvidencePayloadStore
+
+            payloads = EvidencePayloadStore(connection).load_documents(
+                [(uuid.UUID(str(row[2])), json.loads(str(row[10]))) for row in snapshot["evidence"]]
+            )
+            snapshot["evidence"] = tuple(
+                (*row[:10], json.dumps(payload, sort_keys=True), *row[11:])
+                for row, payload in zip(snapshot["evidence"], payloads, strict=True)
+            )
+            return snapshot
     finally:
         engine.dispose()
 
@@ -2251,3 +2275,156 @@ def test_decision_revision_migration_keeps_historical_evidence_unchanged(tmp_pat
             )
     finally:
         downgraded.dispose()
+
+
+def test_current_read_summary_migration_is_atomic_and_preserves_history(tmp_path: Path) -> None:
+    from utils.workbench_env import seed_finding_pair
+
+    from app import models, repositories
+
+    config = _alembic_config(tmp_path)
+    command.upgrade(config, "head")
+    engine = create_engine(config.get_main_option("sqlalchemy.url"))
+    with Session(engine) as session:
+        project = Project(name="Compact read migration")
+        session.add(project)
+        session.commit()
+        project_id = project.id
+    seeded = seed_finding_pair(
+        engine, models, repositories, project_id=project_id, with_decision_evidence=True
+    )
+    with engine.connect() as connection:
+        history = connection.execute(
+            text("SELECT id, payload_json FROM finding_decision_evidence ORDER BY id")
+        ).all()
+    with Session(engine) as session:
+        expected = {
+            record.finding_id: record.read_summary_json
+            for record in FindingCurrentProjectionRepository(session).records_for_findings(
+                seeded["finding_ids"]
+            )
+        }
+    engine.dispose()
+    command.downgrade(config, "20260923_0012")
+
+    def fail_backfill(_connection, _cursor, statement, _parameters, _context, _executemany):
+        if statement.startswith("UPDATE finding_current_projection SET read_summary_json="):
+            raise RuntimeError("injected summary backfill failure")
+
+    event.listen(Engine, "before_cursor_execute", fail_backfill)
+    try:
+        with pytest.raises(RuntimeError, match="injected summary backfill failure"):
+            command.upgrade(config, "head")
+    finally:
+        event.remove(Engine, "before_cursor_execute", fail_backfill)
+    engine = create_engine(config.get_main_option("sqlalchemy.url"))
+    try:
+        assert "read_summary_json" not in {
+            column["name"] for column in inspect(engine).get_columns("finding_current_projection")
+        }
+        with engine.connect() as connection:
+            assert (
+                connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+                == "20260923_0012"
+            )
+    finally:
+        engine.dispose()
+    command.upgrade(config, "head")
+    engine = create_engine(config.get_main_option("sqlalchemy.url"))
+    try:
+        with engine.connect() as connection:
+            assert (
+                connection.execute(
+                    text("SELECT id, payload_json FROM finding_decision_evidence ORDER BY id")
+                ).all()
+                == history
+            )
+        with Session(engine) as session:
+            repository = FindingCurrentProjectionRepository(session)
+            records = repository.records_for_findings(seeded["finding_ids"])
+            assert {row.finding_id: row.read_summary_json for row in records} == expected
+            assert repository.verify_source_parity(records).matches
+    finally:
+        engine.dispose()
+
+
+def test_evidence_sections_migrate_atomically_and_restore_standalone_history(
+    tmp_path: Path,
+) -> None:
+    from utils.workbench_env import seed_finding_pair
+
+    from app import models, repositories
+    from app.decision_core.evidence_storage import STORAGE_KEY
+    from app.repositories.evidence_payloads import EvidencePayloadStore
+
+    config = _alembic_config(tmp_path)
+    command.upgrade(config, "head")
+    engine = create_engine(config.get_main_option("sqlalchemy.url"))
+    with Session(engine) as session:
+        project = Project(name="Shared evidence migration")
+        session.add(project)
+        session.commit()
+        project_id = project.id
+    seeded = seed_finding_pair(
+        engine, models, repositories, project_id=project_id, with_decision_evidence=True
+    )
+    with Session(engine) as session:
+        rows = session.exec(select(models.FindingDecisionEvidence)).all()
+        expected = EvidencePayloadStore(session.connection()).load_records(rows)
+        hashes = {
+            row.finding_id: (row.source_payload_sha256, row.projection_payload_sha256)
+            for row in session.exec(select(models.FindingCurrentProjection)).all()
+        }
+    engine.dispose()
+    command.downgrade(config, "20260923_0013")
+
+    def fail_encoding(_connection, _cursor, statement, _parameters, _context, _executemany):
+        if statement.startswith("UPDATE finding_decision_evidence SET payload_json="):
+            raise RuntimeError("injected evidence encoding failure")
+
+    event.listen(Engine, "before_cursor_execute", fail_encoding)
+    try:
+        with pytest.raises(RuntimeError, match="injected evidence encoding failure"):
+            command.upgrade(config, "head")
+    finally:
+        event.remove(Engine, "before_cursor_execute", fail_encoding)
+    engine = create_engine(config.get_main_option("sqlalchemy.url"))
+    try:
+        assert "evidence_section" not in inspect(engine).get_table_names()
+        with Session(engine) as session:
+            assert {
+                row.id: row.payload_json
+                for row in session.exec(select(models.FindingDecisionEvidence)).all()
+            } == expected
+            assert (
+                session.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+                == "20260923_0013"
+            )
+    finally:
+        engine.dispose()
+    command.upgrade(config, "head")
+    engine = create_engine(config.get_main_option("sqlalchemy.url"))
+    try:
+        with Session(engine) as session:
+            rows = session.exec(select(models.FindingDecisionEvidence)).all()
+            assert all(STORAGE_KEY in row.payload_json for row in rows)
+            assert EvidencePayloadStore(session.connection()).load_records(rows) == expected
+            repository = FindingCurrentProjectionRepository(session)
+            current = repository.records_for_findings(seeded["finding_ids"])
+            assert repository.verify_source_parity(current).matches
+            assert {
+                row.finding_id: (row.source_payload_sha256, row.projection_payload_sha256)
+                for row in current
+            } == hashes
+    finally:
+        engine.dispose()
+    command.downgrade(config, "20260923_0013")
+    engine = create_engine(config.get_main_option("sqlalchemy.url"))
+    try:
+        with Session(engine) as session:
+            assert {
+                row.id: row.payload_json
+                for row in session.exec(select(models.FindingDecisionEvidence)).all()
+            } == expected
+    finally:
+        engine.dispose()

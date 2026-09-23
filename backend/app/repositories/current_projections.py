@@ -11,18 +11,23 @@ from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import ValidationError
-from sqlalchemy import func
+from sqlalchemy import bindparam, func
+from sqlalchemy.orm import defer
 from sqlmodel import Session, col, select
 
 from app.decision_core.component_projection import project_component_decision
 from app.decision_core.contracts import FindingDecisionEvidenceV2
+from app.decision_core.current_queue import decision_sort_key, with_current_rank
+from app.decision_core.governance_state import governance_sync_state
 from app.decision_core.ledger import (
     FINDING_CURRENT_PROJECTION_SCHEMA_VERSION,
     DecisionLedgerInvariantError,
     canonical_payload_sha256,
 )
+from app.decision_core.read_summary import decision_read_summary
 from app.models import FindingCurrentProjection, FindingDecisionEvidence
 from app.models.base import get_datetime_utc
+from app.repositories.evidence_payloads import EvidencePayloadStore
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +85,12 @@ class FindingCurrentProjectionRepository:
         """Rehydrate effective contracts from immutable sources in one bounded query."""
         rows = list(projections)
         sources = source_records or self.source_records_for_records(rows)
+        for projection in rows:
+            source_id = projection.source_finding_evidence_id
+            source = sources.get(source_id) if source_id is not None else None
+            if source is not None:
+                _assert_projection_source_identity(projection, source)
+        payloads = EvidencePayloadStore(self.session.connection()).load_records(sources.values())
         result: dict[uuid.UUID, FindingDecisionEvidenceV2] = {}
         for projection in rows:
             source_id = projection.source_finding_evidence_id
@@ -88,7 +99,9 @@ class FindingCurrentProjectionRepository:
                 raise DecisionLedgerInvariantError(
                     f"Current projection {projection.finding_id} has no immutable source."
                 )
-            result[projection.finding_id] = _effective_projection_evidence(projection, source)
+            result[projection.finding_id] = _effective_projection_evidence(
+                projection, source, payloads[source.id]
+            )
         return result
 
     def source_records_for_records(
@@ -131,11 +144,41 @@ class FindingCurrentProjectionRepository:
             )
         return records
 
+    def read_records_for_findings(
+        self, finding_ids: Iterable[uuid.UUID]
+    ) -> list[FindingCurrentProjection]:
+        """Read compact columns only; reject accidental lazy evidence-overlay loads."""
+        ids = list(dict.fromkeys(finding_ids))
+        records: list[FindingCurrentProjection] = []
+        for offset in range(0, len(ids), 500):
+            records.extend(
+                self.session.exec(
+                    select(FindingCurrentProjection)
+                    .where(col(FindingCurrentProjection.finding_id).in_(ids[offset : offset + 500]))
+                    .options(
+                        defer(
+                            getattr(FindingCurrentProjection, "lifecycle_overlay_json"),
+                            raiseload=True,
+                        ),
+                        defer(
+                            getattr(FindingCurrentProjection, "operational_sort_key_json"),
+                            raiseload=True,
+                        ),
+                        defer(
+                            getattr(FindingCurrentProjection, "governance_sync_json"),
+                            raiseload=True,
+                        ),
+                    )
+                ).all()
+            )
+        return records
+
     def upsert_from_evidence_record(
         self,
         *,
         source_record: FindingDecisionEvidence,
         evidence: FindingDecisionEvidenceV2,
+        source_payload: dict[str, Any] | None = None,
         existing_record: FindingCurrentProjection | None = None,
         lookup_existing: bool = True,
         flush: bool = True,
@@ -145,6 +188,8 @@ class FindingCurrentProjectionRepository:
         project_id = uuid.UUID(evidence.project_id)
         analysis_run_id = uuid.UUID(evidence.analysis_run_id)
         payload = evidence.to_jsonable()
+        if source_payload is None:
+            source_payload = EvidencePayloadStore(self.session.connection()).load(source_record)
         if source_record.finding_id != finding_id:
             raise DecisionLedgerInvariantError(
                 "Projection source finding does not match the decision contract."
@@ -162,7 +207,7 @@ class FindingCurrentProjectionRepository:
             or source_record.dedup_key != evidence.dedup_key
             or source_record.priority != evidence.priority
             or source_record.status != evidence.status
-            or source_record.payload_json != payload
+            or source_payload != payload
         ):
             raise DecisionLedgerInvariantError(
                 "Projection source columns do not match the decision contract."
@@ -172,7 +217,7 @@ class FindingCurrentProjectionRepository:
         if existing is None and lookup_existing:
             existing = self.get_record(finding_id)
         if existing is not None and existing.source_finding_evidence_id == source_record.id:
-            expected_hash = canonical_payload_sha256(source_record.payload_json)
+            expected_hash = canonical_payload_sha256(source_payload)
             if existing.source_payload_sha256 != expected_hash:
                 raise DecisionLedgerInvariantError(
                     f"Current projection {finding_id} no longer matches its immutable source hash."
@@ -181,7 +226,7 @@ class FindingCurrentProjectionRepository:
         if existing is not None and not _source_is_newer(source_record, existing):
             return existing
 
-        source_hash = canonical_payload_sha256(source_record.payload_json)
+        source_hash = canonical_payload_sha256(source_payload)
         if canonical_payload_sha256(payload) != source_hash:
             raise DecisionLedgerInvariantError(
                 "Projection contract payload differs from the persisted source evidence."
@@ -237,7 +282,7 @@ class FindingCurrentProjectionRepository:
             raise DecisionLedgerInvariantError(
                 "Lifecycle projection update received a mismatched immutable source."
             )
-        source_payload = dict(source.payload_json or {})
+        source_payload = EvidencePayloadStore(self.session.connection()).load(source)
         source_hash = canonical_payload_sha256(source_payload)
         if record.source_payload_sha256 != source_hash:
             raise DecisionLedgerInvariantError(
@@ -260,7 +305,9 @@ class FindingCurrentProjectionRepository:
             raise DecisionLedgerInvariantError(
                 "Lifecycle projection payload changed immutable finding identity fields."
             )
-        normalized = evidence.to_jsonable()
+        # A rank belongs to the current queue. Keep the source rank in stored
+        # decision state so displaced peers never copy full evidence subtrees.
+        normalized = with_current_rank(evidence.to_jsonable(), source_payload["operational_rank"])
         overlay = _top_level_overlay(source_payload, normalized)
         # This temporary is only compared, never returned or persisted.
         reconstructed = source_payload | overlay
@@ -293,6 +340,50 @@ class FindingCurrentProjectionRepository:
             return None
         return self.update_current_payload(finding_id, transform(current_payload))
 
+    def update_queue_ranks(
+        self,
+        ranks: dict[uuid.UUID, int],
+        *,
+        restored_keys: dict[uuid.UUID, list[Any]] | None = None,
+    ) -> None:
+        """Update only compact queue state, without touching decision evidence."""
+        self.session.flush()
+        table = getattr(FindingCurrentProjection, "__table__")
+        now = get_datetime_utc()
+        if ranks:
+            statement = (
+                table.update()
+                .where(table.c.finding_id == bindparam("queue_finding_id"))
+                .values(
+                    operational_rank=bindparam("queue_rank"),
+                    revision=table.c.revision + 1,
+                    updated_at=now,
+                )
+            )
+            self.session.connection().execute(
+                statement,
+                [
+                    {"queue_finding_id": finding_id, "queue_rank": rank}
+                    for finding_id, rank in ranks.items()
+                ],
+            )
+        if restored_keys:
+            self.session.connection().execute(
+                table.update()
+                .where(table.c.finding_id == bindparam("queue_finding_id"))
+                .values(operational_sort_key_json=bindparam("queue_sort_key")),
+                [
+                    {"queue_finding_id": finding_id, "queue_sort_key": key}
+                    for finding_id, key in restored_keys.items()
+                ],
+            )
+        # Core executemany deliberately avoids loading all ORM rows. Expire only
+        # projections already held by this session so callers observe the new rank.
+        changed = set(ranks) | set(restored_keys or {})
+        for obj in list(self.session.identity_map.values()):
+            if isinstance(obj, FindingCurrentProjection) and obj.finding_id in changed:
+                self.session.expire(obj)
+
     def backfill_missing(self, *, batch_size: int = 500) -> int:
         """Backfill missing current rows from each finding's newest immutable evidence."""
         inserted = 0
@@ -301,9 +392,13 @@ class FindingCurrentProjectionRepository:
             records = self._latest_evidence_without_projection(limit=bounded_batch)
             if not records:
                 return inserted
+            payloads = EvidencePayloadStore(self.session.connection()).load_records(records)
             for source_record in records:
-                evidence = FindingDecisionEvidenceV2.model_validate(source_record.payload_json)
-                self.upsert_from_evidence_record(source_record=source_record, evidence=evidence)
+                payload = payloads[source_record.id]
+                evidence = FindingDecisionEvidenceV2.model_validate(payload)
+                self.upsert_from_evidence_record(
+                    source_record=source_record, evidence=evidence, source_payload=payload
+                )
                 inserted += 1
 
     def verify_source_parity(
@@ -334,7 +429,12 @@ class FindingCurrentProjectionRepository:
             if source is None:
                 mismatches.append(f"{projection.finding_id}:missing-source")
                 continue
-            source_hash = canonical_payload_sha256(source.payload_json)
+            try:
+                source_payload = EvidencePayloadStore(self.session.connection()).load(source)
+            except DecisionLedgerInvariantError:
+                mismatches.append(f"{projection.finding_id}:source-storage-integrity")
+                continue
+            source_hash = canonical_payload_sha256(source_payload)
             if (
                 source.finding_id != projection.finding_id
                 or source.project_id != projection.project_id
@@ -346,13 +446,17 @@ class FindingCurrentProjectionRepository:
             if projection.source_payload_sha256 != source_hash:
                 mismatches.append(f"{projection.finding_id}:source-hash")
             try:
-                effective_payload = _effective_projection_payload(projection, source)
+                effective_payload = _effective_projection_payload(
+                    projection, source, source_payload
+                )
                 projection_hash = canonical_payload_sha256(effective_payload)
                 if projection.projection_payload_sha256 != projection_hash:
                     mismatches.append(f"{projection.finding_id}:projection-hash")
                 if projection.lifecycle_revision == 0 and projection_hash != source_hash:
                     mismatches.append(f"{projection.finding_id}:source-projection-hash")
-                evidence = FindingDecisionEvidenceV2.model_validate(effective_payload)
+                evidence = FindingDecisionEvidenceV2.model_validate(
+                    with_current_rank(effective_payload, projection.operational_rank)
+                )
             except ValueError:
                 mismatches.append(f"{projection.finding_id}:invalid-projection-payload")
             else:
@@ -468,6 +572,9 @@ def projection_insert_values(
         "priority_rank": evidence.priority_rank,
         "risk_score": evidence.risk_score,
         "operational_rank": evidence.operational_rank,
+        "operational_sort_key_json": decision_sort_key(evidence),
+        "governance_sync_json": governance_sync_state(evidence),
+        "read_summary_json": decision_read_summary(evidence),
         "in_kev": evidence.in_kev,
         "epss": evidence.epss,
         "cvss_base_score": evidence.cvss_base_score,
@@ -504,6 +611,9 @@ def _apply_projection_columns(
     record.priority_rank = evidence.priority_rank
     record.risk_score = evidence.risk_score
     record.operational_rank = evidence.operational_rank
+    record.operational_sort_key_json = decision_sort_key(evidence)
+    record.governance_sync_json = governance_sync_state(evidence)
+    record.read_summary_json = decision_read_summary(evidence)
     record.in_kev = evidence.in_kev
     record.epss = evidence.epss
     record.cvss_base_score = evidence.cvss_base_score
@@ -523,10 +633,11 @@ def _apply_projection_columns(
 def _effective_projection_payload(
     projection: FindingCurrentProjection,
     source: FindingDecisionEvidence,
+    source_payload: dict[str, Any],
 ) -> dict[str, Any]:
     _assert_projection_source_identity(projection, source)
     return _apply_top_level_overlay(
-        dict(source.payload_json or {}),
+        source_payload,
         dict(projection.lifecycle_overlay_json or {}),
     )
 
@@ -534,10 +645,14 @@ def _effective_projection_payload(
 def _effective_projection_evidence(
     projection: FindingCurrentProjection,
     source: FindingDecisionEvidence,
+    source_payload: dict[str, Any],
 ) -> FindingDecisionEvidenceV2:
     """Validate persisted JSON into an isolated contract without copying it first."""
     _assert_projection_source_identity(projection, source)
-    payload = dict(source.payload_json or {}) | dict(projection.lifecycle_overlay_json or {})
+    payload = with_current_rank(
+        source_payload | dict(projection.lifecycle_overlay_json or {}),
+        projection.operational_rank,
+    )
     try:
         # JSON parsing owns every nested value, including untyped raw evidence.
         return FindingDecisionEvidenceV2.model_validate_json(json.dumps(payload))
@@ -545,7 +660,10 @@ def _effective_projection_evidence(
         # Preserve valid legacy raw evidence beyond the JSON parser's depth limit,
         # and retain the existing validation failures for invalid contracts.
         return FindingDecisionEvidenceV2.model_validate(
-            _effective_projection_payload(projection, source)
+            with_current_rank(
+                _effective_projection_payload(projection, source, source_payload),
+                projection.operational_rank,
+            )
         )
 
 
@@ -601,6 +719,14 @@ def _projection_columns_match_evidence(
         and projection.priority_rank == evidence.priority_rank
         and projection.risk_score == evidence.risk_score
         and projection.operational_rank == evidence.operational_rank
+        and (
+            projection.operational_sort_key_json is None
+            or projection.operational_sort_key_json == decision_sort_key(evidence)
+        )
+        and (
+            projection.governance_sync_json is None
+            or projection.governance_sync_json == governance_sync_state(evidence)
+        )
         and projection.in_kev == evidence.in_kev
         and projection.epss == evidence.epss
         and projection.cvss_base_score == evidence.cvss_base_score
@@ -615,6 +741,7 @@ def _projection_columns_match_evidence(
         and projection.component_purl == component.purl
         and projection.component_package_type == component.package_type
         and projection.component_ecosystem == component.ecosystem
+        and projection.read_summary_json == decision_read_summary(evidence)
     )
 
 

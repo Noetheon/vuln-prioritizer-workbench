@@ -376,6 +376,7 @@ def test_import_upload_applies_openvex_sidecar_to_workbench_findings(
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
         headers=headers,
+        params={"include_evidence": True},
     )
     assert findings.status_code == 200, findings.text
     finding = findings.json()["data"][0]
@@ -446,6 +447,7 @@ def test_import_upload_applies_cyclonedx_vex_sidecar_to_workbench_findings(
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
         headers=headers,
+        params={"include_evidence": True},
     )
     assert findings.status_code == 200, findings.text
     by_cve = {finding["cve_id"]: finding for finding in findings.json()["data"]}

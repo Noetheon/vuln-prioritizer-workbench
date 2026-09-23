@@ -7,7 +7,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 
 from app.api.deps import LocalActor, SessionDep
-from app.api.routes.workbench_access import require_project
+from app.api.routes.workbench_access import require_current_decisions, require_project
 from app.core.app_state import workbench_settings
 from app.decision_core.finding_queries import list_project_attack_summary_inputs
 from app.models import (
@@ -105,7 +105,7 @@ def read_project_summary(
     local_actor: LocalActor,
 ) -> ProjectDecisionSummaryPublic:
     """Read a dashboard-oriented decision summary for one visible project."""
-    require_project(session, project_id)
+    require_current_decisions(session, project_id)
     finding_repository = FindingRepository(session)
     run_repository = RunRepository(session)
     runs, _run_count = run_repository.list_analysis_runs_page(project_id, limit=1, offset=0)
@@ -123,7 +123,7 @@ def read_project_dashboard(
     local_actor: LocalActor,
 ) -> ProjectDashboardPublic:
     """Read the one-call aggregate payload for the project dashboard."""
-    require_project(session, project_id)
+    require_current_decisions(session, project_id)
     finding_repository = FindingRepository(session)
     run_repository = RunRepository(session)
     waiver_repository = WaiverRepository(session)
@@ -143,7 +143,7 @@ def read_project_attack_summary(
     limit: int = Query(default=5, ge=1, le=20),
 ) -> ProjectAttackSummaryPublic:
     """Read top ATT&CK techniques, tactics, and confidence distribution."""
-    require_project(session, project_id)
+    require_current_decisions(session, project_id)
     findings, attack_contexts = list_project_attack_summary_inputs(session, project_id)
     return build_project_attack_summary_payload_from_rows(
         project_id=project_id,
@@ -161,7 +161,7 @@ def read_project_governance_rollups(
     limit: int = Query(default=5, ge=1, le=20),
 ) -> ProjectGovernanceRollupsPublic:
     """Read owner, service, environment, and waiver-debt rollups."""
-    require_project(session, project_id)
+    require_current_decisions(session, project_id)
     finding_repository = FindingRepository(session)
     waiver_repository = WaiverRepository(session)
     return build_project_governance_rollups_payload_from_repositories(
@@ -182,7 +182,7 @@ def compare_project_cvss_only(
     include_comparisons: bool = Query(default=False),
 ) -> ProjectCvssOnlyComparisonPublic:
     """Compare current enriched priorities with a CVSS-only baseline."""
-    require_project(session, project_id)
+    require_current_decisions(session, project_id)
     active_settings = workbench_settings(request)
     finding_repository = FindingRepository(session)
     finding_count = finding_repository.count_project_findings(project_id)

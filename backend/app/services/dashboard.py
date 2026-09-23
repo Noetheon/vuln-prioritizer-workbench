@@ -7,6 +7,7 @@ from collections.abc import Sequence
 
 from app.decision_core.readmodels import (
     DecisionFindingView,
+    current_finding_read_views,
     decision_views_for_findings,
     latest_finding_decision_view,
 )
@@ -40,7 +41,7 @@ from app.services.run_workflow_projection import analysis_run_public
 def build_project_dashboard_payload(
     *,
     project_id: uuid.UUID,
-    findings: Sequence[Finding],
+    findings: Sequence[Finding | DecisionFindingView],
     runs: Sequence[AnalysisRun],
     waivers: Sequence[Waiver],
     waiver_repository: WaiverRepository,
@@ -49,7 +50,11 @@ def build_project_dashboard_payload(
 ) -> ProjectDashboardPublic:
     """Build the one-call project dashboard aggregate from loaded domain rows."""
     bounded_remediation_limit = max(1, min(remediation_limit, 50))
-    finding_views = decision_views_for_findings(list(findings))
+    finding_views = (
+        [item for item in findings if isinstance(item, DecisionFindingView)]
+        if findings and isinstance(findings[0], DecisionFindingView)
+        else decision_views_for_findings([item for item in findings if isinstance(item, Finding)])
+    )
     remediation_findings = sorted(finding_views, key=_remediation_queue_sort_key)[
         :bounded_remediation_limit
     ]
@@ -104,7 +109,7 @@ def build_project_dashboard_payload_from_repositories(
     )
     dashboard = build_project_dashboard_payload(
         project_id=project_id,
-        findings=findings,
+        findings=current_finding_read_views(finding_repository.session, findings),
         runs=runs,
         waivers=waiver_repository.list_project_waivers(project_id),
         waiver_repository=waiver_repository,
@@ -128,7 +133,7 @@ def finding_public(finding: Finding | DecisionFindingView) -> FindingPublic:
         if isinstance(finding, DecisionFindingView)
         else latest_finding_decision_view(finding)
     )
-    return FindingPublic.model_validate(view.finding).model_copy(update=view.public_update())
+    return FindingPublic.model_validate(view.finding, update=view.public_update())
 
 
 def _remediation_queue_sort_key(view: DecisionFindingView) -> tuple[object, ...]:

@@ -15,12 +15,14 @@ from app.models.workbench import (
 )
 from app.services.report_contracts import (
     REPORT_CONTENT_TYPE_CSV,
+    REPORT_CONTENT_TYPE_GZIP,
     REPORT_CONTENT_TYPE_HTML,
     REPORT_CONTENT_TYPE_JSON,
     REPORT_CONTENT_TYPE_MARKDOWN,
     REPORT_CONTENT_TYPE_SARIF,
     REPORT_CONTENT_TYPE_ZIP,
     REPORT_FILENAME_ANALYSIS_JSON,
+    REPORT_FILENAME_ANALYSIS_JSON_GZIP,
     REPORT_FILENAME_ATTACK_NAVIGATOR,
     REPORT_FILENAME_EVIDENCE_BUNDLE,
     REPORT_FILENAME_EXECUTIVE_HTML,
@@ -356,6 +358,20 @@ def _report_format_capability(report_format: ReportFormat) -> ReportFormatCapabi
             kind=REPORT_KIND_ANALYSIS_JSON,
             filename=REPORT_FILENAME_ANALYSIS_JSON,
             content_type=REPORT_CONTENT_TYPE_JSON,
+        ),
+        "json-gzip": ReportFormatCapabilityPublic(
+            format="json-gzip",
+            label="JSON (gzip)",
+            title="Compressed JSON Export",
+            action_label="Export compressed JSON",
+            detail=(
+                "Complete historical findings and evidence for large runs, "
+                "compressed as a gzip file."
+            ),
+            audience="Automation",
+            kind=REPORT_KIND_ANALYSIS_JSON,
+            filename=REPORT_FILENAME_ANALYSIS_JSON_GZIP,
+            content_type=REPORT_CONTENT_TYPE_GZIP,
         ),
         "csv": ReportFormatCapabilityPublic(
             format="csv",

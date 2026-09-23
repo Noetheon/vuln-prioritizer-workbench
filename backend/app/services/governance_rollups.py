@@ -5,7 +5,6 @@ from __future__ import annotations
 import uuid
 from collections import Counter
 from collections.abc import Callable, Sequence
-from typing import Any
 
 from app.decision_core.readmodels import (
     DecisionFindingView,
@@ -190,6 +189,13 @@ def _waiver_debt_summary(
     service_counts: Counter[str] = Counter()
     matched_finding_count = 0
     items: list[GovernanceWaiverDebtEntryPublic] = []
+    matched_counts = (
+        waiver_repository.matching_finding_counts(
+            list(waivers), findings=[item.finding for item in findings]
+        )
+        if waiver_repository is not None
+        else {}
+    )
 
     for waiver in waivers:
         status, days_remaining = waiver_lifecycle_status(waiver)
@@ -197,9 +203,7 @@ def _waiver_debt_summary(
         owner_counts[waiver.owner or UNKNOWN_LABEL] += 1
         if waiver.service:
             service_counts[waiver.service] += 1
-        matched_findings = (
-            waiver_repository.matching_finding_count(waiver) if waiver_repository is not None else 0
-        )
+        matched_findings = matched_counts.get(waiver.id, 0)
         matched_finding_count += matched_findings
         items.append(
             GovernanceWaiverDebtEntryPublic(
@@ -247,23 +251,12 @@ def _waiver_debt_summary(
 
 def _owner_label(finding: DecisionFindingView) -> str:
     asset_owner = getattr(finding.finding.asset, "owner", None)
-    return _clean_label(
-        asset_owner
-        or _record_string(finding, ("owner", "asset_owner", "waiver_owner"))
-        or UNKNOWN_LABEL
-    )
+    return _clean_label(asset_owner or finding.read_summary.get("owner") or UNKNOWN_LABEL)
 
 
 def _service_label(finding: DecisionFindingView) -> str:
     asset_service = getattr(finding.finding.asset, "business_service", None)
-    return _clean_label(
-        asset_service
-        or _record_string(
-            finding,
-            ("business_service", "service", "asset_business_service", "waiver_service"),
-        )
-        or UNKNOWN_LABEL
-    )
+    return _clean_label(asset_service or finding.read_summary.get("service") or UNKNOWN_LABEL)
 
 
 def _asset_label(finding: DecisionFindingView) -> str:
@@ -271,19 +264,14 @@ def _asset_label(finding: DecisionFindingView) -> str:
     asset_key = getattr(asset, "asset_key", None)
     asset_name = getattr(asset, "name", None)
     return _clean_label(
-        asset_key
-        or asset_name
-        or _record_string(finding, ("asset_key", "target_ref"))
-        or UNKNOWN_LABEL
+        asset_key or asset_name or finding.read_summary.get("asset") or UNKNOWN_LABEL
     )
 
 
 def _environment_label(finding: DecisionFindingView) -> str:
     asset_environment = getattr(finding.finding.asset, "environment", None)
     return _clean_label(
-        _enum_value(asset_environment)
-        or _record_string(finding, ("environment", "asset_environment"))
-        or "unknown"
+        _enum_value(asset_environment) or finding.read_summary.get("environment") or "unknown"
     )
 
 
@@ -303,38 +291,7 @@ def _highest_priority(priority_counts: Counter[str]) -> str | None:
 
 
 def _waiver_status(finding: DecisionFindingView) -> str | None:
-    record = _waiver_record(finding)
-    status = _string_value(record.get("waiver_status")) or _string_value(record.get("status"))
-    return status.strip().lower() if status else None
-
-
-def _waiver_record(finding: DecisionFindingView) -> dict[str, Any]:
-    evidence = finding.evidence_payload
-    explanation = _dict_value(evidence.get("priority_evidence", {}).get("raw"))
-    record: dict[str, Any] = {}
-    governance = _dict_value(evidence.get("governance"))
-    for source in (governance.get("waiver"), explanation.get("waiver"), explanation, governance):
-        if isinstance(source, dict):
-            record.update(source)
-    return record
-
-
-def _record_string(finding: DecisionFindingView, keys: Sequence[str]) -> str | None:
-    evidence = finding.evidence_payload
-    priority_raw = _dict_value(_dict_value(evidence.get("priority_evidence")).get("raw"))
-    occurrence_scope = _dict_value(evidence.get("occurrence_scope"))
-    records = (
-        priority_raw,
-        evidence,
-        occurrence_scope,
-        _dict_value(priority_raw.get("provenance")),
-    )
-    for record in records:
-        for key in keys:
-            value = _string_value(record.get(key))
-            if value:
-                return value
-    return None
+    return _string_value(finding.read_summary.get("waiver_status"))
 
 
 def _clean_label(value: object) -> str:
@@ -349,10 +306,6 @@ def _enum_value(value: object) -> str:
 
 def _string_value(value: object) -> str | None:
     return value if isinstance(value, str) and value.strip() else None
-
-
-def _dict_value(value: object) -> dict[str, Any]:
-    return dict(value) if isinstance(value, dict) else {}
 
 
 def _waiver_status_sort_key(status: str) -> int:

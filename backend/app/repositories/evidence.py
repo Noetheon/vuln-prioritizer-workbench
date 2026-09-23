@@ -19,6 +19,7 @@ from app.decision_core.ledger import DecisionLedgerInvariantError
 from app.models import AnalysisEvidence, FindingDecisionEvidence
 from app.models.base import get_datetime_utc
 from app.repositories.current_projections import FindingCurrentProjectionRepository
+from app.repositories.evidence_payloads import EvidencePayloadStore
 
 
 class EvidenceRepository:
@@ -131,6 +132,7 @@ class EvidenceRepository:
         """Append immutable finding evidence and atomically advance current projections."""
         items = list(evidence_items)
         records: list[FindingDecisionEvidence] = []
+        new_records: list[FindingDecisionEvidence] = []
         projection_items: list[tuple[FindingDecisionEvidence, FindingDecisionEvidenceV2]] = []
         finding_ids = [uuid.UUID(item.finding_id) for item in items]
         existing_records: dict[uuid.UUID, FindingDecisionEvidence] = {}
@@ -146,6 +148,7 @@ class EvidenceRepository:
                 existing_records[record.finding_id] = record
 
         projection_repository = FindingCurrentProjectionRepository(self.session)
+        payload_store = EvidencePayloadStore(self.session.connection())
         projections_by_finding_id = {
             projection.finding_id: projection
             for projection in projection_repository.records_for_findings(finding_ids)
@@ -171,7 +174,7 @@ class EvidenceRepository:
                     or existing.dedup_key != item.dedup_key
                     or existing.priority != item.priority
                     or existing.status != item.status
-                    or existing.payload_json != payload_json
+                    or payload_store.load(existing) != payload_json
                 ):
                     raise DecisionLedgerInvariantError(
                         "Finding decision evidence is immutable once persisted for a run."
@@ -205,15 +208,24 @@ class EvidenceRepository:
             record.schema_version = FINDING_DECISION_EVIDENCE_SCHEMA_VERSION
             record.payload_json = payload_json
             self.session.add(record)
+            new_records.append(record)
             existing_records[finding_id] = record
             records.append(record)
             projection_items.append((record, item))
+        if new_records:
+            documents = payload_store.store_payloads(
+                project_id, (record.payload_json for record in new_records)
+            )
+            for record, document in zip(new_records, documents, strict=True):
+                record.payload_json = document
         self.session.flush()
+        source_payloads = payload_store.load_records(records)
         for record, item in projection_items:
             finding_id = uuid.UUID(item.finding_id)
             projection = projection_repository.upsert_from_evidence_record(
                 source_record=record,
                 evidence=item,
+                source_payload=source_payloads[record.id],
                 existing_record=projections_by_finding_id.get(finding_id),
                 lookup_existing=False,
                 flush=False,
@@ -267,7 +279,9 @@ class EvidenceRepository:
         record = self.latest_finding_decision_evidence_record(finding_id)
         if record is None:
             return None
-        return FindingDecisionEvidenceV2.model_validate(record.payload_json)
+        return FindingDecisionEvidenceV2.model_validate(
+            EvidencePayloadStore(self.session.connection()).load(record)
+        )
 
     def latest_finding_decision_evidence_record(
         self,
@@ -312,8 +326,9 @@ class EvidenceRepository:
             .join(ranked, col(FindingDecisionEvidence.id) == ranked.c.evidence_id)
             .where(ranked.c.row_number == 1)
         ).all()
+        payloads = EvidencePayloadStore(self.session.connection()).load_records(rows)
         return {
-            row.finding_id: FindingDecisionEvidenceV2.model_validate(row.payload_json)
+            row.finding_id: FindingDecisionEvidenceV2.model_validate(payloads[row.id])
             for row in rows
         }
 
@@ -327,7 +342,8 @@ class EvidenceRepository:
                 FindingDecisionEvidence.analysis_run_id == analysis_run_id
             )
         ).all()
+        payloads = EvidencePayloadStore(self.session.connection()).load_records(rows)
         return {
-            row.finding_id: FindingDecisionEvidenceV2.model_validate(row.payload_json)
+            row.finding_id: FindingDecisionEvidenceV2.model_validate(payloads[row.id])
             for row in rows
         }

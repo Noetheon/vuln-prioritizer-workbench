@@ -25,6 +25,7 @@ REPORT_KIND_GOVERNANCE_DETECTION_COVERAGE = "governance-detection-coverage"
 
 REPORT_FILENAME_TECHNICAL_MARKDOWN = "technical-report.md"
 REPORT_FILENAME_EXECUTIVE_HTML = "executive-report.html"
+REPORT_FILENAME_ANALYSIS_JSON_GZIP = "analysis-result.v2.json.gz"
 REPORT_FILENAME_ANALYSIS_JSON = "analysis-result.v2.json"
 REPORT_FILENAME_FINDINGS_CSV = "findings.csv"
 REPORT_FILENAME_EVIDENCE_BUNDLE = "evidence-bundle.zip"
@@ -38,6 +39,7 @@ REPORT_FILENAME_GOVERNANCE_DETECTION_COVERAGE = "governance/detection-coverage.j
 
 REPORT_CONTENT_TYPE_MARKDOWN = "text/markdown; charset=utf-8"
 REPORT_CONTENT_TYPE_HTML = "text/html; charset=utf-8"
+REPORT_CONTENT_TYPE_GZIP = "application/gzip"
 REPORT_CONTENT_TYPE_JSON = "application/json; charset=utf-8"
 REPORT_CONTENT_TYPE_CSV = "text/csv; charset=utf-8"
 REPORT_CONTENT_TYPE_SARIF = "application/sarif+json; charset=utf-8"

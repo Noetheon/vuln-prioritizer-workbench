@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -23,7 +22,8 @@ def create_report_record(
     generated_at: datetime,
     finding_count: int,
     provider_snapshot_id: uuid.UUID | None,
-    content_bytes: bytes,
+    sha256: str,
+    size_bytes: int,
     report_path: Path,
     kind: str,
     report_format: str,
@@ -32,7 +32,6 @@ def create_report_record(
     extra_metadata: dict[str, Any] | None = None,
 ) -> Report:
     """Create report record function."""
-    sha256 = hashlib.sha256(content_bytes).hexdigest()
     metadata_json = {
         "generated_at": generated_at.isoformat(),
         "project_id": str(project.id),
@@ -57,7 +56,7 @@ def create_report_record(
         content_type=content_type,
         path=str(report_path),
         sha256=sha256,
-        size_bytes=len(content_bytes),
+        size_bytes=size_bytes,
         metadata_json=metadata_json,
     )
 

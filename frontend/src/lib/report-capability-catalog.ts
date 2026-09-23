@@ -27,6 +27,7 @@ const REPORT_FORMAT_ICONS: Partial<Record<string, LucideIcon>> = {
   csv: Table2,
   html: FileText,
   json: FileJson,
+  "json-gzip": FileArchive,
   markdown: FileText,
   sarif: FileJson,
   zip: FileArchive,

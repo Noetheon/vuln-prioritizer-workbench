@@ -1,7 +1,7 @@
 import type { FindingPublic } from "../api-client"
 
-export function findingSlaLabel(finding: Pick<FindingPublic, "evidence">) {
-  const sla = finding.evidence?.remediation?.sla
+export function findingSlaLabel(finding: Pick<FindingPublic, "evidence" | "sla">) {
+  const sla = finding.sla ?? finding.evidence?.remediation?.sla
   const label = sla?.label
   if (typeof label !== "string" || !label.trim()) return "No SLA recorded"
   if (

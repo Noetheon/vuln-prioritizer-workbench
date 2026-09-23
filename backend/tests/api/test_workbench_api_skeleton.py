@@ -132,7 +132,7 @@ def test_workbench_capabilities_contract_is_redacted(
     payload = response.json()
     assert payload["schema_version"] == "workbench-capabilities.v1"
     assert len(payload["import_formats"]) == 10
-    assert len(payload["report_formats"]) == 7
+    assert len(payload["report_formats"]) == 8
     assert payload["upload_policy"]["max_upload_bytes"] > 0
     serialized = json.dumps(payload)
     assert "/Users/" not in serialized

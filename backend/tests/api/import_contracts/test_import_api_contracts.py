@@ -116,6 +116,7 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
         headers=headers,
+        params={"include_evidence": True},
     )
     assert findings.status_code == 200
     finding_payloads = findings.json()["data"]

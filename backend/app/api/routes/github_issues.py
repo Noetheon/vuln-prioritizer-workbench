@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from app.api.deps import LocalActor, SessionDep
-from app.api.routes.workbench_access import require_project
+from app.api.routes.workbench_access import require_current_decisions
 from app.core.local_actor import LocalWorkbenchActor
 from app.models import (
     AuditEventStatus,
@@ -45,7 +45,7 @@ def preview_project_github_issues(
     local_actor: LocalActor,
 ) -> GitHubIssuePreviewPublic:
     """Prepare GitHub issue markdown for selected or top-ranked visible findings."""
-    require_project(session, project_id)
+    require_current_decisions(session, project_id)
     try:
         items = build_github_issue_preview_items(session, project_id=project_id, payload=payload)
     except HTTPException as exc:
@@ -334,7 +334,7 @@ def export_project_github_issues(
 
 def _lock_existing_export_project(session: Session, project_id: uuid.UUID) -> None:
     """Serialize export reservations with project deletion and reject stale callers."""
-    require_project(session, project_id)
+    require_current_decisions(session, project_id)
     lock_project_decision_scope(session, project_id)
 
 

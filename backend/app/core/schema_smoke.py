@@ -6,7 +6,7 @@ import uuid
 from dataclasses import dataclass, replace
 
 from sqlalchemy import inspect, text
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 from sqlmodel import Session, SQLModel
 
 from app.core.db import engine
@@ -42,29 +42,57 @@ def assert_postgres_engine(active_engine: Engine) -> str:
 
 
 def assert_migrated_schema(active_engine: Engine) -> SchemaSmokeResult:
-    """Validate Alembic head and model tables on the active database."""
+    """Validate the complete required schema on the active database."""
     with active_engine.connect() as connection:
-        table_names = set(inspect(connection).get_table_names())
-        missing_tables = sorted(required_model_tables() - table_names)
-        if missing_tables:
-            raise RuntimeError(
-                "Database schema is missing model tables: " + ", ".join(missing_tables[:20])
-            )
-        if "alembic_version" not in table_names:
-            raise RuntimeError("Database schema is missing alembic_version.")
+        return assert_migrated_connection(connection)
 
-        versions = tuple(
-            sorted(
-                str(row[0])
-                for row in connection.execute(text("SELECT version_num FROM alembic_version")).all()
-            )
+
+def assert_required_model_columns(connection: Connection) -> None:
+    """Reject absent model fields in existing tables, including nullable fields."""
+    expected_tables = required_model_tables()
+    inspector = inspect(connection)
+    existing = set(inspector.get_table_names()) & expected_tables
+    if not existing:
+        return
+    missing: list[str] = []
+    for (_, table_name), columns in inspector.get_multi_columns(
+        filter_names=sorted(existing)
+    ).items():
+        actual = {column["name"] for column in columns}
+        missing.extend(
+            f"{table_name}.{column.name}"
+            for column in SQLModel.metadata.tables[table_name].columns
+            if column.name not in actual
         )
-    if ALEMBIC_HEAD not in versions:
+    if missing:
+        raise RuntimeError(
+            "Database schema is missing required columns: " + ", ".join(sorted(missing))
+        )
+
+
+def assert_migrated_connection(connection: Connection) -> SchemaSmokeResult:
+    """Use the caller's read transaction so readiness cannot alter session state."""
+    table_names = set(inspect(connection).get_table_names())
+    missing_tables = sorted(required_model_tables() - table_names)
+    if missing_tables:
+        raise RuntimeError(
+            "Database schema is missing model tables: " + ", ".join(missing_tables[:20])
+        )
+    if "alembic_version" not in table_names:
+        raise RuntimeError("Database schema is missing alembic_version.")
+    versions = tuple(
+        sorted(
+            str(row[0])
+            for row in connection.execute(text("SELECT version_num FROM alembic_version"))
+        )
+    )
+    if versions != (ALEMBIC_HEAD,):
         found = ", ".join(versions) if versions else "<none>"
         raise RuntimeError(f"Alembic head mismatch: expected {ALEMBIC_HEAD}, found {found}.")
+    assert_required_model_columns(connection)
 
     return SchemaSmokeResult(
-        dialect=active_engine.dialect.name,
+        dialect=connection.dialect.name,
         alembic_versions=versions,
         table_count=len(table_names),
     )

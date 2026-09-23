@@ -37,7 +37,7 @@ def _finding_public(
 
 def _finding_public_from_view(view: DecisionFindingView) -> FindingPublic:
     """Return a finding DTO from an already-batched current decision view."""
-    return FindingPublic.model_validate(view.finding).model_copy(update=view.public_update())
+    return FindingPublic.model_validate(view.finding, update=view.public_update())
 
 
 def _latest_decision_evidence(
@@ -57,7 +57,7 @@ def _finding_detail_public(finding: Finding) -> FindingDetailPublic:
     """Return a finding detail DTO with source occurrence rows."""
     view = latest_finding_decision_view(finding)
     evidence_occurrences = _evidence_occurrences_public(view)
-    return FindingDetailPublic.model_validate(_finding_public(finding)).model_copy(
+    return FindingDetailPublic.model_validate(_finding_public_from_view(view)).model_copy(
         update={
             "occurrences": evidence_occurrences
             if evidence_occurrences is not None

@@ -14,6 +14,7 @@ import {
 } from "../api-client"
 import { matchesAsset } from "../components/assets/asset-model"
 import { apiErrorMessage } from "../lib/app-errors"
+import { decisionRefreshPollingInterval } from "../lib/decision-freshness"
 import {
   ASSET_FINDINGS_PAGE_LIMIT,
   type FindingDetailQueryData,
@@ -54,6 +55,8 @@ export function useProjectSummariesQuery(projects: readonly ProjectPublic[]) {
         ProjectsService.readProjectSummary,
       ),
     queryKey: workbenchQueryKeys.projectSummaries(projectIds),
+    refetchInterval: (query) =>
+      query.state.data?.refreshPendingProjectIds?.length ? 2000 : false,
     retry: false,
     staleTime: 15_000,
   })
@@ -65,6 +68,7 @@ export function useProjectSummaryQuery(projectId: string) {
     queryFn: ({ signal }) =>
       ProjectsService.readProjectSummary({ project_id: projectId }, { signal }),
     queryKey: workbenchQueryKeys.projectSummary(projectId),
+    refetchInterval: (query) => decisionRefreshPollingInterval(query.state.error),
     retry: false,
     staleTime: 15_000,
   })
@@ -79,6 +83,7 @@ export function useProjectDashboardQuery(projectId: string, enabled: boolean) {
         { signal },
       ),
     queryKey: workbenchQueryKeys.projectDashboard(projectId),
+    refetchInterval: (query) => decisionRefreshPollingInterval(query.state.error),
     retry: false,
     staleTime: 10_000,
   })
@@ -93,6 +98,7 @@ export function useProjectAttackSummaryQuery(projectId: string) {
         { signal },
       ),
     queryKey: workbenchQueryKeys.projectAttackSummary(projectId),
+    refetchInterval: (query) => decisionRefreshPollingInterval(query.state.error),
     retry: false,
     staleTime: 15_000,
   })
@@ -110,6 +116,7 @@ export function useProjectGovernanceRollupsQuery(projectId: string) {
         { signal },
       ),
     queryKey: workbenchQueryKeys.projectGovernanceRollups(projectId),
+    refetchInterval: (query) => decisionRefreshPollingInterval(query.state.error),
     retry: false,
     staleTime: 15_000,
   })
@@ -191,6 +198,7 @@ export function useAssetFindingsQuery({
       return findings
     },
     queryKey: workbenchQueryKeys.assetFindings(projectId, asset?.id ?? null),
+    refetchInterval: (query) => decisionRefreshPollingInterval(query.state.error),
     retry: false,
     staleTime: 10_000,
   })
@@ -243,6 +251,7 @@ export function useFindingsQuery(
     queryFn: ({ signal }) =>
       FindingsService.readProjectFindings(params, { signal }),
     queryKey: workbenchQueryKeys.findings(params),
+    refetchInterval: (query) => decisionRefreshPollingInterval(query.state.error),
     retry: false,
     staleTime: 10_000,
   })
@@ -282,6 +291,7 @@ export function useFindingDetailQuery(findingId: string | null) {
       return { detail, explanation, explanationWarning }
     },
     queryKey: workbenchQueryKeys.findingDetail(findingId),
+    refetchInterval: (query) => decisionRefreshPollingInterval(query.state.error),
     retry: false,
     staleTime: 10_000,
   })

@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from collections import Counter
 from collections.abc import Iterable
+from itertools import islice
 
 from pydantic import ValidationError
 from sqlmodel import Session, select
@@ -13,6 +14,7 @@ from app.decision_core.contracts import FindingDecisionEvidenceV2
 from app.domain.engine.models_decision import FindingDecisionGuidance, SlaTarget
 from app.models.decision_summary import ExecutiveFindingDecisionPublic, RunDecisionSummaryPublic
 from app.models.evidence import FindingDecisionEvidence
+from app.repositories.evidence_payloads import EvidencePayloadStore
 
 ACTIONABLE_STATUSES = frozenset({"open", "in_review", "remediating"})
 
@@ -20,13 +22,18 @@ ACTIONABLE_STATUSES = frozenset({"open", "in_review", "remediating"})
 def run_decision_summary(session: Session, run_id: uuid.UUID) -> RunDecisionSummaryPublic:
     """Read immutable run payloads in bounded batches for executive guidance."""
     rows = session.exec(
-        select(FindingDecisionEvidence.payload_json)
+        select(FindingDecisionEvidence)
         .where(FindingDecisionEvidence.analysis_run_id == run_id)
         .execution_options(yield_per=100)
     )
-    return summarize_decision_guidance(
-        FindingDecisionEvidenceV2.model_validate(payload) for payload in rows
-    )
+    store = EvidencePayloadStore(session.connection())
+
+    def contracts() -> Iterable[FindingDecisionEvidenceV2]:
+        while batch := tuple(islice(rows, 100)):
+            for payload in store.load_records(batch).values():
+                yield FindingDecisionEvidenceV2.model_validate(payload)
+
+    return summarize_decision_guidance(contracts())
 
 
 def summarize_decision_guidance(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
@@ -45,6 +46,10 @@ from app.models import (
     FindingOccurrence,
 )
 from app.models.base import get_datetime_utc
+from app.models.occurrence_identity import (
+    OCCURRENCE_IDENTITY_FIELDS,
+    occurrence_identity_expressions,
+)
 from app.repositories.current_projections import FindingCurrentProjectionRepository
 
 ASSET_CONTEXT_RESCORE_FLAG = "asset_context_rescore_needed"
@@ -60,6 +65,20 @@ class AssetFindingSummary:
 
     finding_count: int = 0
     rescore_needed: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class AssetIdentityEvidence:
+    """One read-pass proof from distinct historical identity facts, never persisted."""
+
+    asset_id: uuid.UUID
+    has_findings: bool
+    complete_history: bool
+    explicit_ids: frozenset[str]
+    target_scopes: frozenset[tuple[str, str]]
+    invalid_asset_id: bool
+    blank_asset_id: bool
+    incomplete_scope: bool
 
 
 class AssetRepository:
@@ -263,37 +282,20 @@ class AssetRepository:
         asset = self.get_project_asset_by_key(project_id, legacy_asset_key)
         if asset is None:
             return None
-        has_findings, history_is_complete = self._asset_occurrence_history_status(asset.id)
-        if not has_findings or not history_is_complete:
+        history = self.import_identity_evidence(asset.id)
+        if not history.has_findings or not history.complete_history or history.invalid_asset_id:
             return None
 
         expected_scope = (
             normalize_asset_target_kind(target_kind),
             normalize_asset_identity_value(target_ref),
         )
-        for evidence in self._iter_asset_occurrence_evidence(asset.id):
-            evidence_asset_id = evidence.get("asset_id")
-            if evidence_asset_id is not None and not isinstance(evidence_asset_id, str):
-                return None
-            if isinstance(evidence_asset_id, str) and evidence_asset_id.strip():
-                if asset_id is None or normalize_asset_identity_value(
-                    evidence_asset_id
-                ) != normalize_asset_identity_value(asset_id):
-                    return None
-            kind_value = evidence.get("target_kind")
-            ref_value = evidence.get("target_ref")
-            if not (
-                isinstance(kind_value, str)
-                and kind_value.strip()
-                and isinstance(ref_value, str)
-                and ref_value.strip()
-            ):
-                return None
-            if (
-                normalize_asset_target_kind(kind_value),
-                normalize_asset_identity_value(ref_value),
-            ) != expected_scope:
-                return None
+        if history.explicit_ids and (
+            asset_id is None or history.explicit_ids != {normalize_asset_identity_value(asset_id)}
+        ):
+            return None
+        if history.incomplete_scope or history.target_scopes != {expected_scope}:
+            return None
         return asset
 
     def asset_matches_import_identity(
@@ -303,60 +305,31 @@ class AssetRepository:
         asset_id: str | None,
         target_kind: str,
         target_ref: str | None,
+        identity_evidence: AssetIdentityEvidence | None = None,
     ) -> bool:
         """Check whether persisted occurrence evidence supports an import asset identity."""
-        has_findings, history_is_complete = self._asset_occurrence_history_status(asset.id)
-        if not has_findings:
+        history = identity_evidence or self.import_identity_evidence(asset.id)
+        if history.asset_id != asset.id:
+            raise AssetIdentityInvariantError("Identity proof belongs to another asset.")
+        if not history.has_findings:
             # Manually created assets intentionally remain addressable by their
             # operator-selected key. Internal keys, however, are identity
             # claims and require persisted occurrence evidence.
             return not is_reserved_asset_storage_key(asset.asset_key)
-        if not history_is_complete:
+        if not history.complete_history or history.invalid_asset_id:
             return False
 
-        saw_explicit_id = False
-        has_incomplete_scope = False
-        all_scopes_match = True
         expected_scope = (
             normalize_asset_target_kind(target_kind),
             normalize_asset_identity_value(target_ref) if target_ref is not None else "",
         )
-        for evidence in self._iter_asset_occurrence_evidence(asset.id):
-            evidence_asset_id = evidence.get("asset_id")
-            if evidence_asset_id is not None and not isinstance(evidence_asset_id, str):
-                return False
-            if isinstance(evidence_asset_id, str) and evidence_asset_id.strip():
-                saw_explicit_id = True
-                if asset_id is None or normalize_asset_identity_value(
-                    evidence_asset_id
-                ) != normalize_asset_identity_value(asset_id):
-                    return False
-            kind_value = evidence.get("target_kind")
-            ref_value = evidence.get("target_ref")
-            if (
-                isinstance(kind_value, str)
-                and kind_value.strip()
-                and isinstance(ref_value, str)
-                and ref_value.strip()
-            ):
-                if (
-                    normalize_asset_target_kind(kind_value),
-                    normalize_asset_identity_value(ref_value),
-                ) != expected_scope:
-                    all_scopes_match = False
-            else:
-                has_incomplete_scope = True
-
-        if asset_id is not None:
-            if saw_explicit_id:
-                return True
-            if target_ref is None or has_incomplete_scope:
-                return False
-            return all_scopes_match
-
-        if saw_explicit_id or target_ref is None or has_incomplete_scope:
+        if history.explicit_ids:
+            return asset_id is not None and history.explicit_ids == {
+                normalize_asset_identity_value(asset_id)
+            }
+        if target_ref is None or history.incomplete_scope:
             return False
-        return all_scopes_match
+        return history.target_scopes == {expected_scope}
 
     def evidence_proven_implicit_import_identity(
         self,
@@ -370,36 +343,52 @@ class AssetRepository:
         is used only to move a proven implicit identity out of a readable key
         that is canonically owned by a later explicit asset ID.
         """
-        has_findings, history_is_complete = self._asset_occurrence_history_status(asset.id)
-        if not has_findings or not history_is_complete:
+        history = self.import_identity_evidence(asset.id)
+        if (
+            not history.has_findings
+            or not history.complete_history
+            or history.invalid_asset_id
+            or history.blank_asset_id
+            or history.explicit_ids
+            or history.incomplete_scope
+            or len(history.target_scopes) != 1
+        ):
             return None
+        return next(iter(history.target_scopes))
 
+    def import_identity_evidence(self, asset_id: uuid.UUID) -> AssetIdentityEvidence:
+        """Summarize all distinct identity facts once for a read-only import pass."""
+        has_findings, complete = self._asset_occurrence_history_status(asset_id)
+        explicit_ids: set[str] = set()
         target_scopes: set[tuple[str, str]] = set()
-        for evidence in self._iter_asset_occurrence_evidence(asset.id):
-            evidence_asset_id = evidence.get("asset_id")
-            if evidence_asset_id is not None:
-                if not isinstance(evidence_asset_id, str) or evidence_asset_id.strip():
-                    return None
-                # Blank IDs are malformed rather than proof of an implicit identity.
-                return None
-            kind_value = evidence.get("target_kind")
-            ref_value = evidence.get("target_ref")
-            if not (
-                isinstance(kind_value, str)
-                and kind_value.strip()
-                and isinstance(ref_value, str)
-                and ref_value.strip()
-            ):
-                return None
-            target_scopes.add(
-                (
-                    normalize_asset_target_kind(kind_value),
-                    normalize_asset_identity_value(ref_value),
-                )
-            )
-            if len(target_scopes) > 1:
-                return None
-        return next(iter(target_scopes), None)
+        invalid_id = blank_id = incomplete_scope = False
+        if has_findings and complete:
+            for evidence in self._iter_asset_occurrence_evidence(asset_id):
+                explicit = evidence.get("asset_id")
+                if explicit is not None:
+                    if not isinstance(explicit, str):
+                        invalid_id = True
+                    elif explicit.strip():
+                        explicit_ids.add(normalize_asset_identity_value(explicit))
+                    else:
+                        blank_id = True
+                kind, ref = evidence.get("target_kind"), evidence.get("target_ref")
+                if isinstance(kind, str) and kind.strip() and isinstance(ref, str) and ref.strip():
+                    target_scopes.add(
+                        (normalize_asset_target_kind(kind), normalize_asset_identity_value(ref))
+                    )
+                else:
+                    incomplete_scope = True
+        return AssetIdentityEvidence(
+            asset_id,
+            has_findings,
+            complete,
+            frozenset(explicit_ids),
+            frozenset(target_scopes),
+            invalid_id,
+            blank_id,
+            incomplete_scope,
+        )
 
     def asset_is_exclusively_linked_to_finding(
         self,
@@ -441,14 +430,20 @@ class AssetRepository:
         self,
         asset_id: uuid.UUID,
     ) -> Iterator[Mapping[str, Any]]:
-        """Stream only evidence columns needed for identity validation."""
+        """Stream distinct identity facts through the covering expression index."""
         statement = (
-            select(FindingOccurrence.evidence_json)
+            select(*occurrence_identity_expressions(col(FindingOccurrence.evidence_json)))
+            .select_from(FindingOccurrence)
             .join(Finding, col(Finding.id) == col(FindingOccurrence.finding_id))
             .where(Finding.asset_id == asset_id)
+            .distinct()
             .execution_options(stream_results=True, yield_per=500)
         )
-        yield from self.session.exec(statement)
+        for row in self.session.exec(statement):
+            yield {
+                name: json.loads(value) if value is not None else None
+                for name, value in zip(OCCURRENCE_IDENTITY_FIELDS, row, strict=True)
+            }
 
     def list_project_assets(
         self,
