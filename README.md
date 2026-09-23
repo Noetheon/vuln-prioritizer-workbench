@@ -22,7 +22,7 @@ auditable from source data, policy, and generated local artifacts.
 | Best fit | Local security teams or maintainers who already have CVEs from scanners, SBOMs, advisories, or GitHub alerts and need a defensible triage queue. |
 | Inputs | CVE lists, Trivy, Grype, CycloneDX, SPDX, Dependency-Check, GitHub alerts, Nessus, OpenVAS, VEX, and asset context CSV. |
 | Decision signals | CVSS, EPSS, CISA KEV, provider freshness, asset exposure, lifecycle state, waivers, and reviewed defensive ATT&CK/TTP context. |
-| Outputs | Technical Markdown, executive HTML, JSON, CSV, SARIF, ATT&CK Navigator, and deterministic Evidence ZIP artifacts. |
+| Outputs | Technical Markdown, executive HTML, JSON/gzip, CSV, SARIF, ATT&CK Navigator, and deterministic Evidence ZIP artifacts. |
 | Boundary | Local-first, single-user, defensive prioritization only. No scanner, exploit runner, PoC generator, autopatcher, or AI CVE-to-ATT&CK mapper. |
 
 ## What It Does
@@ -33,7 +33,7 @@ auditable from source data, policy, and generated local artifacts.
   provides it.
 - Prioritizes findings with explainable CVSS, EPSS, KEV, asset context,
   lifecycle, waiver, and curated defensive ATT&CK/TTP signals.
-- Generates audit-ready local artifacts: Markdown, HTML, JSON, CSV, SARIF,
+- Generates audit-ready local artifacts: Markdown, HTML, JSON/gzip, CSV, SARIF,
   ATT&CK Navigator, and Evidence ZIP outputs.
 - Keeps demo and provider snapshot workflows reproducible for local review,
   screenshots, and release evidence.
@@ -138,7 +138,7 @@ artifacts for the selected analysis run:
 
 - technical Markdown report
 - executive HTML report
-- stable `analysis-result.v2.json`
+- stable `analysis-result.v2.json`, optionally gzip compressed for large runs
 - findings CSV
 - SARIF 2.1.0
 - ATT&CK Navigator layer

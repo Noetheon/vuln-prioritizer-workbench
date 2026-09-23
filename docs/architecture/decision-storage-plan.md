@@ -164,3 +164,28 @@ pages are reusable by subsequent writes. Historical JSON values and canonical
 hashes are preserved, although physical JSON ordering and on-disk representation
 change. The section encoding is versioned independently of the public contract;
 keep its v1 decoder available for old data and migration rollback.
+
+### Reproducing the workload
+
+With the repository's development Python dependencies installed:
+
+```sh
+python scripts/benchmark_decision_storage.py --rows 1000 --output build/decision-storage
+python scripts/benchmark_decision_storage.py --rows 5000 --output build/decision-storage
+```
+
+Each invocation creates and removes its own SQLite database, blocks provider
+HTTP requests and uses the fixed demo snapshot. JSON results identify the source
+commit, tracked diff, probe, input and snapshot hashes. They record wall/CPU time,
+SQL/history work, database/section sizes and cumulative process peak RSS. The
+pure-evaluator experiment intentionally loads all inputs; its cumulative RSS must
+not be interpreted as the streaming report's isolated peak. Run scales sequentially
+without concurrent test/build workloads when comparing timings.
+
+Normal CI tests guard semantic work budgets: displaced peers retain history and
+overlays, unchanged queue reads avoid hydration, one-scope waivers create one
+revision, repeated sections do not grow, asset proofs use indexed distinct facts,
+and report readers stop at a fixed batch/input budget. The optional 10k performance
+smoke reduces the one-additional-finding allowance from 60 to 3 seconds. Initial
+import and memory ceilings remain hardware-sensitive smoke limits; they do not
+replace the deterministic work/byte guards.

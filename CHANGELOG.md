@@ -19,6 +19,9 @@ exact git tag output when release wording needs to be verified.
 
 ### Added
 
+- Explicit `json-gzip` exports for large historical runs, using the complete
+  `analysis-result.v2` contract with bounded streaming and checksum validation.
+
 - Optional local Grype assessments for CycloneDX and SPDX inventory uploads,
   with retained SBOM/scanner evidence, explicit partial and zero-match results,
   and rescans that preserve the original observation and decision history.
@@ -29,6 +32,20 @@ exact git tag output when release wording needs to be verified.
 - Finding-scoped GitHub issue preview and explicit export controls in the UI.
 
 ### Changed
+
+- Current queue ranks no longer copy historical evidence or create revisions for
+  displaced peers. Waiver and asset updates evaluate affected scopes.
+- Finding lists return compact recorded decision fields by default; use
+  `include_evidence=true` or finding detail for complete evidence. Dashboard reads
+  use compact projections. The regenerated client and packaged UI follow this contract.
+- Immutable evidence shares compressed project-scoped sections with lossless hash
+  verification and transactional migrations. Asset identity checks read indexed
+  distinct facts instead of repeatedly deserializing full history.
+- UTC-day decision maintenance is worker-owned. Current decision APIs return
+  `503 decision_refresh_pending` until refresh completes; GETs perform no decision
+  writes. Historical reports remain available and the UI retries pending views.
+- JSON and CSV exports stream batches; other report renderers reject oversized
+  input early and recommend streaming exports.
 
 - Upgraded the Docker runtime and single-version CI jobs to Python 3.14,
   added 3.14 to the package compatibility matrix, and removed the obsolete
@@ -46,6 +63,10 @@ exact git tag output when release wording needs to be verified.
   manifest; local audit and runtime files are excluded.
 
 ### Fixed
+
+- Startup and readiness reject incomplete columns and missing history tables in
+  populated databases. Legacy SQLite table repairs roll back atomically on failure
+  and retain child foreign-key targets.
 
 - Container security artifacts remain available after a failed vulnerability
   gate so the complete scanner evidence can be reviewed.
