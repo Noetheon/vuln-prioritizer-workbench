@@ -98,9 +98,29 @@ verification and measured results as implementation proceeds.
 - Dashboard aggregates consume the same compact read model. Full evidence remains
   available for historical reports and detailed explanations. Summary migration
   tests cover exact history preservation, failure rollback and successful retry.
+- Historical decisions share immutable, compressed JSON sections within their
+  project. Provider facts are shared across scopes and repeated imports. A single
+  repository boundary reconstructs the unchanged v2 contract and checks both
+  section and complete-payload hashes; missing/corrupt content fails explicitly.
+  The transactional migration verifies every reconstructed payload before replacing
+  its storage document. Downgrade restores standalone JSON. Project deletion
+  cascades to shared sections; sections otherwise live as long as project history.
 
 Validation so far: 233 baseline import/report/workflow contracts; 200 tests after
 queue/governance changes; 155 import/compact-read contracts after the list change;
 186 frontend unit tests and frontend typechecking. These are slice checks, not
-the final acceptance run. Storage sharing, temporal maintenance, asset identity,
-reports, complete gates and final performance measurements remain in progress.
+the final acceptance run. Storage sharing adds corruption, project-isolation,
+transaction rollback and reversible-migration coverage; 83 storage, revision,
+workflow and report contracts pass after integration. Temporal maintenance, asset
+identity, reports, complete gates and final measurements remain in progress.
+
+### Storage migration operations
+
+Back up the complete database before upgrading, as for any schema migration.
+Migration `20260923_0014` processes evidence in batches of 100 inside one
+transaction. Preserve enough disk space for the migration journal/WAL and a
+rollback; compression does not immediately shrink an existing SQLite file. Freed
+pages are reusable by subsequent writes. Historical JSON values and canonical
+hashes are preserved, although physical JSON ordering and on-disk representation
+change. The section encoding is versioned independently of the public contract;
+keep its v1 decoder available for old data and migration rollback.

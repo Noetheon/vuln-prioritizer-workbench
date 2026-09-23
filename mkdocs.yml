@@ -46,6 +46,7 @@ nav:
       - Overview: architecture/index.md
       - Evaluation Revisions: architecture/evaluation-revisions.md
       - Evaluation Revisions Plan: architecture/evaluation-revisions-plan.md
+      - Decision Storage Plan: architecture/decision-storage-plan.md
       - SBOM Assessment Plan: architecture/sbom-assessment-plan.md
       - Scope-First Decision Graph: architecture/scope-first-decision-graph.md
       - Decision/Evidence Kernel: architecture/decision-evidence-kernel.md

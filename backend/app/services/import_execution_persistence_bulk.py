@@ -33,6 +33,7 @@ from app.models import (
 )
 from app.models.base import get_datetime_utc
 from app.repositories.current_projections import projection_insert_values
+from app.repositories.evidence_payloads import EvidencePayloadStore
 from app.services.analysis import WorkbenchAnalysisResult
 from app.services.import_execution_dedup import (
     _asset_persistence_key,
@@ -416,8 +417,7 @@ def _persist_workbench_occurrences_bulk_insert(
             if occurrence_batch:
                 session.execute(insert(FindingOccurrence), occurrence_batch)
                 occurrence_batch.clear()
-            session.execute(insert(FindingDecisionEvidence), evidence_batch)
-            session.execute(insert(FindingCurrentProjection), projection_batch)
+            _persist_evidence_batch(session, project_id, evidence_batch, projection_batch)
             evidence_batch.clear()
             projection_batch.clear()
         else:
@@ -433,8 +433,7 @@ def _persist_workbench_occurrences_bulk_insert(
     if occurrence_batch:
         session.execute(insert(FindingOccurrence), occurrence_batch)
     if evidence_batch:
-        session.execute(insert(FindingDecisionEvidence), evidence_batch)
-        session.execute(insert(FindingCurrentProjection), projection_batch)
+        _persist_evidence_batch(session, project_id, evidence_batch, projection_batch)
     session.flush()
 
     return {
@@ -459,3 +458,18 @@ def _persist_workbench_occurrences_bulk_insert(
         },
         "finding_evidence": finding_evidence,
     }
+
+
+def _persist_evidence_batch(
+    session: Session,
+    project_id: uuid.UUID,
+    evidence_batch: list[dict[str, Any]],
+    projection_batch: list[dict[str, Any]],
+) -> None:
+    documents = EvidencePayloadStore(session.connection()).store_payloads(
+        project_id, (row["payload_json"] for row in evidence_batch)
+    )
+    for row, document in zip(evidence_batch, documents, strict=True):
+        row["payload_json"] = document
+    session.execute(insert(FindingDecisionEvidence), evidence_batch)
+    session.execute(insert(FindingCurrentProjection), projection_batch)

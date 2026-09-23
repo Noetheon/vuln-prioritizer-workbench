@@ -27,6 +27,7 @@ from app.models import (
 )
 from app.models.base import get_datetime_utc
 from app.repositories.current_projections import FindingCurrentProjectionRepository
+from app.repositories.evidence_payloads import EvidencePayloadStore
 
 _WAIVER_DECISION_FIELDS = (
     "waiver",
@@ -271,9 +272,12 @@ class WaiverRepository:
             records,
             source_records=source_records,
         )
+        source_payloads = EvidencePayloadStore(self.session.connection()).load_records(
+            source_records.values()
+        )
         source_evidence = {
             record.finding_id: FindingDecisionEvidenceV2.model_validate(
-                source_records[record.source_finding_evidence_id].payload_json
+                source_payloads[record.source_finding_evidence_id]
             )
             for record in records
             if record.source_finding_evidence_id in source_records

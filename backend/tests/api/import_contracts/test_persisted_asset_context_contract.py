@@ -413,7 +413,9 @@ def test_raw_reimport_normalizes_legacy_projected_asset_id_to_nfc(
             projection.source_finding_evidence_id,
         )
         assert source is not None
-        payload = json.loads(json.dumps(source.payload_json))
+        from app.repositories.evidence_payloads import EvidencePayloadStore
+
+        payload = EvidencePayloadStore(session.connection()).load(source)
         occurrence_scope = dict(payload["occurrence_scope"])
         occurrence_scope.pop("asset_id", None)
         payload["occurrence_scope"] = occurrence_scope
@@ -973,7 +975,9 @@ def test_invalid_projection_source_contract_fails_once_without_retry(
             projection.source_finding_evidence_id,
         )
         assert source is not None
-        invalid_payload = dict(source.payload_json)
+        from app.repositories.evidence_payloads import EvidencePayloadStore
+
+        invalid_payload = EvidencePayloadStore(session.connection()).load(source)
         invalid_payload.pop("cve_id")
         invalid_hash = canonical_payload_sha256(invalid_payload)
         source.payload_json = invalid_payload
@@ -1018,7 +1022,9 @@ def _rewrite_current_finding_as_legacy(
         )
         assert source is not None
 
-        payload = dict(source.payload_json)
+        from app.repositories.evidence_payloads import EvidencePayloadStore
+
+        payload = EvidencePayloadStore(session.connection()).load(source)
         payload["dedup_key"] = legacy_key
         legacy_occurrences: list[dict[str, Any]] = []
         for item in payload.get("occurrences", []):
