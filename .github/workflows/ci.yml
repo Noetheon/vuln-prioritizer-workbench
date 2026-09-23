@@ -309,6 +309,13 @@ jobs:
                 run_design_audit=true
                 run_full_browser_suite=true
                 ;;
+              backend/app/services/workbench_capabilities.py|frontend/src/lib/report-*.ts|frontend/tests/__screenshots__/*)
+                # Capabilities and format labels render directly in the Evidence Center.
+                # Baseline-only changes must also run the comparison before merging.
+                run_browser=true
+                run_design_audit=true
+                run_full_browser_suite=true
+                ;;
               frontend/tests/cross-browser-critical-smoke.spec.ts|frontend/tests/responsive-shell.spec.ts)
                 run_browser=true
                 run_full_browser_suite=true

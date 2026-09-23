@@ -375,11 +375,24 @@ def test_codeql_scope_runs_analysis_for_tests_and_scripts(
         ("frontend/tsconfig.json", False, "true"),
         ("frontend/Dockerfile.playwright", False, "true"),
         ("scripts/frontend-design-audit-linux-docker.sh", False, "true"),
+        ("frontend/src/lib/report-format.ts", False, "true"),
+        ("frontend/src/lib/report-capability-catalog.ts", False, "true"),
+        ("backend/app/services/workbench_capabilities.py", False, "true"),
+        (
+            "frontend/tests/__screenshots__/linux/chromium/design-audit/reports-03.png",
+            False,
+            "true",
+        ),
+        (
+            "frontend/tests/__screenshots__/darwin/chromium/design-audit/reports-03.png",
+            False,
+            "true",
+        ),
         ("docs/guide.md", False, "false"),
         ("frontend/package.json", True, "false"),
     ],
 )
-def test_frontend_scope_includes_visuals_for_dependency_and_browser_changes(
+def test_frontend_scope_includes_visuals_for_rendering_inputs_and_baselines(
     tmp_path: Path, changed_path: str, draft: bool, expected: str
 ) -> None:
     workflow = yaml.safe_load(_read_repo_text(".github/workflows/ci.yml"))
