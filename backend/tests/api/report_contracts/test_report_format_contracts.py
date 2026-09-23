@@ -119,6 +119,7 @@ def test_vpw049_openapi_exposes_report_format_contract() -> None:
         "markdown",
         "html",
         "json",
+        "json-gzip",
         "csv",
         "zip",
         "attack-navigator",
@@ -149,6 +150,7 @@ def test_workbench_report_capabilities_match_report_create_and_artifact_contract
             REPORT_FILENAME_ANALYSIS_JSON,
             REPORT_CONTENT_TYPE_JSON,
         ),
+        "json-gzip": (REPORT_KIND_ANALYSIS_JSON, "analysis-result.v2.json.gz", "application/gzip"),
         "csv": (REPORT_KIND_FINDINGS_CSV, REPORT_FILENAME_FINDINGS_CSV, REPORT_CONTENT_TYPE_CSV),
         "zip": (
             REPORT_KIND_EVIDENCE_BUNDLE,

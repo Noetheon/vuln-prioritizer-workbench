@@ -124,6 +124,12 @@ verification and measured results as implementation proceeds.
   frontend invalidates open views at the UTC day boundary and polls only this
   pending condition until current decisions are available.
 
+- JSON and CSV exports stream immutable evidence in batches of 25. The explicit
+  `json-gzip` format preserves the complete JSON contract for larger runs. Size
+  limits apply during output; compressed exports also have an expanded-byte cap.
+  Other renderers reject oversized inputs during batched construction. Historical
+  membership, redaction, rollback cleanup and publication fencing remain shared.
+
 Validation so far: 233 baseline import/report/workflow contracts; 200 tests after
 queue/governance changes; 155 import/compact-read contracts after the list change;
 186 frontend unit tests and frontend typechecking. These are slice checks, not

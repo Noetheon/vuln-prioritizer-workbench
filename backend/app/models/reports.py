@@ -12,11 +12,14 @@ from sqlmodel import Field, SQLModel
 from app.models.base import get_datetime_utc
 from app.models.workflows import WorkflowRunPublic
 
-ReportFormat = Literal["markdown", "html", "json", "csv", "zip", "attack-navigator", "sarif"]
+ReportFormat = Literal[
+    "markdown", "html", "json", "json-gzip", "csv", "zip", "attack-navigator", "sarif"
+]
 REPORT_FORMAT_VALUES: tuple[ReportFormat, ...] = (
     "markdown",
     "html",
     "json",
+    "json-gzip",
     "csv",
     "zip",
     "attack-navigator",

@@ -8921,6 +8921,7 @@ export const ReportCreateSchema = {
                 'markdown',
                 'html',
                 'json',
+                'json-gzip',
                 'csv',
                 'zip',
                 'attack-navigator',

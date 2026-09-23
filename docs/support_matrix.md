@@ -64,6 +64,7 @@ boundaries, but Workbench uploads must use one of the explicit values below.
 | Technical Markdown | `markdown` | Human-readable finding and decision summary. |
 | Executive HTML | `html` | Static HTML report for local review. |
 | Analysis JSON | `json` | Stable `analysis-result.v2.json` Workbench export. |
+| Compressed JSON | `json-gzip` | Complete analysis-result.v2 JSON for large runs, gzip compressed |
 | Findings CSV | `csv` | Spreadsheet-safe findings export with stable headers. |
 | SARIF | `sarif` | SARIF 2.1.0 results with stable CVE-addressable rules and fingerprints. |
 | Evidence ZIP | `zip` | Deterministic evidence bundle with `manifest.json`, analysis JSON, reports, provider snapshot, optional ATT&CK layer, and optional governance artifacts. |

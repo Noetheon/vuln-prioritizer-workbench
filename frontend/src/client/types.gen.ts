@@ -4653,7 +4653,7 @@ export type ReportCreate = {
     /**
      * Format
      */
-    format?: 'markdown' | 'html' | 'json' | 'csv' | 'zip' | 'attack-navigator' | 'sarif';
+    format?: 'markdown' | 'html' | 'json' | 'json-gzip' | 'csv' | 'zip' | 'attack-navigator' | 'sarif';
 };
 
 /**

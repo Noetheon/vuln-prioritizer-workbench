@@ -15,9 +15,9 @@ from utils.workbench_env import (
 )
 
 from app.api.routes.workbench_access import (
-    _refresh_stale_project_waivers,
     lock_existing_project_resource,
 )
+from app.services.decision_maintenance import refresh_project_decisions
 from app.services.decision_scope_lock import (
     ProjectDecisionLockError,
 )
@@ -100,7 +100,7 @@ def test_project_deleted_during_lock_acquisition_returns_not_found(
 def test_project_deleted_during_daily_waiver_claim_raises_project_lock_error(
     workbench_api_env: WorkbenchApiEnv,
 ) -> None:
-    """The pre-lock daily-refresh race must use the same request-safe exception."""
+    """The pre-lock daily-refresh race must use the same project-lock exception."""
     project = create_project_via_api(
         workbench_api_env.client,
         local_api_headers(workbench_api_env.client),
@@ -124,7 +124,7 @@ def test_project_deleted_during_daily_waiver_claim_raises_project_lock_error(
             deleting_session.commit()
 
         with pytest.raises(ProjectDecisionLockError, match="does not exist"):
-            _refresh_stale_project_waivers(stale_session, stale_project)
+            refresh_project_decisions(stale_session, stale_project)
     finally:
         stale_session.close()
 

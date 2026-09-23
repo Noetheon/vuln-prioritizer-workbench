@@ -213,72 +213,26 @@ def test_user_and_session_admin_routes_are_not_active(
 
 
 def test_workbench_database_readiness_reports_schema_edges(
-    monkeypatch: pytest.MonkeyPatch,
+    workbench_api_env: WorkbenchApiEnv,
 ) -> None:
-    class Result:
-        def __init__(self, rows: list[tuple[str]] | None = None) -> None:
-            self.rows = rows or []
+    with Session(workbench_api_env.engine) as session:
+        assert workbench_route._database_readiness(session) == ("ready", "ready")
+        version = session.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+        session.execute(text("DELETE FROM alembic_version"))
+        assert workbench_route._database_readiness(session) == ("ready", "not_ready")
+        session.execute(text("INSERT INTO alembic_version (version_num) VALUES ('old')"))
+        assert workbench_route._database_readiness(session) == ("ready", "not_ready")
+        session.execute(
+            text("UPDATE alembic_version SET version_num = :version"), {"version": version}
+        )
+        assert workbench_route._database_readiness(session) == ("ready", "ready")
+        session.rollback()
 
-        def one(self) -> tuple[int]:
-            return (1,)
+    class UnavailableSession:
+        def execute(self, statement: object) -> None:
+            raise SQLAlchemyError("db unavailable")
 
-        def all(self) -> list[tuple[str]]:
-            return self.rows
-
-    class FakeSession:
-        def __init__(self, *, versions: list[str] | None = None, fail_select: bool = False) -> None:
-            self.versions = versions or []
-            self.fail_select = fail_select
-
-        def execute(self, statement: object) -> Result:
-            if self.fail_select:
-                raise SQLAlchemyError("db unavailable")
-            if "alembic_version" in str(statement):
-                return Result([(version,) for version in self.versions])
-            return Result()
-
-        def get_bind(self) -> object:
-            return object()
-
-    class FakeInspector:
-        def __init__(self, *, tables: set[str]) -> None:
-            self.tables = tables
-
-        def get_table_names(self) -> list[str]:
-            return sorted(self.tables)
-
-    required_tables = set(workbench_route.REQUIRED_SCHEMA_TABLES)
-
-    monkeypatch.setattr(
-        workbench_route,
-        "inspect",
-        lambda bind: FakeInspector(tables=required_tables),
-    )
-    assert workbench_route._database_readiness(FakeSession()) == ("ready", "not_ready")
-
-    monkeypatch.setattr(
-        workbench_route,
-        "inspect",
-        lambda bind: FakeInspector(
-            tables=required_tables | {workbench_route.REQUIRED_ALEMBIC_TABLE},
-        ),
-    )
-    assert workbench_route._database_readiness(FakeSession(versions=["old"])) == (
-        "ready",
-        "not_ready",
-    )
-
-    monkeypatch.setattr(
-        workbench_route,
-        "inspect",
-        lambda bind: FakeInspector(
-            tables=required_tables | {workbench_route.REQUIRED_ALEMBIC_TABLE},
-        ),
-    )
-    assert workbench_route._database_readiness(
-        FakeSession(versions=[workbench_route.ALEMBIC_HEAD])
-    ) == ("ready", "ready")
-    assert workbench_route._database_readiness(FakeSession(fail_select=True)) == (
+    assert workbench_route._database_readiness(UnavailableSession()) == (
         "unavailable",
         "not_ready",
     )

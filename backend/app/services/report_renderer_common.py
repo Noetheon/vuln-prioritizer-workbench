@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from app.domain.engine.security_redaction import redact_value
@@ -65,76 +65,7 @@ def _redacted_bundle_payload(
 
     findings: list[MarkdownReportFinding] = []
     for index, finding in enumerate(payload.findings):
-        finding_path = f"findings.{index}"
-        vulnerability = None
-        if finding.vulnerability is not None:
-            vulnerability = ReportVulnerability.model_validate(
-                redact(
-                    finding.vulnerability.model_dump(mode="python", exclude_unset=True),
-                    f"{finding_path}.vulnerability",
-                )
-            )
-        occurrences = tuple(
-            ReportOccurrence.model_validate(item)
-            for item in redact(
-                [
-                    occurrence.model_dump(mode="python", exclude_unset=True)
-                    for occurrence in finding.occurrences
-                ],
-                f"{finding_path}.occurrences",
-            )
-        )
-        findings.append(
-            finding.model_copy(
-                update={
-                    "cve_id": redact(finding.cve_id, f"{finding_path}.cve_id"),
-                    "priority": redact(finding.priority, f"{finding_path}.priority"),
-                    "status": redact(finding.status, f"{finding_path}.status"),
-                    "asset": redact(finding.asset, f"{finding_path}.asset"),
-                    "component": redact(finding.component, f"{finding_path}.component"),
-                    "rationale": redact(finding.rationale, f"{finding_path}.rationale"),
-                    "recommended_action": redact(
-                        finding.recommended_action,
-                        f"{finding_path}.recommended_action",
-                    ),
-                    "id": redact(finding.id, f"{finding_path}.id"),
-                    "dedup_key": redact(finding.dedup_key, f"{finding_path}.dedup_key"),
-                    "asset_key": redact(finding.asset_key, f"{finding_path}.asset_key"),
-                    "owner": redact(finding.owner, f"{finding_path}.owner"),
-                    "business_service": redact(
-                        finding.business_service,
-                        f"{finding_path}.business_service",
-                    ),
-                    "environment": redact(finding.environment, f"{finding_path}.environment"),
-                    "exposure": redact(finding.exposure, f"{finding_path}.exposure"),
-                    "criticality": redact(finding.criticality, f"{finding_path}.criticality"),
-                    "component_purl": redact(
-                        finding.component_purl,
-                        f"{finding_path}.component_purl",
-                    ),
-                    "decision_statement": redact(
-                        finding.decision_statement,
-                        f"{finding_path}.decision_statement",
-                    ),
-                    "business_impact": redact(
-                        finding.business_impact,
-                        f"{finding_path}.business_impact",
-                    ),
-                    "decision_sla": redact(finding.decision_sla, f"{finding_path}.decision_sla"),
-                    "data_quality_flags": tuple(
-                        redact(
-                            list(finding.data_quality_flags),
-                            f"{finding_path}.data_quality_flags",
-                        )
-                    ),
-                    "vulnerability": vulnerability,
-                    "explanation": redact(finding.explanation, f"{finding_path}.explanation"),
-                    "data_quality": redact(finding.data_quality, f"{finding_path}.data_quality"),
-                    "evidence": redact(finding.evidence, f"{finding_path}.evidence"),
-                    "occurrences": occurrences,
-                }
-            )
-        )
+        findings.append(_redact_report_finding(finding, index=index, redact=redact))
 
     return (
         payload.model_copy(
@@ -156,6 +87,83 @@ def _redacted_bundle_payload(
             }
         ),
         redactions,
+    )
+
+
+def _redact_report_finding(
+    finding: MarkdownReportFinding,
+    *,
+    index: int,
+    redact: Callable[[Any, str], Any],
+) -> MarkdownReportFinding:
+    """Use the identical field-level redaction for batch and streaming exports."""
+    finding_path = f"findings.{index}"
+    vulnerability = None
+    if finding.vulnerability is not None:
+        vulnerability = ReportVulnerability.model_validate(
+            redact(
+                finding.vulnerability.model_dump(mode="python", exclude_unset=True),
+                f"{finding_path}.vulnerability",
+            )
+        )
+    occurrences = tuple(
+        ReportOccurrence.model_validate(item)
+        for item in redact(
+            [
+                occurrence.model_dump(mode="python", exclude_unset=True)
+                for occurrence in finding.occurrences
+            ],
+            f"{finding_path}.occurrences",
+        )
+    )
+    return finding.model_copy(
+        update={
+            "cve_id": redact(finding.cve_id, f"{finding_path}.cve_id"),
+            "priority": redact(finding.priority, f"{finding_path}.priority"),
+            "status": redact(finding.status, f"{finding_path}.status"),
+            "asset": redact(finding.asset, f"{finding_path}.asset"),
+            "component": redact(finding.component, f"{finding_path}.component"),
+            "rationale": redact(finding.rationale, f"{finding_path}.rationale"),
+            "recommended_action": redact(
+                finding.recommended_action,
+                f"{finding_path}.recommended_action",
+            ),
+            "id": redact(finding.id, f"{finding_path}.id"),
+            "dedup_key": redact(finding.dedup_key, f"{finding_path}.dedup_key"),
+            "asset_key": redact(finding.asset_key, f"{finding_path}.asset_key"),
+            "owner": redact(finding.owner, f"{finding_path}.owner"),
+            "business_service": redact(
+                finding.business_service,
+                f"{finding_path}.business_service",
+            ),
+            "environment": redact(finding.environment, f"{finding_path}.environment"),
+            "exposure": redact(finding.exposure, f"{finding_path}.exposure"),
+            "criticality": redact(finding.criticality, f"{finding_path}.criticality"),
+            "component_purl": redact(
+                finding.component_purl,
+                f"{finding_path}.component_purl",
+            ),
+            "decision_statement": redact(
+                finding.decision_statement,
+                f"{finding_path}.decision_statement",
+            ),
+            "business_impact": redact(
+                finding.business_impact,
+                f"{finding_path}.business_impact",
+            ),
+            "decision_sla": redact(finding.decision_sla, f"{finding_path}.decision_sla"),
+            "data_quality_flags": tuple(
+                redact(
+                    list(finding.data_quality_flags),
+                    f"{finding_path}.data_quality_flags",
+                )
+            ),
+            "vulnerability": vulnerability,
+            "explanation": redact(finding.explanation, f"{finding_path}.explanation"),
+            "data_quality": redact(finding.data_quality, f"{finding_path}.data_quality"),
+            "evidence": redact(finding.evidence, f"{finding_path}.evidence"),
+            "occurrences": occurrences,
+        }
     )
 
 
