@@ -177,7 +177,7 @@ jobs:
             --dist "$staged" --output "$verify_dir" --verify
 
       - name: Attest build provenance for the delivered archives
-        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: |
             dist/*.whl
@@ -185,19 +185,19 @@ jobs:
             dist/*.zip
 
       - name: Attest the wheel SPDX inventory
-        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: dist/*.whl
           sbom-path: ${{ steps.inventory.outputs.wheel_sbom }}
 
       - name: Attest the source distribution SPDX inventory
-        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: dist/*.tar.gz
           sbom-path: ${{ steps.inventory.outputs.sdist_sbom }}
 
       - name: Attest the local ZIP SPDX inventory
-        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: dist/*.zip
           sbom-path: ${{ steps.inventory.outputs.bundle_sbom }}
