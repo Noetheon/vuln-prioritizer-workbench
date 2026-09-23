@@ -17,6 +17,7 @@ from sqlmodel import Session, col, select
 from app.decision_core.component_projection import project_component_decision
 from app.decision_core.contracts import FindingDecisionEvidenceV2
 from app.decision_core.current_queue import decision_sort_key, with_current_rank
+from app.decision_core.governance_state import governance_sync_state
 from app.decision_core.ledger import (
     FINDING_CURRENT_PROJECTION_SCHEMA_VERSION,
     DecisionLedgerInvariantError,
@@ -518,6 +519,7 @@ def projection_insert_values(
         "risk_score": evidence.risk_score,
         "operational_rank": evidence.operational_rank,
         "operational_sort_key_json": decision_sort_key(evidence),
+        "governance_sync_json": governance_sync_state(evidence),
         "in_kev": evidence.in_kev,
         "epss": evidence.epss,
         "cvss_base_score": evidence.cvss_base_score,
@@ -555,6 +557,7 @@ def _apply_projection_columns(
     record.risk_score = evidence.risk_score
     record.operational_rank = evidence.operational_rank
     record.operational_sort_key_json = decision_sort_key(evidence)
+    record.governance_sync_json = governance_sync_state(evidence)
     record.in_kev = evidence.in_kev
     record.epss = evidence.epss
     record.cvss_base_score = evidence.cvss_base_score
@@ -660,6 +663,10 @@ def _projection_columns_match_evidence(
         and (
             projection.operational_sort_key_json is None
             or projection.operational_sort_key_json == decision_sort_key(evidence)
+        )
+        and (
+            projection.governance_sync_json is None
+            or projection.governance_sync_json == governance_sync_state(evidence)
         )
         and projection.in_kev == evidence.in_kev
         and projection.epss == evidence.epss

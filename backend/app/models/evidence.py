@@ -166,6 +166,9 @@ class FindingCurrentProjectionBase(SQLModel):
     operational_sort_key_json: list[Any] | None = Field(
         default=None, sa_column=Column(JSON, nullable=True)
     )
+    governance_sync_json: dict[str, Any] | None = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
     in_kev: bool = Field(default=False, sa_column=Column(Boolean, nullable=False))
     epss: float | None = Field(default=None, sa_column=Column(Float, nullable=True))
     cvss_base_score: float | None = Field(default=None, sa_column=Column(Float, nullable=True))

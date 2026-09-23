@@ -21,6 +21,7 @@ from utils.workbench_env import WorkbenchApiEnv, create_project_via_api
 from app.decision_core.contracts import FindingDecisionEvidenceV2
 from app.decision_core.projection_evaluation import evaluate_evidence_payload
 from app.domain.engine.models import WaiverRule
+from app.domain.engine.services.prioritization import PrioritizationService
 from app.models import (
     AnalysisRun,
     FindingDecisionEvidence,
@@ -31,6 +32,7 @@ from app.models import (
 from app.repositories.current_projections import FindingCurrentProjectionRepository
 from app.repositories.workflows import WorkflowRepository
 from app.services import reevaluation_execution
+from app.services.decision_projection_sync import DecisionProjectionService
 from app.services.decision_scope_lock import lock_project_decision_scope
 from app.services.evaluation_publication import publish_evaluation_run
 from app.workers.workflow_worker import run_worker_once
@@ -85,6 +87,74 @@ def _worker(env: WorkbenchApiEnv):
         worker_id="native-evaluation-test",
         retry_delay_seconds=0,
     )
+
+
+def test_one_scope_waiver_hydrates_and_revises_only_its_scope(
+    file_backed_workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    env = file_backed_workbench_api_env
+    project_id, selected, _ = _import(
+        env,
+        tmp_path,
+        extra_rows=b"".join(
+            f"CVE-2024-4577,peer-{index},peer-{index},owner,payments,internal,test,low\n".encode()
+            for index in range(30)
+        ),
+    )
+    finding_id = uuid.UUID(selected["id"])
+    with Session(env.engine) as session:
+        before = {
+            row.id: deepcopy(row.payload_json)
+            for row in session.exec(select(FindingDecisionEvidence)).all()
+        }
+    hydrated: list[uuid.UUID] = []
+    evaluations: list[str] = []
+    original_hydrate = FindingCurrentProjectionRepository.evidence_for_records
+    original_prioritize = PrioritizationService.prioritize
+
+    def hydrate(self, records, **kwargs):
+        records = list(records)
+        hydrated.extend(record.finding_id for record in records)
+        return original_hydrate(self, records, **kwargs)
+
+    def prioritize(self, cve_ids, **kwargs):
+        evaluations.extend(cve_ids)
+        return original_prioritize(self, cve_ids, **kwargs)
+
+    monkeypatch.setattr(FindingCurrentProjectionRepository, "evidence_for_records", hydrate)
+    monkeypatch.setattr(PrioritizationService, "prioritize", prioritize)
+    response = env.client.post(
+        f"/api/v1/projects/{project_id}/waivers/",
+        json={
+            "finding_id": str(finding_id),
+            "owner": "risk-owner",
+            "reason": "A bounded scope acceptance",
+            "expires_at": "2099-12-31",
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert hydrated == [finding_id]
+    assert evaluations == [selected["cve_id"]]
+    with Session(env.engine) as session:
+        history = session.exec(select(FindingDecisionEvidence)).all()
+        assert len(history) == len(before) + 1
+        assert {row.id: row.payload_json for row in history if row.id in before} == before
+        revision = next(row for row in history if row.id not in before)
+        assert revision.finding_id == finding_id
+        assert revision.payload_json["operational_rank"] == len(before)
+        assert revision.payload_json["evaluation"]["cause"] == "waiver"
+        hydrated.clear()
+        evaluations.clear()
+        lock_project_decision_scope(session, uuid.UUID(project_id))
+        DecisionProjectionService(session).sync_project_waivers(
+            uuid.UUID(project_id), force=True, revision_cause="waiver"
+        )
+        assert hydrated == []
+        assert evaluations == []
+        assert len(session.exec(select(FindingDecisionEvidence)).all()) == len(history)
+        assert FindingCurrentProjectionRepository(session).verify_all_source_parity().matches
 
 
 def test_native_evaluation_appends_history_without_observing_or_resetting_manual_status(
@@ -432,6 +502,14 @@ def test_selected_snapshot_change_reranks_peer_without_replacing_its_facts(
     before = env.client.get(f"/api/v1/projects/{project_id}/findings/").json()["data"]
     selected, peer = sorted(before, key=lambda item: item["operational_rank"])
     assert selected["risk_score"] > peer["risk_score"]
+    with Session(env.engine) as session:
+        original_peer = session.exec(
+            select(FindingDecisionEvidence).where(
+                FindingDecisionEvidence.finding_id == uuid.UUID(peer["id"])
+            )
+        ).one()
+        peer_source_id = original_peer.id
+        peer_source_payload = deepcopy(original_peer.payload_json)
     artifact = tmp_path / "snapshots" / "lower.json"
     document = json.loads((tmp_path / "snapshots" / "demo.json").read_text())
     item = next(row for row in document["items"] if row["cve_id"] == selected["cve_id"])
@@ -460,6 +538,16 @@ def test_selected_snapshot_change_reranks_peer_without_replacing_its_facts(
     assert after["evidence"]["provider"] == peer["evidence"]["provider"]
     assert after["evidence"]["evaluation_input"] == peer["evidence"]["evaluation_input"]
     assert "#1" in after["evidence"]["remediation"]["decision_statement"]
+    with Session(env.engine) as session:
+        peer_history = session.exec(
+            select(FindingDecisionEvidence).where(
+                FindingDecisionEvidence.finding_id == uuid.UUID(peer["id"])
+            )
+        ).all()
+        assert len(peer_history) == 1
+        assert peer_history[0].id == peer_source_id
+        assert peer_history[0].payload_json == peer_source_payload
+        assert FindingCurrentProjectionRepository(session).verify_all_source_parity().matches
 
 
 def test_native_evaluation_report_exports_its_recorded_decision_without_new_upload(

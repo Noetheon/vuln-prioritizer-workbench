@@ -5,7 +5,6 @@ from __future__ import annotations
 import unicodedata
 import uuid
 from copy import deepcopy
-from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Any, cast
 
@@ -46,14 +45,6 @@ _WAIVER_DECISION_FIELDS = (
 )
 
 _PROJECTION_SYNC_BATCH_SIZE = 250
-
-
-@dataclass(frozen=True, slots=True)
-class _ProjectionRankCandidate:
-    """Compact global-order material retained between bounded passes."""
-
-    finding_id: uuid.UUID
-    sort_key: tuple[Any, ...]
 
 
 class WaiverRepository:
@@ -368,20 +359,7 @@ def _apply_effective_waiver(
     evidence = FindingDecisionEvidenceV2.model_validate(updated)
     if evidence.evaluation_input is not None:
         inputs = evidence.evaluation_input
-        override = (
-            WaiverRule(
-                id=str(waiver.id),
-                cve_id=evidence.cve_id,
-                owner=waiver.owner,
-                reason=waiver.reason,
-                expires_on=waiver.expires_at.isoformat(),
-                review_on=waiver.review_at.isoformat() if waiver.review_at else None,
-                approval_ref=waiver.approval_ref,
-                ticket_url=waiver.ticket_url,
-            )
-            if waiver is not None
-            else None
-        )
+        override = workbench_waiver_rule(waiver, cve_id=evidence.cve_id)
         inputs = inputs.model_copy(
             update={
                 "workbench_waiver": override,
@@ -443,6 +421,22 @@ def _apply_effective_waiver(
     updated["priority_evidence"] = priority_evidence
     updated["governance"] = governance
     return updated
+
+
+def workbench_waiver_rule(waiver: Waiver | None, *, cve_id: str) -> WaiverRule | None:
+    """Capture the exact override consumed by the pure scope evaluator."""
+    if waiver is None:
+        return None
+    return WaiverRule(
+        id=str(waiver.id),
+        cve_id=cve_id,
+        owner=waiver.owner,
+        reason=waiver.reason,
+        expires_on=waiver.expires_at.isoformat(),
+        review_on=waiver.review_at.isoformat() if waiver.review_at else None,
+        approval_ref=waiver.approval_ref,
+        ticket_url=waiver.ticket_url,
+    )
 
 
 def waiver_lifecycle_status(

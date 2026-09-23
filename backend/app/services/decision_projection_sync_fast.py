@@ -19,6 +19,8 @@ def sync_unchanged_project_ranks(
     project_id: uuid.UUID,
     *,
     changed_finding_ids: set[uuid.UUID] | None = None,
+    fallback_keys: dict[uuid.UUID, list[Any]] | None = None,
+    require_complete: bool = True,
 ) -> bool:
     """
     Rank existing decisions without hydrating their evidence or evaluating them.
@@ -33,7 +35,7 @@ def sync_unchanged_project_ranks(
         .where(Finding.project_id == project_id, col(FindingCurrentProjection.finding_id).is_(None))
         .limit(1)
     ).first()
-    if missing is not None:
+    if missing is not None and require_complete:
         return False
     repository = FindingCurrentProjectionRepository(session)
     rows = session.exec(
@@ -43,7 +45,10 @@ def sync_unchanged_project_ranks(
             FindingCurrentProjection.operational_rank,
         ).where(FindingCurrentProjection.project_id == project_id)
     ).all()
-    missing_ids = [finding_id for finding_id, key, _ in rows if key is None]
+    supplied = fallback_keys or {}
+    missing_ids = [
+        finding_id for finding_id, key, _ in rows if key is None and finding_id not in supplied
+    ]
     restored: dict[uuid.UUID, list[Any]] = {}
     for offset in range(0, len(missing_ids), _BATCH_SIZE):
         evidence = repository.evidence_for_findings(missing_ids[offset : offset + _BATCH_SIZE])
@@ -53,7 +58,13 @@ def sync_unchanged_project_ranks(
                 return False
             restored[finding_id] = key
     candidates = [
-        (_as_tuple(key if key is not None else restored[finding_id]), finding_id, previous_rank)
+        (
+            _as_tuple(
+                key if key is not None else restored.get(finding_id, supplied.get(finding_id))
+            ),
+            finding_id,
+            previous_rank,
+        )
         for finding_id, key, previous_rank in rows
     ]
     candidates.sort(key=lambda item: (*item[0], str(item[1])))
