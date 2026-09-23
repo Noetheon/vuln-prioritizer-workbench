@@ -11,11 +11,12 @@ from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import ValidationError
-from sqlalchemy import func
+from sqlalchemy import bindparam, func
 from sqlmodel import Session, col, select
 
 from app.decision_core.component_projection import project_component_decision
 from app.decision_core.contracts import FindingDecisionEvidenceV2
+from app.decision_core.current_queue import decision_sort_key, with_current_rank
 from app.decision_core.ledger import (
     FINDING_CURRENT_PROJECTION_SCHEMA_VERSION,
     DecisionLedgerInvariantError,
@@ -260,7 +261,9 @@ class FindingCurrentProjectionRepository:
             raise DecisionLedgerInvariantError(
                 "Lifecycle projection payload changed immutable finding identity fields."
             )
-        normalized = evidence.to_jsonable()
+        # A rank belongs to the current queue. Keep the source rank in stored
+        # decision state so displaced peers never copy full evidence subtrees.
+        normalized = with_current_rank(evidence.to_jsonable(), source_payload["operational_rank"])
         overlay = _top_level_overlay(source_payload, normalized)
         # This temporary is only compared, never returned or persisted.
         reconstructed = source_payload | overlay
@@ -292,6 +295,50 @@ class FindingCurrentProjectionRepository:
         if current_payload is None:  # pragma: no cover - guarded by the record lookup
             return None
         return self.update_current_payload(finding_id, transform(current_payload))
+
+    def update_queue_ranks(
+        self,
+        ranks: dict[uuid.UUID, int],
+        *,
+        restored_keys: dict[uuid.UUID, list[Any]] | None = None,
+    ) -> None:
+        """Update only compact queue state, without touching decision evidence."""
+        self.session.flush()
+        table = getattr(FindingCurrentProjection, "__table__")
+        now = get_datetime_utc()
+        if ranks:
+            statement = (
+                table.update()
+                .where(table.c.finding_id == bindparam("queue_finding_id"))
+                .values(
+                    operational_rank=bindparam("queue_rank"),
+                    revision=table.c.revision + 1,
+                    updated_at=now,
+                )
+            )
+            self.session.connection().execute(
+                statement,
+                [
+                    {"queue_finding_id": finding_id, "queue_rank": rank}
+                    for finding_id, rank in ranks.items()
+                ],
+            )
+        if restored_keys:
+            self.session.connection().execute(
+                table.update()
+                .where(table.c.finding_id == bindparam("queue_finding_id"))
+                .values(operational_sort_key_json=bindparam("queue_sort_key")),
+                [
+                    {"queue_finding_id": finding_id, "queue_sort_key": key}
+                    for finding_id, key in restored_keys.items()
+                ],
+            )
+        # Core executemany deliberately avoids loading all ORM rows. Expire only
+        # projections already held by this session so callers observe the new rank.
+        changed = set(ranks) | set(restored_keys or {})
+        for obj in list(self.session.identity_map.values()):
+            if isinstance(obj, FindingCurrentProjection) and obj.finding_id in changed:
+                self.session.expire(obj)
 
     def backfill_missing(self, *, batch_size: int = 500) -> int:
         """Backfill missing current rows from each finding's newest immutable evidence."""
@@ -352,7 +399,9 @@ class FindingCurrentProjectionRepository:
                     mismatches.append(f"{projection.finding_id}:projection-hash")
                 if projection.lifecycle_revision == 0 and projection_hash != source_hash:
                     mismatches.append(f"{projection.finding_id}:source-projection-hash")
-                evidence = FindingDecisionEvidenceV2.model_validate(effective_payload)
+                evidence = FindingDecisionEvidenceV2.model_validate(
+                    with_current_rank(effective_payload, projection.operational_rank)
+                )
             except ValueError:
                 mismatches.append(f"{projection.finding_id}:invalid-projection-payload")
             else:
@@ -468,6 +517,7 @@ def projection_insert_values(
         "priority_rank": evidence.priority_rank,
         "risk_score": evidence.risk_score,
         "operational_rank": evidence.operational_rank,
+        "operational_sort_key_json": decision_sort_key(evidence),
         "in_kev": evidence.in_kev,
         "epss": evidence.epss,
         "cvss_base_score": evidence.cvss_base_score,
@@ -504,6 +554,7 @@ def _apply_projection_columns(
     record.priority_rank = evidence.priority_rank
     record.risk_score = evidence.risk_score
     record.operational_rank = evidence.operational_rank
+    record.operational_sort_key_json = decision_sort_key(evidence)
     record.in_kev = evidence.in_kev
     record.epss = evidence.epss
     record.cvss_base_score = evidence.cvss_base_score
@@ -537,7 +588,10 @@ def _effective_projection_evidence(
 ) -> FindingDecisionEvidenceV2:
     """Validate persisted JSON into an isolated contract without copying it first."""
     _assert_projection_source_identity(projection, source)
-    payload = dict(source.payload_json or {}) | dict(projection.lifecycle_overlay_json or {})
+    payload = with_current_rank(
+        dict(source.payload_json or {}) | dict(projection.lifecycle_overlay_json or {}),
+        projection.operational_rank,
+    )
     try:
         # JSON parsing owns every nested value, including untyped raw evidence.
         return FindingDecisionEvidenceV2.model_validate_json(json.dumps(payload))
@@ -545,7 +599,9 @@ def _effective_projection_evidence(
         # Preserve valid legacy raw evidence beyond the JSON parser's depth limit,
         # and retain the existing validation failures for invalid contracts.
         return FindingDecisionEvidenceV2.model_validate(
-            _effective_projection_payload(projection, source)
+            with_current_rank(
+                _effective_projection_payload(projection, source), projection.operational_rank
+            )
         )
 
 
@@ -601,6 +657,10 @@ def _projection_columns_match_evidence(
         and projection.priority_rank == evidence.priority_rank
         and projection.risk_score == evidence.risk_score
         and projection.operational_rank == evidence.operational_rank
+        and (
+            projection.operational_sort_key_json is None
+            or projection.operational_sort_key_json == decision_sort_key(evidence)
+        )
         and projection.in_kev == evidence.in_kev
         and projection.epss == evidence.epss
         and projection.cvss_base_score == evidence.cvss_base_score

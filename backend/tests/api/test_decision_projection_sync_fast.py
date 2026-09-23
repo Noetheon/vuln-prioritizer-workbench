@@ -11,7 +11,7 @@ from utils.workbench_env import WorkbenchApiEnv, local_api_headers
 from utils.workbench_workflow_contracts import configure_workflow_context, post_import
 
 from app.domain.engine.services.prioritization import PrioritizationService
-from app.models import Finding, FindingCurrentProjection
+from app.models import Finding, FindingCurrentProjection, FindingDecisionEvidence
 from app.repositories.current_projections import FindingCurrentProjectionRepository
 from app.services.decision_projection_sync_fast import sync_unchanged_project_ranks
 
@@ -78,6 +78,38 @@ def test_rank_fast_path_preserves_inputs_and_history_and_skips_unchanged_writes(
         monkeypatch.setattr(
             FindingCurrentProjectionRepository, "update_current_payload", unexpected_write
         )
+        monkeypatch.setattr(
+            FindingCurrentProjectionRepository, "evidence_for_records", unexpected_write
+        )
+        assert sync_unchanged_project_ranks(session, project_id)
+
+
+def test_migrated_queue_keys_are_reconstructed_once_without_changing_history(
+    file_backed_workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    env = file_backed_workbench_api_env
+    project_id = _import_scopes(env, tmp_path)
+    with Session(env.engine) as session:
+        repository = FindingCurrentProjectionRepository(session)
+        records = list(session.exec(select(FindingCurrentProjection)).all())
+        expected = repository.evidence_for_records(records)
+        for record in records:
+            record.operational_sort_key_json = None
+            session.add(record)
+        session.flush()
+        assert sync_unchanged_project_ranks(session, project_id)
+        assert all(record.operational_sort_key_json is not None for record in records)
+        assert repository.evidence_for_records(records) == expected
+        assert repository.verify_source_parity(records).matches
+
+        def unexpected_hydration(*_args: Any, **_kwargs: Any) -> None:
+            pytest.fail("Persisted queue keys must avoid subsequent evidence hydration")
+
+        monkeypatch.setattr(
+            FindingCurrentProjectionRepository, "evidence_for_records", unexpected_hydration
+        )
         assert sync_unchanged_project_ranks(session, project_id)
 
 
@@ -116,10 +148,20 @@ def test_incremental_import_evaluates_only_new_scope_and_updates_displaced_ranks
     project_id = _import_scopes(env, tmp_path)
     with Session(env.engine) as session:
         existing_ids = set(session.exec(select(Finding.id)).all())
+        original_projections = {
+            row.finding_id: (
+                row.source_finding_evidence_id,
+                row.lifecycle_overlay_json,
+                row.projection_payload_sha256,
+                row.lifecycle_revision,
+            )
+            for row in session.exec(select(FindingCurrentProjection)).all()
+        }
+        history_ids = set(session.exec(select(FindingDecisionEvidence.id)).all())
     evaluations: list[str] = []
     rank_updates: list[uuid.UUID] = []
     original_prioritize = PrioritizationService.prioritize
-    original_update = FindingCurrentProjectionRepository.update_current_payload
+    original_update = FindingCurrentProjectionRepository.update_queue_ranks
 
     def prioritize(self: PrioritizationService, cve_ids: list[str], **kwargs: Any) -> Any:
         evaluations.extend(cve_ids)
@@ -127,15 +169,20 @@ def test_incremental_import_evaluates_only_new_scope_and_updates_displaced_ranks
 
     def update_rank(
         self: FindingCurrentProjectionRepository,
-        finding_id: uuid.UUID,
-        payload: dict[str, Any],
+        ranks: dict[uuid.UUID, int],
         **kwargs: Any,
     ) -> Any:
-        rank_updates.append(finding_id)
-        return original_update(self, finding_id, payload, **kwargs)
+        rank_updates.extend(ranks)
+        return original_update(self, ranks, **kwargs)
+
+    def unexpected_evidence_write(*_args: Any, **_kwargs: Any) -> None:
+        pytest.fail("Displacing a peer must not copy its decision evidence")
 
     monkeypatch.setattr(PrioritizationService, "prioritize", prioritize)
-    monkeypatch.setattr(FindingCurrentProjectionRepository, "update_current_payload", update_rank)
+    monkeypatch.setattr(FindingCurrentProjectionRepository, "update_queue_ranks", update_rank)
+    monkeypatch.setattr(
+        FindingCurrentProjectionRepository, "update_current_payload", unexpected_evidence_write
+    )
     queued = env.client.post(
         f"/api/v1/projects/{project_id}/imports",
         headers=local_api_headers(env.client),
@@ -161,6 +208,26 @@ def test_incremental_import_evaluates_only_new_scope_and_updates_displaced_ranks
     with Session(env.engine) as session:
         repository = FindingCurrentProjectionRepository(session)
         records = session.exec(select(FindingCurrentProjection)).all()
+        assert {
+            row.finding_id: (
+                row.source_finding_evidence_id,
+                row.lifecycle_overlay_json,
+                row.projection_payload_sha256,
+                row.lifecycle_revision,
+            )
+            for row in records
+            if row.finding_id in existing_ids
+        } == original_projections
+        assert (
+            set(
+                session.exec(
+                    select(FindingDecisionEvidence.id).where(
+                        FindingDecisionEvidence.finding_id.in_(existing_ids)
+                    )
+                ).all()
+            )
+            == history_ids
+        )
         current = repository.evidence_for_records(records)
         assert sorted(item.operational_rank for item in current.values()) == [1, 2, 3]
         for item in current.values():
