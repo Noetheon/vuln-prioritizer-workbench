@@ -40,3 +40,24 @@ updates:
       frontend-dependencies:
         patterns:
           - "*"
+  - package-ecosystem: "docker"
+    directories:
+      - "/backend"
+      - "/frontend"
+      - "/docker/security-tools"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "maintenance"
+      - "dependencies"
+      - "area:security"
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "maintenance"
+      - "dependencies"
+      - "area:security"

@@ -64,6 +64,9 @@ data/template-provider-snapshots/
 workbench.db
 workbench-review.db
 backend/template.db
+*.db-wal
+*.db-shm
+*.db-journal
 
 # Build and packaging artifacts
 build/

@@ -26,18 +26,29 @@ and residual-risk decision used for the public-production release ledger.
 
 The workflow already does the important trusted-publishing pieces:
 
-- it builds source and wheel distributions
+- it synchronizes the reviewed `uv.lock` resolution and builds the source and
+  wheel distributions with hash-checked build constraints from
+  `backend/requirements.lock.txt`
 - it builds the local end-user Workbench ZIP through `make release-bundle`
 - it validates them with `twine check`
+- it generates one SPDX 2.3 inventory from each built archive, retaining the
+  archive digest, packaged files, and declared or lock-referenced dependencies
+- it records the exact Python, uv, build tools, input hashes, commit, and run
+  URL; the local JSON index is self-reported build context
+- it creates signed GitHub build-provenance and SBOM attestations for the three
+  archives and verifies the downloaded draft-release bytes after upload
 - it creates a draft GitHub Release from the checked-in notes when present
-- it uses `pypa/gh-action-pypi-publish@release/v1`
+- it uses a commit-pinned `pypa/gh-action-pypi-publish` action
 - it grants `id-token: write` on the PyPI job
 - it runs the PyPI job inside the `pypi` GitHub environment
 
 Current safety model:
 
+- a pushed `v*` tag must point to a commit already in `main` history; the
+  workflow checks this before building or signing any release archive
 - tagged releases always build artifacts and create a draft GitHub Release
-- manual `workflow_dispatch` runs on the release workflow are preflight-only and do not create a GitHub Release or publish to PyPI
+- manual `workflow_dispatch` runs, even when pointed at a tag, are preflight-only
+  and do not create a GitHub Release or publish to PyPI
 - public PyPI publishing is gated behind the repository variable `PYPI_PUBLISH_ENABLED=true`
 - the live PyPI workflow verifies a hosted-index install after publish
 - TestPyPI publishing is available through the manual workflow [`.github/workflows/testpypi.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/workflows/testpypi.yml), runs `make release-readiness-check`, is gated behind `TEST_PYPI_PUBLISH_ENABLED=true`, and verifies a hosted-index install after publish
@@ -48,7 +59,9 @@ That keeps normal tagged releases green even before PyPI Trusted Publishing is f
 
 Use this path for normal releases:
 
-1. Make sure the working tree is clean.
+1. Merge the reviewed candidate into `main` and make sure the working tree is
+   clean. Create the release tag from that merged commit (or another commit
+   already in `main` history); a tag on an unmerged branch is rejected.
 2. Run the local release gate while developing the candidate:
 
 ```bash
@@ -114,36 +127,78 @@ git push origin vX.Y.Z
 7. Confirm that the GitHub Release workflow completed successfully and created
    a draft GitHub Release.
 8. Download or link the `release-readiness-evidence` workflow artifact. It must
-   include the release-readiness command log, commit metadata, evidence-bundle
-   verification JSON when generated, and the SHA-256 list for built release
-   artifacts, including the local Workbench ZIP.
+   include the release-readiness command log, checked build-input versions and
+   hashes, artifact-specific SPDX inventories, evidence-bundle verification
+   JSON when generated, and the SHA-256 list for built release artifacts,
+   including the local Workbench ZIP. The separate `github-release-assets`
+   workflow artifact retains the exact files staged for the draft.
 9. Inspect the draft release before publication. Confirm the release title,
-   notes, tag, asset names, `dist-sha256.txt`, ZIP `.sha256`, and ZIP manifest
-   all match the exact tag.
+   notes, tag, asset names, `dist-sha256.txt`, ZIP `.sha256`, ZIP manifest, three
+   `.spdx.json` files, `build-inputs.json`, and
+   `release-artifact-evidence.json` all match the exact tag. The release
+   workflow downloads the draft assets again and checks their digests and
+   inventories against its staged files.
 10. Paste the evidence comment into the release issue or PR before publishing
     the draft.
 11. Publish the GitHub Release manually after the asset and evidence review.
 12. If PyPI publishing is enabled for the repository, verify that the package appeared on PyPI.
 13. Confirm that the workflow's hosted-index install verification step completed successfully.
 
-## Restoring a Missing GitHub Release Object
-
-If a tag exists but the GitHub Release object is missing, recreate it from the current tag:
+GitHub's signed attestations are separate from the unsigned local JSON index.
+From a trusted checkout of the intended release tag, verify each downloaded
+wheel, sdist, and local ZIP against the tag's exact commit and signing workflow:
 
 ```bash
-make package
-gh release create vX.Y.Z dist/* \
+release_tag=vX.Y.Z
+release_commit="$(git rev-parse "$release_tag^{commit}")"
+repo=Noetheon/vuln-prioritizer-workbench
+signer="$repo/.github/workflows/release.yml"
+gh attestation verify PATH/TO/ARCHIVE -R "$repo" \
+  --source-ref "refs/tags/$release_tag" --source-digest "$release_commit" \
+  --signer-workflow "$signer"
+gh attestation verify PATH/TO/ARCHIVE -R "$repo" \
+  --predicate-type https://spdx.dev/Document/v2.3 \
+  --source-ref "refs/tags/$release_tag" --source-digest "$release_commit" \
+  --signer-workflow "$signer"
+```
+
+The release JSON index lets an operator compare archive, inventory, and
+build-input bytes. It is self-reported and does not authenticate the signer;
+use the certificate-bound attestation verification above for that identity.
+
+The inventories for the wheel and sdist list packaged files and declared
+`Requires-Dist` constraints. The local ZIP lists its packaged files and the
+Python/npm packages *referenced by its included lockfiles*; those packages are
+not installed inside the source ZIP. Neither an inventory nor an attestation
+claims an SLSA level or that the release has no vulnerabilities.
+
+## Restoring a Missing GitHub Release Object
+
+If a tag exists but its GitHub Release object is missing, first use the
+`github-release-assets` artifact from a successful workflow run for that exact
+tag (retained for 14 days). Work from a checkout of the same tag, substitute
+its run ID, and verify the downloaded bytes before creating a new draft:
+
+```bash
+artifact_dir="$(mktemp -d)"
+gh run download RUN_ID -n github-release-assets -D "$artifact_dir"
+(cd "$artifact_dir" && sha256sum --check dist-sha256.txt)
+mkdir "$artifact_dir/.verify"
+cp "$artifact_dir"/*.spdx.json "$artifact_dir/release-artifact-evidence.json" \
+  "$artifact_dir/build-inputs.json" "$artifact_dir/.verify/"
+python3 scripts/build_release_artifact_evidence.py \
+  --dist "$artifact_dir" --output "$artifact_dir/.verify" --verify
+gh release create vX.Y.Z "$artifact_dir"/* --draft \
   --title vX.Y.Z \
   --notes-file docs/releases/vX.Y.Z.md
 ```
 
-`make package` removes stale `dist/` artifacts and runs
-`python3 -m build backend --outdir dist`, matching the GitHub release and
-TestPyPI workflows. Run `make package-check` first when the recovery needs a
-fresh local packaging validation before recreating the GitHub Release object.
-This is the correct recovery path after accidental GitHub-side deletion or
-repository history cleanup, as long as the release tag still points to the
-intended tree.
+If the retained workflow artifact has expired, run a new manual release
+preflight at the exact tag containing this workflow, then use its newly staged
+assets. Manual dispatch does not republish GitHub or PyPI releases. A local
+rebuild is a new artifact with new hashes; `make package` is a packaging smoke,
+not evidence that its bytes equal the original CI release. If no matching
+checked-in notes exist, use reviewed generated notes for the recovered draft.
 
 ## TestPyPI Validation Path
 

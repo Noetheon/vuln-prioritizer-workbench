@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import os
 import sqlite3
@@ -10,6 +11,7 @@ import sys
 import tarfile
 import tomllib
 from collections import deque
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -872,6 +874,219 @@ def test_restore_validates_artifact_archive_before_replacing_sqlite(tmp_path: Pa
     finally:
         database.close()
     assert not (tmp_path / "escaped.txt").exists()
+
+
+def test_sqlite_restore_rebases_only_hash_verified_reports(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    report = source / "reports" / "example.txt"
+    report.parent.mkdir()
+    report.write_bytes(b"original report")
+    database_path = source / "workbench.db"
+    with closing(sqlite3.connect(database_path)) as database:
+        with database:
+            database.execute(
+                "CREATE TABLE report (id TEXT PRIMARY KEY, path TEXT NOT NULL, "
+                "sha256 TEXT NOT NULL, size_bytes INTEGER NOT NULL)"
+            )
+            database.execute(
+                "INSERT INTO report VALUES (?, ?, ?, ?)",
+                (
+                    "report-1",
+                    str(report),
+                    hashlib.sha256(report.read_bytes()).hexdigest(),
+                    report.stat().st_size,
+                ),
+            )
+    backup = tmp_path / "backup"
+    subprocess.run(
+        [str(REPO_ROOT / "scripts/workbench-backup.sh")],
+        env={**os.environ, "SQLITE_DATABASE_PATH": str(database_path), "BACKUP_DIR": str(backup)},
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert (backup / "backup-manifest.json").is_file()
+    target = tmp_path / "relocated"
+    target.mkdir()
+    subprocess.run(
+        [str(REPO_ROOT / "scripts/workbench-restore.sh"), str(backup)],
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(target / "workbench.db"),
+            "ARTIFACT_RESTORE_ROOT": str(target),
+        },
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    with closing(sqlite3.connect(target / "workbench.db")) as restored:
+        assert restored.execute("SELECT path FROM report").fetchone() == (
+            str(target / "reports" / "example.txt"),
+        )
+    assert (target / "reports" / "example.txt").read_bytes() == b"original report"
+
+    # Tampering with the archive must fail before an existing target database is changed.
+    with tarfile.open(backup / "artifacts.tar", "w") as archive:
+        altered = tmp_path / "example.txt"
+        altered.write_bytes(b"altered report!")
+        archive.add(altered, arcname="reports/example.txt")
+    prior_database = (target / "workbench.db").read_bytes()
+    rejected = subprocess.run(
+        [str(REPO_ROOT / "scripts/workbench-restore.sh"), str(backup)],
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(target / "workbench.db"),
+            "ARTIFACT_RESTORE_ROOT": str(target),
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert rejected.returncode != 0
+    assert "Backup checksum mismatch" in rejected.stderr
+    assert (target / "workbench.db").read_bytes() == prior_database
+
+    # Even after an attacker replaces the private checksum list, the immutable
+    # report metadata must reject content that differs from the archived report.
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts/verify_backup_checksums.py"),
+            "create",
+            str(backup),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    rejected_again = subprocess.run(
+        [str(REPO_ROOT / "scripts/workbench-restore.sh"), str(backup)],
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(target / "workbench.db"),
+            "ARTIFACT_RESTORE_ROOT": str(target),
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert rejected_again.returncode != 0
+    assert "Archived artifact" in rejected_again.stderr
+    assert (target / "workbench.db").read_bytes() == prior_database
+
+
+def test_backup_omits_reconstructible_cache_symlink(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    with closing(sqlite3.connect(source / "workbench.db")) as database:
+        database.execute("CREATE TABLE backup_probe (value TEXT)")
+        database.commit()
+    cache = source / "provider-cache"
+    cache.mkdir()
+    outside = tmp_path / "outside.txt"
+    outside.write_text("not backed up", encoding="utf-8")
+    (cache / "external").symlink_to(outside)
+    backup = tmp_path / "backup"
+    result = subprocess.run(
+        [str(REPO_ROOT / "scripts/workbench-backup.sh")],
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(source / "workbench.db"),
+            "BACKUP_DIR": str(backup),
+        },
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "Skipped 1 reconstructible cache symlink" in result.stderr
+    with tarfile.open(backup / "artifacts.tar") as archive:
+        assert "provider-cache/external" not in archive.getnames()
+
+
+def test_custom_report_layout_restores_at_same_root(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    report = source / "workbench-reports" / "example.txt"
+    report.parent.mkdir()
+    report.write_bytes(b"custom report")
+    with closing(sqlite3.connect(source / "workbench.db")) as database:
+        database.execute(
+            "CREATE TABLE report (id TEXT PRIMARY KEY, path TEXT NOT NULL, "
+            "sha256 TEXT NOT NULL, size_bytes INTEGER NOT NULL)"
+        )
+        database.execute(
+            "INSERT INTO report VALUES (?, ?, ?, ?)",
+            (
+                "custom",
+                str(report),
+                hashlib.sha256(report.read_bytes()).hexdigest(),
+                report.stat().st_size,
+            ),
+        )
+        database.commit()
+    backup = tmp_path / "backup"
+    subprocess.run(
+        [str(REPO_ROOT / "scripts/workbench-backup.sh")],
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(source / "workbench.db"),
+            "WORKBENCH_ARTIFACT_PATHS": str(report.parent),
+            "BACKUP_DIR": str(backup),
+        },
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    manifest = json.loads((backup / "backup-manifest.json").read_text(encoding="utf-8"))
+    assert manifest["report_archive_root"] == "workbench-reports"
+    source.rename(tmp_path / "source-preserved")
+    source.mkdir()
+    subprocess.run(
+        [str(REPO_ROOT / "scripts/workbench-restore.sh"), str(backup)],
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(source / "workbench.db"),
+            "ARTIFACT_RESTORE_ROOT": str(source),
+        },
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    with closing(sqlite3.connect(source / "workbench.db")) as database:
+        assert database.execute("SELECT path FROM report").fetchone() == (str(report),)
+    assert report.read_bytes() == b"custom report"
+
+    # Pre-manifest backups can still recover at the same known managed root.
+    legacy = tmp_path / "legacy"
+    subprocess.run(
+        [str(REPO_ROOT / "scripts/workbench-backup.sh")],
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(source / "workbench.db"),
+            "WORKBENCH_ARTIFACT_PATHS": str(report.parent),
+            "BACKUP_DIR": str(legacy),
+        },
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    (legacy / "backup-manifest.json").unlink()
+    (legacy / "backup-checksums.json").unlink()
+    source.rename(tmp_path / "source-preserved-again")
+    source.mkdir()
+    subprocess.run(
+        [str(REPO_ROOT / "scripts/workbench-restore.sh"), str(legacy)],
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(source / "workbench.db"),
+            "ARTIFACT_RESTORE_ROOT": str(source),
+        },
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert report.read_bytes() == b"custom report"
 
 
 def test_active_runtime_entrypoints_use_workbench_backend_app() -> None:

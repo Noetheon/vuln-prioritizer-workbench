@@ -1092,10 +1092,8 @@ test("VPW design audit stays exposed as a named local and CI gate", () => {
   assert.ok(browserImage)
   assert.equal(packageJson.devDependencies["@playwright/test"], runnerVersion)
   assert.equal(browserImage[1], runnerVersion)
-  assert.equal(
-    dockerRunner.match(/PLAYWRIGHT_DOCKER_IMAGE:-([^}]+)/)?.[1],
-    browserImage[0],
-  )
+  assert.match(dockerRunner, /PLAYWRIGHT_DOCKER_IMAGE:-\$\(awk/)
+  assert.match(dockerRunner, /frontend\/Dockerfile\.playwright/)
   assert.match(dockerRunner, /DOCKER_DEFAULT_PLATFORM/)
   assert.match(dockerRunner, /linux\/amd64/)
   assert.match(dockerRunner, /--ipc=host/)
