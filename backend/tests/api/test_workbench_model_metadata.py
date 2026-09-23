@@ -86,6 +86,17 @@ def test_workbench_alembic_head_matches_model_metadata(tmp_path: Path) -> None:
             version = connection.execute(
                 text("SELECT version_num FROM alembic_version")
             ).scalar_one()
+            # SQLAlchemy cannot reflect SQLite expression indexes. Verify the
+            # migrated identity index explicitly through the actual query plan.
+            from app.models.occurrence_identity import occurrence_identity_expressions
+
+            occurrence = SQLModel.metadata.tables["finding_occurrence"]
+            identity_query = select(
+                *occurrence_identity_expressions(occurrence.c.evidence_json)
+            ).where(occurrence.c.finding_id == uuid.UUID(int=1))
+            sql = str(identity_query.compile(connection, compile_kwargs={"literal_binds": True}))
+            plan = connection.exec_driver_sql("EXPLAIN QUERY PLAN " + sql).all()
+            assert any("ix_finding_occurrence_identity" in row[-1] for row in plan), plan
     finally:
         engine.dispose()
 

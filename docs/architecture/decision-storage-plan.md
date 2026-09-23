@@ -105,6 +105,12 @@ verification and measured results as implementation proceeds.
   The transactional migration verifies every reconstructed payload before replacing
   its storage document. Downgrade restores standalone JSON. Project deletion
   cascades to shared sections; sections otherwise live as long as project history.
+- Asset collision checks read distinct identity fields through a covering index,
+  and summarize them once per asset during the read-only import preflight.
+  Reimports no longer deserialize every past observation for every finding. The
+  index follows the original JSON, including contradictory legacy facts; there is
+  no second mutable identity certificate. A work-budget test covers repeated
+  shared-asset imports, use of the index, and detection of an altered old fact.
 
 Validation so far: 233 baseline import/report/workflow contracts; 200 tests after
 queue/governance changes; 155 import/compact-read contracts after the list change;
@@ -112,7 +118,8 @@ queue/governance changes; 155 import/compact-read contracts after the list chang
 the final acceptance run. Storage sharing adds corruption, project-isolation,
 transaction rollback and reversible-migration coverage; 83 storage, revision,
 workflow and report contracts pass after integration. Temporal maintenance, asset
-identity, reports, complete gates and final measurements remain in progress.
+reports, complete gates and final measurements remain in progress. The asset
+change passes 178 import/migration contracts and its targeted read-budget check.
 
 ### Storage migration operations
 
