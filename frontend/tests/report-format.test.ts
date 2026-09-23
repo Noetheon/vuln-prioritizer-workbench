@@ -28,6 +28,7 @@ test("report format labels cover every backend-supported format", () => {
     markdown: "MARKDOWN",
     html: "HTML",
     json: "JSON",
+    "json-gzip": "JSON (gzip)",
     csv: "CSV",
     zip: "Evidence ZIP",
     "attack-navigator": "ATT&CK Navigator",

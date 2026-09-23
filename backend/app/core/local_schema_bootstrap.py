@@ -11,7 +11,11 @@ from sqlmodel import SQLModel
 
 from app.core.config import Settings
 from app.core.migration_bootstrap import ALEMBIC_HEAD, _alembic_config
-from app.core.schema_smoke import assert_migrated_schema, required_model_tables
+from app.core.schema_smoke import (
+    assert_migrated_schema,
+    assert_required_model_columns,
+    required_model_tables,
+)
 from app.models import import_table_models
 
 
@@ -88,9 +92,27 @@ def _run_alembic_upgrade(database_uri: str) -> None:
 
 
 def _can_repair_missing_sqlite_schema(active_engine: Engine) -> bool:
+    """Only complete empty schemas can be reconstructed without inventing history."""
     with active_engine.connect() as connection:
         table_names = set(inspect(connection).get_table_names())
-    return bool(required_model_tables() - table_names) or "alembic_version" not in table_names
+        if not (required_model_tables() - table_names or "alembic_version" not in table_names):
+            return False
+        if "alembic_version" in table_names:
+            versions = tuple(
+                connection.execute(text("SELECT version_num FROM alembic_version")).scalars()
+            )
+            if versions not in ((), (ALEMBIC_HEAD,)):
+                return False
+        try:
+            assert_required_model_columns(connection)
+        except RuntimeError:
+            return False
+        for table_name in required_model_tables() & table_names:
+            if connection.execute(
+                text(f"SELECT 1 FROM {_quote_identifier(table_name)} LIMIT 1")
+            ).first():
+                return False
+    return True
 
 
 def _legacy_blocking_column_tables(active_engine: Engine) -> tuple[str, ...]:
@@ -116,8 +138,9 @@ def _legacy_blocking_column_tables(active_engine: Engine) -> tuple[str, ...]:
 
 def _repair_missing_sqlite_schema(active_engine: Engine) -> None:
     import_table_models()
-    SQLModel.metadata.create_all(active_engine)
     with active_engine.begin() as connection:
+        connection.exec_driver_sql("BEGIN IMMEDIATE")
+        SQLModel.metadata.create_all(connection)
         table_names = set(inspect(connection).get_table_names())
         if "alembic_version" not in table_names:
             connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
@@ -133,14 +156,26 @@ def _rebuild_sqlite_table(active_engine: Engine, table_name: str) -> None:
     table = SQLModel.metadata.tables[table_name]
     backup_table_name = f"_{table_name}_legacy_repair"
     with active_engine.connect().execution_options(isolation_level="AUTOCOMMIT") as connection:
-        connection.execute(text("PRAGMA foreign_keys=OFF"))
+        assert_required_model_columns(connection)
+        previous_fk = connection.exec_driver_sql("PRAGMA foreign_keys").scalar_one()
+        previous_alter = connection.exec_driver_sql("PRAGMA legacy_alter_table").scalar_one()
+        connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+        connection.exec_driver_sql("PRAGMA legacy_alter_table=ON")
+        connection.exec_driver_sql("BEGIN IMMEDIATE")
         try:
-            connection.execute(text(f"DROP TABLE IF EXISTS {_quote_identifier(backup_table_name)}"))
-            index_names: list[str] = []
-            for index in inspect(connection).get_indexes(table_name):
-                index_name = index.get("name")
-                if isinstance(index_name, str):
-                    index_names.append(index_name)
+            if backup_table_name in inspect(connection).get_table_names():
+                raise RuntimeError(f"Unresolved earlier schema repair: {backup_table_name}")
+            # Reflection omits SQLite expression indexes. Read their real names
+            # so rebuilding an occurrence table remains atomic and reproducible.
+            index_names = list(
+                connection.execute(
+                    text(
+                        "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = :table "
+                        "AND sql IS NOT NULL"
+                    ),
+                    {"table": table_name},
+                ).scalars()
+            )
             connection.execute(
                 text(
                     f"ALTER TABLE {_quote_identifier(table_name)} "
@@ -166,8 +201,15 @@ def _rebuild_sqlite_table(active_engine: Engine, table_name: str) -> None:
                     )
                 )
             connection.execute(text(f"DROP TABLE {_quote_identifier(backup_table_name)}"))
+            if connection.exec_driver_sql("PRAGMA foreign_key_check").first() is not None:
+                raise RuntimeError("Schema repair would leave invalid foreign-key references.")
+            connection.exec_driver_sql("COMMIT")
+        except Exception:
+            connection.exec_driver_sql("ROLLBACK")
+            raise
         finally:
-            connection.execute(text("PRAGMA foreign_keys=ON"))
+            connection.exec_driver_sql(f"PRAGMA legacy_alter_table={int(previous_alter)}")
+            connection.exec_driver_sql(f"PRAGMA foreign_keys={int(previous_fk)}")
 
 
 def _quote_identifier(identifier: str) -> str:

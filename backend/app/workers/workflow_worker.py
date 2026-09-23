@@ -25,6 +25,7 @@ from app.models import (
 )
 from app.repositories import RuntimeHeartbeatRepository, WorkflowRepository
 from app.repositories.workflows import WorkflowLeaseLostError
+from app.services.decision_maintenance import maintain_due_project_decisions
 from app.services.workflow_execution import WorkflowShutdownRequested
 from app.services.workflows import finish_cancelled_workflow
 from app.workers.workflow_handlers import (
@@ -43,6 +44,8 @@ class WorkerTickResult:
     completed: int = 0
     cancelled: int = 0
     retried_or_failed: int = 0
+    refreshed_projects: int = 0
+    failed_project_refreshes: int = 0
 
 
 def run_worker_once(
@@ -96,7 +99,8 @@ def run_worker_once(
             cancelled += 1
         elif outcome == "retried_or_failed":
             retried_or_failed += 1
-    if workflow_ids:
+    refreshed, refresh_failed = maintain_due_project_decisions(engine, stop_event=stop_event)
+    if workflow_ids or refreshed or refresh_failed:
         _record_worker_service_heartbeat(
             engine=engine,
             worker_id=worker_id,
@@ -108,6 +112,8 @@ def run_worker_once(
         completed=completed,
         cancelled=cancelled,
         retried_or_failed=retried_or_failed,
+        refreshed_projects=refreshed,
+        failed_project_refreshes=refresh_failed,
     )
 
 

@@ -18,6 +18,7 @@ import type {
   WorkbenchStatus,
 } from "../api-client"
 import { apiErrorMessage } from "../lib/app-errors"
+import { millisecondsUntilUtcDayChange } from "../lib/decision-freshness"
 import {
   useWorkbenchCapabilitiesQuery,
   useWorkbenchProviderStatusQuery,
@@ -31,7 +32,7 @@ import {
   selectedProjectIdFromSearch,
   selectedProjectUrlSearch,
 } from "./selected-project-search"
-import { invalidateWorkbenchProjectQueries } from "./workbench-query-keys"
+import { invalidateWorkbenchProjectQueries, workbenchQueryKeys } from "./workbench-query-keys"
 
 const SELECTED_PROJECT_STORAGE_KEY = "vpw.selectedProjectId"
 
@@ -92,6 +93,17 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>
+    function schedule() {
+      timer = setTimeout(() => {
+        void queryClient.invalidateQueries({ queryKey: workbenchQueryKeys.all })
+        schedule()
+      }, millisecondsUntilUtcDayChange(new Date()))
+    }
+    schedule()
+    return () => clearTimeout(timer)
+  }, [queryClient])
   const capabilitiesQuery = useWorkbenchCapabilitiesQuery()
   const providerStatusQuery = useWorkbenchProviderStatusQuery()
   const statusQuery = useWorkbenchStatusQuery()

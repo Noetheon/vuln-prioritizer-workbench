@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import shutil
 import uuid
-from collections.abc import Callable
+import zlib
+from collections.abc import Callable, Iterable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -37,8 +39,7 @@ def persist_text_report(
     before_publication: Callable[[], None] | None = None,
 ) -> Report:
     """Persist text report function."""
-    content_bytes = content.encode("utf-8")
-    return _persist_report_artifact(
+    return persist_binary_report(
         session,
         settings,
         run=run,
@@ -46,8 +47,7 @@ def persist_text_report(
         generated_at=generated_at,
         finding_count=finding_count,
         provider_snapshot_id=provider_snapshot_id,
-        content_bytes=content_bytes,
-        write_artifact=lambda path: path.write_text(content, encoding="utf-8"),
+        content=content.encode("utf-8"),
         kind=kind,
         report_format=report_format,
         filename=filename,
@@ -75,7 +75,8 @@ def persist_binary_report(
     before_publication: Callable[[], None] | None = None,
 ) -> Report:
     """Persist binary report function."""
-    return _persist_report_artifact(
+    _ensure_report_size_allowed(settings, content_size=len(content), filename=filename)
+    return persist_stream_report(
         session,
         settings,
         run=run,
@@ -83,8 +84,7 @@ def persist_binary_report(
         generated_at=generated_at,
         finding_count=finding_count,
         provider_snapshot_id=provider_snapshot_id,
-        content_bytes=content,
-        write_artifact=lambda path: path.write_bytes(content),
+        chunks=(content,),
         kind=kind,
         report_format=report_format,
         filename=filename,
@@ -94,7 +94,7 @@ def persist_binary_report(
     )
 
 
-def _persist_report_artifact(
+def persist_stream_report(
     session: Session,
     settings: Settings,
     *,
@@ -103,17 +103,16 @@ def _persist_report_artifact(
     generated_at: datetime,
     finding_count: int,
     provider_snapshot_id: uuid.UUID | None,
-    content_bytes: bytes,
-    write_artifact: Callable[[Path], object],
+    chunks: Iterable[bytes],
+    compress: bool = False,
     kind: str,
     report_format: str,
     filename: str,
     content_type: str,
-    extra_metadata: dict[str, Any] | None,
-    before_publication: Callable[[], None] | None,
+    extra_metadata: dict[str, Any] | None = None,
+    before_publication: Callable[[], None] | None = None,
 ) -> Report:
     """Persist report artifact function."""
-    _ensure_report_size_allowed(settings, content_size=len(content_bytes), filename=filename)
     report_id = uuid.uuid4()
     path = report_path(
         settings,
@@ -123,8 +122,30 @@ def _persist_report_artifact(
         filename=filename,
     )
     path.parent.mkdir(parents=True, exist_ok=True)
+    iterator = iter(chunks)
     try:
-        write_artifact(path)
+        digest = hashlib.sha256()
+        size = expanded_size = 0
+        compressor = zlib.compressobj(wbits=31) if compress else None
+        with path.open("wb") as output:
+
+            def write(data: bytes) -> None:
+                nonlocal size
+                size += len(data)
+                _ensure_report_size_allowed(settings, content_size=size, filename=filename)
+                digest.update(data)
+                output.write(data)
+
+            for chunk in iterator:
+                expanded_size += len(chunk)
+                if compress and expanded_size > settings.max_report_bytes * 20:
+                    raise ReportGenerationError(
+                        "Expanded JSON exceeds configured report size limit "
+                        "(20 times MAX_REPORT_MB)."
+                    )
+                write(compressor.compress(chunk) if compressor is not None else chunk)
+            if compressor is not None:
+                write(compressor.flush())
         if before_publication is not None:
             before_publication()
         track_report_artifact_creation(session, settings, path)
@@ -136,7 +157,8 @@ def _persist_report_artifact(
             generated_at=generated_at,
             finding_count=finding_count,
             provider_snapshot_id=provider_snapshot_id,
-            content_bytes=content_bytes,
+            sha256=digest.hexdigest(),
+            size_bytes=size,
             report_path=path,
             kind=kind,
             report_format=report_format,
@@ -149,6 +171,10 @@ def _persist_report_artifact(
     except Exception:
         _remove_report_artifact_dir(settings, path)
         raise
+    finally:
+        close = getattr(iterator, "close", None)
+        if close is not None:
+            close()
 
 
 def report_path(

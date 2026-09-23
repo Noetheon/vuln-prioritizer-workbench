@@ -5,6 +5,10 @@ import { findingSlaLabel } from "../src/lib/finding-recorded-guidance.ts"
 
 test("all finding surfaces use the recorded SLA including a custom policy", () => {
   assert.equal(
+    findingSlaLabel({ sla: { label: "Custom policy", target_hours: 6 } }),
+    "Custom policy · 6h",
+  )
+  assert.equal(
     findingSlaLabel({
       evidence: { remediation: { sla: { label: " Within 6 hours " } } },
     } as unknown as FindingPublic),

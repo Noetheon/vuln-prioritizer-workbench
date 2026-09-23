@@ -5,7 +5,6 @@ from __future__ import annotations
 import unicodedata
 import uuid
 from copy import deepcopy
-from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Any, cast
 
@@ -28,6 +27,7 @@ from app.models import (
 )
 from app.models.base import get_datetime_utc
 from app.repositories.current_projections import FindingCurrentProjectionRepository
+from app.repositories.evidence_payloads import EvidencePayloadStore
 
 _WAIVER_DECISION_FIELDS = (
     "waiver",
@@ -46,14 +46,6 @@ _WAIVER_DECISION_FIELDS = (
 )
 
 _PROJECTION_SYNC_BATCH_SIZE = 250
-
-
-@dataclass(frozen=True, slots=True)
-class _ProjectionRankCandidate:
-    """Compact global-order material retained between bounded passes."""
-
-    finding_id: uuid.UUID
-    sort_key: tuple[Any, ...]
 
 
 class WaiverRepository:
@@ -215,14 +207,18 @@ class WaiverRepository:
         """Count project findings with the exact effective matcher semantics."""
         return self.matching_finding_counts([waiver]).get(waiver.id, 0)
 
-    def matching_finding_counts(self, waivers: list[Waiver]) -> dict[uuid.UUID, int]:
+    def matching_finding_counts(
+        self, waivers: list[Waiver], *, findings: list[Finding] | None = None
+    ) -> dict[uuid.UUID, int]:
         """Count a page of waivers from one batched finding/asset snapshot."""
         if not waivers:
             return {}
         project_ids = {waiver.project_id for waiver in waivers}
         if len(project_ids) != 1:
             raise ValueError("Waiver match counts require one project scope.")
-        findings = self._project_findings(next(iter(project_ids)))
+        findings = (
+            findings if findings is not None else self._project_findings(next(iter(project_ids)))
+        )
         return {
             waiver.id: sum(_waiver_matches_finding(waiver, finding) for finding in findings)
             for waiver in waivers
@@ -276,9 +272,12 @@ class WaiverRepository:
             records,
             source_records=source_records,
         )
+        source_payloads = EvidencePayloadStore(self.session.connection()).load_records(
+            source_records.values()
+        )
         source_evidence = {
             record.finding_id: FindingDecisionEvidenceV2.model_validate(
-                source_records[record.source_finding_evidence_id].payload_json
+                source_payloads[record.source_finding_evidence_id]
             )
             for record in records
             if record.source_finding_evidence_id in source_records
@@ -368,20 +367,7 @@ def _apply_effective_waiver(
     evidence = FindingDecisionEvidenceV2.model_validate(updated)
     if evidence.evaluation_input is not None:
         inputs = evidence.evaluation_input
-        override = (
-            WaiverRule(
-                id=str(waiver.id),
-                cve_id=evidence.cve_id,
-                owner=waiver.owner,
-                reason=waiver.reason,
-                expires_on=waiver.expires_at.isoformat(),
-                review_on=waiver.review_at.isoformat() if waiver.review_at else None,
-                approval_ref=waiver.approval_ref,
-                ticket_url=waiver.ticket_url,
-            )
-            if waiver is not None
-            else None
-        )
+        override = workbench_waiver_rule(waiver, cve_id=evidence.cve_id)
         inputs = inputs.model_copy(
             update={
                 "workbench_waiver": override,
@@ -443,6 +429,22 @@ def _apply_effective_waiver(
     updated["priority_evidence"] = priority_evidence
     updated["governance"] = governance
     return updated
+
+
+def workbench_waiver_rule(waiver: Waiver | None, *, cve_id: str) -> WaiverRule | None:
+    """Capture the exact override consumed by the pure scope evaluator."""
+    if waiver is None:
+        return None
+    return WaiverRule(
+        id=str(waiver.id),
+        cve_id=cve_id,
+        owner=waiver.owner,
+        reason=waiver.reason,
+        expires_on=waiver.expires_at.isoformat(),
+        review_on=waiver.review_at.isoformat() if waiver.review_at else None,
+        approval_ref=waiver.approval_ref,
+        ticket_url=waiver.ticket_url,
+    )
 
 
 def waiver_lifecycle_status(

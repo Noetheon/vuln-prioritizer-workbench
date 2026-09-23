@@ -241,6 +241,7 @@ export class FindingsService {
         epss_max?: number | null;
         cvss_min?: number | null;
         cvss_max?: number | null;
+        include_evidence?: boolean;
     }, options?: Options<never, ThrowOnError>): RequestResult<GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdFindingsErrors, ThrowOnError, 'data'> {
         const params = buildClientParams([parameters], [{ args: [
                     { in: 'path', key: 'project_id' },
@@ -260,7 +261,8 @@ export class FindingsService {
                     { in: 'query', key: 'epss_min' },
                     { in: 'query', key: 'epss_max' },
                     { in: 'query', key: 'cvss_min' },
-                    { in: 'query', key: 'cvss_max' }
+                    { in: 'query', key: 'cvss_max' },
+                    { in: 'query', key: 'include_evidence' }
                 ] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdFindingsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',

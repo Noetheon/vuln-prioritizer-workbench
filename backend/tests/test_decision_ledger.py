@@ -25,6 +25,7 @@ from app.repositories.current_projections import (
     _apply_top_level_overlay,
     _effective_projection_payload,
 )
+from app.repositories.evidence_payloads import EvidencePayloadStore
 from app.services.risk_reduction import project_risk_index, project_risk_index_from_projection
 
 
@@ -209,7 +210,7 @@ def test_decision_ledger_contract_reader_preserves_json_values_and_isolates_nest
         assert projection is not None
         source = session.get(FindingDecisionEvidence, projection.source_finding_evidence_id)
         assert source is not None
-        payload = deepcopy(source.payload_json)
+        payload = EvidencePayloadStore(session.connection()).load(source)
         payload["remediation"]["raw"] = {"source": {"items": [None, "Größe, 東京, 🛡️\u0000"]}}
         payload["evaluation_input"] = {
             "cve_id": source.cve_id,
@@ -229,7 +230,7 @@ def test_decision_ledger_contract_reader_preserves_json_values_and_isolates_nest
         original_source = deepcopy(source.payload_json)
         original_overlay = deepcopy(projection.lifecycle_overlay_json)
         expected = FindingDecisionEvidenceV2.model_validate(
-            _effective_projection_payload(projection, source)
+            _effective_projection_payload(projection, source, source.payload_json)
         )
         projection.source_payload_sha256 = canonical_payload_sha256(source.payload_json)
         projection.projection_payload_sha256 = canonical_payload_sha256(expected.to_jsonable())
@@ -273,7 +274,7 @@ def test_decision_ledger_contract_reader_retains_deep_persistable_raw_evidence(
         nested: dict[str, object] = {"items": [None, "deep evidence"]}
         for _ in range(199):
             nested = {"nested": nested}
-        payload = deepcopy(source.payload_json)
+        payload = EvidencePayloadStore(session.connection()).load(source)
         payload["priority_evidence"]["raw"] = nested
         persisted = FindingDecisionEvidenceV2.model_validate(payload).to_jsonable()
         source.payload_json = persisted
@@ -313,7 +314,9 @@ def test_decision_ledger_contract_reader_still_rejects_invalid_overlay_fields(
 
         with pytest.raises(ValidationError) as old_error:
             FindingDecisionEvidenceV2.model_validate(
-                _effective_projection_payload(projection, source)
+                _effective_projection_payload(
+                    projection, source, EvidencePayloadStore(session.connection()).load(source)
+                )
             )
         with pytest.raises(ValidationError) as current_error:
             repository.evidence_for_records([projection], source_records={source.id: source})
@@ -336,7 +339,7 @@ def test_decision_ledger_both_readers_reject_mismatched_source_identity(
         setattr(source, identity, uuid.uuid4())
 
         with pytest.raises(ValueError, match="identity mismatch"):
-            _effective_projection_payload(projection, source)
+            _effective_projection_payload(projection, source, {})
         with pytest.raises(ValueError, match="identity mismatch"):
             repository.evidence_for_records([projection], source_records={source.id: source})
 

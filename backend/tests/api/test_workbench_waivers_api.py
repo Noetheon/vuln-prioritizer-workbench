@@ -1025,6 +1025,7 @@ def test_waiver_recompute_preserves_asset_context_from_pre_typed_v2_evidence(
     findings = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
         headers=headers,
+        params={"include_evidence": True},
     ).json()["data"]
     assert len(findings) == 1
     original = findings[0]
@@ -1042,7 +1043,9 @@ def test_waiver_recompute_preserves_asset_context_from_pre_typed_v2_evidence(
             projection.source_finding_evidence_id,
         )
         assert source is not None
-        legacy_payload = deepcopy(source.payload_json)
+        from app.repositories.evidence_payloads import EvidencePayloadStore
+
+        legacy_payload = EvidencePayloadStore(session.connection()).load(source)
         legacy_payload.pop("evaluation_input", None)
         legacy_payload.pop("evaluation", None)
         for occurrence in legacy_payload["occurrences"]:

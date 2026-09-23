@@ -2119,6 +2119,7 @@ export type FindingDetailPublic = {
      * Risk Score
      */
     risk_score?: number | null;
+    sla?: FindingSlaPublic | null;
     status?: FindingStatus;
     /**
      * Suppressed By Vex
@@ -2476,6 +2477,7 @@ export type FindingPublic = {
      * Risk Score
      */
     risk_score?: number | null;
+    sla?: FindingSlaPublic | null;
     status?: FindingStatus;
     /**
      * Suppressed By Vex
@@ -2497,6 +2499,26 @@ export type FindingPublic = {
      * Waived
      */
     waived?: boolean;
+};
+
+/**
+ * FindingSlaPublic
+ *
+ * Recorded SLA fields needed by the compact work queue.
+ */
+export type FindingSlaPublic = {
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Target Days
+     */
+    target_days?: number | null;
+    /**
+     * Target Hours
+     */
+    target_hours?: number | null;
 };
 
 /**
@@ -4631,7 +4653,7 @@ export type ReportCreate = {
     /**
      * Format
      */
-    format?: 'markdown' | 'html' | 'json' | 'csv' | 'zip' | 'attack-navigator' | 'sarif';
+    format?: 'markdown' | 'html' | 'json' | 'json-gzip' | 'csv' | 'zip' | 'attack-navigator' | 'sarif';
 };
 
 /**
@@ -6748,6 +6770,12 @@ export type GetApiV1ProjectsByProjectIdFindingsData = {
          * Cvss Max
          */
         cvss_max?: number | null;
+        /**
+         * Include Evidence
+         *
+         * Expand full decision evidence for this page. Detail views include it by default.
+         */
+        include_evidence?: boolean;
     };
     url: '/api/v1/projects/{project_id}/findings/';
 };

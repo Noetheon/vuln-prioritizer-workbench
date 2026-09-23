@@ -183,8 +183,8 @@ def _adopt_snapshot(
 def ranked_evaluation_payloads(
     current: dict[uuid.UUID, FindingDecisionEvidenceV2],
     evaluated: dict[uuid.UUID, dict[str, Any]],
-) -> dict[uuid.UUID, dict[str, Any]]:
-    """Rank the project once; include selected decisions and changed peer ranks."""
+) -> tuple[dict[uuid.UUID, dict[str, Any]], dict[uuid.UUID, int]]:
+    """Rank selected decisions and return only compact rank changes for peers."""
     candidates = []
     for finding_id, previous in current.items():
         evidence = FindingDecisionEvidenceV2.model_validate(
@@ -205,37 +205,19 @@ def ranked_evaluation_payloads(
         )
     candidates.sort(key=lambda item: (*item[0], str(item[1])))
     result = dict(evaluated)
+    peer_ranks: dict[uuid.UUID, int] = {}
     guidance = DecisionGuidanceService()
     for rank, (_, finding_id, evidence, decision) in enumerate(candidates, 1):
         if finding_id not in evaluated and rank == evidence.operational_rank:
             continue
+        if finding_id not in evaluated:
+            peer_ranks[finding_id] = rank
+            continue
         decision = decision.model_copy(update={"operational_rank": rank})
         ranked_guidance = guidance.build(decision)
-        if finding_id not in evaluated:
-            # A peer's rank changing is not authorization to recompute its stored
-            # decision from incomplete legacy inputs or stale relational context.
-            payload = evidence.to_jsonable()
-            payload["operational_rank"] = rank
-            if "operational_rank" in payload["priority_evidence"]["raw"]:
-                payload["priority_evidence"]["raw"]["operational_rank"] = rank
-            payload["priority_evidence"]["raw"]["decision_guidance"] = ranked_guidance.model_dump(
-                mode="json"
-            )
-            payload["remediation"].update(
-                {
-                    "decision_statement": ranked_guidance.decision_statement,
-                    "recommendation": ranked_guidance.recommendation,
-                    "recommendation_label": ranked_guidance.recommendation_label,
-                    "business_impact": ranked_guidance.business_impact.text,
-                    "sla": ranked_guidance.sla.model_dump(mode="json"),
-                    "raw": ranked_guidance.model_dump(mode="json"),
-                }
-            )
-            result[finding_id] = payload
-            continue
         decision = decision.model_copy(update={"decision_guidance": ranked_guidance})
         result[finding_id] = _apply_recomputed_decision(evidence.to_jsonable(), decision)
-    return result
+    return result, peer_ranks
 
 
 def _fresh_scope_payloads(
@@ -338,7 +320,7 @@ def execute_reevaluation_workflow(
                 progress_current=index,
                 progress_total=len(selected),
             )
-    payloads = ranked_evaluation_payloads(current, evaluated)
+    payloads, peer_ranks = ranked_evaluation_payloads(current, evaluated)
     context.begin_publication()
     lock_project_decision_scope(session, project_id, expected_revision=revision)
     run = session.get(AnalysisRun, run_id)
@@ -351,6 +333,7 @@ def execute_reevaluation_workflow(
         run=run,
         base_project_revision=revision,
     )
+    FindingCurrentProjectionRepository(session).update_queue_ranks(peer_ranks)
     envelope = EvidenceRepository(session).get_analysis_evidence_record(run.id)
     assert envelope is not None
     context.succeed(

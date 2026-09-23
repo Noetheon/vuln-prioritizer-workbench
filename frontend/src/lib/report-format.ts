@@ -13,6 +13,7 @@ const reportFormatDisplayOrder: readonly string[] = [
   "markdown",
   "csv",
   "json",
+  "json-gzip",
   "attack-navigator",
   "sarif",
 ]
@@ -29,6 +30,7 @@ type DisplayReport = Pick<
 >
 
 export function reportFormatLabel(format: string): string {
+  if (format === "json-gzip") return "JSON (gzip)"
   if (format === "zip") return "Evidence ZIP"
   if (format === "attack-navigator") return "ATT&CK Navigator"
   if (format === "sarif") return "SARIF"

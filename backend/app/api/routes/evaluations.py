@@ -26,6 +26,7 @@ from app.models import (
 )
 from app.models.evaluations import DecisionRevisionPublic, DecisionRevisionsPublic, EvaluationCreate
 from app.repositories import RunRepository, WorkflowRepository
+from app.repositories.evidence_payloads import EvidencePayloadStore
 from app.services.reevaluation_execution import (
     ReevaluationConflict,
     load_verified_snapshot,
@@ -156,10 +157,11 @@ def list_decision_revisions(
         .limit(limit + 1)
     ).all()
     projection = session.get(FindingCurrentProjection, finding_id)
+    payloads = EvidencePayloadStore(session.connection()).load_records(rows)
     data = []
     for index, row in enumerate(rows[:limit]):
-        evidence = FindingDecisionEvidenceV2.model_validate(row.payload_json)
-        previous = rows[index + 1].payload_json if index + 1 < len(rows) else None
+        evidence = FindingDecisionEvidenceV2.model_validate(payloads[row.id])
+        previous = payloads[rows[index + 1].id] if index + 1 < len(rows) else None
         metadata = evidence.evaluation
         data.append(
             DecisionRevisionPublic(
@@ -188,7 +190,7 @@ def list_decision_revisions(
                 recommended_action=evidence.recommended_action,
                 is_current=projection is not None
                 and projection.source_finding_evidence_id == row.id,
-                changed_fields=_changed_fields(row.payload_json, previous),
+                changed_fields=_changed_fields(payloads[row.id], previous),
             )
         )
     return DecisionRevisionsPublic(data=data, count=count)

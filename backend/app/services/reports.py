@@ -16,12 +16,14 @@ from app.repositories.workflows import WorkflowLeaseLostError
 from app.services.report_contracts import (
     EVIDENCE_BUNDLE_MANIFEST_SCHEMA_VERSION,
     REPORT_CONTENT_TYPE_CSV,
+    REPORT_CONTENT_TYPE_GZIP,
     REPORT_CONTENT_TYPE_HTML,
     REPORT_CONTENT_TYPE_JSON,
     REPORT_CONTENT_TYPE_MARKDOWN,
     REPORT_CONTENT_TYPE_SARIF,
     REPORT_CONTENT_TYPE_ZIP,
     REPORT_FILENAME_ANALYSIS_JSON,
+    REPORT_FILENAME_ANALYSIS_JSON_GZIP,
     REPORT_FILENAME_ATTACK_NAVIGATOR,
     REPORT_FILENAME_EVIDENCE_BUNDLE,
     REPORT_FILENAME_EXECUTIVE_HTML,
@@ -56,12 +58,15 @@ from app.services.report_sarif import render_sarif_report
 from app.services.report_service_attack import attack_navigator_layer, run_attack_contexts
 from app.services.report_service_payload import (
     REPORT_SUPPORTED_RUN_STATUSES,
+    ReportSource,
     build_report_payload,
 )
 from app.services.report_service_persistence import (
     persist_binary_report,
+    persist_stream_report,
     persist_text_report,
 )
+from app.services.report_streaming import stream_analysis_json, stream_findings_csv
 from app.services.workflow_execution import WorkflowCancellationRequested, WorkflowExecutionContext
 
 __all__ = [
@@ -104,6 +109,7 @@ class ReportService:
         self.session = session
         self.settings = settings
         self._before_publication: Callable[[], None] | None = None
+        self._checkpoint: Callable[[], None] | None = None
 
     def create_markdown_report(self, *, run: AnalysisRun, project: Project) -> Report:
         """Generate a Markdown technical report and persist its metadata."""
@@ -121,6 +127,7 @@ class ReportService:
             self.session,
             run=run,
             project=project,
+            max_input_bytes=self.settings.max_report_bytes,
         )
         content = render_markdown_report(payload)
         return persist_text_report(
@@ -155,6 +162,7 @@ class ReportService:
             self.session,
             run=run,
             project=project,
+            max_input_bytes=self.settings.max_report_bytes,
         )
         content = render_html_executive_report(payload)
         return persist_text_report(
@@ -183,28 +191,28 @@ class ReportService:
             create_report=lambda: self._create_analysis_json_export(run=run, project=project),
         )
 
-    def _create_analysis_json_export(self, *, run: AnalysisRun, project: Project) -> Report:
-        """Generate an analysis-result.v2 JSON export without workflow bookkeeping."""
-        payload, findings, generated_at = build_report_payload(
-            self.session,
-            run=run,
-            project=project,
-        )
-        content = render_analysis_result_json(payload)
-        return persist_text_report(
+    def _create_analysis_json_export(
+        self, *, run: AnalysisRun, project: Project, compress: bool = False
+    ) -> Report:
+        """Stream the unchanged v2 JSON values with optional explicit gzip encoding."""
+        source = ReportSource(self.session, run=run, project=project)
+        return persist_stream_report(
             self.session,
             self.settings,
-            before_publication=self._before_publication,
             run=run,
             project=project,
-            generated_at=generated_at,
-            finding_count=len(findings),
-            provider_snapshot_id=_report_provider_snapshot_id(payload),
-            content=content,
+            before_publication=self._before_publication,
+            generated_at=source.header.generated_at,
+            finding_count=len(source.finding_ids),
+            provider_snapshot_id=_report_provider_snapshot_id(source.header),
+            chunks=stream_analysis_json(source, checkpoint=self._checkpoint),
+            compress=compress,
             kind=REPORT_KIND_ANALYSIS_JSON,
-            report_format="json",
-            filename=REPORT_FILENAME_ANALYSIS_JSON,
-            content_type=REPORT_CONTENT_TYPE_JSON,
+            report_format="json-gzip" if compress else "json",
+            filename=REPORT_FILENAME_ANALYSIS_JSON_GZIP
+            if compress
+            else REPORT_FILENAME_ANALYSIS_JSON,
+            content_type=REPORT_CONTENT_TYPE_GZIP if compress else REPORT_CONTENT_TYPE_JSON,
         )
 
     def create_findings_csv_export(self, *, run: AnalysisRun, project: Project) -> Report:
@@ -218,23 +226,18 @@ class ReportService:
         )
 
     def _create_findings_csv_export(self, *, run: AnalysisRun, project: Project) -> Report:
-        """Generate a findings CSV export without workflow bookkeeping."""
-        payload, findings, generated_at = build_report_payload(
-            self.session,
-            run=run,
-            project=project,
-        )
-        content = render_findings_csv(payload)
-        return persist_text_report(
+        """Stream spreadsheet-safe findings with the existing CSV contract."""
+        source = ReportSource(self.session, run=run, project=project)
+        return persist_stream_report(
             self.session,
             self.settings,
-            before_publication=self._before_publication,
             run=run,
             project=project,
-            generated_at=generated_at,
-            finding_count=len(findings),
-            provider_snapshot_id=_report_provider_snapshot_id(payload),
-            content=content,
+            before_publication=self._before_publication,
+            generated_at=source.header.generated_at,
+            finding_count=len(source.finding_ids),
+            provider_snapshot_id=_report_provider_snapshot_id(source.header),
+            chunks=stream_findings_csv(source, checkpoint=self._checkpoint),
             kind=REPORT_KIND_FINDINGS_CSV,
             report_format="csv",
             filename=REPORT_FILENAME_FINDINGS_CSV,
@@ -274,6 +277,7 @@ class ReportService:
             self.session,
             run=run,
             project=project,
+            max_input_bytes=self.settings.max_report_bytes,
         )
         finding_views = run_finding_decision_views(self.session, run=run, findings=findings)
         layer = attack_navigator_layer(
@@ -329,6 +333,7 @@ class ReportService:
             self.session,
             run=run,
             project=project,
+            max_input_bytes=self.settings.max_report_bytes,
         )
         sarif_payload = render_sarif_report(payload)
         content = json.dumps(sarif_payload, indent=2, sort_keys=True) + "\n"
@@ -446,6 +451,7 @@ class ReportService:
             self.session,
             run=run,
             project=project,
+            max_input_bytes=self.settings.max_report_bytes,
         )
         finding_views = run_finding_decision_views(self.session, run=run, findings=findings)
         attack_layer = attack_navigator_layer(
@@ -533,6 +539,7 @@ class ReportService:
         )
         context.begin_compute()
         self._before_publication = context.begin_publication
+        self._checkpoint = context.checkpoint
         try:
             report = create_report()
         except (WorkflowCancellationRequested, WorkflowLeaseLostError):
@@ -549,6 +556,7 @@ class ReportService:
             raise
         finally:
             self._before_publication = None
+            self._checkpoint = None
         context.stage(
             "persist",
             f"Persisted {report_format} report metadata.",
@@ -597,10 +605,11 @@ class ReportService:
                 run=run,
                 project=project,
             )
-        if report_format == "json":
+        if report_format in {"json", "json-gzip"}:
             return REPORT_KIND_ANALYSIS_JSON, lambda: self._create_analysis_json_export(
                 run=run,
                 project=project,
+                compress=report_format == "json-gzip",
             )
         if report_format == "csv":
             return REPORT_KIND_FINDINGS_CSV, lambda: self._create_findings_csv_export(
