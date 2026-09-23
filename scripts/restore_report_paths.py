@@ -17,6 +17,11 @@ import tarfile
 from contextlib import closing
 from pathlib import Path, PurePosixPath
 
+if __package__:
+    from .verify_backup_checksums import reject_sqlite_sidecars, require_regular_backup_file
+else:
+    from verify_backup_checksums import reject_sqlite_sidecars, require_regular_backup_file
+
 MANIFEST_SCHEMA = "vpw-sqlite-backup.v1"
 REPORT_ROOT_NAMES = ("reports", "workbench-reports")
 UPLOAD_ROOT_NAMES = ("imports", "workbench-import-uploads")
@@ -158,7 +163,16 @@ def _prepare(
     if output.exists():
         raise ValueError("Prepared SQLite destination already exists.")
     destination_root = destination_root.expanduser().resolve(strict=False)
-    backup_uri = f"{database.expanduser().resolve(strict=True).as_uri()}?mode=ro"
+    database = database.expanduser()
+    require_regular_backup_file(database)
+    database = database.resolve(strict=True)
+    reject_sqlite_sidecars(database)
+    for payload in (archive_path, manifest):
+        if payload is not None and (payload.exists() or payload.is_symlink()):
+            require_regular_backup_file(payload)
+    # A backup is self-contained: immutable mode reads only its checksummed
+    # main database and does not create WAL files in the source directory.
+    backup_uri = f"{database.as_uri()}?mode=ro&immutable=1"
     try:
         with (
             closing(sqlite3.connect(backup_uri, uri=True)) as source,

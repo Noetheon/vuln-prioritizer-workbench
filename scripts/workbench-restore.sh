@@ -11,6 +11,7 @@ fi
 if [ -f "$BACKUP_DIR/backup-checksums.json" ]; then
   python3 "$SCRIPT_DIR/verify_backup_checksums.py" verify "$BACKUP_DIR"
 else
+  python3 "$SCRIPT_DIR/verify_backup_checksums.py" check-source "$BACKUP_DIR"
   echo "Legacy backup has no private SHA-256 checksum record." >&2
 fi
 
