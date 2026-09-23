@@ -132,7 +132,7 @@ verification and measured results as implementation proceeds.
   Other renderers reject oversized inputs during batched construction. Historical
   membership, redaction, rollback cleanup and publication fencing remain shared.
 
-Acceptance on the implemented application: `make check` passes 1,513 tests,
+Acceptance on the reviewed application: `make check` passes 1,516 tests,
 with seven optional live/scanner/performance checks skipped and the critical
 coverage gate passing. The optional 10k performance test was then run separately
 and passed. `make frontend-check` passes 189 unit tests, typechecks, build, packaged
@@ -151,43 +151,49 @@ implementation and existing contracts do not substitute for that integration tes
 ### Measured comparison
 
 Same fixed workload and provider snapshot on the same 16-GiB ARM64 machine.
-Baseline: `0d654697`; measured implementation: `8491989b`, with no tracked diff.
+Baseline: `0d654697`; measured implementation: `f4108451`, with no tracked diff
+and default sampled shadow checks enabled. The final review corrected legacy queue
+downgrade and restored configured sampled/strict parity checks on compact reads;
+both regressions were reproduced before the fixes and are covered by tests.
 Each number is a single observed run, not a portable performance promise.
 
 | 5,000-scope workload | Baseline | Implemented |
 | --- | ---: | ---: |
-| Initial import | 19.41 s | 11.82 s |
-| Identical reimports, second / third | 43.90 / 59.38 s | 24.85 / 25.26 s |
-| Additional scope | 61.27 s | 0.48 s |
-| One-scope waiver | 133.34 s | 0.62 s |
+| Initial import | 19.41 s | 11.91 s |
+| Identical reimports, second / third | 43.90 / 59.38 s | 25.19 / 25.30 s |
+| Additional scope | 61.27 s | 0.50 s |
+| One-scope waiver | 133.34 s | 0.66 s |
 | New historical decisions for that waiver | 5,000 | 1 |
-| Reimport with waiver | 183.72 s | 25.46 s |
-| Dashboard, first / repeated | 18.02 / 28.98 s | 0.53 / 0.53 s |
-| List of 100 findings | 0.76 s; about 4.6 MB | 0.038 s; 206,663 B |
+| Reimport with waiver | 183.72 s | 26.36 s |
+| Dashboard, first / repeated | 18.02 / 28.98 s | 0.61 / 0.62 s |
+| List of 100 findings | 0.76 s; about 4.6 MB | 0.081 s; 207,199 B |
 | Database growth per identical reimport | about 223 MiB | about 38 MiB |
-| Final database after the fixed workload | 1,138.7 MiB | 192.5 MiB |
-| Plain JSON over the 50-MiB limit | late failure, 56.46 s | bounded failure, 4.11 s |
-| Full JSON (gzip) | unavailable | succeeds, 29.14 s; 21,542,037 B |
+| Final database after the fixed workload | 1,138.7 MiB | 192.6 MiB |
+| Plain JSON over the 50-MiB limit | late failure, 56.46 s | bounded failure, 4.25 s |
+| Full JSON (gzip) | unavailable | succeeds, 29.53 s; 21,544,106 B |
 
-At 1,000 scopes: import 2.37 s; repeated imports 4.58 / 4.57 s; an additional
+The earlier 1,000-scope measurement at `8491989b` recorded: import 2.37 s;
+repeated imports 4.58 / 4.57 s; an additional
 scope 0.10 s; one-scope waiver 0.11 s; dashboard 0.10 s. At both scales the number
 and compressed bytes of shared sections remain exactly unchanged across identical
 reimports. The stale-day read performs zero mutations and returns its explicit
-pending response. The 5k worker refresh with the stale marker takes 0.34 s; this
+pending response. The 5k worker refresh with the stale marker takes 0.36 s; this
 case invalidates the marker, not every waiver's actual expiration date. Expiration
 semantics are covered separately by worker and source-waiver tests.
 
 The independent 10k smoke records a 24.01 s import, 1.07 s additional scope,
 0.10 s tail page and 266.9 MiB increase in process peak RSS (398.7 MiB total).
 The repeated-import 5k workload still reaches about 1,352 MiB cumulative process
-peak RSS. This is a real remaining limit: imports and native full reevaluations
+peak RSS in the first measurement and 1,340 MiB in the final review measurement.
+This is a real remaining limit: imports and native full reevaluations
 still materialize substantial graphs. Current dashboard aggregation is linear in
 compact findings. This implementation establishes tested behavior at these scales,
 not a 50k-scope capacity guarantee or a universal 15–20x reduction.
 
 The before/after probe output and validation logs are retained with the task's
 `vpw-decision-storage-implementation/final` artifact. Repository-owned work budgets
-and the reproduction command below protect the behavior independently of those
+and the final review's `vpw-decision-storage-review` artifact preserve both measured
+versions. The reproduction command below protects the behavior independently of those
 local timing observations.
 
 ### Daily maintenance operations
