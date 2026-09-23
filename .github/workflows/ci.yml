@@ -397,6 +397,10 @@ jobs:
         if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: make frontend-build
 
+      - name: Check packaged runtime assets
+        if: steps.frontend-scope.outputs.run-frontend == 'true'
+        run: make runtime-assets-check
+
       - name: Typecheck frontend tests
         if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: make frontend-test-types
