@@ -710,24 +710,28 @@ def test_backup_is_private_and_restorable_with_permissive_caller_umask(tmp_path:
     restore_root = tmp_path / "restored"
     restore_root.mkdir()
     destination = restore_root / "workbench.db"
-    subprocess.run(
-        [
-            "sh",
-            "-c",
-            'umask 022; exec "$@"',
-            "sh",
-            str(REPO_ROOT / "scripts/workbench-restore.sh"),
-            str(backup_dir),
-        ],
-        capture_output=True,
-        check=True,
-        env={
-            **os.environ,
-            "SQLITE_DATABASE_PATH": str(destination),
-            "ARTIFACT_RESTORE_ROOT": str(restore_root),
-        },
-        text=True,
-    )
+    backup_dir.chmod(0o500)
+    try:
+        subprocess.run(
+            [
+                "sh",
+                "-c",
+                'umask 022; exec "$@"',
+                "sh",
+                str(REPO_ROOT / "scripts/workbench-restore.sh"),
+                str(backup_dir),
+            ],
+            capture_output=True,
+            check=True,
+            env={
+                **os.environ,
+                "SQLITE_DATABASE_PATH": str(destination),
+                "ARTIFACT_RESTORE_ROOT": str(restore_root),
+            },
+            text=True,
+        )
+    finally:
+        backup_dir.chmod(0o700)
     database = sqlite3.connect(destination)
     try:
         assert database.execute("SELECT value FROM backup_probe").fetchone() == ("private-backup",)
@@ -736,6 +740,270 @@ def test_backup_is_private_and_restorable_with_permissive_caller_umask(tmp_path:
     assert (restore_root / "imports" / "upload.txt").read_text(encoding="utf-8") == (
         "private upload"
     )
+    assert not any(
+        (backup_dir / f"workbench.db{suffix}").exists() for suffix in ("-wal", "-shm", "-journal")
+    )
+
+
+@pytest.mark.parametrize("legacy", (False, True))
+@pytest.mark.parametrize(
+    ("suffix", "sidecar_kind"),
+    (("-wal", "file"), ("-shm", "file"), ("-journal", "file"), ("-wal", "symlink")),
+)
+def test_restore_refuses_unchecksummed_sqlite_source_sidecars(
+    tmp_path: Path, legacy: bool, suffix: str, sidecar_kind: str
+) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    database_path = source / "workbench.db"
+    with closing(sqlite3.connect(database_path)) as database:
+        database.execute("CREATE TABLE backup_probe (value TEXT NOT NULL)")
+        database.execute("INSERT INTO backup_probe VALUES ('preserved')")
+        database.commit()
+    backup = tmp_path / "backup"
+    subprocess.run(
+        [str(REPO_ROOT / "scripts/workbench-backup.sh")],
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(database_path),
+            "WORKBENCH_ARTIFACT_MODE": "none",
+            "BACKUP_DIR": str(backup),
+        },
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    checksums = backup / "backup-checksums.json"
+    recorded = json.loads(checksums.read_text(encoding="utf-8"))["sha256"]
+    assert all(
+        hashlib.sha256((backup / name).read_bytes()).hexdigest() == digest
+        for name, digest in recorded.items()
+    )
+    sidecar = backup / f"workbench.db{suffix}"
+    if sidecar_kind == "symlink":
+        sidecar.symlink_to(tmp_path / "missing-sidecar")
+    else:
+        sidecar.write_bytes(b"")
+    if legacy:
+        checksums.unlink()
+    else:
+        # The declared payload remains unchanged; only an undeclared SQLite
+        # sidecar has been added beside it.
+        assert all(
+            hashlib.sha256((backup / name).read_bytes()).hexdigest() == digest
+            for name, digest in recorded.items()
+        )
+        verified = subprocess.run(
+            [
+                sys.executable,
+                str(REPO_ROOT / "scripts/verify_backup_checksums.py"),
+                "verify",
+                str(backup),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert verified.returncode != 0
+        assert "SQLite backup sidecar" in verified.stderr
+        recreated = subprocess.run(
+            [
+                sys.executable,
+                str(REPO_ROOT / "scripts/verify_backup_checksums.py"),
+                "create",
+                str(backup),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert recreated.returncode != 0
+        assert "SQLite backup sidecar" in recreated.stderr
+
+    target = tmp_path / "restored"
+    target.mkdir()
+    restored = subprocess.run(
+        [str(REPO_ROOT / "scripts/workbench-restore.sh"), str(backup)],
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(target / "workbench.db"),
+            "ARTIFACT_RESTORE_ROOT": str(target),
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert restored.returncode != 0
+    assert "SQLite backup sidecar" in restored.stderr
+    assert list(target.iterdir()) == []
+    prepared = tmp_path / "prepared.db"
+    direct = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts/restore_report_paths.py"),
+            "prepare",
+            str(backup / "workbench.db"),
+            str(target),
+            str(prepared),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert direct.returncode != 0
+    assert "SQLite backup sidecar" in direct.stderr
+    assert not prepared.exists()
+    direct_database = tmp_path / "direct-restore.db"
+    direct_restore = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts/sqlite_backup.py"),
+            "restore",
+            str(backup / "workbench.db"),
+            str(direct_database),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert direct_restore.returncode != 0
+    assert "SQLite backup sidecar" in direct_restore.stderr
+    assert not direct_database.exists()
+
+
+@pytest.mark.parametrize(
+    ("payload", "kind"),
+    (
+        ("workbench.db", "symlink"),
+        ("workbench.db", "directory"),
+        ("artifacts.tar", "symlink"),
+        ("backup-manifest.json", "symlink"),
+        ("workbench.dump", "symlink"),
+        ("backup-checksums.json", "dangling_symlink"),
+    ),
+)
+def test_legacy_restore_refuses_nonregular_named_backup_files(
+    tmp_path: Path, payload: str, kind: str
+) -> None:
+    outside_database = tmp_path / "outside.db"
+    with closing(sqlite3.connect(outside_database)) as database:
+        database.execute("CREATE TABLE outside_probe (value TEXT NOT NULL)")
+        database.execute("INSERT INTO outside_probe VALUES ('foreign')")
+        database.commit()
+    backup = tmp_path / "legacy"
+    backup.mkdir()
+    if payload != "workbench.db":
+        (backup / "workbench.db").write_bytes(outside_database.read_bytes())
+    external = tmp_path / f"external-{payload}"
+    if payload == "artifacts.tar":
+        with tarfile.open(external, "w"):
+            pass
+    elif payload == "backup-manifest.json":
+        external.write_text(
+            json.dumps(
+                {
+                    "schema": "vpw-sqlite-backup.v1",
+                    "report_root": str(tmp_path / "reports"),
+                    "report_archive_root": "reports",
+                    "upload_archive_root": "imports",
+                }
+            ),
+            encoding="utf-8",
+        )
+    elif payload == "workbench.db":
+        external = outside_database
+    elif kind != "dangling_symlink":
+        external.write_bytes(b"unused")
+    named = backup / payload
+    if kind == "directory":
+        named.mkdir()
+    else:
+        named.symlink_to(external)
+
+    target = tmp_path / "restored"
+    restored = subprocess.run(
+        [str(REPO_ROOT / "scripts/workbench-restore.sh"), str(backup)],
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(target / "workbench.db"),
+            "ARTIFACT_RESTORE_ROOT": str(target),
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert restored.returncode != 0
+    assert "Backup file must be a regular file" in restored.stderr
+    assert not target.exists()
+    if payload in {"artifacts.tar", "backup-manifest.json"}:
+        prepared = tmp_path / "prepared.db"
+        option = "--archive" if payload == "artifacts.tar" else "--manifest"
+        direct = subprocess.run(
+            [
+                sys.executable,
+                str(REPO_ROOT / "scripts/restore_report_paths.py"),
+                "prepare",
+                str(backup / "workbench.db"),
+                str(target),
+                str(prepared),
+                option,
+                str(named),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert direct.returncode != 0
+        assert "Backup file must be a regular file" in direct.stderr
+        assert not prepared.exists()
+
+
+@pytest.mark.parametrize("kind", ("symlink", "directory"))
+def test_direct_sqlite_restore_helpers_refuse_nonregular_source(tmp_path: Path, kind: str) -> None:
+    backup = tmp_path / "backup"
+    backup.mkdir()
+    database_path = backup / "workbench.db"
+    if kind == "symlink":
+        outside = tmp_path / "outside.db"
+        with closing(sqlite3.connect(outside)) as database:
+            database.execute("CREATE TABLE outside_probe (value TEXT NOT NULL)")
+            database.commit()
+        database_path.symlink_to(outside)
+    else:
+        database_path.mkdir()
+    prepared = tmp_path / "prepared.db"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts/restore_report_paths.py"),
+            "prepare",
+            str(database_path),
+            str(tmp_path / "restored"),
+            str(prepared),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "Backup file must be a regular file" in result.stderr
+    assert not prepared.exists()
+    destination = tmp_path / "direct-restored" / "workbench.db"
+    direct = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts/sqlite_backup.py"),
+            "restore",
+            str(database_path),
+            str(destination),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert direct.returncode != 0
+    assert "Backup file must be a regular file" in direct.stderr
+    assert not destination.parent.exists()
 
 
 @pytest.mark.parametrize("existing_kind", ("directory", "file", "symlink"))
@@ -828,6 +1096,96 @@ def test_sqlite_restore_is_verified_and_refuses_active_wal_destination(tmp_path:
         )
     finally:
         database.close()
+
+
+def test_direct_sqlite_restore_from_read_only_wal_snapshot(tmp_path: Path) -> None:
+    snapshot = tmp_path / "snapshot"
+    snapshot.mkdir()
+    database_path = snapshot / "workbench.db"
+    with closing(sqlite3.connect(database_path)) as database:
+        database.execute("PRAGMA journal_mode=WAL")
+        database.execute("CREATE TABLE restore_probe (value TEXT NOT NULL)")
+        database.execute("INSERT INTO restore_probe VALUES ('self-contained')")
+        database.commit()
+    destination = tmp_path / "restored.db"
+    snapshot.chmod(0o500)
+    try:
+        subprocess.run(
+            [
+                sys.executable,
+                str(REPO_ROOT / "scripts/sqlite_backup.py"),
+                "restore",
+                str(database_path),
+                str(destination),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    finally:
+        snapshot.chmod(0o700)
+    assert not any(
+        (snapshot / f"workbench.db{suffix}").exists() for suffix in ("-wal", "-shm", "-journal")
+    )
+    with closing(sqlite3.connect(destination)) as database:
+        assert database.execute("SELECT value FROM restore_probe").fetchone() == ("self-contained",)
+
+
+def test_direct_sqlite_restore_rejects_wal_only_row_outside_checksum(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    database_path = source / "workbench.db"
+    with closing(sqlite3.connect(database_path)) as database:
+        database.execute("PRAGMA journal_mode=WAL")
+        database.execute("CREATE TABLE restore_probe (value TEXT NOT NULL)")
+        database.execute("INSERT INTO restore_probe VALUES ('checked')")
+        database.commit()
+    backup = tmp_path / "backup"
+    subprocess.run(
+        [str(REPO_ROOT / "scripts/workbench-backup.sh")],
+        env={
+            **os.environ,
+            "SQLITE_DATABASE_PATH": str(database_path),
+            "WORKBENCH_ARTIFACT_MODE": "none",
+            "BACKUP_DIR": str(backup),
+        },
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    backup_database = backup / "workbench.db"
+    declared_hash = json.loads((backup / "backup-checksums.json").read_text(encoding="utf-8"))[
+        "sha256"
+    ]["workbench.db"]
+    assert hashlib.sha256(backup_database.read_bytes()).hexdigest() == declared_hash
+    with closing(sqlite3.connect(backup_database)) as database:
+        assert database.execute("PRAGMA journal_mode").fetchone() == ("wal",)
+        database.execute("PRAGMA wal_autocheckpoint=0")
+        database.execute("INSERT INTO restore_probe VALUES ('wal-only')")
+        database.commit()
+        assert database.execute("SELECT value FROM restore_probe ORDER BY rowid").fetchall() == [
+            ("checked",),
+            ("wal-only",),
+        ]
+        assert (backup / "workbench.db-wal").stat().st_size > 0
+        assert hashlib.sha256(backup_database.read_bytes()).hexdigest() == declared_hash
+
+        destination = tmp_path / "direct-restored" / "workbench.db"
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(REPO_ROOT / "scripts/sqlite_backup.py"),
+                "restore",
+                str(backup_database),
+                str(destination),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode != 0
+        assert "SQLite backup sidecar" in result.stderr
+        assert not destination.parent.exists()
 
 
 def test_restore_validates_artifact_archive_before_replacing_sqlite(tmp_path: Path) -> None:

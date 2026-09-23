@@ -1,4 +1,4 @@
-"""Create or restore an integrity-checked SQLite backup, including WAL state."""
+"""Back up live SQLite state including WAL, or restore a self-contained snapshot."""
 
 from __future__ import annotations
 
@@ -10,6 +10,11 @@ from collections.abc import Sequence
 from contextlib import closing
 from pathlib import Path
 
+if __package__:
+    from .verify_backup_checksums import reject_sqlite_sidecars, require_regular_backup_file
+else:
+    from verify_backup_checksums import reject_sqlite_sidecars, require_regular_backup_file
+
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Run an atomic SQLite backup or restore operation."""
@@ -18,22 +23,35 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("source", type=Path)
     parser.add_argument("destination", type=Path)
     args = parser.parse_args(argv)
-    source = args.source.expanduser().resolve(strict=True)
+    source = args.source.expanduser()
+    if args.action == "restore":
+        try:
+            require_regular_backup_file(source)
+        except ValueError as exc:
+            raise SystemExit(f"SQLite restore refused: {exc}") from exc
+    source = source.resolve(strict=True)
     destination = args.destination.expanduser().resolve(strict=False)
     if source == destination:
         raise SystemExit("SQLite backup source and destination must differ.")
+    if args.action == "restore":
+        try:
+            reject_sqlite_sidecars(source)
+        except ValueError as exc:
+            raise SystemExit(f"SQLite restore refused: {exc}") from exc
     destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     if args.action == "restore":
         _assert_restore_destination_is_offline(destination)
-    _copy_database(source, destination)
+    _copy_database(source, destination, immutable_source=args.action == "restore")
     print(f"SQLite {args.action} verified: {destination}")
     return 0
 
 
-def _copy_database(source: Path, destination: Path) -> None:
+def _copy_database(source: Path, destination: Path, *, immutable_source: bool = False) -> None:
     temporary = destination.with_name(f".{destination.name}.{uuid.uuid4().hex}.tmp")
     temporary.unlink(missing_ok=True)
     source_uri = f"{source.as_uri()}?mode=ro"
+    if immutable_source:
+        source_uri += "&immutable=1"
     try:
         with (
             closing(sqlite3.connect(source_uri, uri=True, timeout=30)) as source_connection,
