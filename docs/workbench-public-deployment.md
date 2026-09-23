@@ -311,7 +311,10 @@ archive, and report-root manifest. Restore verifies it before extracting or
 activating anything. This detects changed or missing backup files; because the
 checksum list is stored beside them, it is not a signature against someone who
 can modify the entire backup. Older backups without this file remain readable
-but receive a warning.
+but receive a warning. SQLite backup directories must not contain
+`workbench.db-wal`, `workbench.db-shm`, or `workbench.db-journal`: these files
+are outside the checksum list and restore refuses them even for older backups.
+Named backup payloads must also be regular files, not symlinks or directories.
 
 ## Restore
 

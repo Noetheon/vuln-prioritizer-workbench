@@ -11,6 +11,7 @@ from pathlib import Path
 SCHEMA = "vpw-backup-checksums.v1"
 BACKUP_NAMES = {"workbench.db", "workbench.dump", "artifacts.tar", "backup-manifest.json"}
 CHECKSUM_NAME = "backup-checksums.json"
+SQLITE_SIDECAR_SUFFIXES = ("-wal", "-shm", "-journal")
 
 
 def _sha256(path: Path) -> str:
@@ -21,12 +22,26 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def reject_sqlite_sidecars(database: Path) -> None:
+    """Reject undeclared SQLite state beside a self-contained backup database."""
+    for suffix in SQLITE_SIDECAR_SUFFIXES:
+        sidecar = database.with_name(f"{database.name}{suffix}")
+        if sidecar.exists() or sidecar.is_symlink():
+            raise ValueError(f"SQLite backup sidecar is not allowed: {sidecar.name}.")
+
+
+def require_regular_backup_file(path: Path) -> None:
+    """Reject links and special files before a backup payload is consumed."""
+    if path.is_symlink() or not path.is_file():
+        raise ValueError(f"Backup file must be a regular file: {path.name}.")
+
+
 def _files(directory: Path) -> set[str]:
-    if (directory / CHECKSUM_NAME).is_symlink():
-        raise ValueError("Backup checksum file must not be a symlink.")
-    for name in BACKUP_NAMES:
-        if (directory / name).is_symlink():
-            raise ValueError("Backup file must not be a symlink.")
+    reject_sqlite_sidecars(directory / "workbench.db")
+    for name in (CHECKSUM_NAME, *sorted(BACKUP_NAMES)):
+        candidate = directory / name
+        if candidate.exists() or candidate.is_symlink():
+            require_regular_backup_file(candidate)
     return {name for name in BACKUP_NAMES if (directory / name).is_file()}
 
 
@@ -66,15 +81,17 @@ def _verify(directory: Path) -> None:
 def main() -> int:
     """Create or verify checksums without exposing backup content."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("create", "verify"))
+    parser.add_argument("action", choices=("create", "verify", "check-source"))
     parser.add_argument("backup_dir", type=Path)
     args = parser.parse_args()
     directory = args.backup_dir.expanduser().resolve(strict=True)
     try:
         if args.action == "create":
             _create(directory)
-        else:
+        elif args.action == "verify":
             _verify(directory)
+        else:
+            _files(directory)
     except (OSError, ValueError) as exc:
         raise SystemExit(f"Backup checksum verification failed: {exc}") from exc
     return 0
