@@ -48,6 +48,7 @@ export const sortOptions: readonly FindingsSort[] = [
 export const defaultFindingFilters: FindingFilters = {
   cvssMax: "",
   cvssMin: "",
+  dataGap: "",
   epssMax: "",
   epssMin: "",
   exposure: "",
@@ -88,11 +89,13 @@ export const defaultFindingsSearchState: FindingsSearchState = {
 
 export const directionOptions = ["asc", "desc"] as const
 export const kevOptions = ["true", "false"] as const
+export const dataGapOptions = ["true", "false"] as const
 export const searchKeys = [
   "assetId",
   "assetKey",
   "cvssMax",
   "cvssMin",
+  "dataGap",
   "direction",
   "epssMax",
   "epssMin",

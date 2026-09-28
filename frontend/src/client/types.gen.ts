@@ -2675,6 +2675,22 @@ export type GitHubIssueExportRecord = {
 };
 
 /**
+ * GitHubIssueExportSettingsPublic
+ *
+ * Operator-configured GitHub credential source, by name and presence only.
+ */
+export type GitHubIssueExportSettingsPublic = {
+    /**
+     * Token Configured
+     */
+    token_configured?: boolean;
+    /**
+     * Token Env
+     */
+    token_env: string;
+};
+
+/**
  * GitHubIssuePreviewCreate
  *
  * Request payload for preparing GitHub issue markdown.
@@ -6261,6 +6277,22 @@ export type PatchApiV1FindingsByFindingIdStatusResponses = {
 
 export type PatchApiV1FindingsByFindingIdStatusResponse = PatchApiV1FindingsByFindingIdStatusResponses[keyof PatchApiV1FindingsByFindingIdStatusResponses];
 
+export type GetApiV1GithubIssuesExportSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/github/issues/export-settings';
+};
+
+export type GetApiV1GithubIssuesExportSettingsResponses = {
+    /**
+     * Successful Response
+     */
+    200: GitHubIssueExportSettingsPublic;
+};
+
+export type GetApiV1GithubIssuesExportSettingsResponse = GetApiV1GithubIssuesExportSettingsResponses[keyof GetApiV1GithubIssuesExportSettingsResponses];
+
 export type GetApiV1ProjectsData = {
     body?: never;
     path?: never;
@@ -6770,6 +6802,12 @@ export type GetApiV1ProjectsByProjectIdFindingsData = {
          * Cvss Max
          */
         cvss_max?: number | null;
+        /**
+         * Data Gap
+         *
+         * True selects findings without NVD CVSS or FIRST EPSS; false the rest.
+         */
+        data_gap?: boolean | null;
         /**
          * Include Evidence
          *

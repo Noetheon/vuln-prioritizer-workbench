@@ -635,6 +635,21 @@ def test_vpw042_findings_list_filters_and_display_fields(
         headers,
         {"cvss_min": "8.0", "cvss_max": "9.0"},
     ) == ["CVE-2022-22965"]
+    assert _finding_cves(workbench_api_env, project, headers, {"data_gap": "true"}) == []
+    with Session(workbench_api_env.engine) as session:
+        projection = session.get(
+            workbench_api_env.app_models.FindingCurrentProjection, seeded["critical"]
+        )
+        assert projection is not None
+        projection.epss = None
+        session.add(projection)
+        session.commit()
+    assert _finding_cves(workbench_api_env, project, headers, {"data_gap": "true"}) == [
+        DEMO_CVE_LOG4SHELL
+    ]
+    assert DEMO_CVE_LOG4SHELL not in _finding_cves(
+        workbench_api_env, project, headers, {"data_gap": "false"}
+    )
 
     detail_response = workbench_api_env.client.get(
         f"/api/v1/findings/{seeded['critical']}",

@@ -5245,6 +5245,26 @@ export const GitHubIssueExportRecordSchema = {
     type: 'object'
 } as const;
 
+export const GitHubIssueExportSettingsPublicSchema = {
+    description: 'Operator-configured GitHub credential source, by name and presence only.',
+    properties: {
+        token_configured: {
+            default: false,
+            title: 'Token Configured',
+            type: 'boolean'
+        },
+        token_env: {
+            title: 'Token Env',
+            type: 'string'
+        }
+    },
+    required: [
+        'token_env'
+    ],
+    title: 'GitHubIssueExportSettingsPublic',
+    type: 'object'
+} as const;
+
 export const GitHubIssuePreviewCreateSchema = {
     description: 'Request payload for preparing GitHub issue markdown.',
     properties: {
@@ -9933,7 +9953,7 @@ export const ScopeEvaluationInputSchema = {
             type: 'array'
         },
         engine_version: {
-            default: 'scope-evaluator.v1',
+            default: 'scope-evaluator.v2',
             title: 'Engine Version',
             type: 'string'
         },

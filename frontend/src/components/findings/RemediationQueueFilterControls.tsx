@@ -13,6 +13,7 @@ import {
 import { formatLabel as labelize } from "@/lib/ui-copy"
 import { RangeFilter } from "./RemediationQueueRangeFilter"
 import {
+  type DataGapFilter,
   exposureOptions,
   type FindingFilters,
   type KevFilter,
@@ -150,6 +151,30 @@ export function AdvancedFilterSelects({
                 {labelize(e)}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="findings-filter-field findings-filter-field--wide-select">
+        <span className="vpw-label findings-filter-label">
+          Provider data
+        </span>
+        <Select
+          onValueChange={(v) =>
+            onFilterChange("dataGap", v === "__all" ? "" : (v as DataGapFilter))
+          }
+          value={findingFilters.dataGap || "__all"}
+        >
+          <SelectTrigger
+            aria-label="Provider data"
+            className="findings-filter-control h-9 w-full text-sm"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all">Any</SelectItem>
+            <SelectItem value="true">Missing CVSS or EPSS</SelectItem>
+            <SelectItem value="false">Complete</SelectItem>
           </SelectContent>
         </Select>
       </div>

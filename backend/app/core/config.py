@@ -9,7 +9,11 @@ from pathlib import Path
 from typing import Literal, cast
 from urllib.parse import quote_plus, urlparse
 
-from app.domain.engine.config import DEFAULT_NVD_API_KEY_ENV, validate_env_var_name
+from app.domain.engine.config import (
+    DEFAULT_GITHUB_TOKEN_ENV,
+    DEFAULT_NVD_API_KEY_ENV,
+    validate_env_var_name,
+)
 
 EnvironmentName = Literal["local", "staging", "production"]
 VALID_ENVIRONMENTS: set[str] = {"local", "staging", "production"}
@@ -59,6 +63,7 @@ class Settings:
     SBOM_SCAN_TIMEOUT_SECONDS: int = 300
     SBOM_SCAN_MAX_OUTPUT_MB: int = 64
     NVD_API_KEY_ENV: str = DEFAULT_NVD_API_KEY_ENV
+    GITHUB_TOKEN_ENV: str = DEFAULT_GITHUB_TOKEN_ENV
     ATTACK_ARTIFACT_DIR: str = "data/attack"
     DEMO_PROVIDER_SNAPSHOT_ENABLED: bool = False
     DEMO_WORKSPACE_ENABLED: bool = False
@@ -96,6 +101,14 @@ class Settings:
             validate_env_var_name(
                 self.NVD_API_KEY_ENV,
                 label="NVD API key environment variable name",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "GITHUB_TOKEN_ENV",
+            validate_env_var_name(
+                self.GITHUB_TOKEN_ENV,
+                label="GitHub token environment variable name",
             ),
         )
         _validate_secret_defaults(self)
@@ -224,6 +237,10 @@ def load_settings() -> Settings:
         NVD_API_KEY_ENV=environ.get(
             "WORKBENCH_NVD_API_KEY_ENV",
             DEFAULT_NVD_API_KEY_ENV,
+        ),
+        GITHUB_TOKEN_ENV=environ.get(
+            "WORKBENCH_GITHUB_TOKEN_ENV",
+            DEFAULT_GITHUB_TOKEN_ENV,
         ),
         ATTACK_ARTIFACT_DIR=environ.get("ATTACK_ARTIFACT_DIR", "data/attack"),
         DEMO_PROVIDER_SNAPSHOT_ENABLED=_bool_from_env(

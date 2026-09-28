@@ -1,6 +1,7 @@
 import type { AssetExposure, FindingPriority, FindingStatus } from "../../api-client"
-import type { KevFilter } from "../../lib/app-defaults"
+import type { DataGapFilter, KevFilter } from "../../lib/app-defaults"
 import {
+  dataGapOptions,
   defaultFindingsSearchState,
   directionOptions,
   findingExposureOptions,
@@ -55,6 +56,10 @@ export function parseFindingsSearch(input: unknown): FindingsSearchState {
     assetKey: assetId ? searchValue(source, "assetKey") : "",
     cvssMax: cvssRange.maxValue,
     cvssMin: cvssRange.minValue,
+    dataGap: optionalEnumValue<DataGapFilter>(
+      searchValue(source, "dataGap"),
+      dataGapOptions,
+    ),
     direction: enumValue(
       searchValue(source, "direction"),
       directionOptions,

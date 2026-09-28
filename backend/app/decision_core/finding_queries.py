@@ -62,6 +62,7 @@ def list_project_findings_page(
     epss_max: float | None = None,
     cvss_min: float | None = None,
     cvss_max: float | None = None,
+    data_gap: bool | None = None,
 ) -> tuple[list[Finding], int]:
     """Return a filtered, sorted, paginated project finding page."""
     return list_project_findings_query(
@@ -85,6 +86,7 @@ def list_project_findings_page(
             epss_max=epss_max,
             cvss_min=cvss_min,
             cvss_max=cvss_max,
+            data_gap=data_gap,
         ),
     )
 
@@ -157,6 +159,12 @@ def _database_finding_filters(query: FindingPageQuery) -> list[Any]:
         filters.append(col(FindingCurrentProjection.cvss_base_score) >= query.cvss_min)
     if query.cvss_max is not None:
         filters.append(col(FindingCurrentProjection.cvss_base_score) <= query.cvss_max)
+    if query.data_gap is not None:
+        missing_provider_signal = or_(
+            col(FindingCurrentProjection.cvss_base_score).is_(None),
+            col(FindingCurrentProjection.epss).is_(None),
+        )
+        filters.append(missing_provider_signal if query.data_gap else ~missing_provider_signal)
     if query.owner and query.owner.strip():
         filters.append(_database_contains(Asset.owner, query.owner))
     if query.service and query.service.strip():

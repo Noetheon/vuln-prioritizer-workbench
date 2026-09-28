@@ -5,18 +5,20 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from app.api.deps import LocalActor, SessionDep
 from app.api.routes.workbench_access import require_current_decisions
+from app.core.app_state import workbench_settings
 from app.core.local_actor import LocalWorkbenchActor
 from app.models import (
     AuditEventStatus,
     GitHubIssueExportCreate,
     GitHubIssueExportPublic,
     GitHubIssueExportRecord,
+    GitHubIssueExportSettingsPublic,
     GitHubIssuePreviewCreate,
     GitHubIssuePreviewPublic,
 )
@@ -26,12 +28,30 @@ from app.services import (
     build_github_issue_preview_items,
     create_github_issue,
     github_export_token,
+    github_export_token_configured,
     github_repository_path,
 )
 from app.services.audit import record_audit_event
 from app.services.decision_scope_lock import lock_project_decision_scope
 
 router = APIRouter(tags=["github-issues"])
+
+
+@router.get(
+    "/github/issues/export-settings",
+    response_model=GitHubIssueExportSettingsPublic,
+)
+def read_github_issue_export_settings(
+    request: Request,
+    local_actor: LocalActor,
+) -> GitHubIssueExportSettingsPublic:
+    """Return the configured token variable name and whether it is set, never its value."""
+    _ = local_actor
+    token_env = workbench_settings(request).GITHUB_TOKEN_ENV
+    return GitHubIssueExportSettingsPublic(
+        token_env=token_env,
+        token_configured=github_export_token_configured(token_env),
+    )
 
 
 @router.post(

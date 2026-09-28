@@ -155,6 +155,13 @@ class GitHubIssueExportPublic(SQLModel):
     data: list[GitHubIssueExportRecord] = Field(default_factory=list)
 
 
+class GitHubIssueExportSettingsPublic(SQLModel):
+    """Operator-configured GitHub credential source, by name and presence only."""
+
+    token_env: str
+    token_configured: bool = False
+
+
 class GitHubIssueExport(SQLModel, table=True):
     """Persisted idempotency record for externally created GitHub issues."""
 

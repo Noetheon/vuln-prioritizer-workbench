@@ -54,6 +54,15 @@ class InputOccurrence(StrictModel):
     raw_evidence: dict[str, object] = Field(default_factory=dict, exclude=True)
 
 
+class SeverityProxy(StrictModel):
+    """Source-reported severity band used when NVD has not published CVSS."""
+
+    severity: str
+    cvss_floor: float
+    raw_value: str
+    source_format: str
+
+
 class InputSourceSummary(StrictModel):
     """Data representation and logic for Input Source Summary."""
 

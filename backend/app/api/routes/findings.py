@@ -75,6 +75,10 @@ def read_project_findings(
     epss_max: float | None = Query(default=None, ge=0, le=1),
     cvss_min: float | None = Query(default=None, ge=0, le=10),
     cvss_max: float | None = Query(default=None, ge=0, le=10),
+    data_gap: bool | None = Query(
+        default=None,
+        description="True selects findings without NVD CVSS or FIRST EPSS; false the rest.",
+    ),
     include_evidence: bool = Query(
         default=False,
         description=(
@@ -105,6 +109,7 @@ def read_project_findings(
             epss_max=epss_max,
             cvss_min=cvss_min,
             cvss_max=cvss_max,
+            data_gap=data_gap,
         ),
     )
     views = (

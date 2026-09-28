@@ -112,6 +112,15 @@ export function RemediationQueueFilters({
           onRemove: () => onFilterChange("exposure", ""),
         }
       : null,
+    findingFilters.dataGap
+      ? {
+          label:
+            findingFilters.dataGap === "true"
+              ? "Missing CVSS or EPSS"
+              : "Complete provider data",
+          onRemove: () => onFilterChange("dataGap", ""),
+        }
+      : null,
     findingFilters.epssMin
       ? {
           label: `EPSS min: ${findingFilters.epssMin}`,

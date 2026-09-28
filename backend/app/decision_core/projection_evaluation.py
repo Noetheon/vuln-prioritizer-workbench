@@ -18,7 +18,11 @@ from app.decision_core.contracts import (
     OccurrenceScopeV2,
 )
 from app.decision_core.decision_graph import ScopeKey
-from app.decision_core.evaluation import ScopeEvaluationInput, evaluate_scope
+from app.decision_core.evaluation import (
+    EVALUATION_ENGINE_VERSION,
+    ScopeEvaluationInput,
+    evaluate_scope,
+)
 from app.decision_core.ledger import DecisionLedgerInvariantError
 from app.domain.asset_identity import normalize_asset_identity_value
 from app.domain.engine.inputs.parsers.common import (
@@ -59,6 +63,8 @@ def evaluate_evidence_payload(
         ScopeKey.from_occurrence(item).sort_key() != expected_scope for item in actual.observations
     ):
         raise DecisionLedgerInvariantError("Evaluation inputs changed the stored finding scope.")
+    # Record which rules produced this revision; the input schema is unchanged.
+    actual = actual.model_copy(update={"engine_version": EVALUATION_ENGINE_VERSION})
     decision = evaluate_scope(actual)
     updated = _apply_recomputed_decision(payload, decision)
     updated["evaluation_input"] = actual.model_dump(mode="json")

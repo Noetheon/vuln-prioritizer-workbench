@@ -41,9 +41,12 @@ export const findingsSavedViewOptions: Array<{
   { label: "Fixed", value: "fixed" },
 ]
 
+export type DataGapFilter = "" | "true" | "false"
+
 export type FindingFilters = {
   cvssMax: string
   cvssMin: string
+  dataGap: DataGapFilter
   epssMax: string
   epssMin: string
   exposure: "" | AssetExposure
@@ -272,6 +275,7 @@ export function advancedFilterCount(filters: FindingFilters) {
   return [
     filters.cvssMax,
     filters.cvssMin,
+    filters.dataGap,
     filters.epssMax,
     filters.epssMin,
     filters.exposure,

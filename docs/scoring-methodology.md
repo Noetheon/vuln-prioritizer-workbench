@@ -18,6 +18,31 @@ The base priority is rule-based from CVSS, FIRST EPSS, and CISA KEV:
 The base rule stays transparent so a finding can be explained in reports, API
 responses, the Findings table, and Finding Detail.
 
+### Missing NVD CVSS
+
+When NVD has not published a CVSS score, the severity that the imported
+evidence itself reports (for example Trivy `Severity`, Grype and GitHub
+advisory severities, Nessus `risk_factor` or its 0-4 level, an OpenVAS numeric
+severity, or a CycloneDX rating) stands in for CVSS at the **lower bound** of
+its qualitative band:
+
+| Reported severity | CVSS used by the base rule |
+| --- | --- |
+| Critical | 9.0 |
+| High / Important | 7.0 |
+| Medium / Moderate | 4.0 |
+| Low | 0.1 |
+
+Negligible, informational, `none`, and unknown values are ignored. When several
+observations of one finding scope report different severities, the highest
+band applies. The proxy never replaces an NVD score, is never shown as a CVSS
+value, and appears as its own explanation driver (`priority.*.severity_proxy`),
+rationale sentence, and operational score reason. A Critical report therefore
+yields High until NVD analysis arrives, or Critical together with a high EPSS
+value, instead of silently falling to Low. Decisions produced with this rule
+record evaluation engine `scope-evaluator.v2`; older recorded inputs remain
+replayable and are re-recorded with the current engine version.
+
 ## Signal Inputs
 
 | Signal | Role |

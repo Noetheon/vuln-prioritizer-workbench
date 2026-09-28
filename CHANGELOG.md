@@ -19,6 +19,19 @@ exact git tag output when release wording needs to be verified.
 
 ### Added
 
+- Findings without NVD CVSS use the severity reported by their imported
+  evidence as a CVSS-band proxy (lower band bound) with its own explanation
+  driver, so unanalyzed Critical findings are no longer ranked as Low. The
+  evaluation engine version is now `scope-evaluator.v2`; recorded v1 inputs
+  stay replayable.
+- The Triage queue and findings API filter findings with missing CVSS or EPSS
+  (`data_gap`).
+- `GET /api/v1/github/issues/export-settings` reports the configured GitHub
+  token variable (`WORKBENCH_GITHUB_TOKEN_ENV`, default `GITHUB_TOKEN`) and
+  whether it is set, without its value.
+- State-changing API requests and WebSocket handshakes from other sites are
+  rejected (`Origin`/`Sec-Fetch-Site` check); non-browser clients are unaffected.
+
 - Explicit `json-gzip` exports for large historical runs, using the complete
   `analysis-result.v2` contract with bounded streaming and checksum validation.
 
@@ -63,6 +76,13 @@ exact git tag output when release wording needs to be verified.
   manifest; local audit and runtime files are excluded.
 
 ### Fixed
+
+- Creating a GitHub issue from Finding Detail sends the configured token
+  variable instead of failing with HTTP 422, and the dialog explains when the
+  variable is not set.
+- Reloading or deep-linking the Assets page in `vpw serve` loads the app
+  instead of a JSON 404, and every deep-linked page now carries the same CSP,
+  frame and host protections as `/`.
 
 - Startup and readiness reject incomplete columns and missing history tables in
   populated databases. Legacy SQLite table repairs roll back atomically on failure

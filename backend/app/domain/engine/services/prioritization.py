@@ -39,6 +39,7 @@ from app.domain.engine.services.prioritization_sorting import (
     sort_prioritized_findings,
 )
 from app.domain.engine.services.remediation import RemediationService
+from app.domain.engine.severity_proxy import severity_proxy_for_occurrences
 
 
 class PrioritizationService:
@@ -76,7 +77,18 @@ class PrioritizationService:
             suppressed_by_vex = is_suppressed_by_vex(provenance)
             under_investigation = is_under_investigation(provenance)
 
-            priority_label, priority_rank = determine_priority(nvd, epss, kev, self.policy)
+            severity_proxy = (
+                severity_proxy_for_occurrences(provenance.occurrences)
+                if nvd.cvss_base_score is None
+                else None
+            )
+            priority_label, priority_rank = determine_priority(
+                nvd,
+                epss,
+                kev,
+                self.policy,
+                severity_proxy=severity_proxy,
+            )
             remediation, recommended_action = remediation_service.build_action(
                 provenance,
                 priority_label=priority_label,
@@ -110,7 +122,14 @@ class PrioritizationService:
                     under_investigation=under_investigation,
                     priority_label=priority_label.value,
                     priority_rank=priority_rank,
-                    priority_drivers=build_priority_drivers(nvd, epss, kev, self.policy),
+                    priority_drivers=build_priority_drivers(
+                        nvd,
+                        epss,
+                        kev,
+                        self.policy,
+                        severity_proxy=severity_proxy,
+                    ),
+                    severity_proxy=severity_proxy,
                     rationale=build_rationale(
                         nvd,
                         epss,
@@ -120,6 +139,7 @@ class PrioritizationService:
                         context_summary=context_summary,
                         suppressed_by_vex=suppressed_by_vex,
                         under_investigation=under_investigation,
+                        severity_proxy=severity_proxy,
                     ),
                     provider_evidence=ProviderEvidence(
                         nvd=nvd,

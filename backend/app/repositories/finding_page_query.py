@@ -33,3 +33,4 @@ class FindingPageQuery:
     epss_max: float | None = None
     cvss_min: float | None = None
     cvss_max: float | None = None
+    data_gap: bool | None = None

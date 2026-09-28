@@ -57,6 +57,7 @@ ProviderSnapshot = _models_provider.ProviderSnapshot
 ProviderStatus = _models_provider.ProviderStatus
 RemediationComponent = _models_remediation.RemediationComponent
 RemediationPlan = _models_remediation.RemediationPlan
+SeverityProxy = _models_input.SeverityProxy
 SlaTarget = _models_decision.SlaTarget
 
 VexStatement = _models_input.VexStatement
@@ -250,6 +251,7 @@ class PrioritizedFinding(StrictModel):
     priority_rank: int
     priority_state: str | None = None
     priority_drivers: list[str] = Field(default_factory=list)
+    severity_proxy: SeverityProxy | None = None
     operational_score: int = 0
     operational_score_reasons: list[str] = Field(default_factory=list)
     explanation: PriorityExplanation | None = None

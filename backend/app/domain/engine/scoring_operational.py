@@ -194,12 +194,15 @@ def _epss_score_adjustment(
     policy: PriorityPolicy,
 ) -> tuple[int, str] | None:
     """Epss score adjustment function."""
+    cvss, proxied = _effective_cvss(finding)
     if (
         finding.epss is not None
         and finding.epss >= policy.critical_epss_threshold
-        and finding.cvss_base_score is not None
-        and finding.cvss_base_score >= policy.critical_cvss_threshold
+        and cvss is not None
+        and cvss >= policy.critical_cvss_threshold
     ):
+        if proxied:
+            return 8, "critical EPSS/reported severity threshold: +8"
         return 8, "critical EPSS/CVSS threshold: +8"
     if finding.epss is not None and finding.epss >= policy.high_epss_threshold:
         return 5, "high EPSS threshold: +5"
@@ -213,17 +216,22 @@ def _cvss_score_adjustment(
     policy: PriorityPolicy,
 ) -> tuple[int, str] | None:
     """Cvss score adjustment function."""
-    if (
-        finding.cvss_base_score is not None
-        and finding.cvss_base_score >= policy.high_cvss_threshold
-    ):
-        return 5, "high CVSS threshold: +5"
-    if (
-        finding.cvss_base_score is not None
-        and finding.cvss_base_score >= policy.medium_cvss_threshold
-    ):
-        return 2, "medium CVSS threshold: +2"
+    cvss, proxied = _effective_cvss(finding)
+    label = "reported severity band (no NVD CVSS)" if proxied else "CVSS threshold"
+    if cvss is not None and cvss >= policy.high_cvss_threshold:
+        return 5, f"high {label}: +5"
+    if cvss is not None and cvss >= policy.medium_cvss_threshold:
+        return 2, f"medium {label}: +2"
     return None
+
+
+def _effective_cvss(finding: PrioritizedFinding) -> tuple[float | None, bool]:
+    """Return NVD CVSS, or the recorded severity-band proxy when NVD has none."""
+    if finding.cvss_base_score is not None:
+        return finding.cvss_base_score, False
+    if finding.severity_proxy is not None:
+        return finding.severity_proxy.cvss_floor, True
+    return None, False
 
 
 def _asset_context_adjustments(finding: PrioritizedFinding) -> tuple[int, list[str]]:

@@ -73,10 +73,12 @@ export type FindingsDirection = NonNullable<
 >
 
 export type KevFilter = "" | "true" | "false"
+export type DataGapFilter = "" | "true" | "false"
 
 export type FindingFilters = {
   cvssMax: string
   cvssMin: string
+  dataGap: DataGapFilter
   epssMax: string
   epssMin: string
   exposure: "" | AssetExposure
@@ -90,6 +92,7 @@ export type FindingFilters = {
 export const defaultFindingFilters: FindingFilters = {
   cvssMax: "",
   cvssMin: "",
+  dataGap: "",
   epssMax: "",
   epssMin: "",
   exposure: "",

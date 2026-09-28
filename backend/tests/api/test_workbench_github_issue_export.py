@@ -1278,3 +1278,77 @@ def _audit_payloads(
             .order_by(app_models.AuditEvent.created_at)
         ).all()
     return [{"status": event.status, "detail": dict(event.detail_json or {})} for event in events]
+
+
+def test_github_issue_export_settings_name_the_token_variable_without_its_value(
+    workbench_api_env: WorkbenchApiEnv,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = workbench_api_env.client
+    headers = local_api_headers(client)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+
+    missing = client.get("/api/v1/github/issues/export-settings", headers=headers)
+
+    assert missing.status_code == 200, missing.text
+    assert missing.json() == {"token_env": "GITHUB_TOKEN", "token_configured": False}
+
+    client.app.state.workbench_settings = replace(
+        client.app.state.workbench_settings,
+        GITHUB_TOKEN_ENV="VPW_GITHUB_TOKEN",
+    )
+    monkeypatch.setenv("VPW_GITHUB_TOKEN", "ghp_settings_value_must_not_leak")
+
+    configured = client.get("/api/v1/github/issues/export-settings", headers=headers)
+
+    assert configured.status_code == 200, configured.text
+    assert configured.json() == {"token_env": "VPW_GITHUB_TOKEN", "token_configured": True}
+    assert "ghp_settings_value_must_not_leak" not in configured.text
+
+
+def test_github_issue_export_accepts_the_request_the_ui_builds_from_settings(
+    workbench_api_env: WorkbenchApiEnv,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = workbench_api_env.client
+    headers = local_api_headers(client)
+    project = create_project_via_api(client, headers)
+    seeded = seed_finding_pair(
+        workbench_api_env.engine,
+        workbench_api_env.app_models,
+        workbench_api_env.repositories,
+        project_id=UUID(project["id"]),
+        with_decision_evidence=True,
+    )
+    monkeypatch.setenv("GITHUB_TOKEN", "ghp_ui_contract_value")
+    posted: list[dict[str, Any]] = []
+
+    class CreatedResponse:
+        status_code = 201
+
+        def json(self) -> dict[str, Any]:
+            return {"html_url": "https://github.com/acme/triage/issues/7", "number": 7}
+
+    def fake_post(*args: Any, **kwargs: Any) -> CreatedResponse:
+        assert kwargs["headers"]["Authorization"] == "Bearer ghp_ui_contract_value"
+        posted.append(kwargs["json"])
+        return CreatedResponse()
+
+    monkeypatch.setattr("app.services.github_issues.requests.post", fake_post)
+    settings_payload = client.get("/api/v1/github/issues/export-settings", headers=headers).json()
+
+    # Mirrors frontend/src/lib/github-issue-export.ts buildGitHubIssueExportRequest().
+    created = client.post(
+        f"/api/v1/projects/{project['id']}/github/issues/export",
+        headers=headers,
+        json={
+            "finding_ids": [str(seeded["finding_ids"][0])],
+            "repository": "acme/triage",
+            "dry_run": False,
+            "token_env": settings_payload["token_env"],
+        },
+    )
+
+    assert created.status_code == 200, created.text
+    assert created.json()["created_count"] == 1
+    assert len(posted) == 1
