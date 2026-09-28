@@ -48,6 +48,18 @@ exact git tag output when release wording needs to be verified.
   requests per 30 seconds) and retry rate-limited `403` responses.
 - Imports lead their warnings with one summary of vulnerabilities skipped for
   lacking a CVE identifier (for example GHSA or GO advisories).
+- Projects have a versioned priority policy: base-rule thresholds and SLA
+  hours per priority (`GET`/`PUT /api/v1/projects/{project_id}/policy`,
+  migration `0017`), edited under Projects > Settings > Configuration. Saving
+  queues a re-evaluation, imports use the current policy, and every decision
+  records the policy it was evaluated with.
+- `vpw backup` and `vpw restore` write and verify portable archives of a local
+  data directory; restore only fills an empty directory, checks every file
+  against the manifest, and migrates the restored database.
+- `vpw import` uploads a scanner or SBOM file to a running Workbench, waits
+  for the run, and exits non-zero on failure.
+- `vpw serve` reads optional settings from `vpw.toml` in the data directory
+  (port, browser, log level, NVD and GitHub credentials, import limits).
 - Open findings carry an SLA due date (first seen plus the recorded SLA target)
   and a state (`sla_due_at`, `sla_state`: overdue, due soon, on track). Triage
   shows them, filters by them (`sla`), and offers an **Overdue** view.

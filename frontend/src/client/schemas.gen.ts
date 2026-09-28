@@ -7819,6 +7819,16 @@ export const PriorityPolicySchema = {
             default: 0.1,
             title: 'Medium Epss Threshold',
             type: 'number'
+        },
+        sla_hours: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/SlaHoursPolicy'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         }
     },
     title: 'PriorityPolicy',
@@ -8296,6 +8306,276 @@ export const ProjectGovernanceRollupsPublicSchema = {
         'generated_at'
     ],
     title: 'ProjectGovernanceRollupsPublic',
+    type: 'object'
+} as const;
+
+export const ProjectPolicyFieldsSchema = {
+    description: 'Thresholds of the transparent base priority rule plus SLA targets.',
+    properties: {
+        critical_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'Critical Cvss Threshold',
+            type: 'number'
+        },
+        critical_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'Critical Epss Threshold',
+            type: 'number'
+        },
+        high_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'High Cvss Threshold',
+            type: 'number'
+        },
+        high_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'High Epss Threshold',
+            type: 'number'
+        },
+        medium_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'Medium Cvss Threshold',
+            type: 'number'
+        },
+        medium_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'Medium Epss Threshold',
+            type: 'number'
+        },
+        sla_hours: {
+            $ref: '#/components/schemas/SlaHoursPublic'
+        }
+    },
+    required: [
+        'critical_epss_threshold',
+        'critical_cvss_threshold',
+        'high_epss_threshold',
+        'high_cvss_threshold',
+        'medium_epss_threshold',
+        'medium_cvss_threshold',
+        'sla_hours'
+    ],
+    title: 'ProjectPolicyFields',
+    type: 'object'
+} as const;
+
+export const ProjectPolicyPublicSchema = {
+    description: 'A project\'s effective policy with its version and defaults for comparison.',
+    properties: {
+        critical_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'Critical Cvss Threshold',
+            type: 'number'
+        },
+        critical_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'Critical Epss Threshold',
+            type: 'number'
+        },
+        defaults: {
+            $ref: '#/components/schemas/ProjectPolicyFields'
+        },
+        high_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'High Cvss Threshold',
+            type: 'number'
+        },
+        high_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'High Epss Threshold',
+            type: 'number'
+        },
+        is_default: {
+            default: true,
+            title: 'Is Default',
+            type: 'boolean'
+        },
+        medium_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'Medium Cvss Threshold',
+            type: 'number'
+        },
+        medium_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'Medium Epss Threshold',
+            type: 'number'
+        },
+        project_id: {
+            format: 'uuid',
+            title: 'Project Id',
+            type: 'string'
+        },
+        sla_hours: {
+            $ref: '#/components/schemas/SlaHoursPublic'
+        },
+        updated_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Updated At'
+        },
+        updated_by: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Updated By'
+        },
+        version: {
+            default: 0,
+            title: 'Version',
+            type: 'integer'
+        }
+    },
+    required: [
+        'critical_epss_threshold',
+        'critical_cvss_threshold',
+        'high_epss_threshold',
+        'high_cvss_threshold',
+        'medium_epss_threshold',
+        'medium_cvss_threshold',
+        'sla_hours',
+        'project_id',
+        'defaults'
+    ],
+    title: 'ProjectPolicyPublic',
+    type: 'object'
+} as const;
+
+export const ProjectPolicyUpdateSchema = {
+    description: 'Replace a project\'s policy and, by default, re-evaluate its findings.',
+    properties: {
+        critical_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'Critical Cvss Threshold',
+            type: 'number'
+        },
+        critical_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'Critical Epss Threshold',
+            type: 'number'
+        },
+        high_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'High Cvss Threshold',
+            type: 'number'
+        },
+        high_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'High Epss Threshold',
+            type: 'number'
+        },
+        medium_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'Medium Cvss Threshold',
+            type: 'number'
+        },
+        medium_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'Medium Epss Threshold',
+            type: 'number'
+        },
+        reason: {
+            anyOf: [
+                {
+                    maxLength: 500,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reason'
+        },
+        reevaluate: {
+            default: true,
+            title: 'Reevaluate',
+            type: 'boolean'
+        },
+        sla_hours: {
+            $ref: '#/components/schemas/SlaHoursPublic'
+        }
+    },
+    required: [
+        'critical_epss_threshold',
+        'critical_cvss_threshold',
+        'high_epss_threshold',
+        'high_cvss_threshold',
+        'medium_epss_threshold',
+        'medium_cvss_threshold',
+        'sla_hours'
+    ],
+    title: 'ProjectPolicyUpdate',
+    type: 'object'
+} as const;
+
+export const ProjectPolicyUpdatePublicSchema = {
+    description: 'Saved policy and the re-evaluation it queued, if any.',
+    properties: {
+        changed: {
+            title: 'Changed',
+            type: 'boolean'
+        },
+        evaluation_run_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Evaluation Run Id'
+        },
+        evaluation_skipped_reason: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Evaluation Skipped Reason'
+        },
+        policy: {
+            $ref: '#/components/schemas/ProjectPolicyPublic'
+        }
+    },
+    required: [
+        'policy',
+        'changed'
+    ],
+    title: 'ProjectPolicyUpdatePublic',
     type: 'object'
 } as const;
 
@@ -10384,6 +10664,83 @@ export const SidecarUploadCapabilityPublicSchema = {
         'description'
     ],
     title: 'SidecarUploadCapabilityPublic',
+    type: 'object'
+} as const;
+
+export const SlaHoursPolicySchema = {
+    additionalProperties: false,
+    description: 'Response targets in hours per base priority, replacing the default SLA table.',
+    properties: {
+        critical: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'Critical',
+            type: 'integer'
+        },
+        high: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'High',
+            type: 'integer'
+        },
+        low: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'Low',
+            type: 'integer'
+        },
+        medium: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'Medium',
+            type: 'integer'
+        }
+    },
+    required: [
+        'critical',
+        'high',
+        'medium',
+        'low'
+    ],
+    title: 'SlaHoursPolicy',
+    type: 'object'
+} as const;
+
+export const SlaHoursPublicSchema = {
+    description: 'Response target in hours for each base priority.',
+    properties: {
+        critical: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'Critical',
+            type: 'integer'
+        },
+        high: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'High',
+            type: 'integer'
+        },
+        low: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'Low',
+            type: 'integer'
+        },
+        medium: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'Medium',
+            type: 'integer'
+        }
+    },
+    required: [
+        'critical',
+        'high',
+        'medium',
+        'low'
+    ],
+    title: 'SlaHoursPublic',
     type: 'object'
 } as const;
 

@@ -125,6 +125,14 @@ from app.models.governance import (
     GovernanceWaiverDebtPublic,
     ProjectGovernanceRollupsPublic,
 )
+from app.models.project_policy import (
+    ProjectPolicy,
+    ProjectPolicyFields,
+    ProjectPolicyPublic,
+    ProjectPolicyUpdate,
+    ProjectPolicyUpdatePublic,
+    SlaHoursPublic,
+)
 from app.models.projects import (
     Project,
     ProjectBase,
@@ -317,6 +325,11 @@ __all__ = [
     "ProjectDashboardPublic",
     "ProjectDecisionSummaryPublic",
     "ProjectGovernanceRollupsPublic",
+    "ProjectPolicy",
+    "ProjectPolicyFields",
+    "ProjectPolicyPublic",
+    "ProjectPolicyUpdate",
+    "ProjectPolicyUpdatePublic",
     "ProjectPublic",
     "ProjectRiskReductionPublic",
     "ProjectsPublic",
@@ -340,6 +353,7 @@ __all__ = [
     "ResidualRiskStepPublic",
     "RuntimeServiceHeartbeat",
     "SidecarUploadCapabilityPublic",
+    "SlaHoursPublic",
     "UploadPolicyPublic",
     "Vulnerability",
     "VulnerabilityBase",

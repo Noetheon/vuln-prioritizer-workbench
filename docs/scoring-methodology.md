@@ -47,6 +47,17 @@ value, instead of silently falling to Low. Decisions produced with this rule
 record evaluation engine `scope-evaluator.v2`; older recorded inputs remain
 replayable and are re-recorded with the current engine version.
 
+### Project policy
+
+A project can replace the default thresholds of the base rule and the SLA
+response targets per priority. The policy is part of every recorded evaluation
+input, so a decision always replays with the thresholds it was made with. A
+changed policy applies to new imports and to findings once they are
+re-evaluated; saving a policy queues that re-evaluation by default. SLA targets
+from a project policy are recorded with source `project-policy`; unchanged
+defaults are not recorded, which keeps default-policy inputs identical to
+earlier versions.
+
 ## Signal Inputs
 
 | Signal | Role |

@@ -78,6 +78,31 @@ class PriorityLabel(StrEnum):
     FIXED = "Fixed"
 
 
+class SlaHoursPolicy(StrictModel):
+    """Response targets in hours per base priority, replacing the default SLA table."""
+
+    critical: int = Field(ge=1, le=8760)
+    high: int = Field(ge=1, le=8760)
+    medium: int = Field(ge=1, le=8760)
+    low: int = Field(ge=1, le=8760)
+
+    @model_validator(mode="after")
+    def validate_order(self) -> SlaHoursPolicy:
+        """More urgent priorities never get a longer response target."""
+        if not self.critical <= self.high <= self.medium <= self.low:
+            raise ValueError("SLA hours must not decrease from critical to high to medium to low.")
+        return self
+
+    def hours_for(self, priority_label: str) -> int | None:
+        """Return the target for a base priority label such as ``Critical``."""
+        return {
+            "Critical": self.critical,
+            "High": self.high,
+            "Medium": self.medium,
+            "Low": self.low,
+        }.get(priority_label)
+
+
 class PriorityPolicy(StrictModel):
     """Data representation and logic for Priority Policy."""
 
@@ -87,6 +112,8 @@ class PriorityPolicy(StrictModel):
     high_cvss_threshold: float = 9.0
     medium_epss_threshold: float = 0.10
     medium_cvss_threshold: float = 7.0
+    # Omitted when unset so recorded default-policy inputs keep their fingerprints.
+    sla_hours: SlaHoursPolicy | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def validate_thresholds(self) -> PriorityPolicy:

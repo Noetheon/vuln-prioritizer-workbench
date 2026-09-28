@@ -65,6 +65,7 @@ type RouteWorkbenchShellOptions = {
   findingsDelayMs?: number
   lifecycleEvents?: Record<string, unknown>[]
   onBulkStatusRequest?: (body: Record<string, unknown>) => void
+  onPolicyUpdate?: (body: Record<string, unknown>) => void
   onFindingsRequest?: (url: URL) => void
   providerStatus?: ProviderStatusPublic
   providerStatusDelayMs?: number
@@ -539,6 +540,48 @@ export async function routeWorkbenchShell(
     }),
   )
   for (const project of projects) {
+    const policyDefaults = {
+      critical_cvss_threshold: 7,
+      critical_epss_threshold: 0.7,
+      high_cvss_threshold: 9,
+      high_epss_threshold: 0.4,
+      medium_cvss_threshold: 7,
+      medium_epss_threshold: 0.1,
+      sla_hours: { critical: 24, high: 168, low: 2160, medium: 720 },
+    }
+    let policy: Record<string, unknown> = {
+      ...policyDefaults,
+      defaults: policyDefaults,
+      is_default: true,
+      project_id: project.id,
+      version: 0,
+    }
+    await page.route(`**/api/v1/projects/${project.id}/policy`, (route) => {
+      if (route.request().method() === "PUT") {
+        const { reason: _reason, reevaluate: _reevaluate, ...fields } = route
+          .request()
+          .postDataJSON() as Record<string, unknown>
+        options.onPolicyUpdate?.(fields)
+        policy = {
+          ...policy,
+          ...fields,
+          is_default: false,
+          version: Number(policy.version) + 1,
+        }
+        return route.fulfill({
+          contentType: "application/json",
+          body: JSON.stringify({
+            changed: true,
+            evaluation_run_id: "run-policy-1",
+            policy,
+          }),
+        })
+      }
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(policy),
+      })
+    })
     const projectRuns = runs.filter((run) => run.project_id === project.id)
     const projectSummary = {
       counts_by_priority: { critical: findings.length },

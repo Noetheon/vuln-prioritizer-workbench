@@ -96,6 +96,7 @@ class AnalysisService:
         vex_files: list[Path] | None = None,
         parsed_input: ParsedInput | None = None,
         persist_snapshot: bool = True,
+        priority_policy: PriorityPolicy | None = None,
     ) -> WorkbenchAnalysisResult:
         """Run parse/enrich/score/explain for one uploaded Workbench import."""
         snapshot_path = provider_snapshot_file or self.default_provider_snapshot_file()
@@ -123,7 +124,7 @@ class AnalysisService:
             min_cvss=None,
             min_epss=None,
             sort_by=SortBy.operational,
-            policy=PriorityPolicy(),
+            policy=priority_policy or PriorityPolicy(),
             policy_profile="default",
             policy_file=None,
             waiver_file=waiver_file,

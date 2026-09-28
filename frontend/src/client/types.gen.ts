@@ -3987,6 +3987,7 @@ export type PriorityPolicy = {
      * Medium Epss Threshold
      */
     medium_epss_threshold?: number;
+    sla_hours?: SlaHoursPolicy | null;
 };
 
 /**
@@ -4310,6 +4311,155 @@ export type ProjectGovernanceRollupsPublic = {
      */
     top_services_by_risk?: Array<GovernanceRollupPublic>;
     waiver_debt?: GovernanceWaiverDebtPublic;
+};
+
+/**
+ * ProjectPolicyFields
+ *
+ * Thresholds of the transparent base priority rule plus SLA targets.
+ */
+export type ProjectPolicyFields = {
+    /**
+     * Critical Cvss Threshold
+     */
+    critical_cvss_threshold: number;
+    /**
+     * Critical Epss Threshold
+     */
+    critical_epss_threshold: number;
+    /**
+     * High Cvss Threshold
+     */
+    high_cvss_threshold: number;
+    /**
+     * High Epss Threshold
+     */
+    high_epss_threshold: number;
+    /**
+     * Medium Cvss Threshold
+     */
+    medium_cvss_threshold: number;
+    /**
+     * Medium Epss Threshold
+     */
+    medium_epss_threshold: number;
+    sla_hours: SlaHoursPublic;
+};
+
+/**
+ * ProjectPolicyPublic
+ *
+ * A project's effective policy with its version and defaults for comparison.
+ */
+export type ProjectPolicyPublic = {
+    /**
+     * Critical Cvss Threshold
+     */
+    critical_cvss_threshold: number;
+    /**
+     * Critical Epss Threshold
+     */
+    critical_epss_threshold: number;
+    defaults: ProjectPolicyFields;
+    /**
+     * High Cvss Threshold
+     */
+    high_cvss_threshold: number;
+    /**
+     * High Epss Threshold
+     */
+    high_epss_threshold: number;
+    /**
+     * Is Default
+     */
+    is_default?: boolean;
+    /**
+     * Medium Cvss Threshold
+     */
+    medium_cvss_threshold: number;
+    /**
+     * Medium Epss Threshold
+     */
+    medium_epss_threshold: number;
+    /**
+     * Project Id
+     */
+    project_id: string;
+    sla_hours: SlaHoursPublic;
+    /**
+     * Updated At
+     */
+    updated_at?: string | null;
+    /**
+     * Updated By
+     */
+    updated_by?: string | null;
+    /**
+     * Version
+     */
+    version?: number;
+};
+
+/**
+ * ProjectPolicyUpdate
+ *
+ * Replace a project's policy and, by default, re-evaluate its findings.
+ */
+export type ProjectPolicyUpdate = {
+    /**
+     * Critical Cvss Threshold
+     */
+    critical_cvss_threshold: number;
+    /**
+     * Critical Epss Threshold
+     */
+    critical_epss_threshold: number;
+    /**
+     * High Cvss Threshold
+     */
+    high_cvss_threshold: number;
+    /**
+     * High Epss Threshold
+     */
+    high_epss_threshold: number;
+    /**
+     * Medium Cvss Threshold
+     */
+    medium_cvss_threshold: number;
+    /**
+     * Medium Epss Threshold
+     */
+    medium_epss_threshold: number;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+    /**
+     * Reevaluate
+     */
+    reevaluate?: boolean;
+    sla_hours: SlaHoursPublic;
+};
+
+/**
+ * ProjectPolicyUpdatePublic
+ *
+ * Saved policy and the re-evaluation it queued, if any.
+ */
+export type ProjectPolicyUpdatePublic = {
+    /**
+     * Changed
+     */
+    changed: boolean;
+    /**
+     * Evaluation Run Id
+     */
+    evaluation_run_id?: string | null;
+    /**
+     * Evaluation Skipped Reason
+     */
+    evaluation_skipped_reason?: string | null;
+    policy: ProjectPolicyPublic;
 };
 
 /**
@@ -5557,6 +5707,54 @@ export type SidecarUploadCapabilityPublic = {
      * Required
      */
     required?: boolean;
+};
+
+/**
+ * SlaHoursPolicy
+ *
+ * Response targets in hours per base priority, replacing the default SLA table.
+ */
+export type SlaHoursPolicy = {
+    /**
+     * Critical
+     */
+    critical: number;
+    /**
+     * High
+     */
+    high: number;
+    /**
+     * Low
+     */
+    low: number;
+    /**
+     * Medium
+     */
+    medium: number;
+};
+
+/**
+ * SlaHoursPublic
+ *
+ * Response target in hours for each base priority.
+ */
+export type SlaHoursPublic = {
+    /**
+     * Critical
+     */
+    critical: number;
+    /**
+     * High
+     */
+    high: number;
+    /**
+     * Low
+     */
+    low: number;
+    /**
+     * Medium
+     */
+    medium: number;
 };
 
 /**
@@ -7220,6 +7418,66 @@ export type PostApiV1ProjectsByProjectIdImportsResponses = {
 };
 
 export type PostApiV1ProjectsByProjectIdImportsResponse = PostApiV1ProjectsByProjectIdImportsResponses[keyof PostApiV1ProjectsByProjectIdImportsResponses];
+
+export type GetApiV1ProjectsByProjectIdPolicyData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/policy';
+};
+
+export type GetApiV1ProjectsByProjectIdPolicyErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1ProjectsByProjectIdPolicyError = GetApiV1ProjectsByProjectIdPolicyErrors[keyof GetApiV1ProjectsByProjectIdPolicyErrors];
+
+export type GetApiV1ProjectsByProjectIdPolicyResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectPolicyPublic;
+};
+
+export type GetApiV1ProjectsByProjectIdPolicyResponse = GetApiV1ProjectsByProjectIdPolicyResponses[keyof GetApiV1ProjectsByProjectIdPolicyResponses];
+
+export type PutApiV1ProjectsByProjectIdPolicyData = {
+    body: ProjectPolicyUpdate;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/policy';
+};
+
+export type PutApiV1ProjectsByProjectIdPolicyErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type PutApiV1ProjectsByProjectIdPolicyError = PutApiV1ProjectsByProjectIdPolicyErrors[keyof PutApiV1ProjectsByProjectIdPolicyErrors];
+
+export type PutApiV1ProjectsByProjectIdPolicyResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectPolicyUpdatePublic;
+};
+
+export type PutApiV1ProjectsByProjectIdPolicyResponse = PutApiV1ProjectsByProjectIdPolicyResponses[keyof PutApiV1ProjectsByProjectIdPolicyResponses];
 
 export type GetApiV1ProjectsByProjectIdRunsData = {
     body?: never;

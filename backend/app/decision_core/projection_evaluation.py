@@ -35,6 +35,7 @@ from app.domain.engine.models import (
     InputOccurrence,
     PrioritizedFinding,
     ProviderEvidence,
+    SlaHoursPolicy,
 )
 from app.domain.engine.services.contextualization import (
     SUPPRESSED_VEX_STATUSES,
@@ -70,6 +71,12 @@ def evaluate_evidence_payload(
     updated = _apply_recomputed_decision(payload, decision)
     updated["evaluation_input"] = actual.model_dump(mode="json")
     return FindingDecisionEvidenceV2.model_validate(updated).to_jsonable(), decision
+
+
+def recorded_sla_hours(evidence: FindingDecisionEvidenceV2) -> SlaHoursPolicy | None:
+    """Return the policy SLA targets a decision was evaluated with, if any."""
+    inputs = evidence.evaluation_input
+    return inputs.priority_policy.sla_hours if inputs is not None else None
 
 
 def _stored_projection_decision(evidence: FindingDecisionEvidenceV2) -> PrioritizedFinding:

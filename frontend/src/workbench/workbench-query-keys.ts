@@ -27,6 +27,8 @@ export const workbenchQueryKeys = {
   githubIssueExportSettings: () =>
     [...workbenchQueryKeys.all, "github-issue-export-settings"] as const,
   demoWorkspace: () => [...workbenchQueryKeys.all, "demo-workspace"] as const,
+  projectPolicy: (projectId: string) =>
+    [...workbenchQueryKeys.all, "project-policy", projectId] as const,
   projectDashboard: (projectId: string) =>
     [...workbenchQueryKeys.all, "project-dashboard", projectId] as const,
   findingDetail: (findingId: string | null) =>

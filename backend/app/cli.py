@@ -6,12 +6,14 @@ import argparse
 import os
 import platform
 import shutil
+import sqlite3
 import threading
 import time
 import urllib.error
 import urllib.request
 import uuid
 import webbrowser
+import zipfile
 from collections.abc import Sequence
 from importlib import metadata, resources
 from pathlib import Path
@@ -28,6 +30,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _ledger(args)
     if args.command == "migrate":
         return _migrate(args)
+    if args.command == "backup":
+        return _backup(args)
+    if args.command == "restore":
+        return _restore(args)
+    if args.command == "import":
+        return _import(args)
     parser.print_help()
     return 2
 
@@ -41,12 +49,18 @@ def _parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command")
 
     serve = commands.add_parser("serve", help="Start the local browser Workbench.")
-    serve.add_argument("--host", default="127.0.0.1")
-    serve.add_argument("--port", type=int, default=8765)
+    serve.add_argument("--host", default=None, help="Bind address (default: 127.0.0.1).")
+    serve.add_argument("--port", type=int, default=None, help="Port (default: 8765).")
     serve.add_argument("--data-dir", type=Path, default=None)
+    serve.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="Settings file (default: vpw.toml in the data directory, if present).",
+    )
     serve.add_argument("--no-browser", action="store_true")
     serve.add_argument("--allow-network", action="store_true")
-    serve.add_argument("--log-level", default="info", choices=("debug", "info", "warning", "error"))
+    serve.add_argument("--log-level", default=None, choices=("debug", "info", "warning", "error"))
 
     ledger = commands.add_parser("ledger", help="Maintain or verify the Decision Ledger.")
     ledger.add_argument("action", choices=("backfill", "verify"))
@@ -62,18 +76,97 @@ def _parser() -> argparse.ArgumentParser:
     migrate.add_argument("--source-url-env", default="VPW_SOURCE_DATABASE_URL")
     migrate.add_argument("--source-postgres-env", action="store_true")
     migrate.add_argument("--artifact-archive", type=Path, default=None)
+
+    backup = commands.add_parser(
+        "backup",
+        help="Write a verified backup archive of the local data directory.",
+    )
+    backup.add_argument("--data-dir", type=Path, default=None)
+    backup.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Archive path (default: vpw-backup-<UTC timestamp>.zip in the current directory).",
+    )
+    backup.add_argument(
+        "--include-cache",
+        action="store_true",
+        help="Also archive the provider cache, which is otherwise rebuilt on demand.",
+    )
+
+    restore = commands.add_parser(
+        "restore",
+        help="Restore a backup archive into a new or empty data directory.",
+    )
+    restore.add_argument("archive", type=Path)
+    restore.add_argument("--data-dir", type=Path, default=None)
+
+    importer = commands.add_parser(
+        "import",
+        help="Import a scanner or SBOM file through a running Workbench.",
+    )
+    importer.add_argument("file", type=Path)
+    importer.add_argument("--project", required=True, help="Project name or id.")
+    importer.add_argument(
+        "--input-type",
+        required=True,
+        help="Import format, for example trivy-json, grype-json, or cyclonedx-json.",
+    )
+    importer.add_argument("--create-project", action="store_true")
+    importer.add_argument(
+        "--url",
+        default=os.environ.get("VPW_URL", "http://127.0.0.1:8765"),
+        help="Workbench address (default: $VPW_URL or http://127.0.0.1:8765).",
+    )
+    importer.add_argument("--asset-context", type=Path, default=None)
+    importer.add_argument("--vex", type=Path, default=None)
+    importer.add_argument("--provider-snapshot", default=None)
+    importer.add_argument("--locked-provider-data", action="store_true")
+    importer.add_argument(
+        "--keep-missing-open",
+        action="store_true",
+        help="Do not resolve findings this file no longer reports (for partial exports).",
+    )
+    importer.add_argument("--no-wait", action="store_true")
+    importer.add_argument("--timeout", type=float, default=900.0)
+    importer.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the finished run summary as JSON.",
+    )
     return parser
 
 
 def _serve(args: argparse.Namespace) -> int:
-    host = str(args.host).strip()
-    _validate_bind(host=host, port=args.port, allow_network=bool(args.allow_network))
+    from app.core.local_config import (
+        CONFIG_FILE_NAME,
+        LocalConfigError,
+        apply_local_config_environment,
+        load_local_config,
+    )
+
+    data_root = (args.data_dir or _default_data_dir()).expanduser().resolve(strict=False)
+    try:
+        config = load_local_config(
+            args.config.expanduser() if args.config else data_root / CONFIG_FILE_NAME,
+            required=args.config is not None,
+        )
+    except LocalConfigError as exc:
+        raise SystemExit(str(exc)) from exc
+    host = str(args.host or config.host or "127.0.0.1").strip()
+    port = int(args.port or config.port or 8765)
+    log_level = args.log_level or config.log_level or "info"
+    open_browser = not args.no_browser and config.open_browser is not False
+    _validate_bind(host=host, port=port, allow_network=bool(args.allow_network))
     data_dir = _prepare_runtime_environment(
-        data_dir=args.data_dir,
+        data_dir=data_root,
         host=host,
-        port=args.port,
+        port=port,
         in_process_worker=True,
     )
+    apply_local_config_environment(config)
+    for warning in config.warnings:
+        print(f"Warning: {warning}")
     active_settings = _migrate_and_load_settings()
     _harden_permissions(data_dir / "workbench.db", 0o600)
 
@@ -85,10 +178,12 @@ def _serve(args: argparse.Namespace) -> int:
             "Packaged frontend assets are missing. Reinstall the release wheel or run "
             "the frontend runtime asset build."
         )
-    url = f"http://{host}:{args.port}"
+    url = f"http://{host}:{port}"
     print(f"VPW data: {data_dir}")
+    if config.path is not None:
+        print(f"Settings: {config.path}")
     print(f"Workbench: {url}")
-    if not args.no_browser:
+    if open_browser:
         threading.Thread(
             target=_open_browser_when_ready,
             args=(url,),
@@ -101,9 +196,9 @@ def _serve(args: argparse.Namespace) -> int:
     uvicorn.run(
         application,
         host=host,
-        port=args.port,
-        log_level=args.log_level,
-        access_log=args.log_level == "debug",
+        port=port,
+        log_level=log_level,
+        access_log=log_level == "debug",
     )
     return 0
 
@@ -254,6 +349,160 @@ def _migrate(args: argparse.Namespace) -> int:
         )
     print(f"Target: {target}")
     return 0
+
+
+def _backup(args: argparse.Namespace) -> int:
+    from app.services.local_backup import BackupError, create_backup
+
+    root = (args.data_dir or _default_data_dir()).expanduser().resolve(strict=False)
+    timestamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+    output = (args.output or Path.cwd() / f"vpw-backup-{timestamp}.zip").expanduser()
+    try:
+        result = create_backup(
+            root,
+            output.resolve(strict=False),
+            package_version=_package_version(),
+            include_cache=bool(args.include_cache),
+        )
+    except (BackupError, OSError, sqlite3.Error) as exc:
+        raise SystemExit(f"Backup failed: {exc}") from exc
+    print(f"Backup written: {result.path}")
+    print(
+        f"Files: {result.files}, bytes: {result.bytes}, "
+        f"database revision: {result.database_revision or 'unknown'}."
+    )
+    return 0
+
+
+def _restore(args: argparse.Namespace) -> int:
+    from app.services.local_backup import (
+        DATABASE_NAME,
+        BackupError,
+        database_integrity_ok,
+        read_manifest,
+        rebase_report_paths,
+        restore_backup,
+    )
+
+    root = (args.data_dir or _default_data_dir()).expanduser().resolve(strict=False)
+    archive = args.archive.expanduser().resolve(strict=False)
+    try:
+        manifest = read_manifest(archive)
+        _require_known_revision(manifest.get("database_revision"))
+        result = restore_backup(archive, root)
+    except (BackupError, OSError, zipfile.BadZipFile) as exc:
+        raise SystemExit(f"Restore aborted: {exc}") from exc
+    _prepare_runtime_environment(
+        data_dir=root,
+        host="127.0.0.1",
+        port=8765,
+        in_process_worker=False,
+    )
+    active_settings = _migrate_and_load_settings()
+    database = root / DATABASE_NAME
+    _harden_permissions(database, 0o600)
+    if not database_integrity_ok(database):
+        raise SystemExit(f"Restored database failed SQLite's integrity check: {database}.")
+
+    from sqlmodel import Session
+
+    from app.core.db import create_db_engine
+
+    previous_root = manifest.get("data_root")
+    engine = create_db_engine(active_settings)
+    try:
+        with Session(engine) as session:
+            moved = rebase_report_paths(
+                session,
+                active_settings,
+                previous_root=previous_root if isinstance(previous_root, str) else None,
+            )
+            session.commit()
+    finally:
+        engine.dispose()
+    print(f"Restored {result.files} file(s), {result.bytes} bytes into {root}.")
+    if moved:
+        print(f"Updated {moved} report path(s) for the new data directory.")
+    print(f"Backup created {manifest.get('created_at')} by VPW {manifest.get('package_version')}.")
+    return 0
+
+
+def _require_known_revision(revision: object) -> None:
+    from alembic.script import ScriptDirectory
+    from alembic.util.exc import CommandError
+
+    from app.core.migration_bootstrap import _alembic_config
+
+    if not isinstance(revision, str) or not revision:
+        raise SystemExit("Restore aborted: the backup does not record a database revision.")
+    try:
+        known = ScriptDirectory.from_config(_alembic_config()).get_revision(revision)
+    except CommandError:
+        known = None
+    if known is None:
+        raise SystemExit(
+            f"Restore aborted: database revision {revision} comes from a newer VPW version. "
+            "Upgrade VPW, then restore again."
+        )
+
+
+def _import(args: argparse.Namespace) -> int:
+    from app.services.api_import_client import (
+        SUCCESSFUL_RUN_STATUSES,
+        ImportClientError,
+        ImportRequest,
+        WorkbenchImportClient,
+        urllib_transport,
+    )
+
+    for label, path in (
+        ("Import file", args.file),
+        ("Asset context file", args.asset_context),
+        ("VEX file", args.vex),
+    ):
+        if path is not None and not path.expanduser().is_file():
+            raise SystemExit(f"{label} not found: {path}")
+    client = WorkbenchImportClient(args.url, urllib_transport())
+    try:
+        project = client.resolve_project(args.project, create=bool(args.create_project))
+        run = client.start_import(
+            str(project["id"]),
+            ImportRequest(
+                file=args.file.expanduser(),
+                input_type=args.input_type,
+                asset_context_file=args.asset_context.expanduser() if args.asset_context else None,
+                vex_file=args.vex.expanduser() if args.vex else None,
+                provider_snapshot_file=args.provider_snapshot,
+                locked_provider_data=bool(args.locked_provider_data),
+                resolve_missing=not args.keep_missing_open,
+            ),
+        )
+        if args.no_wait:
+            print(f"Queued run {run['id']} for {project['name']}: {client.run_url(run)}")
+            return 0
+        summary = client.wait_for_run(str(run["id"]), timeout_seconds=float(args.timeout))
+    except ImportClientError as exc:
+        raise SystemExit(f"Import failed: {exc}") from exc
+    if args.json:
+        import json
+
+        print(json.dumps(summary, indent=2, sort_keys=True, default=str))
+    else:
+        print(
+            f"Imported {args.file.name} into {project['name']} "
+            f"(run {str(summary.get('id', run['id']))[:8]}): {summary.get('status')}."
+        )
+        print(
+            f"Findings: {summary.get('created_findings', 0)} created, "
+            f"{summary.get('updated_findings', 0)} updated, "
+            f"{summary.get('resolved_findings', 0)} resolved, "
+            f"{summary.get('reopened_findings', 0)} reopened; "
+            f"{len(summary.get('warnings') or [])} warning(s)."
+        )
+        if summary.get("error_message"):
+            print(f"Error: {summary['error_message']}")
+        print(f"Open: {client.run_url(summary or run)}")
+    return 0 if summary.get("status") in SUCCESSFUL_RUN_STATUSES else 1
 
 
 def _prepare_runtime_environment(

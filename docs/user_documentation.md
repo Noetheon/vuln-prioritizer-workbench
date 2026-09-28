@@ -121,6 +121,18 @@ Asset context, defensive context, ATT&CK, VEX, waivers, and governance state add
 explanation, routing, visibility, or applicability context. They do not become a
 hidden replacement for the base CVSS, EPSS, and KEV decision rule.
 
+### Project priority policy
+
+Each project can change the thresholds of that rule and the SLA each priority
+gets: open **Projects**, choose **Settings** for the project, then
+**Configuration > Priority policy** (or `GET`/`PUT
+/api/v1/projects/{project_id}/policy`). Saving records a new policy version and,
+by default, re-evaluates the project's findings. New imports use the current
+policy. Every decision records the policy it was evaluated with, so replays and
+reports stay reproducible; findings keep their old policy until they are
+re-evaluated. **Use defaults** restores the default thresholds and SLA targets
+(24 hours, 7 days, 30 days, and 90 days from Critical to Low).
+
 ## Re-evaluation And Recorded Decisions
 
 Use **Re-evaluate** on the project dashboard to evaluate the project's findings,
