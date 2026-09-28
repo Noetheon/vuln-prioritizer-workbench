@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable
 
 from app.domain.engine.models import InputOccurrence, SeverityProxy
@@ -57,7 +58,7 @@ def reported_cvss_score(value: object) -> float | None:
             return None
     else:
         return None
-    if score != score or score <= 0.0 or score > 10.0:
+    if math.isnan(score) or score <= 0.0 or score > 10.0:
         return None
     return round(score, 1)
 
@@ -112,7 +113,7 @@ def _band_proxy(occurrence: InputOccurrence) -> SeverityProxy | None:
 
 
 def _band_for_score(score: float) -> str | None:
-    if score != score or score <= 0.0 or score > 10.0:  # NaN, "none", or out of range
+    if math.isnan(score) or score <= 0.0 or score > 10.0:  # NaN, "none", or out of range
         return None
     if score >= 9.0:
         return "critical"
