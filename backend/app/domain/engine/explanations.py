@@ -463,6 +463,8 @@ def _severity_proxy_value(finding: PrioritizedFinding) -> str:
     proxy = finding.severity_proxy
     if proxy is None:
         return "missing"
+    if proxy.cvss_source:
+        return f"{proxy.severity} (CVSS {proxy.cvss_floor:.1f} from {proxy.cvss_source})"
     return f"{proxy.severity} ({proxy.raw_value}) -> CVSS band floor {proxy.cvss_floor:.1f}"
 
 

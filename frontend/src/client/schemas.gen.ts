@@ -6408,6 +6408,28 @@ export const InputOccurrenceSchema = {
             ],
             title: 'Purl'
         },
+        raw_cvss_score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Raw Cvss Score'
+        },
+        raw_cvss_source: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Raw Cvss Source'
+        },
         raw_severity: {
             anyOf: [
                 {

@@ -95,4 +95,7 @@ ATT&CK, GHSA, OSV, or vendor advisory data during import.
 - Missing or non-object `vulnerability` or `artifact` objects are treated as
   empty source context for that match.
 - Invalid or non-CVE `vulnerability.id` values are skipped and reported as
-  warnings.
+  warnings, led by one summary warning that counts the skipped identifiers.
+- `cvss` scores (NVD records from `relatedVulnerabilities` first) are kept as
+  the finding's reported CVSS; they stand in for NVD CVSS only while NVD has
+  not scored the CVE.

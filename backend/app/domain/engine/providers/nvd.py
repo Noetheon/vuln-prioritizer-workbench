@@ -5,7 +5,8 @@ from __future__ import annotations
 import os
 import random
 import time
-from collections.abc import Sequence
+from collections import deque
+from collections.abc import Callable, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from threading import Lock
@@ -26,6 +27,53 @@ from app.domain.engine.security_redaction import redact_text
 from app.domain.engine.utils import safe_float
 
 DEFAULT_NVD_MAX_CONCURRENCY: Final = 4
+# NVD allows 5 requests per rolling 30 seconds without an API key and 50 with one.
+NVD_RATE_LIMIT_WINDOW_SECONDS: Final = 30.0
+NVD_REQUESTS_PER_WINDOW_WITH_KEY: Final = 50
+NVD_REQUESTS_PER_WINDOW_WITHOUT_KEY: Final = 5
+# NVD answers rate-limited requests with 403 as well as 429.
+_RETRYABLE_STATUS_CODES: Final = frozenset({403, 429, 500, 502, 503, 504})
+_RATE_LIMIT_STATUS_CODES: Final = frozenset({403, 429})
+
+
+class RollingWindowRateLimiter:
+    """Block until another request fits a provider's rolling request window."""
+
+    def __init__(
+        self,
+        max_requests: int,
+        window_seconds: float,
+        *,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        """Initialize a limiter shared by every request thread of one provider."""
+        self.max_requests = max(1, max_requests)
+        self.window_seconds = max(0.0, window_seconds)
+        self._clock = clock
+        self._sleep = sleep
+        self._sent: deque[float] = deque()
+        self._lock = Lock()
+
+    @property
+    def spacing_seconds(self) -> float:
+        """Average spacing that keeps a steady stream inside the window."""
+        return self.window_seconds / self.max_requests
+
+    def acquire(self) -> float:
+        """Reserve a request slot and return how long the caller waited."""
+        waited = 0.0
+        while True:
+            with self._lock:
+                now = self._clock()
+                while self._sent and now - self._sent[0] >= self.window_seconds:
+                    self._sent.popleft()
+                if len(self._sent) < self.max_requests:
+                    self._sent.append(now)
+                    return waited
+                delay = self.window_seconds - (now - self._sent[0])
+            self._sleep(delay)
+            waited += delay
 
 
 @dataclass(slots=True, frozen=True)
@@ -54,6 +102,7 @@ class NvdProvider:
         max_concurrency: int = DEFAULT_NVD_MAX_CONCURRENCY,
         cache: FileCache | None = None,
         session_factory: type[requests.Session] | None = None,
+        rate_limiter: RollingWindowRateLimiter | None = None,
     ) -> None:
         """Initialize a new instance of NvdProvider."""
         self.session = session
@@ -64,6 +113,7 @@ class NvdProvider:
         self.max_retries = max_retries
         self.max_concurrency = max(1, max_concurrency)
         self.cache = cache
+        self.rate_limiter = rate_limiter
         self.last_diagnostics = NvdFetchDiagnostics()
 
     @classmethod
@@ -81,6 +131,12 @@ class NvdProvider:
             api_key=api_key,
             cache=cache,
             max_concurrency=DEFAULT_NVD_MAX_CONCURRENCY if api_key else 1,
+            rate_limiter=RollingWindowRateLimiter(
+                NVD_REQUESTS_PER_WINDOW_WITH_KEY
+                if api_key
+                else NVD_REQUESTS_PER_WINDOW_WITHOUT_KEY,
+                NVD_RATE_LIMIT_WINDOW_SECONDS,
+            ),
         )
 
     def fetch_many(
@@ -197,26 +253,37 @@ class NvdProvider:
         last_error: Exception | None = None
         while attempt < self.max_retries:
             attempt += 1
+            if self.rate_limiter is not None:
+                self.rate_limiter.acquire()
             try:
                 response = self._session_get(params=params, headers=headers)
                 if response.status_code == 404:
                     return {}
-                if response.status_code in {429, 500, 502, 503, 504} and attempt < self.max_retries:
-                    time.sleep(_retry_delay(response, attempt))
+                if response.status_code in _RETRYABLE_STATUS_CODES and attempt < self.max_retries:
+                    time.sleep(self._retry_delay(response, attempt))
                     continue
                 response.raise_for_status()
                 return response.json()
             except requests.RequestException as exc:
                 last_error = exc
-                status_code = getattr(getattr(exc, "response", None), "status_code", None)
-                if status_code in {429, 500, 502, 503, 504} and attempt < self.max_retries:
-                    time.sleep(_retry_delay(getattr(exc, "response", None), attempt))
+                failed_response = getattr(exc, "response", None)
+                status_code = getattr(failed_response, "status_code", None)
+                if status_code in _RETRYABLE_STATUS_CODES and attempt < self.max_retries:
+                    time.sleep(self._retry_delay(failed_response, attempt))
                     continue
                 break
 
         if last_error is not None:
             raise RuntimeError(self._safe_error_message(last_error)) from last_error
         raise RuntimeError("NVD request failed without a response")
+
+    def _retry_delay(self, response: requests.Response | None, attempt: int) -> float:
+        """Back off at least one request slot after NVD reports a rate limit."""
+        delay = _retry_delay(response, attempt)
+        status_code = getattr(response, "status_code", None)
+        if status_code in _RATE_LIMIT_STATUS_CODES and self.rate_limiter is not None:
+            return max(delay, self.rate_limiter.spacing_seconds)
+        return delay
 
     def _safe_error_message(self, exc: BaseException) -> str:
         """Safe error message method for NvdProvider."""

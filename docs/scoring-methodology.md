@@ -33,9 +33,13 @@ its qualitative band:
 | Medium / Moderate | 4.0 |
 | Low | 0.1 |
 
-Negligible, informational, `none`, and unknown values are ignored. When several
-observations of one finding scope report different severities, the highest
-band applies. The proxy never replaces an NVD score, is never shown as a CVSS
+When a scanner report carries a CVSS base score, that score is used instead of
+the band's lower bound: Trivy's embedded `CVSS` (NVD first, then the severity
+source, then GHSA and other sources; v3 before v4) and Grype's `cvss` entries
+(NVD records from `relatedVulnerabilities` first; v3 before v4). CVSS v2 scores
+are not used. Negligible, informational, `none`, and unknown values are
+ignored. When several observations of one finding scope report different
+values, the highest applies. The proxy never replaces an NVD score, is never shown as a CVSS
 value, and appears as its own explanation driver (`priority.*.severity_proxy`),
 rationale sentence, and operational score reason. A Critical report therefore
 yields High until NVD analysis arrives, or Critical together with a high EPSS

@@ -15,7 +15,7 @@ from app.domain.engine.models import (
     VexStatement,
 )
 
-from . import _occurrence_support, _vex_support
+from . import _cve_support, _occurrence_support, _vex_support
 from .asset_context_loader import (
     AssetContextCatalog,
     AssetContextLoadDiagnostics,
@@ -212,7 +212,10 @@ def _load_single_input(
     parser = _INPUT_PARSERS.get(resolved_format)
     if parser is None:
         raise ValueError(f"Unsupported input format: {resolved_format}")
-    return parser(path)
+    parsed = parser(path)
+    return parsed.model_copy(
+        update={"warnings": _cve_support.summarize_non_cve_identifiers(parsed.warnings)}
+    )
 
 
 def build_inline_input(

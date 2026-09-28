@@ -10,6 +10,7 @@ from pathlib import Path
 
 from app.contracts.sbom import SbomAssessmentV1
 from app.core.config import Settings
+from app.domain.engine.inputs._cve_support import summarize_non_cve_identifiers
 from app.domain.engine.inputs._occurrence_support import finalize_occurrences
 from app.domain.engine.inputs.parsers.scanner import parse_grype_json
 from app.domain.engine.models import AnalysisContext, ExaminedTarget
@@ -82,7 +83,9 @@ def scan_prepared_sbom(
     manifest_path = directory / "assessment.json"
     upload_root = settings.import_upload_dir_path.resolve()
     raw = parse_grype_json(report_path)
-    warnings = _public_warnings(chain(result.evidence.warnings, raw.warnings))
+    warnings = _public_warnings(
+        chain(result.evidence.warnings, summarize_non_cve_identifiers(raw.warnings))
+    )
     observation = (
         observed_at.replace(tzinfo=UTC)
         if observed_at.tzinfo is None

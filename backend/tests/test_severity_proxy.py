@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from datetime import date
+from pathlib import Path
 
 import pytest
 
@@ -9,6 +11,7 @@ from app.decision_core.evaluation import (
     ScopeEvaluationInput,
     evaluate_scope,
 )
+from app.domain.engine.inputs.parsers.scanner import parse_grype_json, parse_trivy_json
 from app.domain.engine.models import (
     AttackData,
     EpssData,
@@ -22,6 +25,7 @@ from app.domain.engine.models import (
 from app.domain.engine.scoring import build_priority_drivers, determine_priority
 from app.domain.engine.severity_proxy import (
     normalize_reported_severity,
+    reported_cvss_score,
     severity_proxy_for_occurrences,
 )
 
@@ -161,3 +165,153 @@ def test_recorded_v1_inputs_remain_replayable() -> None:
     assert evaluate_scope(legacy).priority_label == "Medium"
     with pytest.raises(ValueError, match="Unsupported evaluation engine"):
         evaluate_scope(legacy.model_copy(update={"engine_version": "scope-evaluator.v0"}))
+
+
+def test_scope_proxy_prefers_the_most_severe_reported_score() -> None:
+    scored = InputOccurrence(
+        cve_id=CVE,
+        source_format="trivy-json",
+        raw_severity="HIGH",
+        raw_cvss_score=8.8,
+        raw_cvss_source="nvd",
+    )
+    proxy = severity_proxy_for_occurrences(
+        [scored, InputOccurrence(cve_id=CVE, source_format="grype-json", raw_severity="High")]
+    )
+
+    assert proxy == SeverityProxy(
+        severity="high",
+        cvss_floor=8.8,
+        raw_value="8.8",
+        source_format="trivy-json",
+        cvss_source="nvd",
+    )
+    labelled_critical = InputOccurrence(
+        cve_id=CVE, source_format="generic-occurrence-csv", raw_severity="critical"
+    )
+    assert severity_proxy_for_occurrences([scored, labelled_critical]).cvss_floor == 9.0
+    band_only = SeverityProxy(
+        severity="high", cvss_floor=7.0, raw_value="HIGH", source_format="trivy-json"
+    )
+    assert "cvss_source" not in band_only.model_dump()
+    assert "raw_cvss_score" not in InputOccurrence(cve_id=CVE).model_dump()
+    assert reported_cvss_score("9.81") == 9.8
+    for invalid in (True, 0, 10.5, "n/a", float("nan"), None, [7.0]):
+        assert reported_cvss_score(invalid) is None
+
+
+def test_scanner_reports_carry_their_cvss_scores(tmp_path: Path) -> None:
+    trivy = tmp_path / "trivy.json"
+    trivy.write_text(
+        json.dumps(
+            {
+                "ArtifactName": "app:1",
+                "Results": [
+                    {
+                        "Target": "app:1 (debian 12)",
+                        "Vulnerabilities": [
+                            {
+                                "VulnerabilityID": "CVE-2026-0001",
+                                "Severity": "HIGH",
+                                "SeveritySource": "debian",
+                                "CVSS": {
+                                    "debian": {"V3Score": 7.5},
+                                    "ghsa": {"V3Score": 7.1},
+                                    "nvd": {"V2Score": 6.8, "V3Score": 8.1},
+                                },
+                            },
+                            {
+                                "VulnerabilityID": "CVE-2026-0002",
+                                "Severity": "MEDIUM",
+                                "CVSS": {"redhat": {"V40Score": 6.3}},
+                            },
+                            {
+                                "VulnerabilityID": "CVE-2026-0003",
+                                "Severity": "LOW",
+                                "CVSS": {"nvd": {"V2Score": 5.0}},
+                            },
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    grype = tmp_path / "grype.json"
+    grype.write_text(
+        json.dumps(
+            {
+                "source": {"type": "image", "target": {"userInput": "app:1"}},
+                "matches": [
+                    {
+                        "vulnerability": {
+                            "id": "GHSA-aaaa-bbbb-cccc",
+                            "namespace": "github:language:python",
+                            "severity": "High",
+                            "cvss": [{"version": "3.1", "metrics": {"baseScore": 7.4}}],
+                        },
+                        "relatedVulnerabilities": [
+                            {
+                                "id": "CVE-2026-0004",
+                                "namespace": "nvd:cpe",
+                                "cvss": [
+                                    {"version": "2.0", "metrics": {"baseScore": 5.0}},
+                                    {"version": "3.1", "metrics": {"baseScore": 8.2}},
+                                ],
+                            }
+                        ],
+                        "artifact": {"name": "requests", "version": "2.0.0"},
+                    },
+                    {
+                        "vulnerability": {
+                            "id": "CVE-2026-0005",
+                            "namespace": "debian:distro:debian:12",
+                            "severity": "Medium",
+                            "cvss": [{"version": "4.0", "metrics": {"baseScore": 5.3}}],
+                        },
+                        "artifact": {"name": "libfoo", "version": "1.0"},
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    trivy_scores = [
+        (item.cve_id, item.raw_cvss_score, item.raw_cvss_source)
+        for item in parse_trivy_json(trivy).occurrences
+    ]
+    grype_scores = [
+        (item.cve_id, item.raw_cvss_score, item.raw_cvss_source)
+        for item in parse_grype_json(grype).occurrences
+    ]
+
+    assert trivy_scores == [
+        ("CVE-2026-0001", 8.1, "nvd"),
+        ("CVE-2026-0002", 6.3, "redhat"),
+        ("CVE-2026-0003", None, None),
+    ]
+    assert grype_scores == [
+        ("CVE-2026-0004", 8.2, "nvd"),
+        ("CVE-2026-0005", 5.3, "debian"),
+    ]
+
+
+def test_scanner_score_explains_itself_when_nvd_has_not_scored() -> None:
+    inputs = _unanalyzed_inputs("HIGH")
+    scored = inputs.model_copy(
+        update={
+            "observations": [
+                inputs.observations[0].model_copy(
+                    update={"raw_cvss_score": 9.4, "raw_cvss_source": "nvd"}
+                )
+            ]
+        }
+    )
+
+    result = evaluate_scope(scored)
+
+    assert result.priority_label == "High"
+    assert result.severity_proxy is not None
+    assert result.severity_proxy.cvss_source == "nvd"
+    assert "reports CVSS 9.4 (critical) from nvd" in result.rationale

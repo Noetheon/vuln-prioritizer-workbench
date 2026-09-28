@@ -43,6 +43,7 @@ from app.domain.engine.services.contextualization import (
     is_under_investigation,
 )
 from app.domain.engine.services.prioritization import PrioritizationService
+from app.domain.engine.severity_proxy import reported_cvss_score
 from app.models import FindingStatus
 
 
@@ -366,6 +367,8 @@ def _input_occurrence_from_evidence(
         dependency_path=_string_value(import_evidence.get("dependency_path")),
         fix_versions=fix_versions,
         raw_severity=item.raw_severity,
+        raw_cvss_score=reported_cvss_score(import_evidence.get("raw_cvss_score")),
+        raw_cvss_source=_string_value(import_evidence.get("raw_cvss_source")),
         target_kind=item.target_kind
         or _string_value(import_evidence.get("target_kind"))
         or "generic",

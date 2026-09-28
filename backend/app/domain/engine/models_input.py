@@ -29,6 +29,8 @@ class InputOccurrence(StrictModel):
     fix_versions: list[str] = Field(default_factory=list)
     source_record_id: str | None = None
     raw_severity: str | None = None
+    raw_cvss_score: float | None = Field(default=None, exclude_if=lambda value: value is None)
+    raw_cvss_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     target_kind: str = "generic"
     target_ref: str | None = None
     asset_id: str | None = None
@@ -63,12 +65,18 @@ class ExaminedTarget(StrictModel):
 
 
 class SeverityProxy(StrictModel):
-    """Source-reported severity band used when NVD has not published CVSS."""
+    """
+    Source-reported severity used when NVD has not published CVSS.
+
+    ``cvss_floor`` is the lower bound of the reported band, or the exact
+    source-reported CVSS score when ``cvss_source`` names where it came from.
+    """
 
     severity: str
     cvss_floor: float
     raw_value: str
     source_format: str
+    cvss_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class InputSourceSummary(StrictModel):

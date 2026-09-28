@@ -3375,6 +3375,14 @@ export type InputOccurrence = {
      */
     purl?: string | null;
     /**
+     * Raw Cvss Score
+     */
+    raw_cvss_score?: number | null;
+    /**
+     * Raw Cvss Source
+     */
+    raw_cvss_source?: string | null;
+    /**
      * Raw Severity
      */
     raw_severity?: string | null;

@@ -42,6 +42,12 @@ exact git tag output when release wording needs to be verified.
   `resolved_findings` and `reopened_findings`.
 - Trivy and Grype reports without CVEs import successfully when they name the
   targets they examined, so a clean rescan closes the remaining findings.
+- Trivy and Grype CVSS scores stand in for missing NVD CVSS with their exact
+  value and source instead of the reported band's lower bound.
+- Live NVD lookups are paced to NVD's limits (5 or, with an API key, 50
+  requests per 30 seconds) and retry rate-limited `403` responses.
+- Imports lead their warnings with one summary of vulnerabilities skipped for
+  lacking a CVE identifier (for example GHSA or GO advisories).
 - Open findings carry an SLA due date (first seen plus the recorded SLA target)
   and a state (`sla_due_at`, `sla_state`: overdue, due soon, on track). Triage
   shows them, filters by them (`sla`), and offers an **Overdue** view.

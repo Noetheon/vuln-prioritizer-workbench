@@ -214,6 +214,9 @@ def _raw_evidence(occurrence: InputOccurrence, *, input_type: str) -> dict[str, 
         "target_ref": occurrence.target_ref,
         "asset_id": occurrence.asset_id,
     }
+    if occurrence.raw_cvss_score is not None:
+        evidence["raw_cvss_score"] = occurrence.raw_cvss_score
+        evidence["raw_cvss_source"] = occurrence.raw_cvss_source
     line_number = _line_number_from_record_id(occurrence.source_record_id)
     if line_number is not None:
         evidence["line_number"] = line_number

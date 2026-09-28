@@ -192,6 +192,49 @@ def test_clean_scanner_reports_name_examined_targets_only_when_allowed(tmp_path:
     ] == [("grype-json", "image", "alpine")]
 
 
+def test_advisories_without_cves_are_summarized_before_details(tmp_path: Path) -> None:
+    from app.domain.engine.inputs._cve_support import summarize_non_cve_identifiers
+
+    trivy = tmp_path / "trivy.json"
+    trivy.write_text(
+        json.dumps(
+            {
+                "ArtifactName": "app:3",
+                "Results": [
+                    {
+                        "Target": "go.sum",
+                        "Vulnerabilities": [
+                            {"VulnerabilityID": "GO-2026-0001"},
+                            {"VulnerabilityID": "GHSA-aaaa-bbbb-cccc"},
+                            {"VulnerabilityID": "GO-2026-0001"},
+                            {"VulnerabilityID": "CVE-2026-0101"},
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    parsed = _load_loader_module().InputLoader().load(trivy, input_format="trivy-json")
+
+    assert parsed.unique_cves == ["CVE-2026-0101"]
+    assert parsed.warnings[0] == (
+        "Not imported: 2 vulnerabilities without a CVE identifier "
+        "(GO-2026-0001, GHSA-aaaa-bbbb-cccc). The Workbench prioritizes "
+        "CVE-identified findings; review these in the source report."
+    )
+    assert "Ignored non-CVE Trivy vulnerability identifier: 'GO-2026-0001'" in parsed.warnings
+    assert summarize_non_cve_identifiers(parsed.warnings) == parsed.warnings
+    assert summarize_non_cve_identifiers(["Unrelated warning"]) == ["Unrelated warning"]
+    many = [f"Ignored non-CVE Grype vulnerability identifier: 'GHSA-{i}'" for i in range(7)]
+    assert "GHSA-4, +2 more" in summarize_non_cve_identifiers(many)[0]
+    single = ["Ignored non-CVE Nessus identifier in host-1: 'MS17-010'"]
+    assert summarize_non_cve_identifiers(single)[0].startswith(
+        "Not imported: 1 vulnerability without a CVE identifier (MS17-010)"
+    )
+
+
 def test_dependency_check_empty_project_references_are_ignored(tmp_path: Path) -> None:
     loader_module = _load_loader_module()
     input_file = tmp_path / "dependency-check.json"

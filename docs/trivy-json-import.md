@@ -94,4 +94,7 @@ NVD, EPSS, KEV, ATT&CK, GHSA, OSV, or vendor advisory data during import.
   then resolved (see [Closing findings and rescans](user_documentation.md#closing-findings-and-rescans)).
   A report that names no target is still rejected.
 - Invalid or non-CVE `VulnerabilityID` values are skipped and reported as
-  warnings.
+  warnings, led by one summary warning that counts the skipped identifiers
+  (for example GHSA, GO, RUSTSEC, or PYSEC advisories without a CVE alias).
+- `CVSS` scores (NVD first) are kept as the finding's reported CVSS; they stand
+  in for NVD CVSS only while NVD has not scored the CVE.

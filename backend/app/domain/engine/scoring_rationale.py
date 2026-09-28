@@ -54,6 +54,12 @@ def _nvd_rationale_part(nvd: NvdData) -> str:
 
 
 def _severity_proxy_rationale_part(proxy: SeverityProxy) -> str:
+    if proxy.cvss_source:
+        return (
+            f"The {proxy.source_format} input reports CVSS {proxy.cvss_floor:.1f} "
+            f"({proxy.severity}) from {proxy.cvss_source}; until NVD publishes CVSS, "
+            "the base rule uses this source-reported score."
+        )
     return (
         f"The {proxy.source_format} input reports {proxy.severity} severity "
         f"({proxy.raw_value}); until NVD publishes CVSS, the base rule uses the "

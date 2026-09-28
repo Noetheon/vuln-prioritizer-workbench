@@ -122,7 +122,10 @@ def test_scanner_warnings_are_sanitized_and_bounded_without_modifying_raw_report
     assert len(assessment.warnings) == 21
     assert all(len(warning) <= 1000 for warning in assessment.warnings)
     assert "/private/tmp/secret" not in assessment.model_dump_json()
-    assert "981 additional warning(s) omitted" in assessment.warnings[-1]
+    assert "982 additional warning(s) omitted" in assessment.warnings[-1]
+    assert assessment.warnings[1].startswith(
+        "Not imported: 1000 vulnerabilities without a CVE identifier (GHSA-0,"
+    )
     assert parsed.parsed_input.parsed_input.warnings == assessment.warnings
     assert assessment.status == "partial"
     raw_path = settings.import_upload_dir_path / assessment.artifact_refs["report"]
