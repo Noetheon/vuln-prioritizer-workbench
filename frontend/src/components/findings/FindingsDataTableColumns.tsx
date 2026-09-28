@@ -33,6 +33,7 @@ import {
   sortAriaState,
 } from "./FindingsDataTableModel"
 import type { FindingsUrlSearch } from "./findings-search-state"
+import { SlaDueBadge } from "./SlaDueBadge"
 import type { FindingsDirection, QueueSort } from "./remediation-queue-model"
 
 export type FindingsTableSelection = {
@@ -240,6 +241,7 @@ export function buildFindingsDataTableColumns({
           </span>
           <div className="finding-meta-tags">
             <MetaTag label={findingSlaLabel(finding)} />
+            <SlaDueBadge finding={finding} />
             {finding.under_investigation ? (
               <MetaTag label="Under review" />
             ) : null}

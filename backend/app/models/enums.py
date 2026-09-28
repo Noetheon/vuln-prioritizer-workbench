@@ -63,6 +63,14 @@ ACTIONABLE_FINDING_STATUSES = frozenset(
 CLOSED_WORKFLOW_STATUSES = frozenset({FindingStatus.RESOLVED, FindingStatus.FALSE_POSITIVE})
 
 
+class FindingSlaState(StrEnum):
+    """Where open work stands against its recorded SLA due date."""
+
+    OVERDUE = "overdue"
+    DUE_SOON = "due_soon"
+    ON_TRACK = "on_track"
+
+
 class FindingLifecycleSource(StrEnum):
     """What caused a recorded finding status transition."""
 

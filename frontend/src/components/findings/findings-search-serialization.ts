@@ -34,6 +34,7 @@ export function findingsSearchToUrlSearch(
     ownerService: undefined,
     priority: undefined,
     query: undefined,
+    sla: undefined,
     sort: undefined,
     status: undefined,
   }
@@ -50,6 +51,7 @@ export function findingsSearchToUrlSearch(
   addIfPresent(search, "cvssMin", normalized)
   addIfPresent(search, "cvssMax", normalized)
   addIfPresent(search, "dataGap", normalized)
+  addIfPresent(search, "sla", normalized)
   addIfPresent(search, "sort", normalized)
   addIfPresent(search, "direction", normalized)
   addIfPresent(search, "limit", normalized)
@@ -108,6 +110,7 @@ export function findingsSearchToFilters(
     ownerService: state.ownerService,
     priority: state.priority,
     query: state.query,
+    sla: state.sla,
     status: state.status,
   }
 }
@@ -127,6 +130,7 @@ export function findingsSearchToApiParams(
     epss_min: numericApiValue(filters.epssMin),
     exposure: filters.exposure || undefined,
     kev: filters.kev === "" ? undefined : filters.kev === "true",
+    sla: filters.sla || undefined,
     limit: state.limit,
     offset: state.offset,
     owner_service: filters.ownerService.trim() || undefined,

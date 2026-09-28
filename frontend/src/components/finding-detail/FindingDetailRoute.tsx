@@ -17,6 +17,7 @@ import {
   VpwStatusBanner,
 } from "@/components/vpw"
 import type { FindingDetailTab } from "@/lib/app-defaults"
+import { slaDueDetail } from "@/lib/finding-sla-due"
 import { Link } from "@/lib/router"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 import { findingWaiverEvidence } from "@/lib/waiver-view"
@@ -304,6 +305,10 @@ function FindingDetailActionRail({
     {
       label: "SLA",
       value: findingSlaLabel(finding),
+    },
+    {
+      label: "SLA due",
+      value: slaDueDetail(finding),
     },
     {
       label: "Status",

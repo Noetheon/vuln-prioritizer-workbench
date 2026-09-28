@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from utils.demo_imports import configure_demo_imports, import_demo_rows
 from utils.import_contracts import completed_run_summary
 from utils.workbench_env import (
     WorkbenchApiEnv,
@@ -17,49 +17,9 @@ from utils.workbench_env import (
     seed_finding_pair,
 )
 
-SNAPSHOT = Path(__file__).resolve().parents[2] / "app" / "resources" / "demo_provider_snapshot.json"
 LOG4SHELL = "CVE-2021-44228"
 SPRING4SHELL = "CVE-2022-22965"
 MOVEIT = "CVE-2023-34362"
-CSV_HEADER = b"cve_id,target_ref,component_name,component_version\n"
-
-
-def _configure_imports(env: WorkbenchApiEnv, tmp_path: Path) -> None:
-    snapshots = tmp_path / "snapshots"
-    snapshots.mkdir(exist_ok=True)
-    (snapshots / "demo.json").write_bytes(SNAPSHOT.read_bytes())
-    env.client.app.state.workbench_settings = replace(
-        env.client.app.state.workbench_settings,
-        PROVIDER_SNAPSHOT_DIR=str(snapshots),
-        IMPORT_UPLOAD_DIR=str(tmp_path / "uploads"),
-        REPORT_DIR=str(tmp_path / "reports"),
-    )
-
-
-def _import(
-    env: WorkbenchApiEnv,
-    project_id: str,
-    rows: list[bytes],
-    *,
-    input_type: str = "generic-occurrence-csv",
-    resolve_missing: bool | None = None,
-) -> dict[str, object]:
-    data = {
-        "input_type": input_type,
-        "provider_snapshot_file": "demo.json",
-        "locked_provider_data": "true",
-    }
-    if resolve_missing is not None:
-        data["resolve_missing"] = "true" if resolve_missing else "false"
-    body = b"".join(rows) if input_type == "cve-list" else CSV_HEADER + b"".join(rows)
-    response = env.client.post(
-        f"/api/v1/projects/{project_id}/imports",
-        data=data,
-        files={"file": ("scan.csv" if input_type != "cve-list" else "cves.txt", body, "text/csv")},
-    )
-    summary = completed_run_summary(env, response, headers={})
-    assert summary["status"] == "succeeded", summary
-    return summary
 
 
 def _trivy_import(
@@ -110,9 +70,9 @@ def test_rescan_resolves_unreported_findings_and_reopens_regressions(
     tmp_path: Path,
 ) -> None:
     env = workbench_api_env
-    _configure_imports(env, tmp_path)
+    configure_demo_imports(env, tmp_path)
     project_id = create_project_via_api(env.client, {}, name="Lifecycle")["id"]
-    _import(
+    import_demo_rows(
         env,
         project_id,
         [
@@ -122,7 +82,7 @@ def test_rescan_resolves_unreported_findings_and_reopens_regressions(
         ],
     )
 
-    rescan = _import(env, project_id, [f"{LOG4SHELL},web-1,log4j-core,2.14.1\n".encode()])
+    rescan = import_demo_rows(env, project_id, [f"{LOG4SHELL},web-1,log4j-core,2.14.1\n".encode()])
 
     findings = _findings(env.client, project_id)
     assert rescan["resolved_findings"] == 1
@@ -146,7 +106,7 @@ def test_rescan_resolves_unreported_findings_and_reopens_regressions(
     assert detail["status"] == "resolved"
     assert detail["evidence"]["status"] == "resolved"
 
-    regression = _import(
+    regression = import_demo_rows(
         env,
         project_id,
         [
@@ -167,7 +127,7 @@ def test_clean_scanner_rescan_resolves_the_targets_it_examined(
     tmp_path: Path,
 ) -> None:
     env = workbench_api_env
-    _configure_imports(env, tmp_path)
+    configure_demo_imports(env, tmp_path)
     project_id = create_project_via_api(env.client, {}, name="Clean rescan")["id"]
     _trivy_import(
         env,
@@ -198,9 +158,9 @@ def test_reconciliation_respects_opt_out_cve_lists_and_false_positives(
     tmp_path: Path,
 ) -> None:
     env = workbench_api_env
-    _configure_imports(env, tmp_path)
+    configure_demo_imports(env, tmp_path)
     project_id = create_project_via_api(env.client, {}, name="Lifecycle opt-out")["id"]
-    _import(
+    import_demo_rows(
         env,
         project_id,
         [
@@ -209,7 +169,7 @@ def test_reconciliation_respects_opt_out_cve_lists_and_false_positives(
         ],
     )
 
-    kept = _import(
+    kept = import_demo_rows(
         env,
         project_id,
         [f"{LOG4SHELL},web-1,log4j-core,2.14.1\n".encode()],
@@ -218,7 +178,7 @@ def test_reconciliation_respects_opt_out_cve_lists_and_false_positives(
     assert kept["resolved_findings"] == 0
     assert _findings(env.client, project_id)[(SPRING4SHELL, "web-1")]["status"] == "open"
 
-    cve_only = _import(env, project_id, [f"{MOVEIT}\n".encode()], input_type="cve-list")
+    cve_only = import_demo_rows(env, project_id, [f"{MOVEIT}\n".encode()], input_type="cve-list")
     assert cve_only["resolved_findings"] == 0
 
     findings = _findings(env.client, project_id)
@@ -228,7 +188,7 @@ def test_reconciliation_respects_opt_out_cve_lists_and_false_positives(
         json={"status": "false_positive", "reason": "Library is vendored but never loaded."},
     )
     assert marked.status_code == 200, marked.text
-    _import(env, project_id, [f"{LOG4SHELL},web-1,log4j-core,2.14.1\n".encode()])
+    import_demo_rows(env, project_id, [f"{LOG4SHELL},web-1,log4j-core,2.14.1\n".encode()])
     assert _findings(env.client, project_id)[(LOG4SHELL, "web-1")]["status"] == "false_positive"
 
 

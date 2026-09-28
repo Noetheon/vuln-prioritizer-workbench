@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any, cast
 
-from sqlalchemy import case, or_
+from sqlalchemy import and_, case, false, or_
 from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlmodel import Session, col, func, select
 
 from app.decision_core.readmodels import project_finding_decision_views
+from app.decision_core.sla_due import first_seen_bounds
 from app.models import (
+    ACTIONABLE_FINDING_STATUSES,
     Asset,
     AttackSummaryContextRow,
     AttackSummaryFindingRow,
@@ -18,8 +21,10 @@ from app.models import (
     Finding,
     FindingCurrentProjection,
     FindingPriority,
+    FindingSlaState,
     FindingStatus,
 )
+from app.models.base import get_datetime_utc
 from app.repositories.finding_attack_query import (
     list_project_attack_summary_contexts as _list_project_attack_summary_contexts,
 )
@@ -63,6 +68,7 @@ def list_project_findings_page(
     cvss_min: float | None = None,
     cvss_max: float | None = None,
     data_gap: bool | None = None,
+    sla_state: FindingSlaState | str | None = None,
 ) -> tuple[list[Finding], int]:
     """Return a filtered, sorted, paginated project finding page."""
     return list_project_findings_query(
@@ -87,6 +93,7 @@ def list_project_findings_page(
             cvss_min=cvss_min,
             cvss_max=cvss_max,
             data_gap=data_gap,
+            sla_state=sla_state,
         ),
     )
 
@@ -99,6 +106,14 @@ def list_project_findings_query(
     asset_relationship = cast(QueryableAttribute[Any], Finding.asset)
     component_relationship = cast(QueryableAttribute[Any], Finding.component)
     filters = _database_finding_filters(query)
+    if query.sla_state is not None:
+        filters.append(
+            _sla_state_filter(
+                FindingSlaState(query.sla_state),
+                sla_hours=_project_sla_hours(session, query.project_id),
+                now=get_datetime_utc(),
+            )
+        )
     count = int(
         session.exec(
             select(func.count())
@@ -216,6 +231,59 @@ def _database_finding_filters(query: FindingPageQuery) -> list[Any]:
             )
         )
     return filters
+
+
+def _sla_hours_expression() -> Any:
+    """Recorded SLA window in hours, read from the materialized decision summary."""
+    summary = col(FindingCurrentProjection.read_summary_json)
+    return func.coalesce(
+        summary[("sla", "target_hours")].as_integer(),
+        summary[("sla", "target_days")].as_integer() * 24,
+    )
+
+
+def _actionable_status_filter() -> Any:
+    return func.coalesce(FindingCurrentProjection.status, Finding.status).in_(
+        [status.value for status in ACTIONABLE_FINDING_STATUSES]
+    )
+
+
+def _project_sla_hours(session: Session, project_id: uuid.UUID) -> list[int]:
+    """Return the distinct SLA windows of a project's open work."""
+    hours = _sla_hours_expression()
+    values = session.exec(
+        select(hours)
+        .select_from(FindingCurrentProjection)
+        .join(Finding, col(Finding.id) == col(FindingCurrentProjection.finding_id))
+        .where(
+            col(FindingCurrentProjection.project_id) == project_id,
+            _actionable_status_filter(),
+        )
+        .distinct()
+    ).all()
+    return sorted({int(value) for value in values if isinstance(value, int) and value > 0})
+
+
+def _sla_state_filter(
+    state: FindingSlaState,
+    *,
+    sla_hours: list[int],
+    now: datetime,
+) -> Any:
+    """Match open work whose first sighting puts it in ``state`` for its SLA window."""
+    hours_expression = _sla_hours_expression()
+    windows = []
+    for hours in sla_hours:
+        lower, upper = first_seen_bounds(state, hours=hours, now=now)
+        conditions = [hours_expression == hours]
+        if lower is not None:
+            conditions.append(col(Finding.first_seen_at) > lower)
+        if upper is not None:
+            conditions.append(col(Finding.first_seen_at) <= upper)
+        windows.append(and_(*conditions))
+    if not windows:
+        return false()
+    return and_(_actionable_status_filter(), or_(*windows))
 
 
 def _database_finding_order(query: FindingPageQuery) -> tuple[Any, ...]:

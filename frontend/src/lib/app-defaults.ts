@@ -2,6 +2,7 @@ import type {
   AssetExposure,
   AttackSourceCapabilityPublic,
   FindingPriority,
+  FindingSlaState,
   FindingStatus,
   FindingsReadProjectFindingsData,
   ImportsService,
@@ -76,6 +77,7 @@ export type FindingsDirection = NonNullable<
 
 export type KevFilter = "" | "true" | "false"
 export type DataGapFilter = "" | "true" | "false"
+export type SlaFilter = "" | FindingSlaState
 
 export type FindingFilters = {
   cvssMax: string
@@ -88,6 +90,7 @@ export type FindingFilters = {
   ownerService: string
   priority: "" | FindingPriority
   query: string
+  sla: SlaFilter
   status: "" | FindingStatus
 }
 
@@ -102,6 +105,7 @@ export const defaultFindingFilters: FindingFilters = {
   ownerService: "",
   priority: "",
   query: "",
+  sla: "",
   status: "",
 }
 

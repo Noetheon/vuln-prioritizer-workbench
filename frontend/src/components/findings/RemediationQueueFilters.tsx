@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from "react"
 import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { VpwBadge, VpwSearchInput } from "@/components/vpw"
+import { slaStateLabel } from "@/lib/finding-sla-due"
 import { formatLabel as labelize } from "@/lib/ui-copy"
 import {
   AdvancedFilterSelects,
@@ -119,6 +120,12 @@ export function RemediationQueueFilters({
               ? "Missing CVSS or EPSS"
               : "Complete provider data",
           onRemove: () => onFilterChange("dataGap", ""),
+        }
+      : null,
+    findingFilters.sla
+      ? {
+          label: `SLA: ${slaStateLabel(findingFilters.sla)}`,
+          onRemove: () => onFilterChange("sla", ""),
         }
       : null,
     findingFilters.epssMin

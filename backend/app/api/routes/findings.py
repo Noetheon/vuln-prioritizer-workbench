@@ -24,6 +24,7 @@ from app.models import (
     FindingExplanationPublic,
     FindingLifecycleEventsPublic,
     FindingPriority,
+    FindingSlaState,
     FindingsPublic,
     FindingStatus,
     FindingStatusUpdateRequest,
@@ -86,6 +87,13 @@ def read_project_findings(
         default=None,
         description="True selects findings without NVD CVSS or FIRST EPSS; false the rest.",
     ),
+    sla: FindingSlaState | None = Query(
+        default=None,
+        description=(
+            "Open work by SLA due date (first seen plus the recorded SLA target): "
+            "overdue, due_soon (last quarter of the window), or on_track."
+        ),
+    ),
     include_evidence: bool = Query(
         default=False,
         description=(
@@ -117,6 +125,7 @@ def read_project_findings(
             cvss_min=cvss_min,
             cvss_max=cvss_max,
             data_gap=data_gap,
+            sla_state=sla,
         ),
     )
     views = (

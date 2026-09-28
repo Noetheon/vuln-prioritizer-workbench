@@ -1,5 +1,9 @@
 import type { AssetExposure, FindingPriority, FindingStatus } from "../../api-client"
-import type { DataGapFilter, KevFilter } from "../../lib/app-defaults"
+import type {
+  DataGapFilter,
+  KevFilter,
+  SlaFilter,
+} from "../../lib/app-defaults"
 import {
   dataGapOptions,
   defaultFindingsSearchState,
@@ -9,6 +13,7 @@ import {
   findingPriorityOptions,
   findingStatusOptions,
   kevOptions,
+  slaOptions,
   sortOptions,
   type FindingPageSize,
   type FindingsSearchState,
@@ -72,6 +77,7 @@ export function parseFindingsSearch(input: unknown): FindingsSearchState {
       findingExposureOptions,
     ),
     kev: optionalEnumValue<KevFilter>(searchValue(source, "kev"), kevOptions),
+    sla: optionalEnumValue<SlaFilter>(searchValue(source, "sla"), slaOptions),
     limit: pageSizeValue(searchValue(source, "limit")),
     offset: offsetValue(searchValue(source, "offset")),
     ownerService: searchValue(source, "ownerService").slice(0, 200),

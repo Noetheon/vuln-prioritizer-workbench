@@ -168,6 +168,17 @@ many findings each import resolved and reopened.
 
 SLA labels in the finding views come from recorded decision guidance, including
 recorded hours or days when available. Missing guidance is shown explicitly.
+Open work (open, in review, remediating) also gets an SLA due date: the time
+the Workbench first saw the finding plus the SLA target recorded with its
+current decision (by default 24 hours for Critical, 7 days for High, 30 days
+for Medium, and 90 days for Low). Triage and Finding Detail mark findings as
+**Overdue**, **Due soon** (the last quarter of the window), or on track, and
+the **SLA** filter (`sla=overdue|due_soon|on_track` in the findings API) and
+the **Overdue** view list them. An escalation keeps the original start, so a
+finding that becomes Critical long after it was first seen is overdue at
+once. Closed and governed findings have no due date. Reports keep their
+recorded SLA labels only, so a report does not change with the time it is
+opened.
 The Evidence Center's Decision Summary likewise uses the selected run's stored
 recommendations and SLA guidance. A critical finding count or KEV membership
 alone does not establish production exposure or an incident in the project.

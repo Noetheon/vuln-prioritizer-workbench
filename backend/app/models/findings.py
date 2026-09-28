@@ -9,7 +9,7 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from app.decision_core.contracts import FindingDecisionEvidenceV2
 from app.models.base import get_datetime_utc
-from app.models.enums import FindingPriority, FindingStatus
+from app.models.enums import FindingPriority, FindingSlaState, FindingStatus
 
 
 class FindingBase(SQLModel):
@@ -139,6 +139,11 @@ class FindingPublic(FindingBase):
     business_service: str | None = None
     exposure: str | None = None
     sla: FindingSlaPublic | None = None
+    sla_due_at: datetime | None = Field(
+        default=None,
+        description="First seen plus the recorded SLA target; set only for open work.",
+    )
+    sla_state: FindingSlaState | None = None
     evidence: FindingDecisionEvidenceV2 | None = None
 
 

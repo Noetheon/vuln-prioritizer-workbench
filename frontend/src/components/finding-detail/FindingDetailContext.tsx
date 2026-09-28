@@ -10,6 +10,7 @@ import {
   StatusLozenge,
   VpwCommandPanel,
 } from "@/components/vpw"
+import { slaDueSummary } from "@/lib/finding-sla-due"
 import { formatEpss, formatNullableNumber } from "@/lib/risk-format"
 
 import {
@@ -36,6 +37,7 @@ export function FindingDetailContext({
   const action = findingRecommendedActionParts(recommendedAction)
   const governanceStatus = findingGovernanceStatus(finding)
   const governanceNote = findingGovernanceActionNote(finding)
+  const due = slaDueSummary(finding)
   const recommendationSummary = compactFindingText(
     `${action.title}. Validate affected assets, then record the fix path in Triage.`,
     150,
@@ -62,9 +64,18 @@ export function FindingDetailContext({
       value: formatNullableNumber(finding.cvss_base_score),
     },
     {
-      description: governanceStatus ? "Governance state" : "Response target",
+      description: due
+        ? due.label
+        : governanceStatus
+          ? "Governance state"
+          : "Response target",
       label: "SLA",
-      tone: "success",
+      tone:
+        due?.tone === "critical"
+          ? "critical"
+          : due?.tone === "warning"
+            ? "warning"
+            : "success",
       value: findingSlaLabel(finding),
     },
   ]

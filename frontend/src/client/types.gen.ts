@@ -2196,6 +2196,13 @@ export type FindingDetailPublic = {
      */
     risk_score?: number | null;
     sla?: FindingSlaPublic | null;
+    /**
+     * Sla Due At
+     *
+     * First seen plus the recorded SLA target; set only for open work.
+     */
+    sla_due_at?: string | null;
+    sla_state?: FindingSlaState | null;
     status?: FindingStatus;
     /**
      * Suppressed By Vex
@@ -2614,6 +2621,13 @@ export type FindingPublic = {
      */
     risk_score?: number | null;
     sla?: FindingSlaPublic | null;
+    /**
+     * Sla Due At
+     *
+     * First seen plus the recorded SLA target; set only for open work.
+     */
+    sla_due_at?: string | null;
+    sla_state?: FindingSlaState | null;
     status?: FindingStatus;
     /**
      * Suppressed By Vex
@@ -2656,6 +2670,13 @@ export type FindingSlaPublic = {
      */
     target_hours?: number | null;
 };
+
+/**
+ * FindingSlaState
+ *
+ * Where open work stands against its recorded SLA due date.
+ */
+export type FindingSlaState = 'overdue' | 'due_soon' | 'on_track';
 
 /**
  * FindingStatus
@@ -7003,6 +7024,12 @@ export type GetApiV1ProjectsByProjectIdFindingsData = {
          * True selects findings without NVD CVSS or FIRST EPSS; false the rest.
          */
         data_gap?: boolean | null;
+        /**
+         * Sla
+         *
+         * Open work by SLA due date (first seen plus the recorded SLA target): overdue, due_soon (last quarter of the window), or on_track.
+         */
+        sla?: FindingSlaState | null;
         /**
          * Include Evidence
          *

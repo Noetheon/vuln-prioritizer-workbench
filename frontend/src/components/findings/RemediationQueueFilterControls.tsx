@@ -1,6 +1,7 @@
 import type {
   AssetExposure,
   FindingPriority,
+  FindingSlaState,
   FindingStatus,
 } from "@/api-client"
 import {
@@ -10,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { slaFilterOptions } from "@/lib/finding-sla-due"
 import { formatLabel as labelize } from "@/lib/ui-copy"
 import { RangeFilter } from "./RemediationQueueRangeFilter"
 import {
@@ -175,6 +177,31 @@ export function AdvancedFilterSelects({
             <SelectItem value="__all">Any</SelectItem>
             <SelectItem value="true">Missing CVSS or EPSS</SelectItem>
             <SelectItem value="false">Complete</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="findings-filter-field findings-filter-field--select">
+        <span className="vpw-label findings-filter-label">SLA</span>
+        <Select
+          onValueChange={(v) =>
+            onFilterChange("sla", v === "__all" ? "" : (v as FindingSlaState))
+          }
+          value={findingFilters.sla || "__all"}
+        >
+          <SelectTrigger
+            aria-label="SLA due"
+            className="findings-filter-control h-9 w-full text-sm"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all">Any</SelectItem>
+            {slaFilterOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

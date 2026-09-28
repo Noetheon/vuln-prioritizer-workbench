@@ -785,3 +785,39 @@ test("finding history lists status changes with cause and reason", async ({
     history.getByRole("link", { name: "Open import run run-0000" }),
   ).toHaveAttribute("href", /\/imports\/runs\/run-00000002/)
 })
+
+test("SLA due dates flag overdue work and filter the queue", async ({
+  page,
+}) => {
+  const requests: URL[] = []
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await routeWorkbenchShell(page, {
+    findings: [
+      {
+        ...mockFinding,
+        sla: { label: "Emergency", target_days: 1, target_hours: 24 },
+        sla_due_at: "2026-09-02T00:00:00Z",
+        sla_state: "overdue",
+      },
+    ],
+    onFindingsRequest: (url) => requests.push(url),
+    projects: [mockProject],
+  })
+
+  await page.goto("/findings")
+  const table = page.getByRole("table", { name: "Findings remediation queue" })
+  await expect(table.getByText(/^Overdue since /)).toBeVisible()
+
+  await page.getByRole("button", { name: /^Signals(?:\s+\d+)?$/ }).click()
+  await page.getByRole("combobox", { name: "SLA due" }).click()
+  await page.getByRole("option", { name: "Overdue" }).click()
+  await expect(page).toHaveURL(/sla=overdue/)
+  await expect
+    .poll(() => requests.at(-1)?.searchParams.get("sla"))
+    .toBe("overdue")
+  await expect(page.getByText("SLA: Overdue")).toBeVisible()
+
+  await page.getByRole("link", { exact: true, name: mockFinding.cve_id }).click()
+  await expect(page.getByText(/SLA due/).first()).toBeVisible()
+  await expect(page.getByText(/· Overdue$/)).toBeVisible()
+})

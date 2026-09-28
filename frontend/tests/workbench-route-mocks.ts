@@ -46,6 +46,9 @@ type MockFinding = {
   rationale: string
   recommended_action: string
   risk_score: number
+  sla?: { label: string; target_days?: number; target_hours?: number }
+  sla_due_at?: string | null
+  sla_state?: "overdue" | "due_soon" | "on_track" | null
   status: string
   updated_at: string
   vulnerability_id: string

@@ -2,6 +2,7 @@ import type {
   AssetExposure,
   FindingPriority,
   FindingPublic,
+  FindingSlaState,
   FindingStatus,
   FindingsReadProjectFindingsData,
 } from "@/api-client"
@@ -24,6 +25,7 @@ export type KevFilter = "" | "true" | "false"
 export type FindingsSavedView =
   | "all"
   | "immediate"
+  | "overdue"
   | "kev"
   | "internet"
   | "accepted"
@@ -35,6 +37,7 @@ export const findingsSavedViewOptions: Array<{
 }> = [
   { label: "All", value: "all" },
   { label: "Immediate", value: "immediate" },
+  { label: "Overdue", value: "overdue" },
   { label: "KEV", value: "kev" },
   { label: "Internet-facing", value: "internet" },
   { label: "Accepted", value: "accepted" },
@@ -54,6 +57,7 @@ export type FindingFilters = {
   ownerService: string
   priority: "" | FindingPriority
   query: string
+  sla: "" | FindingSlaState
   status: "" | FindingStatus
 }
 
@@ -127,6 +131,7 @@ export function savedViewFromFilters(
 ): FindingsSavedView {
   if (filters.status === "accepted") return "accepted"
   if (filters.status === "fixed") return "fixed"
+  if (filters.sla === "overdue") return "overdue"
   if (filters.kev === "true") return "kev"
   if (filters.exposure === "internet-facing") return "internet"
   if (filters.priority === "critical" && filters.status === "open") {
@@ -280,5 +285,6 @@ export function advancedFilterCount(filters: FindingFilters) {
     filters.epssMin,
     filters.exposure,
     filters.kev,
+    filters.sla,
   ].filter((v) => v.trim() !== "").length
 }

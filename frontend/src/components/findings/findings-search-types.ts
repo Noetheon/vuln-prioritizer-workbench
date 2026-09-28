@@ -58,6 +58,7 @@ export const defaultFindingFilters: FindingFilters = {
   ownerService: "",
   priority: "",
   query: "",
+  sla: "",
   status: "",
 }
 
@@ -92,6 +93,7 @@ export const defaultFindingsSearchState: FindingsSearchState = {
 export const directionOptions = ["asc", "desc"] as const
 export const kevOptions = ["true", "false"] as const
 export const dataGapOptions = ["true", "false"] as const
+export const slaOptions = ["overdue", "due_soon", "on_track"] as const
 export const searchKeys = [
   "assetId",
   "assetKey",
@@ -108,6 +110,7 @@ export const searchKeys = [
   "ownerService",
   "priority",
   "query",
+  "sla",
   "sort",
   "status",
 ] as const

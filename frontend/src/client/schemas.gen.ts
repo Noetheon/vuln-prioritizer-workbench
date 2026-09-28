@@ -4217,6 +4217,29 @@ export const FindingDetailPublicSchema = {
                 }
             ]
         },
+        sla_due_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            description: 'First seen plus the recorded SLA target; set only for open work.',
+            title: 'Sla Due At'
+        },
+        sla_state: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/FindingSlaState'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         status: {
             $ref: '#/components/schemas/FindingStatus',
             default: 'open'
@@ -5111,6 +5134,29 @@ export const FindingPublicSchema = {
                 }
             ]
         },
+        sla_due_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            description: 'First seen plus the recorded SLA target; set only for open work.',
+            title: 'Sla Due At'
+        },
+        sla_state: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/FindingSlaState'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         status: {
             $ref: '#/components/schemas/FindingStatus',
             default: 'open'
@@ -5192,6 +5238,17 @@ export const FindingSlaPublicSchema = {
     ],
     title: 'FindingSlaPublic',
     type: 'object'
+} as const;
+
+export const FindingSlaStateSchema = {
+    description: 'Where open work stands against its recorded SLA due date.',
+    enum: [
+        'overdue',
+        'due_soon',
+        'on_track'
+    ],
+    title: 'FindingSlaState',
+    type: 'string'
 } as const;
 
 export const FindingStatusSchema = {

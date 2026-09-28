@@ -42,6 +42,9 @@ exact git tag output when release wording needs to be verified.
   `resolved_findings` and `reopened_findings`.
 - Trivy and Grype reports without CVEs import successfully when they name the
   targets they examined, so a clean rescan closes the remaining findings.
+- Open findings carry an SLA due date (first seen plus the recorded SLA target)
+  and a state (`sla_due_at`, `sla_state`: overdue, due soon, on track). Triage
+  shows them, filters by them (`sla`), and offers an **Overdue** view.
 
 - Explicit `json-gzip` exports for large historical runs, using the complete
   `analysis-result.v2` contract with bounded streaming and checksum validation.

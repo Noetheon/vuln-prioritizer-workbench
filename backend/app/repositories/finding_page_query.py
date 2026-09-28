@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from app.models import (
     FindingPriority,
+    FindingSlaState,
     FindingStatus,
 )
 
@@ -34,3 +35,4 @@ class FindingPageQuery:
     cvss_min: float | None = None
     cvss_max: float | None = None
     data_gap: bool | None = None
+    sla_state: FindingSlaState | str | None = None
