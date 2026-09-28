@@ -60,6 +60,8 @@ type RouteWorkbenchShellOptions = {
   assets?: AssetPublic[]
   findings?: MockFinding[]
   findingsDelayMs?: number
+  lifecycleEvents?: Record<string, unknown>[]
+  onBulkStatusRequest?: (body: Record<string, unknown>) => void
   onFindingsRequest?: (url: URL) => void
   providerStatus?: ProviderStatusPublic
   providerStatusDelayMs?: number
@@ -315,6 +317,7 @@ export async function routeWorkbenchShell(
   const apiDocsEnabled = options.apiDocsEnabled ?? true
   const apiDocsPath = options.apiDocsPath ?? "/docs"
   const onFindingsRequest = options.onFindingsRequest
+  const lifecycleEvents = options.lifecycleEvents ?? []
   const providerStatus = options.providerStatus ?? {
     status: "ok",
     snapshot_mode: "demo",
@@ -503,6 +506,29 @@ export async function routeWorkbenchShell(
   )
   await page.route("**/api/v1/projects/*/evaluations?*", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ data: [], count: 0 }) }))
   await page.route("**/api/v1/findings/*/decision-revisions?*", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ data: [], count: 0 }) }))
+  await page.route("**/api/v1/findings/*/lifecycle-events?*", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: lifecycleEvents,
+        count: lifecycleEvents.length,
+      }),
+    }),
+  )
+  await page.route("**/api/v1/projects/*/findings/status", (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>
+    options.onBulkStatusRequest?.(body)
+    const ids = Array.isArray(body.finding_ids) ? body.finding_ids : []
+    return route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        status: body.status,
+        updated_count: ids.length,
+        updated_ids: ids,
+        skipped: [],
+      }),
+    })
+  })
   await page.route("**/api/v1/projects/?*", (route) =>
     route.fulfill({
       contentType: "application/json",

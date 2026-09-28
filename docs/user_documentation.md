@@ -140,6 +140,32 @@ new scan, advance the observation time, or prove that a finding was fixed.
 Legacy revisions without complete replay inputs remain readable; a new import
 is required before those findings can be re-evaluated.
 
+## Closing Findings And Rescans
+
+Findings close in two ways, and both are recorded in the finding's **History**
+tab under **Status changes** with who or what changed the status and why.
+
+- **Rescans.** When a new import examines a target with the same source format
+  (for example, a Trivy report for the same image), open findings that format
+  previously reported for that target and that the new file no longer lists
+  become `resolved`. A later import that reports a resolved finding again
+  reopens it. Findings on targets the new file did not examine, findings from
+  other formats, and CVE-only lists are left untouched. A Trivy or Grype report
+  that lists no vulnerabilities is accepted when it names the targets it
+  examined, so a clean rescan closes the remaining findings. Clear **Resolve
+  findings this import no longer reports** in the import review step, or send
+  `resolve_missing=false`, for partial exports.
+- **Analysts.** Set **Resolved** or **False positive** on Finding Detail, or
+  select rows in the Triage queue and choose **Set status…** to change up to
+  500 findings at once. Both closing statuses require a reason. False
+  positives stay closed when a later scan reports them again. Accepted,
+  suppressed, and fixed remain owned by waivers and VEX; bulk changes skip
+  those findings and say why.
+
+Closed findings stay visible behind open work in the queue, with their
+recorded decision evidence unchanged. Import history and run detail show how
+many findings each import resolved and reopened.
+
 SLA labels in the finding views come from recorded decision guidance, including
 recorded hours or days when available. Missing guidance is shown explicitly.
 The Evidence Center's Decision Summary likewise uses the selected run's stored

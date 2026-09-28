@@ -1,4 +1,5 @@
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, RefreshCcw } from "lucide-react"
+import { Input } from "@/components/ui/input"
 import {
   VpwBadge,
   VpwSectionHeader,
@@ -25,6 +26,7 @@ import {
 
 export function ReviewImportStep({
   importWizard,
+  onResolveMissingChange,
   parserPreview,
   readiness,
   selectedProject,
@@ -60,6 +62,7 @@ export function ReviewImportStep({
       : "No optional context selected"
   const providerMessage =
     providerCheck?.message ?? "Current provider data is available."
+  const resolveMissing = importWizard.resolveMissing ?? true
   const evidenceFileLabel = importWizard.file
     ? `${importWizard.file.name} - ${fileSizeLabel(importWizard.file)}`
     : "Required"
@@ -115,6 +118,11 @@ export function ReviewImportStep({
       value: importWizard.lockedProviderData ? "Yes" : "No",
       muted: !importWizard.lockedProviderData,
     },
+    {
+      label: "Unreported findings",
+      value: resolveMissing ? "Resolve" : "Keep open",
+      muted: !resolveMissing,
+    },
   ]
   return (
     <section className="flex flex-col gap-5">
@@ -139,6 +147,34 @@ export function ReviewImportStep({
         inputType={format?.label ?? "Required"}
         projectName={selectedProject?.name ?? "Required"}
       />
+      <label
+        className="flex items-start gap-3 rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-4 text-sm"
+        htmlFor="resolve-missing"
+      >
+        <Input
+          checked={resolveMissing}
+          className="mt-1 size-4 min-w-4 shrink-0 p-0 accent-[var(--vpw-blue)] shadow-none"
+          id="resolve-missing"
+          name="resolveMissing"
+          onChange={(event) => onResolveMissingChange(event.target.checked)}
+          type="checkbox"
+        />
+        <span className="min-w-0 pt-px">
+          <span className="inline-flex items-center gap-2 font-semibold text-[var(--vpw-text-primary)]">
+            <RefreshCcw
+              aria-hidden="true"
+              className="size-4 text-[var(--vpw-text-muted)]"
+            />
+            Resolve findings this import no longer reports
+          </span>
+          <span className="mt-0.5 block text-xs leading-5 text-[var(--vpw-text-muted)]">
+            Findings an earlier import of the same format reported for a target
+            in this file are marked resolved when this file no longer lists
+            them. Turn this off for partial exports. A later import that
+            reports a resolved finding again reopens it.
+          </span>
+        </span>
+      </label>
       <div className="grid gap-4 min-[1800px]:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)] min-[1800px]:items-start">
         <section className="min-w-0">
           <ReviewSectionHeading

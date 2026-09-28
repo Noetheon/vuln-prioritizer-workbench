@@ -13,6 +13,7 @@ from sqlmodel import Session, select
 
 from app.core.config import Settings
 from app.decision_core.contracts import FindingDecisionEvidenceV2
+from app.decision_core.current_queue import closed_workflow_bucket
 from app.decision_core.evaluation import ScopeEvaluationInput
 from app.decision_core.projection_evaluation import (
     _apply_recomputed_decision,
@@ -197,7 +198,10 @@ def ranked_evaluation_payloads(
         )
         candidates.append(
             (
-                global_operational_sort_key(decision, _projection_scope_sort_key(evidence)),
+                (
+                    closed_workflow_bucket(evidence.status),
+                    *global_operational_sort_key(decision, _projection_scope_sort_key(evidence)),
+                ),
                 finding_id,
                 evidence,
                 decision,

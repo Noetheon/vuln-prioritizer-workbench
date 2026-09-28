@@ -87,8 +87,8 @@ def _is_under_investigation_finding(finding: MarkdownReportFinding) -> bool:
 
 
 def _is_fixed_evidence_finding(finding: MarkdownReportFinding) -> bool:
-    """Is fixed evidence finding function."""
-    return _status_value(finding) == "fixed"
+    """Fixed by VEX evidence, or resolved by an analyst or a rescan."""
+    return _status_value(finding) in {"fixed", "resolved"}
 
 
 def _is_actionable_finding(finding: MarkdownReportFinding) -> bool:
@@ -99,7 +99,7 @@ def _is_actionable_finding(finding: MarkdownReportFinding) -> bool:
 def _is_suppressed_finding(finding: MarkdownReportFinding) -> bool:
     """Is suppressed finding function."""
     status = str(finding.status or "").split(".", maxsplit=1)[-1].strip().lower()
-    return finding.suppressed_by_vex or status == "suppressed"
+    return finding.suppressed_by_vex or status in {"suppressed", "false_positive"}
 
 
 def _is_accepted_risk_finding(finding: MarkdownReportFinding) -> bool:

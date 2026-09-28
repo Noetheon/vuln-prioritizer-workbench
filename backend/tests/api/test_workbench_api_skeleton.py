@@ -1340,6 +1340,8 @@ def test_vpw036_project_decision_endpoints_handle_empty_projects(
         "open": 0,
         "in_review": 0,
         "remediating": 0,
+        "resolved": 0,
+        "false_positive": 0,
         "fixed": 0,
         "accepted": 0,
         "suppressed": 0,

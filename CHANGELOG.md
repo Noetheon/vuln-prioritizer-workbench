@@ -31,6 +31,17 @@ exact git tag output when release wording needs to be verified.
   whether it is set, without its value.
 - State-changing API requests and WebSocket handshakes from other sites are
   rejected (`Origin`/`Sec-Fetch-Site` check); non-browser clients are unaffected.
+- Findings can be closed. Analysts set `resolved` or `false_positive` with a
+  required reason on Finding Detail or for up to 500 selected Triage rows
+  (`POST /api/v1/projects/{project_id}/findings/status`). Imports resolve
+  findings a rescan of the same target and format no longer reports and
+  reopen resolved findings reported again (`resolve_missing`, default on).
+  Every transition is kept in an append-only status history
+  (`GET /api/v1/findings/{finding_id}/lifecycle-events`, migration `0016`),
+  closed findings sort behind open work, and runs report
+  `resolved_findings` and `reopened_findings`.
+- Trivy and Grype reports without CVEs import successfully when they name the
+  targets they examined, so a clean rescan closes the remaining findings.
 
 - Explicit `json-gzip` exports for large historical runs, using the complete
   `analysis-result.v2` contract with bounded streaming and checksum validation.

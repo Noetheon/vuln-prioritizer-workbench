@@ -75,13 +75,28 @@ export function timelineDetail(item: string, summary: ImportRunSummary) {
   }
   if (item === "Optional context applied") return "Reviewed supplemental context"
   if (item === "Findings created or updated") {
-    return `${created} created, ${updated} updated`
+    return findingChangeSummary(summary, created, updated)
   }
   if (item === "Import completed") return runStatusLabel(summary.status)
   if (item === "Parser diagnostics recorded") {
     return `${summary.parse_errors?.length ?? 0} parser error(s)`
   }
   return formatDisplayType(summary.input_type)
+}
+
+function findingChangeSummary(
+  summary: ImportRunSummary,
+  created: number,
+  updated: number,
+) {
+  const resolved = runCount(summary, "resolved_findings")
+  const reopened = runCount(summary, "reopened_findings")
+  return [
+    `${created} created`,
+    `${updated} updated`,
+    ...(resolved ? [`${resolved} resolved`] : []),
+    ...(reopened ? [`${reopened} reopened`] : []),
+  ].join(", ")
 }
 
 export function timelineTime(item: string, summary: ImportRunSummary) {
@@ -96,6 +111,8 @@ export function numberFromSummary(
   key:
     | "created_findings"
     | "updated_findings"
+    | "resolved_findings"
+    | "reopened_findings"
     | "ignored_lines"
     | "rows_read"
     | "occurrence_count"

@@ -50,6 +50,8 @@ export function DiagnosticsTab({
             { label: "Candidate findings", value: candidateFindings(summary) },
             { label: "Findings created", value: summary.created_findings ?? 0 },
             { label: "Findings updated", value: summary.updated_findings ?? 0 },
+            { label: "Findings resolved", value: summary.resolved_findings ?? 0 },
+            { label: "Findings reopened", value: summary.reopened_findings ?? 0 },
             { label: "Ignored lines", value: summary.ignored_lines ?? 0 },
             { label: "Parser errors", value: parseErrors.length },
             { label: "Warnings", value: warningCount(warnings) },

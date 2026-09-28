@@ -122,6 +122,14 @@ export type AnalysisRunCountsPublic = {
      */
     occurrence_count?: number;
     /**
+     * Reopened Findings
+     */
+    reopened_findings?: number;
+    /**
+     * Resolved Findings
+     */
+    resolved_findings?: number;
+    /**
      * Rows Read
      */
     rows_read?: number;
@@ -301,6 +309,14 @@ export type AnalysisRunSummaryPublic = {
      * Provider Snapshot Id
      */
     provider_snapshot_id?: string | null;
+    /**
+     * Reopened Findings
+     */
+    reopened_findings?: number;
+    /**
+     * Resolved Findings
+     */
+    resolved_findings?: number;
     /**
      * Rows Read
      */
@@ -1058,6 +1074,12 @@ export type BodyImportsImportProjectUpload = {
      * Provider Snapshot File
      */
     provider_snapshot_file?: string | null;
+    /**
+     * Resolve Missing
+     *
+     * Mark findings resolved when this import examined their target with the same source format and no longer reports them.
+     */
+    resolve_missing?: boolean;
     /**
      * Sbom Db Update
      */
@@ -1857,6 +1879,60 @@ export type FindingAttackTechniqueDetailPublic = {
 };
 
 /**
+ * FindingBulkStatusSkipPublic
+ *
+ * One finding that a bulk status change left unchanged, with the reason.
+ */
+export type FindingBulkStatusSkipPublic = {
+    /**
+     * Detail
+     */
+    detail: string;
+    /**
+     * Finding Id
+     */
+    finding_id: string;
+};
+
+/**
+ * FindingBulkStatusUpdatePublic
+ *
+ * Outcome of a bulk workflow status change.
+ */
+export type FindingBulkStatusUpdatePublic = {
+    /**
+     * Skipped
+     */
+    skipped?: Array<FindingBulkStatusSkipPublic>;
+    status: FindingStatus;
+    /**
+     * Updated Count
+     */
+    updated_count?: number;
+    /**
+     * Updated Ids
+     */
+    updated_ids?: Array<string>;
+};
+
+/**
+ * FindingBulkStatusUpdateRequest
+ *
+ * Apply one manual workflow status to several findings of a project.
+ */
+export type FindingBulkStatusUpdateRequest = {
+    /**
+     * Finding Ids
+     */
+    finding_ids: Array<string>;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+    status: FindingStatus;
+};
+
+/**
  * FindingDecisionEvidenceV2
  *
  * Current decision and evidence graph for one finding in one run.
@@ -2223,6 +2299,66 @@ export type FindingExplanationPublic = {
 };
 
 /**
+ * FindingLifecycleEventPublic
+ *
+ * Public status-history row for finding detail views.
+ */
+export type FindingLifecycleEventPublic = {
+    /**
+     * Actor
+     */
+    actor?: string | null;
+    /**
+     * Analysis Run Id
+     */
+    analysis_run_id?: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Finding Id
+     */
+    finding_id: string;
+    /**
+     * From Status
+     */
+    from_status: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * To Status
+     */
+    to_status: string;
+};
+
+/**
+ * FindingLifecycleEventsPublic
+ *
+ * Newest-first status history of one finding.
+ */
+export type FindingLifecycleEventsPublic = {
+    /**
+     * Count
+     */
+    count?: number;
+    /**
+     * Data
+     */
+    data?: Array<FindingLifecycleEventPublic>;
+};
+
+/**
  * FindingOccurrencePublic
  *
  * Public occurrence row for finding detail views.
@@ -2526,7 +2662,7 @@ export type FindingSlaPublic = {
  *
  * Finding lifecycle state.
  */
-export type FindingStatus = 'open' | 'in_review' | 'remediating' | 'fixed' | 'accepted' | 'suppressed';
+export type FindingStatus = 'open' | 'in_review' | 'remediating' | 'resolved' | 'false_positive' | 'fixed' | 'accepted' | 'suppressed';
 
 /**
  * FindingStatusUpdateRequest
@@ -2534,6 +2670,10 @@ export type FindingStatus = 'open' | 'in_review' | 'remediating' | 'fixed' | 'ac
  * Manual workflow status change for one finding.
  */
 export type FindingStatusUpdateRequest = {
+    /**
+     * Reason
+     */
+    reason?: string | null;
     status: FindingStatus;
 };
 
@@ -2844,6 +2984,10 @@ export type GovernanceRollupPublic = {
      */
     expired_waiver_count?: number;
     /**
+     * False Positive Count
+     */
+    false_positive_count?: number;
+    /**
      * Finding Count
      */
     finding_count?: number;
@@ -2877,6 +3021,10 @@ export type GovernanceRollupPublic = {
     priority_counts?: {
         [key: string]: number;
     };
+    /**
+     * Resolved Count
+     */
+    resolved_count?: number;
     /**
      * Review Due Waiver Count
      */
@@ -5022,6 +5170,14 @@ export type RunCountsV2 = {
      */
     occurrence_count?: number;
     /**
+     * Reopened Findings
+     */
+    reopened_findings?: number;
+    /**
+     * Resolved Findings
+     */
+    resolved_findings?: number;
+    /**
      * Rows Read
      */
     rows_read?: number;
@@ -6247,6 +6403,45 @@ export type GetApiV1FindingsByFindingIdExplainResponses = {
 
 export type GetApiV1FindingsByFindingIdExplainResponse = GetApiV1FindingsByFindingIdExplainResponses[keyof GetApiV1FindingsByFindingIdExplainResponses];
 
+export type GetApiV1FindingsByFindingIdLifecycleEventsData = {
+    body?: never;
+    path: {
+        /**
+         * Finding Id
+         */
+        finding_id: string;
+    };
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
+    url: '/api/v1/findings/{finding_id}/lifecycle-events';
+};
+
+export type GetApiV1FindingsByFindingIdLifecycleEventsErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1FindingsByFindingIdLifecycleEventsError = GetApiV1FindingsByFindingIdLifecycleEventsErrors[keyof GetApiV1FindingsByFindingIdLifecycleEventsErrors];
+
+export type GetApiV1FindingsByFindingIdLifecycleEventsResponses = {
+    /**
+     * Successful Response
+     */
+    200: FindingLifecycleEventsPublic;
+};
+
+export type GetApiV1FindingsByFindingIdLifecycleEventsResponse = GetApiV1FindingsByFindingIdLifecycleEventsResponses[keyof GetApiV1FindingsByFindingIdLifecycleEventsResponses];
+
 export type PatchApiV1FindingsByFindingIdStatusData = {
     body: FindingStatusUpdateRequest;
     path: {
@@ -6835,6 +7030,36 @@ export type GetApiV1ProjectsByProjectIdFindingsResponses = {
 };
 
 export type GetApiV1ProjectsByProjectIdFindingsResponse = GetApiV1ProjectsByProjectIdFindingsResponses[keyof GetApiV1ProjectsByProjectIdFindingsResponses];
+
+export type PostApiV1ProjectsByProjectIdFindingsStatusData = {
+    body: FindingBulkStatusUpdateRequest;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/findings/status';
+};
+
+export type PostApiV1ProjectsByProjectIdFindingsStatusErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type PostApiV1ProjectsByProjectIdFindingsStatusError = PostApiV1ProjectsByProjectIdFindingsStatusErrors[keyof PostApiV1ProjectsByProjectIdFindingsStatusErrors];
+
+export type PostApiV1ProjectsByProjectIdFindingsStatusResponses = {
+    /**
+     * Successful Response
+     */
+    200: FindingBulkStatusUpdatePublic;
+};
+
+export type PostApiV1ProjectsByProjectIdFindingsStatusResponse = PostApiV1ProjectsByProjectIdFindingsStatusResponses[keyof PostApiV1ProjectsByProjectIdFindingsStatusResponses];
 
 export type PostApiV1ProjectsByProjectIdGithubIssuesExportData = {
     body: GitHubIssueExportCreate;

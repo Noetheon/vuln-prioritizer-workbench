@@ -682,3 +682,106 @@ test("invalid findings URL params are normalized before API requests", async ({
   expect(lastRequest?.searchParams.has("cvss_max")).toBe(false)
   expect(lastRequest?.searchParams.has("asset_id")).toBe(false)
 })
+
+test("triage selection closes findings with a recorded reason", async ({
+  page,
+}) => {
+  const bulkRequests: Record<string, unknown>[] = []
+  const secondFinding = {
+    ...mockFinding,
+    cve_id: "CVE-2021-44228",
+    id: "finding-2",
+    vulnerability_id: "CVE-2021-44228",
+  }
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await routeWorkbenchShell(page, {
+    findings: [mockFinding, secondFinding],
+    onBulkStatusRequest: (body) => bulkRequests.push(body),
+    projects: [mockProject],
+  })
+
+  await page.goto("/findings")
+  const table = page.getByRole("table", { name: "Findings remediation queue" })
+  await expect(table).toContainText("CVE-2021-44228")
+  await expect(
+    page.getByRole("region", { name: "Bulk status change" }),
+  ).toHaveCount(0)
+
+  await page
+    .getByRole("checkbox", { name: "Select all findings on this page" })
+    .click()
+  const bulkBar = page.getByRole("region", { name: "Bulk status change" })
+  await expect(bulkBar).toContainText("2 findings selected")
+  await page.getByRole("checkbox", { name: /Select CVE-2021-44228/ }).click()
+  await expect(bulkBar).toContainText("1 finding selected")
+  await expect(
+    page.getByRole("checkbox", { name: "Select all findings on this page" }),
+  ).toHaveAttribute("aria-checked", "mixed")
+  await page
+    .getByRole("checkbox", { name: "Select all findings on this page" })
+    .click()
+  await expect(bulkBar).toContainText("2 findings selected")
+
+  await bulkBar
+    .getByRole("combobox", { name: "Set status for selected findings" })
+    .click()
+  await page.getByRole("option", { name: "Resolved" }).click()
+  const dialog = page.getByRole("dialog", {
+    name: "Mark 2 findings as resolved",
+  })
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole("button", { name: "Mark as resolved" }).click()
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "Describe why this finding is resolved.",
+  )
+  expect(bulkRequests).toHaveLength(0)
+
+  await dialog
+    .getByLabel("Reason (required)")
+    .fill("  Upgraded both images in release 2026.10.  ")
+  await dialog.getByRole("button", { name: "Mark as resolved" }).click()
+  await expect(dialog).toHaveCount(0)
+  await expect(bulkBar.getByRole("status")).toHaveText(
+    "Marked 2 findings as resolved.",
+  )
+  expect(bulkRequests).toEqual([
+    {
+      finding_ids: ["finding-1", "finding-2"],
+      reason: "Upgraded both images in release 2026.10.",
+      status: "resolved",
+    },
+  ])
+})
+
+test("finding history lists status changes with cause and reason", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await routeWorkbenchShell(page, {
+    findings: [{ ...mockFinding, status: "resolved" }],
+    lifecycleEvents: [
+      {
+        actor: null,
+        analysis_run_id: "run-00000002",
+        created_at: "2026-09-28T09:00:00Z",
+        finding_id: mockFinding.id,
+        from_status: "open",
+        id: "event-1",
+        reason:
+          "Not reported by the trivy-json import of scan.json (run run-0000) for image app:2.0.",
+        source: "import_not_observed",
+        to_status: "resolved",
+      },
+    ],
+    projects: [mockProject],
+  })
+
+  await page.goto(`/findings/${mockFinding.id}`)
+  await page.getByRole("tab", { name: "History" }).click()
+  const history = page.getByRole("region", { name: "Status changes" })
+  await expect(history).toContainText("Not reported by a rescan")
+  await expect(history).toContainText("Not reported by the trivy-json import")
+  await expect(
+    history.getByRole("link", { name: "Open import run run-0000" }),
+  ).toHaveAttribute("href", /\/imports\/runs\/run-00000002/)
+})

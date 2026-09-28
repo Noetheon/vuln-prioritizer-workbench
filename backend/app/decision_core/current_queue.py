@@ -11,8 +11,21 @@ from app.decision_core.projection_evaluation import (
     _stored_projection_decision,
 )
 from app.domain.engine.services.prioritization_ranking import global_operational_sort_key
+from app.models.enums import CLOSED_WORKFLOW_STATUSES
 
 _RANK_PREFIX = re.compile(r"^Top finding #\d+: ")
+_CLOSED_STATUS_VALUES = frozenset(status.value for status in CLOSED_WORKFLOW_STATUSES)
+
+
+def closed_workflow_bucket(status: object) -> int:
+    """
+    Order analyst-closed findings after all other current work.
+
+    Resolved and false-positive findings keep their recorded decision and sort
+    key; only the current queue moves them behind open and governed work.
+    """
+    value = getattr(status, "value", status)
+    return 1 if value in _CLOSED_STATUS_VALUES else 0
 
 
 def decision_sort_key(evidence: FindingDecisionEvidenceV2) -> list[Any] | None:

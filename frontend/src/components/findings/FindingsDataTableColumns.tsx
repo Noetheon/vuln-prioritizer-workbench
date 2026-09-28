@@ -2,6 +2,7 @@ import { Link } from "@/lib/router"
 import { ExternalLink, Eye } from "lucide-react"
 import type { FindingPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Tooltip,
   TooltipContent,
@@ -16,6 +17,7 @@ import {
   VpwSignalCluster,
   type VpwDataTableColumn,
 } from "@/components/vpw"
+import type { SelectAllState } from "@/lib/finding-bulk-selection"
 import { formatLabel as labelize } from "@/lib/ui-copy"
 import {
   assetLabel,
@@ -33,12 +35,47 @@ import {
 import type { FindingsUrlSearch } from "./findings-search-state"
 import type { FindingsDirection, QueueSort } from "./remediation-queue-model"
 
+export type FindingsTableSelection = {
+  allState: SelectAllState
+  isSelected: (findingId: string) => boolean
+  onToggle: (findingId: string, checked: boolean) => void
+  onToggleAll: (checked: boolean) => void
+}
+
 type BuildFindingsColumnsOptions = {
   findingDirection: FindingsDirection
   findingSearch: FindingsUrlSearch
   onOpenSheet: (finding: FindingPublic) => void
   onSort: (sort: QueueSort) => void
   queueSort: QueueSort
+  selection?: FindingsTableSelection
+}
+
+function selectionColumn(
+  selection: FindingsTableSelection,
+): VpwDataTableColumn<FindingPublic> {
+  return {
+    id: "select",
+    header: (
+      <Checkbox
+        aria-label="Select all findings on this page"
+        checked={selection.allState}
+        onCheckedChange={(checked) => selection.onToggleAll(checked === true)}
+      />
+    ),
+    cell: (finding) => (
+      <Checkbox
+        aria-label={`Select ${findingActionLabel(finding)}`}
+        checked={selection.isSelected(finding.id)}
+        onCheckedChange={(checked) =>
+          selection.onToggle(finding.id, checked === true)
+        }
+      />
+    ),
+    className: "w-[2.75rem] px-2",
+    headerClassName: "w-[2.75rem] px-2",
+    width: "2.75rem",
+  }
 }
 
 export function buildFindingsDataTableColumns({
@@ -47,6 +84,7 @@ export function buildFindingsDataTableColumns({
   onOpenSheet,
   onSort,
   queueSort,
+  selection,
 }: BuildFindingsColumnsOptions): readonly VpwDataTableColumn<FindingPublic>[] {
   const sortable = (sort: QueueSort, label: string) => ({
     active: queueSort === sort,
@@ -56,6 +94,7 @@ export function buildFindingsDataTableColumns({
   })
 
   return [
+    ...(selection ? [selectionColumn(selection)] : []),
     {
       id: "priority",
       header: "Priority",
@@ -63,10 +102,10 @@ export function buildFindingsDataTableColumns({
       cell: (finding) => (
         <RiskBadge density="compact" level={finding.priority} />
       ),
-      className: "w-[8%]",
-      headerClassName: "w-[8%]",
+      className: "w-[9%]",
+      headerClassName: "w-[9%]",
       sort: sortable("priority", "Priority"),
-      width: "8%",
+      width: "9%",
     },
     {
       id: "score",
@@ -224,9 +263,9 @@ export function buildFindingsDataTableColumns({
           </span>
         )
       },
-      className: "w-[15%] min-w-0",
-      headerClassName: "w-[15%]",
-      width: "15%",
+      className: "w-[14%] min-w-0",
+      headerClassName: "w-[14%]",
+      width: "14%",
     },
     {
       id: "view",

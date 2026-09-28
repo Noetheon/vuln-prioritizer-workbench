@@ -2,7 +2,7 @@
 
 import { buildClientParams, type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AssetCreate, AssetExposure, AssetUpdate, BodyAssetsImportProjectAssets, BodyImportsImportProjectUpload, DeleteApiV1ProjectsByProjectIdErrors, DeleteApiV1ProjectsByProjectIdResponses, DeleteApiV1WaiversByWaiverIdErrors, DeleteApiV1WaiversByWaiverIdResponses, DeleteApiV1WorkbenchDemoResponses, DemoWorkspaceCreate, EvaluationCreate, FindingPriority, FindingStatus, FindingStatusUpdateRequest, GetApiV1AuditEventsErrors, GetApiV1AuditEventsResponses, GetApiV1FindingsByFindingIdDecisionRevisionsErrors, GetApiV1FindingsByFindingIdDecisionRevisionsResponses, GetApiV1FindingsByFindingIdErrors, GetApiV1FindingsByFindingIdExplainErrors, GetApiV1FindingsByFindingIdExplainResponses, GetApiV1FindingsByFindingIdResponses, GetApiV1GithubIssuesExportSettingsResponses, GetApiV1ProjectsByProjectIdAssetsErrors, GetApiV1ProjectsByProjectIdAssetsResponses, GetApiV1ProjectsByProjectIdAttackSummaryErrors, GetApiV1ProjectsByProjectIdAttackSummaryResponses, GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors, GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses, GetApiV1ProjectsByProjectIdDashboardErrors, GetApiV1ProjectsByProjectIdDashboardResponses, GetApiV1ProjectsByProjectIdErrors, GetApiV1ProjectsByProjectIdEvaluationsErrors, GetApiV1ProjectsByProjectIdEvaluationsResponses, GetApiV1ProjectsByProjectIdFindingsErrors, GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdGovernanceRollupsErrors, GetApiV1ProjectsByProjectIdGovernanceRollupsResponses, GetApiV1ProjectsByProjectIdResponses, GetApiV1ProjectsByProjectIdRunsErrors, GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdSummaryErrors, GetApiV1ProjectsByProjectIdSummaryResponses, GetApiV1ProjectsByProjectIdWaiversErrors, GetApiV1ProjectsByProjectIdWaiversResponses, GetApiV1ProjectsByProjectIdWorkflowsErrors, GetApiV1ProjectsByProjectIdWorkflowsResponses, GetApiV1ProjectsErrors, GetApiV1ProjectsResponses, GetApiV1ProvidersStatusResponses, GetApiV1ProvidersUpdateJobsResponses, GetApiV1ReportsByReportIdDownloadErrors, GetApiV1ReportsByReportIdDownloadResponses, GetApiV1RunsByRunIdErrors, GetApiV1RunsByRunIdReportsErrors, GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdResponses, GetApiV1RunsByRunIdSbomEvidenceErrors, GetApiV1RunsByRunIdSbomEvidenceResponses, GetApiV1RunsByRunIdSummaryErrors, GetApiV1RunsByRunIdSummaryResponses, GetApiV1UtilsHealthCheckResponses, GetApiV1WorkbenchCapabilitiesResponses, GetApiV1WorkbenchDemoResponses, GetApiV1WorkbenchHealthResponses, GetApiV1WorkbenchStatusResponses, GetApiV1WorkflowsByWorkflowIdErrors, GetApiV1WorkflowsByWorkflowIdEventsErrors, GetApiV1WorkflowsByWorkflowIdEventsResponses, GetApiV1WorkflowsByWorkflowIdResponses, GitHubIssueExportCreate, GitHubIssuePreviewCreate, PatchApiV1AssetsByAssetIdErrors, PatchApiV1AssetsByAssetIdResponses, PatchApiV1FindingsByFindingIdStatusErrors, PatchApiV1FindingsByFindingIdStatusResponses, PatchApiV1ProjectsByProjectIdErrors, PatchApiV1ProjectsByProjectIdResponses, PatchApiV1WaiversByWaiverIdErrors, PatchApiV1WaiversByWaiverIdResponses, PostApiV1AssetsByAssetIdRecalculateErrors, PostApiV1AssetsByAssetIdRecalculateResponses, PostApiV1ProjectsByProjectIdAssetsErrors, PostApiV1ProjectsByProjectIdAssetsImportErrors, PostApiV1ProjectsByProjectIdAssetsImportResponses, PostApiV1ProjectsByProjectIdAssetsResponses, PostApiV1ProjectsByProjectIdEvaluationsErrors, PostApiV1ProjectsByProjectIdEvaluationsResponses, PostApiV1ProjectsByProjectIdGithubIssuesExportErrors, PostApiV1ProjectsByProjectIdGithubIssuesExportResponses, PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors, PostApiV1ProjectsByProjectIdGithubIssuesPreviewResponses, PostApiV1ProjectsByProjectIdImportsErrors, PostApiV1ProjectsByProjectIdImportsResponses, PostApiV1ProjectsByProjectIdWaiversErrors, PostApiV1ProjectsByProjectIdWaiversResponses, PostApiV1ProjectsErrors, PostApiV1ProjectsResponses, PostApiV1ProvidersUpdateJobsErrors, PostApiV1ProvidersUpdateJobsResponses, PostApiV1ReportsByReportIdVerifyErrors, PostApiV1ReportsByReportIdVerifyResponses, PostApiV1RunsByRunIdReportJobsErrors, PostApiV1RunsByRunIdReportJobsResponses, PostApiV1RunsByRunIdSbomRescansErrors, PostApiV1RunsByRunIdSbomRescansResponses, PostApiV1WaiversByWaiverIdExpireErrors, PostApiV1WaiversByWaiverIdExpireResponses, PostApiV1WorkbenchDemoErrors, PostApiV1WorkbenchDemoResponses, PostApiV1WorkflowsByWorkflowIdCancelErrors, PostApiV1WorkflowsByWorkflowIdCancelResponses, PostApiV1WorkflowsByWorkflowIdRetryErrors, PostApiV1WorkflowsByWorkflowIdRetryResponses, ProjectCreate, ProjectUpdate, ProviderUpdateJobCreate, ReportCreate, SbomRescanCreate, WaiverCreate, WaiverUpdate } from './types.gen';
+import type { AssetCreate, AssetExposure, AssetUpdate, BodyAssetsImportProjectAssets, BodyImportsImportProjectUpload, DeleteApiV1ProjectsByProjectIdErrors, DeleteApiV1ProjectsByProjectIdResponses, DeleteApiV1WaiversByWaiverIdErrors, DeleteApiV1WaiversByWaiverIdResponses, DeleteApiV1WorkbenchDemoResponses, DemoWorkspaceCreate, EvaluationCreate, FindingBulkStatusUpdateRequest, FindingPriority, FindingStatus, FindingStatusUpdateRequest, GetApiV1AuditEventsErrors, GetApiV1AuditEventsResponses, GetApiV1FindingsByFindingIdDecisionRevisionsErrors, GetApiV1FindingsByFindingIdDecisionRevisionsResponses, GetApiV1FindingsByFindingIdErrors, GetApiV1FindingsByFindingIdExplainErrors, GetApiV1FindingsByFindingIdExplainResponses, GetApiV1FindingsByFindingIdLifecycleEventsErrors, GetApiV1FindingsByFindingIdLifecycleEventsResponses, GetApiV1FindingsByFindingIdResponses, GetApiV1GithubIssuesExportSettingsResponses, GetApiV1ProjectsByProjectIdAssetsErrors, GetApiV1ProjectsByProjectIdAssetsResponses, GetApiV1ProjectsByProjectIdAttackSummaryErrors, GetApiV1ProjectsByProjectIdAttackSummaryResponses, GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors, GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses, GetApiV1ProjectsByProjectIdDashboardErrors, GetApiV1ProjectsByProjectIdDashboardResponses, GetApiV1ProjectsByProjectIdErrors, GetApiV1ProjectsByProjectIdEvaluationsErrors, GetApiV1ProjectsByProjectIdEvaluationsResponses, GetApiV1ProjectsByProjectIdFindingsErrors, GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdGovernanceRollupsErrors, GetApiV1ProjectsByProjectIdGovernanceRollupsResponses, GetApiV1ProjectsByProjectIdResponses, GetApiV1ProjectsByProjectIdRunsErrors, GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdSummaryErrors, GetApiV1ProjectsByProjectIdSummaryResponses, GetApiV1ProjectsByProjectIdWaiversErrors, GetApiV1ProjectsByProjectIdWaiversResponses, GetApiV1ProjectsByProjectIdWorkflowsErrors, GetApiV1ProjectsByProjectIdWorkflowsResponses, GetApiV1ProjectsErrors, GetApiV1ProjectsResponses, GetApiV1ProvidersStatusResponses, GetApiV1ProvidersUpdateJobsResponses, GetApiV1ReportsByReportIdDownloadErrors, GetApiV1ReportsByReportIdDownloadResponses, GetApiV1RunsByRunIdErrors, GetApiV1RunsByRunIdReportsErrors, GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdResponses, GetApiV1RunsByRunIdSbomEvidenceErrors, GetApiV1RunsByRunIdSbomEvidenceResponses, GetApiV1RunsByRunIdSummaryErrors, GetApiV1RunsByRunIdSummaryResponses, GetApiV1UtilsHealthCheckResponses, GetApiV1WorkbenchCapabilitiesResponses, GetApiV1WorkbenchDemoResponses, GetApiV1WorkbenchHealthResponses, GetApiV1WorkbenchStatusResponses, GetApiV1WorkflowsByWorkflowIdErrors, GetApiV1WorkflowsByWorkflowIdEventsErrors, GetApiV1WorkflowsByWorkflowIdEventsResponses, GetApiV1WorkflowsByWorkflowIdResponses, GitHubIssueExportCreate, GitHubIssuePreviewCreate, PatchApiV1AssetsByAssetIdErrors, PatchApiV1AssetsByAssetIdResponses, PatchApiV1FindingsByFindingIdStatusErrors, PatchApiV1FindingsByFindingIdStatusResponses, PatchApiV1ProjectsByProjectIdErrors, PatchApiV1ProjectsByProjectIdResponses, PatchApiV1WaiversByWaiverIdErrors, PatchApiV1WaiversByWaiverIdResponses, PostApiV1AssetsByAssetIdRecalculateErrors, PostApiV1AssetsByAssetIdRecalculateResponses, PostApiV1ProjectsByProjectIdAssetsErrors, PostApiV1ProjectsByProjectIdAssetsImportErrors, PostApiV1ProjectsByProjectIdAssetsImportResponses, PostApiV1ProjectsByProjectIdAssetsResponses, PostApiV1ProjectsByProjectIdEvaluationsErrors, PostApiV1ProjectsByProjectIdEvaluationsResponses, PostApiV1ProjectsByProjectIdFindingsStatusErrors, PostApiV1ProjectsByProjectIdFindingsStatusResponses, PostApiV1ProjectsByProjectIdGithubIssuesExportErrors, PostApiV1ProjectsByProjectIdGithubIssuesExportResponses, PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors, PostApiV1ProjectsByProjectIdGithubIssuesPreviewResponses, PostApiV1ProjectsByProjectIdImportsErrors, PostApiV1ProjectsByProjectIdImportsResponses, PostApiV1ProjectsByProjectIdWaiversErrors, PostApiV1ProjectsByProjectIdWaiversResponses, PostApiV1ProjectsErrors, PostApiV1ProjectsResponses, PostApiV1ProvidersUpdateJobsErrors, PostApiV1ProvidersUpdateJobsResponses, PostApiV1ReportsByReportIdVerifyErrors, PostApiV1ReportsByReportIdVerifyResponses, PostApiV1RunsByRunIdReportJobsErrors, PostApiV1RunsByRunIdReportJobsResponses, PostApiV1RunsByRunIdSbomRescansErrors, PostApiV1RunsByRunIdSbomRescansResponses, PostApiV1WaiversByWaiverIdExpireErrors, PostApiV1WaiversByWaiverIdExpireResponses, PostApiV1WorkbenchDemoErrors, PostApiV1WorkbenchDemoResponses, PostApiV1WorkflowsByWorkflowIdCancelErrors, PostApiV1WorkflowsByWorkflowIdCancelResponses, PostApiV1WorkflowsByWorkflowIdRetryErrors, PostApiV1WorkflowsByWorkflowIdRetryResponses, ProjectCreate, ProjectUpdate, ProviderUpdateJobCreate, ReportCreate, SbomRescanCreate, WaiverCreate, WaiverUpdate } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -195,9 +195,35 @@ export class FindingsService {
     }
 
     /**
+     * Read Finding Lifecycle Events
+     *
+     * Return the newest-first status history of one finding with causes and reasons.
+     */
+    public static readFindingLifecycleEvents<ThrowOnError extends boolean = true>(parameters: {
+        finding_id: string;
+        limit?: number;
+        offset?: number;
+    }, options?: Options<never, ThrowOnError>): RequestResult<GetApiV1FindingsByFindingIdLifecycleEventsResponses, GetApiV1FindingsByFindingIdLifecycleEventsErrors, ThrowOnError, 'data'> {
+        const params = buildClientParams([parameters], [{ args: [
+                    { in: 'path', key: 'finding_id' },
+                    { in: 'query', key: 'limit' },
+                    { in: 'query', key: 'offset' }
+                ] }]);
+        return (options?.client ?? client).get<GetApiV1FindingsByFindingIdLifecycleEventsResponses, GetApiV1FindingsByFindingIdLifecycleEventsErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            url: '/api/v1/findings/{finding_id}/lifecycle-events',
+            ...options,
+            ...params
+        });
+    }
+
+    /**
      * Update Finding Status
      *
-     * Apply a manual workflow status (open, in_review, remediating) to one finding.
+     * Apply a manual workflow status to one finding.
+     *
+     * ``resolved`` and ``false_positive`` require a reason; ``fixed``, ``accepted``,
+     * and ``suppressed`` stay owned by VEX and waivers.
      */
     public static updateFindingStatus<ThrowOnError extends boolean = true>(parameters: {
         finding_id: string;
@@ -271,6 +297,29 @@ export class FindingsService {
             url: '/api/v1/projects/{project_id}/findings/',
             ...options,
             ...params
+        });
+    }
+
+    /**
+     * Update Project Findings Status
+     *
+     * Apply one manual workflow status to several findings; report skipped ones.
+     */
+    public static updateProjectFindingsStatus<ThrowOnError extends boolean = true>(parameters: {
+        project_id: string;
+        findingBulkStatusUpdateRequest: FindingBulkStatusUpdateRequest;
+    }, options?: Options<never, ThrowOnError>): RequestResult<PostApiV1ProjectsByProjectIdFindingsStatusResponses, PostApiV1ProjectsByProjectIdFindingsStatusErrors, ThrowOnError, 'data'> {
+        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }, { key: 'findingBulkStatusUpdateRequest', map: 'body' }] }]);
+        return (options?.client ?? client).post<PostApiV1ProjectsByProjectIdFindingsStatusResponses, PostApiV1ProjectsByProjectIdFindingsStatusErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            url: '/api/v1/projects/{project_id}/findings/status',
+            ...options,
+            ...params,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options?.headers,
+                ...params.headers
+            }
         });
     }
 }

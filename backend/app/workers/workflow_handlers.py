@@ -236,6 +236,7 @@ def _stored_import_upload_request(
         sbom_db_update=bool(payload.get("sbom_db_update", True)),
         sbom_source_run_id=_optional_string(payload.get("sbom_source_run_id")),
         sbom_observed_at=_optional_string(payload.get("sbom_observed_at")),
+        resolve_missing=bool(payload.get("resolve_missing", True)),
         file=_upload_content(settings, input_upload),
         asset_context_file=_optional_upload_content(settings, asset_context_upload),
         vex_file=_optional_upload_content(settings, vex_upload),

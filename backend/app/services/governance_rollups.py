@@ -26,7 +26,16 @@ from app.repositories.waivers import (
 )
 
 PRIORITY_LABELS = ("Critical", "High", "Medium", "Low")
-STATUS_LABELS = ("open", "in_review", "remediating", "fixed", "accepted", "suppressed")
+STATUS_LABELS = (
+    "open",
+    "in_review",
+    "remediating",
+    "resolved",
+    "false_positive",
+    "fixed",
+    "accepted",
+    "suppressed",
+)
 UNKNOWN_LABEL = "Unassigned"
 
 
@@ -157,6 +166,8 @@ def _rollup_for_findings(
         ),
         fixed_count=status_counts.get("fixed", 0),
         suppressed_count=status_counts.get("suppressed", 0),
+        resolved_count=status_counts.get("resolved", 0),
+        false_positive_count=status_counts.get("false_positive", 0),
         critical_count=priority_counts.get("Critical", 0),
         high_count=priority_counts.get("High", 0),
         kev_count=sum(1 for finding in findings if finding.in_kev),

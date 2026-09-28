@@ -10,6 +10,8 @@ export type StatusKind =
   | "open"
   | "in_review"
   | "remediating"
+  | "resolved"
+  | "false_positive"
   | "fixed"
   | "accepted"
   | "suppressed"

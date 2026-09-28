@@ -4,6 +4,7 @@ from __future__ import annotations
 
 # ruff: noqa: F401
 import uuid
+from collections.abc import Collection
 from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
@@ -22,7 +23,7 @@ from app.decision_core.identity import (
 from app.domain.asset_identity import is_reserved_asset_storage_key
 from app.domain.import_asset_context import string_evidence as _string_evidence
 from app.importers.contracts import NormalizedOccurrence
-from app.models import Asset, Component
+from app.models import Asset, Component, FindingStatus
 from app.repositories import AssetRepository, FindingRepository, RunRepository
 from app.repositories.assets import AssetIdentityInvariantError
 from app.repositories.findings import (
@@ -388,6 +389,7 @@ def _persist_workbench_occurrences(
     analysis_result: WorkbenchAnalysisResult,
     analysis_evidence_id: uuid.UUID | None = None,
     observed_at: datetime | None = None,
+    keep_resolved_ids: Collection[uuid.UUID] = (),
 ) -> dict[str, Any]:
     bulk_summary = (
         None
@@ -689,6 +691,14 @@ def _persist_workbench_occurrences(
             previous_last_seen = (
                 existing_finding.last_seen_at if existing_finding is not None else None
             )
+            imported_status = _finding_status_for_occurrence(decision, occurrence)
+            if (
+                existing_finding is not None
+                and existing_finding.id in keep_resolved_ids
+                and imported_status == FindingStatus.OPEN
+            ):
+                # An older observation does not reopen a later resolution.
+                imported_status = FindingStatus.RESOLVED
             finding = finding_repo.create_or_update_finding(
                 project_id=project_id,
                 vulnerability_id=vulnerability.id,
@@ -696,7 +706,7 @@ def _persist_workbench_occurrences(
                 dedup_key=dedup_key,
                 component_id=component.id if component else None,
                 asset_id=asset.id if asset else None,
-                status=_finding_status_for_occurrence(decision, occurrence),
+                status=imported_status,
                 existing_finding=existing_finding,
                 lookup_existing=False,
                 allow_asset_rebind=(

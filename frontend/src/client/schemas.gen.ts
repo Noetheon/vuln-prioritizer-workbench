@@ -247,6 +247,16 @@ export const AnalysisRunCountsPublicSchema = {
             title: 'Occurrence Count',
             type: 'integer'
         },
+        reopened_findings: {
+            default: 0,
+            title: 'Reopened Findings',
+            type: 'integer'
+        },
+        resolved_findings: {
+            default: 0,
+            title: 'Resolved Findings',
+            type: 'integer'
+        },
         rows_read: {
             default: 0,
             title: 'Rows Read',
@@ -637,6 +647,16 @@ export const AnalysisRunSummaryPublicSchema = {
                 }
             ],
             title: 'Provider Snapshot Id'
+        },
+        reopened_findings: {
+            default: 0,
+            title: 'Reopened Findings',
+            type: 'integer'
+        },
+        resolved_findings: {
+            default: 0,
+            title: 'Resolved Findings',
+            type: 'integer'
         },
         rows_read: {
             default: 0,
@@ -2025,6 +2045,12 @@ export const Body_imports_import_project_uploadSchema = {
                 }
             ],
             title: 'Provider Snapshot File'
+        },
+        resolve_missing: {
+            default: true,
+            description: 'Mark findings resolved when this import examined their target with the same source format and no longer reports them.',
+            title: 'Resolve Missing',
+            type: 'boolean'
         },
         sbom_db_update: {
             default: true,
@@ -3553,6 +3579,98 @@ export const FindingAttackTechniqueDetailPublicSchema = {
     type: 'object'
 } as const;
 
+export const FindingBulkStatusSkipPublicSchema = {
+    description: 'One finding that a bulk status change left unchanged, with the reason.',
+    properties: {
+        detail: {
+            title: 'Detail',
+            type: 'string'
+        },
+        finding_id: {
+            format: 'uuid',
+            title: 'Finding Id',
+            type: 'string'
+        }
+    },
+    required: [
+        'finding_id',
+        'detail'
+    ],
+    title: 'FindingBulkStatusSkipPublic',
+    type: 'object'
+} as const;
+
+export const FindingBulkStatusUpdatePublicSchema = {
+    description: 'Outcome of a bulk workflow status change.',
+    properties: {
+        skipped: {
+            items: {
+                $ref: '#/components/schemas/FindingBulkStatusSkipPublic'
+            },
+            title: 'Skipped',
+            type: 'array'
+        },
+        status: {
+            $ref: '#/components/schemas/FindingStatus'
+        },
+        updated_count: {
+            default: 0,
+            title: 'Updated Count',
+            type: 'integer'
+        },
+        updated_ids: {
+            items: {
+                format: 'uuid',
+                type: 'string'
+            },
+            title: 'Updated Ids',
+            type: 'array'
+        }
+    },
+    required: [
+        'status'
+    ],
+    title: 'FindingBulkStatusUpdatePublic',
+    type: 'object'
+} as const;
+
+export const FindingBulkStatusUpdateRequestSchema = {
+    description: 'Apply one manual workflow status to several findings of a project.',
+    properties: {
+        finding_ids: {
+            items: {
+                format: 'uuid',
+                type: 'string'
+            },
+            maxItems: 500,
+            minItems: 1,
+            title: 'Finding Ids',
+            type: 'array'
+        },
+        reason: {
+            anyOf: [
+                {
+                    maxLength: 2000,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reason'
+        },
+        status: {
+            $ref: '#/components/schemas/FindingStatus'
+        }
+    },
+    required: [
+        'finding_ids',
+        'status'
+    ],
+    title: 'FindingBulkStatusUpdateRequest',
+    type: 'object'
+} as const;
+
 export const FindingDecisionEvidenceV2Schema = {
     additionalProperties: false,
     description: 'Current decision and evidence graph for one finding in one run.',
@@ -4284,6 +4402,103 @@ export const FindingExplanationPublicSchema = {
     type: 'object'
 } as const;
 
+export const FindingLifecycleEventPublicSchema = {
+    description: 'Public status-history row for finding detail views.',
+    properties: {
+        actor: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Actor'
+        },
+        analysis_run_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Analysis Run Id'
+        },
+        created_at: {
+            format: 'date-time',
+            title: 'Created At',
+            type: 'string'
+        },
+        finding_id: {
+            format: 'uuid',
+            title: 'Finding Id',
+            type: 'string'
+        },
+        from_status: {
+            title: 'From Status',
+            type: 'string'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        reason: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reason'
+        },
+        source: {
+            title: 'Source',
+            type: 'string'
+        },
+        to_status: {
+            title: 'To Status',
+            type: 'string'
+        }
+    },
+    required: [
+        'id',
+        'finding_id',
+        'from_status',
+        'to_status',
+        'source',
+        'created_at'
+    ],
+    title: 'FindingLifecycleEventPublic',
+    type: 'object'
+} as const;
+
+export const FindingLifecycleEventsPublicSchema = {
+    description: 'Newest-first status history of one finding.',
+    properties: {
+        count: {
+            default: 0,
+            title: 'Count',
+            type: 'integer'
+        },
+        data: {
+            items: {
+                $ref: '#/components/schemas/FindingLifecycleEventPublic'
+            },
+            title: 'Data',
+            type: 'array'
+        }
+    },
+    title: 'FindingLifecycleEventsPublic',
+    type: 'object'
+} as const;
+
 export const FindingOccurrencePublicSchema = {
     description: 'Public occurrence row for finding detail views.',
     properties: {
@@ -4985,6 +5200,8 @@ export const FindingStatusSchema = {
         'open',
         'in_review',
         'remediating',
+        'resolved',
+        'false_positive',
         'fixed',
         'accepted',
         'suppressed'
@@ -4996,6 +5213,18 @@ export const FindingStatusSchema = {
 export const FindingStatusUpdateRequestSchema = {
     description: 'Manual workflow status change for one finding.',
     properties: {
+        reason: {
+            anyOf: [
+                {
+                    maxLength: 2000,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reason'
+        },
         status: {
             $ref: '#/components/schemas/FindingStatus'
         }
@@ -5479,6 +5708,11 @@ export const GovernanceRollupPublicSchema = {
             title: 'Expired Waiver Count',
             type: 'integer'
         },
+        false_positive_count: {
+            default: 0,
+            title: 'False Positive Count',
+            type: 'integer'
+        },
         finding_count: {
             default: 0,
             title: 'Finding Count',
@@ -5525,6 +5759,11 @@ export const GovernanceRollupPublicSchema = {
             },
             title: 'Priority Counts',
             type: 'object'
+        },
+        resolved_count: {
+            default: 0,
+            title: 'Resolved Count',
+            type: 'integer'
         },
         review_due_waiver_count: {
             default: 0,
@@ -9433,6 +9672,16 @@ export const RunCountsV2Schema = {
         occurrence_count: {
             default: 0,
             title: 'Occurrence Count',
+            type: 'integer'
+        },
+        reopened_findings: {
+            default: 0,
+            title: 'Reopened Findings',
+            type: 'integer'
+        },
+        resolved_findings: {
+            default: 0,
+            title: 'Resolved Findings',
             type: 'integer'
         },
         rows_read: {

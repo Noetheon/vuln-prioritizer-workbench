@@ -57,6 +57,8 @@ class RunCountsV2(EvidenceContractModel):
 
     created_findings: int = 0
     updated_findings: int = 0
+    resolved_findings: int = 0
+    reopened_findings: int = 0
     ignored_lines: int = 0
     rows_read: int = 0
     occurrence_count: int = 0

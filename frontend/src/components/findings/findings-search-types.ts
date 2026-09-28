@@ -22,6 +22,8 @@ export const findingStatusOptions: readonly FindingStatus[] = [
   "open",
   "in_review",
   "remediating",
+  "resolved",
+  "false_positive",
   "fixed",
   "accepted",
   "suppressed",

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.domain.engine.models import InputOccurrence, ParsedInput
+from app.domain.engine.models import ExaminedTarget, InputOccurrence, ParsedInput
 
 from .. import _cve_support
 from .common import (
@@ -26,8 +26,13 @@ def parse_trivy_json(path: Path) -> ParsedInput:
     occurrences: list[InputOccurrence] = []
     total_rows = 0
     target_kind = _trivy_target_kind(document)
+    results = dict_items(document.get("Results"))
+    examined_refs = [
+        first_present_string(result.get("Target"), document.get("ArtifactName"))
+        for result in results
+    ] or [first_present_string(document.get("ArtifactName"))]
 
-    for result_index, result in enumerate(dict_items(document.get("Results")), start=1):
+    for result_index, result in enumerate(results, start=1):
         target = first_present_string(result.get("Target"), document.get("ArtifactName"))
         package_type = first_present_string(result.get("Type"))
         for vuln_index, vulnerability in enumerate(
@@ -68,6 +73,7 @@ def parse_trivy_json(path: Path) -> ParsedInput:
         total_rows=total_rows,
         occurrences=occurrences,
         warnings=warnings,
+        examined_targets=_examined_targets("trivy-json", target_kind, examined_refs),
     )
 
 
@@ -171,7 +177,24 @@ def parse_grype_json(path: Path) -> ParsedInput:
         total_rows=total_rows,
         occurrences=occurrences,
         warnings=warnings,
+        examined_targets=_examined_targets(
+            "grype-json",
+            target_kind,
+            [first_present_string(source_target)],
+        ),
     )
+
+
+def _examined_targets(
+    source_format: str,
+    target_kind: str,
+    target_refs: list[str | None],
+) -> list[ExaminedTarget]:
+    """Record every target the report examined, so a clean rescan can close findings."""
+    return [
+        ExaminedTarget(source_format=source_format, target_kind=target_kind, target_ref=ref)
+        for ref in dict.fromkeys(ref for ref in target_refs if ref)
+    ]
 
 
 def _grype_match_items(value: object, *, warnings: list[str]) -> tuple[int, list[tuple[int, dict]]]:

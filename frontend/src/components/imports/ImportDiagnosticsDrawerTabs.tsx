@@ -128,6 +128,14 @@ export function ImportDiagnosticsDrawerTabs({
                 value: runCount(summary, "updated_findings"),
               },
               {
+                label: "Resolved",
+                value: runCount(summary, "resolved_findings"),
+              },
+              {
+                label: "Reopened",
+                value: runCount(summary, "reopened_findings"),
+              },
+              {
                 label: "Ignored",
                 value: runCount(summary, "ignored_lines"),
               },
@@ -148,6 +156,8 @@ export function ImportDiagnosticsDrawerTabs({
               { label: "Rows read", value: recordedValue(runCount(summary, "rows_read")) },
               { label: "Created findings", value: runCount(summary, "created_findings") },
               { label: "Updated findings", value: runCount(summary, "updated_findings") },
+              { label: "Resolved findings", value: runCount(summary, "resolved_findings") },
+              { label: "Reopened findings", value: runCount(summary, "reopened_findings") },
               { label: "Finding count", value: runCount(summary, "finding_count") },
               { label: "Ignored lines", value: runCount(summary, "ignored_lines") },
               { label: "Parser errors", value: parseErrors.length },

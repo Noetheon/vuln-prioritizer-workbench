@@ -50,6 +50,9 @@ function FindingDetailRouteContainer({ findingId }: { findingId: string }) {
     void queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.findingDetail(findingId),
     })
+    void queryClient.invalidateQueries({
+      queryKey: workbenchQueryKeys.findingLifecycleEventsRoot(findingId),
+    })
   }
 
   return (

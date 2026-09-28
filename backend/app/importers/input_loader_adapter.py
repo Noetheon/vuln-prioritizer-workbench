@@ -113,7 +113,7 @@ def _parse_input_path(
         return parse_cve_list(path)
     if preserve_parser_warnings and input_type == "generic-occurrence-csv":
         return parse_generic_occurrence_csv(path)
-    return InputLoader().load(path, input_format=input_type)
+    return InputLoader().load(path, input_format=input_type, allow_empty_examined=True)
 
 
 def _write_payload(path: Path, payload: InputPayload, *, input_type: str) -> None:

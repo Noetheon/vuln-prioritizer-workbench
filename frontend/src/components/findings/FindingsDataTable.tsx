@@ -1,6 +1,9 @@
 import type { FindingPublic } from "@/api-client"
 import { VpwDataTable } from "@/components/vpw"
-import { buildFindingsDataTableColumns } from "./FindingsDataTableColumns"
+import {
+  buildFindingsDataTableColumns,
+  type FindingsTableSelection,
+} from "./FindingsDataTableColumns"
 import { FindingsMobileCards } from "./FindingsMobileCards"
 import type { FindingsUrlSearch } from "./findings-search-state"
 import type { FindingsDirection, QueueSort } from "./remediation-queue-model"
@@ -14,6 +17,7 @@ type FindingsDataTableProps = {
   onOpenSheet: (finding: FindingPublic) => void
   onSort: (sort: QueueSort) => void
   queueSort: QueueSort
+  selection?: FindingsTableSelection
 }
 
 export function FindingsDataTable({
@@ -23,6 +27,7 @@ export function FindingsDataTable({
   onOpenSheet,
   onSort,
   queueSort,
+  selection,
 }: FindingsDataTableProps) {
   const columns = buildFindingsDataTableColumns({
     findingDirection,
@@ -30,6 +35,7 @@ export function FindingsDataTable({
     onOpenSheet,
     onSort,
     queueSort,
+    selection,
   })
 
   return (

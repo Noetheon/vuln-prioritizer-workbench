@@ -54,6 +54,14 @@ class InputOccurrence(StrictModel):
     raw_evidence: dict[str, object] = Field(default_factory=dict, exclude=True)
 
 
+class ExaminedTarget(StrictModel):
+    """A target a scanner report says it examined, even when it reported nothing there."""
+
+    source_format: str
+    target_kind: str
+    target_ref: str
+
+
 class SeverityProxy(StrictModel):
     """Source-reported severity band used when NVD has not published CVSS."""
 
@@ -93,6 +101,7 @@ class ParsedInput(BaseModel):
     included_unique_cves: int = 0
     asset_match_conflict_count: int = 0
     vex_conflict_count: int = 0
+    examined_targets: list[ExaminedTarget] = Field(default_factory=list)
 
 
 class FindingProvenance(StrictModel):

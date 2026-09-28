@@ -88,5 +88,10 @@ NVD, EPSS, KEV, ATT&CK, GHSA, OSV, or vendor advisory data during import.
 - Missing or empty `Results[]` creates no occurrences.
 - Missing or empty `Vulnerabilities[]` on a result creates no occurrences for
   that result.
+- A Workbench import without any CVE succeeds when the report names what it
+  examined: each result's `Target`, or `ArtifactName` when there are no
+  results. Open findings earlier Trivy imports reported for those targets are
+  then resolved (see [Closing findings and rescans](user_documentation.md#closing-findings-and-rescans)).
+  A report that names no target is still rejected.
 - Invalid or non-CVE `VulnerabilityID` values are skipped and reported as
   warnings.

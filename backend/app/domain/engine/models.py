@@ -41,6 +41,7 @@ EvidenceBundleVerificationSummary = _models_artifacts.EvidenceBundleVerification
 DefensiveContext = _models_provider.DefensiveContext
 EpssData = _models_provider.EpssData
 FindingDecisionGuidance = _models_decision.FindingDecisionGuidance
+ExaminedTarget = _models_input.ExaminedTarget
 FindingProvenance = _models_input.FindingProvenance
 InputItem = _models_input.InputItem
 InputOccurrence = _models_input.InputOccurrence

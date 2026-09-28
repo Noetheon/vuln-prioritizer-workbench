@@ -211,12 +211,16 @@ class DecisionSummaryCounts:
     under_investigation_count: int
     vex_conflict_count: int
     attack_mapped_cves: int
+    resolved_findings: int = 0
+    reopened_findings: int = 0
 
     def to_contract(self) -> RunCountsV2:
         """Return the public v2 run-count contract."""
         return RunCountsV2(
             created_findings=self.created_findings,
             updated_findings=self.updated_findings,
+            resolved_findings=self.resolved_findings,
+            reopened_findings=self.reopened_findings,
             ignored_lines=self.ignored_lines,
             rows_read=self.rows_read,
             occurrence_count=self.occurrence_count,
@@ -238,6 +242,8 @@ class DecisionSummaryCounts:
             "occurrence_count": self.occurrence_count,
             "created_findings": self.created_findings,
             "updated_findings": self.updated_findings,
+            "resolved_findings": self.resolved_findings,
+            "reopened_findings": self.reopened_findings,
         }
 
 
@@ -282,6 +288,8 @@ class DecisionPersistencePlan:
             under_investigation_count=int(analysis_result.context.under_investigation_count),
             vex_conflict_count=int(analysis_result.context.vex_conflict_count),
             attack_mapped_cves=int(analysis_result.context.attack_hits),
+            resolved_findings=_int_value(summary.get("resolved_findings")),
+            reopened_findings=_int_value(summary.get("reopened_findings")),
         )
         return cls(
             analysis_evidence_id=analysis_evidence_id,

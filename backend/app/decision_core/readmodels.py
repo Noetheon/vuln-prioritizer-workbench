@@ -72,6 +72,8 @@ class DecisionRunView:
         return AnalysisRunCountsPublic(
             created_findings=counts.created_findings,
             updated_findings=counts.updated_findings,
+            resolved_findings=counts.resolved_findings,
+            reopened_findings=counts.reopened_findings,
             ignored_lines=counts.ignored_lines,
             rows_read=counts.rows_read,
             occurrence_count=counts.occurrence_count,
