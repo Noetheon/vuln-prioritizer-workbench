@@ -59,8 +59,8 @@ docker run -d --name vpw -p 127.0.0.1:8765:8765 -v vpw-data:/data \
   ghcr.io/noetheon/vuln-prioritizer-workbench:latest
 ```
 
-The PyPI package and image are published with releases; until a release is on
-PyPI, use the checkout install.
+Since `v1.4.0`, every release is published to PyPI and as an amd64 and arm64
+image on GHCR.
 
 Open `http://127.0.0.1:8765`, create or select a project, and import
 `data/sample_cves.txt`. In the provider snapshot field, enter

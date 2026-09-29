@@ -64,8 +64,9 @@ pipx install ./backend
 vpw serve
 ```
 
-The PyPI package and container image are published with releases; until a
-release is on PyPI, use the source install.
+Since `v1.4.0`, every release is published to PyPI and as an amd64 and arm64
+image on GHCR. Pin a version, such as `vuln-prioritizer-workbench==1.4.0` or
+the `1.4.0` image tag, for repeatable installs.
 
 Open `http://127.0.0.1:8765`. `vpw serve` creates a private platform data
 directory, migrates its SQLite database, enables WAL mode, starts the worker in

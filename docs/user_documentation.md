@@ -18,9 +18,9 @@ pipx install vuln-prioritizer-workbench
 vpw serve
 ```
 
-The PyPI package and the container image
-(`ghcr.io/noetheon/vuln-prioritizer-workbench`) are published with releases.
-Until a release is on PyPI, install from a checkout:
+Since `v1.4.0`, every release is published to PyPI and as a container image
+(`ghcr.io/noetheon/vuln-prioritizer-workbench`). To run unreleased changes,
+install from a checkout:
 
 ```bash
 git clone https://github.com/Noetheon/vuln-prioritizer-workbench.git
