@@ -20,10 +20,10 @@ worker service.
 
 Pick one of three installs. All three run the same single-process Workbench.
 
-The PyPI package and the container image are published with releases once
-publishing is enabled for the repository (see
-[Release Operations](docs/release_operations.md)). Until a release is on PyPI,
-install from source.
+Since `v1.4.0`, every release is published to PyPI and as an amd64 and arm64
+image on GHCR ([Release Operations](docs/release_operations.md)). Pin a
+version, such as `vuln-prioritizer-workbench==1.4.0` or the `1.4.0` image tag,
+for repeatable installs.
 
 ### From PyPI
 
