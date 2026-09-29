@@ -173,6 +173,7 @@ function findingsSearchForSavedView(
     ...findingsSearch,
     cvssMax: "",
     cvssMin: "",
+    dataGap: "",
     direction: defaultFindingsSearchState.direction,
     epssMax: "",
     epssMin: "",
@@ -180,6 +181,7 @@ function findingsSearchForSavedView(
     kev: "",
     offset: 0,
     priority: "",
+    sla: "",
     sort: defaultFindingsSearchState.sort,
     status: "",
   }
@@ -197,6 +199,8 @@ function findingsSearchForSavedView(
         sort: "priority",
         status: "open",
       }
+    case "overdue":
+      return { ...base, direction: "asc", sla: "overdue", sort: "priority" }
     case "internet":
       return {
         ...base,

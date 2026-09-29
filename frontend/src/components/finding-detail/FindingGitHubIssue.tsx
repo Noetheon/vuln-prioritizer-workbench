@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { GithubIssuesService } from "@/api-client"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { apiErrorMessage } from "@/lib/app-errors"
+import {
+  buildGitHubIssueExportRequest,
+  githubIssueExportReadiness,
+  isValidGitHubRepository,
+} from "@/lib/github-issue-export"
+import { workbenchQueryKeys } from "@/workbench/workbench-query-keys"
 
 export function FindingGitHubIssue({
   findingId,
@@ -30,22 +36,27 @@ export function FindingGitHubIssue({
         gitHubIssuePreviewCreate: { finding_ids: [findingId] },
       }),
   })
+  const exportSettings = useQuery({
+    enabled: open,
+    queryFn: ({ signal }) =>
+      GithubIssuesService.readGithubIssueExportSettings({ signal }),
+    queryKey: workbenchQueryKeys.githubIssueExportSettings(),
+  })
+  const readiness = githubIssueExportReadiness(exportSettings.data)
   const publish = useMutation({
-    mutationFn: () =>
+    mutationFn: (tokenEnv: string) =>
       GithubIssuesService.exportProjectGithubIssues({
         project_id: projectId,
-        gitHubIssueExportCreate: {
-          finding_ids: [findingId],
-          repository: repository.trim(),
-          dry_run: false,
-        },
+        gitHubIssueExportCreate: buildGitHubIssueExportRequest({
+          findingIds: [findingId],
+          repository,
+          tokenEnv,
+        }),
       }),
   })
   const issue = preview.data?.data?.[0]
   const result = publish.data?.data?.[0]
-  const validRepository = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(
-    repository.trim(),
-  )
+  const validRepository = isValidGitHubRepository(repository)
 
   function openPreview() {
     publish.reset()
@@ -102,7 +113,9 @@ export function FindingGitHubIssue({
                   disabled={publish.isPending}
                 />
                 <p className="text-xs text-[var(--vpw-text-muted)]">
-                  Uses the GitHub credential configured for this Workbench.
+                  {readiness.ready
+                    ? `Uses the GitHub token from the ${readiness.tokenEnv} environment variable of this Workbench.`
+                    : readiness.reason}
                 </p>
               </div>
               {publish.isError ? (
@@ -136,9 +149,14 @@ export function FindingGitHubIssue({
               <DialogFooter>
                 <Button
                   disabled={
-                    !validRepository || publish.isPending || Boolean(result)
+                    !readiness.ready ||
+                    !validRepository ||
+                    publish.isPending ||
+                    Boolean(result)
                   }
-                  onClick={() => publish.mutate()}
+                  onClick={() => {
+                    if (readiness.ready) publish.mutate(readiness.tokenEnv)
+                  }}
                 >
                   {publish.isPending
                     ? "Creating issue…"

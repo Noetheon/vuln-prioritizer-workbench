@@ -25,7 +25,11 @@ from app.domain.engine.services.contextualization import aggregate_provenance
 from app.domain.engine.services.prioritization import PrioritizationService
 from app.domain.engine.services.waivers import apply_waivers
 
-EVALUATION_ENGINE_VERSION = "scope-evaluator.v1"
+# v2: a source-reported severity band stands in for missing NVD CVSS.
+EVALUATION_ENGINE_VERSION = "scope-evaluator.v2"
+# Recorded inputs keep their schema across engine versions; replaying an older
+# record evaluates it with the current rules and records the current version.
+REPLAYABLE_ENGINE_VERSIONS = frozenset({"scope-evaluator.v1", EVALUATION_ENGINE_VERSION})
 
 
 class ScopeEvaluationInput(StrictModel):
@@ -89,7 +93,7 @@ def evaluate_scope_with_diagnostics(
     inputs: ScopeEvaluationInput,
 ) -> tuple[PrioritizedFinding, list[str]]:
     """Return the decision and rule diagnostics from one evaluation pass."""
-    if inputs.engine_version != EVALUATION_ENGINE_VERSION:
+    if inputs.engine_version not in REPLAYABLE_ENGINE_VERSIONS:
         raise ValueError(f"Unsupported evaluation engine: {inputs.engine_version}")
     cve_id = inputs.cve_id
     provider = inputs.provider_evidence

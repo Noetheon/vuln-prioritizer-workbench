@@ -7,7 +7,7 @@ from typing import Any
 
 from sqlmodel import Session, col, select
 
-from app.decision_core.current_queue import decision_sort_key
+from app.decision_core.current_queue import closed_workflow_bucket, decision_sort_key
 from app.models import Finding, FindingCurrentProjection
 from app.repositories.current_projections import FindingCurrentProjectionRepository
 
@@ -43,11 +43,12 @@ def sync_unchanged_project_ranks(
             FindingCurrentProjection.finding_id,
             FindingCurrentProjection.operational_sort_key_json,
             FindingCurrentProjection.operational_rank,
+            FindingCurrentProjection.status,
         ).where(FindingCurrentProjection.project_id == project_id)
     ).all()
     supplied = fallback_keys or {}
     missing_ids = [
-        finding_id for finding_id, key, _ in rows if key is None and finding_id not in supplied
+        finding_id for finding_id, key, _, _ in rows if key is None and finding_id not in supplied
     ]
     restored: dict[uuid.UUID, list[Any]] = {}
     for offset in range(0, len(missing_ids), _BATCH_SIZE):
@@ -59,13 +60,16 @@ def sync_unchanged_project_ranks(
             restored[finding_id] = key
     candidates = [
         (
-            _as_tuple(
-                key if key is not None else restored.get(finding_id, supplied.get(finding_id))
+            (
+                closed_workflow_bucket(status),
+                *_as_tuple(
+                    key if key is not None else restored.get(finding_id, supplied.get(finding_id))
+                ),
             ),
             finding_id,
             previous_rank,
         )
-        for finding_id, key, previous_rank in rows
+        for finding_id, key, previous_rank, status in rows
     ]
     candidates.sort(key=lambda item: (*item[0], str(item[1])))
     changes = {

@@ -13,7 +13,16 @@ from app.services.report_formatting import iso_datetime as _iso_datetime
 from app.services.report_models import MarkdownReportFinding
 
 PRIORITY_LABELS = ("Critical", "High", "Medium", "Low")
-STATUS_LABELS = ("open", "in_review", "remediating", "fixed", "accepted", "suppressed")
+STATUS_LABELS = (
+    "open",
+    "in_review",
+    "remediating",
+    "resolved",
+    "false_positive",
+    "fixed",
+    "accepted",
+    "suppressed",
+)
 UNKNOWN_LABEL = "Unassigned"
 WAIVER_STATUSES = ("active", "review_due", "expired")
 WAIVER_RECORD_FIELDS = (

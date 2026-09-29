@@ -43,7 +43,12 @@ export function buildImportHistoryColumns({
 
   function runNumber(
     run: AnalysisRunPublic,
-    key: "created_findings" | "updated_findings" | "ignored_lines",
+    key:
+      | "created_findings"
+      | "updated_findings"
+      | "resolved_findings"
+      | "reopened_findings"
+      | "ignored_lines",
   ) {
     if (selectedRunId === run.id && selectedRunSummary) {
       const value = selectedRunSummary[key]
@@ -110,6 +115,21 @@ export function buildImportHistoryColumns({
       id: "updated",
       header: "Updated",
       cell: (run) => runNumber(run, "updated_findings"),
+    },
+    {
+      id: "resolved",
+      header: "Resolved",
+      cell: (run) => {
+        const reopened = runNumber(run, "reopened_findings")
+        return (
+          <div className="min-w-0">
+            {runNumber(run, "resolved_findings")}
+            {reopened > 0 ? (
+              <span className="vpw-table-subtext">{reopened} reopened</span>
+            ) : null}
+          </div>
+        )
+      },
     },
     {
       id: "ignored",

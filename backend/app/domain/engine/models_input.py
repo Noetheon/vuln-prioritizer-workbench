@@ -29,6 +29,8 @@ class InputOccurrence(StrictModel):
     fix_versions: list[str] = Field(default_factory=list)
     source_record_id: str | None = None
     raw_severity: str | None = None
+    raw_cvss_score: float | None = Field(default=None, exclude_if=lambda value: value is None)
+    raw_cvss_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
     target_kind: str = "generic"
     target_ref: str | None = None
     asset_id: str | None = None
@@ -52,6 +54,29 @@ class InputOccurrence(StrictModel):
     vex_source_path: str | None = None
     vex_candidate_count: int = 0
     raw_evidence: dict[str, object] = Field(default_factory=dict, exclude=True)
+
+
+class ExaminedTarget(StrictModel):
+    """A target a scanner report says it examined, even when it reported nothing there."""
+
+    source_format: str
+    target_kind: str
+    target_ref: str
+
+
+class SeverityProxy(StrictModel):
+    """
+    Source-reported severity used when NVD has not published CVSS.
+
+    ``cvss_floor`` is the lower bound of the reported band, or the exact
+    source-reported CVSS score when ``cvss_source`` names where it came from.
+    """
+
+    severity: str
+    cvss_floor: float
+    raw_value: str
+    source_format: str
+    cvss_source: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class InputSourceSummary(StrictModel):
@@ -84,6 +109,7 @@ class ParsedInput(BaseModel):
     included_unique_cves: int = 0
     asset_match_conflict_count: int = 0
     vex_conflict_count: int = 0
+    examined_targets: list[ExaminedTarget] = Field(default_factory=list)
 
 
 class FindingProvenance(StrictModel):

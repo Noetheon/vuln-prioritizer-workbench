@@ -10,9 +10,10 @@ from pathlib import Path
 
 from app.contracts.sbom import SbomAssessmentV1
 from app.core.config import Settings
+from app.domain.engine.inputs._cve_support import summarize_non_cve_identifiers
 from app.domain.engine.inputs._occurrence_support import finalize_occurrences
 from app.domain.engine.inputs.parsers.scanner import parse_grype_json
-from app.domain.engine.models import AnalysisContext
+from app.domain.engine.models import AnalysisContext, ExaminedTarget
 from app.importers import ImporterParseError
 from app.importers.input_loader_adapter import normalize_parsed_input
 from app.services.analysis import WorkbenchAnalysisResult
@@ -82,7 +83,9 @@ def scan_prepared_sbom(
     manifest_path = directory / "assessment.json"
     upload_root = settings.import_upload_dir_path.resolve()
     raw = parse_grype_json(report_path)
-    warnings = _public_warnings(chain(result.evidence.warnings, raw.warnings))
+    warnings = _public_warnings(
+        chain(result.evidence.warnings, summarize_non_cve_identifiers(raw.warnings))
+    )
     observation = (
         observed_at.replace(tzinfo=UTC)
         if observed_at.tzinfo is None
@@ -114,6 +117,19 @@ def scan_prepared_sbom(
         input_paths=[str(artifacts.upload_path)],
         allow_empty=True,
     )
+    if assessment.target_ref:
+        # A rescan that no longer matches a CVE still examined this SBOM subject.
+        normalized = normalized.model_copy(
+            update={
+                "examined_targets": [
+                    ExaminedTarget(
+                        source_format="grype-json",
+                        target_kind="sbom",
+                        target_ref=assessment.target_ref,
+                    )
+                ]
+            }
+        )
     parsed = normalize_parsed_input(normalized, input_type="grype-json")
     return ParsedPreparedUpload(occurrences=parsed.occurrences, parsed_input=parsed), assessment
 
@@ -124,15 +140,31 @@ def empty_sbom_analysis(
     assessment: SbomAssessmentV1,
 ) -> WorkbenchAnalysisResult:
     """A completed scan without CVE mappings needs no vulnerability-provider requests."""
+    return empty_import_analysis(
+        input_path=input_path,
+        input_format=assessment.input_format,
+        warnings=assessment.warnings,
+        total_input=assessment.scanner_match_count,
+    )
+
+
+def empty_import_analysis(
+    *,
+    input_path: Path,
+    input_format: str,
+    warnings: list[str],
+    total_input: int,
+) -> WorkbenchAnalysisResult:
+    """A report that examined targets but listed no CVEs needs no provider requests."""
     return WorkbenchAnalysisResult(
         findings_by_cve={},
         context=AnalysisContext(
             input_path=str(input_path),
             output_format="json",
             generated_at=datetime.now(UTC).isoformat(),
-            input_format=assessment.input_format,
-            warnings=assessment.warnings,
-            total_input=assessment.scanner_match_count,
+            input_format=input_format,
+            warnings=warnings,
+            total_input=total_input,
         ),
         provider_snapshot_id=None,
         provider_snapshot_hash=None,

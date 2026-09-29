@@ -41,6 +41,7 @@ EvidenceBundleVerificationSummary = _models_artifacts.EvidenceBundleVerification
 DefensiveContext = _models_provider.DefensiveContext
 EpssData = _models_provider.EpssData
 FindingDecisionGuidance = _models_decision.FindingDecisionGuidance
+ExaminedTarget = _models_input.ExaminedTarget
 FindingProvenance = _models_input.FindingProvenance
 InputItem = _models_input.InputItem
 InputOccurrence = _models_input.InputOccurrence
@@ -57,6 +58,7 @@ ProviderSnapshot = _models_provider.ProviderSnapshot
 ProviderStatus = _models_provider.ProviderStatus
 RemediationComponent = _models_remediation.RemediationComponent
 RemediationPlan = _models_remediation.RemediationPlan
+SeverityProxy = _models_input.SeverityProxy
 SlaTarget = _models_decision.SlaTarget
 
 VexStatement = _models_input.VexStatement
@@ -76,6 +78,31 @@ class PriorityLabel(StrEnum):
     FIXED = "Fixed"
 
 
+class SlaHoursPolicy(StrictModel):
+    """Response targets in hours per base priority, replacing the default SLA table."""
+
+    critical: int = Field(ge=1, le=8760)
+    high: int = Field(ge=1, le=8760)
+    medium: int = Field(ge=1, le=8760)
+    low: int = Field(ge=1, le=8760)
+
+    @model_validator(mode="after")
+    def validate_order(self) -> SlaHoursPolicy:
+        """More urgent priorities never get a longer response target."""
+        if not self.critical <= self.high <= self.medium <= self.low:
+            raise ValueError("SLA hours must not decrease from critical to high to medium to low.")
+        return self
+
+    def hours_for(self, priority_label: str) -> int | None:
+        """Return the target for a base priority label such as ``Critical``."""
+        return {
+            "Critical": self.critical,
+            "High": self.high,
+            "Medium": self.medium,
+            "Low": self.low,
+        }.get(priority_label)
+
+
 class PriorityPolicy(StrictModel):
     """Data representation and logic for Priority Policy."""
 
@@ -85,6 +112,8 @@ class PriorityPolicy(StrictModel):
     high_cvss_threshold: float = 9.0
     medium_epss_threshold: float = 0.10
     medium_cvss_threshold: float = 7.0
+    # Omitted when unset so recorded default-policy inputs keep their fingerprints.
+    sla_hours: SlaHoursPolicy | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def validate_thresholds(self) -> PriorityPolicy:
@@ -250,6 +279,7 @@ class PrioritizedFinding(StrictModel):
     priority_rank: int
     priority_state: str | None = None
     priority_drivers: list[str] = Field(default_factory=list)
+    severity_proxy: SeverityProxy | None = None
     operational_score: int = 0
     operational_score_reasons: list[str] = Field(default_factory=list)
     explanation: PriorityExplanation | None = None

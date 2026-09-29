@@ -15,6 +15,7 @@ from app.decision_core.projection_evaluation import (
     _apply_recomputed_decision,
     _projection_scope_sort_key,
     _recompute_projection_decision,
+    recorded_sla_hours,
 )
 from app.domain.engine.services.decision_guidance import DecisionGuidanceService
 from app.domain.engine.services.prioritization_ranking import global_operational_sort_key
@@ -138,7 +139,11 @@ def sync_project_decisions(
                     update={"operational_rank": current.operational_rank}
                 )
                 decision = decision.model_copy(
-                    update={"decision_guidance": DecisionGuidanceService().build(decision)}
+                    update={
+                        "decision_guidance": DecisionGuidanceService(
+                            recorded_sla_hours(current)
+                        ).build(decision)
+                    }
                 )
                 updated = _apply_recomputed_decision(payload, decision)
                 if current.evaluation_input is not None and current.evaluation is not None:

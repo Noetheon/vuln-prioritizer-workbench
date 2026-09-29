@@ -85,6 +85,11 @@ def github_export_token(token_env: str | None) -> str:
     return token
 
 
+def github_export_token_configured(token_env: str) -> bool:
+    """Return whether the named token environment variable holds a non-empty value."""
+    return bool(os.getenv(token_env, "").strip())
+
+
 def github_repository_path(repository: str) -> str:
     """Return a URL-safe GitHub repository path after owner/name validation."""
     try:

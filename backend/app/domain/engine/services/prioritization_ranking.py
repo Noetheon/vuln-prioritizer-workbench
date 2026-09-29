@@ -20,7 +20,7 @@ def assign_operational_ranks(
     scored_findings = [_with_operational_score(finding, policy) for finding in findings]
     ordered = sorted(scored_findings, key=operational_sort_key)
     rank_by_cve = {finding.cve_id: index for index, finding in enumerate(ordered, start=1)}
-    decision_guidance_service = DecisionGuidanceService()
+    decision_guidance_service = DecisionGuidanceService(policy.sla_hours)
     ranked_findings: list[PrioritizedFinding] = []
     for finding in scored_findings:
         ranked = finding.model_copy(

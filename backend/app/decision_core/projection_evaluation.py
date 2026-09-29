@@ -18,7 +18,11 @@ from app.decision_core.contracts import (
     OccurrenceScopeV2,
 )
 from app.decision_core.decision_graph import ScopeKey
-from app.decision_core.evaluation import ScopeEvaluationInput, evaluate_scope
+from app.decision_core.evaluation import (
+    EVALUATION_ENGINE_VERSION,
+    ScopeEvaluationInput,
+    evaluate_scope,
+)
 from app.decision_core.ledger import DecisionLedgerInvariantError
 from app.domain.asset_identity import normalize_asset_identity_value
 from app.domain.engine.inputs.parsers.common import (
@@ -31,6 +35,7 @@ from app.domain.engine.models import (
     InputOccurrence,
     PrioritizedFinding,
     ProviderEvidence,
+    SlaHoursPolicy,
 )
 from app.domain.engine.services.contextualization import (
     SUPPRESSED_VEX_STATUSES,
@@ -39,6 +44,7 @@ from app.domain.engine.services.contextualization import (
     is_under_investigation,
 )
 from app.domain.engine.services.prioritization import PrioritizationService
+from app.domain.engine.severity_proxy import reported_cvss_score
 from app.models import FindingStatus
 
 
@@ -59,10 +65,18 @@ def evaluate_evidence_payload(
         ScopeKey.from_occurrence(item).sort_key() != expected_scope for item in actual.observations
     ):
         raise DecisionLedgerInvariantError("Evaluation inputs changed the stored finding scope.")
+    # Record which rules produced this revision; the input schema is unchanged.
+    actual = actual.model_copy(update={"engine_version": EVALUATION_ENGINE_VERSION})
     decision = evaluate_scope(actual)
     updated = _apply_recomputed_decision(payload, decision)
     updated["evaluation_input"] = actual.model_dump(mode="json")
     return FindingDecisionEvidenceV2.model_validate(updated).to_jsonable(), decision
+
+
+def recorded_sla_hours(evidence: FindingDecisionEvidenceV2) -> SlaHoursPolicy | None:
+    """Return the policy SLA targets a decision was evaluated with, if any."""
+    inputs = evidence.evaluation_input
+    return inputs.priority_policy.sla_hours if inputs is not None else None
 
 
 def _stored_projection_decision(evidence: FindingDecisionEvidenceV2) -> PrioritizedFinding:
@@ -360,6 +374,8 @@ def _input_occurrence_from_evidence(
         dependency_path=_string_value(import_evidence.get("dependency_path")),
         fix_versions=fix_versions,
         raw_severity=item.raw_severity,
+        raw_cvss_score=reported_cvss_score(import_evidence.get("raw_cvss_score")),
+        raw_cvss_source=_string_value(import_evidence.get("raw_cvss_source")),
         target_kind=item.target_kind
         or _string_value(import_evidence.get("target_kind"))
         or "generic",

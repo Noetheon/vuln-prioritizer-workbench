@@ -15,6 +15,7 @@ from app.api.routes import (
     findings,
     github_issues,
     imports,
+    project_policy,
     projects,
     providers,
     reports,
@@ -39,6 +40,7 @@ api_router = APIRouter()
 api_router.include_router(audit.router)
 api_router.include_router(evaluations.router)
 api_router.include_router(projects.router)
+api_router.include_router(project_policy.router)
 api_router.include_router(assets.router)
 api_router.include_router(providers.router)
 api_router.include_router(runs.router)

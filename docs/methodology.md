@@ -34,8 +34,13 @@ warnings where the parser can continue. For XML ingest, the parser rejects
   current `cveIds` query parameter
 - NVD documents `cveIds` as accepting a comma-separated list with a maximum of
   100 CVE IDs per request
+- live lookups stay inside NVD's published limits of 5 requests per rolling
+  30 seconds without an API key and 50 with one; rate-limited responses (`403`
+  or `429`) are retried after at least one request slot
 - English description preferred
-- CVSS selection order: `v4.0 -> v3.1 -> v3.0 -> v2`
+- CVSS selection order: `v4.0 -> v3.1 -> v3.0 -> v2`; within a version, NVD's
+  primary score wins and secondary scores (for example CISA ADP Vulnrichment
+  scores published through NVD) fill in when NVD has not analyzed the CVE
 - the chosen CVSS family is stored as `cvss_version`
 
 ### EPSS

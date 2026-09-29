@@ -17,6 +17,7 @@ from app.domain.engine.inputs.parsers.common import (
 )
 from app.domain.engine.inputs.parsers.common import split_versions
 from app.domain.engine.models import InputOccurrence
+from app.domain.engine.severity_proxy import reported_cvss_score
 from app.importers.contracts import NormalizedOccurrence
 from app.models import AssetCriticality, AssetEnvironment, AssetExposure
 
@@ -77,6 +78,8 @@ def input_occurrence_from_workbench_occurrence(
         dependency_path=string_evidence(evidence, "dependency_path"),
         fix_versions=fix_versions,
         raw_severity=string_evidence(evidence, "raw_severity"),
+        raw_cvss_score=reported_cvss_score(evidence.get("raw_cvss_score")),
+        raw_cvss_source=string_evidence(evidence, "raw_cvss_source"),
         target_kind=occurrence.target_kind,
         target_ref=occurrence.target_ref,
         asset_id=occurrence.asset_id,

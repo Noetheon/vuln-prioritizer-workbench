@@ -8,6 +8,7 @@ import {
   VpwKeyValueList,
   VpwProgress,
 } from "@/components/vpw"
+import { ProjectPolicyCard } from "./ProjectPolicyCard"
 import {
   ActiveProjectDeletePanel,
   ActiveProjectEditForm,
@@ -123,6 +124,7 @@ export function ProjectDetailDrawer(props: ProjectDetailDrawerProps) {
         </TabsContent>
         <TabsContent className="flex flex-col gap-6" value="config">
           <ProjectDrawerEditCard {...props} />
+          <ProjectPolicyCard projectId={project.id} />
           <ProjectDrawerDangerCard {...props} selectedProject={project} />
         </TabsContent>
       </Tabs>

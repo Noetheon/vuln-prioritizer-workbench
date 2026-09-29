@@ -84,9 +84,72 @@ vpw serve --data-dir ./vpw-data
 Each start applies Alembic migrations before serving requests. SQLite
 connections enable foreign keys, a 30-second busy timeout, WAL journaling, and
 normal synchronous durability. Keep the database and its `-wal`/`-shm` sidecars
-together while the process is running. Use `scripts/workbench-backup.sh` for a
-verified online copy; it uses SQLite's backup API rather than copying only the
-main database file.
+together while the process is running.
+
+## Backup And Restore
+
+`vpw backup` writes one zip archive with a consistent copy of the database
+(SQLite's online backup API, so a running Workbench keeps serving), the
+uploaded files, the reports, and the provider snapshots, plus a manifest with
+the SHA-256 of every file. The archive is readable only by you.
+
+```bash
+vpw backup --data-dir ./vpw-data --output ./vpw-backup.zip
+vpw backup --include-cache   # also keep the provider cache
+vpw restore ./vpw-backup.zip --data-dir ./vpw-restored
+```
+
+`vpw restore` only writes into a new or empty directory. It checks every file
+against the manifest, refuses paths outside the data layout, refuses backups
+from a newer VPW version, then migrates the database to the installed version
+and runs SQLite's integrity check. The target may be a different directory or
+machine: stored report paths are moved to the restored location. Stop
+`vpw serve` and point it at the restored directory, or move the old directory
+aside and restore into its place. The Docker Compose path keeps using
+`scripts/workbench-backup.sh`.
+
+## Settings File
+
+`vpw serve` reads `vpw.toml` from the data directory when it exists, or the file
+passed with `--config`. Command-line options and environment variables win over
+the file; unknown settings are errors.
+
+```toml
+[serve]
+port = 8877
+open_browser = false
+log_level = "info"       # debug, info, warning, error
+# host = "127.0.0.1"     # non-loopback hosts still need --allow-network
+
+[providers]
+nvd_api_key = "..."      # sets the NVD key variable (default NVD_API_KEY)
+github_token = "..."     # sets the GitHub token variable (default GITHUB_TOKEN)
+
+[imports]
+max_upload_mb = 50
+grype_executable = "/usr/local/bin/grype"
+sbom_scan_timeout_seconds = 600
+```
+
+Keep a file with secrets readable only by you (`chmod 600 vpw.toml`); `vpw serve`
+warns when it is not. Backups do not include `vpw.toml`.
+
+## Importing From The Command Line
+
+`vpw import` uploads a file to a running Workbench, waits for the run, and
+prints its counts and link. It exits non-zero when the import fails, so it fits
+scheduled scans:
+
+```bash
+trivy image --format json --output scan.json registry.example/app:1.4
+vpw import scan.json --project "Payments" --input-type trivy-json
+vpw import scan.json --project "Payments" --input-type trivy-json \
+  --create-project --keep-missing-open --json
+```
+
+`--url` (or `VPW_URL`) selects another Workbench address, `--no-wait` returns
+after queueing, and `--asset-context`, `--vex`, `--provider-snapshot`, and
+`--locked-provider-data` match the import wizard's options.
 
 ## Runtime Options
 

@@ -30,9 +30,10 @@ from app.repositories.finding_attack_query import (
     list_project_attack_contexts as _list_project_attack_contexts,
 )
 
-_MANUAL_WORKFLOW_STATUSES = {
+_PRESERVED_ON_REOBSERVATION = {
     FindingStatus.IN_REVIEW,
     FindingStatus.REMEDIATING,
+    FindingStatus.FALSE_POSITIVE,
 }
 
 
@@ -371,8 +372,13 @@ def _import_status_for_finding(
     current: FindingStatus,
     imported: FindingStatus,
 ) -> FindingStatus:
-    """Keep analyst workflow status unless import evidence moves the finding elsewhere."""
-    if imported == FindingStatus.OPEN and current in _MANUAL_WORKFLOW_STATUSES:
+    """
+    Keep analyst workflow status unless import evidence moves the finding elsewhere.
+
+    A resolved finding that an import reports again reopens (a regression); an
+    analyst's false-positive decision survives re-observation.
+    """
+    if imported == FindingStatus.OPEN and current in _PRESERVED_ON_REOBSERVATION:
         return current
     return imported
 

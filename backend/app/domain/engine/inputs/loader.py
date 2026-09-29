@@ -8,13 +8,14 @@ from pathlib import Path
 
 from app.domain.engine.models import (
     AssetContextRecord,
+    ExaminedTarget,
     InputOccurrence,
     InputSourceSummary,
     ParsedInput,
     VexStatement,
 )
 
-from . import _occurrence_support, _vex_support
+from . import _cve_support, _occurrence_support, _vex_support
 from .asset_context_loader import (
     AssetContextCatalog,
     AssetContextLoadDiagnostics,
@@ -43,6 +44,7 @@ class InputLoader:
         target_ref: str | None = None,
         asset_records: Mapping[tuple[str, str], AssetContextRecord] | None = None,
         vex_statements: list[VexStatement] | None = None,
+        allow_empty_examined: bool = False,
     ) -> ParsedInput:
         """Load method for InputLoader."""
         return self.load_many(
@@ -52,6 +54,7 @@ class InputLoader:
             target_ref=target_ref,
             asset_records=asset_records,
             vex_statements=vex_statements,
+            allow_empty_examined=allow_empty_examined,
         )
 
     def load_many(
@@ -63,8 +66,14 @@ class InputLoader:
         target_ref: str | None = None,
         asset_records: Mapping[tuple[str, str], AssetContextRecord] | None = None,
         vex_statements: list[VexStatement] | None = None,
+        allow_empty_examined: bool = False,
     ) -> ParsedInput:
-        """Load many method for InputLoader."""
+        """
+        Load many method for InputLoader.
+
+        ``allow_empty_examined`` accepts a report without CVEs when it names the
+        targets it examined, so a clean rescan can close earlier findings.
+        """
         if not inputs:
             raise ValueError("At least one input file must be provided.")
 
@@ -72,6 +81,7 @@ class InputLoader:
         occurrences: list[InputOccurrence] = []
         source_summaries: list[InputSourceSummary] = []
         source_occurrence_groups: list[list[InputOccurrence]] = []
+        examined_targets: list[ExaminedTarget] = []
         resolved_formats: list[str] = []
         total_rows = 0
         asset_match_conflict_count = 0
@@ -84,6 +94,7 @@ class InputLoader:
         for spec in inputs:
             parsed = _load_single_input(spec.path, input_format=spec.input_format)
             resolved_formats.append(parsed.input_format)
+            examined_targets.extend(parsed.examined_targets)
             total_rows += parsed.total_rows
             warnings.extend(parsed.warnings)
             source_occurrences = [
@@ -132,10 +143,12 @@ class InputLoader:
             merged_input_count=len(inputs),
             asset_match_conflict_count=asset_match_conflict_count,
             vex_conflict_count=vex_conflict_count,
+            allow_empty=allow_empty_examined and bool(examined_targets),
         )
         included_cves = set(parsed.unique_cves)
         return parsed.model_copy(
             update={
+                "examined_targets": list(dict.fromkeys(examined_targets)),
                 "source_summaries": [
                     summary.model_copy(
                         update={
@@ -160,7 +173,7 @@ class InputLoader:
                         source_occurrence_groups,
                         strict=True,
                     )
-                ]
+                ],
             }
         )
 
@@ -199,7 +212,10 @@ def _load_single_input(
     parser = _INPUT_PARSERS.get(resolved_format)
     if parser is None:
         raise ValueError(f"Unsupported input format: {resolved_format}")
-    return parser(path)
+    parsed = parser(path)
+    return parsed.model_copy(
+        update={"warnings": _cve_support.summarize_non_cve_identifiers(parsed.warnings)}
+    )
 
 
 def build_inline_input(

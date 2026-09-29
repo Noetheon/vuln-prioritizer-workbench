@@ -19,6 +19,51 @@ exact git tag output when release wording needs to be verified.
 
 ### Added
 
+- Findings without NVD CVSS use the severity reported by their imported
+  evidence as a CVSS-band proxy (lower band bound) with its own explanation
+  driver, so unanalyzed Critical findings are no longer ranked as Low. The
+  evaluation engine version is now `scope-evaluator.v2`; recorded v1 inputs
+  stay replayable.
+- The Triage queue and findings API filter findings with missing CVSS or EPSS
+  (`data_gap`).
+- `GET /api/v1/github/issues/export-settings` reports the configured GitHub
+  token variable (`WORKBENCH_GITHUB_TOKEN_ENV`, default `GITHUB_TOKEN`) and
+  whether it is set, without its value.
+- State-changing API requests and WebSocket handshakes from other sites are
+  rejected (`Origin`/`Sec-Fetch-Site` check); non-browser clients are unaffected.
+- Findings can be closed. Analysts set `resolved` or `false_positive` with a
+  required reason on Finding Detail or for up to 500 selected Triage rows
+  (`POST /api/v1/projects/{project_id}/findings/status`). Imports resolve
+  findings a rescan of the same target and format no longer reports and
+  reopen resolved findings reported again (`resolve_missing`, default on).
+  Every transition is kept in an append-only status history
+  (`GET /api/v1/findings/{finding_id}/lifecycle-events`, migration `0016`),
+  closed findings sort behind open work, and runs report
+  `resolved_findings` and `reopened_findings`.
+- Trivy and Grype reports without CVEs import successfully when they name the
+  targets they examined, so a clean rescan closes the remaining findings.
+- Trivy and Grype CVSS scores stand in for missing NVD CVSS with their exact
+  value and source instead of the reported band's lower bound.
+- Live NVD lookups are paced to NVD's limits (5 or, with an API key, 50
+  requests per 30 seconds) and retry rate-limited `403` responses.
+- Imports lead their warnings with one summary of vulnerabilities skipped for
+  lacking a CVE identifier (for example GHSA or GO advisories).
+- Projects have a versioned priority policy: base-rule thresholds and SLA
+  hours per priority (`GET`/`PUT /api/v1/projects/{project_id}/policy`,
+  migration `0017`), edited under Projects > Settings > Configuration. Saving
+  queues a re-evaluation, imports use the current policy, and every decision
+  records the policy it was evaluated with.
+- `vpw backup` and `vpw restore` write and verify portable archives of a local
+  data directory; restore only fills an empty directory, checks every file
+  against the manifest, and migrates the restored database.
+- `vpw import` uploads a scanner or SBOM file to a running Workbench, waits
+  for the run, and exits non-zero on failure.
+- `vpw serve` reads optional settings from `vpw.toml` in the data directory
+  (port, browser, log level, NVD and GitHub credentials, import limits).
+- Open findings carry an SLA due date (first seen plus the recorded SLA target)
+  and a state (`sla_due_at`, `sla_state`: overdue, due soon, on track). Triage
+  shows them, filters by them (`sla`), and offers an **Overdue** view.
+
 - Explicit `json-gzip` exports for large historical runs, using the complete
   `analysis-result.v2` contract with bounded streaming and checksum validation.
 
@@ -63,6 +108,13 @@ exact git tag output when release wording needs to be verified.
   manifest; local audit and runtime files are excluded.
 
 ### Fixed
+
+- Creating a GitHub issue from Finding Detail sends the configured token
+  variable instead of failing with HTTP 422, and the dialog explains when the
+  variable is not set.
+- Reloading or deep-linking the Assets page in `vpw serve` loads the app
+  instead of a JSON 404, and every deep-linked page now carries the same CSP,
+  frame and host protections as `/`.
 
 - Startup and readiness reject incomplete columns and missing history tables in
   populated databases. Legacy SQLite table repairs roll back atomically on failure

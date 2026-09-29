@@ -30,6 +30,7 @@ from app.core.db import create_db_engine
 from app.core.frontend import mount_packaged_frontend
 from app.core.local_schema_bootstrap import bootstrap_local_sqlite_schema
 from app.core.rate_limit import RateLimiter, create_rate_limiter, rate_limit_key
+from app.core.request_origin import CrossSiteRequestGuard
 from app.core.schema_smoke import assert_migrated_schema
 from app.services.decision_scope_lock import ProjectDecisionLockError
 from app.services.provider_updates import reconcile_stale_provider_update_runs
@@ -101,6 +102,10 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
         app.router.on_startup.append(worker.start)
         app.router.on_shutdown.append(worker.stop)
     app.router.on_shutdown.append(lambda: active_engine.dispose())
+    # Starlette runs the most recently added middleware first. Mounting the packaged
+    # frontend before the guards keeps its SPA fallback innermost, so deep-link HTML
+    # passes host validation and receives the same security headers as API responses.
+    mount_packaged_frontend(app)
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=list(selected_settings.ALLOWED_HOSTS),
@@ -113,6 +118,10 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
             allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
             allow_headers=["Content-Type", "Accept"],
         )
+    app.add_middleware(
+        CrossSiteRequestGuard,
+        allowed_origins=selected_settings.all_cors_origins,
+    )
     app.middleware("http")(_rate_limit_guard)
     app.middleware("http")(_upload_size_guard)
     app.middleware("http")(_security_headers)
@@ -123,7 +132,6 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(ProjectDecisionLockError, project_decision_lock_error_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
     install_error_openapi_schema(app)
-    mount_packaged_frontend(app)
     return app
 
 

@@ -10,6 +10,7 @@ from app.domain.engine.models import (
     KevData,
     NvdData,
     PrioritizedFinding,
+    SeverityProxy,
 )
 
 
@@ -23,12 +24,15 @@ def build_rationale(
     context_summary: str | None = None,
     suppressed_by_vex: bool = False,
     under_investigation: bool = False,
+    severity_proxy: SeverityProxy | None = None,
 ) -> str:
     """Build a deterministic rationale string from the available signals."""
     parts: list[str] = []
     if kev.in_kev:
         parts.append(_kev_rationale_part())
     parts.append(_nvd_rationale_part(nvd))
+    if nvd.cvss_base_score is None and severity_proxy is not None:
+        parts.append(_severity_proxy_rationale_part(severity_proxy))
     parts.append(_epss_rationale_part(epss))
     parts.extend(_attack_rationale_parts(attack))
     parts.extend(_provenance_rationale_parts(provenance))
@@ -47,6 +51,20 @@ def _nvd_rationale_part(nvd: NvdData) -> str:
     severity = f" ({nvd.cvss_severity})" if nvd.cvss_severity else ""
     version_note = f" via CVSS v{nvd.cvss_version}" if nvd.cvss_version else ""
     return f"NVD reports CVSS {nvd.cvss_base_score:.1f}{severity}{version_note}."
+
+
+def _severity_proxy_rationale_part(proxy: SeverityProxy) -> str:
+    if proxy.cvss_source:
+        return (
+            f"The {proxy.source_format} input reports CVSS {proxy.cvss_floor:.1f} "
+            f"({proxy.severity}) from {proxy.cvss_source}; until NVD publishes CVSS, "
+            "the base rule uses this source-reported score."
+        )
+    return (
+        f"The {proxy.source_format} input reports {proxy.severity} severity "
+        f"({proxy.raw_value}); until NVD publishes CVSS, the base rule uses the "
+        f"band's lower bound CVSS {proxy.cvss_floor:.1f} so the finding is not treated as safe."
+    )
 
 
 def _epss_rationale_part(epss: EpssData) -> str:

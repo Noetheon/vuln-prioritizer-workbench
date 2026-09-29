@@ -11,21 +11,28 @@ from app.api.deps import LocalActor, SessionDep
 from app.api.routes.workbench_access import (
     lock_existing_project_resource,
     require_current_decisions,
+    require_project,
 )
 from app.decision_core.finding_queries import list_project_findings_query
 from app.decision_core.readmodels import current_finding_read_views, project_finding_decision_views
 from app.models import (
     AssetExposure,
     Finding,
+    FindingBulkStatusUpdatePublic,
+    FindingBulkStatusUpdateRequest,
     FindingDetailPublic,
     FindingExplanationPublic,
+    FindingLifecycleEventsPublic,
     FindingPriority,
+    FindingSlaState,
     FindingsPublic,
     FindingStatus,
     FindingStatusUpdateRequest,
 )
 from app.repositories import FindingPageQuery, FindingRepository
 from app.services import DecisionDataUnavailableError, build_finding_explanation_payload
+from app.services.decision_scope_lock import lock_project_decision_scope
+from app.services.finding_lifecycle import list_lifecycle_events
 from app.services.finding_projection import (
     _finding_detail_public_with_attack_context,
     _finding_public_from_view,
@@ -33,6 +40,7 @@ from app.services.finding_projection import (
 from app.services.finding_status import (
     FindingStatusTransitionError,
     update_finding_workflow_status,
+    update_findings_workflow_status,
 )
 
 router = APIRouter(tags=["findings"])
@@ -75,6 +83,17 @@ def read_project_findings(
     epss_max: float | None = Query(default=None, ge=0, le=1),
     cvss_min: float | None = Query(default=None, ge=0, le=10),
     cvss_max: float | None = Query(default=None, ge=0, le=10),
+    data_gap: bool | None = Query(
+        default=None,
+        description="True selects findings without NVD CVSS or FIRST EPSS; false the rest.",
+    ),
+    sla: FindingSlaState | None = Query(
+        default=None,
+        description=(
+            "Open work by SLA due date (first seen plus the recorded SLA target): "
+            "overdue, due_soon (last quarter of the window), or on_track."
+        ),
+    ),
     include_evidence: bool = Query(
         default=False,
         description=(
@@ -105,6 +124,8 @@ def read_project_findings(
             epss_max=epss_max,
             cvss_min=cvss_min,
             cvss_max=cvss_max,
+            data_gap=data_gap,
+            sla_state=sla,
         ),
     )
     views = (
@@ -136,7 +157,12 @@ def update_finding_status(
     session: SessionDep,
     local_actor: LocalActor,
 ) -> FindingDetailPublic:
-    """Apply a manual workflow status (open, in_review, remediating) to one finding."""
+    """
+    Apply a manual workflow status to one finding.
+
+    ``resolved`` and ``false_positive`` require a reason; ``fixed``, ``accepted``,
+    and ``suppressed`` stay owned by VEX and waivers.
+    """
     finding = FindingRepository(session).get_finding(finding_id)
     if finding is None:
         raise HTTPException(status_code=404, detail="Finding not found")
@@ -154,6 +180,7 @@ def update_finding_status(
             finding=finding,
             status=payload.status,
             local_actor=local_actor,
+            reason=payload.reason,
         )
     except FindingStatusTransitionError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -177,3 +204,52 @@ def explain_finding(
         return build_finding_explanation_payload(finding)
     except DecisionDataUnavailableError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/projects/{project_id}/findings/status",
+    response_model=FindingBulkStatusUpdatePublic,
+)
+def update_project_findings_status(
+    project_id: uuid.UUID,
+    payload: FindingBulkStatusUpdateRequest,
+    session: SessionDep,
+    local_actor: LocalActor,
+) -> FindingBulkStatusUpdatePublic:
+    """Apply one manual workflow status to several findings; report skipped ones."""
+    require_project(session, project_id)
+    lock_project_decision_scope(session, project_id)
+    require_current_decisions(session, project_id)
+    try:
+        result = update_findings_workflow_status(
+            session,
+            project_id=project_id,
+            finding_ids=payload.finding_ids,
+            status=payload.status,
+            local_actor=local_actor,
+            reason=payload.reason,
+        )
+    except FindingStatusTransitionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    session.commit()
+    return result
+
+
+@router.get(
+    "/findings/{finding_id}/lifecycle-events",
+    response_model=FindingLifecycleEventsPublic,
+)
+def read_finding_lifecycle_events(
+    finding_id: uuid.UUID,
+    session: SessionDep,
+    local_actor: LocalActor,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+) -> FindingLifecycleEventsPublic:
+    """Return the newest-first status history of one finding with causes and reasons."""
+    finding = FindingRepository(session).get_finding(finding_id)
+    if finding is None:
+        raise HTTPException(status_code=404, detail="Finding not found")
+    require_project(session, finding.project_id)
+    events, count = list_lifecycle_events(session, finding_id, limit=limit, offset=offset)
+    return FindingLifecycleEventsPublic(data=events, count=count)

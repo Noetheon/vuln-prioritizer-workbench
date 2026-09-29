@@ -73,5 +73,7 @@ prioritization is visible instead of drowned in uniform noise.
 - Provider facts are shared per CVE, while VEX, remediation, score,
   explanation, guidance, and rank are evaluated per component/asset finding
   scope. A scoped decision never borrows those fields from another asset.
-- Manual statuses are limited to open / in review / remediating. Accepted,
-  suppressed, and fixed remain owned by waivers, VEX, and imports.
+- Manual statuses are open / in review / remediating / resolved / false
+  positive; the two closing statuses require a reason. Accepted, suppressed,
+  and fixed remain owned by waivers and VEX. Rescans resolve findings they no
+  longer report and reopen resolved findings they report again.

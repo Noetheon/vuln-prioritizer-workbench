@@ -106,6 +106,16 @@ export function ImportRunDetailRoute({
       value: selectedRunSummary.updated_findings ?? 0,
     },
     {
+      description:
+        (selectedRunSummary.reopened_findings ?? 0) > 0
+          ? `${selectedRunSummary.reopened_findings} reopened`
+          : undefined,
+      label: "Resolved findings",
+      tone:
+        (selectedRunSummary.resolved_findings ?? 0) > 0 ? "success" : "support",
+      value: selectedRunSummary.resolved_findings ?? 0,
+    },
+    {
       label: "Ignored lines",
       tone:
         (selectedRunSummary.ignored_lines ?? 0) > 0 ? "warning" : "success",

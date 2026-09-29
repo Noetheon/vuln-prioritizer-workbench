@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.domain.engine.models import InputOccurrence, ParsedInput
+from app.domain.engine.models import ExaminedTarget, InputOccurrence, ParsedInput
+from app.domain.engine.severity_proxy import reported_cvss_score
 
 from .. import _cve_support
 from .common import (
@@ -26,8 +27,13 @@ def parse_trivy_json(path: Path) -> ParsedInput:
     occurrences: list[InputOccurrence] = []
     total_rows = 0
     target_kind = _trivy_target_kind(document)
+    results = dict_items(document.get("Results"))
+    examined_refs = [
+        first_present_string(result.get("Target"), document.get("ArtifactName"))
+        for result in results
+    ] or [first_present_string(document.get("ArtifactName"))]
 
-    for result_index, result in enumerate(dict_items(document.get("Results")), start=1):
+    for result_index, result in enumerate(results, start=1):
         target = first_present_string(result.get("Target"), document.get("ArtifactName"))
         package_type = first_present_string(result.get("Type"))
         for vuln_index, vulnerability in enumerate(
@@ -40,6 +46,7 @@ def parse_trivy_json(path: Path) -> ParsedInput:
             if not cve_ids:
                 _warn_non_cve_trivy_id(source_id, warnings)
                 continue
+            cvss_score, cvss_source = _trivy_cvss(vulnerability)
             for cve_index, cve_id in enumerate(cve_ids, start=1):
                 occurrences.append(
                     InputOccurrence(
@@ -58,6 +65,8 @@ def parse_trivy_json(path: Path) -> ParsedInput:
                             cve_count=len(cve_ids),
                         ),
                         raw_severity=vulnerability.get("Severity"),
+                        raw_cvss_score=cvss_score,
+                        raw_cvss_source=cvss_source,
                         target_kind=target_kind,
                         target_ref=target,
                     )
@@ -68,6 +77,7 @@ def parse_trivy_json(path: Path) -> ParsedInput:
         total_rows=total_rows,
         occurrences=occurrences,
         warnings=warnings,
+        examined_targets=_examined_targets("trivy-json", target_kind, examined_refs),
     )
 
 
@@ -83,6 +93,20 @@ def _trivy_target_kind(document: dict) -> str:
         "aws_account": "aws_account",
         "vm": "vm",
     }.get((artifact_type or "").strip().lower(), "image")
+
+
+def _trivy_cvss(vulnerability: dict) -> tuple[float | None, str | None]:
+    """Prefer the NVD score Trivy embeds, then its severity source, then others."""
+    cvss = dict_value(vulnerability.get("CVSS"))
+    severity_source = first_present_string(vulnerability.get("SeveritySource"))
+    order = [*(["nvd", severity_source, "ghsa"]), *sorted(str(key) for key in cvss)]
+    for source in dict.fromkeys(item for item in order if item):
+        entry = dict_value(cvss.get(source))
+        for field_name in ("V3Score", "V40Score"):
+            score = reported_cvss_score(entry.get(field_name))
+            if score is not None:
+                return score, source
+    return None, None
 
 
 def _trivy_cve_candidates(vulnerability: dict) -> list[str | None]:
@@ -133,6 +157,7 @@ def parse_grype_json(path: Path) -> ParsedInput:
         if not cve_ids:
             _warn_non_cve_grype_id(source_id, warnings)
             continue
+        cvss_score, cvss_source = _grype_cvss(match_item, vulnerability)
         artifact = dict_value(match_item.get("artifact"))
         if not artifact:
             warnings.append(
@@ -161,6 +186,8 @@ def parse_grype_json(path: Path) -> ParsedInput:
                         cve_count=len(cve_ids),
                     ),
                     raw_severity=vulnerability.get("severity"),
+                    raw_cvss_score=cvss_score,
+                    raw_cvss_source=cvss_source,
                     target_kind=target_kind,
                     target_ref=source_target,
                 )
@@ -171,7 +198,48 @@ def parse_grype_json(path: Path) -> ParsedInput:
         total_rows=total_rows,
         occurrences=occurrences,
         warnings=warnings,
+        examined_targets=_examined_targets(
+            "grype-json",
+            target_kind,
+            [first_present_string(source_target)],
+        ),
     )
+
+
+def _examined_targets(
+    source_format: str,
+    target_kind: str,
+    target_refs: list[str | None],
+) -> list[ExaminedTarget]:
+    """Record every target the report examined, so a clean rescan can close findings."""
+    return [
+        ExaminedTarget(source_format=source_format, target_kind=target_kind, target_ref=ref)
+        for ref in dict.fromkeys(ref for ref in target_refs if ref)
+    ]
+
+
+def _grype_cvss(match: dict, vulnerability: dict) -> tuple[float | None, str | None]:
+    """Prefer NVD CVSS v3 from related records, then other v3, then v4 scores."""
+    candidates: list[tuple[int, int, str, float]] = []
+    for record in (*dict_items(match.get("relatedVulnerabilities")), vulnerability):
+        namespace = first_present_string(record.get("namespace")) or ""
+        for entry in dict_items(record.get("cvss")):
+            version = str(entry.get("version") or "")
+            score = reported_cvss_score(dict_value(entry.get("metrics")).get("baseScore"))
+            if score is None or not version.startswith(("3", "4")):
+                continue
+            source = (
+                "nvd"
+                if namespace.startswith("nvd") or "nvd" in str(entry.get("source") or "")
+                else namespace.split(":")[0] or first_present_string(entry.get("source")) or "grype"
+            )
+            candidates.append(
+                (0 if source == "nvd" else 1, 0 if version.startswith("3") else 1, source, score)
+            )
+    if not candidates:
+        return None, None
+    _nvd_rank, _version_rank, source, score = min(candidates, key=lambda item: item[:3])
+    return score, source
 
 
 def _grype_match_items(value: object, *, warnings: list[str]) -> tuple[int, list[tuple[int, dict]]]:

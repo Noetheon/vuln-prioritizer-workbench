@@ -339,6 +339,10 @@ export function findingNextStepLabel(finding: FindingDetailPublic | null) {
       return "Complete technical review and confirm the remediation path."
     case "remediating":
       return "Verify the fix, then update evidence and status."
+    case "resolved":
+      return "Keep the closure evidence; a later scan that reports it again reopens the finding."
+    case "false_positive":
+      return "Keep the recorded reason; reopen if new evidence shows the finding applies."
     case "fixed":
       return "Confirm scanner closure and keep evidence for reporting."
     case "accepted":

@@ -1,21 +1,11 @@
 import { ArrowLeft, RefreshCcw } from "lucide-react"
-import { useState } from "react"
 import type {
   FindingDetailPublic,
   FindingExplanationPublic,
-  FindingStatus,
 } from "@/api-client"
-import { FindingsService } from "@/api-client"
 import { ReevaluateControl } from "@/components/evaluations/ReevaluateControl"
 import type { FindingsUrlSearch } from "@/components/findings/findings-search-state"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   DefinitionList,
@@ -27,6 +17,7 @@ import {
   VpwStatusBanner,
 } from "@/components/vpw"
 import type { FindingDetailTab } from "@/lib/app-defaults"
+import { slaDueDetail } from "@/lib/finding-sla-due"
 import { Link } from "@/lib/router"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 import { findingWaiverEvidence } from "@/lib/waiver-view"
@@ -39,6 +30,7 @@ import { FindingGovernanceTab } from "./FindingGovernanceTab"
 import { FindingHistoryTab } from "./FindingHistoryTab"
 import { FindingOccurrencesTab } from "./FindingOccurrencesTab"
 import { FindingTtpContextTab } from "./FindingTtpContextTab"
+import { FindingWorkflowStatusControl } from "./FindingWorkflowStatusControl"
 import {
   findingComponentDetailLabel,
   findingDataQualityRows,
@@ -246,6 +238,7 @@ export function FindingDetailRoute({
                   <FindingHistoryTab
                     findingId={finding.id}
                     historyRows={historyRows}
+                    projectId={finding.project_id}
                   />
                 </TabsContent>
 
@@ -312,6 +305,10 @@ function FindingDetailActionRail({
     {
       label: "SLA",
       value: findingSlaLabel(finding),
+    },
+    {
+      label: "SLA due",
+      value: slaDueDetail(finding),
     },
     {
       label: "Status",
@@ -386,86 +383,5 @@ function FindingDetailActionRail({
         ]}
       />
     </DetailRail>
-  )
-}
-
-const WORKFLOW_STATUS_OPTIONS: readonly {
-  label: string
-  value: FindingStatus
-}[] = [
-  { label: "Open", value: "open" },
-  { label: "In review", value: "in_review" },
-  { label: "Remediating", value: "remediating" },
-]
-
-function FindingWorkflowStatusControl({
-  finding,
-  onRefresh,
-}: {
-  finding: FindingDetailPublic
-  onRefresh: () => void
-}) {
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState("")
-  const isWorkflowStatus = WORKFLOW_STATUS_OPTIONS.some(
-    (option) => option.value === finding.status,
-  )
-
-  async function applyStatus(status: FindingStatus) {
-    if (status === finding.status) {
-      return
-    }
-    setSaving(true)
-    setSaveError("")
-    try {
-      await FindingsService.updateFindingStatus({
-        finding_id: finding.id,
-        findingStatusUpdateRequest: { status },
-      })
-      onRefresh()
-    } catch {
-      setSaveError("Status update failed - refresh and try again.")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div className="finding-detail-action-block">
-      <span>Workflow status</span>
-      {isWorkflowStatus ? (
-        <>
-          <Select
-            disabled={saving}
-            onValueChange={(value) => applyStatus(value as FindingStatus)}
-            value={finding.status}
-          >
-            <SelectTrigger
-              aria-label="Workflow status"
-              className="w-full bg-[var(--vpw-bg-card)]"
-            >
-              <SelectValue placeholder="Set status" />
-            </SelectTrigger>
-            <SelectContent>
-              {WORKFLOW_STATUS_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {saveError ? (
-            <p className="finding-detail-action-error" role="alert">
-              {saveError}
-            </p>
-          ) : null}
-        </>
-      ) : (
-        <p>
-          Managed by governance evidence (waiver, VEX, or import) - use Risk
-          acceptance or evidence updates to change it.
-        </p>
-      )}
-    </div>
   )
 }

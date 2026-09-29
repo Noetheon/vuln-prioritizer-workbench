@@ -11,6 +11,9 @@ from fastapi import FastAPI, Request
 from starlette.responses import FileResponse, Response
 from starlette.staticfiles import StaticFiles
 
+# Browser routes whose path equals a static mount root rather than a file below it.
+SPA_ROUTES_SHADOWED_BY_MOUNTS = frozenset({"/assets", "/assets/"})
+
 
 class ImmutableAssetFiles(StaticFiles):
     """StaticFiles variant with immutable caching for hashed Vite assets."""
@@ -54,6 +57,10 @@ def mount_packaged_frontend(
 
     @app.middleware("http")
     async def serve_frontend_fallback(request: Request, call_next: Any) -> Response:
+        if request.method in {"GET", "HEAD"} and request.url.path in SPA_ROUTES_SHADOWED_BY_MOUNTS:
+            # The Assets page shares its path with the hashed asset mount; the mount
+            # root itself is never a file, so reloads and deep links get the app.
+            return serve_index()
         response = await call_next(request)
         if (
             request.method not in {"GET", "HEAD"}

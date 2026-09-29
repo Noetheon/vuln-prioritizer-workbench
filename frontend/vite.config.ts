@@ -44,7 +44,9 @@ export default defineConfig(({ mode }) => {
       host: "127.0.0.1",
       port: 5173,
       proxy: {
-        "/api": devProxyTarget,
+        // Keep the browser-facing Host so the API's same-origin request guard
+        // sees the dev server as the page origin (Vite's shorthand rewrites it).
+        "/api": { target: devProxyTarget, changeOrigin: false },
       },
     },
     plugins: [tailwindcss(), react()],

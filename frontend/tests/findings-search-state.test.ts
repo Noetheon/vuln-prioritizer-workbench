@@ -94,6 +94,7 @@ test("findings search maps URL state to generated findings API params", () => {
   assert.deepEqual(findingsSearchToFilters(state), {
     cvssMax: "9.8",
     cvssMin: "4",
+    dataGap: "",
     epssMax: "",
     epssMin: "0.7",
     exposure: "",
@@ -101,12 +102,14 @@ test("findings search maps URL state to generated findings API params", () => {
     ownerService: "payments",
     priority: "high",
     query: "spring",
+    sla: "",
     status: "",
   })
   assert.deepEqual(findingsSearchToApiParams(state, "project-1"), {
     asset_id: "asset-1",
     cvss_max: 9.8,
     cvss_min: 4,
+    data_gap: undefined,
     direction: "desc",
     epss_max: undefined,
     epss_min: 0.7,
@@ -118,6 +121,7 @@ test("findings search maps URL state to generated findings API params", () => {
     priority: "high",
     project_id: "project-1",
     q: "spring",
+    sla: undefined,
     sort: "epss",
     status: undefined,
   })
@@ -139,6 +143,7 @@ test("findings search drops invalid max range values that are below min", () => 
     asset_id: undefined,
     cvss_max: undefined,
     cvss_min: 9,
+    data_gap: undefined,
     direction: "asc",
     epss_max: undefined,
     epss_min: 0.7,
@@ -150,6 +155,7 @@ test("findings search drops invalid max range values that are below min", () => 
     priority: undefined,
     project_id: "project-1",
     q: undefined,
+    sla: undefined,
     sort: "operational",
     status: undefined,
   })
@@ -181,4 +187,30 @@ test("findings search cleanup preserves route-owned project id", () => {
     ),
     "status=open&projectId=project-1",
   )
+})
+
+test("findings search round-trips the provider data gap filter", () => {
+  const gaps = parseFindingsSearch({ dataGap: "true", priority: "high" })
+  const complete = parseFindingsSearch({ dataGap: "false" })
+  const invalid = parseFindingsSearch({ dataGap: "maybe" })
+
+  assert.equal(gaps.dataGap, "true")
+  assert.equal(findingsSearchToApiParams(gaps, "project-1").data_gap, true)
+  assert.equal(findingsSearchToApiParams(complete, "project-1").data_gap, false)
+  assert.equal(invalid.dataGap, "")
+  assert.equal(findingsSearchToApiParams(invalid, "project-1").data_gap, undefined)
+  assert.equal(findingsSearchQueryString(gaps), "dataGap=true&priority=high")
+  assert.equal(cleanFindingsSearchQueryString("dataGap=maybe&priority=high"), "priority=high")
+})
+
+test("findings search keeps a valid SLA filter and drops unknown ones", () => {
+  const overdue = parseFindingsSearch({ sla: "overdue", status: "open" })
+  const invalid = parseFindingsSearch({ sla: "late" })
+
+  assert.equal(overdue.sla, "overdue")
+  assert.equal(findingsSearchToApiParams(overdue, "project-1").sla, "overdue")
+  assert.equal(findingsSearchQueryString(overdue), "sla=overdue&status=open")
+  assert.equal(invalid.sla, "")
+  assert.equal(findingsSearchToApiParams(invalid, "project-1").sla, undefined)
+  assert.equal(cleanFindingsSearchQueryString("sla=late&kev=true"), "kev=true")
 })

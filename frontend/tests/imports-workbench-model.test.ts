@@ -496,6 +496,13 @@ test("import run timeline only includes evidence-backed events", () => {
   ])
   assert.equal(completedItems.includes("Optional context applied"), false)
   assert.equal(completedItems.includes("Evidence recorded"), false)
+  assert.equal(
+    importRunTimelineItems(null, {
+      ...completedSummary,
+      resolved_findings: 3,
+    } as never).includes("Findings created or updated"),
+    true,
+  )
 
   const contextualSummary = {
     ...completedSummary,
@@ -614,7 +621,23 @@ test("import upload payload includes provider and ATT&CK options", () => {
   assert.equal(payload.input_type, "cyclonedx-json")
   assert.equal(payload.locked_provider_data, true)
   assert.equal(payload.provider_snapshot_file, "provider-snapshot.json")
+  assert.equal(payload.resolve_missing, true)
   assert.equal(payload.vex_file, vexFile)
+})
+
+test("import upload payload lets partial scans keep unreported findings open", () => {
+  const payload = buildImportUploadFormData({
+    importWizard: {
+      ...defaultImportWizardState,
+      inputType: "trivy-json",
+      resolveMissing: false,
+    },
+    selectedAssetContextFile: null,
+    selectedFile: {} as File,
+    selectedVexFile: null,
+  })
+
+  assert.equal(payload.resolve_missing, false)
 })
 
 test("import upload payload omits empty optional file-name fields", () => {
@@ -638,6 +661,7 @@ test("import upload payload omits empty optional file-name fields", () => {
     file: importFile,
     input_type: "cve-list",
     locked_provider_data: false,
+    resolve_missing: true,
   })
 })
 

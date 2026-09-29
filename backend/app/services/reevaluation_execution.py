@@ -13,6 +13,7 @@ from sqlmodel import Session, select
 
 from app.core.config import Settings
 from app.decision_core.contracts import FindingDecisionEvidenceV2
+from app.decision_core.current_queue import closed_workflow_bucket
 from app.decision_core.evaluation import ScopeEvaluationInput
 from app.decision_core.projection_evaluation import (
     _apply_recomputed_decision,
@@ -20,6 +21,7 @@ from app.decision_core.projection_evaluation import (
     _recompute_projection_decision,
     _stored_projection_decision,
     evaluate_evidence_payload,
+    recorded_sla_hours,
 )
 from app.domain.engine.models import (
     EpssData,
@@ -54,6 +56,7 @@ from app.repositories.waivers import (
 )
 from app.services.decision_scope_lock import lock_project_decision_scope, project_decision_revision
 from app.services.evaluation_publication import publish_evaluation_run
+from app.services.project_policy import current_priority_policy
 from app.services.workflow_execution import WorkflowExecutionContext
 
 
@@ -197,7 +200,10 @@ def ranked_evaluation_payloads(
         )
         candidates.append(
             (
-                global_operational_sort_key(decision, _projection_scope_sort_key(evidence)),
+                (
+                    closed_workflow_bucket(evidence.status),
+                    *global_operational_sort_key(decision, _projection_scope_sort_key(evidence)),
+                ),
                 finding_id,
                 evidence,
                 decision,
@@ -206,7 +212,6 @@ def ranked_evaluation_payloads(
     candidates.sort(key=lambda item: (*item[0], str(item[1])))
     result = dict(evaluated)
     peer_ranks: dict[uuid.UUID, int] = {}
-    guidance = DecisionGuidanceService()
     for rank, (_, finding_id, evidence, decision) in enumerate(candidates, 1):
         if finding_id not in evaluated and rank == evidence.operational_rank:
             continue
@@ -214,7 +219,7 @@ def ranked_evaluation_payloads(
             peer_ranks[finding_id] = rank
             continue
         decision = decision.model_copy(update={"operational_rank": rank})
-        ranked_guidance = guidance.build(decision)
+        ranked_guidance = DecisionGuidanceService(recorded_sla_hours(evidence)).build(decision)
         decision = decision.model_copy(update={"decision_guidance": ranked_guidance})
         result[finding_id] = _apply_recomputed_decision(evidence.to_jsonable(), decision)
     return result, peer_ranks
@@ -288,10 +293,14 @@ def execute_reevaluation_workflow(
     context.checkpoint()
     evaluated: dict[uuid.UUID, dict[str, Any]] = {}
     today = get_datetime_utc().date()
+    # Re-evaluation adopts the project's current policy like its current context.
+    policy = current_priority_policy(session, project_id)
     for index, finding_id in enumerate(sorted(selected, key=str), 1):
         evidence = FindingDecisionEvidenceV2.model_validate(fresh[finding_id])
         assert evidence.evaluation_input is not None
-        inputs = evidence.evaluation_input.model_copy(update={"evaluation_date": today})
+        inputs = evidence.evaluation_input.model_copy(
+            update={"evaluation_date": today, "priority_policy": policy}
+        )
         if report is not None:
             inputs = _adopt_snapshot(inputs, report, snapshot_items)
         payload, _ = evaluate_evidence_payload(evidence.to_jsonable(), inputs=inputs)

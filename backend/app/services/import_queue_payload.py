@@ -24,4 +24,5 @@ def import_queue_payload(
         "sbom_db_update": upload.sbom_db_update,
         "sbom_source_run_id": upload.sbom_source_run_id,
         "sbom_observed_at": upload.sbom_observed_at,
+        "resolve_missing": upload.resolve_missing,
     }

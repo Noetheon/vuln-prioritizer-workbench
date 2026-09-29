@@ -10,6 +10,7 @@ from typing import Final
 APP_NAME: Final = "vuln-prioritizer-workbench"
 DEFAULT_OUTPUT_FORMAT: Final = "markdown"
 DEFAULT_NVD_API_KEY_ENV: Final = "NVD_API_KEY"
+DEFAULT_GITHUB_TOKEN_ENV: Final = "GITHUB_TOKEN"
 DEFAULT_CACHE_DIR: Final = Path(".cache") / APP_NAME
 DEFAULT_CACHE_TTL_HOURS: Final = 24
 ENV_VAR_NAME_PATTERN: Final = r"^[A-Z_][A-Z0-9_]*$"
