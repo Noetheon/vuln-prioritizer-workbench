@@ -35,7 +35,11 @@ def test_uv_metadata_dev_selector_does_not_change_unmarked_requirement() -> None
 
 @pytest.mark.parametrize(
     ("filename", "job"),
-    [("ci.yml", "dependency-audit"), ("release.yml", "build-and-release")],
+    [
+        ("ci.yml", "dependency-audit"),
+        ("maintenance.yml", "quality-10"),
+        ("release.yml", "build-and-release"),
+    ],
 )
 def test_audit_export_jobs_set_up_python_311_before_runtime(
     filename: str, job: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
