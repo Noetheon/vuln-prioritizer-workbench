@@ -103,7 +103,7 @@ jobs:
               backend/*|pyproject.toml|uv.lock)
                 set_demo_smoke
                 ;;
-              scripts/docker_quickstart_api_smoke.py|scripts/start*)
+              scripts/docker_quickstart_api_smoke.py|scripts/docker_serve_image_smoke.sh|scripts/start*)
                 set_demo_smoke
                 ;;
               .nvmrc|.npmrc|package.json|frontend/package.json|frontend/package-lock.json)
@@ -165,6 +165,10 @@ jobs:
       - name: Run production-like Docker smoke
         if: needs.changes.outputs.docker-smoke-mode == 'full'
         run: make docker-production-smoke
+
+      - name: Smoke-test the single-container vpw serve image
+        if: needs.changes.outputs.run-docker == 'true'
+        run: make docker-serve-smoke
 
       - name: Build pinned scanner images
         if: needs.changes.outputs.run-image-security == 'true'

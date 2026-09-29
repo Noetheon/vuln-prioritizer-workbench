@@ -16,6 +16,9 @@ from app.domain.engine.config import (
 )
 
 EnvironmentName = Literal["local", "staging", "production"]
+# "local" serves one trusted operator without login; "proxy" is team mode, where
+# a reverse proxy signs users in and asserts who they are.
+AuthMode = Literal["local", "proxy"]
 VALID_ENVIRONMENTS: set[str] = {"local", "staging", "production"}
 LOCAL_WORKBENCH_POSTGRES_PASSWORD_PLACEHOLDER = "local-workbench-dev-postgres-password"
 DEFAULT_WORKBENCH_SECRET = "changethis"
@@ -83,6 +86,10 @@ class Settings:
     BACKGROUND_IMPORT_STALE_MINUTES: int = 120
     PROVIDER_UPDATE_STALE_MINUTES: int = 120
     TRUSTED_PROXY_CIDRS: tuple[str, ...] = field(default_factory=tuple)
+    AUTH_MODE: AuthMode = "local"
+    AUTH_PROXY_USER_HEADER: str = "Remote-Email"
+    AUTH_PROXY_NAME_HEADER: str = "Remote-Name"
+    AUTH_PROXY_LOGOUT_URL: str = ""
     AUDIT_RETENTION_DAYS: int = 365
     ALLOWED_HOSTS: tuple[str, ...] = field(default_factory=lambda: DEFAULT_ALLOWED_HOSTS)
     API_DOCS_ENABLED: bool | None = None
@@ -95,6 +102,26 @@ class Settings:
         object.__setattr__(self, "ENVIRONMENT", environment)
         object.__setattr__(self, "ALLOWED_HOSTS", allowed_hosts)
         object.__setattr__(self, "TRUSTED_PROXY_CIDRS", trusted_proxy_cidrs)
+        auth_mode = _validate_auth_mode(self.AUTH_MODE)
+        if auth_mode == "proxy" and not trusted_proxy_cidrs:
+            raise ValueError(
+                "AUTH_MODE=proxy requires TRUSTED_PROXY_CIDRS with the address of the login proxy."
+            )
+        object.__setattr__(self, "AUTH_MODE", auth_mode)
+        object.__setattr__(
+            self,
+            "AUTH_PROXY_USER_HEADER",
+            _validate_header_name(self.AUTH_PROXY_USER_HEADER, label="AUTH_PROXY_USER_HEADER"),
+        )
+        name_header = self.AUTH_PROXY_NAME_HEADER.strip()
+        if name_header:
+            name_header = _validate_header_name(name_header, label="AUTH_PROXY_NAME_HEADER")
+        object.__setattr__(self, "AUTH_PROXY_NAME_HEADER", name_header)
+        object.__setattr__(
+            self,
+            "AUTH_PROXY_LOGOUT_URL",
+            _validate_logout_url(self.AUTH_PROXY_LOGOUT_URL),
+        )
         object.__setattr__(
             self,
             "NVD_API_KEY_ENV",
@@ -279,6 +306,10 @@ def load_settings() -> Settings:
             120,
         ),
         TRUSTED_PROXY_CIDRS=parse_trusted_proxy_cidrs(environ.get("TRUSTED_PROXY_CIDRS", "")),
+        AUTH_MODE=_validate_auth_mode(environ.get("AUTH_MODE", "local")),
+        AUTH_PROXY_USER_HEADER=environ.get("AUTH_PROXY_USER_HEADER", "Remote-Email"),
+        AUTH_PROXY_NAME_HEADER=environ.get("AUTH_PROXY_NAME_HEADER", "Remote-Name"),
+        AUTH_PROXY_LOGOUT_URL=environ.get("AUTH_PROXY_LOGOUT_URL", ""),
         AUDIT_RETENTION_DAYS=_positive_int_from_env("AUDIT_RETENTION_DAYS", 365),
         ALLOWED_HOSTS=allowed_hosts,
         API_DOCS_ENABLED=_optional_bool_from_env("API_DOCS_ENABLED"),
@@ -384,6 +415,37 @@ def _validate_allowed_hosts(hosts: tuple[str, ...]) -> tuple[str, ...]:
     if not deduped:
         raise ValueError("ALLOWED_HOSTS must include at least one host.")
     return tuple(deduped)
+
+
+def _validate_auth_mode(value: str) -> AuthMode:
+    mode = value.strip().lower()
+    if mode not in {"local", "proxy"}:
+        raise ValueError("AUTH_MODE must be one of: local, proxy.")
+    return cast(AuthMode, mode)
+
+
+_HEADER_NAME_CHARACTERS = frozenset(
+    "!#$%&'*+-.^_`|~0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+)
+
+
+def _validate_header_name(value: str, *, label: str) -> str:
+    name = value.strip()
+    if not name or not set(name) <= _HEADER_NAME_CHARACTERS:
+        raise ValueError(f"{label} must be an HTTP header name, for example Remote-Email.")
+    return name
+
+
+def _validate_logout_url(value: str) -> str:
+    url = value.strip()
+    if not url:
+        return ""
+    if url.startswith("/") and not url.startswith("//"):
+        return url
+    parsed = urlparse(url)
+    if parsed.scheme in {"http", "https"} and parsed.netloc:
+        return url
+    raise ValueError("AUTH_PROXY_LOGOUT_URL must be an http(s) URL or a path starting with '/'.")
 
 
 def _validate_trusted_proxy_cidrs(cidrs: tuple[str, ...]) -> tuple[str, ...]:

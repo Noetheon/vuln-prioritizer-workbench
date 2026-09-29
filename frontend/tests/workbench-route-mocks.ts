@@ -12,6 +12,7 @@ import type {
   WaiverPublic,
   WaiverUpdate,
   WorkbenchCapabilitiesPublic,
+  WorkbenchSessionPublic,
 } from "../src/api-client"
 
 type MockProject = {
@@ -74,6 +75,7 @@ type RouteWorkbenchShellOptions = {
   governanceRollups?: ProjectGovernanceRollupsPublic
   runSummaries?: Record<string, AnalysisRunSummaryPublic>
   runs?: AnalysisRunPublic[]
+  session?: WorkbenchSessionPublic
   waivers?: WaiverPublic[]
 }
 
@@ -359,6 +361,19 @@ export async function routeWorkbenchShell(
         api_docs_enabled: apiDocsEnabled,
         api_docs_path: apiDocsPath,
       }),
+    }),
+  )
+  const session: WorkbenchSessionPublic = options.session ?? {
+    auth_mode: "local",
+    display_name: "Local Workbench",
+    logout_url: null,
+    user: "local@workbench.test",
+    user_id: "00000000-0000-5000-8000-000000000001",
+  }
+  await page.route("**/api/v1/workbench/session", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(session),
     }),
   )
   await page.route("**/api/v1/workbench/capabilities", (route) => {

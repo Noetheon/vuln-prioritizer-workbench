@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from ipaddress import ip_address, ip_network
+from ipaddress import ip_address
 from time import monotonic
 from typing import Protocol, runtime_checkable
 
@@ -15,6 +15,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.sql.elements import TextClause
 
 from app.core.config import Settings
+from app.core.trusted_proxy import is_trusted_proxy_host
 
 _RATE_LIMIT_DATETIME = DateTime(timezone=True)
 
@@ -229,7 +230,7 @@ def rate_limit_key(request: Request, settings: Settings) -> tuple[str, int] | No
 def rate_limit_client_host(request: Request, settings: Settings) -> str:
     """Return the client host used for rate-limit buckets."""
     direct_host = request.client.host if request.client else "unknown"
-    if _is_trusted_proxy_host(direct_host, settings.TRUSTED_PROXY_CIDRS):
+    if is_trusted_proxy_host(direct_host, settings.TRUSTED_PROXY_CIDRS):
         forwarded_host = _forwarded_for_host(
             request.headers.get("x-forwarded-for"),
             settings.TRUSTED_PROXY_CIDRS,
@@ -237,22 +238,6 @@ def rate_limit_client_host(request: Request, settings: Settings) -> str:
         if forwarded_host:
             return forwarded_host
     return direct_host
-
-
-def _is_trusted_proxy_host(host: str, trusted_proxy_cidrs: tuple[str, ...]) -> bool:
-    if not trusted_proxy_cidrs:
-        return False
-    try:
-        host_ip = ip_address(host)
-    except ValueError:
-        return False
-    for cidr in trusted_proxy_cidrs:
-        try:
-            if host_ip in ip_network(cidr, strict=False):
-                return True
-        except ValueError:
-            continue
-    return False
 
 
 def _forwarded_for_host(
@@ -267,7 +252,7 @@ def _forwarded_for_host(
         if (parsed_host := _parse_forwarded_for_host(raw_candidate)) is not None
     ]
     for forwarded_host in reversed(forwarded_hosts):
-        if not _is_trusted_proxy_host(forwarded_host, trusted_proxy_cidrs):
+        if not is_trusted_proxy_host(forwarded_host, trusted_proxy_cidrs):
             return forwarded_host
     return forwarded_hosts[-1] if forwarded_hosts else None
 

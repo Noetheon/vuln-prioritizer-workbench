@@ -48,19 +48,27 @@ For a complete external-user path across install, the Workbench demo,
 architecture, scoring, providers, reports, ATT&CK, security, and known
 limitations, start with the [User Documentation Guide](user_documentation.md).
 
-Local Workbench from a repository checkout:
+Install the Workbench from PyPI, run the container image, or install a
+repository checkout with `pipx install ./backend`:
 
 ```bash
-pipx install ./backend
+pipx install vuln-prioritizer-workbench
 vpw serve
+# or
+docker run -d --name vpw -p 127.0.0.1:8765:8765 -v vpw-data:/data \
+  ghcr.io/noetheon/vuln-prioritizer-workbench:latest
 ```
+
+The PyPI package and image are published with releases; until a release is on
+PyPI, use the checkout install.
 
 Open `http://127.0.0.1:8765`, create or select a project, and import
 `data/sample_cves.txt`. In the provider snapshot field, enter
 `demo_provider_snapshot.json` and enable locked provider data. The checked-in
 snapshot source is `data/demo_provider_snapshot.json`. The current local
-Workbench is single-user and does not require a login step. This path works
-without live provider API keys.
+Workbench is single-user and does not require a login step; shared instances use
+[team mode behind a login proxy](team-mode.md). This path works without live
+provider API keys.
 
 The same process serves the packaged React UI and FastAPI API and supervises the
 durable workflow worker over SQLite WAL. The Workbench remains local-first and

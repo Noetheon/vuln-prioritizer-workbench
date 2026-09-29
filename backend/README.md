@@ -1,21 +1,48 @@
-# Vuln Prioritizer Workbench Backend
+# Vuln Prioritizer Workbench
 
-This backend workspace packages the active FastAPI Workbench API, database
-migrations, packaged browser assets/resources, the supervised local worker,
-supporting services, and the internal `app.domain.engine` domain modules used by
-the Workbench runtime.
+Vuln Prioritizer Workbench is a local-first workbench for explainable CVE
+prioritization. It imports vulnerability evidence you already have, then ranks
+findings with CVSS, EPSS, CISA KEV, asset context, VEX, waivers, and reviewed
+defensive ATT&CK context. Every ranking is explained.
 
-The published backend distribution is `vuln-prioritizer-workbench`, ships the
-`app/**` package only, and exposes `vpw serve` as its local browser-runtime
-entrypoint. Old Typer analytical CLI/package namespaces are not compatibility
-surfaces; package checks validate that the wheel and sdist do not publish the
-removed `vuln_prioritizer` tree.
+- **Inputs:** CVE lists, Trivy, Grype, CycloneDX, SPDX, Dependency-Check,
+  GitHub alerts, Nessus, OpenVAS, VEX, and asset context.
+- **Outputs:** Markdown, HTML, JSON, CSV, SARIF, ATT&CK Navigator, and Evidence
+  ZIP reports.
+- **Boundary:** It does not scan networks, run exploits, or patch anything.
 
-Repository-level docs, fixtures, demo artifacts, and maintainer commands remain
-at the repository root.
+## Install And Run
 
-When backend behavior is referenced from documentation, verify the claim through
-the repository-level
-[`docs/documentation-evidence-matrix.md`](../docs/documentation-evidence-matrix.md)
-before treating historical CLI, template, or archive material as current
-Workbench evidence.
+```bash
+pipx install vuln-prioritizer-workbench
+vpw serve
+```
+
+`vpw serve` opens the browser at `http://127.0.0.1:8765`. One process runs the
+API, the browser app, database migrations, and the background worker, with
+SQLite data in a private per-user directory. No Node.js, PostgreSQL, or Docker
+is needed.
+
+Other commands:
+
+- `vpw import`: upload scanner or SBOM files from CI.
+- `vpw backup` and `vpw restore`: create and restore verified backups.
+- `vpw serve --help`: list runtime options.
+
+A container image is published as
+`ghcr.io/noetheon/vuln-prioritizer-workbench`. Small teams can share one
+instance behind their own login proxy in team mode.
+
+## Documentation
+
+- [README and product tour](https://github.com/Noetheon/vuln-prioritizer-workbench#readme)
+- [Installation](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/INSTALL.md)
+- [Team mode](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/docs/team-mode.md)
+- [Changelog](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/CHANGELOG.md)
+
+## Package Layout
+
+This distribution ships the `app` package only: the FastAPI Workbench API,
+database migrations, packaged browser assets and resources, the supervised
+worker, and the internal `app.domain.engine` modules. Repository-level docs,
+fixtures, and maintainer tooling stay in the source repository.

@@ -24,6 +24,7 @@ export const workbenchQueryKeys = {
     [...workbenchQueryKeys.all, "assets", projectId] as const,
   providerStatus: () => [...workbenchQueryKeys.all, "provider-status"] as const,
   capabilities: () => [...workbenchQueryKeys.all, "capabilities"] as const,
+  session: () => [...workbenchQueryKeys.all, "session"] as const,
   githubIssueExportSettings: () =>
     [...workbenchQueryKeys.all, "github-issue-export-settings"] as const,
   demoWorkspace: () => [...workbenchQueryKeys.all, "demo-workspace"] as const,

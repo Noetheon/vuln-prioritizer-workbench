@@ -21,6 +21,9 @@ The current local-first Workbench threat model covers:
   retained as a separate Compose process for transition parity
 - local single-user browser/API access for active `/api/v1` routes, without
   login, RBAC, session cookies, API tokens, or CSRF headers
+- optional team mode (`AUTH_MODE=proxy`), where a reverse proxy the operator
+  runs signs users in and asserts the user through a request header; the
+  Workbench still manages no accounts, sessions, roles, or API tokens
 - local-first GitHub issue preview/export
 - generated JSON, Markdown, HTML, CSV, SARIF, and evidence bundle artifacts
 
@@ -188,6 +191,24 @@ version and these controls as product requirements:
 These prerequisites are intentionally listed as blockers rather than implied
 support. Local single-user access is not a complete shared-deployment auth
 model unless candidate-specific evidence explicitly accepts that boundary.
+
+## Team Mode
+
+Team mode ([Team Mode Behind A Login Proxy](./team-mode.md)) moves sign-in to a
+reverse proxy the operator already trusts. The Workbench accepts the user named
+in `AUTH_PROXY_USER_HEADER` and nothing else about the session.
+
+| Concern | Mitigation |
+| --- | --- |
+| A client sends its own identity header | Only direct peers inside `TRUSTED_PROXY_CIDRS` may assert a user; other peers get `401`. The proxy must overwrite the header, and a header that appears more than once is rejected. |
+| The Workbench is reached around the proxy | Team mode fails closed. Operators bind `vpw serve` to loopback or keep the container port unpublished so the proxy is the only path. `vpw serve` refuses team mode without trusted proxies. |
+| Processes inside a trusted network impersonate users | Keep `TRUSTED_PROXY_CIDRS` to the proxy's address or network. When loopback is trusted, local processes are as trusted as in local mode. |
+| A foreign site rides the proxy's session cookie | The cross-site request guard rejects state-changing requests and WebSocket handshakes whose `Origin` is not the request host. The proxy must preserve `Host`. |
+| Users can see and change each other's projects | Accepted: every signed-in user has full access; there are no roles or project memberships. Use the proxy's access rules for who may sign in. Team mode is not for mutually untrusted users or tenants. |
+| Actions cannot be attributed | Audit events and finding status changes record the signed-in user. |
+
+Health and status routes stay public so container health checks work without a
+signed-in user. They return readiness and version data only.
 
 ## Readiness Checklist
 

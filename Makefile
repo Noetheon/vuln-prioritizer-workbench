@@ -20,7 +20,7 @@ NPM ?= scripts/frontend-npm.sh
 FRONTEND_NPM_ENGINE_STRICT ?= true
 FRONTEND_NPM := $(NPM) --prefix frontend --workspaces=false --engine-strict=$(FRONTEND_NPM_ENGINE_STRICT)
 
-.PHONY: install launch workbench-status workbench-stop workbench-reset workbench-update workbench-diagnostics test lint format fix typecheck check critical-coverage-check backend-compatibility-check property-check mutation-check quality-10-check local-workbench-check performance-smoke playwright-install playwright-check playwright-check-without-design-audit frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-design-audit frontend-design-audit-update frontend-design-audit-linux-docker frontend-design-audit-linux-docker-update demo-screenshot frontend-audit frontend-check runtime-assets-sync runtime-assets-check python-lock-check docker-base-image-check pre-commit-pin-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check ci-cost-report docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package release-bundle package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
+.PHONY: install launch workbench-status workbench-stop workbench-reset workbench-update workbench-diagnostics test lint format fix typecheck check critical-coverage-check backend-compatibility-check property-check mutation-check quality-10-check local-workbench-check performance-smoke playwright-install playwright-check playwright-check-without-design-audit frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-design-audit frontend-design-audit-update frontend-design-audit-linux-docker frontend-design-audit-linux-docker-update demo-screenshot frontend-audit frontend-check runtime-assets-sync runtime-assets-check python-lock-check docker-base-image-check pre-commit-pin-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check ci-cost-report docker-demo-smoke docker-production-smoke docker-serve-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package release-bundle package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -277,6 +277,9 @@ docker-demo-smoke:
 	fi; \
 	DOCKER_QUICKSTART_API_BASE_URL="http://127.0.0.1:$$DOCKER_DEMO_BACKEND_PORT/api/v1" $(PYTHON) scripts/docker_quickstart_api_smoke.py; \
 	echo "Workbench Docker smoke passed."
+
+docker-serve-smoke:
+	bash scripts/docker_serve_image_smoke.sh
 
 docker-production-smoke:
 	@set -e; \

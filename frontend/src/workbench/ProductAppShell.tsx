@@ -1,9 +1,6 @@
 import type { ReactNode } from "react"
 
-import type {
-  ProviderStatusPublic,
-  WorkbenchStatus,
-} from "../api-client"
+import type { ProviderStatusPublic, WorkbenchStatus } from "../api-client"
 import { AppShell } from "../components/app/AppShell"
 import {
   dataServicesSummary,
@@ -13,6 +10,8 @@ import {
   type WorkbenchPath,
   workbenchNavigationGroups,
 } from "../lib/workbench-navigation"
+import { shellIdentity } from "../lib/workbench-session"
+import { useWorkbenchSessionQuery } from "./useWorkbenchRuntimeQueries"
 
 type ProductAppShellProps = {
   activePath: WorkbenchPath | null
@@ -39,6 +38,7 @@ export function ProductAppShell({
   statusError,
   title,
 }: ProductAppShellProps) {
+  const identity = shellIdentity(useWorkbenchSessionQuery().data)
   return (
     <AppShell
       activePath={activePath}
@@ -50,7 +50,9 @@ export function ProductAppShell({
       navigationKey={navigationKey}
       statusItems={dataServicesSummary(status, providerStatus)}
       title={title}
-      workspaceLabel="Local workspace"
+      signOutUrl={identity.signOutUrl}
+      workspaceLabel={identity.label}
+      workspaceStatusLabel={identity.statusLabel}
     >
       {children}
     </AppShell>
