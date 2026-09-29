@@ -1,0 +1,85 @@
+# Team-mode reference deployment: Caddy terminates TLS and asks Authelia about
+# every Workbench request. The Workbench trusts identity headers only from
+# Caddy's fixed address. Run ./setup.sh before the first start; README.md has
+# the steps and what to change for a real domain.
+name: vpw-team-mode
+
+services:
+  caddy:
+    image: caddy:2.11.4-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b
+    restart: unless-stopped
+    ports:
+      # Loopback only for a local trial; publish 443 on all interfaces for a
+      # real deployment.
+      - "127.0.0.1:443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      app:
+        # TRUSTED_PROXY_CIDRS below names exactly this address.
+        ipv4_address: 172.30.0.10
+      auth: {}
+    depends_on:
+      authelia:
+        condition: service_healthy
+      workbench:
+        condition: service_healthy
+
+  authelia:
+    image: authelia/authelia:4.39.28@sha256:bd97cff4fcbf715b5ff1f9ae286afbe6033afce385302520b0368122d43a6f54
+    restart: unless-stopped
+    environment:
+      X_AUTHELIA_CONFIG: /etc/authelia/configuration.yml
+      AUTHELIA_SESSION_SECRET_FILE: /run/secrets/session_secret
+      AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE: /run/secrets/storage_encryption_key
+    secrets:
+      - session_secret
+      - storage_encryption_key
+    volumes:
+      - ./authelia/configuration.yml:/etc/authelia/configuration.yml:ro
+      - type: bind
+        source: ./authelia/users_database.yml
+        target: /etc/authelia/users_database.yml
+        read_only: true
+        bind:
+          # Fail clearly instead of creating a directory when setup.sh has not run.
+          create_host_path: false
+      - authelia-data:/var/lib/authelia
+    networks:
+      - auth
+
+  workbench:
+    image: ${VPW_IMAGE:-ghcr.io/noetheon/vuln-prioritizer-workbench:latest}
+    restart: unless-stopped
+    environment:
+      AUTH_MODE: proxy
+      # Only Caddy may name the signed-in user. Trusting the whole subnet would
+      # also trust the Docker gateway, which every host process can reach.
+      TRUSTED_PROXY_CIDRS: 172.30.0.10/32
+      VPW_ALLOWED_HOSTS: workbench.example.test
+      AUTH_PROXY_LOGOUT_URL: https://auth.example.test/logout
+    volumes:
+      - vpw-data:/data
+    networks:
+      - app
+
+networks:
+  app:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+  auth: {}
+
+volumes:
+  caddy-data:
+  caddy-config:
+  authelia-data:
+  vpw-data:
+
+secrets:
+  session_secret:
+    file: ./secrets/session_secret
+  storage_encryption_key:
+    file: ./secrets/storage_encryption_key

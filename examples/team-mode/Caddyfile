@@ -1,0 +1,23 @@
+# Caddy terminates TLS and asks Authelia about every Workbench request before
+# passing it on.
+{
+	# Certificates from Caddy's local CA, so the example runs offline. With a real
+	# domain, remove both lines and Caddy obtains public certificates.
+	local_certs
+	skip_install_trust
+}
+
+# Authelia sign-in portal.
+auth.example.test {
+	reverse_proxy authelia:9091
+}
+
+# The Workbench. forward_auth drops identity headers the client sent and copies
+# the ones Authelia returns for the signed-in user.
+workbench.example.test {
+	forward_auth authelia:9091 {
+		uri /api/authz/forward-auth
+		copy_headers Remote-User Remote-Groups Remote-Email Remote-Name
+	}
+	reverse_proxy workbench:8765
+}

@@ -229,6 +229,7 @@ def test_container_image_digest_policy_covers_compose_service_images() -> None:
 
     assert "compose.yml" in digest_check
     assert "compose.traefik.yml" in digest_check
+    assert '"team-mode" / "compose.yml"' in digest_check
     assert "Dockerfile.playwright" in digest_check
     assert "MAKE_IMAGE_RE" in digest_check
     assert "services" in digest_check

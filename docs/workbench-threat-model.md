@@ -210,6 +210,10 @@ in `AUTH_PROXY_USER_HEADER` and nothing else about the session.
 Health and status routes stay public so container health checks work without a
 signed-in user. They return readiness and version data only.
 
+The [reference deployment](https://github.com/Noetheon/vuln-prioritizer-workbench/tree/main/examples/team-mode) with Caddy
+and Authelia runs in the Docker workflow. It checks the chain end to end,
+including a forged identity header and a request that bypasses the proxy.
+
 ## Readiness Checklist
 
 The current local-first Workbench is readiness-aligned when:

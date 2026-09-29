@@ -107,7 +107,9 @@ sidebar. It stores no accounts or passwords and has no roles: everyone who can
 sign in may use every project.
 
 Setup, proxy requirements, and examples are in
-[Team Mode Behind A Login Proxy](docs/team-mode.md).
+[Team Mode Behind A Login Proxy](docs/team-mode.md). For a complete starting
+point, [`examples/team-mode`](examples/team-mode/README.md) runs Caddy,
+Authelia, and the Workbench with Docker Compose; CI tests that setup.
 
 ## Local Data
 
