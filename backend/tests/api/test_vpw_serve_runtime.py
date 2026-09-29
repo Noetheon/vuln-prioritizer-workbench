@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import stat
 import threading
 import time
@@ -58,6 +59,44 @@ def test_packaged_frontend_serves_assets_and_spa_without_masking_unknown_api(
         missing_api = client.get("/api/v1/does-not-exist")
         assert missing_api.status_code == 404
         assert missing_api.json()["detail"] == "Not Found"
+
+
+def _workbench_navigation_paths() -> list[str]:
+    navigation = (PROJECT_ROOT / "frontend/src/lib/workbench-navigation.ts").read_text(
+        encoding="utf-8"
+    )
+    paths = sorted(set(re.findall(r'\|\s+"(/[^"]*)"', navigation)))
+    assert "/assets" in paths, "navigation parsing must see every Workbench route"
+    return paths
+
+
+def test_packaged_runtime_serves_every_browser_route_with_security_headers() -> None:
+    app = create_app(Settings(SQLALCHEMY_DATABASE_URI="sqlite://"))
+    browser_routes = [
+        *_workbench_navigation_paths(),
+        "/assets?projectId=00000000-0000-4000-8000-00000000d001",
+        "/findings/00000000-0000-4000-8000-000000000001",
+        "/imports/new",
+        "/imports/formats",
+        "/imports/runs/00000000-0000-4000-8000-000000000002",
+    ]
+
+    with TestClient(app) as client:
+        for route in browser_routes:
+            response = client.get(route, follow_redirects=False)
+            assert response.status_code == 200, route
+            assert response.headers["content-type"].startswith("text/html"), route
+            assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
+            assert response.headers["x-frame-options"] == "DENY", route
+            assert response.headers["cache-control"] == "no-store", route
+
+        rebound = client.get("/assets", headers={"Host": "attacker.example"})
+        assert rebound.status_code == 400
+        missing_api = client.get("/api/v1/does-not-exist")
+        assert missing_api.status_code == 404
+        assert missing_api.headers["content-type"].startswith("application/json")
+        missing_asset = client.get("/assets/does-not-exist.js")
+        assert missing_asset.status_code == 404
 
 
 def test_in_process_worker_supervisor_restarts_after_crash_and_stops_cleanly() -> None:

@@ -24,6 +24,7 @@ async def build_project_import_upload_request(
     sbom_scanner: str = "none",
     sbom_target_ref: str | None = None,
     sbom_db_update: bool = True,
+    resolve_missing: bool = True,
 ) -> ProjectImportUploadRequest:
     """Build project import upload request function."""
     primary_content = await read_bounded_upload(file, settings=settings)
@@ -57,6 +58,7 @@ async def build_project_import_upload_request(
         sbom_scanner=sbom_scanner,
         sbom_target_ref=sbom_target_ref,
         sbom_db_update=sbom_db_update,
+        resolve_missing=resolve_missing,
     )
 
 

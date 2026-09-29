@@ -383,10 +383,31 @@ test("semantic finding statuses map to stable labels and tones", () => {
       normalizeStatus("in-review"),
       normalizeStatus("in progress"),
       normalizeStatus("resolved"),
+      normalizeStatus("false_positive"),
+      normalizeStatus("fixed"),
       normalizeStatus("accepted"),
       normalizeStatus("wont_fix"),
     ],
-    ["open", "in_review", "remediating", "fixed", "accepted", "suppressed"],
+    [
+      "open",
+      "in_review",
+      "remediating",
+      "resolved",
+      "false_positive",
+      "fixed",
+      "accepted",
+      "suppressed",
+    ],
+  )
+  assert.deepEqual(
+    ["resolved", "false_positive"].map((status) => ({
+      label: statusLabel(status),
+      tone: statusTone(status),
+    })),
+    [
+      { label: "Resolved", tone: "success" },
+      { label: "False positive", tone: "neutral" },
+    ],
   )
 
   assert.deepEqual(

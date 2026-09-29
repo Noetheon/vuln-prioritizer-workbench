@@ -35,6 +35,7 @@ class ProjectImportUploadRequest:
     sbom_db_update: bool = True
     sbom_source_run_id: str | None = None
     sbom_observed_at: str | None = None
+    resolve_missing: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,6 +74,7 @@ class PreparedImportUpload:
     sbom_db_update: bool = True
     sbom_source_run_id: str | None = None
     sbom_observed_at: str | None = None
+    resolve_missing: bool = True
 
 
 @dataclass(frozen=True, slots=True)

@@ -457,6 +457,9 @@ export function ImportsRouteContainer() {
       onProviderSnapshotFileChange={(value) =>
         setImportWizard((state) => ({ ...state, providerSnapshotFile: value }))
       }
+      onResolveMissingChange={(value) =>
+        setImportWizard((state) => ({ ...state, resolveMissing: value }))
+      }
       onUseDemoProviderSnapshot={() =>
         setImportWizard((state) => withDemoProviderSnapshot(state))
       }

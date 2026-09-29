@@ -38,6 +38,13 @@ async def import_project_upload(
     sbom_scanner: Literal["none", "grype"] = Form("none"),
     sbom_target_ref: str | None = Form(None),
     sbom_db_update: bool = Form(True),
+    resolve_missing: bool = Form(
+        True,
+        description=(
+            "Mark findings resolved when this import examined their target with the same "
+            "source format and no longer reports them."
+        ),
+    ),
 ) -> AnalysisRunPublic:
     """Accept one upload request and queue a worker-first import workflow."""
     require_project(session, project_id)
@@ -57,6 +64,7 @@ async def import_project_upload(
             sbom_scanner=sbom_scanner,
             sbom_target_ref=sbom_target_ref,
             sbom_db_update=sbom_db_update,
+            resolve_missing=resolve_missing,
         )
         run = await queue_project_import(
             project_id=project_id,

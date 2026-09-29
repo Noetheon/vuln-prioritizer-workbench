@@ -8,6 +8,7 @@ from app.domain.engine.models import (
     BusinessImpactBlock,
     FindingDecisionGuidance,
     PrioritizedFinding,
+    SlaHoursPolicy,
     SlaTarget,
 )
 from app.domain.engine.models_decision import DecisionRecommendation
@@ -75,10 +76,14 @@ BusinessImpactLevel = Literal["critical", "high", "medium", "low", "governance"]
 class DecisionGuidanceService:
     """Build deterministic management-readable guidance from finding evidence."""
 
+    def __init__(self, sla_hours: SlaHoursPolicy | None = None) -> None:
+        """Use a policy's response targets instead of the default SLA table when given."""
+        self.sla_hours = sla_hours
+
     def build(self, finding: PrioritizedFinding) -> FindingDecisionGuidance:
         """Build method for DecisionGuidanceService."""
         recommendation, recommendation_reasons = _select_recommendation(finding)
-        sla = _sla_for_finding(finding)
+        sla = _sla_for_finding(finding, self.sla_hours)
         business_impact = _business_impact(finding)
         visibility = _visibility_statement(finding)
         decision_statement = _decision_statement(
@@ -105,9 +110,12 @@ class DecisionGuidanceService:
         )
 
 
-def build_decision_guidance(finding: PrioritizedFinding) -> FindingDecisionGuidance:
+def build_decision_guidance(
+    finding: PrioritizedFinding,
+    sla_hours: SlaHoursPolicy | None = None,
+) -> FindingDecisionGuidance:
     """Convenience wrapper around :class:`DecisionGuidanceService`."""
-    return DecisionGuidanceService().build(finding)
+    return DecisionGuidanceService(sla_hours).build(finding)
 
 
 def _select_recommendation(finding: PrioritizedFinding) -> tuple[DecisionRecommendation, list[str]]:
@@ -126,7 +134,10 @@ def _select_recommendation(finding: PrioritizedFinding) -> tuple[DecisionRecomme
     return "monitor", ["recommendation.monitor.normal_cycle"]
 
 
-def _sla_for_finding(finding: PrioritizedFinding) -> SlaTarget:
+def _sla_for_finding(
+    finding: PrioritizedFinding,
+    sla_hours: SlaHoursPolicy | None = None,
+) -> SlaTarget:
     """Sla for finding function."""
     state = finding.priority_state or finding.priority_label
     if state in GOVERNANCE_SLA_BY_STATE:
@@ -135,7 +146,36 @@ def _sla_for_finding(finding: PrioritizedFinding) -> SlaTarget:
         return GOVERNANCE_SLA_BY_STATE["Suppressed"]
     if finding.waived:
         return GOVERNANCE_SLA_BY_STATE["Accepted"]
-    return SLA_BY_PRIORITY.get(finding.priority_label, SLA_BY_PRIORITY["Low"])
+    default = SLA_BY_PRIORITY.get(finding.priority_label, SLA_BY_PRIORITY["Low"])
+    hours = sla_hours.hours_for(default.priority) if sla_hours is not None else None
+    if hours is None:
+        return default
+    return default.model_copy(
+        update={
+            "target_hours": hours,
+            "target_days": hours // 24 if hours % 24 == 0 else None,
+            "guidance": POLICY_SLA_GUIDANCE[default.priority].format(
+                duration=_duration_label(hours)
+            ),
+            "source": "project-policy",
+        }
+    )
+
+
+POLICY_SLA_GUIDANCE: dict[str, str] = {
+    "Critical": "Validate scope and begin remediation or approved mitigation within {duration}.",
+    "High": "Validate scope and schedule remediation or mitigation within {duration}.",
+    "Medium": "Plan remediation in the regular risk-reduction cycle within {duration}.",
+    "Low": "Track in the normal maintenance cycle within {duration}; re-evaluate if exposure "
+    "changes.",
+}
+
+
+def _duration_label(hours: int) -> str:
+    if hours % 24 == 0:
+        days = hours // 24
+        return f"{days} day" if days == 1 else f"{days} days"
+    return f"{hours} hour" if hours == 1 else f"{hours} hours"
 
 
 def _business_impact(finding: PrioritizedFinding) -> BusinessImpactBlock:

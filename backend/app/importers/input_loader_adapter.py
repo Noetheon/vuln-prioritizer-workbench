@@ -113,7 +113,7 @@ def _parse_input_path(
         return parse_cve_list(path)
     if preserve_parser_warnings and input_type == "generic-occurrence-csv":
         return parse_generic_occurrence_csv(path)
-    return InputLoader().load(path, input_format=input_type)
+    return InputLoader().load(path, input_format=input_type, allow_empty_examined=True)
 
 
 def _write_payload(path: Path, payload: InputPayload, *, input_type: str) -> None:
@@ -214,6 +214,9 @@ def _raw_evidence(occurrence: InputOccurrence, *, input_type: str) -> dict[str, 
         "target_ref": occurrence.target_ref,
         "asset_id": occurrence.asset_id,
     }
+    if occurrence.raw_cvss_score is not None:
+        evidence["raw_cvss_score"] = occurrence.raw_cvss_score
+        evidence["raw_cvss_source"] = occurrence.raw_cvss_source
     line_number = _line_number_from_record_id(occurrence.source_record_id)
     if line_number is not None:
         evidence["line_number"] = line_number

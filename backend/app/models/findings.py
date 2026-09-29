@@ -4,12 +4,12 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Column, DateTime, Index, String, UniqueConstraint
+from sqlalchemy import Column, DateTime, Index, String, Text, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.decision_core.contracts import FindingDecisionEvidenceV2
 from app.models.base import get_datetime_utc
-from app.models.enums import FindingPriority, FindingStatus
+from app.models.enums import FindingPriority, FindingSlaState, FindingStatus
 
 
 class FindingBase(SQLModel):
@@ -139,6 +139,11 @@ class FindingPublic(FindingBase):
     business_service: str | None = None
     exposure: str | None = None
     sla: FindingSlaPublic | None = None
+    sla_due_at: datetime | None = Field(
+        default=None,
+        description="First seen plus the recorded SLA target; set only for open work.",
+    )
+    sla_state: FindingSlaState | None = None
     evidence: FindingDecisionEvidenceV2 | None = None
 
 
@@ -229,10 +234,88 @@ class FindingDetailPublic(FindingPublic):
     attack_context: FindingAttackContextDetailPublic | None = None
 
 
+FINDING_STATUS_REASON_MAX_LENGTH = 2000
+
+
 class FindingStatusUpdateRequest(SQLModel):
     """Manual workflow status change for one finding."""
 
     status: FindingStatus
+    reason: str | None = Field(default=None, max_length=FINDING_STATUS_REASON_MAX_LENGTH)
+
+
+class FindingBulkStatusUpdateRequest(SQLModel):
+    """Apply one manual workflow status to several findings of a project."""
+
+    finding_ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
+    status: FindingStatus
+    reason: str | None = Field(default=None, max_length=FINDING_STATUS_REASON_MAX_LENGTH)
+
+
+class FindingBulkStatusSkipPublic(SQLModel):
+    """One finding that a bulk status change left unchanged, with the reason."""
+
+    finding_id: uuid.UUID
+    detail: str
+
+
+class FindingBulkStatusUpdatePublic(SQLModel):
+    """Outcome of a bulk workflow status change."""
+
+    status: FindingStatus
+    updated_count: int = 0
+    updated_ids: list[uuid.UUID] = Field(default_factory=list)
+    skipped: list[FindingBulkStatusSkipPublic] = Field(default_factory=list)
+
+
+class FindingLifecycleEvent(SQLModel, table=True):
+    """Append-only record of one finding status transition and why it happened."""
+
+    __tablename__ = "finding_lifecycle_event"
+    __table_args__ = (
+        Index("ix_finding_lifecycle_event_finding_created", "finding_id", "created_at"),
+        Index("ix_finding_lifecycle_event_project_created", "project_id", "created_at"),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    project_id: uuid.UUID = Field(foreign_key="project.id", nullable=False, ondelete="CASCADE")
+    finding_id: uuid.UUID = Field(foreign_key="finding.id", nullable=False, ondelete="CASCADE")
+    analysis_run_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="analysis_run.id",
+        nullable=True,
+        ondelete="SET NULL",
+    )
+    from_status: str = Field(sa_column=Column(String(40), nullable=False))
+    to_status: str = Field(sa_column=Column(String(40), nullable=False))
+    source: str = Field(sa_column=Column(String(40), nullable=False))
+    reason: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
+    actor: str | None = Field(default=None, max_length=255)
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+
+
+class FindingLifecycleEventPublic(SQLModel):
+    """Public status-history row for finding detail views."""
+
+    id: uuid.UUID
+    finding_id: uuid.UUID
+    analysis_run_id: uuid.UUID | None = None
+    from_status: str
+    to_status: str
+    source: str
+    reason: str | None = None
+    actor: str | None = None
+    created_at: datetime
+
+
+class FindingLifecycleEventsPublic(SQLModel):
+    """Newest-first status history of one finding."""
+
+    data: list[FindingLifecycleEventPublic] = Field(default_factory=list)
+    count: int = 0
 
 
 class FindingsPublic(SQLModel):

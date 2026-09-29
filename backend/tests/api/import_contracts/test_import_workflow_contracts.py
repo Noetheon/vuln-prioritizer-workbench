@@ -92,6 +92,8 @@ def test_decision_api_endpoints_expose_explain_summary_and_cvss_comparison(
         "open": 2,
         "in_review": 0,
         "remediating": 0,
+        "resolved": 0,
+        "false_positive": 0,
         "fixed": 0,
         "accepted": 0,
         "suppressed": 0,

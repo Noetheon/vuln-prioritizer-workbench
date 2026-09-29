@@ -22,16 +22,15 @@ from app.models import (
     FindingDecisionEvidence,
     ProviderSnapshot,
     WorkflowRunKind,
-    WorkflowRunStatus,
 )
 from app.models.evaluations import DecisionRevisionPublic, DecisionRevisionsPublic, EvaluationCreate
-from app.repositories import RunRepository, WorkflowRepository
 from app.repositories.evidence_payloads import EvidencePayloadStore
 from app.services.reevaluation_execution import (
     ReevaluationConflict,
     load_verified_snapshot,
     project_evaluation_inputs,
 )
+from app.services.reevaluation_queue import enqueue_project_reevaluation
 from app.services.run_workflow_projection import analysis_run_public
 from app.services.workflows import latest_analysis_workflow_public
 
@@ -58,28 +57,7 @@ def create_evaluation(
             load_verified_snapshot(snapshot, workbench_settings(request))
     except ReevaluationConflict as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    run = RunRepository(session).create_analysis_run(
-        project_id=project_id,
-        input_type="reevaluation",
-        provider_snapshot_id=payload.provider_snapshot_id,
-    )
-    repository = WorkflowRepository(session)
-    workflow = repository.ensure_analysis_workflow(
-        kind=WorkflowRunKind.REEVALUATION,
-        analysis_run_id=run.id,
-        project_id=project_id,
-        title="Evaluate existing findings",
-        handler="app.services.reevaluation_execution.execute_reevaluation_workflow",
-        current_stage="queued",
-        status=WorkflowRunStatus.PENDING,
-        metadata_json={"reason": payload.reason},
-    )
-    repository.set_workflow_payload(
-        workflow.id,
-        payload_json=payload.model_dump(mode="json"),
-        queue_name="default",
-        max_retries=0,
-    )
+    run = enqueue_project_reevaluation(session, project_id, payload)
     session.commit()
     session.refresh(run)
     return analysis_run_public(

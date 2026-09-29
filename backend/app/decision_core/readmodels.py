@@ -22,6 +22,7 @@ from app.decision_core.contracts import (
     RunDiagnosticsV2,
 )
 from app.decision_core.read_summary import decision_read_summary
+from app.decision_core.sla_due import sla_due
 from app.domain.engine.security_redaction import redact_value
 from app.models import (
     AnalysisRun,
@@ -36,6 +37,7 @@ from app.models import (
     FindingStatus,
     WorkflowRunKind,
 )
+from app.models.base import get_datetime_utc
 from app.repositories.current_projections import FindingCurrentProjectionRepository
 from app.repositories.evidence import EvidenceRepository
 from app.repositories.workflows import WorkflowRepository
@@ -72,6 +74,8 @@ class DecisionRunView:
         return AnalysisRunCountsPublic(
             created_findings=counts.created_findings,
             updated_findings=counts.updated_findings,
+            resolved_findings=counts.resolved_findings,
+            reopened_findings=counts.reopened_findings,
             ignored_lines=counts.ignored_lines,
             rows_read=counts.rows_read,
             occurrence_count=counts.occurrence_count,
@@ -395,9 +399,18 @@ class DecisionFindingView:
         return self.evidence.to_jsonable() if self.evidence is not None else {}
 
     def public_update(self) -> dict[str, object]:
+        sla = self.read_summary.get("sla")
+        due = sla_due(
+            first_seen_at=self.finding.first_seen_at,
+            sla=sla if isinstance(sla, dict) else None,
+            status=self.status,
+            now=get_datetime_utc(),
+        )
         update: dict[str, object] = {
             "evidence": self.evidence,
-            "sla": self.read_summary.get("sla"),
+            "sla": sla,
+            "sla_due_at": due.due_at if due is not None else None,
+            "sla_state": due.state if due is not None else None,
             "component_name": self.component_name,
             "component_version": self.component_version,
             "component_purl": self.component_purl,

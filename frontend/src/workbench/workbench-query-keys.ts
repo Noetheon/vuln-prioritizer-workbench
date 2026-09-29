@@ -24,11 +24,22 @@ export const workbenchQueryKeys = {
     [...workbenchQueryKeys.all, "assets", projectId] as const,
   providerStatus: () => [...workbenchQueryKeys.all, "provider-status"] as const,
   capabilities: () => [...workbenchQueryKeys.all, "capabilities"] as const,
+  githubIssueExportSettings: () =>
+    [...workbenchQueryKeys.all, "github-issue-export-settings"] as const,
   demoWorkspace: () => [...workbenchQueryKeys.all, "demo-workspace"] as const,
+  projectPolicy: (projectId: string) =>
+    [...workbenchQueryKeys.all, "project-policy", projectId] as const,
   projectDashboard: (projectId: string) =>
     [...workbenchQueryKeys.all, "project-dashboard", projectId] as const,
   findingDetail: (findingId: string | null) =>
     [...workbenchQueryKeys.all, "finding-detail", findingId ?? "none"] as const,
+  findingLifecycleEventsRoot: (findingId: string) =>
+    [...workbenchQueryKeys.all, "finding-lifecycle-events", findingId] as const,
+  findingLifecycleEvents: (findingId: string, offset: number) =>
+    [
+      ...workbenchQueryKeys.findingLifecycleEventsRoot(findingId),
+      offset,
+    ] as const,
   findingRevisions: (findingId: string, offset: number) =>
     [
       ...workbenchQueryKeys.all,

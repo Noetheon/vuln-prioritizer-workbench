@@ -50,6 +50,7 @@ export function buildImportUploadFormData({
         }
       : {}),
     locked_provider_data: importWizard.lockedProviderData,
+    resolve_missing: importWizard.resolveMissing,
     ...(importWizard.providerSnapshotFile.trim()
       ? {
           provider_snapshot_file: importWizard.providerSnapshotFile.trim(),

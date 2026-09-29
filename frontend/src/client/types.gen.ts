@@ -122,6 +122,14 @@ export type AnalysisRunCountsPublic = {
      */
     occurrence_count?: number;
     /**
+     * Reopened Findings
+     */
+    reopened_findings?: number;
+    /**
+     * Resolved Findings
+     */
+    resolved_findings?: number;
+    /**
      * Rows Read
      */
     rows_read?: number;
@@ -301,6 +309,14 @@ export type AnalysisRunSummaryPublic = {
      * Provider Snapshot Id
      */
     provider_snapshot_id?: string | null;
+    /**
+     * Reopened Findings
+     */
+    reopened_findings?: number;
+    /**
+     * Resolved Findings
+     */
+    resolved_findings?: number;
     /**
      * Rows Read
      */
@@ -1058,6 +1074,12 @@ export type BodyImportsImportProjectUpload = {
      * Provider Snapshot File
      */
     provider_snapshot_file?: string | null;
+    /**
+     * Resolve Missing
+     *
+     * Mark findings resolved when this import examined their target with the same source format and no longer reports them.
+     */
+    resolve_missing?: boolean;
     /**
      * Sbom Db Update
      */
@@ -1857,6 +1879,60 @@ export type FindingAttackTechniqueDetailPublic = {
 };
 
 /**
+ * FindingBulkStatusSkipPublic
+ *
+ * One finding that a bulk status change left unchanged, with the reason.
+ */
+export type FindingBulkStatusSkipPublic = {
+    /**
+     * Detail
+     */
+    detail: string;
+    /**
+     * Finding Id
+     */
+    finding_id: string;
+};
+
+/**
+ * FindingBulkStatusUpdatePublic
+ *
+ * Outcome of a bulk workflow status change.
+ */
+export type FindingBulkStatusUpdatePublic = {
+    /**
+     * Skipped
+     */
+    skipped?: Array<FindingBulkStatusSkipPublic>;
+    status: FindingStatus;
+    /**
+     * Updated Count
+     */
+    updated_count?: number;
+    /**
+     * Updated Ids
+     */
+    updated_ids?: Array<string>;
+};
+
+/**
+ * FindingBulkStatusUpdateRequest
+ *
+ * Apply one manual workflow status to several findings of a project.
+ */
+export type FindingBulkStatusUpdateRequest = {
+    /**
+     * Finding Ids
+     */
+    finding_ids: Array<string>;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+    status: FindingStatus;
+};
+
+/**
  * FindingDecisionEvidenceV2
  *
  * Current decision and evidence graph for one finding in one run.
@@ -2120,6 +2196,13 @@ export type FindingDetailPublic = {
      */
     risk_score?: number | null;
     sla?: FindingSlaPublic | null;
+    /**
+     * Sla Due At
+     *
+     * First seen plus the recorded SLA target; set only for open work.
+     */
+    sla_due_at?: string | null;
+    sla_state?: FindingSlaState | null;
     status?: FindingStatus;
     /**
      * Suppressed By Vex
@@ -2220,6 +2303,66 @@ export type FindingExplanationPublic = {
      * Risk Score
      */
     risk_score?: number | null;
+};
+
+/**
+ * FindingLifecycleEventPublic
+ *
+ * Public status-history row for finding detail views.
+ */
+export type FindingLifecycleEventPublic = {
+    /**
+     * Actor
+     */
+    actor?: string | null;
+    /**
+     * Analysis Run Id
+     */
+    analysis_run_id?: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Finding Id
+     */
+    finding_id: string;
+    /**
+     * From Status
+     */
+    from_status: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+    /**
+     * Source
+     */
+    source: string;
+    /**
+     * To Status
+     */
+    to_status: string;
+};
+
+/**
+ * FindingLifecycleEventsPublic
+ *
+ * Newest-first status history of one finding.
+ */
+export type FindingLifecycleEventsPublic = {
+    /**
+     * Count
+     */
+    count?: number;
+    /**
+     * Data
+     */
+    data?: Array<FindingLifecycleEventPublic>;
 };
 
 /**
@@ -2478,6 +2621,13 @@ export type FindingPublic = {
      */
     risk_score?: number | null;
     sla?: FindingSlaPublic | null;
+    /**
+     * Sla Due At
+     *
+     * First seen plus the recorded SLA target; set only for open work.
+     */
+    sla_due_at?: string | null;
+    sla_state?: FindingSlaState | null;
     status?: FindingStatus;
     /**
      * Suppressed By Vex
@@ -2522,11 +2672,18 @@ export type FindingSlaPublic = {
 };
 
 /**
+ * FindingSlaState
+ *
+ * Where open work stands against its recorded SLA due date.
+ */
+export type FindingSlaState = 'overdue' | 'due_soon' | 'on_track';
+
+/**
  * FindingStatus
  *
  * Finding lifecycle state.
  */
-export type FindingStatus = 'open' | 'in_review' | 'remediating' | 'fixed' | 'accepted' | 'suppressed';
+export type FindingStatus = 'open' | 'in_review' | 'remediating' | 'resolved' | 'false_positive' | 'fixed' | 'accepted' | 'suppressed';
 
 /**
  * FindingStatusUpdateRequest
@@ -2534,6 +2691,10 @@ export type FindingStatus = 'open' | 'in_review' | 'remediating' | 'fixed' | 'ac
  * Manual workflow status change for one finding.
  */
 export type FindingStatusUpdateRequest = {
+    /**
+     * Reason
+     */
+    reason?: string | null;
     status: FindingStatus;
 };
 
@@ -2672,6 +2833,22 @@ export type GitHubIssueExportRecord = {
      * Title
      */
     title: string;
+};
+
+/**
+ * GitHubIssueExportSettingsPublic
+ *
+ * Operator-configured GitHub credential source, by name and presence only.
+ */
+export type GitHubIssueExportSettingsPublic = {
+    /**
+     * Token Configured
+     */
+    token_configured?: boolean;
+    /**
+     * Token Env
+     */
+    token_env: string;
 };
 
 /**
@@ -2828,6 +3005,10 @@ export type GovernanceRollupPublic = {
      */
     expired_waiver_count?: number;
     /**
+     * False Positive Count
+     */
+    false_positive_count?: number;
+    /**
      * Finding Count
      */
     finding_count?: number;
@@ -2861,6 +3042,10 @@ export type GovernanceRollupPublic = {
     priority_counts?: {
         [key: string]: number;
     };
+    /**
+     * Resolved Count
+     */
+    resolved_count?: number;
     /**
      * Review Due Waiver Count
      */
@@ -3189,6 +3374,14 @@ export type InputOccurrence = {
      * Purl
      */
     purl?: string | null;
+    /**
+     * Raw Cvss Score
+     */
+    raw_cvss_score?: number | null;
+    /**
+     * Raw Cvss Source
+     */
+    raw_cvss_source?: string | null;
     /**
      * Raw Severity
      */
@@ -3794,6 +3987,7 @@ export type PriorityPolicy = {
      * Medium Epss Threshold
      */
     medium_epss_threshold?: number;
+    sla_hours?: SlaHoursPolicy | null;
 };
 
 /**
@@ -4117,6 +4311,155 @@ export type ProjectGovernanceRollupsPublic = {
      */
     top_services_by_risk?: Array<GovernanceRollupPublic>;
     waiver_debt?: GovernanceWaiverDebtPublic;
+};
+
+/**
+ * ProjectPolicyFields
+ *
+ * Thresholds of the transparent base priority rule plus SLA targets.
+ */
+export type ProjectPolicyFields = {
+    /**
+     * Critical Cvss Threshold
+     */
+    critical_cvss_threshold: number;
+    /**
+     * Critical Epss Threshold
+     */
+    critical_epss_threshold: number;
+    /**
+     * High Cvss Threshold
+     */
+    high_cvss_threshold: number;
+    /**
+     * High Epss Threshold
+     */
+    high_epss_threshold: number;
+    /**
+     * Medium Cvss Threshold
+     */
+    medium_cvss_threshold: number;
+    /**
+     * Medium Epss Threshold
+     */
+    medium_epss_threshold: number;
+    sla_hours: SlaHoursPublic;
+};
+
+/**
+ * ProjectPolicyPublic
+ *
+ * A project's effective policy with its version and defaults for comparison.
+ */
+export type ProjectPolicyPublic = {
+    /**
+     * Critical Cvss Threshold
+     */
+    critical_cvss_threshold: number;
+    /**
+     * Critical Epss Threshold
+     */
+    critical_epss_threshold: number;
+    defaults: ProjectPolicyFields;
+    /**
+     * High Cvss Threshold
+     */
+    high_cvss_threshold: number;
+    /**
+     * High Epss Threshold
+     */
+    high_epss_threshold: number;
+    /**
+     * Is Default
+     */
+    is_default?: boolean;
+    /**
+     * Medium Cvss Threshold
+     */
+    medium_cvss_threshold: number;
+    /**
+     * Medium Epss Threshold
+     */
+    medium_epss_threshold: number;
+    /**
+     * Project Id
+     */
+    project_id: string;
+    sla_hours: SlaHoursPublic;
+    /**
+     * Updated At
+     */
+    updated_at?: string | null;
+    /**
+     * Updated By
+     */
+    updated_by?: string | null;
+    /**
+     * Version
+     */
+    version?: number;
+};
+
+/**
+ * ProjectPolicyUpdate
+ *
+ * Replace a project's policy and, by default, re-evaluate its findings.
+ */
+export type ProjectPolicyUpdate = {
+    /**
+     * Critical Cvss Threshold
+     */
+    critical_cvss_threshold: number;
+    /**
+     * Critical Epss Threshold
+     */
+    critical_epss_threshold: number;
+    /**
+     * High Cvss Threshold
+     */
+    high_cvss_threshold: number;
+    /**
+     * High Epss Threshold
+     */
+    high_epss_threshold: number;
+    /**
+     * Medium Cvss Threshold
+     */
+    medium_cvss_threshold: number;
+    /**
+     * Medium Epss Threshold
+     */
+    medium_epss_threshold: number;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+    /**
+     * Reevaluate
+     */
+    reevaluate?: boolean;
+    sla_hours: SlaHoursPublic;
+};
+
+/**
+ * ProjectPolicyUpdatePublic
+ *
+ * Saved policy and the re-evaluation it queued, if any.
+ */
+export type ProjectPolicyUpdatePublic = {
+    /**
+     * Changed
+     */
+    changed: boolean;
+    /**
+     * Evaluation Run Id
+     */
+    evaluation_run_id?: string | null;
+    /**
+     * Evaluation Skipped Reason
+     */
+    evaluation_skipped_reason?: string | null;
+    policy: ProjectPolicyPublic;
 };
 
 /**
@@ -5006,6 +5349,14 @@ export type RunCountsV2 = {
      */
     occurrence_count?: number;
     /**
+     * Reopened Findings
+     */
+    reopened_findings?: number;
+    /**
+     * Resolved Findings
+     */
+    resolved_findings?: number;
+    /**
      * Rows Read
      */
     rows_read?: number;
@@ -5356,6 +5707,54 @@ export type SidecarUploadCapabilityPublic = {
      * Required
      */
     required?: boolean;
+};
+
+/**
+ * SlaHoursPolicy
+ *
+ * Response targets in hours per base priority, replacing the default SLA table.
+ */
+export type SlaHoursPolicy = {
+    /**
+     * Critical
+     */
+    critical: number;
+    /**
+     * High
+     */
+    high: number;
+    /**
+     * Low
+     */
+    low: number;
+    /**
+     * Medium
+     */
+    medium: number;
+};
+
+/**
+ * SlaHoursPublic
+ *
+ * Response target in hours for each base priority.
+ */
+export type SlaHoursPublic = {
+    /**
+     * Critical
+     */
+    critical: number;
+    /**
+     * High
+     */
+    high: number;
+    /**
+     * Low
+     */
+    low: number;
+    /**
+     * Medium
+     */
+    medium: number;
 };
 
 /**
@@ -6231,6 +6630,45 @@ export type GetApiV1FindingsByFindingIdExplainResponses = {
 
 export type GetApiV1FindingsByFindingIdExplainResponse = GetApiV1FindingsByFindingIdExplainResponses[keyof GetApiV1FindingsByFindingIdExplainResponses];
 
+export type GetApiV1FindingsByFindingIdLifecycleEventsData = {
+    body?: never;
+    path: {
+        /**
+         * Finding Id
+         */
+        finding_id: string;
+    };
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
+    url: '/api/v1/findings/{finding_id}/lifecycle-events';
+};
+
+export type GetApiV1FindingsByFindingIdLifecycleEventsErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1FindingsByFindingIdLifecycleEventsError = GetApiV1FindingsByFindingIdLifecycleEventsErrors[keyof GetApiV1FindingsByFindingIdLifecycleEventsErrors];
+
+export type GetApiV1FindingsByFindingIdLifecycleEventsResponses = {
+    /**
+     * Successful Response
+     */
+    200: FindingLifecycleEventsPublic;
+};
+
+export type GetApiV1FindingsByFindingIdLifecycleEventsResponse = GetApiV1FindingsByFindingIdLifecycleEventsResponses[keyof GetApiV1FindingsByFindingIdLifecycleEventsResponses];
+
 export type PatchApiV1FindingsByFindingIdStatusData = {
     body: FindingStatusUpdateRequest;
     path: {
@@ -6260,6 +6698,22 @@ export type PatchApiV1FindingsByFindingIdStatusResponses = {
 };
 
 export type PatchApiV1FindingsByFindingIdStatusResponse = PatchApiV1FindingsByFindingIdStatusResponses[keyof PatchApiV1FindingsByFindingIdStatusResponses];
+
+export type GetApiV1GithubIssuesExportSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/github/issues/export-settings';
+};
+
+export type GetApiV1GithubIssuesExportSettingsResponses = {
+    /**
+     * Successful Response
+     */
+    200: GitHubIssueExportSettingsPublic;
+};
+
+export type GetApiV1GithubIssuesExportSettingsResponse = GetApiV1GithubIssuesExportSettingsResponses[keyof GetApiV1GithubIssuesExportSettingsResponses];
 
 export type GetApiV1ProjectsData = {
     body?: never;
@@ -6771,6 +7225,18 @@ export type GetApiV1ProjectsByProjectIdFindingsData = {
          */
         cvss_max?: number | null;
         /**
+         * Data Gap
+         *
+         * True selects findings without NVD CVSS or FIRST EPSS; false the rest.
+         */
+        data_gap?: boolean | null;
+        /**
+         * Sla
+         *
+         * Open work by SLA due date (first seen plus the recorded SLA target): overdue, due_soon (last quarter of the window), or on_track.
+         */
+        sla?: FindingSlaState | null;
+        /**
          * Include Evidence
          *
          * Expand full decision evidence for this page. Detail views include it by default.
@@ -6797,6 +7263,36 @@ export type GetApiV1ProjectsByProjectIdFindingsResponses = {
 };
 
 export type GetApiV1ProjectsByProjectIdFindingsResponse = GetApiV1ProjectsByProjectIdFindingsResponses[keyof GetApiV1ProjectsByProjectIdFindingsResponses];
+
+export type PostApiV1ProjectsByProjectIdFindingsStatusData = {
+    body: FindingBulkStatusUpdateRequest;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/findings/status';
+};
+
+export type PostApiV1ProjectsByProjectIdFindingsStatusErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type PostApiV1ProjectsByProjectIdFindingsStatusError = PostApiV1ProjectsByProjectIdFindingsStatusErrors[keyof PostApiV1ProjectsByProjectIdFindingsStatusErrors];
+
+export type PostApiV1ProjectsByProjectIdFindingsStatusResponses = {
+    /**
+     * Successful Response
+     */
+    200: FindingBulkStatusUpdatePublic;
+};
+
+export type PostApiV1ProjectsByProjectIdFindingsStatusResponse = PostApiV1ProjectsByProjectIdFindingsStatusResponses[keyof PostApiV1ProjectsByProjectIdFindingsStatusResponses];
 
 export type PostApiV1ProjectsByProjectIdGithubIssuesExportData = {
     body: GitHubIssueExportCreate;
@@ -6922,6 +7418,66 @@ export type PostApiV1ProjectsByProjectIdImportsResponses = {
 };
 
 export type PostApiV1ProjectsByProjectIdImportsResponse = PostApiV1ProjectsByProjectIdImportsResponses[keyof PostApiV1ProjectsByProjectIdImportsResponses];
+
+export type GetApiV1ProjectsByProjectIdPolicyData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/policy';
+};
+
+export type GetApiV1ProjectsByProjectIdPolicyErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1ProjectsByProjectIdPolicyError = GetApiV1ProjectsByProjectIdPolicyErrors[keyof GetApiV1ProjectsByProjectIdPolicyErrors];
+
+export type GetApiV1ProjectsByProjectIdPolicyResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectPolicyPublic;
+};
+
+export type GetApiV1ProjectsByProjectIdPolicyResponse = GetApiV1ProjectsByProjectIdPolicyResponses[keyof GetApiV1ProjectsByProjectIdPolicyResponses];
+
+export type PutApiV1ProjectsByProjectIdPolicyData = {
+    body: ProjectPolicyUpdate;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/policy';
+};
+
+export type PutApiV1ProjectsByProjectIdPolicyErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type PutApiV1ProjectsByProjectIdPolicyError = PutApiV1ProjectsByProjectIdPolicyErrors[keyof PutApiV1ProjectsByProjectIdPolicyErrors];
+
+export type PutApiV1ProjectsByProjectIdPolicyResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectPolicyUpdatePublic;
+};
+
+export type PutApiV1ProjectsByProjectIdPolicyResponse = PutApiV1ProjectsByProjectIdPolicyResponses[keyof PutApiV1ProjectsByProjectIdPolicyResponses];
 
 export type GetApiV1ProjectsByProjectIdRunsData = {
     body?: never;

@@ -28,6 +28,7 @@ from app.domain.engine.models import (
     PrioritizedFinding,
     ProviderDataQualityFlag,
     ProviderEvidence,
+    SlaHoursPolicy,
     WaiverRule,
 )
 from app.domain.engine.services.contextualization import (
@@ -379,7 +380,10 @@ def build_scoped_decision_graph(
                 ),
             )
         )
-    ranked_decisions = _assign_global_ranks(stored_decisions)
+    ranked_decisions = _assign_global_ranks(
+        stored_decisions,
+        sla_hours=context.priority_policy.sla_hours,
+    )
     counts_by_priority = dict(Counter(item.priority_label for item in ranked_decisions))
     for rule in active_waiver_rules:
         label = waiver_rule_label(rule)
@@ -489,9 +493,11 @@ def _evaluate_scope(
 
 def _assign_global_ranks(
     decisions: list[_StoredScopedDecision],
+    *,
+    sla_hours: SlaHoursPolicy | None,
 ) -> list[_StoredScopedDecision]:
     ordered = sorted(decisions, key=lambda item: item.sort_key)
-    guidance_service = DecisionGuidanceService()
+    guidance_service = DecisionGuidanceService(sla_hours)
     for rank, stored in enumerate(ordered, start=1):
         item = stored.materialize()
         ranked_decision = item.decision.model_copy(update={"operational_rank": rank})

@@ -2,6 +2,7 @@ import type {
   AssetExposure,
   AttackSourceCapabilityPublic,
   FindingPriority,
+  FindingSlaState,
   FindingStatus,
   FindingsReadProjectFindingsData,
   ImportsService,
@@ -30,6 +31,7 @@ export type ImportWizardState = {
   inputType: ImportFormat | ""
   lockedProviderData: boolean
   providerSnapshotFile: string
+  resolveMissing: boolean
   sbomScanner: "none" | "grype"
   sbomTargetRef: string
   sbomDbUpdate: boolean
@@ -47,6 +49,7 @@ export const defaultImportWizardState: ImportWizardState = {
   inputType: "",
   lockedProviderData: false,
   providerSnapshotFile: "",
+  resolveMissing: true,
   sbomScanner: "none",
   sbomTargetRef: "",
   sbomDbUpdate: true,
@@ -73,10 +76,13 @@ export type FindingsDirection = NonNullable<
 >
 
 export type KevFilter = "" | "true" | "false"
+export type DataGapFilter = "" | "true" | "false"
+export type SlaFilter = "" | FindingSlaState
 
 export type FindingFilters = {
   cvssMax: string
   cvssMin: string
+  dataGap: DataGapFilter
   epssMax: string
   epssMin: string
   exposure: "" | AssetExposure
@@ -84,12 +90,14 @@ export type FindingFilters = {
   ownerService: string
   priority: "" | FindingPriority
   query: string
+  sla: SlaFilter
   status: "" | FindingStatus
 }
 
 export const defaultFindingFilters: FindingFilters = {
   cvssMax: "",
   cvssMin: "",
+  dataGap: "",
   epssMax: "",
   epssMin: "",
   exposure: "",
@@ -97,6 +105,7 @@ export const defaultFindingFilters: FindingFilters = {
   ownerService: "",
   priority: "",
   query: "",
+  sla: "",
   status: "",
 }
 

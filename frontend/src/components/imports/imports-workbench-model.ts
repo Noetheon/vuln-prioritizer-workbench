@@ -30,6 +30,7 @@ export type ImportWizardStateLike = {
   inputType: ImportInputType | ""
   lockedProviderData?: boolean
   providerSnapshotFile?: string
+  resolveMissing?: boolean
   sbomScanner?: "none" | "grype"
   sbomTargetRef?: string
   sbomDbUpdate?: boolean
@@ -52,6 +53,7 @@ export type ImportsWorkbenchProps = {
   onInputTypeChange: (value: string) => void
   onLockedProviderDataChange: (value: boolean) => void
   onProviderSnapshotFileChange: (value: string) => void
+  onResolveMissingChange: (value: boolean) => void
   onProjectChange: (projectId: string) => void
   onRefreshRuns: () => void
   onSelectRun: (runId: string) => void
@@ -185,6 +187,8 @@ export function runCount(
   key:
     | "created_findings"
     | "updated_findings"
+    | "resolved_findings"
+    | "reopened_findings"
     | "ignored_lines"
     | "rows_read"
     | "occurrence_count"

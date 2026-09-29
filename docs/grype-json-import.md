@@ -87,9 +87,15 @@ ATT&CK, GHSA, OSV, or vendor advisory data during import.
 
 - A non-JSON file is rejected.
 - A JSON document without a top-level object is rejected.
-- Missing or empty `matches[]` creates no occurrences.
+- Missing or empty `matches[]` creates no occurrences. A Workbench import
+  without any CVE succeeds when `source.target` names the scanned subject, and
+  resolves open findings earlier Grype imports reported for it (see
+  [Closing findings and rescans](user_documentation.md#closing-findings-and-rescans)).
 - Match items that are not JSON objects are ignored as unexpected match shapes.
 - Missing or non-object `vulnerability` or `artifact` objects are treated as
   empty source context for that match.
 - Invalid or non-CVE `vulnerability.id` values are skipped and reported as
-  warnings.
+  warnings, led by one summary warning that counts the skipped identifiers.
+- `cvss` scores (NVD records from `relatedVulnerabilities` first) are kept as
+  the finding's reported CVSS; they stand in for NVD CVSS only while NVD has
+  not scored the CVE.

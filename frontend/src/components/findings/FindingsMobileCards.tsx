@@ -28,6 +28,7 @@ import {
   serviceLabel,
 } from "./FindingsDataTableModel"
 import type { FindingsUrlSearch } from "./findings-search-state"
+import { SlaDueBadge } from "./SlaDueBadge"
 
 type FindingsMobileCardsProps = {
   findings: readonly FindingPublic[]
@@ -114,6 +115,7 @@ export function FindingsMobileCards({
                 </small>
                 <div className="finding-meta-tags">
                   <MetaTag label={findingSlaLabel(finding)} />
+                  <SlaDueBadge finding={finding} />
                 </div>
               </div>
             </div>

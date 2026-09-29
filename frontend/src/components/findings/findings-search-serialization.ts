@@ -23,6 +23,7 @@ export function findingsSearchToUrlSearch(
     assetKey: undefined,
     cvssMax: undefined,
     cvssMin: undefined,
+    dataGap: undefined,
     direction: undefined,
     epssMax: undefined,
     epssMin: undefined,
@@ -33,6 +34,7 @@ export function findingsSearchToUrlSearch(
     ownerService: undefined,
     priority: undefined,
     query: undefined,
+    sla: undefined,
     sort: undefined,
     status: undefined,
   }
@@ -48,6 +50,8 @@ export function findingsSearchToUrlSearch(
   addIfPresent(search, "epssMax", normalized)
   addIfPresent(search, "cvssMin", normalized)
   addIfPresent(search, "cvssMax", normalized)
+  addIfPresent(search, "dataGap", normalized)
+  addIfPresent(search, "sla", normalized)
   addIfPresent(search, "sort", normalized)
   addIfPresent(search, "direction", normalized)
   addIfPresent(search, "limit", normalized)
@@ -98,6 +102,7 @@ export function findingsSearchToFilters(
   return {
     cvssMax: state.cvssMax,
     cvssMin: state.cvssMin,
+    dataGap: state.dataGap,
     epssMax: state.epssMax,
     epssMin: state.epssMin,
     exposure: state.exposure,
@@ -105,6 +110,7 @@ export function findingsSearchToFilters(
     ownerService: state.ownerService,
     priority: state.priority,
     query: state.query,
+    sla: state.sla,
     status: state.status,
   }
 }
@@ -118,11 +124,13 @@ export function findingsSearchToApiParams(
     asset_id: state.assetId || undefined,
     cvss_max: numericApiValue(filters.cvssMax),
     cvss_min: numericApiValue(filters.cvssMin),
+    data_gap: filters.dataGap === "" ? undefined : filters.dataGap === "true",
     direction: state.direction,
     epss_max: numericApiValue(filters.epssMax),
     epss_min: numericApiValue(filters.epssMin),
     exposure: filters.exposure || undefined,
     kev: filters.kev === "" ? undefined : filters.kev === "true",
+    sla: filters.sla || undefined,
     limit: state.limit,
     offset: state.offset,
     owner_service: filters.ownerService.trim() || undefined,

@@ -50,6 +50,14 @@ function governanceWhyNow(finding: FindingPublic) {
     return `Verification: fixed evidence remains visible${contextText} until follow-up evidence confirms closure.`
   }
 
+  if (finding.status === "resolved") {
+    return `Closed: resolved${contextText}; a later scan that reports it again reopens it.`
+  }
+
+  if (finding.status === "false_positive") {
+    return `Closed: marked as a false positive${contextText} with a recorded reason.`
+  }
+
   if (finding.waived || finding.status === "accepted") {
     return `Governance review: ${signalText}accepted risk stays on owner review cadence${contextText}.`
   }

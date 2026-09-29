@@ -30,6 +30,12 @@ from app.repositories import EvidenceRepository, RunRepository, WorkflowReposito
 from app.services.analysis import AnalysisService, WorkbenchAnalysisError
 from app.services.decision_projection_sync import DecisionProjectionService
 from app.services.decision_scope_lock import lock_project_decision_scope, project_decision_revision
+from app.services.finding_lifecycle import (
+    import_coverage,
+    reconcile_import_observations,
+    resolved_after_observation,
+    resolved_finding_ids,
+)
 from app.services.import_execution_context import (
     _apply_persisted_project_asset_context,
     _apply_workbench_asset_context,
@@ -77,8 +83,13 @@ from app.services.import_execution_uploads import (
 )
 from app.services.import_queue_payload import import_queue_payload
 from app.services.import_uploads import sanitize_parser_error_message as _sanitize_error_message
+from app.services.project_policy import current_priority_policy
 from app.services.risk_reduction import project_risk_index_from_projection
-from app.services.sbom_import import empty_sbom_analysis, scan_prepared_sbom
+from app.services.sbom_import import (
+    empty_import_analysis,
+    empty_sbom_analysis,
+    scan_prepared_sbom,
+)
 from app.services.workflow_execution import WorkflowExecutionContext
 
 __all__ = [
@@ -214,6 +225,7 @@ async def execute_project_import_upload(
         else:
             parsed_upload = _parse_prepared_upload(prepared)
         occurrences = parsed_upload.occurrences
+        examined_targets = list(parsed_upload.parsed_input.parsed_input.examined_targets)
         context.stage(
             "parse_upload",
             "Primary import upload parsed.",
@@ -442,7 +454,7 @@ async def execute_project_import_upload(
             base_parsed_input=parsed_upload.parsed_input.parsed_input,
             asset_context_summary=asset_context_summary,
             vex_summary=vex_summary,
-            allow_empty=sbom_assessment is not None,
+            allow_empty=sbom_assessment is not None or bool(examined_targets),
         )
         analysis_result = (
             empty_sbom_analysis(
@@ -450,6 +462,13 @@ async def execute_project_import_upload(
                 assessment=sbom_assessment,
             )
             if sbom_assessment is not None and not occurrences
+            else empty_import_analysis(
+                input_path=artifacts.upload_path,
+                input_format=prepared.input_type,
+                warnings=list(parsed_input.warnings),
+                total_input=parsed_input.total_rows,
+            )
+            if not occurrences
             else AnalysisService(session, settings).analyze_import(
                 input_path=artifacts.upload_path,
                 input_type=prepared.input_type,
@@ -462,6 +481,7 @@ async def execute_project_import_upload(
                 vex_files=[],
                 parsed_input=parsed_input,
                 persist_snapshot=False,
+                priority_policy=current_priority_policy(session, project_id),
             )
         )
     except ValueError as exc:
@@ -573,6 +593,13 @@ async def execute_project_import_upload(
         analysis_run_id=run.id,
         provider_snapshot_id=analysis_result.provider_snapshot_id,
     )
+    observed_at = (
+        datetime.fromisoformat(sbom_assessment.observed_at)
+        if sbom_assessment is not None and sbom_assessment.observed_at
+        else None
+    )
+    previously_resolved = resolved_finding_ids(session, project_id)
+    keep_resolved = resolved_after_observation(session, previously_resolved, observed_at)
     persist_summary = _persist_workbench_occurrences(
         session=session,
         project_id=project_id,
@@ -580,10 +607,39 @@ async def execute_project_import_upload(
         occurrences=occurrences,
         analysis_result=analysis_result,
         analysis_evidence_id=prepared_evidence_record.id,
-        observed_at=datetime.fromisoformat(sbom_assessment.observed_at)
-        if sbom_assessment is not None and sbom_assessment.observed_at
-        else None,
+        observed_at=observed_at,
+        keep_resolved_ids=keep_resolved,
     )
+    reconciliation = reconcile_import_observations(
+        session,
+        project_id=project_id,
+        run_id=run.id,
+        coverage=import_coverage(
+            [
+                *(
+                    (item.source, item.target_kind, item.target_ref, item.asset_id)
+                    for item in occurrences
+                ),
+                *(
+                    (target.source_format, target.target_kind, target.target_ref, None)
+                    for target in examined_targets
+                ),
+            ]
+        ),
+        previously_resolved=previously_resolved - keep_resolved,
+        run_label=(
+            f"the {prepared.input_type} import of {prepared.original_filename} "
+            f"(run {str(run.id)[:8]})"
+        ),
+        actor=local_actor.email,
+        resolve_missing=prepared.resolve_missing,
+        observed_at=observed_at,
+    )
+    persist_summary = {
+        **persist_summary,
+        "resolved_findings": len(reconciliation.resolved_ids),
+        "reopened_findings": len(reconciliation.reopened_ids),
+    }
     run.provider_snapshot_id = analysis_result.provider_snapshot_id
     finished_run = run_repo.finish_analysis_run(
         run.id,

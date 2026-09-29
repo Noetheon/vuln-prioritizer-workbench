@@ -140,6 +140,12 @@ test("GitHub preview is reviewable and creates only the explicitly scoped issue"
     labels: ["security"],
   }
   let exported: unknown
+  await page.route("**/github/issues/export-settings", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ token_env: "GITHUB_TOKEN", token_configured: true }),
+    }),
+  )
   await page.route("**/github/issues/preview", (route) =>
     route.fulfill({
       contentType: "application/json",
@@ -183,7 +189,54 @@ test("GitHub preview is reviewable and creates only the explicitly scoped issue"
     finding_ids: [mockFinding.id],
     repository: "example/security",
     dry_run: false,
+    token_env: "GITHUB_TOKEN",
   })
+})
+
+test("GitHub issue creation stays disabled until the token variable is configured", async ({
+  page,
+}) => {
+  await routeWorkbenchShell(page, {
+    findings: [mockFinding],
+    projects: [mockProject],
+  })
+  await page.route("**/github/issues/export-settings", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ token_env: "VPW_GITHUB_TOKEN", token_configured: false }),
+    }),
+  )
+  await page.route("**/github/issues/preview", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: [
+          {
+            finding_id: mockFinding.id,
+            cve_id: mockFinding.cve_id,
+            title: "Patch xz on build-host-1",
+            body: "Recorded finding scope and evidence.",
+            duplicate_key: "scope-1",
+            labels: [],
+          },
+        ],
+        count: 1,
+        dry_run: true,
+      }),
+    }),
+  )
+  await page.goto(`/findings/${mockFinding.id}?projectId=${mockProject.id}`)
+  await page.getByRole("button", { name: "Preview GitHub issue" }).click()
+  const dialog = page.getByRole("dialog", { name: "GitHub issue preview" })
+  await dialog.getByLabel("Repository (owner/name)").fill("example/security")
+  await expect(
+    dialog.getByText(
+      "Set VPW_GITHUB_TOKEN in the environment of the Workbench process to create issues.",
+    ),
+  ).toBeVisible()
+  await expect(
+    dialog.getByRole("button", { name: "Create GitHub issue in example/security" }),
+  ).toBeDisabled()
 })
 
 test("a real native evaluation appends history while preserving observation time", async ({

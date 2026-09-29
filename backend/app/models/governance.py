@@ -16,6 +16,8 @@ class GovernanceRollupPublic(SQLModel):
     accepted_count: int = 0
     fixed_count: int = 0
     suppressed_count: int = 0
+    resolved_count: int = 0
+    false_positive_count: int = 0
     critical_count: int = 0
     high_count: int = 0
     kev_count: int = 0

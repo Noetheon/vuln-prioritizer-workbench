@@ -28,6 +28,7 @@ from app.services.github_issues import (
     build_github_issue_preview_items,
     create_github_issue,
     github_export_token,
+    github_export_token_configured,
     github_repository_path,
 )
 from app.services.governance import build_project_governance_rollups_payload_from_repositories
@@ -76,6 +77,7 @@ __all__ = [
     "dashboard_signal_counts",
     "create_github_issue",
     "github_export_token",
+    "github_export_token_configured",
     "github_repository_path",
     "render_analysis_result_json",
     "render_evidence_bundle_zip",

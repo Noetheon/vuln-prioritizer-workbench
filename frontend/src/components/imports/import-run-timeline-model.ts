@@ -54,10 +54,16 @@ export function importRunTimelineItems(
     items.push("Optional context applied")
   }
 
+  const findingChangeKeys = [
+    "created_findings",
+    "updated_findings",
+    "resolved_findings",
+    "reopened_findings",
+  ] as const
   if (
-    runCount(summary, "created_findings") + runCount(run, "created_findings") +
-      runCount(summary, "updated_findings") + runCount(run, "updated_findings") >
-    0
+    findingChangeKeys.some(
+      (key) => runCount(summary, key) + runCount(run, key) > 0,
+    )
   ) {
     items.push("Findings created or updated")
   }

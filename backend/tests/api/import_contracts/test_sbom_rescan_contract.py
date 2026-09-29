@@ -258,6 +258,7 @@ def test_first_committed_import_is_claimable_only_with_complete_scanner_options(
                 "sbom_db_update": False,
                 "sbom_source_run_id": None,
                 "sbom_observed_at": None,
+                "resolve_missing": True,
             }
             assert workflow.max_attempts == 3
             stored = root / project["id"] / str(workflow.analysis_run_id) / "inventory.json"

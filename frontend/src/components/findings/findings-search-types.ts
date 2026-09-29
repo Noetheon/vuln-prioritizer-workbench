@@ -22,6 +22,8 @@ export const findingStatusOptions: readonly FindingStatus[] = [
   "open",
   "in_review",
   "remediating",
+  "resolved",
+  "false_positive",
   "fixed",
   "accepted",
   "suppressed",
@@ -48,6 +50,7 @@ export const sortOptions: readonly FindingsSort[] = [
 export const defaultFindingFilters: FindingFilters = {
   cvssMax: "",
   cvssMin: "",
+  dataGap: "",
   epssMax: "",
   epssMin: "",
   exposure: "",
@@ -55,6 +58,7 @@ export const defaultFindingFilters: FindingFilters = {
   ownerService: "",
   priority: "",
   query: "",
+  sla: "",
   status: "",
 }
 
@@ -88,11 +92,14 @@ export const defaultFindingsSearchState: FindingsSearchState = {
 
 export const directionOptions = ["asc", "desc"] as const
 export const kevOptions = ["true", "false"] as const
+export const dataGapOptions = ["true", "false"] as const
+export const slaOptions = ["overdue", "due_soon", "on_track"] as const
 export const searchKeys = [
   "assetId",
   "assetKey",
   "cvssMax",
   "cvssMin",
+  "dataGap",
   "direction",
   "epssMax",
   "epssMin",
@@ -103,6 +110,7 @@ export const searchKeys = [
   "ownerService",
   "priority",
   "query",
+  "sla",
   "sort",
   "status",
 ] as const

@@ -47,9 +47,36 @@ class FindingStatus(StrEnum):
     OPEN = "open"
     IN_REVIEW = "in_review"
     REMEDIATING = "remediating"
+    RESOLVED = "resolved"
+    FALSE_POSITIVE = "false_positive"
     FIXED = "fixed"
     ACCEPTED = "accepted"
     SUPPRESSED = "suppressed"
+
+
+# Analyst-owned work that still needs remediation.
+ACTIONABLE_FINDING_STATUSES = frozenset(
+    {FindingStatus.OPEN, FindingStatus.IN_REVIEW, FindingStatus.REMEDIATING}
+)
+# Analyst-owned closure. "resolved" is also set when a rescan no longer reports
+# the finding; "fixed", "accepted", and "suppressed" stay owned by VEX/waivers.
+CLOSED_WORKFLOW_STATUSES = frozenset({FindingStatus.RESOLVED, FindingStatus.FALSE_POSITIVE})
+
+
+class FindingSlaState(StrEnum):
+    """Where open work stands against its recorded SLA due date."""
+
+    OVERDUE = "overdue"
+    DUE_SOON = "due_soon"
+    ON_TRACK = "on_track"
+
+
+class FindingLifecycleSource(StrEnum):
+    """What caused a recorded finding status transition."""
+
+    MANUAL = "manual"
+    IMPORT_NOT_OBSERVED = "import_not_observed"
+    IMPORT_REOBSERVED = "import_reobserved"
 
 
 class AnalysisRunStatus(StrEnum):

@@ -149,6 +149,92 @@ def test_json_parser_rejects_wrong_top_level_type_before_parser_access(tmp_path:
         loader_module.InputLoader().load(input_file, input_format="trivy-json")
 
 
+def test_clean_scanner_reports_name_examined_targets_only_when_allowed(tmp_path: Path) -> None:
+    loader = _load_loader_module().InputLoader()
+    trivy = tmp_path / "trivy.json"
+    trivy.write_text(
+        json.dumps(
+            {
+                "ArtifactName": "app:2.0",
+                "ArtifactType": "container_image",
+                "Results": [
+                    {"Target": "app:2.0 (debian 12.6)", "Type": "debian"},
+                    {"Target": "app:2.0 (debian 12.6)", "Type": "debian"},
+                    {"Type": "jar"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    grype = tmp_path / "grype.json"
+    grype.write_text(
+        json.dumps({"matches": [], "source": {"type": "image", "target": {"name": "alpine"}}}),
+        encoding="utf-8",
+    )
+    bare = tmp_path / "bare.json"
+    bare.write_text(json.dumps({"Results": []}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="No valid CVE identifiers"):
+        loader.load(trivy, input_format="trivy-json")
+    with pytest.raises(ValueError, match="No valid CVE identifiers"):
+        loader.load(bare, input_format="trivy-json", allow_empty_examined=True)
+
+    parsed = loader.load(trivy, input_format="trivy-json", allow_empty_examined=True)
+    assert parsed.unique_cves == []
+    assert [(item.target_kind, item.target_ref) for item in parsed.examined_targets] == [
+        ("image", "app:2.0 (debian 12.6)"),
+        ("image", "app:2.0"),
+    ]
+    grype_parsed = loader.load(grype, input_format="grype-json", allow_empty_examined=True)
+    assert [
+        (item.source_format, item.target_kind, item.target_ref)
+        for item in grype_parsed.examined_targets
+    ] == [("grype-json", "image", "alpine")]
+
+
+def test_advisories_without_cves_are_summarized_before_details(tmp_path: Path) -> None:
+    from app.domain.engine.inputs._cve_support import summarize_non_cve_identifiers
+
+    trivy = tmp_path / "trivy.json"
+    trivy.write_text(
+        json.dumps(
+            {
+                "ArtifactName": "app:3",
+                "Results": [
+                    {
+                        "Target": "go.sum",
+                        "Vulnerabilities": [
+                            {"VulnerabilityID": "GO-2026-0001"},
+                            {"VulnerabilityID": "GHSA-aaaa-bbbb-cccc"},
+                            {"VulnerabilityID": "GO-2026-0001"},
+                            {"VulnerabilityID": "CVE-2026-0101"},
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    parsed = _load_loader_module().InputLoader().load(trivy, input_format="trivy-json")
+
+    assert parsed.unique_cves == ["CVE-2026-0101"]
+    assert parsed.warnings[0] == (
+        "Not imported: 2 vulnerabilities without a CVE identifier "
+        "(GO-2026-0001, GHSA-aaaa-bbbb-cccc). The Workbench prioritizes "
+        "CVE-identified findings; review these in the source report."
+    )
+    assert "Ignored non-CVE Trivy vulnerability identifier: 'GO-2026-0001'" in parsed.warnings
+    assert summarize_non_cve_identifiers(parsed.warnings) == parsed.warnings
+    assert summarize_non_cve_identifiers(["Unrelated warning"]) == ["Unrelated warning"]
+    many = [f"Ignored non-CVE Grype vulnerability identifier: 'GHSA-{i}'" for i in range(7)]
+    assert "GHSA-4, +2 more" in summarize_non_cve_identifiers(many)[0]
+    single = ["Ignored non-CVE Nessus identifier in host-1: 'MS17-010'"]
+    assert summarize_non_cve_identifiers(single)[0].startswith(
+        "Not imported: 1 vulnerability without a CVE identifier (MS17-010)"
+    )
+
+
 def test_dependency_check_empty_project_references_are_ignored(tmp_path: Path) -> None:
     loader_module = _load_loader_module()
     input_file = tmp_path / "dependency-check.json"

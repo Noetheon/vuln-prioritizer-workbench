@@ -18,6 +18,46 @@ The base priority is rule-based from CVSS, FIRST EPSS, and CISA KEV:
 The base rule stays transparent so a finding can be explained in reports, API
 responses, the Findings table, and Finding Detail.
 
+### Missing NVD CVSS
+
+When NVD has not published a CVSS score, the severity that the imported
+evidence itself reports (for example Trivy `Severity`, Grype and GitHub
+advisory severities, Nessus `risk_factor` or its 0-4 level, an OpenVAS numeric
+severity, or a CycloneDX rating) stands in for CVSS at the **lower bound** of
+its qualitative band:
+
+| Reported severity | CVSS used by the base rule |
+| --- | --- |
+| Critical | 9.0 |
+| High / Important | 7.0 |
+| Medium / Moderate | 4.0 |
+| Low | 0.1 |
+
+When a scanner report carries a CVSS base score, that score is used instead of
+the band's lower bound: Trivy's embedded `CVSS` (NVD first, then the severity
+source, then GHSA and other sources; v3 before v4) and Grype's `cvss` entries
+(NVD records from `relatedVulnerabilities` first; v3 before v4). CVSS v2 scores
+are not used. Negligible, informational, `none`, and unknown values are
+ignored. When several observations of one finding scope report different
+values, the highest applies. The proxy never replaces an NVD score, is never shown as a CVSS
+value, and appears as its own explanation driver (`priority.*.severity_proxy`),
+rationale sentence, and operational score reason. A Critical report therefore
+yields High until NVD analysis arrives, or Critical together with a high EPSS
+value, instead of silently falling to Low. Decisions produced with this rule
+record evaluation engine `scope-evaluator.v2`; older recorded inputs remain
+replayable and are re-recorded with the current engine version.
+
+### Project policy
+
+A project can replace the default thresholds of the base rule and the SLA
+response targets per priority. The policy is part of every recorded evaluation
+input, so a decision always replays with the thresholds it was made with. A
+changed policy applies to new imports and to findings once they are
+re-evaluated; saving a policy queues that re-evaluation by default. SLA targets
+from a project policy are recorded with source `project-policy`; unchanged
+defaults are not recorded, which keeps default-policy inputs identical to
+earlier versions.
+
 ## Signal Inputs
 
 | Signal | Role |

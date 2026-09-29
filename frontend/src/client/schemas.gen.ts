@@ -247,6 +247,16 @@ export const AnalysisRunCountsPublicSchema = {
             title: 'Occurrence Count',
             type: 'integer'
         },
+        reopened_findings: {
+            default: 0,
+            title: 'Reopened Findings',
+            type: 'integer'
+        },
+        resolved_findings: {
+            default: 0,
+            title: 'Resolved Findings',
+            type: 'integer'
+        },
         rows_read: {
             default: 0,
             title: 'Rows Read',
@@ -637,6 +647,16 @@ export const AnalysisRunSummaryPublicSchema = {
                 }
             ],
             title: 'Provider Snapshot Id'
+        },
+        reopened_findings: {
+            default: 0,
+            title: 'Reopened Findings',
+            type: 'integer'
+        },
+        resolved_findings: {
+            default: 0,
+            title: 'Resolved Findings',
+            type: 'integer'
         },
         rows_read: {
             default: 0,
@@ -2025,6 +2045,12 @@ export const Body_imports_import_project_uploadSchema = {
                 }
             ],
             title: 'Provider Snapshot File'
+        },
+        resolve_missing: {
+            default: true,
+            description: 'Mark findings resolved when this import examined their target with the same source format and no longer reports them.',
+            title: 'Resolve Missing',
+            type: 'boolean'
         },
         sbom_db_update: {
             default: true,
@@ -3553,6 +3579,98 @@ export const FindingAttackTechniqueDetailPublicSchema = {
     type: 'object'
 } as const;
 
+export const FindingBulkStatusSkipPublicSchema = {
+    description: 'One finding that a bulk status change left unchanged, with the reason.',
+    properties: {
+        detail: {
+            title: 'Detail',
+            type: 'string'
+        },
+        finding_id: {
+            format: 'uuid',
+            title: 'Finding Id',
+            type: 'string'
+        }
+    },
+    required: [
+        'finding_id',
+        'detail'
+    ],
+    title: 'FindingBulkStatusSkipPublic',
+    type: 'object'
+} as const;
+
+export const FindingBulkStatusUpdatePublicSchema = {
+    description: 'Outcome of a bulk workflow status change.',
+    properties: {
+        skipped: {
+            items: {
+                $ref: '#/components/schemas/FindingBulkStatusSkipPublic'
+            },
+            title: 'Skipped',
+            type: 'array'
+        },
+        status: {
+            $ref: '#/components/schemas/FindingStatus'
+        },
+        updated_count: {
+            default: 0,
+            title: 'Updated Count',
+            type: 'integer'
+        },
+        updated_ids: {
+            items: {
+                format: 'uuid',
+                type: 'string'
+            },
+            title: 'Updated Ids',
+            type: 'array'
+        }
+    },
+    required: [
+        'status'
+    ],
+    title: 'FindingBulkStatusUpdatePublic',
+    type: 'object'
+} as const;
+
+export const FindingBulkStatusUpdateRequestSchema = {
+    description: 'Apply one manual workflow status to several findings of a project.',
+    properties: {
+        finding_ids: {
+            items: {
+                format: 'uuid',
+                type: 'string'
+            },
+            maxItems: 500,
+            minItems: 1,
+            title: 'Finding Ids',
+            type: 'array'
+        },
+        reason: {
+            anyOf: [
+                {
+                    maxLength: 2000,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reason'
+        },
+        status: {
+            $ref: '#/components/schemas/FindingStatus'
+        }
+    },
+    required: [
+        'finding_ids',
+        'status'
+    ],
+    title: 'FindingBulkStatusUpdateRequest',
+    type: 'object'
+} as const;
+
 export const FindingDecisionEvidenceV2Schema = {
     additionalProperties: false,
     description: 'Current decision and evidence graph for one finding in one run.',
@@ -4099,6 +4217,29 @@ export const FindingDetailPublicSchema = {
                 }
             ]
         },
+        sla_due_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            description: 'First seen plus the recorded SLA target; set only for open work.',
+            title: 'Sla Due At'
+        },
+        sla_state: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/FindingSlaState'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         status: {
             $ref: '#/components/schemas/FindingStatus',
             default: 'open'
@@ -4281,6 +4422,103 @@ export const FindingExplanationPublicSchema = {
         'priority_rank'
     ],
     title: 'FindingExplanationPublic',
+    type: 'object'
+} as const;
+
+export const FindingLifecycleEventPublicSchema = {
+    description: 'Public status-history row for finding detail views.',
+    properties: {
+        actor: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Actor'
+        },
+        analysis_run_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Analysis Run Id'
+        },
+        created_at: {
+            format: 'date-time',
+            title: 'Created At',
+            type: 'string'
+        },
+        finding_id: {
+            format: 'uuid',
+            title: 'Finding Id',
+            type: 'string'
+        },
+        from_status: {
+            title: 'From Status',
+            type: 'string'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        reason: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reason'
+        },
+        source: {
+            title: 'Source',
+            type: 'string'
+        },
+        to_status: {
+            title: 'To Status',
+            type: 'string'
+        }
+    },
+    required: [
+        'id',
+        'finding_id',
+        'from_status',
+        'to_status',
+        'source',
+        'created_at'
+    ],
+    title: 'FindingLifecycleEventPublic',
+    type: 'object'
+} as const;
+
+export const FindingLifecycleEventsPublicSchema = {
+    description: 'Newest-first status history of one finding.',
+    properties: {
+        count: {
+            default: 0,
+            title: 'Count',
+            type: 'integer'
+        },
+        data: {
+            items: {
+                $ref: '#/components/schemas/FindingLifecycleEventPublic'
+            },
+            title: 'Data',
+            type: 'array'
+        }
+    },
+    title: 'FindingLifecycleEventsPublic',
     type: 'object'
 } as const;
 
@@ -4896,6 +5134,29 @@ export const FindingPublicSchema = {
                 }
             ]
         },
+        sla_due_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            description: 'First seen plus the recorded SLA target; set only for open work.',
+            title: 'Sla Due At'
+        },
+        sla_state: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/FindingSlaState'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         status: {
             $ref: '#/components/schemas/FindingStatus',
             default: 'open'
@@ -4979,12 +5240,25 @@ export const FindingSlaPublicSchema = {
     type: 'object'
 } as const;
 
+export const FindingSlaStateSchema = {
+    description: 'Where open work stands against its recorded SLA due date.',
+    enum: [
+        'overdue',
+        'due_soon',
+        'on_track'
+    ],
+    title: 'FindingSlaState',
+    type: 'string'
+} as const;
+
 export const FindingStatusSchema = {
     description: 'Finding lifecycle state.',
     enum: [
         'open',
         'in_review',
         'remediating',
+        'resolved',
+        'false_positive',
         'fixed',
         'accepted',
         'suppressed'
@@ -4996,6 +5270,18 @@ export const FindingStatusSchema = {
 export const FindingStatusUpdateRequestSchema = {
     description: 'Manual workflow status change for one finding.',
     properties: {
+        reason: {
+            anyOf: [
+                {
+                    maxLength: 2000,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reason'
+        },
         status: {
             $ref: '#/components/schemas/FindingStatus'
         }
@@ -5245,6 +5531,26 @@ export const GitHubIssueExportRecordSchema = {
     type: 'object'
 } as const;
 
+export const GitHubIssueExportSettingsPublicSchema = {
+    description: 'Operator-configured GitHub credential source, by name and presence only.',
+    properties: {
+        token_configured: {
+            default: false,
+            title: 'Token Configured',
+            type: 'boolean'
+        },
+        token_env: {
+            title: 'Token Env',
+            type: 'string'
+        }
+    },
+    required: [
+        'token_env'
+    ],
+    title: 'GitHubIssueExportSettingsPublic',
+    type: 'object'
+} as const;
+
 export const GitHubIssuePreviewCreateSchema = {
     description: 'Request payload for preparing GitHub issue markdown.',
     properties: {
@@ -5459,6 +5765,11 @@ export const GovernanceRollupPublicSchema = {
             title: 'Expired Waiver Count',
             type: 'integer'
         },
+        false_positive_count: {
+            default: 0,
+            title: 'False Positive Count',
+            type: 'integer'
+        },
         finding_count: {
             default: 0,
             title: 'Finding Count',
@@ -5505,6 +5816,11 @@ export const GovernanceRollupPublicSchema = {
             },
             title: 'Priority Counts',
             type: 'object'
+        },
+        resolved_count: {
+            default: 0,
+            title: 'Resolved Count',
+            type: 'integer'
         },
         review_due_waiver_count: {
             default: 0,
@@ -6091,6 +6407,28 @@ export const InputOccurrenceSchema = {
                 }
             ],
             title: 'Purl'
+        },
+        raw_cvss_score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Raw Cvss Score'
+        },
+        raw_cvss_source: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Raw Cvss Source'
         },
         raw_severity: {
             anyOf: [
@@ -7481,6 +7819,16 @@ export const PriorityPolicySchema = {
             default: 0.1,
             title: 'Medium Epss Threshold',
             type: 'number'
+        },
+        sla_hours: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/SlaHoursPolicy'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         }
     },
     title: 'PriorityPolicy',
@@ -7958,6 +8306,276 @@ export const ProjectGovernanceRollupsPublicSchema = {
         'generated_at'
     ],
     title: 'ProjectGovernanceRollupsPublic',
+    type: 'object'
+} as const;
+
+export const ProjectPolicyFieldsSchema = {
+    description: 'Thresholds of the transparent base priority rule plus SLA targets.',
+    properties: {
+        critical_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'Critical Cvss Threshold',
+            type: 'number'
+        },
+        critical_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'Critical Epss Threshold',
+            type: 'number'
+        },
+        high_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'High Cvss Threshold',
+            type: 'number'
+        },
+        high_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'High Epss Threshold',
+            type: 'number'
+        },
+        medium_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'Medium Cvss Threshold',
+            type: 'number'
+        },
+        medium_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'Medium Epss Threshold',
+            type: 'number'
+        },
+        sla_hours: {
+            $ref: '#/components/schemas/SlaHoursPublic'
+        }
+    },
+    required: [
+        'critical_epss_threshold',
+        'critical_cvss_threshold',
+        'high_epss_threshold',
+        'high_cvss_threshold',
+        'medium_epss_threshold',
+        'medium_cvss_threshold',
+        'sla_hours'
+    ],
+    title: 'ProjectPolicyFields',
+    type: 'object'
+} as const;
+
+export const ProjectPolicyPublicSchema = {
+    description: 'A project\'s effective policy with its version and defaults for comparison.',
+    properties: {
+        critical_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'Critical Cvss Threshold',
+            type: 'number'
+        },
+        critical_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'Critical Epss Threshold',
+            type: 'number'
+        },
+        defaults: {
+            $ref: '#/components/schemas/ProjectPolicyFields'
+        },
+        high_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'High Cvss Threshold',
+            type: 'number'
+        },
+        high_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'High Epss Threshold',
+            type: 'number'
+        },
+        is_default: {
+            default: true,
+            title: 'Is Default',
+            type: 'boolean'
+        },
+        medium_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'Medium Cvss Threshold',
+            type: 'number'
+        },
+        medium_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'Medium Epss Threshold',
+            type: 'number'
+        },
+        project_id: {
+            format: 'uuid',
+            title: 'Project Id',
+            type: 'string'
+        },
+        sla_hours: {
+            $ref: '#/components/schemas/SlaHoursPublic'
+        },
+        updated_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Updated At'
+        },
+        updated_by: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Updated By'
+        },
+        version: {
+            default: 0,
+            title: 'Version',
+            type: 'integer'
+        }
+    },
+    required: [
+        'critical_epss_threshold',
+        'critical_cvss_threshold',
+        'high_epss_threshold',
+        'high_cvss_threshold',
+        'medium_epss_threshold',
+        'medium_cvss_threshold',
+        'sla_hours',
+        'project_id',
+        'defaults'
+    ],
+    title: 'ProjectPolicyPublic',
+    type: 'object'
+} as const;
+
+export const ProjectPolicyUpdateSchema = {
+    description: 'Replace a project\'s policy and, by default, re-evaluate its findings.',
+    properties: {
+        critical_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'Critical Cvss Threshold',
+            type: 'number'
+        },
+        critical_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'Critical Epss Threshold',
+            type: 'number'
+        },
+        high_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'High Cvss Threshold',
+            type: 'number'
+        },
+        high_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'High Epss Threshold',
+            type: 'number'
+        },
+        medium_cvss_threshold: {
+            maximum: 10,
+            minimum: 0,
+            title: 'Medium Cvss Threshold',
+            type: 'number'
+        },
+        medium_epss_threshold: {
+            maximum: 1,
+            minimum: 0,
+            title: 'Medium Epss Threshold',
+            type: 'number'
+        },
+        reason: {
+            anyOf: [
+                {
+                    maxLength: 500,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reason'
+        },
+        reevaluate: {
+            default: true,
+            title: 'Reevaluate',
+            type: 'boolean'
+        },
+        sla_hours: {
+            $ref: '#/components/schemas/SlaHoursPublic'
+        }
+    },
+    required: [
+        'critical_epss_threshold',
+        'critical_cvss_threshold',
+        'high_epss_threshold',
+        'high_cvss_threshold',
+        'medium_epss_threshold',
+        'medium_cvss_threshold',
+        'sla_hours'
+    ],
+    title: 'ProjectPolicyUpdate',
+    type: 'object'
+} as const;
+
+export const ProjectPolicyUpdatePublicSchema = {
+    description: 'Saved policy and the re-evaluation it queued, if any.',
+    properties: {
+        changed: {
+            title: 'Changed',
+            type: 'boolean'
+        },
+        evaluation_run_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Evaluation Run Id'
+        },
+        evaluation_skipped_reason: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Evaluation Skipped Reason'
+        },
+        policy: {
+            $ref: '#/components/schemas/ProjectPolicyPublic'
+        }
+    },
+    required: [
+        'policy',
+        'changed'
+    ],
+    title: 'ProjectPolicyUpdatePublic',
     type: 'object'
 } as const;
 
@@ -9415,6 +10033,16 @@ export const RunCountsV2Schema = {
             title: 'Occurrence Count',
             type: 'integer'
         },
+        reopened_findings: {
+            default: 0,
+            title: 'Reopened Findings',
+            type: 'integer'
+        },
+        resolved_findings: {
+            default: 0,
+            title: 'Resolved Findings',
+            type: 'integer'
+        },
         rows_read: {
             default: 0,
             title: 'Rows Read',
@@ -9933,7 +10561,7 @@ export const ScopeEvaluationInputSchema = {
             type: 'array'
         },
         engine_version: {
-            default: 'scope-evaluator.v1',
+            default: 'scope-evaluator.v2',
             title: 'Engine Version',
             type: 'string'
         },
@@ -10036,6 +10664,83 @@ export const SidecarUploadCapabilityPublicSchema = {
         'description'
     ],
     title: 'SidecarUploadCapabilityPublic',
+    type: 'object'
+} as const;
+
+export const SlaHoursPolicySchema = {
+    additionalProperties: false,
+    description: 'Response targets in hours per base priority, replacing the default SLA table.',
+    properties: {
+        critical: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'Critical',
+            type: 'integer'
+        },
+        high: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'High',
+            type: 'integer'
+        },
+        low: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'Low',
+            type: 'integer'
+        },
+        medium: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'Medium',
+            type: 'integer'
+        }
+    },
+    required: [
+        'critical',
+        'high',
+        'medium',
+        'low'
+    ],
+    title: 'SlaHoursPolicy',
+    type: 'object'
+} as const;
+
+export const SlaHoursPublicSchema = {
+    description: 'Response target in hours for each base priority.',
+    properties: {
+        critical: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'Critical',
+            type: 'integer'
+        },
+        high: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'High',
+            type: 'integer'
+        },
+        low: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'Low',
+            type: 'integer'
+        },
+        medium: {
+            maximum: 8760,
+            minimum: 1,
+            title: 'Medium',
+            type: 'integer'
+        }
+    },
+    required: [
+        'critical',
+        'high',
+        'medium',
+        'low'
+    ],
+    title: 'SlaHoursPublic',
     type: 'object'
 } as const;
 

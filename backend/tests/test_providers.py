@@ -29,6 +29,7 @@ from app.domain.engine.models import (
     ProviderSnapshotMetadata,
     ProviderSnapshotReport,
 )
+from app.domain.engine.providers import nvd as nvd_module
 from app.domain.engine.providers.attack import AttackProvider
 from app.domain.engine.providers.attack_metadata import AttackMetadataProvider
 from app.domain.engine.providers.attack_stix import AttackStixProvider
@@ -39,7 +40,11 @@ from app.domain.engine.providers.curated_attack_mappings import (
 )
 from app.domain.engine.providers.epss import EpssProvider
 from app.domain.engine.providers.kev import KevProvider
-from app.domain.engine.providers.nvd import NvdFetchDiagnostics, NvdProvider
+from app.domain.engine.providers.nvd import (
+    NvdFetchDiagnostics,
+    NvdProvider,
+    RollingWindowRateLimiter,
+)
 from app.domain.engine.services.enrichment import EnrichmentService, _provider_data_quality_flags
 
 
@@ -2647,3 +2652,71 @@ def test_attack_provider_ctid_json_marks_missing_metadata_in_output(tmp_path: Pa
     assert "Local ATT&CK technique metadata is unavailable for: T1059." in attack.attack_note
     assert attack.attack_rationale is not None
     assert "Local ATT&CK technique metadata is unavailable for: T1059." in attack.attack_rationale
+
+
+def test_rolling_window_limiter_waits_for_the_oldest_request_to_expire() -> None:
+    now = [0.0]
+    sleeps: list[float] = []
+
+    def sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+        now[0] += seconds
+
+    limiter = RollingWindowRateLimiter(2, 30.0, clock=lambda: now[0], sleep=sleep)
+
+    assert limiter.acquire() == 0.0
+    now[0] = 10.0
+    assert limiter.acquire() == 0.0
+    now[0] = 12.0
+    assert limiter.acquire() == 18.0
+    assert sleeps == [18.0]
+    assert limiter.spacing_seconds == 15.0
+    now[0] = 45.0
+    assert limiter.acquire() == 0.0
+
+
+def test_nvd_retries_a_rate_limited_403_after_one_request_slot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "vulnerabilities": [
+            {"cve": {"descriptions": [{"lang": "en", "value": "Recovered after pacing"}]}}
+        ]
+    }
+    responses = [FakeResponse(status_code=403), FakeResponse(payload)]
+    sleeps: list[float] = []
+    monkeypatch.setattr(nvd_module.time, "sleep", sleeps.append)
+
+    class Session:
+        calls = 0
+
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            Session.calls += 1
+            return responses.pop(0)
+
+    provider = NvdProvider(
+        session=Session(),
+        rate_limiter=RollingWindowRateLimiter(5, 30.0, clock=lambda: 0.0),
+    )
+
+    results, warnings = provider.fetch_many(["CVE-2026-0403"])
+
+    assert warnings == []
+    assert results["CVE-2026-0403"].description == "Recovered after pacing"
+    assert Session.calls == 2
+    assert sleeps == [6.0]
+
+
+def test_nvd_from_env_paces_requests_to_the_documented_limits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("VPW_TEST_NVD_KEY", raising=False)
+    anonymous = NvdProvider.from_env(api_key_env="VPW_TEST_NVD_KEY")
+    monkeypatch.setenv("VPW_TEST_NVD_KEY", "test-key")
+    keyed = NvdProvider.from_env(api_key_env="VPW_TEST_NVD_KEY")
+
+    assert anonymous.rate_limiter is not None
+    assert (anonymous.rate_limiter.max_requests, anonymous.max_concurrency) == (5, 1)
+    assert keyed.rate_limiter is not None
+    assert (keyed.rate_limiter.max_requests, keyed.max_concurrency) == (50, 4)
+    assert keyed.rate_limiter.window_seconds == 30.0

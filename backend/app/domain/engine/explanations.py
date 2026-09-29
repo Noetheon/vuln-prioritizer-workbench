@@ -114,6 +114,41 @@ def _priority_reasons(
                     message="CVSS meets the Medium severity threshold.",
                 )
             )
+        elif driver == "critical-epss-severity-proxy":
+            reasons.append(
+                ExplanationReason(
+                    code="priority.critical.epss_severity_proxy",
+                    source="FIRST EPSS + reported severity",
+                    signal="epss_severity_proxy_threshold",
+                    value=_epss_severity_proxy_value(finding),
+                    threshold=(
+                        f"EPSS >= {policy.critical_epss_threshold:.2f} and "
+                        f"reported severity band >= CVSS {policy.critical_cvss_threshold:.1f}"
+                    ),
+                    message=(
+                        "EPSS and the input's reported severity meet the Critical escalation "
+                        "threshold while NVD CVSS is unavailable."
+                    ),
+                )
+            )
+        elif driver in {"high-severity-proxy", "medium-severity-proxy"}:
+            level = "High" if driver.startswith("high") else "Medium"
+            threshold = (
+                policy.high_cvss_threshold if level == "High" else policy.medium_cvss_threshold
+            )
+            reasons.append(
+                ExplanationReason(
+                    code=f"priority.{level.lower()}.severity_proxy",
+                    source="Reported severity (NVD CVSS unavailable)",
+                    signal="severity_proxy",
+                    value=_severity_proxy_value(finding),
+                    threshold=f"reported severity band >= CVSS {threshold:.1f}",
+                    message=(
+                        f"The input's reported severity meets the {level} threshold at the "
+                        "lower bound of its CVSS band until NVD publishes a score."
+                    ),
+                )
+            )
         elif driver == "default-low":
             reasons.append(
                 ExplanationReason(
@@ -421,6 +456,22 @@ def _epss_cvss_value(finding: PrioritizedFinding) -> str:
     return (
         f"EPSS={_format_optional_float(finding.epss, 3)}, "
         f"CVSS={_format_optional_float(finding.cvss_base_score, 1)}"
+    )
+
+
+def _severity_proxy_value(finding: PrioritizedFinding) -> str:
+    proxy = finding.severity_proxy
+    if proxy is None:
+        return "missing"
+    if proxy.cvss_source:
+        return f"{proxy.severity} (CVSS {proxy.cvss_floor:.1f} from {proxy.cvss_source})"
+    return f"{proxy.severity} ({proxy.raw_value}) -> CVSS band floor {proxy.cvss_floor:.1f}"
+
+
+def _epss_severity_proxy_value(finding: PrioritizedFinding) -> str:
+    return (
+        f"EPSS={_format_optional_float(finding.epss, 3)}, "
+        f"reported severity={_severity_proxy_value(finding)}"
     )
 
 

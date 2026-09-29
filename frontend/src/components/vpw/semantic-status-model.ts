@@ -8,12 +8,14 @@ const statusLabels: Record<StatusKind, string> = {
   accepted: "Accepted",
   degraded: "Degraded",
   failed: "Failed",
+  false_positive: "False positive",
   fixed: "Fixed",
   fresh: "Fresh",
   in_review: "In review",
   open: "Open",
   ready: "Ready",
   remediating: "Remediating",
+  resolved: "Resolved",
   review_due: "Review due",
   stale: "Stale",
   succeeded: "Succeeded",
@@ -25,12 +27,14 @@ const statusTones: Record<StatusKind, VpwBadgeTone> = {
   accepted: "success",
   degraded: "warning",
   failed: "critical",
+  false_positive: "neutral",
   fixed: "success",
   fresh: "success",
   in_review: "warning",
   open: "info",
   ready: "success",
   remediating: "warning",
+  resolved: "success",
   review_due: "warning",
   stale: "warning",
   succeeded: "success",
@@ -52,8 +56,13 @@ export function normalizeStatus(
     case "unavailable":
       return "failed"
     case "fixed":
-    case "resolved":
       return "fixed"
+    case "resolved":
+    case "closed":
+      return "resolved"
+    case "false_positive":
+    case "not_affected":
+      return "false_positive"
     case "fresh":
     case "available":
     case "healthy":
