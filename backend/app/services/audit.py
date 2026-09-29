@@ -41,6 +41,7 @@ def record_audit_event(
         status=status,
         project_id=project_id,
         detail=redacted_detail,
+        actor=actor.email if actor is not None else None,
     )
 
 

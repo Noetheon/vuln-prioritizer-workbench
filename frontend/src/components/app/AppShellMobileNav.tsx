@@ -1,5 +1,5 @@
 import { Link } from "@/lib/router"
-import { Menu } from "lucide-react"
+import { LogOut, Menu } from "lucide-react"
 import type { Dispatch, RefObject, SetStateAction } from "react"
 import { cn } from "../../lib/utils"
 import type {
@@ -22,6 +22,7 @@ type AppShellMobileNavProps = {
   mobileNavOpen: boolean
   navigationGroups: readonly NavigationGroup[]
   setMobileNavOpen: Dispatch<SetStateAction<boolean>>
+  signOutUrl?: string | null
   workspaceInitial: string
   workspaceLabel: string
 }
@@ -32,6 +33,7 @@ export function AppShellMobileNav({
   mobileNavOpen,
   navigationGroups,
   setMobileNavOpen,
+  signOutUrl = null,
   workspaceInitial,
   workspaceLabel,
 }: AppShellMobileNavProps) {
@@ -117,6 +119,15 @@ export function AppShellMobileNav({
           <span className="min-w-0 flex-1 truncate text-left text-xs text-[var(--vpw-text-secondary)]">
             {workspaceLabel}
           </span>
+          {signOutUrl ? (
+            <a
+              className="flex min-h-10 shrink-0 items-center gap-2 rounded-[var(--vpw-radius-md)] px-2 text-xs text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]"
+              href={signOutUrl}
+            >
+              <LogOut aria-hidden="true" size={16} />
+              Sign out
+            </a>
+          ) : null}
         </div>
       </SheetContent>
     </Sheet>

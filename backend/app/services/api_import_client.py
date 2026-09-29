@@ -73,10 +73,22 @@ class ImportRequest:
 class WorkbenchImportClient:
     """Resolve a project, upload one import, and wait for its run to finish."""
 
-    def __init__(self, base_url: str, transport: Transport) -> None:
-        """Bind the client to a Workbench base URL such as http://127.0.0.1:8765."""
+    def __init__(
+        self,
+        base_url: str,
+        transport: Transport,
+        *,
+        extra_headers: Mapping[str, str] | None = None,
+    ) -> None:
+        """
+        Bind the client to a Workbench base URL such as http://127.0.0.1:8765.
+
+        ``extra_headers`` go with every request, for example the credentials a
+        team-mode login proxy expects from automation.
+        """
         self.base_url = base_url.rstrip("/")
         self._transport = transport
+        self._extra_headers = dict(extra_headers or {})
 
     def resolve_project(self, project: str, *, create: bool = False) -> dict[str, Any]:
         """Return the project with this id or exact name, creating it when asked."""
@@ -162,13 +174,24 @@ class WorkbenchImportClient:
             method,
             f"{self.base_url}{path}",
             body,
-            {"Accept": "application/json", **(headers or {})},
+            {"Accept": "application/json", **self._extra_headers, **(headers or {})},
         )
         if response.status >= 400:
             raise ImportClientError(
                 f"{method} {path} failed with HTTP {response.status}: {_error_detail(response)}"
             )
         return response.json() or {}
+
+
+def parse_header_option(value: str) -> tuple[str, str]:
+    """Split a ``Name: value`` command-line header, rejecting malformed input."""
+    name, separator, header_value = value.partition(":")
+    name = name.strip()
+    if not separator or not name or any(character in name for character in " \t\r\n"):
+        raise ImportClientError(f"Headers must look like 'Name: value', got {value!r}.")
+    if any(character in header_value for character in "\r\n"):
+        raise ImportClientError(f"Header {name} must not contain line breaks.")
+    return name, header_value.strip()
 
 
 def _form_bool(value: bool) -> str:

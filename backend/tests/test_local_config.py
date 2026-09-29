@@ -95,6 +95,13 @@ grype_executable = "/opt/grype/bin/grype"
         ("[imports]\nmax_upload_mb = 0\n", "must be positive"),
         ("serve = 1\n", r"\[serve\] must be a table"),
         ("[serve\n", "not valid TOML"),
+        ('[serve]\nallowed_hosts = "a.example"\n', r"\[serve\].allowed_hosts must be a list"),
+        ('[serve]\nallowed_hosts = ["https://a.example"]\n', "without scheme, port, or path"),
+        ('[serve]\nallowed_hosts = ["a.example:443"]\n', "without scheme, port, or path"),
+        ('[auth]\nmode = "sso"\n', r"\[auth\].mode must be one of local, proxy"),
+        ('[auth]\ntrusted_proxies = ["not-a-network"]\n', "invalid address or network"),
+        ('[auth]\ntrusted_proxies = [""]\n', r"\[auth\].trusted_proxies must be a list"),
+        ('[auth]\nusers = "x"\n', r"Unknown setting \[auth\].users"),
     ],
 )
 def test_invalid_config_files_are_rejected(tmp_path: Path, text: str, message: str) -> None:
@@ -116,3 +123,67 @@ def test_missing_optional_config_is_empty_and_secrets_warn_when_shared(tmp_path:
     blank = load_local_config(_write(tmp_path / "blank.toml", '[providers]\nnvd_api_key = " "\n'))
     assert blank.secrets == {}
     assert blank.warnings == ()
+
+
+def test_team_mode_settings_reach_the_runtime(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    data = tmp_path / "data"
+    data.mkdir()
+    _write(
+        data / "vpw.toml",
+        """
+[serve]
+open_browser = false
+allowed_hosts = ["workbench.example.com"]
+
+[auth]
+mode = "proxy"
+user_header = "X-Auth-Request-Email"
+trusted_proxies = ["10.0.0.0/24", "127.0.0.1"]
+logout_url = "/oauth2/sign_out"
+""",
+    )
+    runs: list[tuple[Any, dict[str, Any]]] = []
+    monkeypatch.setattr(uvicorn, "run", lambda app, **kwargs: runs.append((app, kwargs)))
+    for name in ("SECRET_KEY", "AUTH_MODE", "TRUSTED_PROXY_CIDRS", "AUTH_PROXY_USER_HEADER"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("VPW_ALLOWED_HOSTS", "third.example.com, ")
+
+    assert main(["serve", "--data-dir", str(data), "--allowed-host", "second.example.com"]) == 0
+
+    app, kwargs = runs[-1]
+    assert kwargs["proxy_headers"] is False
+    settings = app.state.workbench_settings
+    assert settings.AUTH_MODE == "proxy"
+    assert settings.AUTH_PROXY_USER_HEADER == "X-Auth-Request-Email"
+    assert settings.TRUSTED_PROXY_CIDRS == ("10.0.0.0/24", "127.0.0.1/32")
+    assert settings.AUTH_PROXY_LOGOUT_URL == "/oauth2/sign_out"
+    assert {"second.example.com", "workbench.example.com", "third.example.com"} <= set(
+        settings.ALLOWED_HOSTS
+    )
+    key_file = data / "secret-key"
+    secret = key_file.read_text(encoding="utf-8").strip()
+    assert len(secret) >= 32
+    assert settings.SECRET_KEY == secret
+    if os.name != "nt":
+        assert key_file.stat().st_mode & 0o777 == 0o600
+    assert "Team mode: users come from the X-Auth-Request-Email header" in capsys.readouterr().out
+
+    monkeypatch.delenv("SECRET_KEY")
+    assert main(["serve", "--data-dir", str(data)]) == 0
+    assert runs[-1][0].state.workbench_settings.SECRET_KEY == secret
+
+
+def test_serve_explains_invalid_team_mode_settings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(uvicorn, "run", lambda _app, **_kwargs: None)
+    monkeypatch.setenv("AUTH_MODE", "proxy")
+    monkeypatch.delenv("TRUSTED_PROXY_CIDRS", raising=False)
+
+    with pytest.raises(SystemExit, match="Invalid settings: AUTH_MODE=proxy requires"):
+        main(["serve", "--data-dir", str(tmp_path / "data"), "--no-browser"])

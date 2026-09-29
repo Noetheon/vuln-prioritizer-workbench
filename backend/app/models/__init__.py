@@ -194,6 +194,7 @@ from app.models.workbench import (
     UploadPolicyPublic,
     WorkbenchCapabilitiesPublic,
     WorkbenchHealth,
+    WorkbenchSessionPublic,
     WorkbenchStatus,
 )
 from app.models.workflows import (
@@ -379,6 +380,7 @@ __all__ = [
     "WorkflowRunStatus",
     "WorkbenchCapabilitiesPublic",
     "WorkbenchHealth",
+    "WorkbenchSessionPublic",
     "WorkbenchStatus",
     "import_table_models",
 ]

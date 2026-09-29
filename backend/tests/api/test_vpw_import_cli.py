@@ -134,3 +134,29 @@ def test_import_client_reports_unreachable_workbench_and_timeouts(tmp_path: Path
     with pytest.raises(api_import_client.ImportClientError, match="pass the project id"):
         WorkbenchImportClient("http://workbench", duplicates).resolve_project("Same")
     assert WorkbenchImportClient("http://workbench", duplicates).resolve_project("b")["id"] == "b"
+
+
+def test_import_client_sends_extra_headers_for_login_proxies() -> None:
+    seen: list[Mapping[str, str]] = []
+
+    def capture(
+        method: str, url: str, body: bytes | None, headers: Mapping[str, str]
+    ) -> HttpResponse:
+        seen.append(dict(headers))
+        return HttpResponse(status=200, body=b'{"data": [{"id": "p1", "name": "Team"}]}')
+
+    client = WorkbenchImportClient(
+        "http://workbench",
+        capture,
+        extra_headers=dict([api_import_client.parse_header_option("Authorization: Bearer t0k")]),
+    )
+    assert client.resolve_project("Team")["id"] == "p1"
+    assert seen[-1]["Authorization"] == "Bearer t0k"
+    assert seen[-1]["Accept"] == "application/json"
+
+    assert api_import_client.parse_header_option(" X-Team :  a:b ") == ("X-Team", "a:b")
+    for invalid in ("no-colon", "Bad Name: x", ": x", "X-Team: a\r\nX-Evil: 1"):
+        with pytest.raises(api_import_client.ImportClientError):
+            api_import_client.parse_header_option(invalid)
+    with pytest.raises(SystemExit, match="Headers must look like"):
+        main(["import", __file__, "--project", "p", "--input-type", "cve-list", "--header", "x"])

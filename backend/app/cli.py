@@ -61,6 +61,13 @@ def _parser() -> argparse.ArgumentParser:
     serve.add_argument("--no-browser", action="store_true")
     serve.add_argument("--allow-network", action="store_true")
     serve.add_argument("--log-level", default=None, choices=("debug", "info", "warning", "error"))
+    serve.add_argument(
+        "--allowed-host",
+        action="append",
+        default=None,
+        metavar="HOST",
+        help="Also accept requests for this host name, e.g. behind a reverse proxy (repeatable).",
+    )
 
     ledger = commands.add_parser("ledger", help="Maintain or verify the Decision Ledger.")
     ledger.add_argument("action", choices=("backfill", "verify"))
@@ -127,6 +134,13 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Do not resolve findings this file no longer reports (for partial exports).",
     )
+    importer.add_argument(
+        "--header",
+        action="append",
+        default=None,
+        metavar="'NAME: VALUE'",
+        help="Send this header with every request, e.g. a login proxy token (repeatable).",
+    )
     importer.add_argument("--no-wait", action="store_true")
     importer.add_argument("--timeout", type=float, default=900.0)
     importer.add_argument(
@@ -158,16 +172,34 @@ def _serve(args: argparse.Namespace) -> int:
     log_level = args.log_level or config.log_level or "info"
     open_browser = not args.no_browser and config.open_browser is not False
     _validate_bind(host=host, port=port, allow_network=bool(args.allow_network))
+    extra_hosts = tuple(
+        dict.fromkeys(
+            name.strip()
+            for name in (
+                *(args.allowed_host or ()),
+                *config.allowed_hosts,
+                *os.environ.get("VPW_ALLOWED_HOSTS", "").split(","),
+            )
+            if name.strip()
+        )
+    )
     data_dir = _prepare_runtime_environment(
         data_dir=data_root,
         host=host,
         port=port,
         in_process_worker=True,
+        extra_allowed_hosts=extra_hosts,
     )
     apply_local_config_environment(config)
+    if host not in {"127.0.0.1", "localhost"} or extra_hosts:
+        # Serving beyond loopback requires a strong SECRET_KEY; keep one per data directory.
+        _ensure_secret_key(data_dir)
     for warning in config.warnings:
         print(f"Warning: {warning}")
-    active_settings = _migrate_and_load_settings()
+    try:
+        active_settings = _migrate_and_load_settings()
+    except ValueError as exc:
+        raise SystemExit(f"Invalid settings: {exc}") from exc
     _harden_permissions(data_dir / "workbench.db", 0o600)
 
     from app.main import create_app
@@ -183,6 +215,12 @@ def _serve(args: argparse.Namespace) -> int:
     if config.path is not None:
         print(f"Settings: {config.path}")
     print(f"Workbench: {url}")
+    if active_settings.AUTH_MODE == "proxy":
+        print(
+            "Team mode: users come from the "
+            f"{active_settings.AUTH_PROXY_USER_HEADER} header of login proxies in "
+            f"{', '.join(active_settings.TRUSTED_PROXY_CIDRS)}."
+        )
     if open_browser:
         threading.Thread(
             target=_open_browser_when_ready,
@@ -199,6 +237,9 @@ def _serve(args: argparse.Namespace) -> int:
         port=port,
         log_level=log_level,
         access_log=log_level == "debug",
+        # The app resolves forwarded clients itself from TRUSTED_PROXY_CIDRS; uvicorn's
+        # rewrite would hide the direct peer that team mode must check.
+        proxy_headers=False,
     )
     return 0
 
@@ -452,6 +493,7 @@ def _import(args: argparse.Namespace) -> int:
         ImportClientError,
         ImportRequest,
         WorkbenchImportClient,
+        parse_header_option,
         urllib_transport,
     )
 
@@ -462,7 +504,11 @@ def _import(args: argparse.Namespace) -> int:
     ):
         if path is not None and not path.expanduser().is_file():
             raise SystemExit(f"{label} not found: {path}")
-    client = WorkbenchImportClient(args.url, urllib_transport())
+    try:
+        extra_headers = dict(parse_header_option(value) for value in args.header or ())
+    except ImportClientError as exc:
+        raise SystemExit(f"Import failed: {exc}") from exc
+    client = WorkbenchImportClient(args.url, urllib_transport(), extra_headers=extra_headers)
     try:
         project = client.resolve_project(args.project, create=bool(args.create_project))
         run = client.start_import(
@@ -511,6 +557,7 @@ def _prepare_runtime_environment(
     host: str,
     port: int,
     in_process_worker: bool,
+    extra_allowed_hosts: Sequence[str] = (),
 ) -> Path:
     root = (data_dir or _default_data_dir()).expanduser().resolve(strict=False)
     root.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -538,7 +585,11 @@ def _prepare_runtime_environment(
         "DEMO_WORKSPACE_ENABLED": "true",
         "FRONTEND_HOST": "",
         "BACKEND_CORS_ORIGINS": "",
-        "ALLOWED_HOSTS": ",".join(dict.fromkeys((host, "localhost", "127.0.0.1", "testserver"))),
+        "ALLOWED_HOSTS": ",".join(
+            dict.fromkeys(
+                (host, "localhost", "127.0.0.1", "testserver", *map(str.strip, extra_allowed_hosts))
+            )
+        ),
         "IN_PROCESS_WORKER_ENABLED": "true" if in_process_worker else "false",
         "API_DOCS_ENABLED": "false",
     }
@@ -548,6 +599,23 @@ def _prepare_runtime_environment(
     os.environ.setdefault("RATE_LIMIT_ENABLED", "true")
     os.environ.setdefault("DECISION_LEDGER_SHADOW_READ", "true")
     return root
+
+
+def _ensure_secret_key(data_dir: Path) -> None:
+    if os.environ.get("SECRET_KEY", "").strip():
+        return
+    key_file = data_dir / "secret-key"
+    secret = key_file.read_text(encoding="utf-8").strip() if key_file.is_file() else ""
+    if not secret:
+        import secrets
+
+        secret = secrets.token_urlsafe(48)
+        key_file.unlink(missing_ok=True)
+        descriptor = os.open(key_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(f"{secret}\n")
+    _harden_permissions(key_file, 0o600)
+    os.environ["SECRET_KEY"] = secret
 
 
 def _migrate_and_load_settings() -> Any:
@@ -627,6 +695,9 @@ def _harden_permissions(path: Path, mode: int) -> None:
 
 
 def _default_data_dir() -> Path:
+    configured = os.environ.get("VPW_DATA_DIR", "").strip()
+    if configured:
+        return Path(configured)
     system = platform.system()
     if system == "Darwin":
         return Path.home() / "Library" / "Application Support" / "Vuln Prioritizer Workbench"

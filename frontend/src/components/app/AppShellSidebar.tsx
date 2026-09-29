@@ -1,5 +1,5 @@
 import { Link } from "@/lib/router"
-import { Sidebar } from "lucide-react"
+import { LogOut, Sidebar } from "lucide-react"
 import type { Dispatch, SetStateAction } from "react"
 import { cn } from "../../lib/utils"
 import type {
@@ -14,8 +14,10 @@ type AppShellSidebarProps = {
   navigationGroups: readonly NavigationGroup[]
   setSidebarCollapsed: Dispatch<SetStateAction<boolean>>
   sidebarCollapsed: boolean
+  signOutUrl?: string | null
   workspaceInitial: string
   workspaceLabel: string
+  workspaceStatusLabel?: string
 }
 
 export function AppShellSidebar({
@@ -23,8 +25,10 @@ export function AppShellSidebar({
   navigationGroups,
   setSidebarCollapsed,
   sidebarCollapsed,
+  signOutUrl = null,
   workspaceInitial,
   workspaceLabel,
+  workspaceStatusLabel = "Local workspace status",
 }: AppShellSidebarProps) {
   return (
     <aside
@@ -171,7 +175,7 @@ export function AppShellSidebar({
         )}
       >
         <div
-          aria-label="Local workspace status"
+          aria-label={workspaceStatusLabel}
           className={cn(
             "flex h-auto min-h-10 items-center justify-start rounded-[var(--vpw-radius-md)] px-2 text-[var(--vpw-text-secondary)]",
             sidebarCollapsed ? "size-10 justify-center p-0" : "w-full",
@@ -187,7 +191,33 @@ export function AppShellSidebar({
             </span>
           ) : null}
         </div>
+        {signOutUrl ? (
+          <SignOutLink compact={sidebarCollapsed} href={signOutUrl} />
+        ) : null}
       </div>
     </aside>
+  )
+}
+
+function SignOutLink({ compact, href }: { compact: boolean; href: string }) {
+  const link = (
+    <a
+      aria-label="Sign out"
+      className={cn(
+        "flex shrink-0 items-center justify-center gap-2 rounded-[var(--vpw-radius-md)] text-xs text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]",
+        compact ? "size-10" : "min-h-10 px-2",
+      )}
+      href={href}
+    >
+      <LogOut aria-hidden="true" size={16} />
+      {compact ? null : <span>Sign out</span>}
+    </a>
+  )
+  if (!compact) return link
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{link}</TooltipTrigger>
+      <TooltipContent side="right">Sign out</TooltipContent>
+    </Tooltip>
   )
 }

@@ -30,6 +30,7 @@ class AuditEventBase(SQLModel):
         default_factory=dict,
         sa_column=Column(JSON, nullable=False),
     )
+    actor: str | None = Field(default=None, max_length=320)
     created_at: datetime = Field(
         default_factory=get_datetime_utc,
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -58,6 +59,7 @@ class AuditEventPublic(SQLModel):
     status: str
     project_id: uuid.UUID | None
     detail: dict[str, Any]
+    actor: str | None = None
     created_at: datetime
 
 
@@ -78,5 +80,6 @@ def audit_event_public(event: AuditEvent) -> AuditEventPublic:
         status=event.status,
         project_id=event.project_id,
         detail=dict(event.detail_json or {}),
+        actor=event.actor,
         created_at=event.created_at,
     )

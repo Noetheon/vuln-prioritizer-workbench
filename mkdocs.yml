@@ -32,6 +32,7 @@ nav:
       - Offline Demo Runbook: workbench-offline-demo.md
       - Threat Model and Readiness: workbench-threat-model.md
       - Local/Private Deployment Runbook: workbench-public-deployment.md
+      - Team Mode Behind A Login Proxy: team-mode.md
   - Submission Package:
       - Overview: submission/README.md
       - Concept: submission/concept.md
