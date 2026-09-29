@@ -25,6 +25,7 @@ SUPPORTED_PYTHON_VERSIONS = ("3.11", "3.12", "3.13", RUNTIME_PYTHON_VERSION)
 SETUP_PYTHON_MATRIX_EXPRESSION = "${{ matrix.python-version }}"
 AUDIT_EXPORT_JOBS = {
     ("ci.yml", "dependency-audit"),
+    ("maintenance.yml", "quality-10"),
     ("release.yml", "build-and-release"),
 }
 AUDIT_EXPORT_SETUP_NAME = "Set up Python 3.11 for the offline audit-lock export"
@@ -197,8 +198,8 @@ def _check_workflow_python_versions() -> list[str]:
                             f"{list(SUPPORTED_PYTHON_VERSIONS)!r}."
                         )
                     continue
-                # Both the audit and release jobs reproduce the committed 3.11
-                # requirements export entirely offline before using Python 3.14.
+                # The audit, weekly quality, and release jobs reproduce the committed
+                # 3.11 requirements export entirely offline before using Python 3.14.
                 if (
                     (workflow.name, job_name) in AUDIT_EXPORT_JOBS
                     and step.get("name") == AUDIT_EXPORT_SETUP_NAME
