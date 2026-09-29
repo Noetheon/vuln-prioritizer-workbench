@@ -193,9 +193,11 @@ page explicitly links it as such and explains the scope. Tracked binary evidence
 under `archive/vpw-evidence/**` is hash-pinned in
 `archive/vpw-evidence/BINARY-MANIFEST.json`.
 
-The current VPW package release line is `v1.3.0`; it introduces the standard
-`vpw serve` runtime and Decision Ledger. Its GitHub Release remains a draft
-until the exact tag artifacts and checksums are reviewed. Older `0.x` tags in
+The current VPW package release line is `v1.4.0`. It adds the finding
+lifecycle, SLA tracking, project priority policies, team mode behind a login
+proxy, and the single-container image. Its GitHub Release starts as a draft
+and is published only after the exact tag artifacts and checksums are
+reviewed. Older `0.x` tags in
 this repository include inherited historical/template-line tags and must not
 be used as proof for current VPW Workbench claims unless a page explicitly
 scopes the reference to that historical line.

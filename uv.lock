@@ -2852,7 +2852,7 @@ wheels = [
 
 [[package]]
 name = "vuln-prioritizer-workbench"
-version = "1.3.0"
+version = "1.4.0"
 source = { editable = "backend" }
 dependencies = [
     { name = "alembic" },
@@ -2946,7 +2946,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "vuln-prioritizer-workbench-workspace"
-version = "1.3.0"
+version = "1.4.0"
 source = { virtual = "." }
 
 [[package]]
