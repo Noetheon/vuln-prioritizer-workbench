@@ -23,7 +23,7 @@ auditable from source data, policy, and generated local artifacts.
 | Inputs | CVE lists, Trivy, Grype, CycloneDX, SPDX, Dependency-Check, GitHub alerts, Nessus, OpenVAS, VEX, and asset context CSV. |
 | Decision signals | CVSS, EPSS, CISA KEV, provider freshness, asset exposure, lifecycle state, waivers, and reviewed defensive ATT&CK/TTP context. |
 | Outputs | Technical Markdown, executive HTML, JSON/gzip, CSV, SARIF, ATT&CK Navigator, and deterministic Evidence ZIP artifacts. |
-| Boundary | Local-first, single-user, defensive prioritization only. No scanner, exploit runner, PoC generator, autopatcher, or AI CVE-to-ATT&CK mapper. |
+| Boundary | Local-first and single-user by default, with an optional team mode behind your own login proxy. Defensive prioritization only. No scanner, exploit runner, PoC generator, autopatcher, or AI CVE-to-ATT&CK mapper. |
 
 ## What It Does
 
@@ -40,9 +40,22 @@ auditable from source data, policy, and generated local artifacts.
 
 ## Quickstart
 
-The standard end-user path is one local command. The installed package contains
-the API, browser application, database migrations, demo resources, and a
-supervised workflow worker.
+The Workbench is one local program. It contains the API, browser application,
+database migrations, demo resources, and a supervised workflow worker.
+
+```bash
+pipx install vuln-prioritizer-workbench
+vpw serve
+```
+
+Or run the container image:
+
+```bash
+docker run -d --name vpw -p 127.0.0.1:8765:8765 -v vpw-data:/data \
+  ghcr.io/noetheon/vuln-prioritizer-workbench:latest
+```
+
+Or install from source:
 
 ```bash
 git clone https://github.com/Noetheon/vuln-prioritizer-workbench.git
@@ -51,10 +64,13 @@ pipx install ./backend
 vpw serve
 ```
 
+The PyPI package and container image are published with releases; until a
+release is on PyPI, use the source install.
+
 Open `http://127.0.0.1:8765`. `vpw serve` creates a private platform data
 directory, migrates its SQLite database, enables WAL mode, starts the worker in
-the same process, and opens the browser. No Docker, Node.js, or PostgreSQL
-installation is needed.
+the same process, and opens the browser. No Node.js or PostgreSQL installation
+is needed.
 
 Use an explicit location when the database and artifacts should stay together:
 
@@ -63,19 +79,10 @@ vpw serve --data-dir ./vpw-data
 ```
 
 The launcher binds to loopback by default. Network binding is rejected unless
-the operator deliberately supplies `--allow-network`; this remains a local
-single-user application without browser authentication or RBAC.
-
-For a built transition-release candidate, install its wheel with:
-
-```bash
-pipx install ./vuln_prioritizer_workbench-X.Y.Z-py3-none-any.whl
-vpw serve
-```
-
-`v1.3.0` is the first release line containing the `vpw` entrypoint. Use its
-attached wheel until publication of the matching package-registry artifact has
-been verified; the GitHub Release is intentionally reviewed as a draft first.
+the operator deliberately supplies `--allow-network`. To share one instance
+with a team, put it behind a login proxy you already run and enable team mode:
+the proxy signs people in, and the Workbench records who did what. See
+[Team Mode Behind A Login Proxy](docs/team-mode.md).
 
 Docker Compose with PostgreSQL remains available for one transition release as
 a **deprecated compatibility path** for existing installations:

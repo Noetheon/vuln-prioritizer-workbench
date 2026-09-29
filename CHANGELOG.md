@@ -19,6 +19,31 @@ exact git tag output when release wording needs to be verified.
 
 ### Added
 
+- Team mode lets a small team share one Workbench behind a login proxy the
+  operator already runs (authentik, Authelia, oauth2-proxy, or similar).
+  - Enable it with `[auth] mode = "proxy"` in `vpw.toml` or `AUTH_MODE=proxy`.
+  - The Workbench accepts the user named in a configurable header, and only
+    from `TRUSTED_PROXY_CIDRS`. Every other API request and WebSocket
+    handshake gets `401`. A duplicated identity header is rejected.
+  - Audit events now record the acting user (migration 0018).
+  - The sidebar shows the signed-in user and an optional sign-out link.
+  - `GET /api/v1/workbench/session` reports the session.
+  - There are no roles; everyone who can sign in has full access.
+- `vpw serve --allowed-host`, `[serve] allowed_hosts`, and `VPW_ALLOWED_HOSTS`
+  accept the public host name a reverse proxy forwards. Serving beyond
+  loopback creates a persisted `secret-key` in the data directory unless
+  `SECRET_KEY` is set.
+- `vpw import --header "Name: value"` passes credentials a login proxy expects.
+- `VPW_DATA_DIR` sets the default data directory for every `vpw` command.
+- The `serve` target of `backend/Dockerfile` builds a single-container image:
+  - `vpw serve` on port 8765 with a `/data` volume, a health check, and a
+    non-root user.
+  - A smoke test covering local mode, team mode, and backups runs in the
+    Docker workflow.
+  - Tagged releases publish it to `ghcr.io/noetheon/vuln-prioritizer-workbench`
+    for amd64 and arm64 once `CONTAINER_PUBLISH_ENABLED=true` is set.
+- The PyPI project page now describes the product and how to run it.
+
 - Findings without NVD CVSS use the severity reported by their imported
   evidence as a CVSS-band proxy (lower band bound) with its own explanation
   driver, so unanalyzed Critical findings are no longer ranked as Low. The

@@ -28,8 +28,10 @@ prioritized findings, understand the reasoning, and export reports.
 
 1. Main workflow reliability: keep import, enrichment, findings review,
    explanation, and report generation working through the browser UI and API.
-2. Single-user runtime coherence: keep login, RBAC, API tokens, user
-   management, and multi-user assumptions out of the active path.
+2. Single-user runtime coherence: local single-user stays the default. Shared
+   use goes through the optional team mode, which delegates sign-in to a
+   reverse proxy the operator runs. Built-in login, RBAC, API tokens, and user
+   management stay out of the product.
 3. Architecture cleanup: keep useful domain behavior in backend services and
    remove legacy CLI/template scaffolding when it no longer supports the
    Workbench.

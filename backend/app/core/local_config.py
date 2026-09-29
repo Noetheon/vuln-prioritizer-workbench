@@ -7,6 +7,7 @@ import stat
 import tomllib
 from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass, field
+from ipaddress import ip_network
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,16 @@ _SERVE_SETTINGS: dict[str, type] = {
     "port": int,
     "open_browser": bool,
     "log_level": str,
+    "allowed_hosts": list,
+}
+AUTH_MODES = ("local", "proxy")
+# Team-mode setting name -> (expected type, environment variable).
+_AUTH_SETTINGS: dict[str, tuple[type, str]] = {
+    "mode": (str, "AUTH_MODE"),
+    "user_header": (str, "AUTH_PROXY_USER_HEADER"),
+    "name_header": (str, "AUTH_PROXY_NAME_HEADER"),
+    "trusted_proxies": (list, "TRUSTED_PROXY_CIDRS"),
+    "logout_url": (str, "AUTH_PROXY_LOGOUT_URL"),
 }
 
 
@@ -44,6 +55,8 @@ class LocalConfig:
     port: int | None = None
     open_browser: bool | None = None
     log_level: str | None = None
+    allowed_hosts: tuple[str, ...] = ()
+    auth: dict[str, str] = field(default_factory=dict)
     imports: dict[str, Any] = field(default_factory=dict)
     secrets: dict[str, str] = field(default_factory=dict)
     warnings: tuple[str, ...] = ()
@@ -61,13 +74,15 @@ def load_local_config(path: Path, *, required: bool = False) -> LocalConfig:
         raise LocalConfigError(f"Cannot read {path}: {exc}") from exc
     except tomllib.TOMLDecodeError as exc:
         raise LocalConfigError(f"{path} is not valid TOML: {exc}") from exc
-    unknown_tables = sorted(set(document) - {"serve", "providers", "imports"})
+    unknown_tables = sorted(set(document) - {"serve", "providers", "imports", "auth"})
     if unknown_tables:
         raise LocalConfigError(f"Unknown section [{unknown_tables[0]}] in {path}.")
     serve = _table(document, "serve", path)
     providers = _table(document, "providers", path)
     imports = _table(document, "imports", path)
+    auth = _table(document, "auth", path)
     _reject_unknown(serve, _SERVE_SETTINGS, "serve", path)
+    _reject_unknown(auth, {key: kind for key, (kind, _env) in _AUTH_SETTINGS.items()}, "auth", path)
     _reject_unknown(providers, dict.fromkeys(_SECRET_SETTINGS, str), "providers", path)
     import_kinds = {key: kind for key, (kind, _env) in _IMPORT_SETTINGS.items()}
     _reject_unknown(imports, import_kinds, "imports", path)
@@ -80,6 +95,14 @@ def load_local_config(path: Path, *, required: bool = False) -> LocalConfig:
     for key, value in imports.items():
         if _IMPORT_SETTINGS[key][0] is int and value <= 0:
             raise LocalConfigError(f"[imports].{key} must be positive in {path}.")
+    allowed_hosts = _string_list(serve.get("allowed_hosts", []), "serve.allowed_hosts", path)
+    for host in allowed_hosts:
+        if "://" in host or "/" in host or ":" in host:
+            raise LocalConfigError(
+                f"[serve].allowed_hosts entries are host names without scheme, port, or path "
+                f"in {path}: {host}"
+            )
+    auth_environment = _auth_environment(auth, path)
     secrets = {key: value for key, value in providers.items() if value.strip()}
     warnings = (
         (
@@ -95,6 +118,8 @@ def load_local_config(path: Path, *, required: bool = False) -> LocalConfig:
         port=port,
         open_browser=serve.get("open_browser"),
         log_level=log_level,
+        allowed_hosts=allowed_hosts,
+        auth=auth_environment,
         imports=dict(imports),
         secrets=secrets,
         warnings=warnings,
@@ -118,6 +143,7 @@ def apply_local_config_environment(
     }
     for key, value in config.secrets.items():
         values[secret_env_names[key]] = value
+    values.update(config.auth)
     applied: list[str] = []
     for name, value in values.items():
         if name in target:
@@ -125,6 +151,36 @@ def apply_local_config_environment(
         target[name] = value
         applied.append(name)
     return applied
+
+
+def _auth_environment(auth: Mapping[str, Any], path: Path) -> dict[str, str]:
+    mode = auth.get("mode")
+    if mode is not None and mode not in AUTH_MODES:
+        raise LocalConfigError(f"[auth].mode must be one of {', '.join(AUTH_MODES)} in {path}.")
+    proxies = _string_list(auth.get("trusted_proxies", []), "auth.trusted_proxies", path)
+    for cidr in proxies:
+        try:
+            ip_network(cidr, strict=False)
+        except ValueError as exc:
+            raise LocalConfigError(
+                f"[auth].trusted_proxies has an invalid address or network in {path}: {cidr}"
+            ) from exc
+    environment = {
+        _AUTH_SETTINGS[key][1]: value.strip()
+        for key, value in auth.items()
+        if isinstance(value, str) and value.strip()
+    }
+    if proxies:
+        environment["TRUSTED_PROXY_CIDRS"] = ",".join(proxies)
+    return environment
+
+
+def _string_list(value: Any, name: str, path: Path) -> tuple[str, ...]:
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) and item.strip() for item in value
+    ):
+        raise LocalConfigError(f"[{name.replace('.', '].', 1)} must be a list of names in {path}.")
+    return tuple(dict.fromkeys(item.strip() for item in value))
 
 
 def _table(document: Mapping[str, Any], name: str, path: Path) -> dict[str, Any]:

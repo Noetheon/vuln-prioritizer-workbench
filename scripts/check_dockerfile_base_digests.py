@@ -9,6 +9,7 @@ from pathlib import Path
 import yaml
 
 FROM_RE = re.compile(r"^\s*FROM\s+(?P<image>\S+)", re.IGNORECASE)
+STAGE_RE = re.compile(r"\s+AS\s+(?P<stage>\S+)\s*$", re.IGNORECASE)
 MAKE_IMAGE_RE = re.compile(r"^\s*(?P<name>[A-Z0-9_]*IMAGE)\s*(?:\?=|:=|=)\s*(?P<image>\S+)")
 ROOT = Path(__file__).resolve().parents[1]
 DOCKERFILES = (
@@ -32,13 +33,19 @@ def main() -> int:
     """Return non-zero when a required image reference is not digest-pinned."""
     failures: list[str] = []
     for dockerfile in DOCKERFILES:
+        # A FROM that names an earlier stage of the same file builds on that stage,
+        # whose own base image is already checked.
+        stages: set[str] = set()
         for line_number, line in enumerate(dockerfile.read_text(encoding="utf-8").splitlines(), 1):
             match = FROM_RE.match(line)
             if match is None:
                 continue
             image = match.group("image")
-            if "@sha256:" not in image:
+            if image.lower() not in stages and "@sha256:" not in image:
                 failures.append(f"{dockerfile.relative_to(ROOT)}:{line_number}: {image}")
+            stage = STAGE_RE.search(line)
+            if stage is not None:
+                stages.add(stage.group("stage").lower())
 
     for compose_file in COMPOSE_FILES:
         document = yaml.safe_load(compose_file.read_text(encoding="utf-8")) or {}

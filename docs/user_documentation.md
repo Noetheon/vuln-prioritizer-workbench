@@ -14,15 +14,23 @@ from descriptions, keywords, or AI output.
 Use this path when you already have CVE evidence or scanner exports.
 
 ```bash
+pipx install vuln-prioritizer-workbench
+vpw serve
+```
+
+The PyPI package and the container image
+(`ghcr.io/noetheon/vuln-prioritizer-workbench`) are published with releases.
+Until a release is on PyPI, install from a checkout:
+
+```bash
 git clone https://github.com/Noetheon/vuln-prioritizer-workbench.git
 cd vuln-prioritizer-workbench
 pipx install ./backend
 vpw serve
 ```
 
-`v1.3.0` is the first release line containing `vpw`. Its attached wheel may
-replace the source install after draft asset verification; use the registry
-path only after the matching package publication is confirmed.
+[INSTALL.md](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/INSTALL.md)
+covers Docker and sharing one instance with a team.
 Open `http://127.0.0.1:8765`, create or select a project, and upload your
 evidence through Imports. Choose the input type explicitly so parsing does not
 depend on filename detection.

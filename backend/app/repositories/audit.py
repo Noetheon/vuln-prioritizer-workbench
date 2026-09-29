@@ -25,6 +25,7 @@ class AuditEventRepository:
         status: AuditEventStatus = "success",
         project_id: uuid.UUID | None = None,
         detail: dict[str, Any] | None = None,
+        actor: str | None = None,
     ) -> AuditEvent:
         """Create an audit event without committing the transaction."""
         event = AuditEvent(
@@ -34,6 +35,7 @@ class AuditEventRepository:
             status=status,
             project_id=project_id,
             detail_json=detail or {},
+            actor=actor,
         )
         self.session.add(event)
         self.session.flush()

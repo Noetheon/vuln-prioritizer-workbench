@@ -22,6 +22,7 @@ from app.core import rate_limit as rate_limit_module
 from app.core import retention as retention_module
 from app.core.config import Settings, settings
 from app.core.local_actor import configured_local_actor, local_actor_id
+from app.core.trusted_proxy import is_trusted_proxy_host
 from app.domain.engine.options import AttackSource
 from app.models import AuditEvent
 from app.repositories.reports import ReportRepository
@@ -139,14 +140,14 @@ def test_rate_limit_edges_cover_disabled_limits_and_trusted_forwarding(
     assert rate_limit_module._forwarded_for_host("203.0.113.10:8443") == "203.0.113.10"
     assert rate_limit_module._forwarded_for_host("not-an-ip") is None
     assert (
-        rate_limit_module._is_trusted_proxy_host(
+        is_trusted_proxy_host(
             "not-an-ip",
             ("10.0.0.0/8",),
         )
         is False
     )
     assert (
-        rate_limit_module._is_trusted_proxy_host(
+        is_trusted_proxy_host(
             "10.0.0.8",
             ("bad-cidr", "10.0.0.0/8"),
         )

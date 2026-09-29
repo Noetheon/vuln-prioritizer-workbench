@@ -74,6 +74,8 @@ the `workbench-app-ipallowlist` Traefik middleware. The default source range is
 - The Workbench app and optional direct API routers must keep Traefik
   `ipallowlist` middleware in front of every HTTPS route because the active
   Workbench does not implement browser login, RBAC, or API-token enforcement.
+  To require sign-in, use team mode with a login proxy instead; see
+  [Team Mode Behind A Login Proxy](./team-mode.md).
 - The Traefik container uses a read-only root filesystem, `no-new-privileges`,
   dropped Linux capabilities with only `NET_BIND_SERVICE` restored, a writable
   `/tmp` tmpfs, and a dedicated ACME certificate volume.

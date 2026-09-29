@@ -4,10 +4,12 @@ import { ProvidersService, WorkbenchService } from "../api-client"
 import { providerStatusNeedsPolling } from "./workbench-query-model"
 import { workbenchQueryKeys } from "./workbench-query-keys"
 
-export const workbenchProviderStatusQueryKey = workbenchQueryKeys.providerStatus()
+export const workbenchProviderStatusQueryKey =
+  workbenchQueryKeys.providerStatus()
 export const workbenchStatusQueryKey = workbenchQueryKeys.status()
 export const workbenchDemoWorkspaceQueryKey = workbenchQueryKeys.demoWorkspace()
 export const workbenchCapabilitiesQueryKey = workbenchQueryKeys.capabilities()
+export const workbenchSessionQueryKey = workbenchQueryKeys.session()
 
 export function useWorkbenchProviderStatusQuery() {
   return useQuery({
@@ -35,6 +37,15 @@ export function useWorkbenchCapabilitiesQuery() {
     queryKey: workbenchCapabilitiesQueryKey,
     retry: false,
     staleTime: 30_000,
+  })
+}
+
+export function useWorkbenchSessionQuery() {
+  return useQuery({
+    queryFn: ({ signal }) => WorkbenchService.workbenchSession({ signal }),
+    queryKey: workbenchSessionQueryKey,
+    retry: false,
+    staleTime: 5 * 60_000,
   })
 }
 

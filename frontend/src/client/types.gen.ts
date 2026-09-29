@@ -981,6 +981,10 @@ export type AuditEventPublic = {
      */
     action: string;
     /**
+     * Actor
+     */
+    actor?: string | null;
+    /**
      * Created At
      */
     created_at: string;
@@ -6134,6 +6138,34 @@ export type WorkbenchHealth = {
 };
 
 /**
+ * WorkbenchSessionPublic
+ *
+ * Who the Workbench attributes this browser's requests to.
+ */
+export type WorkbenchSessionPublic = {
+    /**
+     * Auth Mode
+     */
+    auth_mode: 'local' | 'proxy';
+    /**
+     * Display Name
+     */
+    display_name: string;
+    /**
+     * Logout Url
+     */
+    logout_url?: string | null;
+    /**
+     * User
+     */
+    user: string;
+    /**
+     * User Id
+     */
+    user_id: string;
+};
+
+/**
  * WorkbenchStatus
  *
  * Status response returned by the active Workbench runtime.
@@ -8152,6 +8184,22 @@ export type GetApiV1WorkbenchHealthResponses = {
 };
 
 export type GetApiV1WorkbenchHealthResponse = GetApiV1WorkbenchHealthResponses[keyof GetApiV1WorkbenchHealthResponses];
+
+export type GetApiV1WorkbenchSessionData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/workbench/session';
+};
+
+export type GetApiV1WorkbenchSessionResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkbenchSessionPublic;
+};
+
+export type GetApiV1WorkbenchSessionResponse = GetApiV1WorkbenchSessionResponses[keyof GetApiV1WorkbenchSessionResponses];
 
 export type GetApiV1WorkbenchStatusData = {
     body?: never;

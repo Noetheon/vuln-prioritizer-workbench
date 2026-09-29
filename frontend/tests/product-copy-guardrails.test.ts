@@ -76,6 +76,12 @@ const allowedCurrentCopy = [
       /\b(?:scanner exports|network scanner exports|parsed locally|does not scan networks|category: "scanner"|scanner)\b/i,
   },
   {
+    // Team mode (AUTH_MODE=proxy) delegates sign-in to the operator's reverse
+    // proxy; the shell only links to that proxy's sign-out URL.
+    path: /^(?:src\/components\/app\/AppShell(?:Sidebar|MobileNav)\.tsx|tests\/team-mode-shell\.spec\.ts)$/,
+    context: /\bSign out\b/,
+  },
+  {
     path: /^tests\/(?:accessibility|finding-ttp-context|findings-route-integration|responsive-shell|settings-local-access|ui-evidence-screenshots|ui-smoke|workbench-entry-status)\.spec\.ts$/,
     context:
       /known exploited|does not prove exploitation|legacy sign out|api token management|tohavecount\(0\)|not\.tocontaintext|No exploit steps/i,

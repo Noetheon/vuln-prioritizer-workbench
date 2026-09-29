@@ -29,7 +29,9 @@ type AppShellProps = PageHeaderProps & {
   navigationGroups: readonly NavigationGroup[]
   navigationKey: string
   statusItems: readonly StatusSummaryItem[]
+  signOutUrl?: string | null
   workspaceLabel: string
+  workspaceStatusLabel?: string
 }
 
 const sidebarStorageKey = "vpw-sidebar-collapsed"
@@ -71,7 +73,9 @@ export function AppShell({
   navigationKey,
   statusItems,
   title,
+  signOutUrl = null,
   workspaceLabel,
+  workspaceStatusLabel = "Local workspace status",
 }: AppShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed)
@@ -121,8 +125,10 @@ export function AppShell({
           navigationGroups={navigationGroups}
           setSidebarCollapsed={setSidebarCollapsed}
           sidebarCollapsed={sidebarCollapsed}
+          signOutUrl={signOutUrl}
           workspaceInitial={workspaceInitial}
           workspaceLabel={workspaceLabel}
+          workspaceStatusLabel={workspaceStatusLabel}
         />
 
         <main className="flex h-dvh min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -135,6 +141,7 @@ export function AppShell({
                   mobileNavOpen={mobileNavOpen}
                   navigationGroups={navigationGroups}
                   setMobileNavOpen={setMobileNavOpen}
+                  signOutUrl={signOutUrl}
                   workspaceInitial={workspaceInitial}
                   workspaceLabel={workspaceLabel}
                 />

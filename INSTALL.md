@@ -18,7 +18,30 @@ worker service.
 
 ## Install The Workbench
 
-Install the current source tree:
+Pick one of three installs. All three run the same single-process Workbench.
+
+The PyPI package and the container image are published with releases once
+publishing is enabled for the repository (see
+[Release Operations](docs/release_operations.md)). Until a release is on PyPI,
+install from source.
+
+### From PyPI
+
+```bash
+pipx install vuln-prioritizer-workbench
+vpw serve
+```
+
+### With Docker
+
+```bash
+docker run -d --name vpw -p 127.0.0.1:8765:8765 -v vpw-data:/data \
+  ghcr.io/noetheon/vuln-prioritizer-workbench:latest
+```
+
+Details are in [Docker](#docker) below.
+
+### From Source
 
 ```bash
 git clone https://github.com/Noetheon/vuln-prioritizer-workbench.git
@@ -37,25 +60,54 @@ pipx install ./vuln_prioritizer_workbench-X.Y.Z-py3-none-any.whl
 vpw serve
 ```
 
-After the matching package-registry artifact is published and verified, the
-short install becomes:
-
-```bash
-pipx install vuln-prioritizer-workbench
-```
-
-`v1.3.0` is the first release line containing `vpw serve`. Use the attached
-wheel while the GitHub Release is still under draft-first review; a GitHub tag
-or draft alone does not prove that the registry artifact is available.
-
 Upgrade or remove the isolated installation with:
 
 ```bash
-pipx install --force ./backend
+pipx upgrade vuln-prioritizer-workbench      # PyPI install
+pipx install --force ./backend               # source install
 pipx uninstall vuln-prioritizer-workbench
 ```
 
 Uninstalling the package does not delete local Workbench data.
+
+## Docker
+
+The image runs `vpw serve` with the API, browser app, migrations, and worker in
+one container. Everything it stores lives in the `/data` volume: the database,
+uploads, reports, provider snapshots, and an optional `vpw.toml`.
+
+```bash
+docker run -d --name vpw -p 127.0.0.1:8765:8765 -v vpw-data:/data \
+  ghcr.io/noetheon/vuln-prioritizer-workbench:latest
+```
+
+- Publish the port on `127.0.0.1` as above. Opening it to the network needs a
+  login proxy in front; see [Sharing With A Team](#sharing-with-a-team).
+- Pass provider keys as environment variables, for example
+  `-e NVD_API_KEY=...`.
+- Back up and restore with the built-in commands:
+
+  ```bash
+  docker exec vpw vpw backup --output /data/vpw-backup.zip
+  docker cp vpw:/data/vpw-backup.zip .
+  ```
+
+- Update by pulling the new tag and recreating the container with the same
+  volume; migrations run on start.
+
+Images exist for `linux/amd64` and `linux/arm64`. Version tags look like
+`1.4.0`; `latest` follows the newest final release.
+
+## Sharing With A Team
+
+A shared instance uses team mode. A reverse proxy you run (authentik, Authelia,
+oauth2-proxy, or similar) signs people in and tells the Workbench who they are.
+The Workbench records that user in its audit trail and shows them in the
+sidebar. It stores no accounts or passwords and has no roles: everyone who can
+sign in may use every project.
+
+Setup, proxy requirements, and examples are in
+[Team Mode Behind A Login Proxy](docs/team-mode.md).
 
 ## Local Data
 
@@ -120,6 +172,7 @@ port = 8877
 open_browser = false
 log_level = "info"       # debug, info, warning, error
 # host = "127.0.0.1"     # non-loopback hosts still need --allow-network
+# allowed_hosts = ["workbench.example.com"]   # public name behind a proxy
 
 [providers]
 nvd_api_key = "..."      # sets the NVD key variable (default NVD_API_KEY)
@@ -133,6 +186,9 @@ sbom_scan_timeout_seconds = 600
 
 Keep a file with secrets readable only by you (`chmod 600 vpw.toml`); `vpw serve`
 warns when it is not. Backups do not include `vpw.toml`.
+
+An `[auth]` section switches on team mode; see
+[Team Mode Behind A Login Proxy](docs/team-mode.md).
 
 ## Importing From The Command Line
 
@@ -149,7 +205,8 @@ vpw import scan.json --project "Payments" --input-type trivy-json \
 
 `--url` (or `VPW_URL`) selects another Workbench address, `--no-wait` returns
 after queueing, and `--asset-context`, `--vex`, `--provider-snapshot`, and
-`--locked-provider-data` match the import wizard's options.
+`--locked-provider-data` match the import wizard's options. `--header
+"Name: value"` (repeatable) passes credentials a team-mode login proxy expects.
 
 ## Runtime Options
 
@@ -169,6 +226,13 @@ vpw serve --host 192.0.2.10 --allow-network
 
 This flag does not add authentication, TLS, RBAC, or multi-user isolation.
 Place VPW only on a trusted private host and review the threat model first.
+For shared use, put it behind a login proxy in team mode instead.
+
+When the Workbench accepts more than loopback, it needs a strong `SECRET_KEY`.
+`vpw serve` creates one in `<data-dir>/secret-key` unless `SECRET_KEY` is set.
+`--allowed-host` (repeatable, also `VPW_ALLOWED_HOSTS`) accepts requests for a
+public host name, for example the name a reverse proxy forwards.
+`VPW_DATA_DIR` changes the default data directory for every `vpw` command.
 
 ## Decision Ledger Maintenance
 

@@ -33,6 +33,16 @@ class WorkbenchStatus(SQLModel):
     api_docs_path: str | None = None
 
 
+class WorkbenchSessionPublic(SQLModel):
+    """Who the Workbench attributes this browser's requests to."""
+
+    auth_mode: Literal["local", "proxy"]
+    user_id: uuid.UUID
+    user: str
+    display_name: str
+    logout_url: str | None = None
+
+
 class WorkbenchHealth(SQLModel):
     """Minimal local health response."""
 

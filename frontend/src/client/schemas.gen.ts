@@ -1877,6 +1877,17 @@ export const AuditEventPublicSchema = {
             title: 'Action',
             type: 'string'
         },
+        actor: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Actor'
+        },
         created_at: {
             format: 'date-time',
             title: 'Created At',
@@ -11493,6 +11504,52 @@ export const WorkbenchHealthSchema = {
         'status'
     ],
     title: 'WorkbenchHealth',
+    type: 'object'
+} as const;
+
+export const WorkbenchSessionPublicSchema = {
+    description: 'Who the Workbench attributes this browser\'s requests to.',
+    properties: {
+        auth_mode: {
+            enum: [
+                'local',
+                'proxy'
+            ],
+            title: 'Auth Mode',
+            type: 'string'
+        },
+        display_name: {
+            title: 'Display Name',
+            type: 'string'
+        },
+        logout_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Logout Url'
+        },
+        user: {
+            title: 'User',
+            type: 'string'
+        },
+        user_id: {
+            format: 'uuid',
+            title: 'User Id',
+            type: 'string'
+        }
+    },
+    required: [
+        'auth_mode',
+        'user_id',
+        'user',
+        'display_name'
+    ],
+    title: 'WorkbenchSessionPublic',
     type: 'object'
 } as const;
 

@@ -23,6 +23,7 @@ from app.models import (
     ProjectPublic,
     WorkbenchCapabilitiesPublic,
     WorkbenchHealth,
+    WorkbenchSessionPublic,
     WorkbenchStatus,
     WorkflowRunKind,
 )
@@ -88,6 +89,23 @@ def workbench_status(
         worker_last_seen_at=worker_last_seen_at,
         api_docs_enabled=active_settings.api_docs_enabled,
         api_docs_path="/docs" if active_settings.api_docs_enabled else None,
+    )
+
+
+@router.get("/session", response_model=WorkbenchSessionPublic)
+def workbench_session(
+    request: Request,
+    local_actor: LocalActor,
+) -> WorkbenchSessionPublic:
+    """Return who this browser's requests are attributed to, for the app shell."""
+    active_settings = _request_settings(request)
+    proxy_mode = active_settings.AUTH_MODE == "proxy"
+    return WorkbenchSessionPublic(
+        auth_mode=active_settings.AUTH_MODE,
+        user_id=local_actor.id,
+        user=local_actor.email,
+        display_name=local_actor.full_name,
+        logout_url=(active_settings.AUTH_PROXY_LOGOUT_URL or None) if proxy_mode else None,
     )
 
 
