@@ -29,18 +29,24 @@ IMAGE_LINE = re.compile(
     re.IGNORECASE,
 )
 PIN = re.compile(r"^(?P<tag>[^@\s]+)@sha256:(?P<digest>[0-9a-f]{64})$")
+STAGE = re.compile(r"^\s*FROM\s+\S+\s+AS\s+(?P<stage>\S+)\s*$", re.IGNORECASE)
 
 
 def pinned_images(path: Path) -> list[tuple[int, str]]:
     """Return static image references in a Dockerfile, Compose file or Makefile."""
     result: list[tuple[int, str]] = []
+    # Multi-stage Dockerfiles reference earlier stages by name, not by image.
+    stages: set[str] = set()
     for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         match = IMAGE_LINE.match(line)
         if match is None:
             continue
         image = match.group("image")
-        if "$" not in image:
+        if "$" not in image and image.lower() not in stages:
             result.append((line_number, image))
+        stage = STAGE.search(line)
+        if stage is not None:
+            stages.add(stage.group("stage").lower())
     return result
 
 

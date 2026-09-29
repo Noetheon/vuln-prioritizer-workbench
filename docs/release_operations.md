@@ -50,6 +50,7 @@ Current safety model:
 - manual `workflow_dispatch` runs, even when pointed at a tag, are preflight-only
   and do not create a GitHub Release or publish to PyPI
 - public PyPI publishing is gated behind the repository variable `PYPI_PUBLISH_ENABLED=true`
+- container image publishing to GHCR is gated behind the repository variable `CONTAINER_PUBLISH_ENABLED=true`
 - the live PyPI workflow verifies a hosted-index install after publish
 - TestPyPI publishing is available through the manual workflow [`.github/workflows/testpypi.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/workflows/testpypi.yml), runs `make release-readiness-check`, is gated behind `TEST_PYPI_PUBLISH_ENABLED=true`, and verifies a hosted-index install after publish
 
@@ -238,6 +239,31 @@ When configuring the trusted publisher on PyPI, match these repository values:
 4. Set the repository variable `PYPI_PUBLISH_ENABLED=true` only after the trusted publisher is configured correctly.
 5. If the project does not exist yet on PyPI, use PyPI's trusted-publisher project-creation flow or create the project first and then register the publisher.
 6. Keep the PyPI publish job on GitHub limited to `id-token: write`; do not reintroduce long-lived API tokens.
+
+## Container Image Publishing
+
+Tagged releases can publish the single-container `vpw serve` image to
+`ghcr.io/noetheon/vuln-prioritizer-workbench`:
+
+- `publish-container` builds the `serve` target of `backend/Dockerfile`. It
+  builds natively on `ubuntu-latest` (amd64) and `ubuntu-24.04-arm` (arm64).
+- Each architecture must pass `scripts/docker_serve_image_smoke.sh` (local
+  mode, team mode, backup) before its `<version>-<arch>` tag is pushed.
+- `publish-container-manifest` then publishes the multi-architecture
+  `<version>` tag, and `latest` for versions without a pre-release suffix.
+- The jobs use the workflow's `GITHUB_TOKEN` with `packages: write`; no
+  long-lived registry credentials are stored.
+
+Setup steps:
+
+1. Set the repository variable `CONTAINER_PUBLISH_ENABLED=true`.
+2. After the first publish, open the package settings on GitHub and set the
+   visibility to **Public**. GHCR creates new packages as private.
+3. Check that the package page links back to this repository. The
+   `org.opencontainers.image.source` label does this.
+
+Pull requests that touch Docker inputs run the same smoke test through
+`make docker-serve-smoke` in the Docker workflow.
 
 ## Post-Release Smoke Checks
 

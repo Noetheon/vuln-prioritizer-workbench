@@ -1,4 +1,4 @@
-FROM python:3.14.7-slim-trixie@sha256:caaf356f40667c496d405780745b9ac25771c189a51dfcc42430d531ea09f8a2 AS runtime
+FROM python:3.14.7-slim-trixie@sha256:caaf356f40667c496d405780745b9ac25771c189a51dfcc42430d531ea09f8a2 AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -42,6 +42,29 @@ ENV SQLALCHEMY_DATABASE_URI=sqlite:////app/data/workbench.db \
     API_RATE_LIMIT_PER_MINUTE=600 \
     AUDIT_RETENTION_DAYS=365 \
     MAX_UPLOAD_MB=25
+
+# Single-container runtime for self-hosting: `vpw serve` runs the API, the
+# browser app, migrations, and the worker in one process with data in /data.
+FROM base AS serve
+
+USER root
+RUN mkdir -p /data && chown workbench:workbench /data
+USER workbench
+WORKDIR /data
+
+ENV VPW_DATA_DIR=/data
+
+EXPOSE 8765
+VOLUME ["/data"]
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/api/v1/utils/health-check/', timeout=4)"]
+
+ENTRYPOINT ["vpw"]
+CMD ["serve", "--host", "0.0.0.0", "--port", "8765", "--allow-network", "--no-browser"]
+
+# Deprecated Compose topology (API process); stays the default build target.
+FROM base AS runtime
 
 EXPOSE 8000
 
