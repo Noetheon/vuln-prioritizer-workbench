@@ -1,0 +1,3 @@
+# Created by setup.sh. Keep them out of version control.
+/secrets/
+/authelia/users_database.yml

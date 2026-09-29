@@ -22,6 +22,7 @@ IMAGE_FILES = (
     ROOT / "docker" / "security-tools" / "Dockerfile",
     ROOT / "compose.yml",
     ROOT / "compose.traefik.yml",
+    ROOT / "examples" / "team-mode" / "compose.yml",
     ROOT / "Makefile",
 )
 IMAGE_LINE = re.compile(

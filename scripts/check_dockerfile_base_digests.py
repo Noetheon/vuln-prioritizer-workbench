@@ -21,6 +21,7 @@ DOCKERFILES = (
 COMPOSE_FILES = (
     ROOT / "compose.yml",
     ROOT / "compose.traefik.yml",
+    ROOT / "examples" / "team-mode" / "compose.yml",
 )
 MAKEFILES = (ROOT / "Makefile",)
 

@@ -166,7 +166,7 @@ jobs:
               backend/Dockerfile|frontend/Dockerfile|frontend/Dockerfile.playwright)
                 run_dependency_audit=true
                 ;;
-              compose.yml|compose.traefik.yml|Makefile|.grype.yaml)
+              compose.yml|compose.traefik.yml|examples/team-mode/compose.yml|Makefile|.grype.yaml)
                 run_dependency_audit=true
                 ;;
               scripts/check_release_evidence_hygiene.py|scripts/check_python_lock_exports.py|scripts/check_dockerfile_base_digests.py)

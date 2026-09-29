@@ -17,6 +17,19 @@ exact git tag output when release wording needs to be verified.
 
 ## [Unreleased]
 
+### Added
+
+- `examples/team-mode` is a tested reference deployment for team mode. It
+  runs Caddy, Authelia, and the Workbench image with Docker Compose.
+  - `setup.sh` creates random secrets and the users, so there is no default
+    login.
+  - The Workbench trusts only Caddy's fixed address and publishes no port.
+  - `make team-mode-example-smoke` runs in the Docker workflow and checks the
+    sign-in chain end to end. The checks cover a forged identity header, a
+    user outside the permitted group, cross-site writes, WebSocket upgrades,
+    and a request that bypasses the proxy.
+  - Dependabot and the digest checks cover the example's images.
+
 ## [1.4.0] - 2026-09-29
 
 ### Added

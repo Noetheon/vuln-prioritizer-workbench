@@ -106,6 +106,9 @@ jobs:
               scripts/docker_quickstart_api_smoke.py|scripts/docker_serve_image_smoke.sh|scripts/start*)
                 set_demo_smoke
                 ;;
+              examples/team-mode/*|scripts/team_mode_example_smoke.sh)
+                set_demo_smoke
+                ;;
               .nvmrc|.npmrc|package.json|frontend/package.json|frontend/package-lock.json)
                 set_demo_smoke
                 ;;
@@ -169,6 +172,10 @@ jobs:
       - name: Smoke-test the single-container vpw serve image
         if: needs.changes.outputs.run-docker == 'true'
         run: make docker-serve-smoke
+
+      - name: Smoke-test the team-mode reference deployment
+        if: needs.changes.outputs.run-docker == 'true'
+        run: make team-mode-example-smoke
 
       - name: Build pinned scanner images
         if: needs.changes.outputs.run-image-security == 'true'

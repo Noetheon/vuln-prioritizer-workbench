@@ -58,7 +58,9 @@ updates:
       - "dependencies"
       - "area:security"
   - package-ecosystem: "docker-compose"
-    directory: "/"
+    directories:
+      - "/"
+      - "/examples/team-mode"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10

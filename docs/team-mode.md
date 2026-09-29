@@ -84,9 +84,23 @@ prints the header it reads the user from.
 
 ## Examples
 
-These snippets are starting points. The Workbench side is covered by automated
-tests and a container smoke test in CI; the proxy configurations are not.
-Follow your proxy's own guide for sessions, cookies, and sign-in redirects.
+### Tested Reference Setup: Caddy With Authelia
+
+[`examples/team-mode`](https://github.com/Noetheon/vuln-prioritizer-workbench/tree/main/examples/team-mode) is a complete Docker Compose setup with
+Caddy, Authelia, and the Workbench image. `setup.sh` creates random secrets and
+the first user, so there is no default login. The Docker workflow starts this
+setup on every relevant change and checks it from outside:
+
+- Without a sign-in, API requests get `401` and browsers go to the portal.
+- A signed-in user reaches the Workbench under their own name, and identity
+  headers sent by the client are replaced.
+- A user outside the permitted group gets `403`, and cross-site writes are
+  refused.
+- WebSocket updates pass through the proxy only after sign-in.
+- A request that bypasses the proxy cannot name a user.
+
+The snippets below are starting points for other proxies and are not run in
+CI. Follow your proxy's own guide for sessions, cookies, and sign-in redirects.
 
 ### Caddy With Authelia
 
