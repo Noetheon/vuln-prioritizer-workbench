@@ -218,8 +218,7 @@ def _serve(args: argparse.Namespace) -> int:
     if active_settings.AUTH_MODE == "proxy":
         print(
             "Team mode: users come from the "
-            f"{active_settings.AUTH_PROXY_USER_HEADER} header of login proxies in "
-            f"{', '.join(active_settings.TRUSTED_PROXY_CIDRS)}."
+            f"{active_settings.AUTH_PROXY_USER_HEADER} header of the trusted login proxies."
         )
     if open_browser:
         threading.Thread(

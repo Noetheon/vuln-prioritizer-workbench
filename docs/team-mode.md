@@ -55,7 +55,7 @@ over `vpw.toml`.
 | `VPW_ALLOWED_HOSTS=workbench.example.com` | `[serve] allowed_hosts` |
 
 `vpw serve` refuses to start in team mode without trusted proxies. On start it
-prints the header and the proxy networks it trusts.
+prints the header it reads the user from.
 
 ## Requirements For The Proxy
 

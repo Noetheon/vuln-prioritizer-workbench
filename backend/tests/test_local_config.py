@@ -170,7 +170,10 @@ logout_url = "/oauth2/sign_out"
     assert settings.SECRET_KEY == secret
     if os.name != "nt":
         assert key_file.stat().st_mode & 0o777 == 0o600
-    assert "Team mode: users come from the X-Auth-Request-Email header" in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert "Team mode: users come from the X-Auth-Request-Email header" in output
+    # Proxy networks stay out of the console output; `vpw.toml` already names them.
+    assert "10.0.0.0/24" not in output
 
     monkeypatch.delenv("SECRET_KEY")
     assert main(["serve", "--data-dir", str(data)]) == 0
