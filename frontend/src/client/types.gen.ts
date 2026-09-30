@@ -4354,6 +4354,42 @@ export type ProjectGovernanceRollupsPublic = {
 };
 
 /**
+ * ProjectOnboardingPublic
+ *
+ * How far a project is through first setup: import, asset context, first report.
+ */
+export type ProjectOnboardingPublic = {
+    /**
+     * Asset Count
+     */
+    asset_count?: number;
+    /**
+     * Assets With Context
+     */
+    assets_with_context?: number;
+    /**
+     * Complete
+     */
+    complete?: boolean;
+    /**
+     * Finding Count
+     */
+    finding_count?: number;
+    /**
+     * Import Count
+     */
+    import_count?: number;
+    /**
+     * Project Id
+     */
+    project_id: string;
+    /**
+     * Report Count
+     */
+    report_count?: number;
+};
+
+/**
  * ProjectPolicyFields
  *
  * Thresholds of the transparent base priority rule plus SLA targets.
@@ -7604,6 +7640,36 @@ export type PostApiV1ProjectsByProjectIdImportsResponses = {
 };
 
 export type PostApiV1ProjectsByProjectIdImportsResponse = PostApiV1ProjectsByProjectIdImportsResponses[keyof PostApiV1ProjectsByProjectIdImportsResponses];
+
+export type GetApiV1ProjectsByProjectIdOnboardingData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/onboarding';
+};
+
+export type GetApiV1ProjectsByProjectIdOnboardingErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1ProjectsByProjectIdOnboardingError = GetApiV1ProjectsByProjectIdOnboardingErrors[keyof GetApiV1ProjectsByProjectIdOnboardingErrors];
+
+export type GetApiV1ProjectsByProjectIdOnboardingResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectOnboardingPublic;
+};
+
+export type GetApiV1ProjectsByProjectIdOnboardingResponse = GetApiV1ProjectsByProjectIdOnboardingResponses[keyof GetApiV1ProjectsByProjectIdOnboardingResponses];
 
 export type GetApiV1ProjectsByProjectIdPolicyData = {
     body?: never;

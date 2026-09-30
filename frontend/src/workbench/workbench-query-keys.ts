@@ -70,6 +70,8 @@ export const workbenchQueryKeys = {
     [...workbenchQueryKeys.projectRuns(projectId), "with-state-snapshots"] as const,
   projectSummaries: (projectIds: readonly string[]) =>
     [...workbenchQueryKeys.projectSummariesRoot(), [...projectIds]] as const,
+  projectOnboarding: (projectId: string) =>
+    [...workbenchQueryKeys.all, "project-onboarding", projectId] as const,
   projectSummaryRoot: () =>
     [...workbenchQueryKeys.all, "project-summary"] as const,
   projectSummary: (projectId: string) =>
@@ -120,6 +122,9 @@ export async function invalidateProjectScopedWorkbenchQueries(
     }),
     queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.projectDashboard(projectId),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: workbenchQueryKeys.projectOnboarding(projectId),
     }),
     queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.projectSummariesRoot(),

@@ -74,6 +74,21 @@ export function useProjectSummaryQuery(projectId: string) {
   })
 }
 
+export function useProjectOnboardingQuery(projectId: string) {
+  return useQuery({
+    enabled: Boolean(projectId),
+    queryFn: ({ signal }) =>
+      ProjectsService.readProjectOnboarding(
+        { project_id: projectId },
+        { signal },
+      ),
+    queryKey: workbenchQueryKeys.projectOnboarding(projectId),
+    retry: false,
+    // Imports and reports happen on other pages; recount on every visit.
+    staleTime: 0,
+  })
+}
+
 export function useProjectDashboardQuery(projectId: string, enabled: boolean) {
   return useQuery({
     enabled: enabled && Boolean(projectId),

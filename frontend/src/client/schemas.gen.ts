@@ -8385,6 +8385,52 @@ export const ProjectGovernanceRollupsPublicSchema = {
     type: 'object'
 } as const;
 
+export const ProjectOnboardingPublicSchema = {
+    description: 'How far a project is through first setup: import, asset context, first report.',
+    properties: {
+        asset_count: {
+            default: 0,
+            title: 'Asset Count',
+            type: 'integer'
+        },
+        assets_with_context: {
+            default: 0,
+            title: 'Assets With Context',
+            type: 'integer'
+        },
+        complete: {
+            default: false,
+            title: 'Complete',
+            type: 'boolean'
+        },
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
+        import_count: {
+            default: 0,
+            title: 'Import Count',
+            type: 'integer'
+        },
+        project_id: {
+            format: 'uuid',
+            title: 'Project Id',
+            type: 'string'
+        },
+        report_count: {
+            default: 0,
+            title: 'Report Count',
+            type: 'integer'
+        }
+    },
+    required: [
+        'project_id'
+    ],
+    title: 'ProjectOnboardingPublic',
+    type: 'object'
+} as const;
+
 export const ProjectPolicyFieldsSchema = {
     description: 'Thresholds of the transparent base priority rule plus SLA targets.',
     properties: {

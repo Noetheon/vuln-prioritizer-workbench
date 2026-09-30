@@ -123,11 +123,10 @@ def test_workbench_provider_status_reports_missing_snapshot(
     assert payload["last_sync"] is None
     assert payload["cache_age_seconds"] is None
     assert payload["last_error"] is None
-    assert payload["warnings"] == [
-        "No provider data has been fetched yet. The first import fetches NVD, EPSS, and KEV."
-    ]
+    assert payload["warnings"] == []
     assert [source["name"] for source in payload["sources"]] == ["nvd", "epss", "kev"]
     assert all(source["available"] is False for source in payload["sources"])
+    assert all(source["stale"] is False for source in payload["sources"])
 
 
 def test_workbench_provider_status_reports_latest_snapshot(

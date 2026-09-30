@@ -127,6 +127,14 @@ export function DashboardRiskReductionPanel({
               summary={summary}
             />
           </div>
+        ) : (projectSummary?.finding_count ?? 0) === 0 ? (
+          <EmptyState
+            ariaLabel="No findings yet"
+            className="min-h-0 py-8"
+            icon={<ShieldCheck aria-hidden="true" className="size-5" />}
+            title="No findings yet"
+            description="Open risk appears after the first import. Follow the setup checklist above to import a scanner report, an SBOM, or a CVE list."
+          />
         ) : (
           <EmptyState
             action={

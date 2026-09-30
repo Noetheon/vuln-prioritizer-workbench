@@ -4,13 +4,16 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { WorkbenchService } from "../../api-client"
 import { RiskOperationsDashboard } from "../../components/dashboard/RiskOperationsDashboard"
+import { CreateProjectDrawer } from "../../components/projects/ProjectsWorkbenchSections"
 import { apiErrorMessage } from "../../lib/app-errors"
+import { useCreateProjectDrawer } from "../useCreateProjectDrawer"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import { useWorkbenchDemoWorkspaceQuery } from "../useWorkbenchRuntimeQueries"
 import {
   dashboardSignalCountsFromApi,
   emptyDashboardSignalCounts,
   useProjectDashboardQuery,
+  useProjectOnboardingQuery,
 } from "../useWorkbenchQueries"
 import { workbenchQueryKeys } from "../workbench-query-keys"
 
@@ -35,6 +38,13 @@ function DashboardRouteContainer() {
     selectedProjectId,
     true,
   )
+  const onboardingQuery = useProjectOnboardingQuery(selectedProjectId)
+  const createProject = useCreateProjectDrawer({
+    onCreated: async (project) => {
+      await refreshProjects(project.id)
+      setSelectedProjectId(project.id)
+    },
+  })
   const demoWorkspaceQuery = useWorkbenchDemoWorkspaceQuery()
   const demoWorkspaceMutation = useMutation({
     mutationFn: (reset: boolean) =>
@@ -83,6 +93,7 @@ function DashboardRouteContainer() {
     selectedProjectId === demoWorkspaceStatus?.project_id
 
   return (
+    <>
     <RiskOperationsDashboard
       dashboardError={
         projectListError ||
@@ -131,7 +142,11 @@ function DashboardRouteContainer() {
       summaryLoading={
         projectDashboardQuery.isLoading || projectDashboardQuery.isFetching
       }
+      onboarding={onboardingQuery.data ?? null}
+      onCreateProject={createProject.openDrawer}
     />
+    <CreateProjectDrawer {...createProject.drawerProps} />
+    </>
   )
 }
 
