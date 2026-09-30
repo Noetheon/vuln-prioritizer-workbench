@@ -203,12 +203,12 @@ test("core Workbench routes have no serious accessibility violations", async ({
     ["/", "dashboard"],
     ["/projects", "projects"],
     ["/imports", "imports"],
-    ["/findings", "findings"],
+    ["/triage", "findings"],
     ["/assets", "assets"],
-    ["/reports", "reports"],
-    ["/providers", "providers"],
+    ["/evidence", "reports"],
+    ["/data-sources", "providers"],
     ["/settings", "settings"],
-    ["/waivers", "waivers"],
+    ["/risk-acceptance", "waivers"],
   ] as const) {
     await page.goto(path)
     await expect(page.getByRole("main")).toBeVisible()
@@ -224,7 +224,7 @@ test("findings dialogs, detail, and loading states have no serious accessibility
     projects: [mockProject],
   })
 
-  await page.goto("/findings")
+  await page.goto("/triage")
   await expect(
     page.getByRole("table", { name: "Findings remediation queue" }),
   ).toBeVisible()
@@ -297,7 +297,7 @@ test("risk acceptance drawers have no serious accessibility violations", async (
     waivers: [mockWaiver],
   })
 
-  await page.goto("/waivers")
+  await page.goto("/risk-acceptance")
   await page
     .getByRole("table", { name: "Risk acceptance register table" })
     .locator("tbody tr")
@@ -340,7 +340,7 @@ test("data source tabs have no serious accessibility violations", async ({
     providerStatus: accessibleProviderStatus,
   })
 
-  await page.goto("/providers")
+  await page.goto("/data-sources")
   await expect(
     page.getByRole("heading", { level: 1, name: "Data Sources" }),
   ).toBeVisible()
@@ -383,7 +383,7 @@ test("findings busy state has no serious accessibility violations", async ({
     projects: [mockProject],
   })
 
-  await page.goto("/findings")
+  await page.goto("/triage")
   await expect(
     page.getByRole("status", { name: "Loading findings" }),
   ).toBeVisible()

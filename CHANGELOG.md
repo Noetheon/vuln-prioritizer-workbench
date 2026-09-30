@@ -61,6 +61,20 @@ exact git tag output when release wording needs to be verified.
 
 ### Changed
 
+- The menu follows the work: Overview; Projects, Imports, Assets; Triage;
+  Risk Acceptance and the new Priority Policy page; Evidence Center; then Data
+  Sources and Workspace Settings (audit M2).
+  - Page addresses use the menu names: `/triage`, `/risk-acceptance`,
+    `/evidence`, and `/data-sources`. The old `/findings`, `/waivers`,
+    `/reports`, and `/providers` redirect and keep their query string; a
+    finding stays at `/findings/<id>`. The API paths do not change.
+  - The project's priority thresholds and SLA targets have their own page,
+    `/policy`. The SLA figures on a finding and in the Triage quick view, and
+    "Why this priority?", link to it.
+  - One project switcher in the page header replaces the project fields on
+    Overview, Triage, Assets, Risk Acceptance, and the Evidence Center.
+    Switching keeps filters, drops the previous project's list page, run, or
+    asset, and returns from a finding or import run to its list.
 - A fresh install reads as "no data yet", not as a fault: Data Sources shows
   NVD, EPSS, and KEV as "Not fetched yet", evidence readiness as "No data
   yet", and no warnings. The provider status API no longer reports

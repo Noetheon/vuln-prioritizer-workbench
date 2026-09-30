@@ -12,6 +12,7 @@ import {
   uniqueFindingDataQualityRows,
 } from "@/components/finding-detail/finding-detail-model"
 import { Button } from "@/components/ui/button"
+import { PriorityPolicyLink } from "./PriorityPolicyLink"
 import {
   Callout,
   DecisionSummary,
@@ -173,7 +174,14 @@ export function QuickViewDecisionSummary({
     { label: "Owner", value: optionalText(finding.owner) },
     { label: "Service", value: optionalText(finding.business_service) },
     { label: "Asset", value: drawerAssetLabel(finding) },
-    { label: "SLA", value: findingSlaLabel(finding) },
+    {
+      label: "SLA",
+      value: (
+        <PriorityPolicyLink projectId={finding.project_id}>
+          {findingSlaLabel(finding)}
+        </PriorityPolicyLink>
+      ),
+    },
   ]
 
   return (
@@ -363,7 +371,7 @@ export function QuickViewGovernanceSection({
       <p>{governanceCopy(finding)}</p>
       <div className="finding-drawer-actions-inline">
         <Button asChild size="sm" variant="outline">
-          <Link search={projectSearch} to="/waivers">
+          <Link search={projectSearch} to="/risk-acceptance">
             Open Risk Acceptance
           </Link>
         </Button>

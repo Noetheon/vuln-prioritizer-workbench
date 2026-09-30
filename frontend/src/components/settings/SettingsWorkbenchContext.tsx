@@ -81,9 +81,9 @@ export function SettingsContext({
               <Button asChild variant="outline">
                 <Link
                   search={selectedProjectRouteSearch(selectedProjectId)}
-                  to="/providers"
+                  to="/data-sources"
                 >
-                  View providers
+                  View data sources
                 </Link>
               </Button>
             </VpwToolbarGroup>

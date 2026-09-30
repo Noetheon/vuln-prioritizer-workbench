@@ -22,14 +22,8 @@ import {
 function FindingsRouteContainer() {
   const navigate = useNavigate()
   const location = useLocation()
-  const {
-    projectListLoading,
-    projectListError,
-    projects,
-    selectedProject,
-    selectedProjectId,
-    setSelectedProjectId,
-  } = useWorkbenchContext()
+  const { projectListError, projects, selectedProject, selectedProjectId } =
+    useWorkbenchContext()
   const routeSearch = activeSearchString(location.searchStr)
   const findingsSearch = parseFindingsSearch(routeSearch)
   const cleanedSearch = cleanFindingsSearchQueryString(routeSearch)
@@ -40,7 +34,7 @@ function FindingsRouteContainer() {
   function updateFindingsSearch(nextSearch: FindingsSearchState) {
     void navigate({
       search: findingsRouteSearch(nextSearch, selectedProjectId),
-      to: "/findings",
+      to: "/triage",
     })
   }
 
@@ -50,7 +44,7 @@ function FindingsRouteContainer() {
         findingsSearchForSavedView(findingsSearch, view),
         selectedProjectId,
       ),
-      to: "/findings",
+      to: "/triage",
     })
   }
 
@@ -64,7 +58,7 @@ function FindingsRouteContainer() {
         parseFindingsSearch(cleanedSearch),
         selectedProjectId,
       ),
-      to: "/findings",
+      to: "/triage",
     })
   }, [cleanedSearch, currentSearch, navigate, selectedProjectId])
 
@@ -79,7 +73,6 @@ function FindingsRouteContainer() {
     findingSort,
     nextFindingPage,
     previousFindingPage,
-    resetFindingOffset,
     updateFindingDirection,
     updateFindingFilter,
     updateFindingPageSize,
@@ -131,18 +124,12 @@ function FindingsRouteContainer() {
         onPageNext={nextFindingPage}
         onPagePrev={previousFindingPage}
         onPageSizeChange={updateFindingPageSize}
-        onProjectChange={(id) => {
-          resetFindingOffset()
-          setSelectedProjectId(id)
-        }}
         onSavedViewChange={updateSavedView}
         onSortDirectionChange={updateFindingSortDirection}
-        projectListLoading={projectListLoading}
         projectListError={projectListError}
         projectSummary={projectSummaryQuery.data ?? null}
         projects={projects}
         selectedProject={selectedProject}
-        selectedProjectId={selectedProjectId}
       />
     </section>
   )

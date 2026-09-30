@@ -60,7 +60,7 @@ export function DashboardRemediationSection({
               value={queueSearch}
             />
             <Button asChild className="shrink-0" size="sm" variant="outline">
-              <Link search={fullQueueSearch} to="/findings">
+              <Link search={fullQueueSearch} to="/triage">
                 View full queue
                 <ArrowUpRight aria-hidden="true" className="size-3.5" />
               </Link>

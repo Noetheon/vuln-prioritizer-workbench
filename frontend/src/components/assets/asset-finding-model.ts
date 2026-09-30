@@ -30,7 +30,7 @@ export function assetFindingsHref(asset: AssetPublic) {
       projectId: asset.project_id,
     }),
   )
-  return `/findings?${search}`
+  return `/triage?${search}`
 }
 
 export function highestFindingPriority(findings: readonly FindingPublic[]) {

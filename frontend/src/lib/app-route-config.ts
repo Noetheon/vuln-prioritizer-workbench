@@ -1,5 +1,13 @@
 import type { WorkbenchPath } from "./workbench-navigation"
 
+/** Paths from before the pages took their menu names; they redirect. */
+export const legacyWorkbenchPaths: Readonly<Record<string, WorkbenchPath>> = {
+  "/findings": "/triage",
+  "/providers": "/data-sources",
+  "/reports": "/evidence",
+  "/waivers": "/risk-acceptance",
+}
+
 type RouteDetail = {
   description: string
   eyebrow: string
@@ -19,7 +27,7 @@ export const routeDetails: Record<WorkbenchPath, RouteDetail> = {
   },
   "/projects": {
     description: "Create, select, and maintain local Workbench project scopes.",
-    eyebrow: "System",
+    eyebrow: "Prepare",
     title: "Projects",
     panelTitle: "Projects",
     panelDetail: "Project scopes, imports, and evidence context.",
@@ -32,7 +40,7 @@ export const routeDetails: Record<WorkbenchPath, RouteDetail> = {
     panelTitle: "Imports",
     panelDetail: "Bring supplied evidence into the Workbench.",
   },
-  "/findings": {
+  "/triage": {
     description:
       "Prioritize known CVEs using risk signals, asset context, VEX, and accepted-risk state.",
     eyebrow: "Operate",
@@ -40,7 +48,7 @@ export const routeDetails: Record<WorkbenchPath, RouteDetail> = {
     panelTitle: "Triage",
     panelDetail: "Decide what to remediate or accept next.",
   },
-  "/waivers": {
+  "/risk-acceptance": {
     description:
       "Track accepted risk, review deadlines, expiry, and matched findings.",
     eyebrow: "Govern",
@@ -56,21 +64,29 @@ export const routeDetails: Record<WorkbenchPath, RouteDetail> = {
     panelTitle: "Assets",
     panelDetail: "Maintain asset context and ownership.",
   },
-  "/providers": {
+  "/data-sources": {
     description:
       "Check provider freshness, local snapshots, warnings, and evidence readiness.",
-    eyebrow: "Prepare",
+    eyebrow: "System",
     title: "Data Sources",
     panelTitle: "Data Sources",
     panelDetail: "Check provider freshness, snapshots, and evidence readiness.",
   },
-  "/reports": {
+  "/evidence": {
     description:
       "Generate, verify, and download audit-ready evidence for an import run.",
-    eyebrow: "Govern",
+    eyebrow: "Report",
     title: "Evidence Center",
     panelTitle: "Evidence Center",
     panelDetail: "Generate, verify, and download evidence.",
+  },
+  "/policy": {
+    description:
+      "Set the EPSS and CVSS thresholds that decide each finding's priority, and the SLA each priority gets.",
+    eyebrow: "Govern",
+    title: "Priority Policy",
+    panelTitle: "Priority Policy",
+    panelDetail: "Priority thresholds and SLA targets per project.",
   },
   "/settings": {
     description:
@@ -130,11 +146,12 @@ function importsRunRouteDetail(pathname: string): RouteDetail {
 const routePathOrder: readonly WorkbenchPath[] = [
   "/projects",
   "/imports",
-  "/findings",
-  "/waivers",
+  "/triage",
+  "/risk-acceptance",
+  "/policy",
   "/assets",
-  "/providers",
-  "/reports",
+  "/data-sources",
+  "/evidence",
   "/settings",
   "/",
 ]
@@ -143,6 +160,10 @@ export function workbenchPathFromPathname(
   pathname: string,
 ): WorkbenchPath | null {
   if (pathname === "/" || pathname === "") return "/"
+  // A finding's detail page belongs to Triage.
+  if (pathname.startsWith("/findings/")) return "/triage"
+  const legacy = legacyWorkbenchPaths[pathname.replace(/\/+$/, "")]
+  if (legacy) return legacy
   for (const routePath of routePathOrder) {
     if (
       routePath !== "/" &&
@@ -158,7 +179,7 @@ export function routeDetailFromPathname(
   pathname: string,
   routePath: WorkbenchPath | null,
 ): RouteDetail {
-  if (routePath === "/findings" && /^\/findings\/[^/]+/.test(pathname)) {
+  if (routePath === "/triage" && /^\/findings\/[^/]+/.test(pathname)) {
     return findingDetailRouteDetail
   }
   if (routePath === "/imports") {

@@ -72,7 +72,8 @@ test("AppRouter owns the active Workbench route table", () => {
   assert.match(appRouter, /params: \{ importsView: "run", runId \}/)
   assert.match(appRouter, /routePath: "\/imports"/)
   assert.match(appRouter, /const findingDetailMatch = normalizedPath\.match/)
-  assert.match(appRouter, /routePath: "\/findings"/)
+  assert.match(appRouter, /routePath: "\/triage"/)
+  assert.match(appRouter, /redirectTo: legacyPath/)
 })
 
 test("AppRouter lazy imports existing Workbench route containers", () => {
@@ -166,15 +167,21 @@ test("Workbench route matching does not highlight dashboard for unknown paths", 
   assert.equal(workbenchPathFromPathname("/imports/new"), "/imports")
   assert.equal(workbenchPathFromPathname("/imports/runs/run-2"), "/imports")
   assert.equal(workbenchPathFromPathname("/imports/formats"), "/imports")
-  assert.equal(workbenchPathFromPathname("/findings/demo-f1"), "/findings")
-  assert.equal(workbenchPathFromPathname("/reports/exported/123"), "/reports")
+  assert.equal(workbenchPathFromPathname("/findings/demo-f1"), "/triage")
+  assert.equal(workbenchPathFromPathname("/evidence/exported/123"), "/evidence")
+  // Paths from before the rename highlight the renamed page.
+  assert.equal(workbenchPathFromPathname("/findings"), "/triage")
+  assert.equal(workbenchPathFromPathname("/reports"), "/evidence")
+  assert.equal(workbenchPathFromPathname("/waivers/"), "/risk-acceptance")
+  assert.equal(workbenchPathFromPathname("/providers"), "/data-sources")
+  assert.equal(workbenchPathFromPathname("/policy"), "/policy")
   assert.equal(workbenchPathFromPathname("/findings-old"), null)
   assert.equal(workbenchPathFromPathname("/unknown"), null)
 })
 
 test("route details specialize finding detail and unknown paths", () => {
   assert.equal(
-    routeDetailFromPathname("/findings/finding-1", "/findings").title,
+    routeDetailFromPathname("/findings/finding-1", "/triage").title,
     "Finding detail",
   )
   assert.equal(routeDetailFromPathname("/imports/new", "/imports").title, "New import")

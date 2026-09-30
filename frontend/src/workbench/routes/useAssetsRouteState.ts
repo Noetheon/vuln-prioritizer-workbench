@@ -33,7 +33,6 @@ import {
   assetActionLoading as assetActionLoadingFromState,
   assetInventoryView,
   nextSelectedAssetId,
-  projectSelectDisabled,
   queryBusy,
   selectedAssetForId,
   selectedHighestPriority,
@@ -47,7 +46,6 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
     providerStatus,
     selectedProject,
     selectedProjectId,
-    setSelectedProjectId,
   } = useWorkbenchContext()
   const assetFilterState = useAssetFilterState()
   const { clearAssetFilters } = assetFilterState
@@ -298,13 +296,6 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
     }
   }
 
-  function selectProject(projectId: string) {
-    setSelectedProjectId(projectId)
-    setEditingAssetId("")
-    setAssetDrawerMode(null)
-    setAssetMessage("")
-  }
-
   const assetActionLoading = assetActionLoadingFromState({
     createPending: createAssetMutation.isPending,
     importPending: importAssetContextMutation.isPending,
@@ -357,12 +348,10 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
     openAssetDrawer,
     projectLoading: projectListLoading,
     projects,
-    projectSelectDisabled: projectSelectDisabled(projectListLoading, projects),
     providerStatus,
     recalculateAsset,
     refreshAssets,
     saveAsset,
-    selectProject,
     selectedAsset,
     selectedAssetId,
     selectedHighestPriority: selectedHighestPriority(assetFindings),

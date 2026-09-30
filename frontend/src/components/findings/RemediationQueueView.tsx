@@ -77,7 +77,6 @@ export function RemediationQueueView({
   onPageNext,
   onPagePrev,
   onPageSizeChange,
-  onProjectChange,
   onSavedViewChange,
   onUpdateColumnSort,
   overdueCount,
@@ -85,11 +84,9 @@ export function RemediationQueueView({
   pageEnd,
   pageStart,
   queryDraft,
-  projectListLoading,
   projects,
   queueSort,
   selectedProject,
-  selectedProjectId,
   setAdvancedFiltersOpen,
   setOwnerServiceDraft,
   setQueryDraft,
@@ -119,13 +116,9 @@ export function RemediationQueueView({
       onClearAssetFilter={onClearAssetFilter}
       onClearFilters={onClearFilters}
       onFilterChange={onFilterChange}
-      onProjectChange={onProjectChange}
       onSavedViewChange={onSavedViewChange}
       ownerServiceDraft={ownerServiceDraft}
-      projectListLoading={projectListLoading}
-      projects={projects}
       queryDraft={queryDraft}
-      selectedProjectId={selectedProjectId}
       setAdvancedFiltersOpen={setAdvancedFiltersOpen}
       setOwnerServiceDraft={setOwnerServiceDraft}
       setQueryDraft={setQueryDraft}

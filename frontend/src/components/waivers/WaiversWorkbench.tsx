@@ -72,10 +72,7 @@ export function WaiversWorkbench(props: WaiversWorkbenchProps) {
 
       <WaiverRegister
         openWaiverDrawer={props.openWaiverDrawer}
-        onProjectChange={props.onProjectChange}
         onRefreshWaivers={props.onRefreshWaivers}
-        projectListLoading={props.projectListLoading}
-        projects={props.projects}
         selectedWaiverId={props.selectedWaiverId}
         selectedProjectId={props.selectedProjectId}
         waiverActionLoading={props.waiverActionLoading}

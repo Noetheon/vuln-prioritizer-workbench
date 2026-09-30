@@ -89,7 +89,7 @@ test("providers route presents health-first data source diagnostics", async ({
     providerStatus: degradedProviderStatus,
   })
 
-  await page.goto("/providers")
+  await page.goto("/data-sources")
 
   await expect(
     page.getByRole("heading", { level: 1, name: "Data Sources" }),
@@ -170,5 +170,5 @@ test("providers route presents health-first data source diagnostics", async ({
   ).toBeVisible()
 
   await page.getByRole("link", { name: "Open Evidence Center" }).click()
-  await expect(page).toHaveURL(/\/reports/)
+  await expect(page).toHaveURL(/\/evidence/)
 })

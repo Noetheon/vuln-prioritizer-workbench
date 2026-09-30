@@ -131,7 +131,7 @@ export function buildWaiverRegisterColumns({
               q: waiver.cve_id ?? waiver.asset_key ?? waiver.service ?? "",
               status: "accepted",
             }}
-            to="/findings"
+            to="/triage"
           >
             <CountBadge
               label={`${waiver.matched_findings ?? 0} finding${(waiver.matched_findings ?? 0) === 1 ? "" : "s"}`}

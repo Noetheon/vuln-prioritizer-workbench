@@ -84,7 +84,7 @@ test("dashboard risk reduction shows empty state without actionable risk", async
   await expect(panel.getByText("No open reduction opportunities")).toBeVisible()
   await expect(
     panel.getByRole("link", { name: "Review findings" }),
-  ).toHaveAttribute("href", /\/findings\?projectId=project-1/)
+  ).toHaveAttribute("href", /\/triage\?projectId=project-1/)
 })
 
 async function expectNoPageOverflow(page: Page) {

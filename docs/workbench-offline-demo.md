@@ -113,7 +113,7 @@ and must not depend on reviewer API keys or live provider availability.
 - Providers page showing NVD, EPSS, KEV status, cache state, and snapshot state.
 - Risk Acceptance page showing active, expiring soon, and review-due decisions.
 - Settings page showing local workspace, runtime, and provider diagnostics without secret values.
-- Reports page showing generated JSON, Markdown, HTML, and Evidence ZIP.
+- Evidence Center showing generated JSON, Markdown, HTML, and Evidence ZIP.
 - Downloaded Evidence ZIP verification output.
 
 Checked-in README screenshots from the current offline demo path:

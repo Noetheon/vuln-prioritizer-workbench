@@ -17,7 +17,6 @@ import {
   assetFiltersFromState,
   assetInventoryView,
   nextSelectedAssetId,
-  projectSelectDisabled,
 } from "../src/workbench/routes/assets-route-model.ts"
 
 test("asset register filters match searchable identity fields", () => {
@@ -120,8 +119,6 @@ test("assets route model derives inventory and shell state", () => {
   assert.equal(nextSelectedAssetId(view.assets, "asset-a"), "asset-a")
   assert.equal(activeProjectLabel({ name: "Online Shop" }, false), "Online Shop")
   assert.equal(activeProjectLabel(null, true), "Loading")
-  assert.equal(projectSelectDisabled(false, []), true)
-  assert.equal(projectSelectDisabled(false, [{ id: "project-1" } as never]), false)
   assert.equal(
     assetActionLoading({
       createPending: false,

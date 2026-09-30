@@ -55,7 +55,7 @@ test("shared controls show distinct default, outline, ghost, icon, and disabled 
     projects: [mockProject],
   })
 
-  await page.goto("/findings")
+  await page.goto("/triage")
   await expect(
     page.getByRole("table", { name: "Findings remediation queue" }),
   ).toBeVisible()
@@ -99,7 +99,7 @@ test("shared controls show tokenized busy state separately from disabled", async
     projects: [mockProject],
   })
 
-  await page.goto("/providers")
+  await page.goto("/data-sources")
   const refreshButton = page
     .getByLabel("Provider actions")
     .getByRole("button", { name: "Refresh status" })

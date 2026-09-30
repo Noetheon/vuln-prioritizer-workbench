@@ -24,6 +24,8 @@ type PageHeaderProps = {
 type AppShellProps = PageHeaderProps & {
   activePath: WorkbenchPath | null
   children: ReactNode
+  // Global controls beside the health status, such as the project switcher.
+  headerActions?: ReactNode
   healthLabel: string
   hideStatusStrip?: boolean
   navigationGroups: readonly NavigationGroup[]
@@ -67,6 +69,7 @@ export function AppShell({
   children,
   description,
   eyebrow,
+  headerActions = null,
   healthLabel,
   hideStatusStrip = false,
   navigationGroups,
@@ -155,25 +158,28 @@ export function AppShell({
                   </p>
                 </div>
               </div>
-              <div
-                aria-label={`Workspace health: ${healthLabel}`}
-                className="flex min-w-0 shrink-0 items-center gap-1.5 sm:mt-1"
-                role="status"
-              >
+              <div className="flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:items-center sm:gap-4">
+                {headerActions}
                 <div
-                  className={cn(
-                    "size-2 rounded-full",
-                    isHealthy
-                      ? "bg-[var(--vpw-green)]"
-                      : "bg-[var(--vpw-amber)]",
-                  )}
-                />
-                <span className="text-sm text-[var(--vpw-text-muted)] sm:hidden">
-                  {mobileHealthLabel}
-                </span>
-                <span className="hidden text-sm text-[var(--vpw-text-muted)] sm:inline">
-                  {healthLabel}
-                </span>
+                  aria-label={`Workspace health: ${healthLabel}`}
+                  className="flex min-w-0 shrink-0 items-center gap-1.5 sm:mt-1"
+                  role="status"
+                >
+                  <div
+                    className={cn(
+                      "size-2 rounded-full",
+                      isHealthy
+                        ? "bg-[var(--vpw-green)]"
+                        : "bg-[var(--vpw-amber)]",
+                    )}
+                  />
+                  <span className="text-sm text-[var(--vpw-text-muted)] sm:hidden">
+                    {mobileHealthLabel}
+                  </span>
+                  <span className="hidden text-sm text-[var(--vpw-text-muted)] sm:inline">
+                    {healthLabel}
+                  </span>
+                </div>
               </div>
             </div>
           </header>

@@ -9,16 +9,16 @@ test("settings provider link preserves selected project context", async ({
 
   await page.goto(`/settings?projectId=${mockProject.id}`)
 
-  const providersLink = page.getByRole("link", { name: "View providers" })
+  const providersLink = page.getByRole("link", { name: "View data sources" })
   await expect(providersLink).toHaveAttribute(
     "href",
-    `/providers?projectId=${mockProject.id}`,
+    `/data-sources?projectId=${mockProject.id}`,
   )
 
   await providersLink.click()
 
   await expect(page).toHaveURL(
-    new RegExp(`/providers\\?projectId=${mockProject.id}`),
+    new RegExp(`/data-sources\\?projectId=${mockProject.id}`),
   )
 })
 

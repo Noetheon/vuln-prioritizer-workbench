@@ -30,10 +30,7 @@ import type { WaiversWorkbenchProps } from "./waivers-workbench-model"
 
 export function WaiverRegister({
   openWaiverDrawer,
-  onProjectChange,
   onRefreshWaivers,
-  projectListLoading,
-  projects,
   selectedWaiverId,
   selectedProjectId,
   waiverActionLoading,
@@ -42,10 +39,7 @@ export function WaiverRegister({
 }: Pick<
   WaiversWorkbenchProps,
   | "openWaiverDrawer"
-  | "onProjectChange"
   | "onRefreshWaivers"
-  | "projectListLoading"
-  | "projects"
   | "selectedWaiverId"
   | "selectedProjectId"
   | "waiverActionLoading"
@@ -128,21 +122,6 @@ export function WaiverRegister({
               <RotateCcw aria-hidden="true" />
               Reset
             </Button>
-          }
-          leading={
-            <VpwField className="vpw-filter-field--lg" label="Project">
-              <VpwSelectControl
-                ariaLabel="Risk Acceptance project"
-                disabled={projectListLoading || projects.length === 0}
-                onValueChange={onProjectChange}
-                options={projects.map((project) => ({
-                  label: project.name,
-                  value: project.id,
-                }))}
-                placeholder="Select project"
-                value={selectedProjectId}
-              />
-            </VpwField>
           }
           onSearchChange={setRegisterSearch}
           searchClassName="vpw-filter-field--md"
@@ -239,7 +218,7 @@ export function WaiverRegister({
                       <Button asChild variant="outline">
                         <Link
                           search={{ ...projectSearch, status: "accepted" }}
-                          to="/findings"
+                          to="/triage"
                         >
                           Open accepted findings
                         </Link>

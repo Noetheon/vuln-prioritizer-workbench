@@ -20,7 +20,7 @@ Workbench path:
 3. Import the scanner export with `input_type=trivy-json` or
    `input_type=grype-json`.
 4. Add optional VEX and asset-context files during import.
-5. Review Findings and create reports from the Reports view.
+5. Work the Triage queue and create reports in the Evidence Center.
 
 Why it matters:
 

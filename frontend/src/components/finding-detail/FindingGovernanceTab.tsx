@@ -195,7 +195,7 @@ export function FindingGovernanceTab({
 
       <div className="finding-governance-actions">
         <Button asChild size="sm" variant="outline">
-          <Link search={projectSearch} to="/waivers">
+          <Link search={projectSearch} to="/risk-acceptance">
             Risk acceptance
           </Link>
         </Button>

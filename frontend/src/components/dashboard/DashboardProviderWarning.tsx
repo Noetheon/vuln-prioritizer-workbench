@@ -25,7 +25,7 @@ export function DashboardProviderWarning({ detail }: { detail: string }) {
           be fully current.{" "}
           <Link
             className="font-medium text-[var(--vpw-text-primary)] underline underline-offset-4"
-            to="/providers"
+            to="/data-sources"
           >
             Open Data Sources
           </Link>

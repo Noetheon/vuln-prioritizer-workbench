@@ -42,7 +42,6 @@ export type WaiversWorkbenchProps = {
   onCreateWaiver: FormEventHandler<HTMLFormElement>
   onExpireWaiver: (waiver: WaiverPublic) => void
   onFieldChange: (field: keyof WaiverFormStateLike, value: string) => void
-  onProjectChange: (projectId: string) => void
   onRefreshWaivers: () => void
   onReviewFieldChange: (field: keyof WaiverFormStateLike, value: string) => void
   onUpdateWaiver: FormEventHandler<HTMLFormElement>

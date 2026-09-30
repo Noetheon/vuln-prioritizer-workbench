@@ -26,7 +26,7 @@ export function FindingsTab({ summary }: { summary: ImportRunSummary }) {
         />
         <div className="flex flex-wrap gap-2">
           <Button asChild>
-            <Link search={{ projectId: summary.project_id }} to="/findings">
+            <Link search={{ projectId: summary.project_id }} to="/triage">
               Open Triage
             </Link>
           </Button>
@@ -54,7 +54,7 @@ export function FindingsTab({ summary }: { summary: ImportRunSummary }) {
       />
       <div className="flex flex-wrap gap-2">
         <Button asChild>
-          <Link search={{ projectId: summary.project_id }} to="/findings">
+          <Link search={{ projectId: summary.project_id }} to="/triage">
             Open Triage
           </Link>
         </Button>

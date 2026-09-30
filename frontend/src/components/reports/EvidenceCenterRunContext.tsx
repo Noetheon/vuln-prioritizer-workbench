@@ -40,10 +40,6 @@ type RunContextProps = {
   currentStateSelected?: boolean
   projectFindingCount?: number | null
   selectedProject: ProjectPublic | null
-  selectedProjectId: string
-  projects: ProjectPublic[]
-  projectListLoading: boolean
-  onProjectChange: (id: string) => void
   selectedRunId: string
   onRunIdChange: (id: string) => void
   onOpenGenerateDrawer: () => void

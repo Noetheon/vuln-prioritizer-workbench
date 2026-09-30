@@ -32,6 +32,7 @@ import {
 } from "../import-route-search"
 import { selectedProjectRouteSearch } from "../selected-project-search"
 import { useWorkbenchContext } from "../WorkbenchContext"
+import { useProjectChangeReset } from "../useProjectChangeReset"
 import { useProjectRunsQuery, useRunDetailQuery } from "../useWorkbenchQueries"
 import {
   invalidateProjectScopedWorkbenchQueries,
@@ -84,6 +85,7 @@ export function ImportsRouteContainer() {
     ImportParseErrorPublic[]
   >([])
   const [selectedRunId, setSelectedRunId] = useState("")
+  useProjectChangeReset(selectedProjectId, () => setSelectedRunId(""))
   const [pendingSelectableRunId, setPendingSelectableRunId] = useState("")
   const [refreshedTerminalRun, setRefreshedTerminalRun] = useState("")
   const routeRunId = params.importsView === "run" ? (params.runId ?? "") : ""
@@ -394,7 +396,6 @@ export function ImportsRouteContainer() {
 
   function handleProjectChange(projectId: string) {
     setSelectedProjectId(projectId)
-    selectRunId("")
   }
 
   async function rescanSbom(updateDatabase: boolean) {

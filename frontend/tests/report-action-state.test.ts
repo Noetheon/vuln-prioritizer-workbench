@@ -9,7 +9,7 @@ const failedRun = { status: "failed" } as never
 test("report actions require a completed selected run on the reports route", () => {
   assert.equal(
     reportActionsAvailable({
-      currentPath: "/reports",
+      currentPath: "/evidence",
       reportActionPending: false,
       reportsLoading: false,
       selectedReportRun: completedRun,
@@ -27,7 +27,7 @@ test("report actions require a completed selected run on the reports route", () 
   )
   assert.equal(
     reportActionsAvailable({
-      currentPath: "/reports",
+      currentPath: "/evidence",
       reportActionPending: false,
       reportsLoading: false,
       selectedReportRun: null,
@@ -36,7 +36,7 @@ test("report actions require a completed selected run on the reports route", () 
   )
   assert.equal(
     reportActionsAvailable({
-      currentPath: "/reports",
+      currentPath: "/evidence",
       reportActionPending: false,
       reportsLoading: false,
       selectedReportRun: failedRun,
@@ -48,7 +48,7 @@ test("report actions require a completed selected run on the reports route", () 
 test("report actions stay disabled while reports load or generation is pending", () => {
   assert.equal(
     reportActionsAvailable({
-      currentPath: "/reports",
+      currentPath: "/evidence",
       reportActionPending: false,
       reportsLoading: true,
       selectedReportRun: completedRun,
@@ -57,7 +57,7 @@ test("report actions stay disabled while reports load or generation is pending",
   )
   assert.equal(
     reportActionsAvailable({
-      currentPath: "/reports",
+      currentPath: "/evidence",
       reportActionPending: true,
       reportsLoading: false,
       selectedReportRun: completedRun,
