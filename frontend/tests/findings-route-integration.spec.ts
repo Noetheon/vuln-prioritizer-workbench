@@ -821,3 +821,43 @@ test("SLA due dates flag overdue work and filter the queue", async ({
   await expect(page.getByText(/SLA due/).first()).toBeVisible()
   await expect(page.getByText(/· Overdue$/)).toBeVisible()
 })
+
+test("triage lists open work by default and its tiles count the filtered list", async ({
+  page,
+}) => {
+  const requests: URL[] = []
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await routeWorkbenchShell(page, {
+    findings: [
+      { ...mockFinding, priority: "critical" },
+      {
+        ...mockFinding,
+        cve_id: "CVE-2021-44228",
+        id: "finding-resolved",
+        priority: "critical",
+        status: "resolved",
+      },
+    ],
+    onFindingsRequest: (url) => requests.push(url),
+    projects: [mockProject],
+  })
+
+  await page.goto("/findings")
+  const table = page.getByRole("table", { name: "Findings remediation queue" })
+  await expect(table.getByText(mockFinding.cve_id)).toBeVisible()
+  await expect(table.getByText("CVE-2021-44228")).toHaveCount(0)
+  expect(requests.at(-1)?.searchParams.get("open_work")).toBe("true")
+  expect(requests.at(-1)?.searchParams.get("include_summary")).toBe("true")
+  const tiles = page.getByLabel("Queue signal summary")
+  await expect(tiles).toContainText("Critical, open work")
+
+  await page.getByRole("combobox", { name: "Status" }).click()
+  await page.getByRole("option", { name: "All statuses" }).click()
+  await expect(page).toHaveURL(/status=all/)
+  await expect(table.getByText("CVE-2021-44228")).toBeVisible()
+  await expect
+    .poll(() => requests.at(-1)?.searchParams.get("open_work"))
+    .toBeNull()
+  await expect(tiles).toContainText("Critical, matching the filters")
+  await expect(page.getByText("Status: all statuses")).toBeVisible()
+})

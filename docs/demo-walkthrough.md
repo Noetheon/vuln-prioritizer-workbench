@@ -31,17 +31,20 @@ prioritization is visible instead of drowned in uniform noise.
 
 ## Walkthrough (Overview Page)
 
-1. **Risk index (left).** The index is the average operational score of open
-   actionable findings: **62.1**, in the moderate band. The severity strip
-   below shows all four priority segments - this is a mixed backlog, not a
-   wall of critical.
-2. **Scenario projection (center).** Six backdated analysis runs decline from
-   **94.5 to 64.5** before TODAY: coverage grew (8 -> 32 findings) while
-   waivers, VEX statements, and one fix landed. Right of TODAY the simulation
-   shows what the checked plan would achieve against the dashed target line.
+1. **Open risk (left).** Open risk is the sum of the scores of open work:
+   **1,587** across 26 open findings, 13 of them critical and 12 on the CISA
+   KEV list; 15 are past their SLA. The severity strip below shows all four
+   priority segments - this is a mixed backlog, not a wall of critical. The
+   average score, 61, is a secondary figure.
+2. **Scenario projection (center).** The backdated analysis runs rise from
+   **737 to 1,904** before TODAY because coverage grew (8 -> 30 open
+   findings): more findings never show as less risk. TODAY is lower, 1,587,
+   because waivers, VEX statements, and one fix took findings out of open
+   work. Right of TODAY the simulation shows what the checked plan would
+   achieve against the dashed target, half of today's open risk.
 3. **Top risk reducers (right).** The biggest lever is one upgrade:
    **log4j-core 2.14.1 across three services** (fulfillment, orders,
-   payments). Toggling a reducer instantly re-simulates the projection -
+   payments); it removes 275 of the 1,587. Toggling a reducer instantly re-simulates the projection -
    uncheck everything and the plan readout drops to zero actions.
 4. **Per-asset scoring.** Open the remediation queue: the same CVE carries
    different scores per asset - Log4Shell is **100 on the internet-facing

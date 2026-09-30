@@ -1,7 +1,7 @@
 {
   "artifact_hashes": {
     "analysis.json": "1dcfd60ab3b9c3cdb64851a02255630af132439125ada32526a0085112af473f",
-    "executive.html": "e8ac9ec481ddab3e4ad6d3d046093af8d8149eb136507f1b848852871c859a46",
+    "executive.html": "e44d93aec9cf4dc0986f8d626e4a6097b7ae92d6757376cbaedbc1fd71d9d05b",
     "findings.csv": "3901094bf4ec701b7ffdb53394590980732adf806ffbb65618d11114e8c26d60",
     "provider-snapshot.json": "f5dab115122d78f3ac437386b83f2b5341e2694f0db909ca8cac111cdb57fea0",
     "results.sarif": "52b86b87ed3e2dbb5899a571aeb60b07be10e70cf4722733a5c7628bdd55d642",
@@ -25,8 +25,8 @@
     {
       "kind": "executive-html",
       "path": "executive.html",
-      "sha256": "e8ac9ec481ddab3e4ad6d3d046093af8d8149eb136507f1b848852871c859a46",
-      "size_bytes": 55674
+      "sha256": "e44d93aec9cf4dc0986f8d626e4a6097b7ae92d6757376cbaedbc1fd71d9d05b",
+      "size_bytes": 55790
     },
     {
       "kind": "provider-snapshot",

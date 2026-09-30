@@ -24,6 +24,7 @@ from app.models import AnalysisRun, AnalysisRunStatus, Finding, FindingStatus
 from app.models.base import get_datetime_utc
 from app.repositories.evidence import EvidenceRepository
 from app.repositories.runs import RunRepository
+from app.services.risk_kpis import record_run_risk_snapshot
 from app.services.risk_reduction import project_risk_index_from_projection
 
 
@@ -167,4 +168,5 @@ def publish_evaluation_run(
     run.risk_index = project_risk_index_from_projection(session, project_id)
     session.add(run)
     session.flush()
+    record_run_risk_snapshot(session, run)
     return run

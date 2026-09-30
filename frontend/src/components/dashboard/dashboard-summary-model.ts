@@ -8,6 +8,7 @@ import {
 import type {
   FindingPublic,
   ProjectDecisionSummaryPublic,
+  ProjectRiskKpisPublic,
   ProviderStatusPublic,
 } from "@/api-client"
 import { priorityCount } from "@/lib/chart-data"
@@ -52,49 +53,51 @@ export function rankedDashboardQueueFindings(
   return rankedRemediationQueue(findings, queueSearch)
 }
 
+/** Tiles count open work (open, in review, remediating), not closed findings. */
 export function buildDashboardMetricSummaries({
   acceptedRiskCount,
   effectiveSignalCounts,
   effectiveSummary,
+  kpis = null,
   signalLoading,
   summaryLoading,
 }: {
   acceptedRiskCount: number
   effectiveSignalCounts: DashboardSignalCounts
   effectiveSummary: ProjectDecisionSummaryPublic | null
+  kpis?: ProjectRiskKpisPublic | null
   signalLoading: boolean
   summaryLoading: boolean
 }): DashboardMetricSummary[] {
+  const summaryMissing = summaryLoading || effectiveSummary === null
   return [
     {
-      detail: "Critical findings in scope",
+      detail: "Critical findings still open",
       icon: AlertTriangle,
-      label: "Critical Priority",
+      label: "Open Critical",
       tone: "critical",
-      value:
-        summaryLoading || effectiveSummary === null
-          ? "—"
-          : String(priorityCount(effectiveSummary, "Critical")),
+      value: summaryMissing
+        ? "—"
+        : String(kpis?.open_critical ?? priorityCount(effectiveSummary, "Critical")),
     },
     {
-      detail: "Known CISA KEV findings",
+      detail: "Known exploited (CISA KEV), still open",
       icon: ShieldAlert,
-      label: "KEV Exposed",
+      label: "Open KEV",
       tone: "kev",
-      value:
-        summaryLoading || effectiveSummary === null
-          ? "—"
-          : String(effectiveSummary?.kev_hits ?? 0),
+      value: summaryMissing
+        ? "—"
+        : String(kpis?.open_kev ?? effectiveSummary?.kev_hits ?? 0),
     },
     {
-      detail: "EPSS ≥70% signals",
+      detail: "Open findings with EPSS ≥70%",
       icon: TrendingUp,
       label: "High EPSS",
       tone: "high",
       value: signalLoading ? "—" : String(effectiveSignalCounts.highEpss),
     },
     {
-      detail: "Internet-facing criticals",
+      detail: "Open internet-facing criticals",
       icon: Globe2,
       label: "Internet Facing",
       tone: "exposure",
@@ -103,14 +106,13 @@ export function buildDashboardMetricSummaries({
         : String(effectiveSignalCounts.internetFacingCriticals),
     },
     {
-      detail: "Accepted-risk findings",
+      detail: "Accepted findings, not open work",
       icon: ShieldCheck,
-      label: "Accepted Risk Due",
+      label: "Accepted Risk",
       tone: "accepted",
-      value:
-        summaryLoading || effectiveSummary === null
-          ? "—"
-          : String(acceptedRiskCount),
+      value: summaryMissing
+        ? "—"
+        : String(kpis?.accepted_findings ?? acceptedRiskCount),
     },
   ]
 }

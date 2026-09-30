@@ -182,9 +182,13 @@ tab under **Status changes** with who or what changed the status and why.
   suppressed, and fixed remain owned by waivers and VEX; bulk changes skip
   those findings and say why.
 
-Closed findings stay visible behind open work in the queue, with their
-recorded decision evidence unchanged. Import history and run detail show how
-many findings each import resolved and reopened.
+The Triage queue lists open work (open, in review, remediating) by default;
+the findings API does the same with `open_work=true`. Choose **All statuses**
+in the Status filter, or one status, to see closed, accepted, or suppressed
+findings; they keep their recorded decision evidence unchanged. The tiles
+above the queue (Critical, High, KEV, Overdue) count every page of the list
+the filters select, not only the rows on screen. Import history and run
+detail show how many findings each import resolved and reopened.
 
 SLA labels in the finding views come from recorded decision guidance, including
 recorded hours or days when available. Missing guidance is shown explicitly.
@@ -203,10 +207,12 @@ The Evidence Center's Decision Summary likewise uses the selected run's stored
 recommendations and SLA guidance. A critical finding count or KEV membership
 alone does not establish production exposure or an incident in the project.
 
-The dashboard's remediation simulation removes selected findings from both the
-total score and the actionable finding count. The remaining average can rise
-while the total score burden falls. Selecting simulated actions does not mark
-findings fixed. See [Risk reduction opportunities](risk-reduction-opportunities.md)
+The Overview leads with open risk, the sum of the scores of open work. It
+rises when an import adds findings and falls when findings close, so a larger
+backlog never reads as progress. Next to it are open critical, open KEV,
+overdue, and, over the last 90 days, SLA compliance and mean time to remediate.
+The remediation simulation removes the selected findings' scores from open
+risk; selecting simulated actions does not mark findings fixed. See [Risk reduction opportunities](risk-reduction-opportunities.md)
 for the calculation and [Evaluation revisions](architecture/evaluation-revisions.md)
 for replay, provenance, and compatibility details.
 

@@ -66,6 +66,28 @@ exact git tag output when release wording needs to be verified.
   selected snapshot, or the runtime's default snapshot.
 - The Evidence Center never preselects a single re-evaluation or a failed
   run; it defaults to the current project state.
+- The Overview leads with absolute open risk (#674): the sum of the scores of
+  open work, which rises when imports add findings and falls when findings
+  close. Before, the headline was the average score, which fell when an
+  import added low-scored findings and so looked like progress. The average is
+  now a secondary figure.
+  - Next to open risk the Overview shows open critical, open KEV, overdue, and,
+    over the last 90 days, SLA compliance and mean time to remediate. The
+    dashboard API returns them in `kpis` (`open-risk-kpis.v1`); the risk
+    reduction metric is now `open-risk-sum.v2`.
+  - Each run records the project's open risk, open findings, open critical,
+    and open KEV when it completes (table `analysis_run_risk_snapshot`,
+    migration `20260930_0019`). The trend chart plots those absolute figures.
+  - The summary tiles count open work only: Open Critical, Open KEV, High
+    EPSS, and Internet Facing no longer include closed or accepted findings.
+  - The executive report's risk projection uses open risk and its target is
+    half of today's open risk.
+- The Triage queue lists open work by default. **All statuses** in the Status
+  filter, or a single status, shows the rest. Its tiles (Critical, High, KEV,
+  Overdue) count every page of the filtered list instead of the whole project.
+  - `GET /api/v1/projects/{project_id}/findings/` accepts `open_work` and, with
+    `include_summary=true`, returns counts by priority, KEV, open work, and
+    overdue across the filtered list.
 
 ### Fixed
 

@@ -27,7 +27,7 @@ type RemediationQueueViewProps = RemediationQueueProps & {
   kevCount: number
   onOpenSheet: (finding: FindingPublic) => void
   onUpdateColumnSort: (sort: QueueSort) => void
-  openCount: number
+  overdueCount: number
   ownerServiceDraft: string
   pageEnd: number
   pageStart: number
@@ -80,7 +80,7 @@ export function RemediationQueueView({
   onProjectChange,
   onSavedViewChange,
   onUpdateColumnSort,
-  openCount,
+  overdueCount,
   ownerServiceDraft,
   pageEnd,
   pageStart,
@@ -145,7 +145,8 @@ export function RemediationQueueView({
           displayProject={displayProject}
           highCount={highCount}
           kevCount={kevCount}
-          openCount={openCount}
+          overdueCount={overdueCount}
+          scope={activeFindingFilters ? "filtered" : "open-work"}
         />
         <p aria-live="polite" className="sr-only" role="status">
           {findingsStatusAnnouncement({

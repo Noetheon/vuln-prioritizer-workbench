@@ -40,6 +40,7 @@ export function RiskOperationsDashboard({
   providerStatus,
   providerStatusError,
   providerStatusLoading,
+  kpis = null,
   riskReduction,
   runsLoading,
   selectedProject,
@@ -80,11 +81,13 @@ export function RiskOperationsDashboard({
         acceptedRiskCount,
         effectiveSignalCounts: signalCounts,
         effectiveSummary: projectSummary,
+        kpis,
         signalLoading,
         summaryLoading,
       }),
     [
       acceptedRiskCount,
+      kpis,
       signalCounts,
       projectSummary,
       signalLoading,
@@ -158,6 +161,7 @@ export function RiskOperationsDashboard({
         <>
           <DashboardRiskReductionPanel
             isLoading={isLoading}
+            kpis={kpis}
             projectSummary={projectSummary}
             riskReduction={riskReduction}
             selectedProjectId={selectedProjectId}

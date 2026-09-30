@@ -129,7 +129,9 @@ export function findingsSearchToApiParams(
     epss_max: numericApiValue(filters.epssMax),
     epss_min: numericApiValue(filters.epssMin),
     exposure: filters.exposure || undefined,
+    include_summary: true,
     kev: filters.kev === "" ? undefined : filters.kev === "true",
+    open_work: filters.status === "" ? true : undefined,
     sla: filters.sla || undefined,
     limit: state.limit,
     offset: state.offset,
@@ -138,7 +140,10 @@ export function findingsSearchToApiParams(
     project_id: projectId,
     q: filters.query.trim() || undefined,
     sort: state.sort,
-    status: filters.status || undefined,
+    status:
+      filters.status === "" || filters.status === "all"
+        ? undefined
+        : filters.status,
   }
 }
 

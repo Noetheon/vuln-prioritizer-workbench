@@ -100,11 +100,12 @@ remediation plans.
 
 ## Risk and guidance semantics
 
-`mean-actionable-score.v1` is the average score of actionable findings. A remediation
-simulation removes the selected finding count from the denominator as well as its
-score from the numerator. The total score can decrease while the remaining average
-increases; the UI and HTML reports distinguish these quantities. Opportunity links
-carry exact finding IDs and canonical component identities.
+`open-risk-sum.v2` is the sum of the scores of actionable findings (open risk). A
+remediation simulation removes the selected findings' scores. The average score of
+actionable findings, the headline of the earlier `mean-actionable-score.v1`, is shown
+as a secondary figure because it can rise while open risk falls; the UI and HTML
+reports distinguish these quantities. Opportunity links carry exact finding IDs and
+canonical component identities.
 
 Executive recommendations and SLA labels come from recorded decision guidance.
 A critical count alone does not establish production exposure or exploitation.

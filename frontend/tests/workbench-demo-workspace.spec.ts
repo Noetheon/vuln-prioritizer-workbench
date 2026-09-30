@@ -32,10 +32,11 @@ test("workbench demo workspace seeds persisted dashboard and reports", async ({
     page.getByText("Online Shop Demo Workspace").first(),
   ).toBeVisible({ timeout: 60_000 })
   await expect(page.getByText("Persisted local demo data")).toHaveCount(0)
-  await expect(page.getByLabel("Critical Priority summary card")).toContainText(
-    "19",
+  // Open work only: 13 of the 19 critical findings are still open.
+  await expect(page.getByLabel("Open Critical summary card")).toContainText(
+    "13",
   )
-  await expect(page.getByLabel("High EPSS summary card")).toContainText("19")
+  await expect(page.getByLabel("High EPSS summary card")).toContainText("13")
   await expect(
     page.getByRole("region", { name: "Risk posture" }),
   ).toContainText("Top risk reducers")

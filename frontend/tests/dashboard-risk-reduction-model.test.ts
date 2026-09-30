@@ -29,6 +29,7 @@ test("builds dashboard risk reduction summary with fallback-safe values", () => 
   assert.equal(summary.opportunities.length, 0)
   assert.equal(summary.residualSteps.length, 0)
   assert.equal(summary.simulationTargetIndex, 0)
+  assert.equal(summary.targetRisk, 0)
 })
 
 test("builds dashboard risk reduction summary maxima from payload", () => {
@@ -60,6 +61,7 @@ test("builds dashboard risk reduction summary maxima from payload", () => {
   assert.equal(summary.maxOpportunityReduction, 100)
   assert.equal(summary.maxResidualRisk, 150)
   assert.equal(summary.simulationTargetIndex, 37.5)
+  assert.equal(summary.targetRisk, 75)
 })
 
 test("builds selected risk posture projection without negative residuals", () => {
@@ -173,11 +175,32 @@ test("preserves the newest immutable run when current state can differ", () => {
   ])
 
   assert.deepEqual(steps, [
-    { key: "history-run-1", label: "Apr 02", riskIndex: 100 },
-    { key: "history-run-2", label: "May 07", riskIndex: 71.6 },
-    { key: "history-run-3", label: "run", riskIndex: 0 },
-    { key: "history-run-4", label: "Jun 12", riskIndex: 66.2 },
+    { key: "history-run-1", label: "Apr 02", openRisk: null, riskIndex: 100 },
+    { key: "history-run-2", label: "May 07", openRisk: null, riskIndex: 71.6 },
+    { key: "history-run-3", label: "run", openRisk: null, riskIndex: 0 },
+    { key: "history-run-4", label: "Jun 12", openRisk: null, riskIndex: 66.2 },
   ])
+})
+
+test("history carries the absolute open risk recorded with each run", () => {
+  const steps = buildRiskPostureHistorySteps([
+    {
+      finished_at: "2026-06-12T10:00:00Z",
+      open_risk: 1587.04,
+      risk_index: 61,
+      run_id: "run-1",
+    },
+    {
+      finished_at: "2026-06-13T10:00:00Z",
+      open_risk: -2,
+      risk_index: 0,
+      run_id: "run-2",
+    },
+  ])
+  assert.deepEqual(
+    steps.map((step) => step.openRisk),
+    [1587, 0],
+  )
 })
 
 test("preserves one persisted run and handles empty history", () => {
@@ -190,7 +213,7 @@ test("preserves one persisted run and handles empty history", () => {
         run_id: "run-1",
       },
     ]),
-    [{ key: "history-run-1", label: "Jun 12", riskIndex: 88.1 }],
+    [{ key: "history-run-1", label: "Jun 12", openRisk: null, riskIndex: 88.1 }],
   )
 })
 
