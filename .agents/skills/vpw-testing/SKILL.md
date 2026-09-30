@@ -26,7 +26,10 @@ Known pitfalls:
 - Remove obsolete assertions when their requirement is retired. Preserve coverage
   of behavior that is still required, rather than replacing every old assertion.
 - Performance regressions need representative finding counts and accumulated
-  history, not just a generous single-run timeout.
+  history, not just a generous single-run timeout. Use the supported gzip export
+  for large archive reports while retaining the plain-report size limit.
+- Generated properties need independent positive/negative expectations. Add a
+  minimized ordinary regression when a generated case exposes a real defect.
 
 Use [check selection](references/check-selection.md) for runners and broader gates.
 Report which failure or missing behavior the changed test demonstrates, the

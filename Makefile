@@ -1,8 +1,6 @@
 PYTHON ?= python3
-MUTMUT ?= $(shell command -v mutmut 2>/dev/null || $(PYTHON) -c 'import os, shutil, site, sysconfig; paths=[sysconfig.get_path("scripts"), os.path.join(site.USER_BASE, "bin")]; print(shutil.which("mutmut") or next((os.path.join(path, "mutmut") for path in paths if os.path.exists(os.path.join(path, "mutmut"))), "mutmut"))')
 BACKEND_DIR := backend
 BACKEND_TESTS := $(BACKEND_DIR)/tests
-MUTATION_PATTERNS := "app.decision_core.builders.x_build_run_diagnostics*" "app.services.report_sarif_validation.x_validate_sarif_file*" "app.domain.engine.services.analysis_quality.x__finding_data_quality_confidence*" "app.domain.engine.services.analysis_snapshot.x__provider_snapshot_hash*" "app.domain.engine.services.analysis_snapshot.x__provider_snapshot_metadata_path*" "app.domain.engine.services.analysis_quality.x_attach_provider_data_quality_flags*"
 PYTHON_AUDIT_LOCK := $(BACKEND_DIR)/requirements.lock.txt
 PYTHON_RUNTIME_LOCK := $(BACKEND_DIR)/requirements.runtime.lock.txt
 COMPOSE := docker compose -f compose.yml -f compose.override.yml
@@ -93,13 +91,33 @@ backend-compatibility-check:
 		$(BACKEND_TESTS)/api/workflow_contracts/test_durable_workflow_core.py
 
 property-check:
-	$(PYTHON) -m pytest -q $(BACKEND_TESTS)/property --no-cov
+	$(PYTHON) -m pytest -q $(BACKEND_TESTS)/property --no-cov --junitxml=build/property-ci.xml
 
 mutation-check:
-	rm -rf .mutmut-cache mutants $(BACKEND_DIR)/.mutmut-cache $(BACKEND_DIR)/mutants
-	cd $(BACKEND_DIR) && "$(MUTMUT)" run --max-children 4 $(MUTATION_PATTERNS)
-	cd $(BACKEND_DIR) && $(PYTHON) ../scripts/check_mutmut_results.py mutants $(MUTATION_PATTERNS)
-	rm -rf $(BACKEND_DIR)/.mutmut-cache $(BACKEND_DIR)/mutants
+	$(PYTHON) scripts/run_mutation_checks.py --profile all
+
+.PHONY: mutation-core-check mutation-evidence-check property-extended-check
+mutation-core-check:
+	$(PYTHON) scripts/run_mutation_checks.py --profile core
+
+mutation-evidence-check:
+	$(PYTHON) scripts/run_mutation_checks.py --profile evidence
+
+property-extended-check:
+	VPW_PROPERTY_PROFILE=extended $(PYTHON) -m pytest -q $(BACKEND_TESTS)/property --no-cov --junitxml=build/property-extended.xml
+
+.PHONY: history-performance-check history-performance-extended-check recovery-check grype-integration-check
+history-performance-check:
+	VPW_HISTORY_PERFORMANCE=1 $(PYTHON) -m pytest -q --no-cov $(BACKEND_TESTS)/performance/test_decision_history_performance.py
+
+history-performance-extended-check:
+	VPW_HISTORY_PROFILE=extended $(MAKE) history-performance-check
+
+recovery-check:
+	$(PYTHON) -m pytest -q --no-cov --junitxml=build/recovery.xml $(BACKEND_TESTS)/test_decision_recovery.py $(BACKEND_TESTS)/test_local_backup.py $(BACKEND_TESTS)/test_queue_storage_migration.py $(BACKEND_TESTS)/test_database_migration.py $(BACKEND_TESTS)/test_legacy_asset_identity_migration.py
+
+grype-integration-check:
+	$(PYTHON) scripts/run_grype_integration.py
 
 local-workbench-check:
 	$(MAKE) check
@@ -379,10 +397,15 @@ release-check:
 
 release-readiness-check: release-check api-client-drift-check archive-evidence-check frontend-design-audit-linux-docker playwright-check-without-design-audit docker-production-smoke
 
+# Backward-compatible aggregate; CI executes these jobs independently.
 quality-10-check:
 	$(MAKE) release-readiness-check
 	$(MAKE) performance-smoke
 	$(MAKE) mutation-check
+	$(MAKE) property-extended-check
+	$(MAKE) history-performance-extended-check
+	$(MAKE) recovery-check
+	$(MAKE) grype-integration-check
 
 precommit-install:
 	pre-commit install

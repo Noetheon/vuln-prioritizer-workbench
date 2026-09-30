@@ -50,6 +50,10 @@ This runs:
 - `pytest`
 - documentation hygiene and MkDocs build
 
+For focused mutation, generated lifecycle, history-scale, recovery and real-scanner
+checks, use the [testing strategy](docs/testing-strategy.md). It defines risk-based
+selection, independent CI jobs, budgets and exception review.
+
 ## Local Workflow Equivalent
 
 When you explicitly need the heavier maintainer workflow gate, run:

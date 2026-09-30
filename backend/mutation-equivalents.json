@@ -1,0 +1,49 @@
+{
+  "schema": "vpw.mutation-equivalents.v1",
+  "mutants": [
+    {
+      "name": "app.decision_core.evaluation.x_evaluate_scope_with_diagnostics__mutmut_20",
+      "mutant_sha256": "1cdfb522c5fa7f9b4b461d7bcfef87b737b8cfc12e8481556fd347248f73953a",
+      "context_sha256": {
+        "app/decision_core/evaluation.py": "e2f68b7ca6cc581f119ae85c48275c2cd248f5155aa9e4765add0dd49493c25e",
+        "app/domain/engine/services/prioritization.py": "666532e9d0c8c3626b309f9ef1f81c18795397299f77f1fb2751658234a6b9b4",
+        "app/domain/engine/services/prioritization_ranking.py": "670d6f0ff56b1ccfb044006d0809eaad4d3c5d72012073f3ce1fcbd61d07e7e2",
+        "app/domain/engine/services/waivers.py": "f245c2d0a3a2dcfc2de75e335086eadf195f4df445ffe6ebb9cc4ed637794825"
+      },
+      "reason": "finalize=None and finalize=False both skip the only truth-value check in PrioritizationService.prioritize."
+    },
+    {
+      "name": "app.decision_core.evaluation.x_evaluate_scope_with_diagnostics__mutmut_28",
+      "mutant_sha256": "3bcdf987098fa41cf34779be5ff889c17cb9048a91aa87259f21030c7125a7e1",
+      "context_sha256": {
+        "app/decision_core/evaluation.py": "e2f68b7ca6cc581f119ae85c48275c2cd248f5155aa9e4765add0dd49493c25e",
+        "app/domain/engine/services/prioritization.py": "666532e9d0c8c3626b309f9ef1f81c18795397299f77f1fb2751658234a6b9b4",
+        "app/domain/engine/services/prioritization_ranking.py": "670d6f0ff56b1ccfb044006d0809eaad4d3c5d72012073f3ce1fcbd61d07e7e2",
+        "app/domain/engine/services/waivers.py": "f245c2d0a3a2dcfc2de75e335086eadf195f4df445ffe6ebb9cc4ed637794825"
+      },
+      "reason": "Omitting finalize uses True. Ranking before attachment is overwritten by the unconditional final rank pass; all affected fields are replaced and no side effects escape."
+    },
+    {
+      "name": "app.decision_core.evaluation.x_evaluate_scope_with_diagnostics__mutmut_29",
+      "mutant_sha256": "d048f018a6a95abe513a1c0ca2abeeca1e7ae974df1e176a4ad5ce3e19b8fd9a",
+      "context_sha256": {
+        "app/decision_core/evaluation.py": "e2f68b7ca6cc581f119ae85c48275c2cd248f5155aa9e4765add0dd49493c25e",
+        "app/domain/engine/services/prioritization.py": "666532e9d0c8c3626b309f9ef1f81c18795397299f77f1fb2751658234a6b9b4",
+        "app/domain/engine/services/prioritization_ranking.py": "670d6f0ff56b1ccfb044006d0809eaad4d3c5d72012073f3ce1fcbd61d07e7e2",
+        "app/domain/engine/services/waivers.py": "f245c2d0a3a2dcfc2de75e335086eadf195f4df445ffe6ebb9cc4ed637794825"
+      },
+      "reason": "finalize=True adds an idempotent preliminary ranking. The unconditional final rank pass replaces score, explanation, context reasons and guidance after evidence and waiver attachment."
+    },
+    {
+      "name": "app.decision_core.evaluation.x_evaluate_scope_with_diagnostics__mutmut_55",
+      "mutant_sha256": "25fe3f3e2cef07cb7e0e4f97dc5aebfc4d8112c164dc27363d7b5de48fa60943",
+      "context_sha256": {
+        "app/decision_core/evaluation.py": "e2f68b7ca6cc581f119ae85c48275c2cd248f5155aa9e4765add0dd49493c25e",
+        "app/domain/engine/services/prioritization.py": "666532e9d0c8c3626b309f9ef1f81c18795397299f77f1fb2751658234a6b9b4",
+        "app/domain/engine/services/prioritization_ranking.py": "670d6f0ff56b1ccfb044006d0809eaad4d3c5d72012073f3ce1fcbd61d07e7e2",
+        "app/domain/engine/services/waivers.py": "f245c2d0a3a2dcfc2de75e335086eadf195f4df445ffe6ebb9cc4ed637794825"
+      },
+      "reason": "include_unmatched_warnings=None and False both skip the only truth-value check controlling unmatched waiver warnings."
+    }
+  ]
+}

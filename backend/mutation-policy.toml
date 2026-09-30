@@ -1,0 +1,26 @@
+# Each selection must resolve to a real function and produce checked mutants.
+# Core runs on decision changes; evidence joins the extended maintenance campaign.
+[core]
+patterns = [
+  "app.domain.engine.scoring.x_effective_cvss*",
+  "app.domain.engine.scoring.x_determine_priority*",
+  "app.domain.engine.scoring.x_build_priority_drivers*",
+  "app.domain.engine.scoring.x_determine_cvss_only_priority*",
+  "app.domain.engine.scoring_operational.x_determine_priority_state*",
+  "app.domain.engine.scoring_operational.x_clamp_operational_score*",
+  "app.decision_core.evaluation.x_evaluate_scope*",
+  "app.domain.engine.services.waivers.x_waiver_rule_status*",
+]
+
+[evidence]
+patterns = [
+  "app.decision_core.builders.x_build_run_diagnostics*",
+  "app.services.report_sarif_validation.x_validate_sarif_file*",
+  "app.services.report_sarif_validation.x_validate_sarif_payload*",
+  "app.services.report_bundle_archive_verification.x_validate_evidence_manifest_structure*",
+  "app.services.report_bundle_archive_verification.x_describe_evidence_bundle_mismatch*",
+  "app.domain.engine.services.analysis_quality.x__finding_data_quality_confidence*",
+  "app.domain.engine.services.analysis_snapshot.x__provider_snapshot_hash*",
+  "app.domain.engine.services.analysis_snapshot.x__provider_snapshot_metadata_path*",
+  "app.domain.engine.services.analysis_quality.x_attach_provider_data_quality_flags*",
+]

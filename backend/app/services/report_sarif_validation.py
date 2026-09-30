@@ -159,7 +159,7 @@ def validate_sarif_payload(payload: dict[str, Any]) -> list[str]:
 
 def _validate_rule_references(payload: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    for run_index, run in enumerate(payload.get("runs", [])):
+    for run_index, run in enumerate(_list_members(payload.get("runs"))):
         if not isinstance(run, dict):
             continue
         raw_tool = run.get("tool")
@@ -168,10 +168,10 @@ def _validate_rule_references(payload: dict[str, Any]) -> list[str]:
         driver = raw_driver if isinstance(raw_driver, dict) else {}
         rule_ids = {
             str(rule.get("id"))
-            for rule in driver.get("rules", [])
+            for rule in _list_members(driver.get("rules"))
             if isinstance(rule, dict) and rule.get("id")
         }
-        for result_index, result in enumerate(run.get("results", [])):
+        for result_index, result in enumerate(_list_members(run.get("results"))):
             if not isinstance(result, dict):
                 continue
             rule_id = str(result.get("ruleId") or "")
@@ -185,7 +185,7 @@ def _validate_rule_references(payload: dict[str, Any]) -> list[str]:
 
 def _validate_workbench_results(payload: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    for run_index, run in enumerate(payload.get("runs", [])):
+    for run_index, run in enumerate(_list_members(payload.get("runs"))):
         if not isinstance(run, dict):
             continue
         raw_tool = run.get("tool")
@@ -195,7 +195,7 @@ def _validate_workbench_results(payload: dict[str, Any]) -> list[str]:
         tool_name = str(driver.get("name") or "")
         if not tool_name.startswith("vuln-prioritizer-workbench"):
             continue
-        for result_index, result in enumerate(run.get("results", [])):
+        for result_index, result in enumerate(_list_members(run.get("results"))):
             if not isinstance(result, dict):
                 continue
             raw_properties = result.get("properties")
@@ -224,6 +224,11 @@ def _validate_workbench_results(payload: dict[str, Any]) -> list[str]:
                         "reference must be an HTTP(S) URL"
                     )
     return errors
+
+
+def _list_members(value: Any) -> list[Any]:
+    """Leave malformed-container errors to the schema validator."""
+    return value if isinstance(value, list) else []
 
 
 def validate_sarif_file(path: Path) -> tuple[dict[str, Any], list[str]]:

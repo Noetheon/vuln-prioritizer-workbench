@@ -80,7 +80,7 @@ dev = [
   "httpx>=0.27,<1.0",
   "mkdocs>=1.6,<2.0",
   "msgpack>=1.2.1,<2.0",
-  "mutmut>=3.0,<4.0",
+  "mutmut>=3.8,<4.0",
   "mypy>=1.10,<3.0",
   "pip-audit>=2.7,<3.0",
   "pip>=26.2,<27.0",
@@ -153,15 +153,21 @@ check_untyped_defs = true
 disallow_untyped_defs = true
 
 [tool.coverage.run]
+branch = true
 omit = [
   "app/alembic/env.py",
   "app/alembic/versions/*.py",
 ]
 
 [tool.mutmut]
-paths_to_mutate = [
+source_paths = [
+  "app/decision_core/evaluation.py",
+  "app/domain/engine/scoring.py",
+  "app/domain/engine/scoring_operational.py",
+  "app/domain/engine/services/waivers.py",
   "app/decision_core/builders.py",
   "app/services/report_sarif_validation.py",
+  "app/services/report_bundle_archive_verification.py",
   "app/domain/engine/services/analysis_quality.py",
   "app/domain/engine/services/analysis_snapshot.py",
 ]
@@ -169,11 +175,17 @@ also_copy = [
   "app",
   "tests",
 ]
-tests_dir = [
+pytest_add_cli_args_test_selection = [
   "tests/api/import_contracts/test_decision_evidence_contract.py",
   "tests/api/test_workbench_evidence_verification_unit.py",
   "tests/test_analysis_refactor.py",
-  "tests/property",
+  "tests/test_scope_evaluation.py",
+  "tests/test_scoring.py",
+  "tests/test_waivers.py",
+  "tests/test_severity_proxy.py",
+  "tests/property/test_evidence_properties.py",
+  "tests/property/test_decision_properties.py",
 ]
 pytest_add_cli_args = ["--no-cov"]
 mutate_only_covered_lines = true
+process_isolation = "forkserver"

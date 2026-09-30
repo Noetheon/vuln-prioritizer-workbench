@@ -13,6 +13,9 @@ for current runners; do not copy a historical command when those definitions cha
 | OpenAPI/client | `make api-client-drift-check` | Regenerate and test the consuming API/UI change |
 | Packaged frontend | `make runtime-assets-check` | Sync assets when the source UI changes |
 | Documentation | A relevant docs test or `make docs-check` | A runtime check only when the claim depends on it |
+| Decision rules and evidence quality | `make property-check`; affected `mutation-core-check` or `mutation-evidence-check` | `make mutation-check property-extended-check` |
+| Retained history / persistence | `make recovery-check history-performance-check` | `make performance-smoke history-performance-extended-check` |
+| Real local SBOM matching | `make grype-integration-check` (networked setup, isolated DB) | Inspect scanner/DB hashes and all three executed contracts |
 | Agent guidance | `make agent-skills-check` | Behavioral comparison when instructions materially change |
 
 The frontend's `test:unit` script uses Node's test runner for `.test.ts` files.
@@ -26,3 +29,8 @@ Select broader checks from changed behavior, risk, and the requested delivery.
 Once relevant checks pass, repeat or expand them only for new changes, failures,
 or unresolved concerns. Follow the applicable release/CI requirements when that
 delivery is requested; a small local edit does not need a release rehearsal.
+
+See the [testing strategy](../../../../docs/testing-strategy.md) for generated
+profiles, resource ceilings and CI selection. Run history/performance separately
+from mutation on the same machine. A mutation timeout or signal is a failed gate,
+not a killed mutant; source-bound equivalent reviews are a separate result.

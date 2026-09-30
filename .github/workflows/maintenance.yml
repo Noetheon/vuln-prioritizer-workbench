@@ -17,6 +17,7 @@ permissions:
 jobs:
   local-workbench-health:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
       - name: Check out repository
@@ -63,7 +64,9 @@ jobs:
             docs/examples/*.json
 
   quality-10:
+    name: Release readiness
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
       - name: Check out repository
@@ -103,17 +106,10 @@ jobs:
       - name: Install project and dev dependencies
         run: python -m pip install -e "backend[dev]"
 
-      - name: Run 10/10 quality gate
-        run: make quality-10-check
-
-      - name: Upload performance measurements
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: maintenance-performance
-          if-no-files-found: ignore
-          retention-days: 3
-          path: build/vpw-072-performance-smoke.json
+      # Mutation, properties, performance, recovery and real Grype have independent
+      # jobs in test-quality.yml, so a Docker/release failure cannot prevent them.
+      - name: Run release-readiness checks
+        run: make release-readiness-check
 
       - name: Upload maintenance debug artifacts on failure
         if: failure()

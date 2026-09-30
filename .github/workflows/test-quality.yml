@@ -1,0 +1,108 @@
+name: Test quality
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  selection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    outputs:
+      gates: ${{ steps.select.outputs.gates }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select affected contracts
+        id: select
+        env:
+          QUALITY_BASE: ${{ github.event.pull_request.base.sha }}
+        run: python scripts/select_quality_gates.py --base "$QUALITY_BASE"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: quality-selection
+          path: build/quality-selection.json
+          retention-days: 7
+
+  contracts:
+    name: quality (${{ matrix.gate }})
+    needs: selection
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        gate: [core, evidence, properties, history, recovery, grype]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: fromJSON(needs.selection.outputs.gates)[matrix.gate]
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        if: fromJSON(needs.selection.outputs.gates)[matrix.gate]
+        with:
+          python-version: "3.14"
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        if: fromJSON(needs.selection.outputs.gates)[matrix.gate]
+        with:
+          version: "0.11.31"
+          enable-cache: true
+      - name: Install locked test environment
+        if: fromJSON(needs.selection.outputs.gates)[matrix.gate]
+        run: uv sync --locked --all-packages --all-extras --python 3.14
+      - name: Run the selected contract
+        if: fromJSON(needs.selection.outputs.gates)[matrix.gate]
+        env:
+          QUALITY_GATE: ${{ matrix.gate }}
+          QUALITY_EVENT: ${{ github.event_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$PWD/.venv/bin:$PATH"
+          case "$QUALITY_GATE" in
+            core) make mutation-core-check ;;
+            evidence) make mutation-evidence-check ;;
+            properties)
+              if [[ "$QUALITY_EVENT" == pull_request ]]; then make property-check;
+              else make property-extended-check; fi ;;
+            history)
+              make performance-smoke
+              if [[ "$QUALITY_EVENT" == pull_request ]]; then make history-performance-check;
+              else make history-performance-extended-check; fi ;;
+            recovery) make recovery-check ;;
+            grype) make grype-integration-check ;;
+            *) echo "Unknown quality gate" >&2; exit 1 ;;
+          esac
+      - name: Retain measurements and failure diagnostics
+        if: always() && fromJSON(needs.selection.outputs.gates)[matrix.gate]
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: quality-${{ matrix.gate }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            build/mutation/**
+            build/*performance*.json
+            build/grype-integration/*.json
+            build/grype-integration/*.log
+            build/grype-integration/*.xml
+            build/grype-integration/contracts/**
+            build/property-*.xml
+            build/recovery.xml

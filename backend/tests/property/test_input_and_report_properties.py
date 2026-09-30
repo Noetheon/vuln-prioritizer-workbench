@@ -1,29 +1,20 @@
 from __future__ import annotations
 
-import hashlib
 from pathlib import Path
-from typing import Any
 
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from utils.property_profiles import property_settings
 
 from app.domain.engine.inputs.parsers.simple import (
     parse_cve_list,
     parse_generic_occurrence_csv,
 )
-from app.domain.engine.models import EvidenceBundleFile, EvidenceBundleManifest
 from app.domain.engine.utils import normalize_cve_id
-from app.services.report_bundle_archive_verification import (
-    describe_evidence_bundle_mismatch,
-    validate_evidence_manifest_structure,
-)
-from app.services.report_sarif_validation import validate_sarif_payload
 
 PROPERTY_SETTINGS = settings(
-    deadline=None,
-    derandomize=True,
-    max_examples=40,
+    parent=property_settings(),
     suppress_health_check=[HealthCheck.function_scoped_fixture],
 )
 
@@ -107,97 +98,3 @@ def test_generic_occurrence_parser_rejects_structurally_invalid_csv(
 
     with pytest.raises(ValueError, match="must contain"):
         parse_generic_occurrence_csv(input_path)
-
-
-json_scalar = st.one_of(st.none(), st.booleans(), st.integers(-10, 10), st.text(max_size=16))
-json_values: st.SearchStrategy[Any] = st.recursive(
-    json_scalar,
-    lambda children: st.one_of(
-        st.lists(children, max_size=4),
-        st.dictionaries(st.text(max_size=16), children, max_size=4),
-    ),
-    max_leaves=12,
-)
-
-
-@pytest.mark.property
-@PROPERTY_SETTINGS
-@given(payload=st.dictionaries(st.text(max_size=16), json_values, max_size=6))
-def test_sarif_validator_is_deterministic_for_generated_payloads(
-    payload: dict[str, Any],
-) -> None:
-    first_errors = validate_sarif_payload(payload)
-    second_errors = validate_sarif_payload(payload)
-
-    assert first_errors == second_errors
-    assert all(isinstance(error, str) and error for error in first_errors)
-
-
-bundle_paths = st.lists(
-    st.sampled_from(
-        [
-            "analysis-result.v2.json",
-            "findings.csv",
-            "manifest.json",
-            "reports/technical-report.md",
-        ]
-    ),
-    min_size=0,
-    max_size=8,
-)
-
-
-@pytest.mark.property
-@PROPERTY_SETTINGS
-@given(paths=bundle_paths, size=st.integers(min_value=0, max_value=1024))
-def test_evidence_manifest_validator_is_deterministic_for_generated_paths(
-    paths: list[str],
-    size: int,
-) -> None:
-    digest = hashlib.sha256(str(size).encode()).hexdigest()
-    manifest = EvidenceBundleManifest(
-        generated_at="2026-05-15T00:00:00Z",
-        source_analysis_path="analysis-result.v2.json",
-        files=[
-            EvidenceBundleFile(
-                path=path,
-                kind="generated",
-                size_bytes=size,
-                sha256=digest,
-            )
-            for path in paths
-        ],
-    )
-
-    first_errors = validate_evidence_manifest_structure(manifest)
-    second_errors = validate_evidence_manifest_structure(manifest)
-
-    assert [(item.path, item.detail) for item in first_errors] == [
-        (item.path, item.detail) for item in second_errors
-    ]
-
-
-@pytest.mark.property
-@PROPERTY_SETTINGS
-@given(actual_size=st.integers(min_value=0, max_value=2048), content=st.binary(max_size=32))
-def test_evidence_bundle_mismatch_description_is_deterministic(
-    actual_size: int,
-    content: bytes,
-) -> None:
-    expected = EvidenceBundleFile(
-        path="analysis-result.v2.json",
-        kind="analysis-json",
-        size_bytes=len(content),
-        sha256=hashlib.sha256(content).hexdigest(),
-    )
-    actual_sha256 = hashlib.sha256(content + b"x").hexdigest()
-
-    assert describe_evidence_bundle_mismatch(
-        expected=expected,
-        actual_size=actual_size,
-        actual_sha256=actual_sha256,
-    ) == describe_evidence_bundle_mismatch(
-        expected=expected,
-        actual_size=actual_size,
-        actual_sha256=actual_sha256,
-    )
