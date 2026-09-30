@@ -35,7 +35,7 @@ jobs:
                       # Two intentionally malformed OpenARDP archive fixtures.
                       import hashlib
                       blob = hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
-                      if blob not in {'18ec90e550e6702a0e5f6a705270139848b68d1f', '0de2e29922c554f757facaef7c175c1c2ef76f57'}:
+                      if blob not in {'18ec90e550e6702a0e5f6a705270139848b68d1f', '0de2e29922c554f757facaef7c175c1c2ef76f57', '0537f909573f9b33d123b540b5dfc17c8997adc7'}:
                           errors.append(label + ': archive could not be inspected')
           for raw in git('ls-files', '-z').split(b'\0'):
               if raw:
@@ -43,8 +43,9 @@ jobs:
                   with open(name, 'rb') as source:
                       inspect(source.read(), name)
           base = os.environ.get('BASE_SHA', '')
-          revision = base + '..HEAD' if base and set(base) != {'0'} else 'HEAD'
-          result = subprocess.run(['git', 'log', revision, '--format=%H%x00%an%x00%ae%x00%cn%x00%ce'], capture_output=True)
+          known_base = bool(base) and set(base) != {'0'} and subprocess.run(['git', 'cat-file', '-e', base + '^{commit}'], capture_output=True).returncode == 0
+          revision = base + '..HEAD' if known_base else 'HEAD'
+          result = subprocess.run(['git', 'log', revision, *([] if known_base else ['-1']), '--format=%H%x00%an%x00%ae%x00%cn%x00%ce'], capture_output=True)
           if result.returncode:
               errors.append('Commit range could not be inspected')
           else:
