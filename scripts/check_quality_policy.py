@@ -66,25 +66,27 @@ def changed_paths(root: Path, base: str) -> list[str]:
 
 def public_names(source: bytes) -> set[str]:
     """Surface newly introduced decision entry points for explicit scope review."""
-    return {
-        node.name
-        for node in ast.parse(source).body
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
-        and not node.name.startswith("_")
-    }
+
+    def names(body: list[ast.stmt], prefix: str = "") -> set[str]:
+        result = set()
+        for node in body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                if node.name.startswith("_"):
+                    continue
+                qualified = prefix + node.name
+                result.add(qualified)
+                if isinstance(node, ast.ClassDef):
+                    result.update(names(node.body, qualified + "."))
+        return result
+
+    return names(ast.parse(source).body)
 
 
 def previous_source(root: Path, base: str, name: str) -> bytes:
     """Read the base blob, distinguishing a new path from an existing source."""
-    if (
-        subprocess.run(
-            ["git", "cat-file", "-e", f"{base}:{name}"],
-            cwd=root,
-            capture_output=True,
-            timeout=30,
-        ).returncode
-        == 0
-    ):
+    # An empty successful tree lookup means a new path. A Git read failure
+    # must propagate instead of hiding the deletion of an existing test.
+    if git(root, "ls-tree", "-z", base, "--", name):
         return git(root, "show", f"{base}:{name}")
     return b""
 

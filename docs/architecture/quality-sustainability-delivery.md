@@ -22,16 +22,33 @@ over time, building on the locally verified test work and main including PR #699
   administrators; no required human approval. This rollout adds machine admission
   and does not invent an independent human reviewer.
 - Implementation is isolated in the existing managed worktree.
-- Focused admission/policy/monitoring validation: 53 tests passed. Temporary
+- Focused admission/policy/monitoring validation: 55 tests passed. Temporary
   Git fixture creation was removed so host-specific Git hooks cannot change the
   policy unit-test result; the actual current-tree Git comparison is also checked.
+- Two additional negative controls exposed missing review of new methods on
+  existing critical classes and Git read failures treated as absent base files.
+  Both tests fail before the corrections and pass afterward.
 - Existing package/tooling negative contracts: 40 tests passed.
 - Real recovery execution through the new runner: 22 tests passed and a fresh
   successful receipt was verified.
+- Full backend validation: 1,781 tests passed, eight optional checks skipped;
+  types and all eight critical coverage floors passed. The two policy regressions
+  added afterward passed in the focused suite.
+- All six contract runners passed locally: core 208 killed plus four reviewed
+  equivalent mutations; evidence 166 killed; 37 extended generated tests with a
+  recorded seed; recovery 22; history with 13,000 revisions; three real Grype
+  contracts. Receipt aggregation passed and the empty historical baseline was
+  correctly reported as calibrating. These are local execution results.
 - Native actionlint, action pins, formatting/lint, pre-commit, docs and project
   guidance checks pass. Source-bound adoption reasoning covers the affected files.
 - Hosted checks and branch protection are authoritative for activation. See the
   [delivery PR](https://github.com/Noetheon/vuln-prioritizer-workbench/pulls?q=is%3Apr+head%3Acodex%2Ftest-quality-strategy)
   and [quality runs](https://github.com/Noetheon/vuln-prioritizer-workbench/actions/workflows/test-quality.yml).
+- Independent daily Codex heartbeat created and verified active. GitHub rollout
+  is currently blocked by the host's global privacy guard rejecting metadata
+  already present in origin/main. All 68 changed files and the three initial
+  outgoing commits passed a separate privacy preflight. The guard remains active;
+  no remote branch or PR was created by the rejected pushes. The owner has been
+  asked whether historical cleanup is already underway.
 
 These are separate outcomes. No release or package publication is part of this rollout.

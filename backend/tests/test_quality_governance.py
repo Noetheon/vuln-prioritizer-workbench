@@ -349,3 +349,30 @@ def test_release_build_waits_for_the_same_candidate_quality_workflow():
     assert admission["if"] == "always()"
     assert set(admission["needs"]) == {"selection", "policy", "contracts"}
     assert admission["name"] == "quality-gate"
+
+
+def test_added_method_in_existing_critical_class_requires_scope_review(policy_repo, monkeypatch):
+    root, base = policy_repo
+    name = "backend/app/decision_core/existing.py"
+    before = b"class Decision:\n    def existing(self): return 1\n"
+    path = root / name
+    path.parent.mkdir(parents=True)
+    path.write_bytes(before + b"    def priority(self): return 2\n")
+    monkeypatch.setattr(policy, "previous_source", lambda *args: before)
+    required = policy.obligations(root, base, [name])
+    assert required[name]["reasons"] == ["new critical entry points: Decision.priority"]
+
+
+def test_unreadable_base_blob_cannot_be_treated_as_a_new_file(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        policy.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(returncode=128)
+    )
+
+    def unreadable(*args):
+        raise subprocess.CalledProcessError(128, ["git", "ls-tree"])
+
+    monkeypatch.setattr(policy, "git", unreadable)
+    with pytest.raises(subprocess.CalledProcessError):
+        policy.previous_source(tmp_path, "base", "backend/tests/test_regression.py")

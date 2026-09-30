@@ -3,7 +3,7 @@
   "owner": "Repository maintainer (@Noetheon)",
   "reason": "Introduce independent decision/evidence tests and enforce exact-run quality admission, source-bound policy reasoning, reproducible scheduled exploration, retained measurements and read-only health monitoring, as requested by the repository owner.",
   "risk": "The new required check may block merges for real regressions or unavailable scanner setup. Infrastructure failures remain explicit. Trend calibration starts with real hosted measurements; fixed limits and reviewed mutation equivalence are not automatically relaxed.",
-  "validation": "Local negative admission, policy, trend and monitor regressions; real recovery runner smoke; native actionlint and documentation/guidance checks. All applicable hosted PR checks must pass before merge. The initial testing delivery record retains the measured full-suite, mutation, scanner and history evidence.",
+  "validation": "Local full backend gate: 1781 passed; 55 focused admission/policy/monitoring cases passed after two demonstrated negative controls. All six actual quality contract runners passed. Native actionlint, action pins, Ruff, pre-commit, docs and project guidance pass. Hosted checks remain required before activation; the global privacy guard currently blocks publishing the existing ancestry.",
   "coverage_impact": "Replace three self-comparison validator properties with independent positive/negative expectations and focused evidence mutations. Retire only the obsolete mutmut shell-command assertion. Add decision, stateful, recovery and history coverage; preserve existing UI, package and release checks. Governance test fixtures contain skip markers solely to test scope review. New public decision functions and modules require an explicit coverage decision.",
   "paths": {
     ".github/workflows/agent-guidance.yml": "9b34a098b8ceb9325126fb4781201c0e11bba8989197279499534d7674356536",
@@ -24,7 +24,7 @@
     "scripts/check_critical_coverage.py": "7e8bebdc4605cccf11a91742b4e897452aec619b800ef8f52da365e5ec050d2c",
     "scripts/check_mutmut_results.py": "c12bbfcc108018b4c33d7e71612a20161c8f1797652824c2f2fe0807c4424300",
     "scripts/check_quality_health.py": "8229507c4b38d2552113f43e1db885dbdb9389973ecbc3bdc2a31201a4c52144",
-    "scripts/check_quality_policy.py": "d3c2b9e9d483cc2ffb67911749be5929acb64cd413badd79cac409a2904b9aed",
+    "scripts/check_quality_policy.py": "457859bd0040cea539c218dee5701ad2b45bd53b1f54a1101e96e4f336428963",
     "scripts/grype-checksums.json": "dba587f9965663e6c38c24a18c9edb56b146acb4fd3e2b56584b6e48cb8600d6",
     "scripts/quality_gate.py": "7d90145d918903a4028099e9f1a9d04e9df4430ceec239f41d7fd52671b2c34c",
     "scripts/quality_trends.py": "c2089097f9bf022757bd214e635ad293a61e9dcc82f084086ee2c53299145bcd",
