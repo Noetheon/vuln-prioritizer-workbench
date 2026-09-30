@@ -359,13 +359,14 @@ test("mobile shell exposes drawer navigation without page-width overflow", async
   await expectNoPageOverflow(page)
 })
 
-test("Workbench routes keep content within desktop, tablet, and mobile viewports", async ({
-  page,
-}) => {
-  test.setTimeout(180_000)
-  await openWorkbench(page)
-
-  for (const viewport of responsiveViewports) {
+for (const viewport of responsiveViewports) {
+  test(`Workbench routes keep content within ${viewport.width}x${viewport.height}`, async ({
+    page,
+  }) => {
+    // Keep each viewport's browser state and failure trace bounded while still
+    // exercising every route at all seven sizes.
+    test.setTimeout(60_000)
+    await openWorkbench(page)
     await page.setViewportSize(viewport)
     for (const route of workbenchRoutes) {
       await test.step(`${viewport.width}x${viewport.height}: ${route}`, async () => {
@@ -378,8 +379,8 @@ test("Workbench routes keep content within desktop, tablet, and mobile viewports
         await expectWqhdContainerBehavior(page, viewport)
       })
     }
-  }
-})
+  })
+}
 
 test("dense evidence and risk tables do not clip internal table content", async ({
   page,

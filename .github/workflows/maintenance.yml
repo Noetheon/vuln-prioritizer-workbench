@@ -111,6 +111,12 @@ jobs:
       - name: Run release-readiness checks
         run: make release-readiness-check
 
+      - name: Record runner capacity
+        if: always()
+        run: |
+          df -h . /tmp
+          docker system df
+
       - name: Upload maintenance debug artifacts on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

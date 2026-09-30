@@ -55,6 +55,12 @@ over time, building on the locally verified test work and main including PR #699
   omitted browser diagnostics. The focused case passed locally. First-attempt
   failure traces, route/viewport step labels and retained maintenance browser
   artifacts now make a recurrence diagnosable without relaxing assertions.
+- The next maintenance run reproduced the late responsive navigation failure
+  and reported ENOSPC while closing the browser trace. The 63 route/viewport
+  combinations now run as seven independent viewport cases with bounded browser
+  contexts and traces. All 12 responsive cases passed locally; runner disk/Docker
+  capacity is also retained in maintenance logs. A hosted recheck establishes
+  whether this resolves the observed runner failure.
 - The first hosted quality campaign rejected a 10,000-entry import taking
   62.3 seconds against the existing 60-second limit. Profiling identified eager
   copies of large sections immediately removed by evidence encoding. Detaching
