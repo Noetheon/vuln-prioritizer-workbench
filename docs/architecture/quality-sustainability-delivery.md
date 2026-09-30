@@ -44,11 +44,11 @@ over time, building on the locally verified test work and main including PR #699
 - Hosted checks and branch protection are authoritative for activation. See the
   [delivery PR](https://github.com/Noetheon/vuln-prioritizer-workbench/pulls?q=is%3Apr+head%3Acodex%2Ftest-quality-strategy)
   and [quality runs](https://github.com/Noetheon/vuln-prioritizer-workbench/actions/workflows/test-quality.yml).
-- Independent daily Codex heartbeat created and verified active. GitHub rollout
-  is currently blocked by the host's global privacy guard rejecting metadata
-  already present in origin/main. All 68 changed files and the three initial
-  outgoing commits passed a separate privacy preflight. The guard remains active;
-  no remote branch or PR was created by the rejected pushes. The owner has been
-  asked whether historical cleanup is already underway.
+- Independent daily Codex heartbeat created and verified active. The host's
+  global privacy guard initially rejected existing upstream commit metadata.
+  After the upstream history was independently cleaned, only this delivery's
+  unpublished commits were transferred onto the clean base. The new publication
+  privacy guidance was retained alongside project guidance. The guard remains
+  active; hosted checks and branch-protection activation are still pending.
 
 These are separate outcomes. No release or package publication is part of this rollout.
