@@ -38,7 +38,8 @@ def select_gates(paths: list[str] | None) -> dict[str, bool]:
                 "backend/requirements",
                 "backend/mutation-",
                 "scripts/",
-                ".github/workflows/test-quality.yml",
+                ".github/workflows/",
+                "quality/",
             )
         ):
             return dict.fromkeys(GATES, True)

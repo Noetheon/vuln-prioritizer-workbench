@@ -30,6 +30,10 @@ Known pitfalls:
   for large archive reports while retaining the plain-report size limit.
 - Generated properties need independent positive/negative expectations. Add a
   minimized ordinary regression when a generated case exposes a real defect.
+- For a reproducible defect, demonstrate the regression before and after the fix.
+  Explain a manual-only exception with owner and follow-up. Quality-policy changes,
+  removed tests and new critical entry points need the source-bound reasoning in
+  [continuous quality assurance](../../../docs/quality-assurance.md).
 
 Use [check selection](references/check-selection.md) for runners and broader gates.
 Report which failure or missing behavior the changed test demonstrates, the

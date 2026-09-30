@@ -32,6 +32,11 @@
 - [ ] release-readiness validation only when this PR is explicitly a release,
       public/shared deployment, or release-evidence change
 - [ ] additional local validation, if applicable
+- [ ] defect fixes include a regression that fails before the fix and passes after it,
+      or an explained manual reproduction with owner and follow-up
+- [ ] quality-policy/test-scope changes include an exact-source record under
+      `quality/reviews/`; new critical behavior has an explicit coverage decision
+- [ ] skipped or unstable tests have a tracked repair owner and deadline
 
 Commands and results:
 

@@ -9,12 +9,14 @@ on:
   schedule:
     - cron: "41 4 * * 1"
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: test-quality-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -39,6 +41,28 @@ jobs:
           name: quality-selection
           path: build/quality-selection.json
           retention-days: 7
+          if-no-files-found: error
+
+  policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify reasoning with the base branch's policy checker
+        env:
+          QUALITY_BASE: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          checker=scripts/check_quality_policy.py
+          if [[ -n "$QUALITY_BASE" ]] && git cat-file -e "$QUALITY_BASE:$checker" 2>/dev/null; then
+            git show "$QUALITY_BASE:$checker" > "$RUNNER_TEMP/check_quality_policy.py"
+            checker="$RUNNER_TEMP/check_quality_policy.py"
+          fi
+          python "$checker" --base "$QUALITY_BASE" --root "$PWD"
 
   contracts:
     name: quality (${{ matrix.gate }})
@@ -52,11 +76,9 @@ jobs:
         gate: [core, evidence, properties, history, recovery, grype]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: fromJSON(needs.selection.outputs.gates)[matrix.gate]
         with:
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        if: fromJSON(needs.selection.outputs.gates)[matrix.gate]
         with:
           python-version: "3.14"
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
@@ -67,29 +89,23 @@ jobs:
       - name: Install locked test environment
         if: fromJSON(needs.selection.outputs.gates)[matrix.gate]
         run: uv sync --locked --all-packages --all-extras --python 3.14
-      - name: Run the selected contract
-        if: fromJSON(needs.selection.outputs.gates)[matrix.gate]
+      - name: Execute the contract and record its evidence
         env:
+          QUALITY_SELECTION: ${{ needs.selection.outputs.gates }}
           QUALITY_GATE: ${{ matrix.gate }}
-          QUALITY_EVENT: ${{ github.event_name }}
         shell: bash
         run: |
           set -euo pipefail
           export PATH="$PWD/.venv/bin:$PATH"
-          case "$QUALITY_GATE" in
-            core) make mutation-core-check ;;
-            evidence) make mutation-evidence-check ;;
-            properties)
-              if [[ "$QUALITY_EVENT" == pull_request ]]; then make property-check;
-              else make property-extended-check; fi ;;
-            history)
-              make performance-smoke
-              if [[ "$QUALITY_EVENT" == pull_request ]]; then make history-performance-check;
-              else make history-performance-extended-check; fi ;;
-            recovery) make recovery-check ;;
-            grype) make grype-integration-check ;;
-            *) echo "Unknown quality gate" >&2; exit 1 ;;
-          esac
+          python -m scripts.quality_gate run --gate "$QUALITY_GATE"
+      - name: Retain the exact-run receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: quality-receipt-${{ matrix.gate }}
+          path: build/quality-receipts/*.json
+          retention-days: 7
+          if-no-files-found: error
       - name: Retain measurements and failure diagnostics
         if: always() && fromJSON(needs.selection.outputs.gates)[matrix.gate]
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -106,3 +122,37 @@ jobs:
             build/grype-integration/contracts/**
             build/property-*.xml
             build/recovery.xml
+
+  admission:
+    name: quality-gate
+    if: always()
+    needs: [selection, policy, contracts]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: quality-receipt-*
+          path: build/quality-receipts
+          merge-multiple: true
+      - name: Require every selected contract for this commit and run attempt
+        env:
+          QUALITY_SELECTION: ${{ needs.selection.outputs.gates }}
+          QUALITY_NEEDS: ${{ toJSON(needs) }}
+        run: python -m scripts.quality_gate verify
+      - name: Compare compact measurements with successful main campaigns
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -m scripts.quality_trends
+      - name: Retain compact quality history
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: quality-metrics
+          path: |
+            build/quality-metrics.json
+            build/quality-trends.json
+          retention-days: 90
+          if-no-files-found: error

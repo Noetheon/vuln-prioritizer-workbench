@@ -52,6 +52,12 @@ What should have happened instead?
 
 ## Tests
 
+Repair owner and target date:
+
+Failing regression on the original behavior, and successful result after the fix:
+
+If automation is unsuitable, give the manual reproduction and tracked follow-up.
+
 - [ ] regression test
 - [ ] parser fixture
 - [ ] API test

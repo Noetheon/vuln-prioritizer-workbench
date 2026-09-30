@@ -6,6 +6,8 @@ questions. Use the smallest relevant check during development, then run the gate
 for the affected boundary. This strategy complements the
 [current product state](current-product-state.md) and
 [delivery record](architecture/testing-quality-delivery.md).
+The [continuous quality assurance policy](quality-assurance.md) defines required
+merge/release admission, change records, exploration seeds and ongoing monitoring.
 
 ## Risks and checks
 
