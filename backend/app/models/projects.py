@@ -70,3 +70,17 @@ class ProjectsPublic(SQLModel):
 
     data: list[ProjectPublic]
     count: int
+
+
+class ProjectOnboardingPublic(SQLModel):
+    """How far a project is through first setup: import, asset context, first report."""
+
+    project_id: uuid.UUID
+    import_count: int = 0
+    finding_count: int = 0
+    asset_count: int = 0
+    # Assets with an owner, a business service, or a known environment,
+    # exposure, or criticality.
+    assets_with_context: int = 0
+    report_count: int = 0
+    complete: bool = False

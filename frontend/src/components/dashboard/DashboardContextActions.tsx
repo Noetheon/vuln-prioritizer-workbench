@@ -1,5 +1,12 @@
 import { Link } from "@/lib/router"
-import { BellRing, DatabaseZap, Import, RefreshCw, RotateCcw } from "lucide-react"
+import {
+  BellRing,
+  DatabaseZap,
+  FolderPlus,
+  Import,
+  RefreshCw,
+  RotateCcw,
+} from "lucide-react"
 import type { ProviderStatusPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
@@ -11,7 +18,11 @@ type DashboardContextActionsProps = {
   demoWorkspacePending: boolean
   effectiveProviderStatus: ProviderStatusPublic | null
   freshness: ProviderFreshnessSummary
+  hasFindings: boolean
+  // Without any project the setup checklist offers "Create project".
+  hasProjects: boolean
   isManagedDemoWorkspace: boolean
+  onCreateProject: () => void
   onLoadDemoWorkspace: () => void
   onRefresh: () => void
   onResetDemoWorkspace: () => void
@@ -24,7 +35,10 @@ export function DashboardContextActions({
   demoWorkspacePending,
   effectiveProviderStatus,
   freshness,
+  hasFindings,
+  hasProjects,
   isManagedDemoWorkspace,
+  onCreateProject,
   onLoadDemoWorkspace,
   onRefresh,
   onResetDemoWorkspace,
@@ -54,25 +68,38 @@ export function DashboardContextActions({
       </div>
 
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:justify-end">
-        <Button
-          asChild
-          className="w-full justify-center font-semibold sm:w-auto"
-        >
-          <Link search={projectSearch} to="/imports">
-            <Import aria-hidden="true" data-icon="inline-start" />
-            Import findings
-          </Link>
-        </Button>
-        <Button
-          asChild
-          className="w-full justify-center sm:w-auto"
-          variant="outline"
-        >
-          <Link search={projectSearch} to="/reports">
-            <BellRing aria-hidden="true" data-icon="inline-start" />
-            Generate evidence
-          </Link>
-        </Button>
+        {selectedProjectId ? (
+          <Button
+            asChild
+            className="w-full justify-center font-semibold sm:w-auto"
+          >
+            <Link search={projectSearch} to="/imports">
+              <Import aria-hidden="true" data-icon="inline-start" />
+              Import findings
+            </Link>
+          </Button>
+        ) : hasProjects ? (
+          <Button
+            className="w-full justify-center font-semibold sm:w-auto"
+            onClick={onCreateProject}
+            type="button"
+          >
+            <FolderPlus aria-hidden="true" data-icon="inline-start" />
+            Create project
+          </Button>
+        ) : null}
+        {hasFindings ? (
+          <Button
+            asChild
+            className="w-full justify-center sm:w-auto"
+            variant="outline"
+          >
+            <Link search={projectSearch} to="/reports">
+              <BellRing aria-hidden="true" data-icon="inline-start" />
+              Generate evidence
+            </Link>
+          </Button>
+        ) : null}
         {isManagedDemoWorkspace ? (
           <Button
             className="w-full justify-center sm:w-auto"

@@ -4,6 +4,7 @@ import type {
   AnalysisRunPublic,
   FindingPublic,
   ProjectDecisionSummaryPublic,
+  ProjectOnboardingPublic,
   ProjectPublic,
   ProjectRiskKpisPublic,
   ProjectRiskReductionPublic,
@@ -54,6 +55,8 @@ export type RiskOperationsDashboardProps = {
   riskReduction: ProjectRiskReductionPublic | null
   kpis?: ProjectRiskKpisPublic | null
   isManagedDemoWorkspace: boolean
+  onboarding?: ProjectOnboardingPublic | null
+  onCreateProject?: () => void
 }
 
 export type QueueFilterState = {

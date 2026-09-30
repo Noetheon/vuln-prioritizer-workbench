@@ -8,6 +8,7 @@ import {
 import { ProjectsWorkbench } from "../../components/projects/ProjectsWorkbench"
 import { apiErrorMessage } from "../../lib/app-errors"
 import { emptyProjectForm, type ProjectFormState } from "../../lib/app-defaults"
+import { useCreateProjectDrawer } from "../useCreateProjectDrawer"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import {
   projectRequestBody,
@@ -32,10 +33,6 @@ function ProjectsRouteContainer() {
   const projectSummaryById = projectSummariesQuery.data?.summaries ?? {}
   const failedProjectSummaryCount =
     projectSummariesQuery.data?.failedProjectIds.length ?? 0
-  const [createProjectForm, setCreateProjectForm] =
-    useState<ProjectFormState>(emptyProjectForm)
-  const [createProjectDrawerOpen, setCreateProjectDrawerOpen] = useState(false)
-  const [createProjectError, setCreateProjectError] = useState("")
   const [projectActionError, setProjectActionError] = useState("")
   const [projectActionMessage, setProjectActionMessage] = useState("")
   const [editProjectId, setEditProjectId] = useState("")
@@ -43,9 +40,12 @@ function ProjectsRouteContainer() {
     useState<ProjectFormState>(emptyProjectForm)
   const [deleteConfirmed, setDeleteConfirmed] = useState(false)
 
-  const createProjectMutation = useMutation({
-    mutationFn: (projectCreate: ReturnType<typeof projectRequestBody>) =>
-      ProjectsService.createProject({ projectCreate }),
+  const createProject = useCreateProjectDrawer({
+    onCreated: async (project) => {
+      setProjectActionMessage(`Project ${project.name} created.`)
+      await refreshProjects(project.id)
+    },
+    onError: setProjectActionError,
   })
   const updateProjectMutation = useMutation({
     mutationFn: ({
@@ -64,30 +64,6 @@ function ProjectsRouteContainer() {
     mutationFn: (projectId: string) =>
       ProjectsService.deleteProject({ project_id: projectId }),
   })
-
-  async function createProject(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setCreateProjectError("")
-    setProjectActionError("")
-    setProjectActionMessage("")
-    const validationError = validateProjectForm(createProjectForm)
-    if (validationError) {
-      setCreateProjectError(validationError)
-      return
-    }
-
-    try {
-      const project = await createProjectMutation.mutateAsync(
-        projectRequestBody(createProjectForm),
-      )
-      setCreateProjectForm(emptyProjectForm)
-      setCreateProjectDrawerOpen(false)
-      setProjectActionMessage(`Project ${project.name} created.`)
-      await refreshProjects(project.id)
-    } catch (caught) {
-      setProjectActionError(apiErrorMessage("Project create failed", caught))
-    }
-  }
 
   function startEditProject(project: ProjectPublic) {
     setEditProjectId(project.id)
@@ -146,7 +122,7 @@ function ProjectsRouteContainer() {
   }
 
   const projectActionLoading =
-    createProjectMutation.isPending ||
+    createProject.pending ||
     updateProjectMutation.isPending ||
     deleteProjectMutation.isPending
   const projectSummaryWarning = [
@@ -162,37 +138,20 @@ function ProjectsRouteContainer() {
     .filter(Boolean)
     .join(" ")
 
-  function setCreateProjectDrawer(open: boolean) {
-    setCreateProjectDrawerOpen(open)
-    setCreateProjectError("")
-    if (open) {
-      setProjectActionError("")
-    }
-  }
-
   return (
     <ProjectsWorkbench
-      createProjectDrawerOpen={createProjectDrawerOpen}
-      createProjectError={createProjectError}
-      createProjectForm={createProjectForm}
+      {...createProject.drawerProps}
       deleteConfirmed={deleteConfirmed}
       editProjectForm={editProjectForm}
       editProjectId={editProjectId}
       onCancelEditProject={() => setEditProjectId("")}
-      onCreateProjectDrawerOpenChange={setCreateProjectDrawer}
-      onCreateProject={createProject}
-      onCreateProjectDescriptionChange={(description) =>
-        setCreateProjectForm((form) => ({
-          ...form,
-          description,
-        }))
-      }
-      onCreateProjectNameChange={(name) =>
-        setCreateProjectForm((form) => ({
-          ...form,
-          name,
-        }))
-      }
+      onCreateProjectDrawerOpenChange={(open) => {
+        if (open) {
+          setProjectActionError("")
+          setProjectActionMessage("")
+        }
+        createProject.drawerProps.onCreateProjectDrawerOpenChange(open)
+      }}
       onDeleteConfirmedChange={setDeleteConfirmed}
       onDeleteProject={(project) => void deleteProject(project)}
       onEditProjectDescriptionChange={(description) =>

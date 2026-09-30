@@ -27,9 +27,6 @@ DEMO_SNAPSHOT_ID_PREFIX = "online-shop-demo-provider-snapshot"
 NO_PROVIDER_SNAPSHOT_WARNING = "No provider snapshot has been recorded yet."
 LIVE_SNAPSHOT_MODE = "live"
 DEFAULT_SNAPSHOT_IMPORT_MODE = "default_snapshot"
-NOT_LOADED_WARNING = (
-    "No provider data has been fetched yet. The first import fetches NVD, EPSS, and KEV."
-)
 LIVE_SOURCE_DETAILS = {
     "nvd": "Newest NVD record fetched live and kept in the local provider cache.",
     "epss": "Newest EPSS score fetched live and kept in the local provider cache.",
@@ -136,8 +133,8 @@ def provider_status_payload(
         ]
         fetched_times = [value for value in fetched.values() if value is not None]
         if not fetched_times:
+            # A fresh install: nothing is wrong yet, the first import fetches data.
             status = "degraded" if raw_last_error is not None else "not_loaded"
-            warnings.append(NOT_LOADED_WARNING)
         elif raw_last_error is not None:
             status = "degraded"
         elif any(source.stale or not source.available for source in sources):
@@ -238,7 +235,8 @@ def _live_source_status(
         name=name,
         selected=True,
         available=fetched_at is not None,
-        stale=fetched_at is None or now - fetched_at > stale_after,
+        # Never fetched is missing, not stale.
+        stale=fetched_at is not None and now - fetched_at > stale_after,
         value=fetched_iso,
         last_sync=fetched_iso,
         last_error=last_error,

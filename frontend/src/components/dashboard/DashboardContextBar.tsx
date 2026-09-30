@@ -11,7 +11,9 @@ type DashboardContextBarProps = {
   effectiveProviderStatus: ProviderStatusPublic | null
   effectiveSelectedProject: ProjectPublic | null
   freshness: ProviderFreshnessSummary
+  hasFindings: boolean
   isManagedDemoWorkspace: boolean
+  onCreateProject: () => void
   onLoadDemoWorkspace: () => void
   onProjectChange: (projectId: string) => void
   onRefresh: () => void
@@ -28,7 +30,9 @@ export function DashboardContextBar({
   effectiveProviderStatus,
   effectiveSelectedProject,
   freshness,
+  hasFindings,
   isManagedDemoWorkspace,
+  onCreateProject,
   onLoadDemoWorkspace,
   onProjectChange,
   onRefresh,
@@ -61,7 +65,10 @@ export function DashboardContextBar({
         demoWorkspacePending={demoWorkspacePending}
         effectiveProviderStatus={effectiveProviderStatus}
         freshness={freshness}
+        hasFindings={hasFindings}
+        hasProjects={effectiveProjects.length > 0}
         isManagedDemoWorkspace={isManagedDemoWorkspace}
+        onCreateProject={onCreateProject}
         onLoadDemoWorkspace={onLoadDemoWorkspace}
         onRefresh={onRefresh}
         onResetDemoWorkspace={onResetDemoWorkspace}
