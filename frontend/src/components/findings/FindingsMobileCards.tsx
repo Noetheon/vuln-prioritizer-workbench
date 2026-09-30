@@ -16,6 +16,8 @@ import {
   StatusLozenge,
   VpwSignalCluster,
 } from "@/components/vpw"
+import { formatDate } from "@/lib/date-format"
+import { isActionableFinding } from "@/lib/finding-queue-labels"
 import { formatLabel as labelize } from "@/lib/ui-copy"
 import {
   assetLabel,
@@ -23,7 +25,6 @@ import {
   findingActionLabel,
   findingSlaLabel,
   findingWhyNowCompact,
-  formatShortDate,
   ownerLabel,
   serviceLabel,
 } from "./FindingsDataTableModel"
@@ -49,6 +50,7 @@ export function FindingsMobileCards({
     >
       {findings.map((finding) => {
         const actionLabel = findingActionLabel(finding)
+        const open = isActionableFinding(finding)
         return (
           <article
             aria-label={`Finding ${actionLabel}`}
@@ -58,7 +60,13 @@ export function FindingsMobileCards({
           >
             <div className="findings-mobile-card-header">
               <div className="findings-mobile-card-title">
-                <RiskBadge density="compact" level={finding.priority} />
+                {open ? (
+                  <RiskBadge density="compact" level={finding.priority} />
+                ) : (
+                  <span className="finding-priority-closed">
+                    {labelize(finding.priority ?? "unknown")}
+                  </span>
+                )}
                 <Link
                   className="finding-cve-link findings-mobile-cve"
                   params={{ findingId: finding.id }}
@@ -69,7 +77,9 @@ export function FindingsMobileCards({
                   {finding.cve_id}
                 </Link>
               </div>
-              <RiskScoreBadge density="compact" value={finding.risk_score} />
+              {open ? (
+                <RiskScoreBadge density="compact" value={finding.risk_score} />
+              ) : null}
             </div>
 
             <div className="findings-mobile-component">
@@ -111,11 +121,11 @@ export function FindingsMobileCards({
                 <span className="findings-mobile-label">Status</span>
                 <StatusLozenge density="compact" status={finding.status} />
                 <small className="findings-mobile-meta-detail">
-                  {formatShortDate(finding.last_seen_at)}
+                  Last seen {formatDate(finding.last_seen_at)}
                 </small>
                 <div className="finding-meta-tags">
-                  <MetaTag label={findingSlaLabel(finding)} />
-                  <SlaDueBadge finding={finding} />
+                  {open ? <MetaTag label={findingSlaLabel(finding)} /> : null}
+                  <SlaDueBadge finding={finding} overflow="wrap" />
                 </div>
               </div>
             </div>
@@ -135,9 +145,11 @@ export function FindingsMobileCards({
               </VpwSignalCluster>
             </div>
 
-            <p className="findings-mobile-why">
-              {findingWhyNowCompact(finding)}
-            </p>
+            {open ? (
+              <p className="findings-mobile-why">
+                {findingWhyNowCompact(finding)}
+              </p>
+            ) : null}
 
             <div className="findings-mobile-card-actions">
               <Button asChild className="h-8 px-2" size="sm" variant="outline">

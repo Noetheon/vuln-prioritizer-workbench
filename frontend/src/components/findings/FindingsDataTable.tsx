@@ -53,7 +53,7 @@ export function FindingsDataTable({
           data={findings}
           density="standard"
           getRowKey={(finding) => finding.id}
-          minWidth="1040px"
+          minWidth="860px"
           mobileCards={false}
           tableClassName="table-fixed"
         />
