@@ -57,14 +57,18 @@ class _ProjectionStep:
 
 @dataclass(frozen=True)
 class _RiskProjection:
-    """Prepared static risk posture projection."""
+    """Prepared static risk posture projection, in absolute open risk."""
 
     current_risk: float
+    # Secondary figure: the average score of open findings.
     current_index: float | None
-    target_index: float | None
-    plan_index: float | None
-    planned_reduction_index: float | None
+    target_risk: float | None
+    plan_risk: float | None
+    planned_reduction: float | None
     actionable_count: int
+    critical_count: int
+    kev_count: int
+    high_count: int
     reducers: tuple[_RiskReducer, ...]
     steps: tuple[_ProjectionStep, ...]
 
@@ -76,25 +80,23 @@ def _html_risk_scenario_panel_helper(
     """Render a dashboard-aligned static risk posture projection."""
     projection = _risk_projection_helper(findings)
     label, tone = _risk_index_label_and_tone(projection, risk_posture)
-    index_html = _risk_index_value_html(projection)
-    gauge_html = _risk_index_gauge_html(projection)
+    index_html = _open_risk_value_html(projection)
+    kpis_html = _open_risk_kpis_html(projection)
     foot = _risk_index_footnote(projection)
-    change = projection.planned_reduction_index or 0.0
-    planned_change_label = "average decrease planned" if change >= 0 else "average increase planned"
+    change = projection.planned_reduction or 0.0
     chart_html = _html_projection_chart(projection)
     reducers_html = _html_top_reducers(projection)
     return (
         '      <div class="risk-scenario" data-tone="'
         f'{_safe_html(tone)}">\n'
-        '        <section class="risk-scenario-index" aria-label="Risk index summary">\n'
-        '          <span class="status-label">Risk index - avg open findings</span>\n'
+        '        <section class="risk-scenario-index" aria-label="Open risk summary">\n'
+        '          <span class="status-label">Open risk - sum of open finding scores</span>\n'
         f"          {index_html}\n"
         f'          <p class="risk-index-band">{_safe_html(label)}</p>\n'
         '          <p class="risk-scenario-change">'
-        f"<strong>{_safe_html(_format_score(abs(change)))}</strong> {planned_change_label}</p>\n"
-        f"          {gauge_html}\n"
-        '          <div class="risk-gauge-scale"><span>0</span><span>moderate</span>'
-        "<span>100</span></div>\n"
+        f"<strong>{_safe_html(_format_score(change))}</strong> open risk removed by the "
+        "shown plan</p>\n"
+        f"          {kpis_html}\n"
         f'          <p class="risk-index-foot">{_safe_html(foot)}</p>\n'
         "        </section>\n"
         f"{chart_html}\n"
@@ -112,6 +114,7 @@ def _risk_projection_helper(
     current_risk = _round_score(sum(_risk_score(finding) for finding in actionable))
     current_index = _index_from_score(current_risk, actionable_count)
     reducers = tuple(_risk_reducers(actionable, current_risk=current_risk)[:_REDUCER_LIMIT])
+    priorities = [str(finding.priority or "").lower() for finding in actionable]
 
     steps_list = []
     for key, label, count, mode in (
@@ -128,27 +131,24 @@ def _risk_projection_helper(
             _ProjectionStep(
                 key=key,
                 label=label,
-                value=_index_from_score(max(current_risk - reduction, 0.0), remaining_count),
+                value=_round_score(max(current_risk - reduction, 0.0)),
                 reduction=_round_score(reduction),
                 mode=mode,
                 remaining_count=remaining_count,
             )
         )
     steps = tuple(steps_list)
-    plan_index = steps[-1].value if reducers else current_index
-    target_index = _round_index(current_index * 0.5) if current_index is not None else None
-    planned_reduction_index = (
-        _round_score(current_index - (plan_index or 0.0))
-        if current_index is not None and plan_index is not None
-        else None
-    )
+    plan_risk = steps[-1].value if reducers else current_risk
     return _RiskProjection(
         current_risk=current_risk,
-        current_index=current_index,
-        target_index=target_index,
-        plan_index=plan_index,
-        planned_reduction_index=planned_reduction_index,
+        current_index=current_index if actionable_count else None,
+        target_risk=_round_score(current_risk * 0.5) if actionable_count else None,
+        plan_risk=plan_risk,
+        planned_reduction=_round_score(current_risk - plan_risk),
         actionable_count=actionable_count,
+        critical_count=priorities.count("critical"),
+        kev_count=sum(1 for finding in actionable if finding.in_kev),
+        high_count=priorities.count("high"),
         reducers=reducers,
         steps=steps,
     )
@@ -213,7 +213,7 @@ def _risk_reducer_for_findings(
 
 
 def _html_projection_chart(projection: _RiskProjection) -> str:
-    if not projection.reducers or projection.current_index is None:
+    if not projection.reducers or projection.current_risk <= 0:
         return (
             '        <section class="risk-scenario-chart" aria-label="Scenario projection">\n'
             '          <div class="risk-scenario-section-head">\n'
@@ -233,28 +233,29 @@ def _html_projection_chart(projection: _RiskProjection) -> str:
     today_gap = 42
     slot = (chart_right - chart_left - today_gap) / len(projection.steps)
     bar_width = 78
-    tick_values = (100, 75, 50, 25, 0)
+    # The axis runs from zero to the current open risk.
+    scale_max = projection.current_risk
     grid = []
-    for tick in tick_values:
-        y = chart_bottom - tick * plot_height / 100
+    for share in (1.0, 0.75, 0.5, 0.25, 0.0):
+        y = chart_bottom - share * plot_height
         grid.append(
             f'<line class="risk-projection-grid-line" x1="{chart_left}" '
             f'x2="{chart_right}" y1="{_fmt_coord(y)}" y2="{_fmt_coord(y)}" />'
             f'<text class="risk-projection-axis-label" x="{chart_left - 10}" '
-            f'y="{_fmt_coord(y + 4)}">{tick}</text>'
+            f'y="{_fmt_coord(y + 4)}">{_safe_html(_format_score(scale_max * share))}</text>'
         )
 
-    target_y = chart_bottom - (projection.target_index or 0) * plot_height / 100
+    target_y = chart_bottom - (projection.target_risk or 0) / scale_max * plot_height
     divider_x = chart_left + slot + today_gap / 2
     bars = []
     for index, step in enumerate(projection.steps):
         center = chart_left + slot * index + slot / 2
         if index > 0:
             center += today_gap
-        value = max(0.0, min(step.value, 100.0))
-        height = value * plot_height / 100
+        value = max(0.0, min(step.value, scale_max))
+        height = value / scale_max * plot_height
         top = chart_bottom - height
-        bar_class = _projection_bar_tone(step, projection.target_index)
+        bar_class = _projection_bar_tone(step, projection)
         bars.append(
             '<g class="risk-projection-bar" data-tone="'
             f'{_safe_html(bar_class)}">'
@@ -281,7 +282,7 @@ def _html_projection_chart(projection: _RiskProjection) -> str:
         "target</span>\n"
         "          </div>\n"
         '          <svg class="risk-projection-svg" role="img" '
-        'aria-label="Static projection of risk index after top remediation reducers" '
+        'aria-label="Static projection of open risk after top remediation reducers" '
         f'viewBox="0 0 {view_width} 314" preserveAspectRatio="xMidYMin meet">\n'
         "            <defs>\n"
         '              <linearGradient id="risk-report-grad-critical" '
@@ -317,25 +318,24 @@ def _html_projection_chart(projection: _RiskProjection) -> str:
         f'x2="{chart_right}" y1="{_fmt_coord(target_y)}" y2="{_fmt_coord(target_y)}" />\n'
         f'            <text class="risk-projection-target-label" x="{chart_right - 2}" '
         f'y="{_fmt_coord(target_y - 7)}">TARGET '
-        f"{_safe_html(_format_score(projection.target_index))}</text>\n"
+        f"{_safe_html(_format_score(projection.target_risk))}</text>\n"
         f"            {''.join(bars)}\n"
         "          </svg>\n"
         f"{_html_projection_readout(projection)}\n"
-        '          <p class="risk-scenario-note">Static what-if simulation from this run: '
-        "the mean score of actionable findings remaining after each shown action. "
-        "Closing lower-score findings can raise the mean while reducing total score burden. "
-        "This is not a measured run-history curve.</p>\n"
+        '          <p class="risk-scenario-note">Static what-if simulation from this report: '
+        "the summed score of open findings remaining after each shown action. The target "
+        "is half of today's open risk. This is not a measured run-history curve.</p>\n"
         "        </section>"
     )
 
 
 def _html_projection_readout(projection: _RiskProjection) -> str:
-    final_index = projection.plan_index
-    current_index = projection.current_index
-    if current_index is None or final_index is None:
+    final_risk = projection.plan_risk
+    current_risk = projection.current_risk
+    if current_risk <= 0 or final_risk is None:
         return ""
 
-    drop_percent = _projection_drop_percent(current_index, final_index)
+    drop_percent = _projection_drop_percent(current_risk, final_risk)
     percentage_change = f"{-drop_percent:+d}%" if drop_percent else "0%"
     reached_step = _target_reached_step(projection)
     if reached_step is None:
@@ -353,9 +353,9 @@ def _html_projection_readout(projection: _RiskProjection) -> str:
         f'<span class="risk-scenario-readout-chip">{reducer_count} '
         f"{action_label} planned</span>"
         '<span class="risk-scenario-readout-text">Completing the shown plan takes '
-        "the index "
-        f"<strong>{_safe_html(_format_score(current_index))} -&gt; "
-        f"{_safe_html(_format_score(final_index))}</strong> "
+        "open risk "
+        f"<strong>{_safe_html(_format_score(current_risk))} -&gt; "
+        f"{_safe_html(_format_score(final_risk))}</strong> "
         f"({percentage_change}) - {outcome}</span>"
         "</div>"
     )
@@ -404,7 +404,7 @@ def _html_top_reducers(projection: _RiskProjection) -> str:
         '            <span class="status-label">Top risk reducers</span>\n'
         "          </div>\n"
         '          <p class="risk-scenario-reducer-lede">'
-        "Summed finding scores removed if completed; this is not the change in the mean.</p>\n"
+        "Open risk removed if completed: the summed scores of the findings in each group.</p>\n"
         f"          <ol>{''.join(rows)}</ol>\n"
         "        </section>"
     )
@@ -414,39 +414,49 @@ def _risk_index_label_and_tone(
     projection: _RiskProjection,
     risk_posture: RiskPosture,
 ) -> tuple[str, str]:
-    if projection.actionable_count == 0 or projection.current_index is None:
+    if projection.actionable_count == 0:
         return _RISK_INDEX_BANDS["none"]
-    band = _band_for_index(projection.current_index)
-    fallback = _RISK_INDEX_BANDS.get(risk_posture.risk_index_band, _RISK_INDEX_BANDS["none"])
-    return _RISK_INDEX_BANDS.get(band, fallback)
+    return _RISK_INDEX_BANDS.get(_band_for_projection(projection), _RISK_INDEX_BANDS["none"])
 
 
-def _risk_index_value_html(projection: _RiskProjection) -> str:
-    if projection.current_index is None:
-        return '<span class="risk-scenario-index-value">N/A</span>'
+def _band_for_projection(projection: _RiskProjection) -> str:
+    """Band by what is open, not by an average that low findings dilute."""
+    if projection.actionable_count == 0:
+        return "none"
+    if projection.kev_count or projection.critical_count:
+        return "critical"
+    if projection.high_count:
+        return "elevated"
+    return "low"
+
+
+def _open_risk_value_html(projection: _RiskProjection) -> str:
     return (
         '<span class="risk-scenario-index-value">'
-        f"{_safe_html(_format_score(projection.current_index))}"
-        '<span class="risk-index-max">/100</span></span>'
+        f"{_safe_html(_format_score(projection.current_risk))}</span>"
     )
 
 
-def _risk_index_gauge_html(projection: _RiskProjection) -> str:
-    if projection.current_index is None:
-        return '<div class="risk-gauge"></div>'
-    needle = max(0.0, min(projection.current_index, 100.0))
-    return (
-        '<div class="risk-gauge"><span class="risk-gauge-needle" '
-        f'style="left:{_safe_html(_format_score(needle))}%;"></span></div>'
+def _open_risk_kpis_html(projection: _RiskProjection) -> str:
+    items = (
+        (projection.actionable_count, "open findings"),
+        (projection.critical_count, "open critical"),
+        (projection.kev_count, "open KEV"),
     )
+    cells = "".join(
+        f"<span><strong>{_safe_html(str(count))}</strong> {_safe_html(label)}</span>"
+        for count, label in items
+    )
+    return f'<div class="risk-scenario-kpis">{cells}</div>'
 
 
 def _risk_index_footnote(projection: _RiskProjection) -> str:
     if projection.actionable_count == 0:
-        return "No open, non-accepted finding carries actionable risk for this run."
+        return "No open, non-accepted finding carries actionable risk in this report."
     return (
-        "Mean risk score across "
-        f"{_pluralize(projection.actionable_count, 'open, non-accepted finding')}. "
+        "Summed risk score of "
+        f"{_pluralize(projection.actionable_count, 'open, non-accepted finding')}; "
+        f"average score {_format_score(projection.current_index)}. "
         "Accepted risk, VEX suppressed and fixed-evidence findings are excluded."
     )
 
@@ -506,25 +516,25 @@ def _reducer_signal_tags(reducer: _RiskReducer) -> str:
     return "".join(tags)
 
 
-def _projection_bar_tone(step: _ProjectionStep, target_index: float | None) -> str:
+def _projection_bar_tone(step: _ProjectionStep, projection: _RiskProjection) -> str:
     if step.mode == "actual":
-        return _band_for_index(step.value)
-    if target_index is not None and step.value <= target_index:
+        return _band_for_projection(projection)
+    if projection.target_risk is not None and step.value <= projection.target_risk:
         return "success"
     return "projected"
 
 
-def _projection_drop_percent(current_index: float, final_index: float) -> int:
-    if current_index <= 0:
+def _projection_drop_percent(current: float, final: float) -> int:
+    if current <= 0:
         return 0
-    return round(((current_index - final_index) / current_index) * 100)
+    return round(((current - final) / current) * 100)
 
 
 def _target_reached_step(projection: _RiskProjection) -> _ProjectionStep | None:
-    if projection.target_index is None:
+    if projection.target_risk is None:
         return None
     return next(
-        (step for step in projection.steps if step.value <= (projection.target_index or 0)),
+        (step for step in projection.steps if step.value <= (projection.target_risk or 0)),
         None,
     )
 
@@ -541,14 +551,6 @@ def _readout_step_label(step: _ProjectionStep) -> str:
 
 def _step_detail(step: _ProjectionStep) -> str:
     return f"{step.remaining_count} remaining"
-
-
-def _band_for_index(value: float) -> str:
-    if value >= 70:
-        return "critical"
-    if value >= 40:
-        return "elevated"
-    return "low"
 
 
 def _risk_score(finding: MarkdownReportFinding) -> float:

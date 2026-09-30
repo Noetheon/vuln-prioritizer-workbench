@@ -84,6 +84,7 @@ from app.services.import_execution_uploads import (
 from app.services.import_queue_payload import import_queue_payload
 from app.services.import_uploads import sanitize_parser_error_message as _sanitize_error_message
 from app.services.project_policy import current_priority_policy
+from app.services.risk_kpis import record_run_risk_snapshot
 from app.services.risk_reduction import project_risk_index_from_projection
 from app.services.sbom_import import (
     empty_import_analysis,
@@ -692,6 +693,7 @@ async def execute_project_import_upload(
     )
     session.flush()
     finished_run.risk_index = project_risk_index_from_projection(session, project_id)
+    record_run_risk_snapshot(session, finished_run)
     context.succeed(
         stage="succeeded",
         message="Import workflow succeeded.",

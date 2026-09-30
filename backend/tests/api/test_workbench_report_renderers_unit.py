@@ -62,7 +62,7 @@ def _finding(**overrides: object) -> MarkdownReportFinding:
     return MarkdownReportFinding(**values)  # type: ignore[arg-type]
 
 
-def test_html_risk_projection_removes_scores_and_findings_from_the_mean() -> None:
+def test_html_risk_projection_removes_scores_from_open_risk() -> None:
     from app.services.report_html_risk_projection import _risk_projection_helper
 
     projection = _risk_projection_helper(
@@ -71,16 +71,19 @@ def test_html_risk_projection_removes_scores_and_findings_from_the_mean() -> Non
             _finding(cve_id="CVE-2026-0002", risk_score=50),
         ]
     )
+    assert projection.current_risk == 150
+    # The average stays a secondary figure; the target is half of open risk.
     assert projection.current_index == 75
+    assert projection.target_risk == 75
     assert [(step.value, step.remaining_count) for step in projection.steps] == [
-        (75, 2),
+        (150, 2),
         (50, 1),
         (0, 0),
         (0, 0),
     ]
 
 
-def test_html_risk_projection_can_increase_mean_while_lowering_total_burden() -> None:
+def test_html_risk_projection_falls_while_the_remaining_average_rises() -> None:
     from app.services.report_html_risk_projection import _risk_projection_helper
 
     findings = [_finding(cve_id="CVE-2026-0001", risk_score=40) for _ in range(5)] + [
@@ -90,15 +93,18 @@ def test_html_risk_projection_can_increase_mean_while_lowering_total_burden() ->
     projection = _risk_projection_helper(findings)
     assert projection.current_risk == 500
     assert projection.current_index == 55.556
-    assert projection.steps[1].value == 75
-    assert projection.plan_index == 60
-    assert projection.planned_reduction_index < 0
+    assert projection.steps[1].value == 300
+    assert projection.plan_risk == 60
+    assert projection.planned_reduction == 440
+    # The one finding left scores 60, above today's average, yet open risk fell.
+    assert projection.steps[-1].remaining_count == 1
     html = renderers.render_html_executive_report(_payload(findings))
-    assert "average increase planned" in html
+    assert "takes open risk <strong>500 -&gt; 60</strong>" in html
     assert "200 score" in html
+    assert "average increase planned" not in html
 
 
-def test_html_risk_mean_counts_unknown_scores_and_excludes_governance() -> None:
+def test_html_open_risk_counts_unknown_scores_as_zero_and_excludes_governance() -> None:
     from app.services.report_html_risk_projection import _risk_projection_helper
     from app.services.report_html_view_model import _risk_index_helper
 
@@ -108,9 +114,13 @@ def test_html_risk_mean_counts_unknown_scores_and_excludes_governance() -> None:
         _finding(risk_score=100, status="accepted"),
         _finding(risk_score=100, status="fixed"),
     ]
-    assert _risk_projection_helper(findings).current_index == 50
+    projection = _risk_projection_helper(findings)
+    assert projection.current_risk == 100
+    assert projection.current_index == 50
     assert _risk_index_helper(findings)[0] == 50
-    assert _risk_projection_helper([]).current_index == 0
+    empty = _risk_projection_helper([])
+    assert empty.current_risk == 0
+    assert empty.current_index is None
 
 
 def test_report_models_reject_unknown_fields_and_do_not_share_defaults() -> None:
@@ -449,7 +459,7 @@ def test_executive_html_groups_campaigns_and_interprets_freshness() -> None:
     risk_scenario_text = risk_scenario.get_text(" ", strip=True)
     assert "Scenario projection" in risk_scenario_text
     assert "Top risk reducers" in risk_scenario_text
-    assert "Static what-if simulation from this run" in risk_scenario_text
+    assert "Static what-if simulation from this report" in risk_scenario_text
     assert "Upgrade affected log4j-core components" in risk_scenario_text
     assert "Apply validated Spring Framework fixes" in risk_scenario_text
     assert "CVE-2024-0001" not in risk_scenario_text

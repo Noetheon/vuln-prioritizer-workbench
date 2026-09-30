@@ -9,6 +9,7 @@ import type {
   FindingsDirection,
   FindingsSort,
   KevFilter,
+  StatusFilter,
 } from "../../lib/app-defaults"
 
 export const findingPageSizes = [1, 10, 25, 50] as const
@@ -27,6 +28,10 @@ export const findingStatusOptions: readonly FindingStatus[] = [
   "fixed",
   "accepted",
   "suppressed",
+]
+export const findingStatusFilterOptions: readonly StatusFilter[] = [
+  ...findingStatusOptions,
+  "all",
 ]
 export const findingExposureOptions: readonly AssetExposure[] = [
   "internet-facing",

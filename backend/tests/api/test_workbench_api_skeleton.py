@@ -1442,12 +1442,13 @@ def test_vpw202_project_dashboard_aggregate_replaces_dashboard_query_fanout(
     ]
     assert payload["findings"]["remediation_queue"]["data"][0]["component_name"] == "log4j-core"
     assert payload["findings"]["remediation_queue"]["data"][0]["asset_key"] == "payments-api"
+    # Tiles count open work too: only the open Log4Shell finding.
     assert payload["findings"]["signal_counts"] == {
         "high_epss": 1,
         "internet_facing_criticals": 1,
         "epss_buckets": {
-            "low": 1,
-            "medium": 1,
+            "low": 0,
+            "medium": 0,
             "high": 0,
             "critical": 1,
         },

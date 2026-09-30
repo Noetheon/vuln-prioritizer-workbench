@@ -1,5 +1,5 @@
 import { Link } from "@/lib/router"
-import { AlertTriangle, ArrowUp, Eye, FileDown, Upload } from "lucide-react"
+import { AlertTriangle, ArrowUp, Clock, FileDown, Upload } from "lucide-react"
 import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
@@ -15,7 +15,9 @@ type RemediationQueueSummaryProps = {
   displayProject: ProjectPublic | null
   highCount: number
   kevCount: number
-  openCount: number
+  overdueCount: number
+  // "open-work": the default view; "filtered": the active filters narrow it.
+  scope: "filtered" | "open-work"
 }
 
 export function RemediationQueueSummary({
@@ -23,38 +25,40 @@ export function RemediationQueueSummary({
   displayProject,
   highCount,
   kevCount,
-  openCount,
+  overdueCount,
+  scope,
 }: RemediationQueueSummaryProps) {
   const projectSearch = selectedProjectRouteSearch(displayProject?.id ?? "")
   const projectName = displayProject?.name ?? "the selected project"
+  const inView = scope === "filtered" ? "matching the filters" : "open work"
   const metrics: MetricStripMetric[] = [
     {
-      description: "Immediate owner attention",
+      description: `Critical, ${inView}`,
       icon: <AlertTriangle aria-hidden="true" className="h-4 w-4" />,
       label: "Critical",
       tone: "critical",
       value: criticalCount,
     },
     {
-      description: "Near-term remediation",
+      description: `High, ${inView}`,
       icon: <ArrowUp aria-hidden="true" className="h-4 w-4" />,
       label: "High",
       tone: "warning",
       value: highCount,
     },
     {
-      description: "Known exploited",
+      description: `Known exploited, ${inView}`,
       icon: <AlertTriangle aria-hidden="true" className="h-4 w-4" />,
       label: "KEV",
       tone: "support",
       value: kevCount,
     },
     {
-      description: "Open lifecycle",
-      icon: <Eye aria-hidden="true" className="h-4 w-4" />,
-      label: "Open",
-      tone: "info",
-      value: openCount,
+      description: `Past SLA, ${inView}`,
+      icon: <Clock aria-hidden="true" className="h-4 w-4" />,
+      label: "Overdue",
+      tone: overdueCount > 0 ? "critical" : "info",
+      value: overdueCount,
     },
   ]
 

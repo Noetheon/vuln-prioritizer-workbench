@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import uuid
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from sqlalchemy import func
@@ -41,6 +41,7 @@ def build_project_risk_reduction_payload(
     findings: Sequence[Finding | DecisionFindingView],
     *,
     runs: Sequence[AnalysisRun] = (),
+    run_snapshots: Mapping[uuid.UUID, Mapping[str, Any]] | None = None,
     opportunity_limit: int = 5,
 ) -> ProjectRiskReductionPublic:
     """Build dashboard risk-reduction opportunities from evidence-backed findings."""
@@ -60,7 +61,7 @@ def build_project_risk_reduction_payload(
         largest_driver=_largest_driver(actionable),
         top_opportunities=top_opportunities,
         residual_steps=_residual_steps(current_risk, top_opportunities, len(actionable)),
-        history=risk_index_history(runs),
+        history=risk_index_history(runs, snapshots=run_snapshots),
         governance_debt_risk=_round_score(sum(_risk_score(finding) for finding in governance_debt)),
     )
 
@@ -68,14 +69,17 @@ def build_project_risk_reduction_payload(
 def risk_index_history(
     runs: Sequence[AnalysisRun],
     *,
+    snapshots: Mapping[uuid.UUID, Mapping[str, Any]] | None = None,
     limit: int = RISK_INDEX_HISTORY_LIMIT,
 ) -> list[RiskIndexHistoryPointPublic]:
-    """Return persisted run risk indexes ordered oldest to newest."""
+    """Return persisted run risk figures ordered oldest to newest."""
+    recorded = snapshots or {}
     points = [
         RiskIndexHistoryPointPublic(
             run_id=run.id,
             finished_at=run.finished_at,
             risk_index=_round_score(float(run.risk_index)),
+            **_absolute_history(recorded.get(run.id)),
         )
         for run in runs
         if run.risk_index is not None
@@ -84,6 +88,21 @@ def risk_index_history(
     ]
     points.sort(key=lambda point: point.finished_at)
     return points[-max(1, limit) :]
+
+
+def _absolute_history(kpis: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Absolute figures recorded with a run; older runs have none."""
+    if kpis is None:
+        return {}
+    values: dict[str, Any] = {}
+    risk = kpis.get("open_risk")
+    if isinstance(risk, int | float) and not isinstance(risk, bool):
+        values["open_risk"] = _round_score(float(risk))
+    for key in ("open_findings", "open_critical", "open_kev"):
+        value = kpis.get(key)
+        if isinstance(value, int) and not isinstance(value, bool):
+            values[key] = value
+    return values
 
 
 def project_risk_index(findings: Sequence[Finding | DecisionFindingView]) -> float:

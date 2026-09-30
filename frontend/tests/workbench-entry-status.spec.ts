@@ -86,7 +86,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page.getByLabel("No remediation queue items")).toContainText(
     "No findings",
   )
-  await expect(page.getByLabel("Critical Priority summary card")).toContainText(
+  await expect(page.getByLabel("Open Critical summary card")).toContainText(
     "0",
   )
   await expect(page.getByText("No open reduction opportunities")).toBeVisible()
@@ -117,7 +117,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
 
   await page.reload()
   await selectDashboardProject(page, project.name)
-  await expect(page.getByLabel("KEV Exposed summary card")).toContainText(
+  await expect(page.getByLabel("Open KEV summary card")).toContainText(
     /[1-9]/,
   )
   await expect(page.getByText("Remediation queue")).toBeVisible()

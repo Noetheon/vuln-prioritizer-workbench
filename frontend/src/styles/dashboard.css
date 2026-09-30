@@ -342,6 +342,7 @@
 }
 
 .dashboard-risk-posture-summary {
+  container-type: inline-size;
   gap: 0.74rem;
   padding: 1.1rem 1.3rem 1.1rem 0;
 }
@@ -390,7 +391,8 @@
 }
 
 .dashboard-risk-posture-index {
-  font-size: 5.1rem;
+  /* An open-risk sum can run to several digits; fit the column. */
+  font-size: clamp(2.4rem, 21cqi, 4.4rem);
   font-weight: 850;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
@@ -428,64 +430,34 @@
   font-variant-numeric: tabular-nums;
 }
 
-.dashboard-risk-posture-scale {
+.dashboard-risk-posture-kpis {
   display: grid;
-  gap: 0.42rem;
-  margin-top: 0.45rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 0.9rem;
+  margin: 0.4rem 0 0;
 }
 
-.dashboard-risk-posture-scale-track {
-  position: relative;
+.dashboard-risk-posture-kpi {
   display: grid;
-  grid-template-columns: 40% 30% 30%;
-  gap: 0;
-  height: 0.6rem;
-  overflow: visible;
-  border-radius: 999px;
-}
-
-.dashboard-risk-posture-scale-band {
+  align-content: start;
+  gap: 0.14rem;
   min-width: 0;
 }
 
-.dashboard-risk-posture-scale-band:first-child {
-  border-radius: 999px 0 0 999px;
-}
-
-.dashboard-risk-posture-scale-band:last-of-type {
-  border-radius: 0 999px 999px 0;
-}
-
-.dashboard-risk-posture-scale-band--low {
-  background: color-mix(in srgb, var(--vpw-green) 68%, var(--vpw-bg-card));
-}
-
-.dashboard-risk-posture-scale-band--moderate {
-  background: color-mix(in srgb, var(--vpw-amber) 68%, var(--vpw-bg-card));
-}
-
-.dashboard-risk-posture-scale-band--critical {
-  background: color-mix(in srgb, var(--vpw-red) 68%, var(--vpw-bg-card));
-}
-
-.dashboard-risk-posture-scale-needle {
-  position: absolute;
-  top: -0.3rem;
-  left: var(--risk-posture-level);
-  width: 0.22rem;
-  height: 1.2rem;
-  border-radius: 999px;
-  background: var(--vpw-text-primary);
-  box-shadow: 0 0 0 2px var(--vpw-bg-card);
-  transform: translateX(-50%);
-}
-
-.dashboard-risk-posture-scale-labels {
-  display: flex;
-  justify-content: space-between;
+.dashboard-risk-posture-kpi dt {
   color: var(--vpw-text-muted);
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.dashboard-risk-posture-kpi dd {
+  margin: 0;
+  color: var(--vpw-text-primary);
+  font-size: 1.02rem;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
 }
 
 .dashboard-risk-posture-severity {

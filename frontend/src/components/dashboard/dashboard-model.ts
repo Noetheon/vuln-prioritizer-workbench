@@ -5,6 +5,7 @@ import type {
   FindingPublic,
   ProjectDecisionSummaryPublic,
   ProjectPublic,
+  ProjectRiskKpisPublic,
   ProjectRiskReductionPublic,
   ProviderStatusPublic,
 } from "@/api-client"
@@ -51,6 +52,7 @@ export type RiskOperationsDashboardProps = {
   summaryLoading: boolean
   projectSummary: ProjectDecisionSummaryPublic | null
   riskReduction: ProjectRiskReductionPublic | null
+  kpis?: ProjectRiskKpisPublic | null
   isManagedDemoWorkspace: boolean
 }
 

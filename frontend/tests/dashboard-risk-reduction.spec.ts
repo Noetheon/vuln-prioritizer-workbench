@@ -38,12 +38,15 @@ test("dashboard renders risk reduction opportunities across breakpoints", async 
 
     const panel = page.getByRole("region", { name: "Risk posture" })
     await expect(panel).toBeVisible()
-    await expect(panel.getByText("Risk index")).toBeVisible()
+    await expect(
+      panel.getByText("Open risk · sum of open finding scores"),
+    ).toBeVisible()
+    await expect(panel.getByLabel("Open work KPIs")).toContainText("Overdue")
     await expect(panel.getByText("Scenario projection")).toBeVisible()
     await expect(panel.getByText("Top risk reducers")).toBeVisible()
     await expect(panel.getByText("projected")).toBeVisible()
     await expect(panel.getByText("target", { exact: true })).toBeVisible()
-    await expect(panel.getByText(/governance debt/i)).toBeVisible()
+    await expect(panel.getByText(/accepted \(/)).toBeVisible()
     await expect(
       panel.getByRole("link", { name: /Patch xz|CVE-2024-3094 on xz/ }),
     ).toHaveAttribute("href", /\/findings\/finding-1\?projectId=project-1/)

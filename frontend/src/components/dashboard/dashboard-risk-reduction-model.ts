@@ -19,6 +19,8 @@ export type RiskPostureProjectionStep = {
 export type RiskPostureHistoryStep = {
   key: string
   label: string
+  // Absolute open risk when the run completed; null for older runs.
+  openRisk: number | null
   riskIndex: number
 }
 
@@ -36,10 +38,12 @@ export type RiskReductionSummary = {
   opportunities: readonly RiskReductionOpportunityPublic[]
   residualSteps: readonly ResidualRiskStepPublic[]
   simulationTargetIndex: number
+  // The plan target: half of today's open risk.
+  targetRisk: number
 }
 
 const DEFAULT_METHODOLOGY =
-  "The risk index is the mean score of remaining actionable findings. Completing a group removes its scores and finding count. The average may rise even when total score burden falls. Historical runs can contain different scopes and evidence; a change alone does not prove remediation."
+  "Open risk is the sum of the scores of open, in-review, and remediating findings that are neither accepted nor suppressed by VEX. It rises when findings are added and falls when they are closed. Completing a group removes its scores. The average score of open findings is a secondary figure. Historical runs can contain different scopes and evidence; a change alone does not prove remediation."
 
 // The risk posture panel renders exactly this many reducers; the same list
 // drives the checked-plan simulation so nothing hidden can stay selected.
@@ -79,6 +83,7 @@ export function buildRiskReductionSummary(
     opportunities,
     residualSteps,
     simulationTargetIndex: riskPostureTargetIndex(currentRiskIndex),
+    targetRisk: roundRiskIndex(currentRisk * 0.5),
   }
 }
 
@@ -142,6 +147,10 @@ export function buildRiskPostureHistorySteps(
   return history.map((point) => ({
     key: `history-${point.run_id}`,
     label: riskPostureHistoryLabel(point.finished_at),
+    openRisk:
+      point.open_risk === null || point.open_risk === undefined
+        ? null
+        : roundRiskIndex(Math.max(0, point.open_risk)),
     riskIndex: roundRiskIndex(
       Math.min(100, Math.max(0, point.risk_index ?? 0)),
     ),

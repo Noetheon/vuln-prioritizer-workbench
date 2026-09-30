@@ -103,6 +103,30 @@ class AnalysisRun(AnalysisRunBase, table=True):
     )
 
 
+class AnalysisRunRiskSnapshot(SQLModel, table=True):
+    """The project's absolute open-risk figures when a run completed."""
+
+    __tablename__ = "analysis_run_risk_snapshot"
+
+    analysis_run_id: uuid.UUID = Field(
+        foreign_key="analysis_run.id",
+        primary_key=True,
+        ondelete="CASCADE",
+    )
+    project_id: uuid.UUID = Field(
+        foreign_key="project.id",
+        nullable=False,
+        index=True,
+        ondelete="CASCADE",
+    )
+    # open_risk, open_findings, open_critical, open_kev (metric open-risk-kpis.v1).
+    snapshot_json: dict[str, Any] = Field(sa_column=Column(JSON, nullable=False))
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+
+
 class AnalysisRunUploadsPublic(SQLModel):
     """Public upload artifact references for one run."""
 

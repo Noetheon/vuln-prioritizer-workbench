@@ -114,9 +114,11 @@ test("findings search maps URL state to generated findings API params", () => {
     epss_max: undefined,
     epss_min: 0.7,
     exposure: undefined,
+    include_summary: true,
     kev: false,
     limit: 10,
     offset: 0,
+    open_work: true,
     owner_service: "payments",
     priority: "high",
     project_id: "project-1",
@@ -148,9 +150,11 @@ test("findings search drops invalid max range values that are below min", () => 
     epss_max: undefined,
     epss_min: 0.7,
     exposure: undefined,
+    include_summary: true,
     kev: undefined,
     limit: 10,
     offset: 0,
+    open_work: true,
     owner_service: undefined,
     priority: undefined,
     project_id: "project-1",
@@ -213,4 +217,20 @@ test("findings search keeps a valid SLA filter and drops unknown ones", () => {
   assert.equal(invalid.sla, "")
   assert.equal(findingsSearchToApiParams(invalid, "project-1").sla, undefined)
   assert.equal(cleanFindingsSearchQueryString("sla=late&kev=true"), "kev=true")
+})
+
+test("the queue lists open work unless a status is chosen", () => {
+  const openWork = parseFindingsSearch({})
+  const everything = parseFindingsSearch({ status: "all" })
+  const resolved = parseFindingsSearch({ status: "resolved" })
+
+  assert.equal(openWork.status, "")
+  assert.equal(findingsSearchToApiParams(openWork, "project-1").open_work, true)
+  assert.equal(findingsSearchToApiParams(openWork, "project-1").status, undefined)
+  assert.equal(everything.status, "all")
+  assert.equal(findingsSearchToApiParams(everything, "project-1").open_work, undefined)
+  assert.equal(findingsSearchToApiParams(everything, "project-1").status, undefined)
+  assert.equal(findingsSearchQueryString(everything), "status=all")
+  assert.equal(findingsSearchToApiParams(resolved, "project-1").status, "resolved")
+  assert.equal(findingsSearchToApiParams(resolved, "project-1").open_work, undefined)
 })

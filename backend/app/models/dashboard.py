@@ -76,11 +76,42 @@ class ResidualRiskStepPublic(SQLModel):
 
 
 class RiskIndexHistoryPointPublic(SQLModel):
-    """Persisted risk index of one completed analysis run."""
+    """Open risk recorded when one analysis run completed."""
 
     run_id: uuid.UUID
     finished_at: datetime
+    # Secondary figure: the average score of open findings.
     risk_index: float = 0.0
+    # Absolute figures; None for runs recorded before they were kept.
+    open_risk: float | None = None
+    open_findings: int | None = None
+    open_critical: int | None = None
+    open_kev: int | None = None
+
+
+class ProjectRiskKpisPublic(SQLModel):
+    """Absolute risk KPIs of a project's open work, as defined in issue #674."""
+
+    metric: Literal["open-risk-kpis.v1"] = "open-risk-kpis.v1"
+    open_findings: int = 0
+    open_by_priority: dict[str, int] = Field(default_factory=dict)
+    open_critical: int = 0
+    open_high: int = 0
+    open_kev: int = 0
+    overdue: int = 0
+    due_soon: int = 0
+    # Sum of the operational scores of open work; closing findings lowers it.
+    open_risk: float = 0.0
+    mean_open_score: float = 0.0
+    accepted_findings: int = 0
+    accepted_risk: float = 0.0
+    # Closures (resolved or fixed) in the last `closure_window_days` days.
+    closure_window_days: int = 90
+    closed_findings: int = 0
+    mttr_days: float | None = None
+    closed_with_sla: int = 0
+    closed_within_sla: int = 0
+    sla_compliance_rate: float | None = None
 
 
 class ProjectRiskReductionPublic(SQLModel):
@@ -88,7 +119,8 @@ class ProjectRiskReductionPublic(SQLModel):
 
     current_actionable_risk: float = 0.0
     current_risk_index: float = 0.0
-    metric: Literal["mean-actionable-score.v1"] = "mean-actionable-score.v1"
+    # v2 leads with the absolute open risk; the mean is a secondary figure.
+    metric: Literal["open-risk-sum.v2"] = "open-risk-sum.v2"
     actionable_finding_count: int = 0
     largest_driver: RiskContributionPublic | None = None
     top_opportunities: list[RiskReductionOpportunityPublic] = Field(default_factory=list)
@@ -96,10 +128,12 @@ class ProjectRiskReductionPublic(SQLModel):
     history: list[RiskIndexHistoryPointPublic] = Field(default_factory=list)
     governance_debt_risk: float = 0.0
     methodology: str = (
-        "The risk index is the mean score of remaining actionable findings. "
-        "Simulation removes both their scores and their count. Total score burden "
-        "falls when findings are closed; the remaining average can rise. "
-        "Historical imports can cover different evidence and are not proof of remediation."
+        "Open risk is the sum of the scores of open, in-review, and remediating "
+        "findings that are neither accepted nor suppressed by VEX. It rises when "
+        "findings are added and falls when they are closed. The simulation removes "
+        "the scores of the checked remediation groups. The average score of open "
+        "findings is shown as a secondary figure. Historical imports can cover "
+        "different evidence and are not proof of remediation."
     )
 
 
@@ -120,3 +154,4 @@ class ProjectDashboardPublic(SQLModel):
     runs: AnalysisRunsPublic
     findings: ProjectDashboardFindingsPublic
     risk_reduction: ProjectRiskReductionPublic = Field(default_factory=ProjectRiskReductionPublic)
+    kpis: ProjectRiskKpisPublic = Field(default_factory=ProjectRiskKpisPublic)

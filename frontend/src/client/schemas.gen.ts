@@ -5339,6 +5339,16 @@ export const FindingsPublicSchema = {
             },
             title: 'Data',
             type: 'array'
+        },
+        summary: {
+            anyOf: [
+                {
+                    $ref: '#/components/schemas/FindingsSummaryPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         }
     },
     required: [
@@ -5346,6 +5356,36 @@ export const FindingsPublicSchema = {
         'count'
     ],
     title: 'FindingsPublic',
+    type: 'object'
+} as const;
+
+export const FindingsSummaryPublicSchema = {
+    description: 'Counts across every page of a filtered finding list.',
+    properties: {
+        by_priority: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'By Priority',
+            type: 'object'
+        },
+        kev: {
+            default: 0,
+            title: 'Kev',
+            type: 'integer'
+        },
+        open_work: {
+            default: 0,
+            title: 'Open Work',
+            type: 'integer'
+        },
+        overdue: {
+            default: 0,
+            title: 'Overdue',
+            type: 'integer'
+        }
+    },
+    title: 'FindingsSummaryPublic',
     type: 'object'
 } as const;
 
@@ -8161,6 +8201,9 @@ export const ProjectDashboardPublicSchema = {
         governance: {
             $ref: '#/components/schemas/ProjectGovernanceRollupsPublic'
         },
+        kpis: {
+            $ref: '#/components/schemas/ProjectRiskKpisPublic'
+        },
         project_id: {
             format: 'uuid',
             title: 'Project Id',
@@ -8659,6 +8702,119 @@ export const ProjectPublicSchema = {
     type: 'object'
 } as const;
 
+export const ProjectRiskKpisPublicSchema = {
+    description: 'Absolute risk KPIs of a project\'s open work, as defined in issue #674.',
+    properties: {
+        accepted_findings: {
+            default: 0,
+            title: 'Accepted Findings',
+            type: 'integer'
+        },
+        accepted_risk: {
+            default: 0,
+            title: 'Accepted Risk',
+            type: 'number'
+        },
+        closed_findings: {
+            default: 0,
+            title: 'Closed Findings',
+            type: 'integer'
+        },
+        closed_with_sla: {
+            default: 0,
+            title: 'Closed With Sla',
+            type: 'integer'
+        },
+        closed_within_sla: {
+            default: 0,
+            title: 'Closed Within Sla',
+            type: 'integer'
+        },
+        closure_window_days: {
+            default: 90,
+            title: 'Closure Window Days',
+            type: 'integer'
+        },
+        due_soon: {
+            default: 0,
+            title: 'Due Soon',
+            type: 'integer'
+        },
+        mean_open_score: {
+            default: 0,
+            title: 'Mean Open Score',
+            type: 'number'
+        },
+        metric: {
+            const: 'open-risk-kpis.v1',
+            default: 'open-risk-kpis.v1',
+            title: 'Metric',
+            type: 'string'
+        },
+        mttr_days: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Mttr Days'
+        },
+        open_by_priority: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Open By Priority',
+            type: 'object'
+        },
+        open_critical: {
+            default: 0,
+            title: 'Open Critical',
+            type: 'integer'
+        },
+        open_findings: {
+            default: 0,
+            title: 'Open Findings',
+            type: 'integer'
+        },
+        open_high: {
+            default: 0,
+            title: 'Open High',
+            type: 'integer'
+        },
+        open_kev: {
+            default: 0,
+            title: 'Open Kev',
+            type: 'integer'
+        },
+        open_risk: {
+            default: 0,
+            title: 'Open Risk',
+            type: 'number'
+        },
+        overdue: {
+            default: 0,
+            title: 'Overdue',
+            type: 'integer'
+        },
+        sla_compliance_rate: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Sla Compliance Rate'
+        }
+    },
+    title: 'ProjectRiskKpisPublic',
+    type: 'object'
+} as const;
+
 export const ProjectRiskReductionPublicSchema = {
     description: 'Risk-reduction opportunities for the project dashboard.',
     properties: {
@@ -8700,13 +8856,13 @@ export const ProjectRiskReductionPublicSchema = {
             ]
         },
         methodology: {
-            default: 'The risk index is the mean score of remaining actionable findings. Simulation removes both their scores and their count. Total score burden falls when findings are closed; the remaining average can rise. Historical imports can cover different evidence and are not proof of remediation.',
+            default: 'Open risk is the sum of the scores of open, in-review, and remediating findings that are neither accepted nor suppressed by VEX. It rises when findings are added and falls when they are closed. The simulation removes the scores of the checked remediation groups. The average score of open findings is shown as a secondary figure. Historical imports can cover different evidence and are not proof of remediation.',
             title: 'Methodology',
             type: 'string'
         },
         metric: {
-            const: 'mean-actionable-score.v1',
-            default: 'mean-actionable-score.v1',
+            const: 'open-risk-sum.v2',
+            default: 'open-risk-sum.v2',
             title: 'Metric',
             type: 'string'
         },
@@ -9877,12 +10033,56 @@ export const RiskContributionPublicSchema = {
 } as const;
 
 export const RiskIndexHistoryPointPublicSchema = {
-    description: 'Persisted risk index of one completed analysis run.',
+    description: 'Open risk recorded when one analysis run completed.',
     properties: {
         finished_at: {
             format: 'date-time',
             title: 'Finished At',
             type: 'string'
+        },
+        open_critical: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Open Critical'
+        },
+        open_findings: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Open Findings'
+        },
+        open_kev: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Open Kev'
+        },
+        open_risk: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Open Risk'
         },
         risk_index: {
             default: 0,

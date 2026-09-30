@@ -122,6 +122,7 @@ function FindingsRouteContainer() {
             : ""
         }
         findingsLoading={findingsQuery.isLoading || findingsQuery.isFetching}
+        findingsSummary={findingsQuery.data?.summary ?? null}
         findingSearch={findingsRouteSearch(findingsSearch, selectedProjectId)}
         onClearAssetFilter={clearFindingAssetFilter}
         onClearFilters={clearFindingFilters}
@@ -211,6 +212,7 @@ function findingsSearchForSavedView(
     case "kev":
       return { ...base, direction: "desc", kev: "true", sort: "kev" }
     case "all":
+    case "custom":
       return base
   }
 }

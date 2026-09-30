@@ -13,7 +13,10 @@ from app.api.routes.workbench_access import (
     require_current_decisions,
     require_project,
 )
-from app.decision_core.finding_queries import list_project_findings_query
+from app.decision_core.finding_queries import (
+    list_project_findings_query,
+    project_findings_summary,
+)
 from app.decision_core.readmodels import current_finding_read_views, project_finding_decision_views
 from app.models import (
     AssetExposure,
@@ -94,46 +97,59 @@ def read_project_findings(
             "overdue, due_soon (last quarter of the window), or on_track."
         ),
     ),
+    open_work: bool | None = Query(
+        default=None,
+        description=(
+            "True lists open work (open, in review, remediating); false lists every other status."
+        ),
+    ),
     include_evidence: bool = Query(
         default=False,
         description=(
             "Expand full decision evidence for this page. Detail views include it by default."
         ),
     ),
+    include_summary: bool = Query(
+        default=False,
+        description="Add counts by priority, KEV, open work, and overdue across every page.",
+    ),
 ) -> FindingsPublic:
     """List a paginated page of findings for a visible project."""
     require_current_decisions(session, project_id)
-    findings, count = list_project_findings_query(
-        session,
-        FindingPageQuery(
-            project_id=project_id,
-            limit=limit,
-            offset=offset,
-            sort=sort,
-            direction=direction,
-            priority=priority,
-            status=status,
-            kev=kev,
-            owner=owner,
-            service=service,
-            owner_service=owner_service,
-            query=q,
-            asset_id=asset_id,
-            exposure=exposure,
-            epss_min=epss_min,
-            epss_max=epss_max,
-            cvss_min=cvss_min,
-            cvss_max=cvss_max,
-            data_gap=data_gap,
-            sla_state=sla,
-        ),
+    page_query = FindingPageQuery(
+        project_id=project_id,
+        limit=limit,
+        offset=offset,
+        sort=sort,
+        direction=direction,
+        priority=priority,
+        status=status,
+        kev=kev,
+        owner=owner,
+        service=service,
+        owner_service=owner_service,
+        query=q,
+        asset_id=asset_id,
+        exposure=exposure,
+        epss_min=epss_min,
+        epss_max=epss_max,
+        cvss_min=cvss_min,
+        cvss_max=cvss_max,
+        data_gap=data_gap,
+        sla_state=sla,
+        open_work=open_work,
     )
+    findings, count = list_project_findings_query(session, page_query)
     views = (
         project_finding_decision_views(session, findings)
         if include_evidence
         else current_finding_read_views(session, findings)
     )
-    return FindingsPublic(data=[_finding_public_from_view(view) for view in views], count=count)
+    return FindingsPublic(
+        data=[_finding_public_from_view(view) for view in views],
+        count=count,
+        summary=project_findings_summary(session, page_query) if include_summary else None,
+    )
 
 
 @router.get("/findings/{finding_id}", response_model=FindingDetailPublic)

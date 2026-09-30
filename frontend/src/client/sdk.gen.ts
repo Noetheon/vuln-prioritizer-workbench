@@ -269,7 +269,9 @@ export class FindingsService {
         cvss_max?: number | null;
         data_gap?: boolean | null;
         sla?: FindingSlaState | null;
+        open_work?: boolean | null;
         include_evidence?: boolean;
+        include_summary?: boolean;
     }, options?: Options<never, ThrowOnError>): RequestResult<GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdFindingsErrors, ThrowOnError, 'data'> {
         const params = buildClientParams([parameters], [{ args: [
                     { in: 'path', key: 'project_id' },
@@ -292,7 +294,9 @@ export class FindingsService {
                     { in: 'query', key: 'cvss_max' },
                     { in: 'query', key: 'data_gap' },
                     { in: 'query', key: 'sla' },
-                    { in: 'query', key: 'include_evidence' }
+                    { in: 'query', key: 'open_work' },
+                    { in: 'query', key: 'include_evidence' },
+                    { in: 'query', key: 'include_summary' }
                 ] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdFindingsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',

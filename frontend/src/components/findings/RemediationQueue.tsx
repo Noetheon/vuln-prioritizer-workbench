@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import type {
   FindingPublic,
+  FindingsSummaryPublic,
   ProjectDecisionSummaryPublic,
   ProjectPublic,
 } from "@/api-client"
@@ -39,6 +40,8 @@ export type RemediationQueueProps = {
   projectListError: string
   selectedProjectId: string
   projectSummary: ProjectDecisionSummaryPublic | null
+  // Counts across every page of the filtered list.
+  findingsSummary?: FindingsSummaryPublic | null
   findingSearch: FindingsUrlSearch
   onClearAssetFilter: () => void
   onFilterChange: <K extends keyof FindingFilters>(
@@ -77,6 +80,7 @@ export function RemediationQueue({
   projectListError,
   selectedProjectId,
   projectSummary,
+  findingsSummary = null,
   findingSearch,
   onClearAssetFilter,
   onFilterChange,
@@ -107,16 +111,20 @@ export function RemediationQueue({
   const isLoading = findingsLoading
   const hasError = Boolean(findingsError)
 
-  const criticalCount =
-    displaySummary?.counts_by_priority?.critical ??
-    displaySummary?.counts_by_priority?.Critical ??
-    0
-  const highCount =
-    displaySummary?.counts_by_priority?.high ??
-    displaySummary?.counts_by_priority?.High ??
-    0
-  const kevCount = displaySummary?.kev_hits ?? 0
-  const openCount = displaySummary?.counts_by_status?.open ?? 0
+  const criticalCount = findingsSummary
+    ? (findingsSummary.by_priority?.critical ?? 0)
+    : (displaySummary?.counts_by_priority?.critical ??
+      displaySummary?.counts_by_priority?.Critical ??
+      0)
+  const highCount = findingsSummary
+    ? (findingsSummary.by_priority?.high ?? 0)
+    : (displaySummary?.counts_by_priority?.high ??
+      displaySummary?.counts_by_priority?.High ??
+      0)
+  const kevCount = findingsSummary
+    ? (findingsSummary.kev ?? 0)
+    : (displaySummary?.kev_hits ?? 0)
+  const overdueCount = findingsSummary?.overdue ?? 0
 
   const pageStart =
     findingCount === 0 ? 0 : Math.min(findingOffset + 1, findingCount)
@@ -233,7 +241,7 @@ export function RemediationQueue({
       kevCount={kevCount}
       onOpenSheet={openSheet}
       onUpdateColumnSort={updateColumnSort}
-      openCount={openCount}
+      overdueCount={overdueCount}
       ownerServiceDraft={ownerServiceDraft}
       pageEnd={pageEnd}
       pageStart={pageStart}
