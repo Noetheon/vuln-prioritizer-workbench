@@ -72,12 +72,14 @@ sizes, Python minor versions, operating systems, architectures and runner image
 families are compared separately.
 
 Initial runs report **calibrating**, not an invented baseline. Warnings cover
-fewer checked tests/functions/mutations, a history metric reaching 90% of its
+fewer checked tests/functions/mutations, a history or import metric reaching 90% of its
 fixed budget, or more than 20% deterioration against an older three-run median
 in each of three recent comparable runs. Fixed ceilings still block admission.
 Warnings do not automatically loosen budgets; unavailable comparison data is
 reported as **unavailable**. Review intentional scope/baseline changes with
-evidence. Measurements describe these fixtures, not arbitrary production loads.
+evidence. Import time, incremental import, pagination and additional memory use
+share this warning policy; the import workload size must also match a baseline.
+Measurements describe these fixtures, not arbitrary production loads.
 
 ## Monitoring and response
 

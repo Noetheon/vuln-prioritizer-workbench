@@ -227,6 +227,47 @@ def test_trends_warn_before_absolute_budget_is_exceeded():
     assert any("90%" in warning for warning in result["warnings"])
 
 
+def smoke_campaign(import_seconds=30, rows=10000):
+    receipt = history_receipt()
+    receipt["metrics"].update(
+        smoke={
+            "import_seconds": import_seconds,
+            "incremental_import_seconds": 1,
+            "tail_page_seconds": 0.2,
+            "tail_page_repeat_seconds": 0.2,
+            "peak_rss_delta_mib": 100,
+        },
+        smoke_budgets={
+            "row_count": rows,
+            "import_seconds": 60,
+            "incremental_import_seconds": 3,
+            "tail_page_seconds": 1,
+            "peak_rss_delta_mib": 512,
+        },
+    )
+    return campaign(receipt)
+
+
+def test_import_trends_warn_before_the_hard_budget_is_exceeded():
+    result = trends.analyze(smoke_campaign(54), [])
+    assert result["status"] == "warning"
+    assert any("import_seconds" in warning and "90%" in warning for warning in result["warnings"])
+
+
+def test_import_trends_require_same_workload_and_sustained_regression():
+    current = smoke_campaign(37)
+    previous = [smoke_campaign(n) for n in (37, 37, 30, 30, 30)]
+    assert any(
+        "import_seconds" in warning for warning in trends.analyze(current, previous)["warnings"]
+    )
+    previous[0] = smoke_campaign(30)
+    assert trends.analyze(current, previous)["status"] == "healthy"
+    previous = [smoke_campaign(10, rows=1000) for _ in range(5)]
+    result = trends.analyze(current, previous)
+    assert result["status"] == "calibrating"
+    assert not result["warnings"]
+
+
 def test_test_scope_loss_is_visible_even_when_every_remaining_test_passes():
     current = receipts()[0]
     current.update(profile="ci", environment=history_receipt()["environment"])

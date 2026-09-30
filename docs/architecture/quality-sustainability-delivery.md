@@ -22,7 +22,7 @@ over time, building on the locally verified test work and main including PR #699
   administrators; no required human approval. This rollout adds machine admission
   and does not invent an independent human reviewer.
 - Implementation is isolated in the existing managed worktree.
-- Focused admission/policy/monitoring validation: 55 tests passed. Temporary
+- Focused admission/policy/monitoring validation: 57 tests passed. Temporary
   Git fixture creation was removed so host-specific Git hooks cannot change the
   policy unit-test result; the actual current-tree Git comparison is also checked.
 - Two additional negative controls exposed missing review of new methods on
@@ -31,9 +31,9 @@ over time, building on the locally verified test work and main including PR #699
 - Existing package/tooling negative contracts: 40 tests passed.
 - Real recovery execution through the new runner: 22 tests passed and a fresh
   successful receipt was verified.
-- Full backend validation: 1,781 tests passed, eight optional checks skipped;
-  types and all eight critical coverage floors passed. The two policy regressions
-  added afterward passed in the focused suite.
+- Full backend validation after the evidence-copy optimization: 1,785 tests
+  passed, eight optional checks skipped; types and all eight critical coverage
+  floors passed. Two additional import-trend controls passed in the focused suite.
 - All six contract runners passed locally: core 208 killed plus four reviewed
   equivalent mutations; evidence 166 killed; 37 extended generated tests with a
   recorded seed; recovery 22; history with 13,000 revisions; three real Grype
@@ -62,6 +62,9 @@ over time, building on the locally verified test work and main including PR #699
   format and integrity checks. The focused storage/property suite passed 38
   cases; the local full-size import measured 26.0 seconds after the change.
   Local and hosted timings are distinct measurements, not a cross-machine
-  speedup claim. The unchanged hosted limits require a fresh successful run.
+  speedup claim. The next hosted import measured 57.7 seconds and the history
+  contract passed, without changing its 60-second limit. Import metrics now also
+  warn at 90% of budget and on sustained deterioration; two red/green controls
+  verify these warnings and prevent comparison across different import sizes.
 
 These are separate outcomes. No release or package publication is part of this rollout.

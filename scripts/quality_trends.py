@@ -104,9 +104,30 @@ def comparable(current: dict, previous: dict) -> bool:
             measurement.get("rows"),
             measurement.get("cycles"),
             measurement.get("mutmut"),
+            measurement.get("smoke_budgets", {}).get("row_count"),
         )
 
     return previous.get("status") == "passed" and key(current) == key(previous)
+
+
+def _performance_warnings(
+    label: str, value: float, budget: float, previous: list[float]
+) -> list[str]:
+    for number in (value, budget, *previous):
+        if type(number) not in (int, float) or not math.isfinite(number) or number < 0:
+            raise ValueError(f"Invalid performance metric: {label}")
+    if budget <= 0:
+        raise ValueError(f"Invalid performance budget: {label}")
+    warnings = []
+    if value >= budget * 0.9:
+        warnings.append(f"{label} reached at least 90% of its fixed budget.")
+    if len(previous) >= 5:
+        # Newest first: three older values establish the baseline; current plus
+        # the two newest peers must all exceed it to reject one-off runner noise.
+        baseline = statistics.median(previous[2:5])
+        if baseline > 0 and all(number > baseline * 1.2 for number in [value, *previous[:2]]):
+            warnings.append(f"{label} deteriorated by over 20% in three comparable runs.")
+    return warnings
 
 
 def analyze(current: dict, history: list[dict]) -> dict:
@@ -137,20 +158,30 @@ def analyze(current: dict, history: list[dict]) -> dict:
             "peak_rss_mib",
             "database_bytes_per_revision",
         ):
-            value = measure[key]
-            if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
-                raise ValueError(f"Invalid metric: {key}")
-            if value >= measure["budgets"][key] * 0.9:
-                warnings.append(f"history: {key} reached at least 90% of its fixed budget.")
-            if len(peers) >= 5:
-                # History is newest first: three older values establish a baseline;
-                # current plus the two newest peers must all exceed it by 20%.
-                baseline = statistics.median(p["metrics"][key] for p in peers[2:5])
-                recent = [value, *(p["metrics"][key] for p in peers[:2])]
-                if baseline > 0 and all(number > baseline * 1.2 for number in recent):
-                    warnings.append(
-                        f"history: {key} deteriorated by over 20% in three comparable runs."
+            warnings.extend(
+                _performance_warnings(
+                    f"history: {key}",
+                    measure[key],
+                    measure["budgets"][key],
+                    [p["metrics"][key] for p in peers],
+                )
+            )
+        if "smoke" in measure:
+            for key, budget_key in (
+                ("import_seconds", "import_seconds"),
+                ("incremental_import_seconds", "incremental_import_seconds"),
+                ("tail_page_seconds", "tail_page_seconds"),
+                ("tail_page_repeat_seconds", "tail_page_seconds"),
+                ("peak_rss_delta_mib", "peak_rss_delta_mib"),
+            ):
+                warnings.extend(
+                    _performance_warnings(
+                        f"history import smoke: {key}",
+                        measure["smoke"][key],
+                        measure["smoke_budgets"][budget_key],
+                        [p["metrics"]["smoke"][key] for p in peers],
                     )
+                )
     return {
         "schema": "vpw.quality-trends.v1",
         "context": current["context"],
