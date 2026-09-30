@@ -29,11 +29,16 @@ import {
 type EvidenceCenterTabsProps = {
   activeReportFormat: string
   artifactCards: readonly ArtifactCard[]
+  currentStateSelected?: boolean
   hasDecisionContext: boolean
+  // Every report of the project; the History tab shows it for the current state.
+  historyReports?: ReportPublic[]
+  historyReportsLoading?: boolean
   onCreateReport: (format: ReportFormat) => Promise<void>
   onDownloadReport: (report: ReportPublic) => Promise<void>
   onOpenGenerateDrawer: () => void
   onVerifyReport: (report: ReportPublic) => Promise<void>
+  projectRuns?: readonly AnalysisRunPublic[]
   projectSummary: ProjectDecisionSummaryPublic | null
   providerStatus: ProviderStatusPublic | null
   reportActionsEnabled: boolean
@@ -50,11 +55,15 @@ type EvidenceCenterTabsProps = {
 export function EvidenceCenterTabs({
   activeReportFormat,
   artifactCards,
+  currentStateSelected = false,
   hasDecisionContext,
+  historyReports = [],
+  historyReportsLoading = false,
   onCreateReport,
   onDownloadReport,
   onOpenGenerateDrawer,
   onVerifyReport,
+  projectRuns = [],
   projectSummary,
   providerStatus,
   reportActionsEnabled,
@@ -87,7 +96,13 @@ export function EvidenceCenterTabs({
       </TabsList>
 
       <TabsContent className="mt-0 flex flex-col gap-4" value="artifacts">
-        {!selectedReportRun ? (
+        {currentStateSelected ? (
+          <VpwEmptyState
+            action={<VpwBadge tone="info">Current project state</VpwBadge>}
+            description="Generate evidence to record the project's current state and create reports about all of its findings."
+            title="No report on the current state yet"
+          />
+        ) : !selectedReportRun ? (
           <VpwEmptyState
             action={<VpwBadge tone="neutral">Select run</VpwBadge>}
             description="Select a completed import run to generate evidence artifacts."
@@ -166,7 +181,11 @@ export function EvidenceCenterTabs({
             />
           ) : (
             <VpwEmptyState
-              description="Select a completed run to populate executive decision language."
+              description={
+                currentStateSelected
+                  ? "Decision language appears once a report records the current project state."
+                  : "Select a completed run to populate executive decision language."
+              }
               title="No decision context selected"
             />
           )}
@@ -199,14 +218,26 @@ export function EvidenceCenterTabs({
 
       <TabsContent className="mt-0" value="history">
         <ReportHistory
+          emptyDescription={
+            currentStateSelected
+              ? "Generate a report to record the project's current state."
+              : undefined
+          }
           mode="history"
           onDownload={onDownloadReport}
           onVerify={onVerifyReport}
-          panelDescription="Previously generated reports for the selected run."
+          panelDescription={
+            currentStateSelected
+              ? "Every report generated for this project, newest first. The Run column names the import or recorded state each report covers."
+              : "Previously generated reports for the selected run."
+          }
           panelEyebrow="Generated artifact history"
           panelTitle="Generated artifact history"
-          reports={reports}
-          reportsLoading={reportsLoading}
+          reports={currentStateSelected ? historyReports : reports}
+          reportsLoading={
+            currentStateSelected ? historyReportsLoading : reportsLoading
+          }
+          runs={projectRuns}
           verificationLoading={verificationLoading}
           verificationReport={verificationReport}
           verificationReportTarget={verificationReportTarget}

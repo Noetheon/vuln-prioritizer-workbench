@@ -410,6 +410,17 @@ export const AnalysisRunPublicSchema = {
             title: 'Project Id',
             type: 'string'
         },
+        project_state_current: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Project State Current'
+        },
         provider_snapshot: {
             anyOf: [
                 {
@@ -620,6 +631,17 @@ export const AnalysisRunSummaryPublicSchema = {
             format: 'uuid',
             title: 'Project Id',
             type: 'string'
+        },
+        project_state_current: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Project State Current'
         },
         provider_degraded: {
             default: false,

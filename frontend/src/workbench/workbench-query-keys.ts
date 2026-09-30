@@ -65,6 +65,9 @@ export const workbenchQueryKeys = {
     [...workbenchQueryKeys.all, "project-summaries"] as const,
   projectRuns: (projectId: string) =>
     [...workbenchQueryKeys.all, "project-runs", projectId] as const,
+  // Evidence Center runs, including recorded project states.
+  projectReportRuns: (projectId: string) =>
+    [...workbenchQueryKeys.projectRuns(projectId), "with-state-snapshots"] as const,
   projectSummaries: (projectIds: readonly string[]) =>
     [...workbenchQueryKeys.projectSummariesRoot(), [...projectIds]] as const,
   projectSummaryRoot: () =>
@@ -75,6 +78,8 @@ export const workbenchQueryKeys = {
   reportsRoot: () => [...workbenchQueryKeys.all, "reports"] as const,
   reports: (runId: string) =>
     [...workbenchQueryKeys.reportsRoot(), runId] as const,
+  projectReports: (projectId: string) =>
+    [...workbenchQueryKeys.reportsRoot(), "project", projectId] as const,
   runDetail: (runId: string) =>
     [...workbenchQueryKeys.all, "run-detail", runId] as const,
   status: () => [...workbenchQueryKeys.all, "status"] as const,

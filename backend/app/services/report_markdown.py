@@ -32,6 +32,7 @@ def render_markdown_report(payload: MarkdownReportPayload) -> str:
         input_type=payload.input_type,
         filename=payload.filename,
         run_id=payload.run_id,
+        generated_at=payload.generated_at,
     )
     lines = [
         "# Technical Vulnerability Report",

@@ -23,6 +23,7 @@ export type EvidenceCenterProps = {
   projectListLoading: boolean
   onProjectChange: (id: string) => void
   selectedRunId: string
+  currentStateSelected?: boolean
   onRunIdChange: (id: string) => void
   selectedReportRun: AnalysisRunPublic | null
   selectedRunSummary: AnalysisRunSummaryPublic | null
@@ -34,6 +35,8 @@ export type EvidenceCenterProps = {
   reports: ReportPublic[]
   reportsLoading: boolean
   reportsError: string
+  historyReports?: ReportPublic[]
+  historyReportsLoading?: boolean
   projectSummary: ProjectDecisionSummaryPublic | null
   providerStatus: ProviderStatusPublic | null
   verificationReport: ReportVerificationPublic | null
@@ -55,6 +58,9 @@ export function EvidenceCenter({
   activeReportFormat,
   capabilitiesError,
   capabilitiesLoading,
+  currentStateSelected = false,
+  historyReports,
+  historyReportsLoading,
   onCreateReport,
   onDownloadReport,
   onProjectChange,
@@ -112,7 +118,9 @@ export function EvidenceCenter({
   return (
     <VpwPageStack className="evidence-center">
       <RunContext
+        currentStateSelected={currentStateSelected}
         onOpenGenerateDrawer={() => setGenerateDrawerOpen(true)}
+        projectFindingCount={projectSummary?.finding_count ?? null}
         onProjectChange={onProjectChange}
         onRunIdChange={onRunIdChange}
         providerStatus={providerStatus}
@@ -132,12 +140,16 @@ export function EvidenceCenter({
 
       <EvidenceCenterTabs
         activeReportFormat={activeReportFormat}
+        currentStateSelected={currentStateSelected}
         artifactCards={artifactCards}
         hasDecisionContext={hasDecisionContext}
+        historyReports={historyReports}
+        historyReportsLoading={historyReportsLoading}
         onCreateReport={onCreateReport}
         onDownloadReport={onDownloadReport}
         onOpenGenerateDrawer={() => setGenerateDrawerOpen(true)}
         onVerifyReport={onVerifyReport}
+        projectRuns={projectRuns}
         projectSummary={projectSummary}
         providerStatus={providerStatus}
         reportActionsEnabled={runtimeReportActionsEnabled}
@@ -152,6 +164,7 @@ export function EvidenceCenter({
       />
       <EvidenceGenerateDrawer
         activeReportFormat={activeReportFormat}
+        currentStateSelected={currentStateSelected}
         artifactCards={artifactCards}
         onCreateReport={onCreateReport}
         onOpenChange={setGenerateDrawerOpen}

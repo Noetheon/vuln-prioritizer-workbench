@@ -31,9 +31,14 @@ import {
   runShortId,
 } from "./evidence-center-model"
 import { ReportRunSelect } from "./EvidenceCenterRunSelectors"
-import { reportRunScope } from "./report-run-scope-model"
+import {
+  currentProjectStateScope,
+  reportRunScope,
+} from "./report-run-scope-model"
 
 type RunContextProps = {
+  currentStateSelected?: boolean
+  projectFindingCount?: number | null
   selectedProject: ProjectPublic | null
   selectedProjectId: string
   projects: ProjectPublic[]
@@ -51,7 +56,9 @@ type RunContextProps = {
 }
 
 export function RunContext({
+  currentStateSelected = false,
   onOpenGenerateDrawer,
+  projectFindingCount = null,
   onRunIdChange,
   projectRuns,
   providerStatus,
@@ -60,25 +67,36 @@ export function RunContext({
   selectedProject,
   selectedReportRun,
   selectedRunId,
+  selectedRunSummary,
 }: RunContextProps) {
   const run = selectedReportRun
-  const readiness = evidenceReadinessLabel({
-    reportActionsEnabled,
-    selectedReportRun,
-  })
+  const readiness = currentStateSelected
+    ? reportActionsEnabled
+      ? "Ready for generation"
+      : "Checking"
+    : evidenceReadinessLabel({
+        reportActionsEnabled,
+        selectedReportRun,
+      })
   const runStatus = selectedReportRun
     ? runStatusLabel(selectedReportRun.status)
     : runsLoading
       ? "Loading"
       : "No run selected"
-  const runDetail = run
-    ? `${runStatus.toLowerCase()} · ${formatReportDateTime(run.finished_at)}`
-    : "Select a completed import run"
+  const runDetail = currentStateSelected
+    ? "Recorded when a report is generated"
+    : run
+      ? `${runStatus.toLowerCase()} · ${formatReportDateTime(run.finished_at)}`
+      : "Select a completed import run"
   const projectName = selectedProject?.name ?? "None selected"
   const snapshotLabel = providerSnapshotLabel(selectedReportRun, providerStatus)
   const readinessTone = evidenceReadinessTone(readiness)
   const runTone = runsLoading ? "neutral" : runMetricTone(run)
-  const scope = reportRunScope(selectedReportRun, projectRuns)
+  const scope = currentStateSelected
+    ? currentProjectStateScope(projectFindingCount)
+    : reportRunScope(selectedReportRun, projectRuns, {
+        projectStateCurrent: selectedRunSummary?.project_state_current,
+      })
   const metrics: MetricStripMetric[] = [
     {
       description: "Artifact ownership scope",
@@ -91,16 +109,20 @@ export function RunContext({
       description: runDetail,
       icon: <GitBranch aria-hidden="true" />,
       label: "Analysis run",
-      tone: runTone,
-      value: run ? runShortId(run) : runStatus,
-      visualMaskValue: Boolean(run),
+      tone: currentStateSelected ? "info" : runTone,
+      value: currentStateSelected
+        ? "Current project state"
+        : run
+          ? runShortId(run)
+          : runStatus,
+      visualMaskValue: Boolean(run) && !currentStateSelected,
     },
     {
       description: "Provider replay basis",
       icon: <Database aria-hidden="true" />,
       label: "Provider snapshot",
       tone: "support",
-      value: snapshotLabel,
+      value: currentStateSelected ? "Each finding's latest data" : snapshotLabel,
       visualMaskValue: Boolean(run?.provider_snapshot_id ?? providerStatus?.snapshot.id),
     },
     {
@@ -138,7 +160,7 @@ export function RunContext({
           </VpwToolbar>
         }
         className="evidence-run-context-panel"
-        description="Reports describe one completed run. The latest import is selected unless you pick another run."
+        description="Reports describe the current state of the whole project unless you pick one run."
         eyebrow="Govern"
         title="Evidence run context"
       >

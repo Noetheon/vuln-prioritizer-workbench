@@ -7,7 +7,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { isReportableRun, reportRunOptionLabel } from "./report-run-scope-model"
+import {
+  CURRENT_PROJECT_STATE,
+  isReportableRun,
+  reportRunOptionLabel,
+} from "./report-run-scope-model"
 
 type ReportProjectSelectProps = {
   disabled: boolean
@@ -83,7 +87,11 @@ export function ReportRunSelect({
             <SelectItem disabled value="none">
               No runs available
             </SelectItem>
-          ) : null}
+          ) : (
+            <SelectItem value={CURRENT_PROJECT_STATE}>
+              Current project state · all findings
+            </SelectItem>
+          )}
           {runs.map((run) => (
             <SelectItem
               disabled={!isReportableRun(run)}

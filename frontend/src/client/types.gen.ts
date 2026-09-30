@@ -208,6 +208,10 @@ export type AnalysisRunPublic = {
      * Project Id
      */
     project_id: string;
+    /**
+     * Project State Current
+     */
+    project_state_current?: boolean | null;
     provider_snapshot?: AnalysisRunProviderSnapshotRefPublic | null;
     /**
      * Provider Snapshot Id
@@ -300,6 +304,10 @@ export type AnalysisRunSummaryPublic = {
      * Project Id
      */
     project_id: string;
+    /**
+     * Project State Current
+     */
+    project_state_current?: boolean | null;
     /**
      * Provider Degraded
      */
@@ -7519,6 +7527,45 @@ export type PutApiV1ProjectsByProjectIdPolicyResponses = {
 
 export type PutApiV1ProjectsByProjectIdPolicyResponse = PutApiV1ProjectsByProjectIdPolicyResponses[keyof PutApiV1ProjectsByProjectIdPolicyResponses];
 
+export type GetApiV1ProjectsByProjectIdReportsData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
+    url: '/api/v1/projects/{project_id}/reports';
+};
+
+export type GetApiV1ProjectsByProjectIdReportsErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1ProjectsByProjectIdReportsError = GetApiV1ProjectsByProjectIdReportsErrors[keyof GetApiV1ProjectsByProjectIdReportsErrors];
+
+export type GetApiV1ProjectsByProjectIdReportsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ReportsPublic;
+};
+
+export type GetApiV1ProjectsByProjectIdReportsResponse = GetApiV1ProjectsByProjectIdReportsResponses[keyof GetApiV1ProjectsByProjectIdReportsResponses];
+
 export type GetApiV1ProjectsByProjectIdRunsData = {
     body?: never;
     path: {
@@ -7536,6 +7583,12 @@ export type GetApiV1ProjectsByProjectIdRunsData = {
          * Offset
          */
         offset?: number;
+        /**
+         * Include State Snapshots
+         *
+         * Also list recorded project states that reports were generated from.
+         */
+        include_state_snapshots?: boolean;
     };
     url: '/api/v1/projects/{project_id}/runs/';
 };
@@ -7557,6 +7610,36 @@ export type GetApiV1ProjectsByProjectIdRunsResponses = {
 };
 
 export type GetApiV1ProjectsByProjectIdRunsResponse = GetApiV1ProjectsByProjectIdRunsResponses[keyof GetApiV1ProjectsByProjectIdRunsResponses];
+
+export type PostApiV1ProjectsByProjectIdStateReportJobsData = {
+    body: ReportCreate;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/state-report-jobs';
+};
+
+export type PostApiV1ProjectsByProjectIdStateReportJobsErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type PostApiV1ProjectsByProjectIdStateReportJobsError = PostApiV1ProjectsByProjectIdStateReportJobsErrors[keyof PostApiV1ProjectsByProjectIdStateReportJobsErrors];
+
+export type PostApiV1ProjectsByProjectIdStateReportJobsResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkflowRunPublic;
+};
+
+export type PostApiV1ProjectsByProjectIdStateReportJobsResponse = PostApiV1ProjectsByProjectIdStateReportJobsResponses[keyof PostApiV1ProjectsByProjectIdStateReportJobsResponses];
 
 export type GetApiV1ProjectsByProjectIdSummaryData = {
     body?: never;

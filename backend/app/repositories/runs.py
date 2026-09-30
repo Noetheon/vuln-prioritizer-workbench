@@ -10,6 +10,7 @@ from sqlmodel import Session, col, func, select
 
 from app.domain.engine.security_redaction import redact_value
 from app.models import (
+    PROJECT_STATE_INPUT_TYPE,
     AnalysisRun,
     AnalysisRunStatus,
     FindingOccurrence,
@@ -271,11 +272,12 @@ class RunRepository:
         *,
         limit: int | None = None,
         offset: int = 0,
+        include_state_snapshots: bool = False,
     ) -> list[AnalysisRun]:
         """Return a bounded run page for a project newest first."""
         statement = (
             select(AnalysisRun)
-            .where(AnalysisRun.project_id == project_id)
+            .where(*_project_run_filter(project_id, include_state_snapshots))
             .order_by(col(AnalysisRun.started_at).desc())
             .offset(offset)
         )
@@ -289,21 +291,28 @@ class RunRepository:
         *,
         limit: int = 100,
         offset: int = 0,
+        include_state_snapshots: bool = False,
     ) -> tuple[list[AnalysisRun], int]:
         """Return a bounded run page and total count for a project."""
         count_statement = (
             select(func.count())
             .select_from(AnalysisRun)
-            .where(AnalysisRun.project_id == project_id)
+            .where(*_project_run_filter(project_id, include_state_snapshots))
         )
         count = int(self.session.exec(count_statement).one())
-        return self.list_analysis_runs(project_id, limit=limit, offset=offset), count
+        runs = self.list_analysis_runs(
+            project_id,
+            limit=limit,
+            offset=offset,
+            include_state_snapshots=include_state_snapshots,
+        )
+        return runs, count
 
     def get_latest_analysis_run(self, project_id: uuid.UUID) -> AnalysisRun | None:
-        """Return the newest analysis run for a project."""
+        """Return the newest import or evaluation run for a project."""
         statement = (
             select(AnalysisRun)
-            .where(AnalysisRun.project_id == project_id)
+            .where(*_project_run_filter(project_id, False))
             .order_by(col(AnalysisRun.started_at).desc())
         )
         return self.session.exec(statement).first()
@@ -369,3 +378,11 @@ class RunRepository:
             .limit(limit)
         )
         return list(self.session.exec(statement).all())
+
+
+def _project_run_filter(project_id: uuid.UUID, include_state_snapshots: bool) -> list[Any]:
+    """Recorded project states are report sources, not imports; most views skip them."""
+    clauses: list[Any] = [AnalysisRun.project_id == project_id]
+    if not include_state_snapshots:
+        clauses.append(AnalysisRun.input_type != PROJECT_STATE_INPUT_TYPE)
+    return clauses

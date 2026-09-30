@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "@/lib/router"
 import { EvidenceCenter } from "../../components/reports/EvidenceCenter"
 import {
+  CURRENT_PROJECT_STATE,
   defaultReportRunId,
   reportRunOptions,
 } from "../../components/reports/report-run-scope-model"
@@ -42,22 +43,27 @@ function ReportsRouteContent() {
   } = useWorkbenchContext()
   const routeRunId = selectedReportRunIdFromSearch(location.searchStr)
   const [selectedRunId, setSelectedRunIdState] = useState(routeRunId)
-  const projectRunsQuery = useProjectRunsQuery(selectedProjectId, true)
+  const projectRunsQuery = useProjectRunsQuery(selectedProjectId, true, {
+    includeStateSnapshots: true,
+  })
   const projectRuns = projectRunsQuery.data?.data ?? []
-  const runDetailQuery = useRunDetailQuery(selectedRunId, true)
+  const currentStateSelected = selectedRunId === CURRENT_PROJECT_STATE
+  const runDetailQuery = useRunDetailQuery(
+    currentStateSelected ? "" : selectedRunId,
+    true,
+  )
   const projectSummaryQuery = useProjectSummaryQuery(selectedProjectId)
   const selectedReportRun =
     projectRuns.find((run) => run.id === selectedRunId) ?? null
-  const reportsState = useReportsRouteState({
-    capabilitiesError,
-    currentPath: "/reports",
-    reportFormatCapabilities: capabilities?.report_formats ?? [],
-    selectedReportRun,
-    selectedRunId,
-  })
   const reportRuns = useMemo(() => reportRunOptions(projectRuns), [projectRuns])
-  const runIds = useMemo(() => reportRuns.map((run) => run.id), [reportRuns])
   const defaultRunId = useMemo(() => defaultReportRunId(reportRuns), [reportRuns])
+  const runIds = useMemo(
+    () => [
+      ...(defaultRunId === CURRENT_PROJECT_STATE ? [CURRENT_PROJECT_STATE] : []),
+      ...reportRuns.map((run) => run.id),
+    ],
+    [defaultRunId, reportRuns],
+  )
 
   const selectRunId = useCallback(
     (nextRunId: string, { replace }: { replace: boolean }) => {
@@ -100,6 +106,17 @@ function ReportsRouteContent() {
     selectedRunId,
   ])
 
+  const reportsState = useReportsRouteState({
+    capabilitiesError,
+    currentPath: "/reports",
+    currentStateSelected,
+    onStateRunCreated: (runId) => selectRunId(runId, { replace: false }),
+    reportFormatCapabilities: capabilities?.report_formats ?? [],
+    selectedProjectId,
+    selectedReportRun,
+    selectedRunId,
+  })
+
   function handleProjectChange(projectId: string) {
     setSelectedProjectId(projectId)
     selectRunId("", { replace: true })
@@ -125,6 +142,8 @@ function ReportsRouteContent() {
       reportActionMessage={reportsState.reportActionMessage}
       reportActionsEnabled={reportsState.reportActionsEnabled}
       reportFormatCapabilities={capabilities?.report_formats ?? []}
+      historyReports={reportsState.projectReports}
+      historyReportsLoading={reportsState.projectReportsLoading}
       reports={reportsState.reports}
       reportsError={reportsState.reportsError}
       reportsLoading={reportsState.reportsLoading}
@@ -141,9 +160,12 @@ function ReportsRouteContent() {
       runsLoading={projectRunsQuery.isLoading || projectRunsQuery.isFetching}
       selectedProject={selectedProject}
       selectedProjectId={selectedProjectId}
+      currentStateSelected={currentStateSelected}
       selectedReportRun={selectedReportRun}
       selectedRunId={selectedRunId}
-      selectedRunSummary={runDetailQuery.data?.summary ?? null}
+      selectedRunSummary={
+        currentStateSelected ? null : (runDetailQuery.data?.summary ?? null)
+      }
       verificationLoading={reportsState.verificationLoading}
       verificationReport={reportsState.verificationReport}
       verificationReportTarget={reportsState.verificationReportTarget}

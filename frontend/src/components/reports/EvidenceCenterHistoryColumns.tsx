@@ -1,4 +1,8 @@
-import type { ReportPublic, ReportVerificationPublic } from "@/api-client"
+import type {
+  AnalysisRunPublic,
+  ReportPublic,
+  ReportVerificationPublic,
+} from "@/api-client"
 import type { VpwDataTableColumn } from "@/components/vpw"
 import { formatReportDateTime, reportSizeLabel } from "@/lib/report-format"
 import {
@@ -20,6 +24,7 @@ type ReportHistoryColumnOptions = {
   mode: "inventory" | "history"
   onDownload: (report: ReportPublic) => void
   onVerify: (report: ReportPublic) => void
+  runs?: readonly AnalysisRunPublic[]
   verificationLoading: boolean
   verificationReport: ReportVerificationPublic | null
   verificationReportTarget: ReportPublic | null
@@ -35,6 +40,7 @@ export function buildReportHistoryColumns({
   mode,
   onDownload,
   onVerify,
+  runs = [],
   verificationLoading,
   verificationReport,
   verificationReportTarget,
@@ -104,7 +110,7 @@ export function buildReportHistoryColumns({
             className="font-mono text-xs text-[var(--vpw-text-secondary)]"
             data-vpw-visual-mask="true"
           >
-            {reportRunLabel(report)}
+            {reportRunLabel(report, runs)}
           </span>
         ),
         header: "Run",

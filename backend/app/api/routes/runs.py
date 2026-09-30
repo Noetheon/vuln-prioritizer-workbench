@@ -9,12 +9,18 @@ from fastapi import APIRouter, HTTPException, Query
 from app.api.deps import LocalActor, SessionDep
 from app.api.routes.workbench_access import require_project
 from app.models import (
+    PROJECT_STATE_INPUT_TYPE,
     AnalysisRunPublic,
     AnalysisRunsPublic,
     AnalysisRunSummaryPublic,
     WorkflowRunKind,
 )
 from app.repositories import RunRepository
+from app.services.project_state import (
+    current_project_state,
+    is_project_state_run,
+    recorded_state_fingerprint,
+)
 from app.services.run_workflow_projection import (
     analysis_run_public,
     analysis_run_summary_public,
@@ -41,6 +47,10 @@ def read_project_runs(
     local_actor: LocalActor,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    include_state_snapshots: bool = Query(
+        default=False,
+        description="Also list recorded project states that reports were generated from.",
+    ),
 ) -> AnalysisRunsPublic:
     """List analysis runs for a visible project."""
     require_project(session, project_id)
@@ -48,22 +58,31 @@ def read_project_runs(
         project_id,
         limit=limit,
         offset=offset,
+        include_state_snapshots=include_state_snapshots,
     )
-    return AnalysisRunsPublic(
-        data=[
-            analysis_run_public(
-                run,
-                session=session,
-                workflow=latest_analysis_workflow_public(
-                    session,
-                    analysis_run_id=run.id,
-                    kind=WorkflowRunKind.IMPORT,
-                ),
+    data = [
+        analysis_run_public(
+            run,
+            session=session,
+            workflow=latest_analysis_workflow_public(
+                session,
+                analysis_run_id=run.id,
+                kind=WorkflowRunKind.IMPORT,
+            ),
+        )
+        for run in runs
+    ]
+    if any(is_project_state_run(run) for run in runs):
+        fingerprint = current_project_state(session, project_id).fingerprint
+        data = [
+            item.model_copy(
+                update={"project_state_current": recorded_state_fingerprint(item) == fingerprint}
             )
-            for run in runs
-        ],
-        count=count,
-    )
+            if item.input_type == PROJECT_STATE_INPUT_TYPE
+            else item
+            for item in data
+        ]
+    return AnalysisRunsPublic(data=data, count=count)
 
 
 @router.get("/runs/{run_id}", response_model=AnalysisRunPublic)

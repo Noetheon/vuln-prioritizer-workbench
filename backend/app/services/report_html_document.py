@@ -146,6 +146,7 @@ def render_html_executive_report_helper(
         input_type=payload.input_type,
         filename=payload.filename,
         run_id=payload.run_id,
+        generated_at=payload.generated_at,
     )
     scope_html = (
         f'      <p class="report-scope{" is-partial" if partial_scope else ""}">'
