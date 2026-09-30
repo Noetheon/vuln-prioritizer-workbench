@@ -212,3 +212,75 @@ def test_numeric_sort_keeps_missing_projection_values_last_in_both_directions(
         seeded_ids[1],
         missing_score_id,
     ]
+
+
+def test_priority_sort_puts_open_work_and_higher_scores_first_within_a_band(
+    workbench_api_env: WorkbenchApiEnv,
+) -> None:
+    project = create_project_via_api(
+        workbench_api_env.client,
+        local_api_headers(workbench_api_env.client),
+    )
+    project_id = uuid.UUID(project["id"])
+    rows = {
+        # name: (cve, priority, rank, score, status)
+        "accepted": ("CVE-2020-1472", "critical", 1, 25.0, "accepted"),
+        "open_83": ("CVE-2020-1473", "critical", 1, 83.0, "open"),
+        "open_99": ("CVE-2021-44228", "critical", 1, 99.0, "open"),
+        "fixed": ("CVE-2021-44229", "critical", 1, 0.0, "fixed"),
+        "low": ("CVE-2024-7347", "low", 4, 26.0, "open"),
+    }
+    ids: dict[str, uuid.UUID] = {}
+    with Session(workbench_api_env.engine) as session:
+        asset = create_asset(
+            session,
+            workbench_api_env.app_models,
+            workbench_api_env.repositories,
+            project_id=project_id,
+        )
+        component = create_component(session, workbench_api_env.repositories)
+        for name, (cve_id, priority, rank, score, status) in rows.items():
+            vulnerability = create_vulnerability(
+                session,
+                workbench_api_env.repositories,
+                cve_id=cve_id,
+            )
+            finding = create_finding(
+                session,
+                workbench_api_env.app_models,
+                workbench_api_env.repositories,
+                project_id=project_id,
+                vulnerability_id=vulnerability.id,
+                component_id=component.id,
+                asset_id=asset.id,
+                cve_id=cve_id,
+            )
+            session.add(
+                workbench_api_env.app_models.FindingCurrentProjection(
+                    finding_id=finding.id,
+                    project_id=project_id,
+                    cve_id=cve_id,
+                    dedup_key=f"{cve_id}|{name}",
+                    priority=priority,
+                    status=status,
+                    priority_rank=rank,
+                    risk_score=score,
+                    read_summary_json={},
+                    source_payload_sha256="0" * 64,
+                    projection_payload_sha256="0" * 64,
+                )
+            )
+            ids[name] = finding.id
+        session.commit()
+
+    def ordered(direction: str) -> list[str]:
+        with Session(workbench_api_env.engine) as session:
+            findings, _ = finding_queries.list_project_findings_query(
+                session,
+                FindingPageQuery(project_id=project_id, sort="priority", direction=direction),
+            )
+        by_id = {value: key for key, value in ids.items()}
+        return [by_id[finding.id] for finding in findings]
+
+    assert ordered("asc") == ["open_99", "open_83", "accepted", "fixed", "low"]
+    assert ordered("desc") == ["low", "open_99", "open_83", "accepted", "fixed"]

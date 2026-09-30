@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import os
+from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from app.core.config import Settings
@@ -21,7 +23,18 @@ from app.models.base import get_datetime_utc
 
 PROVIDER_SOURCES = ("nvd", "epss", "kev")
 ATTACK_STIX_SOURCE = "attack_stix"
+DEMO_SNAPSHOT_ID_PREFIX = "online-shop-demo-provider-snapshot"
 NO_PROVIDER_SNAPSHOT_WARNING = "No provider snapshot has been recorded yet."
+LIVE_SNAPSHOT_MODE = "live"
+DEFAULT_SNAPSHOT_IMPORT_MODE = "default_snapshot"
+NOT_LOADED_WARNING = (
+    "No provider data has been fetched yet. The first import fetches NVD, EPSS, and KEV."
+)
+LIVE_SOURCE_DETAILS = {
+    "nvd": "Newest NVD record fetched live and kept in the local provider cache.",
+    "epss": "Newest EPSS score fetched live and kept in the local provider cache.",
+    "kev": "CISA KEV catalog fetched live and kept in the local provider cache.",
+}
 
 
 def provider_update_job_public(
@@ -44,8 +57,18 @@ def provider_status_payload(
     latest_update_run: AnalysisRun | None,
     active_settings: Settings,
     latest_update_workflow: WorkflowRunPublic | None = None,
+    now: datetime | None = None,
 ) -> ProviderStatusPublic:
-    """Build the provider status response from persisted snapshot and job state."""
+    """
+    Build the provider status response from the data that imports actually use.
+
+    Without a default snapshot, imports fetch NVD, EPSS, and KEV live and cache
+    them, so the live cache decides freshness. With a default snapshot (demo
+    and test runtimes), the latest snapshot does. Ages are measured from when
+    the data was fetched, never from when a snapshot row was stored.
+    """
+    current_time = _aware_datetime(now) if now is not None else _aware_datetime(get_datetime_utc())
+    stale_after = timedelta(hours=active_settings.PROVIDER_DATA_STALE_HOURS)
     metadata = _snapshot_metadata(snapshot)
     production_safe = _production_safe(active_settings)
     public_metadata = _provider_public_metadata(metadata, production_safe=production_safe)
@@ -58,53 +81,209 @@ def provider_status_payload(
     workflow_update_error = _workflow_update_error(latest_update_workflow)
     raw_last_error = failed_update_error or workflow_update_error or _last_error(metadata)
     last_error = _public_text(raw_last_error) if raw_last_error is not None else None
-    snapshot_status = _snapshot_status(snapshot, metadata)
-    if snapshot is None:
-        warnings.append(NO_PROVIDER_SNAPSHOT_WARNING)
     if failed_update_error is not None or workflow_update_error is not None:
         warnings.append(f"Latest provider update failed: {_public_text(raw_last_error)}")
 
-    degraded = snapshot_status.missing or raw_last_error is not None
+    snapshot_public = _snapshot_status(
+        snapshot,
+        metadata,
+        public_metadata=public_metadata,
+        production_safe=production_safe,
+    )
+    latest_update_job = _provider_update_job(
+        latest_update_run,
+        production_safe=production_safe,
+        workflow=latest_update_workflow,
+    )
+    cache_dir = (
+        None
+        if production_safe
+        else _public_path(
+            _string_or_none(public_metadata.get("cache_dir"))
+            or _settings_path(active_settings, "provider_cache_dir", "PROVIDER_CACHE_DIR")
+        )
+    )
+    snapshot_dir = (
+        None
+        if production_safe
+        else _public_path(
+            _string_or_none(public_metadata.get("snapshot_dir"))
+            or _settings_path(
+                active_settings,
+                "provider_snapshot_dir",
+                "PROVIDER_SNAPSHOT_DIR",
+            )
+        )
+    )
+
+    fetched = _live_cache_fetch_times(active_settings.provider_cache_dir_path)
+    # What an import uses when the user does not pick a snapshot.
+    import_provider_mode = (
+        DEFAULT_SNAPSHOT_IMPORT_MODE
+        if active_settings.DEMO_PROVIDER_SNAPSHOT_ENABLED
+        else LIVE_SNAPSHOT_MODE
+    )
+    if snapshot is None and not active_settings.DEMO_PROVIDER_SNAPSHOT_ENABLED:
+        sources = [
+            _live_source_status(
+                name,
+                fetched_at=fetched[name],
+                now=current_time,
+                stale_after=stale_after,
+                last_error=last_error,
+            )
+            for name in PROVIDER_SOURCES
+        ]
+        fetched_times = [value for value in fetched.values() if value is not None]
+        if not fetched_times:
+            status = "degraded" if raw_last_error is not None else "not_loaded"
+            warnings.append(NOT_LOADED_WARNING)
+        elif raw_last_error is not None:
+            status = "degraded"
+        elif any(source.stale or not source.available for source in sources):
+            status = "stale"
+            warnings.append(_stale_warning(sources, stale_after))
+        else:
+            status = "ok"
+        return ProviderStatusPublic(
+            status=status,
+            sources=sources,
+            warnings=warnings,
+            last_sync=_iso_datetime(max(fetched_times)) if fetched_times else None,
+            cache_age_seconds=(
+                _age_seconds(min(fetched_times), current_time) if fetched_times else None
+            ),
+            stale_after_hours=active_settings.PROVIDER_DATA_STALE_HOURS,
+            import_provider_mode=import_provider_mode,
+            snapshot_mode=LIVE_SNAPSHOT_MODE,
+            snapshot=snapshot_public,
+            latest_update_job=latest_update_job,
+            cache_dir=cache_dir,
+            snapshot_dir=snapshot_dir,
+            last_error=last_error,
+        )
+
+    if snapshot is None:
+        warnings.append(NO_PROVIDER_SNAPSHOT_WARNING)
+    sources = _source_statuses(
+        snapshot,
+        snapshot_public.selected_sources,
+        last_error=last_error,
+        now=current_time,
+        stale_after=stale_after,
+        live_fetched=fetched,
+    )
+    selected_sources = [source for source in sources if source.selected]
+    if snapshot_public.missing or raw_last_error is not None:
+        status = "degraded"
+    elif any(source.stale for source in selected_sources):
+        status = "stale"
+        warnings.append(_stale_warning(selected_sources, stale_after))
+    else:
+        status = "ok"
+    ages = [
+        source.cache_age_seconds
+        for source in selected_sources
+        if source.cache_age_seconds is not None
+    ]
+    data_as_of = _snapshot_data_as_of(snapshot, metadata)
     return ProviderStatusPublic(
-        status="degraded" if degraded else "ok",
-        snapshot=_snapshot_status(
-            snapshot,
-            metadata,
-            public_metadata=public_metadata,
-            production_safe=production_safe,
-        ),
-        sources=_source_statuses(snapshot, snapshot_status.selected_sources, last_error=last_error),
-        latest_update_job=_provider_update_job(
-            latest_update_run,
-            production_safe=production_safe,
-            workflow=latest_update_workflow,
-        ),
-        cache_dir=(
-            None
-            if production_safe
-            else _public_path(
-                _string_or_none(public_metadata.get("cache_dir"))
-                or _settings_path(active_settings, "provider_cache_dir", "PROVIDER_CACHE_DIR")
-            )
-        ),
-        snapshot_dir=(
-            None
-            if production_safe
-            else _public_path(
-                _string_or_none(public_metadata.get("snapshot_dir"))
-                or _settings_path(
-                    active_settings,
-                    "provider_snapshot_dir",
-                    "PROVIDER_SNAPSHOT_DIR",
-                )
-            )
-        ),
+        status=status,
+        sources=sources,
         warnings=warnings,
         last_sync=_last_sync(snapshot, metadata),
-        last_error=last_error,
-        cache_age_seconds=_cache_age_seconds(snapshot.created_at if snapshot is not None else None),
+        cache_age_seconds=(
+            max(ages) if ages else (_age_seconds(data_as_of, current_time) if data_as_of else None)
+        ),
+        stale_after_hours=active_settings.PROVIDER_DATA_STALE_HOURS,
+        import_provider_mode=import_provider_mode,
         snapshot_mode=_snapshot_mode(snapshot, metadata),
+        snapshot=snapshot_public,
+        latest_update_job=latest_update_job,
+        cache_dir=cache_dir,
+        snapshot_dir=snapshot_dir,
+        last_error=last_error,
     )
+
+
+def _live_cache_fetch_times(cache_dir: Path) -> dict[str, datetime | None]:
+    """Return when each provider last wrote to the live cache (file mtimes only)."""
+    fetched: dict[str, datetime | None] = {}
+    for name in PROVIDER_SOURCES:
+        newest: float | None = None
+        try:
+            with os.scandir(cache_dir / name) as entries:
+                for entry in entries:
+                    if not entry.name.endswith(".json") or not entry.is_file():
+                        continue
+                    modified = entry.stat().st_mtime
+                    if newest is None or modified > newest:
+                        newest = modified
+        except OSError:
+            newest = None
+        fetched[name] = datetime.fromtimestamp(newest, tz=UTC) if newest is not None else None
+    return fetched
+
+
+def _live_source_status(
+    name: str,
+    *,
+    fetched_at: datetime | None,
+    now: datetime,
+    stale_after: timedelta,
+    last_error: str | None,
+) -> ProviderSourceStatusPublic:
+    fetched_iso = _iso_datetime(fetched_at)
+    return ProviderSourceStatusPublic(
+        name=name,
+        selected=True,
+        available=fetched_at is not None,
+        stale=fetched_at is None or now - fetched_at > stale_after,
+        value=fetched_iso,
+        last_sync=fetched_iso,
+        last_error=last_error,
+        cache_age_seconds=_age_seconds(fetched_at, now) if fetched_at is not None else None,
+        detail=LIVE_SOURCE_DETAILS[name],
+    )
+
+
+def _stale_warning(sources: list[ProviderSourceStatusPublic], stale_after: timedelta) -> str:
+    hours = int(stale_after.total_seconds() // 3600)
+    names = [source.name.upper() for source in sources if source.stale or not source.available]
+    return (
+        f"Provider data is older than {hours} hours or missing for: {', '.join(names)}. "
+        "Import again or run a provider update to refresh it."
+    )
+
+
+def _snapshot_data_as_of(
+    snapshot: ProviderSnapshot | None,
+    metadata: dict[str, Any],
+) -> datetime | None:
+    """When the snapshot's provider data was fetched (generated), not stored."""
+    generated = _parse_datetime(_string_or_none(metadata.get("generated_at")))
+    if generated is not None:
+        return generated
+    if snapshot is None:
+        return None
+    return _aware_datetime(snapshot.created_at)
+
+
+def _parse_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            parsed = datetime.combine(date.fromisoformat(value[:10]), datetime.min.time())
+        except ValueError:
+            return None
+    return _aware_datetime(parsed)
+
+
+def _age_seconds(value: datetime, now: datetime) -> int:
+    return max(int((now - _aware_datetime(value)).total_seconds()), 0)
 
 
 def _provider_update_job(
@@ -178,6 +357,9 @@ def _source_statuses(
     selected_sources: list[str],
     *,
     last_error: str | None,
+    now: datetime,
+    stale_after: timedelta,
+    live_fetched: dict[str, datetime | None] | None = None,
 ) -> list[ProviderSourceStatusPublic]:
     values = {
         "nvd": snapshot.nvd_last_sync if snapshot is not None else None,
@@ -189,7 +371,19 @@ def _source_statuses(
     source_names = _source_names(selected_sources, source_hashes)
     values[ATTACK_STIX_SOURCE] = _string_or_none(metadata.get("attack_version"))
     stale_sources = set(_string_list(metadata.get("stale_sources")))
-    cache_age = _cache_age_seconds(snapshot.created_at if snapshot is not None else None)
+    data_as_of = _snapshot_data_as_of(snapshot, metadata)
+    # EPSS carries its own model date; the other feeds are as old as the fetch.
+    epss_date = _parse_datetime(values["epss"])
+    data_dates: dict[str, datetime | None] = {
+        "nvd": data_as_of,
+        "epss": epss_date + timedelta(days=1) if epss_date is not None else data_as_of,
+        "kev": data_as_of,
+    }
+    # Live imports refresh the provider cache; a newer fetch wins.
+    for name, fetched_at in (live_fetched or {}).items():
+        current = data_dates.get(name)
+        if fetched_at is not None and (current is None or fetched_at > current):
+            data_dates[name] = fetched_at
     details = {
         "nvd": "NVD last modified timestamp from the latest stored snapshot.",
         "epss": "EPSS date from the latest stored snapshot.",
@@ -197,24 +391,29 @@ def _source_statuses(
         ATTACK_STIX_SOURCE: "ATT&CK STIX attack_version from the latest stored snapshot.",
     }
     selected = set(selected_sources)
-    return [
-        ProviderSourceStatusPublic(
-            name=name,
-            selected=name in selected,
-            available=_source_available(name, values=values, source_hashes=source_hashes),
-            stale=name in stale_sources,
-            value=values.get(name),
-            last_sync=(
-                _string_or_none(metadata.get("generated_at"))
-                if name == ATTACK_STIX_SOURCE
-                else values.get(name)
-            ),
-            last_error=last_error,
-            cache_age_seconds=cache_age,
-            detail=details.get(name, f"{name} status from the latest stored snapshot."),
+    statuses = []
+    for name in source_names:
+        data_date = data_dates.get(name)
+        refreshed_live = name in (live_fetched or {}) and data_date == (live_fetched or {})[name]
+        too_old = data_date is not None and now - data_date > stale_after
+        statuses.append(
+            ProviderSourceStatusPublic(
+                name=name,
+                selected=name in selected,
+                available=_source_available(name, values=values, source_hashes=source_hashes),
+                stale=too_old or (name in stale_sources and not refreshed_live),
+                value=values.get(name),
+                last_sync=(
+                    _string_or_none(metadata.get("generated_at"))
+                    if name == ATTACK_STIX_SOURCE
+                    else values.get(name)
+                ),
+                last_error=last_error,
+                cache_age_seconds=_age_seconds(data_date, now) if data_date else None,
+                detail=details.get(name, f"{name} status from the latest stored snapshot."),
+            )
         )
-        for name in source_names
-    ]
+    return statuses
 
 
 def _selected_sources(
@@ -274,6 +473,9 @@ def _snapshot_mode(snapshot: ProviderSnapshot | None, metadata: dict[str, Any]) 
     explicit_mode = _string_or_none(metadata.get("snapshot_mode"))
     if explicit_mode is not None:
         return explicit_mode
+    snapshot_id = _string_or_none(metadata.get("snapshot_id"))
+    if snapshot_id is not None and snapshot_id.startswith(DEMO_SNAPSHOT_ID_PREFIX):
+        return "demo"
     if _bool_value(metadata.get("locked_provider_data")):
         return "locked"
     if _bool_value(metadata.get("cache_only")):
@@ -285,14 +487,6 @@ def _last_sync(snapshot: ProviderSnapshot | None, metadata: dict[str, Any]) -> s
     if snapshot is None:
         return None
     return _string_or_none(metadata.get("generated_at")) or _iso_datetime(snapshot.created_at)
-
-
-def _cache_age_seconds(created_at: datetime | None) -> int | None:
-    if created_at is None:
-        return None
-    normalized_created_at = _aware_datetime(created_at)
-    age = get_datetime_utc() - normalized_created_at
-    return max(int(age.total_seconds()), 0)
 
 
 def _last_error(metadata: dict[str, Any]) -> str | None:

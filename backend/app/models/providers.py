@@ -88,6 +88,8 @@ class ProviderStatusPublic(SQLModel):
     last_sync: str | None = None
     last_error: str | None = None
     cache_age_seconds: int | None = None
+    stale_after_hours: int | None = None
+    import_provider_mode: str = "live"
     snapshot_mode: str
 
 

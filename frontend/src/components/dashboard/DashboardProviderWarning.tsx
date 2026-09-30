@@ -5,8 +5,9 @@ import {
   VpwSurfaceHeader,
   VpwSurfaceTitle,
 } from "@/components/vpw"
+import { Link } from "@/lib/router"
 
-export function DashboardProviderWarning() {
+export function DashboardProviderWarning({ detail }: { detail: string }) {
   return (
     <VpwSurface className="border-[var(--vpw-amber)] bg-[var(--vpw-bg-warning)]">
       <VpwSurfaceHeader className="py-3">
@@ -20,8 +21,14 @@ export function DashboardProviderWarning() {
           </VpwSurfaceTitle>
         </div>
         <VpwSurfaceDescription className="text-xs text-[var(--vpw-text-secondary)]">
-          Freshness is stale or partially degraded. Remediation priority remains
-          functional, but evidence may not be fully current.
+          {detail} Remediation priority remains functional, but evidence may not
+          be fully current.{" "}
+          <Link
+            className="font-medium text-[var(--vpw-text-primary)] underline underline-offset-4"
+            to="/providers"
+          >
+            Open Data Sources
+          </Link>
         </VpwSurfaceDescription>
       </VpwSurfaceHeader>
     </VpwSurface>

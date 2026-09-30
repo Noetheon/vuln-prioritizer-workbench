@@ -17,6 +17,7 @@ import {
   MetricStrip,
   type MetricStripMetric,
   VpwSection,
+  VpwStatusBanner,
   VpwToolbar,
   VpwToolbarGroup,
 } from "@/components/vpw"
@@ -29,6 +30,8 @@ import {
   runMetricTone,
   runShortId,
 } from "./evidence-center-model"
+import { ReportRunSelect } from "./EvidenceCenterRunSelectors"
+import { reportRunScope } from "./report-run-scope-model"
 
 type RunContextProps = {
   selectedProject: ProjectPublic | null
@@ -49,11 +52,14 @@ type RunContextProps = {
 
 export function RunContext({
   onOpenGenerateDrawer,
+  onRunIdChange,
+  projectRuns,
   providerStatus,
   reportActionsEnabled,
   runsLoading,
   selectedProject,
   selectedReportRun,
+  selectedRunId,
 }: RunContextProps) {
   const run = selectedReportRun
   const readiness = evidenceReadinessLabel({
@@ -72,6 +78,7 @@ export function RunContext({
   const snapshotLabel = providerSnapshotLabel(selectedReportRun, providerStatus)
   const readinessTone = evidenceReadinessTone(readiness)
   const runTone = runsLoading ? "neutral" : runMetricTone(run)
+  const scope = reportRunScope(selectedReportRun, projectRuns)
   const metrics: MetricStripMetric[] = [
     {
       description: "Artifact ownership scope",
@@ -111,6 +118,14 @@ export function RunContext({
         actions={
           <VpwToolbar label="Evidence actions" variant="plain">
             <VpwToolbarGroup>
+              <ReportRunSelect
+                disabled={runsLoading && projectRuns.length === 0}
+                onRunIdChange={onRunIdChange}
+                runs={projectRuns}
+                selectedRunId={selectedRunId}
+              />
+            </VpwToolbarGroup>
+            <VpwToolbarGroup>
               <Button
                 disabled={!reportActionsEnabled}
                 onClick={onOpenGenerateDrawer}
@@ -123,7 +138,7 @@ export function RunContext({
           </VpwToolbar>
         }
         className="evidence-run-context-panel"
-        description="Select the project and import run that generated artifacts should represent."
+        description="Reports describe one completed run. The latest import is selected unless you pick another run."
         eyebrow="Govern"
         title="Evidence run context"
       >
@@ -133,6 +148,11 @@ export function RunContext({
           minCardWidth="13rem"
         />
       </VpwCommandPanel>
+      {scope ? (
+        <VpwStatusBanner title={scope.title} tone={scope.tone}>
+          {scope.message}
+        </VpwStatusBanner>
+      ) : null}
     </VpwSection>
   )
 }

@@ -17,7 +17,9 @@ import {
   providerAgeLabel,
   providerFreshnessLabel,
   providerFreshnessThresholdLabel,
+  providerFreshnessTone,
   providerHealthLabel,
+  providerHealthTone,
   sourceDisplayName,
   snapshotModeLabel,
 } from "./providers-workbench-model"
@@ -50,14 +52,14 @@ export function ProviderDiagnosticsSection({
               {
                 label: "Overall status",
                 value: providerHealthLabel(providerStatus),
-                tone: providerStatus?.status === "ok" ? "success" : "warning",
+                tone: providerHealthTone(providerStatus),
               },
               {
                 label: "Snapshot mode",
                 value: snapshotModeLabel(providerStatus),
               },
               {
-                label: "Last sync",
+                label: "Data fetched",
                 value: formatDateTime(providerStatus?.last_sync),
               },
               {
@@ -66,15 +68,12 @@ export function ProviderDiagnosticsSection({
               },
               {
                 label: "Freshness threshold",
-                value: providerFreshnessThresholdLabel(),
+                value: providerFreshnessThresholdLabel(providerStatus),
               },
               {
                 label: "Freshness status",
                 value: providerFreshnessLabel(providerStatus),
-                tone:
-                  providerFreshnessLabel(providerStatus) === "Fresh"
-                    ? "success"
-                    : "warning",
+                tone: providerFreshnessTone(providerStatus),
               },
               {
                 label: "Last error",

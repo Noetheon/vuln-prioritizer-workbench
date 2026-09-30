@@ -7,8 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { runStatusLabel } from "@/lib/risk-format"
-import { runFileLabel } from "./evidence-center-model"
+import { isReportableRun, reportRunOptionLabel } from "./report-run-scope-model"
 
 type ReportProjectSelectProps = {
   disabled: boolean
@@ -73,10 +72,10 @@ export function ReportRunSelect({
       value={selectedRunId}
     >
       <SelectTrigger
-        aria-label="Select analysis run"
-        className="h-10 w-full min-w-0 sm:w-64"
+        aria-label="Report run"
+        className="h-10 w-full min-w-0 sm:w-80"
       >
-        <SelectValue placeholder="Select analysis run" />
+        <SelectValue placeholder="Select import run" />
       </SelectTrigger>
       <SelectContent>
         <SelectGroup>
@@ -86,8 +85,12 @@ export function ReportRunSelect({
             </SelectItem>
           ) : null}
           {runs.map((run) => (
-            <SelectItem key={run.id} value={run.id}>
-              {`${runStatusLabel(run.status)} - ${runFileLabel(run)} - ${run.id.slice(0, 8)}`}
+            <SelectItem
+              disabled={!isReportableRun(run)}
+              key={run.id}
+              value={run.id}
+            >
+              {reportRunOptionLabel(run)}
             </SelectItem>
           ))}
         </SelectGroup>

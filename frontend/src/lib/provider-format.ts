@@ -6,6 +6,20 @@ import type {
 
 export type ProviderFreshnessTone = "run" | "kev" | "high"
 export type ProviderSourceState = "available" | "stale" | "missing"
+export type ProviderDataState =
+  | "checking"
+  | "fresh"
+  | "stale"
+  | "not_loaded"
+  | "degraded"
+
+const providerDataStateLabels: Record<ProviderDataState, string> = {
+  checking: "Checking",
+  degraded: "Needs attention",
+  fresh: "Fresh",
+  not_loaded: "Not fetched yet",
+  stale: "Stale",
+}
 
 export type ProviderFreshnessSummary = {
   detail: string
@@ -34,55 +48,241 @@ export function formatCacheAge(seconds: number | null | undefined): string {
   return `${Math.floor(seconds / 86400)}d`
 }
 
+/**
+ * Classify provider data the way the backend does: fresh, stale (older than the
+ * configured threshold), not fetched yet (a new install), or degraded (errors).
+ */
+export function providerDataState(
+  providerStatus: ProviderStatusPublic | null,
+): ProviderDataState {
+  if (providerStatus === null) {
+    return "checking"
+  }
+  if (providerStatus.last_error || providerStatus.status === "degraded") {
+    return "degraded"
+  }
+  switch (providerStatus.status) {
+    case "ok":
+      return "fresh"
+    case "stale":
+      return "stale"
+    case "not_loaded":
+      return "not_loaded"
+    default:
+      return "degraded"
+  }
+}
+
+export function providerDataStateLabel(
+  providerStatus: ProviderStatusPublic | null,
+) {
+  return providerDataStateLabels[providerDataState(providerStatus)]
+}
+
+export function providerDataTone(
+  providerStatus: ProviderStatusPublic | null,
+): "success" | "warning" | "info" {
+  switch (providerDataState(providerStatus)) {
+    case "fresh":
+      return "success"
+    case "stale":
+    case "degraded":
+      return "warning"
+    default:
+      return "info"
+  }
+}
+
+export function providerStaleAfterLabel(
+  providerStatus: ProviderStatusPublic | null,
+) {
+  const hours = providerStatus?.stale_after_hours
+  if (hours === null || hours === undefined) {
+    return "Stale threshold not reported"
+  }
+  return `Stale after ${hours} hour${hours === 1 ? "" : "s"}`
+}
+
 export function formatProviderFreshness(
   providerStatus: ProviderStatusPublic | null,
 ): ProviderFreshnessSummary {
-  if (providerStatus === null) {
+  const state = providerDataState(providerStatus)
+  const age = providerStatus?.cache_age_seconds
+  const ageLabel =
+    age === null || age === undefined ? null : `${formatCacheAge(age)} old`
+  switch (state) {
+    case "checking":
+      return {
+        detail: "provider status loading",
+        tone: "run",
+        value: "Loading",
+      }
+    case "fresh":
+      return {
+        detail: ageLabel ?? providerStatus?.snapshot_mode ?? "",
+        tone: "kev",
+        value: providerDataStateLabels.fresh,
+      }
+    case "stale":
+      return {
+        detail: ageLabel
+          ? `${ageLabel}; ${providerStaleAfterLabel(providerStatus).toLowerCase()}`
+          : (providerStatus?.warnings?.[0] ?? "Provider data is stale"),
+        tone: "high",
+        value: providerDataStateLabels.stale,
+      }
+    case "not_loaded":
+      return {
+        detail: "The first import fetches NVD, EPSS, and KEV",
+        tone: "run",
+        value: providerDataStateLabels.not_loaded,
+      }
+    default:
+      return {
+        detail:
+          providerStatus?.last_error ??
+          providerStatus?.warnings?.[0] ??
+          "Provider data needs attention",
+        tone: "high",
+        value: providerDataStateLabels.degraded,
+      }
+  }
+}
+
+export type ImportProviderReadiness = {
+  label: string
+  message: string
+  status: "passed" | "warning"
+}
+
+/**
+ * What provider data an import will use: a snapshot the user picked, the
+ * runtime's default snapshot (demo runtimes), or live NVD, EPSS, and KEV.
+ */
+export function importProviderReadiness(
+  providerStatus: ProviderStatusPublic | null,
+  providerSnapshotFile?: string | null,
+): ImportProviderReadiness {
+  if (providerSnapshotFile) {
     return {
-      detail: "provider status loading",
-      tone: "run",
-      value: "Loading",
+      label: providerSnapshotFile,
+      message: "The selected provider snapshot is replayed for this import.",
+      status: "passed",
     }
   }
-  if (providerStatus.status === "ok") {
+  if (providerStatus === null) {
     return {
-      detail:
-        providerStatus.cache_age_seconds !== null &&
-        providerStatus.cache_age_seconds !== undefined
-          ? `${formatCacheAge(providerStatus.cache_age_seconds)} old`
-          : providerStatus.snapshot_mode,
-      tone: "kev",
-      value: "Fresh",
+      label: "Checking provider data",
+      message: "Provider status is still loading.",
+      status: "warning",
+    }
+  }
+  if (providerStatus.import_provider_mode === "default_snapshot") {
+    if (providerStatus.snapshot.missing) {
+      return {
+        label: "Default provider snapshot",
+        message: "No default provider snapshot is recorded for this runtime.",
+        status: "warning",
+      }
+    }
+    return providerDataState(providerStatus) === "fresh"
+      ? {
+          label: "Default provider snapshot",
+          message: "The runtime's default provider snapshot is replayed for this import.",
+          status: "passed",
+        }
+      : {
+          label: "Default provider snapshot",
+          message: `The runtime's default provider snapshot is replayed for this import. ${providerStatus.warnings?.[0] ?? "Its data is stale."}`,
+          status: "warning",
+        }
+  }
+  if (providerStatus.last_error) {
+    return {
+      label: "Live provider data",
+      message: `NVD, EPSS, and KEV are fetched live during the import. The last provider update failed: ${providerStatus.last_error}`,
+      status: "warning",
     }
   }
   return {
-    detail:
-      providerStatus.last_error ??
-      providerStatus.warnings?.[0] ??
-      "No snapshot recorded",
-    tone: "high",
-    value: "Needs sync",
+    label: "Live provider data",
+    message: "NVD, EPSS, and KEV are fetched live during the import and cached.",
+    status: "passed",
   }
 }
 
 export function providerSnapshotHealth(
   providerStatus: ProviderStatusPublic | null,
 ) {
-  if (providerStatus === null) {
-    return "Checking"
-  }
-  return providerStatus.status === "ok" ? "Fresh" : "Needs sync"
+  return providerDataStateLabel(providerStatus)
 }
 
 export function providerSnapshotSummary(
   providerStatus: ProviderStatusPublic | null,
 ) {
-  if (providerStatus === null) {
-    return "Provider snapshot loading"
+  switch (providerDataState(providerStatus)) {
+    case "checking":
+      return "Provider data loading"
+    case "fresh":
+      return "Provider data is fresh"
+    case "stale":
+      return "Provider data is stale"
+    case "not_loaded":
+      return "Provider data not fetched yet"
+    default:
+      return "Provider data needs attention"
   }
-  return providerStatus.status === "ok"
-    ? "Provider snapshot available"
-    : "Provider snapshot needs attention"
+}
+
+function snapshotMode(providerStatus: ProviderStatusPublic) {
+  return `${providerStatus.snapshot.mode ?? providerStatus.snapshot_mode}`.toLowerCase()
+}
+
+export function snapshotModeLabel(
+  providerStatus: ProviderStatusPublic | null,
+) {
+  if (providerStatus === null) {
+    return "Checking"
+  }
+  if (providerStatus.snapshot_mode === "live") {
+    return "Live provider data"
+  }
+  if (providerStatus.snapshot.locked_provider_data) {
+    return "Locked snapshot"
+  }
+  const mode = snapshotMode(providerStatus)
+  if (mode === "demo") {
+    return "Demo snapshot"
+  }
+  if (mode.includes("replay")) {
+    return "Replay snapshot"
+  }
+  if (mode === "missing") {
+    return "No snapshot"
+  }
+  return "Stored snapshot"
+}
+
+export function snapshotModeDescription(
+  providerStatus: ProviderStatusPublic | null,
+) {
+  if (providerStatus === null) {
+    return "Snapshot status is still loading."
+  }
+  if (providerStatus.snapshot_mode === "live") {
+    return "Imports fetch NVD, EPSS, and KEV live and keep them in the local provider cache."
+  }
+  if (providerStatus.snapshot.locked_provider_data) {
+    return "Provider replay is deterministic for evidence review."
+  }
+  const mode = snapshotMode(providerStatus)
+  if (mode === "demo") {
+    return "The demo workspace replays a packaged provider snapshot. Its data is as old as the snapshot."
+  }
+  if (mode.includes("replay")) {
+    return "Recorded snapshot replay is used for reproducibility review."
+  }
+  return "The latest stored provider snapshot is used for status review."
 }
 
 export function providerSourceLabel(source: ProviderSourceStatusPublic) {
@@ -109,8 +309,10 @@ export function providerDataQualityNotes(
   providerStatus: ProviderStatusPublic | null,
 ) {
   const notes = [
-    "Status is based on the latest stored provider snapshot.",
-    "Missing, stale, or failed provider evidence is shown as degraded data quality.",
+    providerStatus?.snapshot_mode === "live"
+      ? "Status is based on when NVD, EPSS, and KEV data was last fetched."
+      : "Status is based on when the provider data in the latest snapshot was fetched, not when the snapshot was stored.",
+    `${providerStaleAfterLabel(providerStatus)}. Missing, stale, or failed provider evidence is shown as degraded data quality.`,
   ]
   if (providerStatus?.snapshot.locked_provider_data) {
     notes.push(
@@ -160,7 +362,7 @@ export function dataServicesSummary(
       value: workbenchApiHealth(status),
     },
     {
-      label: "Provider snapshot",
+      label: "Provider data",
       value: providerSnapshotHealth(providerStatus),
     },
     {

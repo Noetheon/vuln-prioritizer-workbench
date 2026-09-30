@@ -29,6 +29,39 @@ exact git tag output when release wording needs to be verified.
     user outside the permitted group, cross-site writes, WebSocket upgrades,
     and a request that bypasses the proxy.
   - Dependabot and the digest checks cover the example's images.
+- The Evidence Center has project and run pickers again. A banner under the
+  run facts states what a report will cover, and warns when the selected run is
+  a re-evaluation or an older import.
+- Markdown and HTML reports open with a scope line, for example "This report
+  covers 32 findings from the import of trivy.json". Reports from a
+  re-evaluation run say that they do not cover the rest of the project.
+
+### Changed
+
+- Imports under `vpw serve` fetch live NVD, EPSS, and KEV data unless a
+  snapshot is selected. Before, they silently replayed the packaged demo
+  snapshot. The demo workspace still replays its own snapshot.
+- Provider freshness is measured from when the data was fetched, not from when
+  a snapshot row was stored. Data older than 72 hours is stale
+  (`PROVIDER_DATA_STALE_HOURS`), and Data Sources, Settings, Imports, the
+  Overview, and the Evidence Center show "Fresh", "Stale", or "Not fetched
+  yet". The packaged demo snapshot is labeled "Demo snapshot".
+  - `GET /api/v1/providers/status` can now report `stale` and `not_loaded`,
+    uses `snapshot_mode` `live` when imports fetch live data, and adds
+    `stale_after_hours` and `import_provider_mode`.
+- The import wizard names the provider data an import will use: live data, the
+  selected snapshot, or the runtime's default snapshot.
+- The Evidence Center selects the newest completed import by default. It never
+  preselects a re-evaluation or a failed run.
+
+### Fixed
+
+- The Overview remediation queue lists only open work (open, in review,
+  remediating). It showed fixed and accepted findings before.
+- Sorting findings by priority lists open work before closed findings of the
+  same priority, then sorts by score.
+- Settings reports the installed package version, and `frontend/package.json`
+  carries the release version. The API and the engine read one version source.
 
 ## [1.4.0] - 2026-09-29
 

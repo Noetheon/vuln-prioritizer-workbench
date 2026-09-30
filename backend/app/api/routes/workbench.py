@@ -15,7 +15,7 @@ from app.core.app_state import workbench_settings
 from app.core.config import Settings
 from app.core.migration_bootstrap import ALEMBIC_HEAD
 from app.core.schema_smoke import assert_migrated_connection
-from app.domain.engine import __version__
+from app.core.version import package_version
 from app.models import (
     DemoWorkspaceCreate,
     DemoWorkspacePublic,
@@ -78,7 +78,7 @@ def workbench_status(
         status="ready" if database == "ready" and schema == "ready" else "not_ready",
         app=active_settings.PROJECT_NAME,
         core_package="app.domain.engine",
-        core_version=__version__,
+        core_version=package_version(),
         environment=active_settings.ENVIRONMENT,
         runtime_mode=_runtime_mode(active_settings),
         database_status=database,

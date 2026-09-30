@@ -93,6 +93,19 @@ h3 {
   width: 100%;
   color: var(--text-secondary);
 }
+.report-scope {
+  margin: 8px 0 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--green);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  font-size: 15px;
+}
+.report-scope.is-partial {
+  border-left-color: var(--amber);
+  background: var(--bg-warning);
+}
 .business-impact-lede {
   max-width: none;
   width: 100%;
@@ -807,6 +820,7 @@ tbody tr:last-child td { border-bottom: 0; }
     <header>
       <p class="eyebrow">Executive Evidence Brief</p>
       <h1>Executive Snapshot &lt;script&gt;alert(1)&lt;/script&gt;</h1>
+      <p class="report-scope"><strong>Scope:</strong> This report covers 2 findings from the import of known-cves.html (run 00000000).</p>
       <p class="lede">Decision-oriented vulnerability prioritization report for CISO and stakeholder review. This report summarizes actionable remediation campaigns, governance exceptions and evidence confidence for the current analysis run.</p>
       <dl class="meta-grid">
         <div><dt>Report</dt><dd>Executive HTML</dd></div>

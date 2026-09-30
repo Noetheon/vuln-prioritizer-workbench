@@ -1434,11 +1434,11 @@ def test_vpw202_project_dashboard_aggregate_replaces_dashboard_query_fanout(
     assert payload["runs"]["count"] == 1
     assert "workflow_schema_version" not in payload["runs"]["data"][0]
     assert payload["runs"]["data"][0]["counts"]["created_findings"] == 0
-    assert payload["findings"]["remediation_queue"]["count"] == 3
+    # The queue lists open work only; the fixed and suppressed findings are not
+    # next actions even though they keep their scores.
+    assert payload["findings"]["remediation_queue"]["count"] == 1
     assert [item["cve_id"] for item in payload["findings"]["remediation_queue"]["data"]] == [
         DEMO_CVE_LOG4SHELL,
-        "CVE-2022-22965",
-        "CVE-2024-4577",
     ]
     assert payload["findings"]["remediation_queue"]["data"][0]["component_name"] == "log4j-core"
     assert payload["findings"]["remediation_queue"]["data"][0]["asset_key"] == "payments-api"

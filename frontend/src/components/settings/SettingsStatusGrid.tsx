@@ -32,7 +32,9 @@ export function SettingsStatusGrid({
   )
   const backendTone: VpwCompactTone = statusError ? "critical" : "success"
   const providerTone: VpwCompactTone =
-    provider.tone === "success" ? "success" : "warning"
+    provider.tone === "success" || provider.tone === "info"
+      ? provider.tone
+      : "warning"
   const evidenceTone: VpwCompactTone =
     evidence.tone === "critical"
       ? "critical"
@@ -50,7 +52,7 @@ export function SettingsStatusGrid({
     {
       description: statusError
         ? "Check server logs"
-        : `Core Version: ${status?.core_version || "1.1.0"}`,
+        : `Version ${status?.core_version || "not reported"}`,
       icon: <Cpu aria-hidden="true" />,
       label: "Backend API",
       tone: backendTone,
@@ -64,11 +66,11 @@ export function SettingsStatusGrid({
       ),
     },
     {
-      description: `Cache age: ${formatCacheAge(providerStatus?.cache_age_seconds)}`,
+      description: `Data age: ${formatCacheAge(providerStatus?.cache_age_seconds)}`,
       icon: <Database aria-hidden="true" />,
-      label: "Providers Health",
+      label: "Provider data",
       tone: providerTone,
-      value: provider.tone === "success" ? "All synced" : "Needs attention",
+      value: provider.label,
     },
     {
       description:

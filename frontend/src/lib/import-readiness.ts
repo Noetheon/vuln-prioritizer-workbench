@@ -8,6 +8,7 @@ import type {
   ParserPreview,
   SupportedFormat,
 } from "./import-format-types.ts"
+import type { ImportProviderReadiness } from "./provider-format.ts"
 
 export function buildImportReadinessChecks({
   evidenceFile,
@@ -15,7 +16,7 @@ export function buildImportReadinessChecks({
   inputType,
   parserPreview,
   projectId,
-  providerAvailable,
+  providerData,
   sbomScanner,
   sbomTargetRef,
 }: {
@@ -24,7 +25,7 @@ export function buildImportReadinessChecks({
   inputType: string | null | undefined
   parserPreview: ParserPreview
   projectId: string
-  providerAvailable: boolean
+  providerData: Pick<ImportProviderReadiness, "message" | "status">
   sbomScanner?: "none" | "grype"
   sbomTargetRef?: string
 }): ImportReadinessCheck[] {
@@ -93,11 +94,9 @@ export function buildImportReadinessChecks({
     },
     {
       id: "provider-data",
-      label: "Provider data available",
-      status: providerAvailable ? "passed" : "warning",
-      message: providerAvailable
-        ? "Current provider data is available."
-        : "Provider data is unavailable or still loading.",
+      label: "Provider data",
+      status: providerData.status,
+      message: providerData.message,
       targetStep: 3,
     },
     {

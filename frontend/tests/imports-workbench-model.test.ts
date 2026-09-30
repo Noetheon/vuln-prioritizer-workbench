@@ -760,7 +760,7 @@ test("SBOM scan readiness requires a stable subject only when scanning", () => {
     inputType: "spdx-json",
     parserPreview: { ...initialParserPreview(), state: "passed" as const },
     projectId: "project-1",
-    providerAvailable: true,
+    providerData: { message: "Live provider data.", status: "passed" as const },
     sbomScanner: "grype" as const,
     sbomTargetRef: " ",
   }
@@ -867,7 +867,7 @@ test("readiness model blocks required fields and allows optional context", () =>
     inputType: "",
     parserPreview: initialParserPreview(),
     projectId: "",
-    providerAvailable: true,
+    providerData: { message: "Live provider data.", status: "passed" as const },
   })
   assert.equal(
     missingChecks.some((check) => check.status === "missing"),
@@ -882,7 +882,7 @@ test("readiness model blocks required fields and allows optional context", () =>
       state: "passed",
     },
     projectId: "project-1",
-    providerAvailable: true,
+    providerData: { message: "Live provider data.", status: "passed" as const },
   })
   assert.equal(
     readyChecks
@@ -983,7 +983,7 @@ test("readiness copy uses specific wizard states for context blockers", () => {
     inputType: "",
     parserPreview: initialParserPreview(),
     projectId: "",
-    providerAvailable: true,
+    providerData: { message: "Live provider data.", status: "passed" as const },
   })
   const readyChecks = buildImportReadinessChecks({
     evidenceFile: new File(["cve_id\nCVE-2024-3094"], "findings.csv", {
@@ -996,7 +996,7 @@ test("readiness copy uses specific wizard states for context blockers", () => {
       state: "passed",
     },
     projectId: "project-1",
-    providerAvailable: true,
+    providerData: { message: "Live provider data.", status: "passed" as const },
   })
   const contextBlockedChecks = readyChecks.map(
     (check) =>
@@ -1034,7 +1034,7 @@ test("readiness model blocks parser preview until the file check has passed", ()
       inputType: "cve-list",
       parserPreview,
       projectId: "project-1",
-      providerAvailable: true,
+      providerData: { message: "Live provider data.", status: "passed" as const },
     })
     return {
       blocksImport: readinessBlocksImport(checks),

@@ -91,6 +91,19 @@ h3 {
   width: 100%;
   color: var(--text-secondary);
 }
+.report-scope {
+  margin: 8px 0 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--green);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  font-size: 15px;
+}
+.report-scope.is-partial {
+  border-left-color: var(--amber);
+  background: var(--bg-warning);
+}
 .business-impact-lede {
   max-width: none;
   width: 100%;

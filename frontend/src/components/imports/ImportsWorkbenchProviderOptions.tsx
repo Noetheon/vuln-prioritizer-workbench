@@ -51,7 +51,7 @@ export function ProviderAttackOptions({
 
       <section className="grid gap-3 border-t border-[var(--vpw-border-subtle)] pt-3">
         <AdvancedOptionHeading
-          description="Current provider data is used unless a snapshot is selected."
+          description="Imports fetch live NVD, EPSS, and KEV data and cache it, unless you select a snapshot."
           icon={<Database aria-hidden="true" className="size-4" />}
           title="Provider data"
         />
