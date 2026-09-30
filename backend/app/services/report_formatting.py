@@ -82,3 +82,29 @@ def metadata_list(metadata: dict[str, Any], key: str) -> str:
 def dict_value(value: Any) -> dict[str, Any]:
     """Return a shallow dict for JSON-like mapping values."""
     return dict(value) if isinstance(value, dict) else {}
+
+
+REEVALUATION_INPUT_TYPE = "reevaluation"
+
+
+def report_scope(
+    *,
+    finding_count: int,
+    input_type: str | None,
+    filename: str | None,
+    run_id: str,
+) -> tuple[str, bool]:
+    """Return the report's scope sentence and whether it covers only part of the project."""
+    findings = f"{finding_count} finding{'' if finding_count == 1 else 's'}"
+    if input_type == REEVALUATION_INPUT_TYPE:
+        return (
+            f"This report covers {findings} re-scored by a re-evaluation run "
+            f"({run_id[:8]}) after an asset or policy change. It does not cover the "
+            "rest of the project.",
+            True,
+        )
+    source = filename or f"{input_type or 'unknown'} input"
+    return (
+        f"This report covers {findings} from the import of {source} (run {run_id[:8]}).",
+        False,
+    )

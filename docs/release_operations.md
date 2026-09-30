@@ -63,6 +63,10 @@ Use this path for normal releases:
 1. Merge the reviewed candidate into `main` and make sure the working tree is
    clean. Create the release tag from that merged commit (or another commit
    already in `main` history); a tag on an unmerged branch is rejected.
+   The candidate sets the same version in `pyproject.toml`,
+   `backend/pyproject.toml`, and `frontend/package.json` (with its lockfile).
+   `backend/tests/test_version_consistency.py` fails when they differ, and the
+   running app reports the installed package version.
 2. Run the local release gate while developing the candidate:
 
 ```bash

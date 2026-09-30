@@ -366,6 +366,8 @@ const evidenceProviderStatus = {
     selected_sources: ["epss", "kev", "vulnrichment"],
   },
   snapshot_mode: "demo",
+  stale_after_hours: 72,
+  import_provider_mode: "live",
   sources: [
     {
       available: true,

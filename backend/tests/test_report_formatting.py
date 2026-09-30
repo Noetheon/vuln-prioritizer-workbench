@@ -9,6 +9,7 @@ from app.services.report_formatting import (
     iso_datetime,
     metadata_bool,
     metadata_list,
+    report_scope,
     safe_cell,
     safe_html,
     safe_inline,
@@ -34,3 +35,28 @@ def test_report_formatting_formats_numbers_dates_and_metadata() -> None:
     assert metadata_list({"sources": []}, "sources") == "N/A"
     assert dict_value({"ok": True}) == {"ok": True}
     assert dict_value(None) == {}
+
+
+def test_report_scope_names_the_import_and_its_finding_count() -> None:
+    text, partial = report_scope(
+        finding_count=32,
+        input_type="trivy-json",
+        filename="trivy.json",
+        run_id="1234abcd-0000-4000-8000-000000000001",
+    )
+
+    assert text == "This report covers 32 findings from the import of trivy.json (run 1234abcd)."
+    assert partial is False
+
+
+def test_report_scope_flags_reevaluation_runs_as_partial() -> None:
+    text, partial = report_scope(
+        finding_count=1,
+        input_type="reevaluation",
+        filename=None,
+        run_id="5678ef00-0000-4000-8000-000000000002",
+    )
+
+    assert text.startswith("This report covers 1 finding re-scored by a re-evaluation run")
+    assert "does not cover the rest of the project" in text
+    assert partial is True

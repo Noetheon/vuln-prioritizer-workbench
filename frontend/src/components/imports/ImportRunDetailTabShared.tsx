@@ -71,7 +71,7 @@ export function timelineDetail(item: string, summary: ImportRunSummary) {
   if (item === "Provider data applied") {
     return summary.provider_snapshot_id
       ? `${summary.provider_snapshot_id} snapshot`
-      : "Current provider data"
+      : "Live provider data"
   }
   if (item === "Optional context applied") return "Reviewed supplemental context"
   if (item === "Findings created or updated") {

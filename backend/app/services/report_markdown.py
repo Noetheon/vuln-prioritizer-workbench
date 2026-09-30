@@ -6,7 +6,9 @@ from app.services.report_formatting import format_number as _format_number
 from app.services.report_formatting import iso_datetime as _iso_datetime
 from app.services.report_formatting import metadata_bool as _metadata_bool
 from app.services.report_formatting import metadata_list as _metadata_list
+from app.services.report_formatting import report_scope
 from app.services.report_formatting import safe_cell as _safe_cell
+from app.services.report_formatting import safe_inline as _safe_inline
 from app.services.report_markdown_sections import (
     _markdown_detection_coverage_section,
     _markdown_governance_section,
@@ -25,8 +27,16 @@ def render_markdown_report(payload: MarkdownReportPayload) -> str:
     payload, _redactions = _redacted_bundle_payload(payload)
     finding_count = len(payload.findings)
     counts = _counts_by_priority(payload.findings)
+    scope_text, _partial_scope = report_scope(
+        finding_count=finding_count,
+        input_type=payload.input_type,
+        filename=payload.filename,
+        run_id=payload.run_id,
+    )
     lines = [
         "# Technical Vulnerability Report",
+        "",
+        f"> **Scope:** {_safe_inline(scope_text)}",
         "",
         "## Summary",
         "",
@@ -46,8 +56,9 @@ def render_markdown_report(payload: MarkdownReportPayload) -> str:
         f"| Low | {counts['Low']} |",
     ]
     if payload.project_context_source:
+        # Directly after the analysis run row.
         lines.insert(
-            9,
+            lines.index(f"| Analysis Run | {_safe_cell(payload.run_id)} |") + 1,
             "| Project Context | Current project projection at export time "
             "(not immutable run evidence) |",
         )

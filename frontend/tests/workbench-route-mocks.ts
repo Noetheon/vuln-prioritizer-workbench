@@ -327,6 +327,8 @@ export async function routeWorkbenchShell(
   const providerStatus = options.providerStatus ?? {
     status: "ok",
     snapshot_mode: "demo",
+    stale_after_hours: 72,
+    import_provider_mode: "live",
     cache_age_seconds: 0,
     last_sync: "2025-04-30T10:00:00Z",
     warnings: [],

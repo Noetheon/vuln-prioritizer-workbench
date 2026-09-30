@@ -9,6 +9,7 @@ import {
   type ImportReadinessCheck,
   type ParserPreview,
 } from "@/lib/import-format-metadata"
+import { importProviderReadiness } from "@/lib/provider-format"
 import {
   fileSizeLabel,
   type ImportsWorkbenchProps,
@@ -28,6 +29,7 @@ export function ReviewImportStep({
   importWizard,
   onResolveMissingChange,
   parserPreview,
+  providerStatus,
   readiness,
   selectedProject,
   supportedFormats,
@@ -60,8 +62,11 @@ export function ReviewImportStep({
     optionalSelected.length > 0
       ? optionalSelected.map((check) => check.label).join(", ")
       : "No optional context selected"
-  const providerMessage =
-    providerCheck?.message ?? "Current provider data is available."
+  const providerData = importProviderReadiness(
+    providerStatus,
+    importWizard.providerSnapshotFile,
+  )
+  const providerMessage = providerCheck?.message ?? providerData.message
   const resolveMissing = importWizard.resolveMissing ?? true
   const evidenceFileLabel = importWizard.file
     ? `${importWizard.file.name} - ${fileSizeLabel(importWizard.file)}`
@@ -91,9 +96,7 @@ export function ReviewImportStep({
     },
     {
       label: "Provider data",
-      value: importWizard.providerSnapshotFile
-        ? importWizard.providerSnapshotFile
-        : "Current provider data",
+      value: providerData.label,
     },
     {
       label: "Asset context",

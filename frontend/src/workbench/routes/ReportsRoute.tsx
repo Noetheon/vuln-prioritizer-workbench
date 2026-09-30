@@ -2,6 +2,10 @@ import "@/styles/reports.css"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "@/lib/router"
 import { EvidenceCenter } from "../../components/reports/EvidenceCenter"
+import {
+  defaultReportRunId,
+  reportRunOptions,
+} from "../../components/reports/report-run-scope-model"
 import { apiErrorMessage } from "../../lib/app-errors"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import {
@@ -51,7 +55,9 @@ function ReportsRouteContent() {
     selectedReportRun,
     selectedRunId,
   })
-  const runIds = useMemo(() => projectRuns.map((run) => run.id), [projectRuns])
+  const reportRuns = useMemo(() => reportRunOptions(projectRuns), [projectRuns])
+  const runIds = useMemo(() => reportRuns.map((run) => run.id), [reportRuns])
+  const defaultRunId = useMemo(() => defaultReportRunId(reportRuns), [reportRuns])
 
   const selectRunId = useCallback(
     (nextRunId: string, { replace }: { replace: boolean }) => {
@@ -79,12 +85,14 @@ function ReportsRouteContent() {
     const nextRunId = normalizeSelectedRunId(
       [routeRunId, selectedRunId],
       runIds,
+      defaultRunId,
     )
     if (nextRunId === selectedRunId && nextRunId === routeRunId) {
       return
     }
     selectRunId(nextRunId, { replace: true })
   }, [
+    defaultRunId,
     projectRunsQuery.isLoading,
     routeRunId,
     runIds,
@@ -109,7 +117,7 @@ function ReportsRouteContent() {
       onVerifyReport={reportsState.verifyEvidenceReport}
       projectListError={projectListError}
       projectListLoading={projectListLoading}
-      projectRuns={projectRuns}
+      projectRuns={reportRuns}
       projectSummary={projectSummaryQuery.data ?? null}
       projects={projects}
       providerStatus={providerStatus}

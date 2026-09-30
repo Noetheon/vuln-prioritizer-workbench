@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.services.report_formatting import report_scope
 from app.services.report_html_attack_context import _html_attack_context_table_helper
 from app.services.report_html_campaign_rendering import (
     _html_business_impact_table_helper,
@@ -140,6 +141,16 @@ def render_html_executive_report_helper(
         "exceptions and evidence confidence for the current analysis run."
     )
     provider_snapshot_id = identity.provider_snapshot_id or "N/A"
+    scope_text, partial_scope = report_scope(
+        finding_count=len(payload.findings),
+        input_type=payload.input_type,
+        filename=payload.filename,
+        run_id=payload.run_id,
+    )
+    scope_html = (
+        f'      <p class="report-scope{" is-partial" if partial_scope else ""}">'
+        f"<strong>Scope:</strong> {_safe_html(scope_text)}</p>\n"
+    )
     project_context_row = (
         "        <div><dt>Project Context</dt><dd>Current at export time; "
         "not immutable run evidence</dd></div>\n"
@@ -173,6 +184,7 @@ def render_html_executive_report_helper(
         "    <header>\n"
         '      <p class="eyebrow">Executive Evidence Brief</p>\n'
         f"      <h1>{_safe_html(identity.project_name)}</h1>\n"
+        f"{scope_html}"
         f'      <p class="lede">{_safe_html(header_lede)}</p>\n'
         '      <dl class="meta-grid">\n'
         f"        <div><dt>Report</dt><dd>{_safe_html(identity.report_type)}</dd></div>\n"

@@ -60,7 +60,7 @@ test("settings overview exposes about and worker health facts", async ({
 
   await page.goto("/settings")
 
-  await expect(page.getByText("Frontend 1.1.0; backend demo.").first()).toBeVisible()
+  await expect(page.getByText("Frontend 1.4.0; backend demo.").first()).toBeVisible()
   await expect(page.getByText("workbench-status.v1").first()).toBeVisible()
   await expect(
     page.getByText("Environment local; demo workspace enabled.").first(),

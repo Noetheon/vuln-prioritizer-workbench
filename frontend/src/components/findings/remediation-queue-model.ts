@@ -6,6 +6,7 @@ import type {
   FindingStatus,
   FindingsReadProjectFindingsData,
 } from "@/api-client"
+import { isActionableFinding } from "@/lib/finding-queue-labels"
 import { optionalText } from "@/lib/ui-copy"
 
 export {
@@ -203,12 +204,11 @@ export function sortDisplayFindings(
     let compared = 0
     switch (sort) {
       case "priority":
-        compared = compareRank(
-          a.priority,
-          b.priority,
-          prioritySortRank,
-          direction,
-        )
+        // Within one band: open work first, then the highest score.
+        compared =
+          compareRank(a.priority, b.priority, prioritySortRank, direction) ||
+          Number(!isActionableFinding(a)) - Number(!isActionableFinding(b)) ||
+          compareNullableNumber(a.risk_score, b.risk_score, "desc")
         break
       case "score":
         compared = compareNullableNumber(a.risk_score, b.risk_score, direction)

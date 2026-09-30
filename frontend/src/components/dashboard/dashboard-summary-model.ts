@@ -11,6 +11,8 @@ import type {
   ProviderStatusPublic,
 } from "@/api-client"
 import { priorityCount } from "@/lib/chart-data"
+import { rankedRemediationQueue } from "@/lib/finding-queue-labels"
+import { providerDataState } from "@/lib/provider-format"
 import type {
   DashboardMetricSummary,
   DashboardSignalCounts,
@@ -20,12 +22,26 @@ export function providerNeedsRefresh(
   hasProviderStatus: boolean,
   providerStatus: ProviderStatusPublic | null,
 ) {
+  if (!hasProviderStatus || providerStatus === null) {
+    return false
+  }
+  switch (providerDataState(providerStatus)) {
+    case "stale":
+    case "degraded":
+      return true
+    case "fresh":
+      return (providerStatus.warnings?.length ?? 0) > 0
+    default:
+      // Nothing fetched yet is not a fault: the first import fetches data.
+      return false
+  }
+}
+
+export function providerRefreshDetail(providerStatus: ProviderStatusPublic | null) {
   return (
-    hasProviderStatus &&
-    providerStatus !== null &&
-    (providerStatus.status !== "ok" ||
-      Boolean(providerStatus.last_error) ||
-      (providerStatus.warnings?.length ?? 0) > 0)
+    providerStatus?.last_error ??
+    providerStatus?.warnings?.[0] ??
+    "Provider data is stale or partially degraded."
   )
 }
 
@@ -33,22 +49,7 @@ export function rankedDashboardQueueFindings(
   findings: readonly FindingPublic[],
   queueSearch: string,
 ) {
-  const ranked = [...findings].sort(
-    (a, b) => (b.risk_score ?? 0) - (a.risk_score ?? 0),
-  )
-  const query = queueSearch.trim().toLowerCase()
-  if (!query) return ranked
-  return ranked.filter((finding) => {
-    const fields = [
-      finding.cve_id,
-      finding.owner,
-      finding.business_service,
-      finding.component_name,
-      finding.rationale,
-      finding.recommended_action,
-    ]
-    return fields.some((field) => field?.toLowerCase().includes(query))
-  })
+  return rankedRemediationQueue(findings, queueSearch)
 }
 
 export function buildDashboardMetricSummaries({

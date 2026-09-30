@@ -140,6 +140,21 @@ connections enable foreign keys, a 30-second busy timeout, WAL journaling, and
 normal synchronous durability. Keep the database and its `-wal`/`-shm` sidecars
 together while the process is running.
 
+## Provider Data
+
+Imports fetch NVD, EPSS, and CISA KEV data live and keep it in
+`provider-cache/`. To replay recorded data instead, select a provider snapshot
+in the import wizard or pass `--provider-snapshot` to `vpw import`.
+
+Data Sources shows how old the data in use is, measured from when it was
+fetched. Data older than 72 hours is marked stale; set
+`PROVIDER_DATA_STALE_HOURS` to change the threshold. A new install shows
+"Not fetched yet" until the first import.
+
+The demo workspace always replays its packaged snapshot. Its data is as old as
+that snapshot, so Data Sources labels it as a demo snapshot and marks it stale.
+Loading the demo does not change what other imports use.
+
 ## Backup And Restore
 
 `vpw backup` writes one zip archive with a consistent copy of the database

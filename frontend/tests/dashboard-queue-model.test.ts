@@ -5,6 +5,8 @@ import type { FindingPublic } from "../src/api-client"
 import {
   findingAssetServiceLabel,
   findingPlannedAction,
+  isActionableFinding,
+  rankedRemediationQueue,
 } from "../src/lib/finding-queue-labels.ts"
 
 function finding(overrides: Partial<FindingPublic>): FindingPublic {
@@ -77,4 +79,48 @@ test("planned action replaces provider boilerplate with a patch instruction", ()
     ),
     "Patch xz",
   )
+})
+
+test("remediation queue keeps open work only and ranks it by score", () => {
+  const queue = rankedRemediationQueue(
+    [
+      finding({ id: "resolved", risk_score: 91, status: "resolved" }),
+      finding({ id: "low", risk_score: 26, status: "open" }),
+      finding({ id: "accepted", risk_score: 53, status: "accepted" }),
+      finding({ id: "review", risk_score: 55, status: "in_review" }),
+      finding({ id: "fixing", risk_score: 66, status: "remediating" }),
+      finding({ id: "fp", risk_score: 99, status: "false_positive" }),
+      finding({ id: "fixed", risk_score: 0, status: "fixed" }),
+      finding({ id: "suppressed", risk_score: 12, status: "suppressed" }),
+      finding({ id: "unscored", risk_score: null, status: "open" }),
+    ],
+    "",
+  )
+  assert.deepEqual(
+    queue.map((item) => item.id),
+    ["fixing", "review", "low", "unscored"],
+  )
+  assert.equal(isActionableFinding(finding({ status: "open" })), true)
+  assert.equal(isActionableFinding(finding({ status: "resolved" })), false)
+})
+
+test("remediation queue search matches CVE, owner, service, component, and text", () => {
+  const findings = [
+    finding({ id: "a", cve_id: "CVE-2023-34362", owner: "team-platform" }),
+    finding({ id: "b", business_service: "payments", component_name: "log4j-core" }),
+    finding({ id: "c", rationale: "KEV listed", recommended_action: "Patch envoy" }),
+  ]
+  assert.deepEqual(
+    rankedRemediationQueue(findings, " PLATFORM ").map((item) => item.id),
+    ["a"],
+  )
+  assert.deepEqual(
+    rankedRemediationQueue(findings, "log4j").map((item) => item.id),
+    ["b"],
+  )
+  assert.deepEqual(
+    rankedRemediationQueue(findings, "envoy").map((item) => item.id),
+    ["c"],
+  )
+  assert.deepEqual(rankedRemediationQueue(findings, "nothing"), [])
 })

@@ -5,6 +5,7 @@ import {
   VpwSectionHeader,
 } from "@/components/vpw"
 import type { ImportReadinessCheck } from "@/lib/import-format-metadata"
+import { importProviderReadiness } from "@/lib/provider-format"
 import { cn } from "@/lib/utils"
 import {
   hasOptionalContext,
@@ -89,9 +90,10 @@ export function SummaryRail({
           },
           {
             label: "Provider data",
-            value: props.importWizard.providerSnapshotFile
-              ? props.importWizard.providerSnapshotFile
-              : "Current provider data",
+            value: importProviderReadiness(
+              props.providerStatus,
+              props.importWizard.providerSnapshotFile,
+            ).label,
           },
           {
             label: "Deterministic replay",

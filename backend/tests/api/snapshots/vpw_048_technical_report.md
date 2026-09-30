@@ -1,5 +1,7 @@
 # Technical Vulnerability Report
 
+> **Scope:** This report covers 2 findings from the import of known-cves.txt \(run 00000000\).
+
 ## Summary
 
 | Field | Value |

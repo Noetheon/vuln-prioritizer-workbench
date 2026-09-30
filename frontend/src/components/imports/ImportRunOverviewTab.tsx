@@ -119,7 +119,7 @@ export function OverviewTab({
               value:
                 runProviderSnapshotFile(summary) ??
                 stringFromRecord(inputUpload, "provider_snapshot_file") ??
-                "Current provider data",
+                "Live provider data",
             },
             {
               label: "Deterministic replay",

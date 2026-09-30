@@ -22,11 +22,11 @@ export function runUrlSearch(
 export function normalizeSelectedRunId(
   candidates: readonly string[],
   runIds: readonly string[],
+  fallbackRunId: string = runIds[0] ?? "",
 ): string {
   const availableRunIds = new Set(runIds)
   return (
     candidates.find((candidate) => candidate && availableRunIds.has(candidate)) ??
-    runIds[0] ??
-    ""
+    fallbackRunId
   )
 }

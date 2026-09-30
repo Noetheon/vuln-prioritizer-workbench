@@ -5,8 +5,12 @@ import {
   VpwSectionHeader,
   VpwStatusBanner,
 } from "@/components/vpw"
-import { formatCacheAge } from "@/lib/provider-format"
-import { formatDateTime } from "./providers-workbench-model"
+import {
+  formatCacheAge,
+  providerDataStateLabel,
+  providerDataTone,
+} from "@/lib/provider-format"
+import { formatDateTime, snapshotModeLabel } from "./providers-workbench-model"
 
 export function ProviderRuntimeFactsPanel({
   providerStatus,
@@ -29,15 +33,15 @@ export function ProviderRuntimeFactsPanel({
         items={[
           {
             label: "Overall status",
-            value: providerStatus?.status ?? "Not recorded",
-            tone: providerStatus?.status === "ok" ? "success" : "warning",
+            value: providerDataStateLabel(providerStatus),
+            tone: providerDataTone(providerStatus),
           },
           {
             label: "Snapshot mode",
-            value: providerStatus?.snapshot_mode ?? "missing",
+            value: snapshotModeLabel(providerStatus),
           },
           {
-            label: "Last sync",
+            label: "Data fetched",
             value: formatDateTime(providerStatus?.last_sync),
           },
           {

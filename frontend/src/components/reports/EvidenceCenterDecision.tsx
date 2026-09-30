@@ -20,6 +20,10 @@ import {
   type ArtifactCard,
   artifactCardForFormat,
 } from "@/lib/report-capability-catalog"
+import {
+  providerDataStateLabel,
+  providerDataTone,
+} from "@/lib/provider-format"
 import { Link } from "@/lib/router"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
@@ -236,8 +240,8 @@ export function QualityFacts({
             },
             {
               label: "Current provider inventory",
-              tone: providerStatus?.status === "ok" ? "success" : "warning",
-              value: providerStatus?.status ?? "Unavailable",
+              tone: providerDataTone(providerStatus),
+              value: providerDataStateLabel(providerStatus),
               description: (
                 <span
                   data-vpw-visual-mask={
