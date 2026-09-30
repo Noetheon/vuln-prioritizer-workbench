@@ -49,6 +49,11 @@ over time, building on the locally verified test work and main including PR #699
   After the upstream history was independently cleaned, only this delivery's
   unpublished commits were transferred onto the clean base. The new publication
   privacy guidance was retained alongside project guidance. The guard remains
-  active; hosted checks and branch-protection activation are still pending.
+  active. Hosted checks and branch protection establish activation separately.
+- A recheck of the earlier main maintenance campaign passed 105 browser cases
+  and failed one responsive navigation case; its old artifact configuration
+  omitted browser diagnostics. The focused case passed locally. First-attempt
+  failure traces, route/viewport step labels and retained maintenance browser
+  artifacts now make a recurrence diagnosable without relaxing assertions.
 
 These are separate outcomes. No release or package publication is part of this rollout.

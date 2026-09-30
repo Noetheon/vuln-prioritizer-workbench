@@ -368,13 +368,15 @@ test("Workbench routes keep content within desktop, tablet, and mobile viewports
   for (const viewport of responsiveViewports) {
     await page.setViewportSize(viewport)
     for (const route of workbenchRoutes) {
-      await page.goto(route)
-      await expect(page.getByRole("main")).toBeVisible()
-      await page.keyboard.press("Tab")
-      await expect(page.locator(":focus")).toBeVisible()
-      await expectNoPageOverflow(page)
-      await expectNoGlobalStatusStrip(page)
-      await expectWqhdContainerBehavior(page, viewport)
+      await test.step(`${viewport.width}x${viewport.height}: ${route}`, async () => {
+        await page.goto(route)
+        await expect(page.getByRole("main")).toBeVisible()
+        await page.keyboard.press("Tab")
+        await expect(page.locator(":focus")).toBeVisible()
+        await expectNoPageOverflow(page)
+        await expectNoGlobalStatusStrip(page)
+        await expectWqhdContainerBehavior(page, viewport)
+      })
     }
   }
 })

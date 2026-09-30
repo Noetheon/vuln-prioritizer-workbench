@@ -120,5 +120,7 @@ jobs:
           retention-days: 3
           path: |
             ${{ runner.temp }}/workflow-artifacts/**
+            frontend/test-results/**
+            frontend/playwright-report/**
             docs/example*.json
             docs/examples/*.json
