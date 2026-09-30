@@ -1,0 +1,59 @@
+name: Privacy guard
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  privacy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check public files and new commit identities
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          python3 - <<'PY'
+          import io, os, re, subprocess, zipfile
+          def git(*args):
+              return subprocess.check_output(['git', *args])
+          path_rule = re.compile(r'/Users/(?!(?:example|runner|user|testuser|USERNAME|Shared|[Aa]lice)(?:/|\b))[A-Za-z0-9._-]+/')
+          errors = []
+          def inspect(data, label, depth=0):
+              if path_rule.search(data.decode('utf-8', errors='replace')):
+                  errors.append(label + ': personal user-directory path')
+              if data.startswith(b'PK\x03\x04') and depth < 5:
+                  try:
+                      with zipfile.ZipFile(io.BytesIO(data)) as archive:
+                          for item in archive.infolist():
+                              if not item.is_dir() and item.file_size < 100 * 1024 * 1024:
+                                  inspect(archive.read(item), label + '!' + item.filename, depth + 1)
+                  except (zipfile.BadZipFile, RuntimeError):
+                      # Two intentionally malformed OpenARDP archive fixtures.
+                      import hashlib
+                      blob = hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
+                      if blob not in {'18ec90e550e6702a0e5f6a705270139848b68d1f', '0de2e29922c554f757facaef7c175c1c2ef76f57'}:
+                          errors.append(label + ': archive could not be inspected')
+          for raw in git('ls-files', '-z').split(b'\0'):
+              if raw:
+                  name = raw.decode()
+                  with open(name, 'rb') as source:
+                      inspect(source.read(), name)
+          base = os.environ.get('BASE_SHA', '')
+          revision = base + '..HEAD' if base and set(base) != {'0'} else 'HEAD'
+          result = subprocess.run(['git', 'log', revision, '--format=%H%x00%an%x00%ae%x00%cn%x00%ce'], capture_output=True)
+          if result.returncode:
+              errors.append('Commit range could not be inspected')
+          else:
+              for line in result.stdout.decode().splitlines():
+                  sha, author, email, committer, committer_email = line.split('\0')
+                  for address in (email, committer_email):
+                      if not (address.endswith('@users.noreply.github.com') or address in {'noreply@github.com', 'claude@anthropic.com'}):
+                          errors.append(sha + ': use a GitHub noreply commit identity')
+          if errors:
+              raise SystemExit('\n'.join(sorted(set(errors))))
+          print('Generic public-path and new commit-identity checks passed. Personal pattern and media checks run locally.')
+          PY
