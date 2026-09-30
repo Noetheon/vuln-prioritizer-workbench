@@ -6,7 +6,7 @@ import { findingSlaLabel } from "../src/lib/finding-recorded-guidance.ts"
 test("all finding surfaces use the recorded SLA including a custom policy", () => {
   assert.equal(
     findingSlaLabel({ sla: { label: "Custom policy", target_hours: 6 } }),
-    "Custom policy · 6h",
+    "Custom policy · 6 hours",
   )
   assert.equal(
     findingSlaLabel({
@@ -21,7 +21,7 @@ test("all finding surfaces use the recorded SLA including a custom policy", () =
         remediation: { sla: { label: "Emergency", target_hours: 6 } },
       },
     } as unknown as FindingPublic),
-    "Emergency · 6h",
+    "Emergency · 6 hours",
   )
   assert.equal(
     findingSlaLabel({
@@ -29,7 +29,7 @@ test("all finding surfaces use the recorded SLA including a custom policy", () =
         remediation: { sla: { label: "Scheduled", target_days: 3 } },
       },
     } as unknown as FindingPublic),
-    "Scheduled · 3d",
+    "Scheduled · 3 days",
   )
   assert.equal(
     findingSlaLabel({
@@ -53,4 +53,27 @@ test("all finding surfaces use the recorded SLA including a custom policy", () =
       "No SLA recorded",
     )
   }
+})
+
+test("SLA targets read in days when they are whole days", () => {
+  assert.equal(
+    findingSlaLabel({ sla: { label: "Emergency", target_hours: 24 } }),
+    "Emergency · 1 day",
+  )
+  assert.equal(
+    findingSlaLabel({ sla: { label: "Standard", target_hours: 720 } }),
+    "Standard · 30 days",
+  )
+  assert.equal(
+    findingSlaLabel({ sla: { label: "Monitor", target_days: 1 } }),
+    "Monitor · 1 day",
+  )
+  assert.equal(
+    findingSlaLabel({ sla: { label: "Custom", target_hours: 1 } }),
+    "Custom · 1 hour",
+  )
+  assert.equal(
+    findingSlaLabel({ sla: { label: "Custom", target_hours: 36 } }),
+    "Custom · 36 hours",
+  )
 })

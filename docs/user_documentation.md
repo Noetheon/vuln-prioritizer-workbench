@@ -225,8 +225,19 @@ above the queue (Critical, High, KEV, Overdue) count every page of the list
 the filters select, not only the rows on screen. Import history and run
 detail show how many findings each import resolved and reopened.
 
-SLA labels in the finding views come from recorded decision guidance, including
-recorded hours or days when available. Missing guidance is shown explicitly.
+Each Triage row shows priority and score together, the finding with why it
+matters now, the asset with its service and owner, the signals, and the
+status with its SLA and the date the finding was last seen. On screens
+narrower than a 1,280 px laptop the queue scrolls sideways and the row
+actions stay in view. Closed findings show their priority muted, without a
+score or SLA. A view (Immediate, Overdue, KEV, Internet-facing, Accepted,
+Fixed) adds its condition to the filters already set and replaces only
+another view's condition; **Reset** clears everything. While rows are
+selected, the **Set status…** bar stays at the bottom of the screen.
+
+SLA labels in the finding views come from recorded decision guidance, with the
+target in days ("Emergency · 1 day"; a target that is not whole days stays in
+hours). Missing guidance is shown explicitly.
 Open work (open, in review, remediating) also gets an SLA due date: the time
 the Workbench first saw the finding plus the SLA target recorded with its
 current decision (by default 24 hours for Critical, 7 days for High, 30 days

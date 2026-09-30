@@ -16,7 +16,11 @@ import {
   StatusLozenge,
   VpwSignalCluster,
   type VpwDataTableColumn,
+  type VpwDataTableSort,
 } from "@/components/vpw"
+import { VpwTableSortButton } from "@/components/vpw/VpwDataTableHeaderContent"
+import { formatDate } from "@/lib/date-format"
+import { isActionableFinding } from "@/lib/finding-queue-labels"
 import type { SelectAllState } from "@/lib/finding-bulk-selection"
 import { formatLabel as labelize } from "@/lib/ui-copy"
 import {
@@ -26,7 +30,6 @@ import {
   findingWhyNow,
   findingWhyNowCompact,
   formatDateTime,
-  formatShortDate,
   findingSlaLabel,
   ownerLabel,
   serviceLabel,
@@ -87,45 +90,53 @@ export function buildFindingsDataTableColumns({
   queueSort,
   selection,
 }: BuildFindingsColumnsOptions): readonly VpwDataTableColumn<FindingPublic>[] {
-  const sortable = (sort: QueueSort, label: string) => ({
+  const sortable = (sort: QueueSort, label: string): VpwDataTableSort => ({
     active: queueSort === sort,
     direction: queueSort === sort ? findingDirection : undefined,
     label,
     onSort: () => onSort(sort),
   })
+  const ariaSort = (...sorts: QueueSort[]) =>
+    sorts
+      .map((sort) => sortAriaState(findingDirection, queueSort, sort))
+      .find(Boolean)
 
+  // Eight columns fit a 1,280 px laptop screen: priority and score share a
+  // cell, "why now" sits under the finding, and the owner under the asset.
   return [
     ...(selection ? [selectionColumn(selection)] : []),
     {
       id: "priority",
-      header: "Priority",
-      ariaSort: sortAriaState(findingDirection, queueSort, "priority"),
-      cell: (finding) => (
-        <RiskBadge density="compact" level={finding.priority} />
+      header: (
+        <div className="finding-sort-pair">
+          <VpwTableSortButton sort={sortable("priority", "Priority")}>
+            Priority
+          </VpwTableSortButton>
+          <VpwTableSortButton sort={sortable("score", "Score")}>
+            Score
+          </VpwTableSortButton>
+        </div>
       ),
-      className: "w-[9%]",
-      headerClassName: "w-[9%]",
-      sort: sortable("priority", "Priority"),
-      width: "9%",
-    },
-    {
-      id: "score",
-      header: "Score",
-      ariaSort: sortAriaState(findingDirection, queueSort, "score"),
-      cell: (finding) => (
-        <RiskScoreBadge density="compact" value={finding.risk_score} />
-      ),
-      className: "w-[6%]",
-      headerClassName: "w-[6%]",
-      sort: sortable("score", "Score"),
-      width: "6%",
+      ariaSort: ariaSort("priority", "score"),
+      cell: (finding) => <FindingPriorityCell finding={finding} />,
+      width: "6.75rem",
     },
     {
       id: "finding",
-      header: "Finding",
-      ariaSort: sortAriaState(findingDirection, queueSort, "cve"),
+      header: (
+        <div className="finding-sort-pair">
+          <VpwTableSortButton sort={sortable("cve", "Finding")}>
+            Finding
+          </VpwTableSortButton>
+          <VpwTableSortButton sort={sortable("component", "Component")}>
+            Component
+          </VpwTableSortButton>
+        </div>
+      ),
+      ariaSort: ariaSort("cve", "component"),
       cell: (finding) => {
         const actionLabel = findingActionLabel(finding)
+        const whyNow = findingWhyNow(finding)
         return (
           <div className="finding-primary-cell">
             <Link
@@ -139,30 +150,24 @@ export function buildFindingsDataTableColumns({
             </Link>
             <strong
               className="finding-component-name"
-              title={componentLabel(finding)}
+              title={finding.component_purl ?? componentLabel(finding)}
             >
               {componentLabel(finding)}
             </strong>
-            {finding.component_purl ? (
-              <span
-                className="remediation-subtext truncate"
-                title={finding.component_purl}
-              >
-                {finding.component_purl}
+            {isActionableFinding(finding) ? (
+              <span className="finding-why-now" title={whyNow}>
+                {findingWhyNowCompact(finding)}
               </span>
             ) : null}
           </div>
         )
       },
-      className: "w-[17%] min-w-0",
-      headerClassName: "w-[17%]",
-      sort: sortable("cve", "Finding"),
-      width: "17%",
+      className: "min-w-0",
     },
     {
       id: "asset",
-      header: "Asset / Service",
-      ariaSort: sortAriaState(findingDirection, queueSort, "component"),
+      header: "Asset / Owner",
+      ariaSort: ariaSort("owner"),
       cell: (finding) => (
         <div className="finding-asset-cell">
           <strong className="block truncate" title={assetLabel(finding)}>
@@ -170,9 +175,16 @@ export function buildFindingsDataTableColumns({
           </strong>
           <span
             className="remediation-subtext truncate"
-            title={serviceLabel(finding)}
+            title={`Service: ${serviceLabel(finding)}`}
           >
             {serviceLabel(finding)}
+          </span>
+          <span
+            className="remediation-subtext truncate"
+            title={`Owner: ${ownerLabel(finding)}`}
+          >
+            <span className="sr-only">Owner: </span>
+            {ownerLabel(finding)}
           </span>
           <div className="finding-meta-tags">
             {finding.asset_environment ? (
@@ -184,29 +196,14 @@ export function buildFindingsDataTableColumns({
           </div>
         </div>
       ),
-      className: "w-[15%] min-w-0",
-      headerClassName: "w-[15%]",
-      sort: sortable("component", "Asset / Service"),
-      width: "15%",
-    },
-    {
-      id: "owner",
-      header: "Owner",
-      ariaSort: sortAriaState(findingDirection, queueSort, "owner"),
-      cell: (finding) => (
-        <div className="finding-owner-cell">
-          <strong>{ownerLabel(finding)}</strong>
-        </div>
-      ),
-      className: "w-[9%]",
-      headerClassName: "w-[9%]",
+      className: "min-w-0",
       sort: sortable("owner", "Owner"),
-      width: "9%",
+      width: "19%",
     },
     {
       id: "signals",
       header: "Signals",
-      ariaSort: sortAriaState(findingDirection, queueSort, "epss"),
+      ariaSort: ariaSort("epss"),
       cell: (finding) => (
         <VpwSignalCluster maxVisible={3}>
           {finding.in_kev ? <SignalChip kind="kev" /> : null}
@@ -221,53 +218,16 @@ export function buildFindingsDataTableColumns({
           {finding.suppressed_by_vex ? <SignalChip kind="vex" /> : null}
         </VpwSignalCluster>
       ),
-      className: "w-[13%]",
-      headerClassName: "w-[13%]",
       sort: sortable("epss", "Signals"),
-      width: "13%",
+      width: "7.25rem",
     },
     {
       id: "status",
       header: "Status / SLA",
-      ariaSort: sortAriaState(findingDirection, queueSort, "status"),
-      cell: (finding) => (
-        <div className="finding-status-cell">
-          <StatusLozenge density="compact" status={finding.status} />
-          <span
-            className="remediation-subtext"
-            title={`Last seen ${formatDateTime(finding.last_seen_at)}`}
-          >
-            {formatShortDate(finding.last_seen_at)}
-          </span>
-          <div className="finding-meta-tags">
-            <MetaTag label={findingSlaLabel(finding)} />
-            <SlaDueBadge finding={finding} />
-            {finding.under_investigation ? (
-              <MetaTag label="Under review" />
-            ) : null}
-            {finding.waived ? <MetaTag label="Accepted risk" /> : null}
-          </div>
-        </div>
-      ),
-      className: "w-[12%]",
-      headerClassName: "w-[12%]",
+      ariaSort: ariaSort("status"),
+      cell: (finding) => <FindingStatusCell finding={finding} />,
       sort: sortable("status", "Status / SLA"),
-      width: "12%",
-    },
-    {
-      id: "why",
-      header: "Why now",
-      cell: (finding) => {
-        const whyNow = findingWhyNow(finding)
-        return (
-          <span className="vpw-table-cell-clamp-copy" title={whyNow}>
-            {findingWhyNowCompact(finding)}
-          </span>
-        )
-      },
-      className: "w-[14%] min-w-0",
-      headerClassName: "w-[14%]",
-      width: "14%",
+      width: "11.5rem",
     },
     {
       id: "view",
@@ -315,9 +275,57 @@ export function buildFindingsDataTableColumns({
           </div>
         )
       },
-      className: "min-w-[5rem] px-2 text-right",
-      headerClassName: "px-2 text-right",
-      width: "5rem",
+      // Stays in view when a narrow screen scrolls the table sideways.
+      className: "finding-actions-column px-2 text-right",
+      headerClassName:
+        "finding-actions-column finding-actions-header px-2 text-right",
+      width: "5.25rem",
     },
   ]
+}
+
+/** Priority and score for open work; closed findings are no longer ranked. */
+function FindingPriorityCell({ finding }: { finding: FindingPublic }) {
+  if (!isActionableFinding(finding)) {
+    return (
+      <span
+        className="finding-priority-closed"
+        title="Closed findings are not ranked; the score applies to open work."
+      >
+        {labelize(finding.priority ?? "unknown")}
+      </span>
+    )
+  }
+  return (
+    <div className="finding-priority-cell">
+      <RiskBadge density="compact" level={finding.priority} />
+      <RiskScoreBadge density="compact" value={finding.risk_score} />
+    </div>
+  )
+}
+
+/** Status, the SLA of open work, and when the finding was last seen. */
+function FindingStatusCell({ finding }: { finding: FindingPublic }) {
+  const open = isActionableFinding(finding)
+  return (
+    <div className="finding-status-cell">
+      <div className="finding-meta-tags">
+        <StatusLozenge density="compact" status={finding.status} />
+        {finding.under_investigation ? <MetaTag label="Under review" /> : null}
+        {finding.waived ? <MetaTag label="Accepted risk" /> : null}
+      </div>
+      <SlaDueBadge finding={finding} overflow="wrap" />
+      {open ? (
+        <span className="remediation-subtext">
+          SLA {findingSlaLabel(finding)}
+        </span>
+      ) : null}
+      <span
+        className="remediation-subtext"
+        title={`Last seen ${formatDateTime(finding.last_seen_at)}`}
+      >
+        Last seen {formatDate(finding.last_seen_at)}
+      </span>
+    </div>
+  )
 }

@@ -7,7 +7,7 @@ import {
   serviceLabel,
 } from "./remediation-queue-model"
 
-export { formatDateTime, formatShortDate } from "../../lib/date-format.ts"
+export { formatDateTime } from "../../lib/date-format.ts"
 export { findingSlaLabel } from "../../lib/finding-recorded-guidance"
 export {
   findingWhyNow,

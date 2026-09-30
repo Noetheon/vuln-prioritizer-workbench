@@ -48,17 +48,3 @@ export function formatDate(
     ...options,
   })
 }
-
-export function formatShortDate(
-  value: string | null | undefined,
-  options: DateFormatOptions = {},
-) {
-  return formatDateValue(value, {
-    formatOptions: {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-    },
-    ...options,
-  })
-}

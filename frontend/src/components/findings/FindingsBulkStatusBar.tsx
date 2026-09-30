@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select"
 import { selectedCountLabel } from "@/lib/finding-bulk-selection"
 import { manualStatusOptions } from "@/lib/finding-status-transitions"
+import { cn } from "@/lib/utils"
 
 export function FindingsBulkStatusBar({
   count,
@@ -29,7 +30,12 @@ export function FindingsBulkStatusBar({
   return (
     <section
       aria-label="Bulk status change"
-      className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] px-4 py-3"
+      className={cn(
+        "flex flex-wrap items-center gap-3 rounded-lg border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] px-4 py-3",
+        // Stays at the bottom of the screen while rows are chosen, so the
+        // choice is visible wherever in the list it was made.
+        count > 0 && "findings-bulk-bar--sticky",
+      )}
     >
       {count > 0 ? (
         <>
