@@ -13,7 +13,8 @@ from sqlmodel import Session, select
 from app.decision_core.contracts import FindingDecisionEvidenceV2
 from app.domain.engine.models_decision import FindingDecisionGuidance, SlaTarget
 from app.models.decision_summary import ExecutiveFindingDecisionPublic, RunDecisionSummaryPublic
-from app.models.evidence import FindingDecisionEvidence
+from app.models.evidence import FindingCurrentProjection, FindingDecisionEvidence
+from app.repositories.current_projections import FindingCurrentProjectionRepository
 from app.repositories.evidence_payloads import EvidencePayloadStore
 
 ACTIONABLE_STATUSES = frozenset({"open", "in_review", "remediating"})
@@ -32,6 +33,27 @@ def run_decision_summary(session: Session, run_id: uuid.UUID) -> RunDecisionSumm
         while batch := tuple(islice(rows, 100)):
             for payload in store.load_records(batch).values():
                 yield FindingDecisionEvidenceV2.model_validate(payload)
+
+    return summarize_decision_guidance(contracts())
+
+
+def project_state_decision_summary(
+    session: Session, project_id: uuid.UUID
+) -> RunDecisionSummaryPublic:
+    """Summarize the current decision of every finding in a project."""
+    repository = FindingCurrentProjectionRepository(session)
+    finding_ids = list(
+        session.exec(
+            select(FindingCurrentProjection.finding_id).where(
+                FindingCurrentProjection.project_id == project_id
+            )
+        ).all()
+    )
+
+    def contracts() -> Iterable[FindingDecisionEvidenceV2]:
+        for offset in range(0, len(finding_ids), 100):
+            records = repository.records_for_findings(finding_ids[offset : offset + 100])
+            yield from repository.evidence_for_records(records).values()
 
     return summarize_decision_guidance(contracts())
 

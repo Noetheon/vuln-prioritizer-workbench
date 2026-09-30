@@ -119,6 +119,79 @@ test("Evidence Center run context stays compact on mobile", async ({ page }) => 
   expect(metrics.height).toBeLessThanOrEqual(360)
 })
 
+test("Evidence Center reports on the current project state by default", async ({
+  page,
+}) => {
+  await routeWorkbenchShell(page, {
+    projects: [mockProject],
+    runSummaries: { [runId]: runSummary() },
+    runs: [analysisRun()],
+  })
+  const stateRun: AnalysisRunPublic = {
+    ...analysisRun(),
+    counts: { finding_count: 2 },
+    filename: null,
+    id: "run-state-1",
+    input_type: "project_state",
+    project_state_current: true,
+    provider_snapshot_id: null,
+    started_at: "2026-05-11T09:00:00Z",
+    uploads: {},
+  }
+  const requests: unknown[] = []
+  await page.route(
+    `**/api/v1/projects/${mockProject.id}/state-report-jobs`,
+    async (route) => {
+      requests.push(route.request().postDataJSON())
+      await page.route(`**/api/v1/projects/${mockProject.id}/runs/?*`, (runs) =>
+        runs.fulfill({
+          contentType: "application/json",
+          body: JSON.stringify({ count: 2, data: [stateRun, analysisRun()] }),
+        }),
+      )
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          analysis_run_id: stateRun.id,
+          created_at: "2026-05-11T09:00:00Z",
+          id: "workflow-state-1",
+          kind: "report_generation",
+          project_id: mockProject.id,
+          status: "pending",
+          title: "Generate html report",
+        }),
+      })
+    },
+  )
+  await page.route(`**/api/v1/runs/${stateRun.id}/reports*`, (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ count: 0, data: [] }),
+    }),
+  )
+
+  await page.goto(`/reports?projectId=${mockProject.id}`)
+
+  await expect(page.getByRole("combobox", { name: "Report run" })).toContainText(
+    "Current project state",
+  )
+  await expect(
+    page.getByRole("status").filter({ hasText: "Current project state" }),
+  ).toContainText("with their current status and priority")
+
+  await page.getByRole("button", { name: "Generate evidence" }).first().click()
+  const drawer = page.getByRole("dialog")
+  await expect(drawer).toContainText("current state of the whole project")
+  await drawer.getByRole("button", { name: /^Generate/ }).last().click()
+
+  await expect.poll(() => requests.length).toBe(1)
+  expect(requests[0]).toMatchObject({ format: expect.any(String) })
+  await expect(page).toHaveURL(/runId=run-state-1/)
+  await expect(
+    page.getByRole("status").filter({ hasText: "Recorded project state" }),
+  ).toContainText("covers the whole project")
+})
+
 function analysisRun(): AnalysisRunPublic {
   return {
     filename: "reports-input.txt",

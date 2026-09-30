@@ -9,7 +9,7 @@ from collections.abc import Callable
 from sqlmodel import Session
 
 from app.core.config import Settings
-from app.decision_core.readmodels import decision_run_view, run_finding_decision_views
+from app.decision_core.readmodels import decision_run_view
 from app.models import AnalysisRun, Project, Report, WorkflowRun, WorkflowRunKind, WorkflowRunStatus
 from app.repositories import WorkflowRepository
 from app.repositories.workflows import WorkflowLeaseLostError
@@ -58,8 +58,9 @@ from app.services.report_sarif import render_sarif_report
 from app.services.report_service_attack import attack_navigator_layer, run_attack_contexts
 from app.services.report_service_payload import (
     REPORT_SUPPORTED_RUN_STATUSES,
-    ReportSource,
     build_report_payload,
+    report_finding_views,
+    report_source,
 )
 from app.services.report_service_persistence import (
     persist_binary_report,
@@ -195,7 +196,7 @@ class ReportService:
         self, *, run: AnalysisRun, project: Project, compress: bool = False
     ) -> Report:
         """Stream the unchanged v2 JSON values with optional explicit gzip encoding."""
-        source = ReportSource(self.session, run=run, project=project)
+        source = report_source(self.session, run=run, project=project)
         return persist_stream_report(
             self.session,
             self.settings,
@@ -227,7 +228,7 @@ class ReportService:
 
     def _create_findings_csv_export(self, *, run: AnalysisRun, project: Project) -> Report:
         """Stream spreadsheet-safe findings with the existing CSV contract."""
-        source = ReportSource(self.session, run=run, project=project)
+        source = report_source(self.session, run=run, project=project)
         return persist_stream_report(
             self.session,
             self.settings,
@@ -279,7 +280,7 @@ class ReportService:
             project=project,
             max_input_bytes=self.settings.max_report_bytes,
         )
-        finding_views = run_finding_decision_views(self.session, run=run, findings=findings)
+        finding_views = report_finding_views(self.session, run=run, findings=findings)
         layer = attack_navigator_layer(
             run=run,
             project=project,
@@ -453,7 +454,7 @@ class ReportService:
             project=project,
             max_input_bytes=self.settings.max_report_bytes,
         )
-        finding_views = run_finding_decision_views(self.session, run=run, findings=findings)
+        finding_views = report_finding_views(self.session, run=run, findings=findings)
         attack_layer = attack_navigator_layer(
             run=run,
             project=project,

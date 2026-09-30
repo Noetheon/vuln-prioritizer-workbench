@@ -29,6 +29,7 @@ import {
 type EvidenceCenterTabsProps = {
   activeReportFormat: string
   artifactCards: readonly ArtifactCard[]
+  currentStateSelected?: boolean
   hasDecisionContext: boolean
   onCreateReport: (format: ReportFormat) => Promise<void>
   onDownloadReport: (report: ReportPublic) => Promise<void>
@@ -50,6 +51,7 @@ type EvidenceCenterTabsProps = {
 export function EvidenceCenterTabs({
   activeReportFormat,
   artifactCards,
+  currentStateSelected = false,
   hasDecisionContext,
   onCreateReport,
   onDownloadReport,
@@ -87,7 +89,13 @@ export function EvidenceCenterTabs({
       </TabsList>
 
       <TabsContent className="mt-0 flex flex-col gap-4" value="artifacts">
-        {!selectedReportRun ? (
+        {currentStateSelected ? (
+          <VpwEmptyState
+            action={<VpwBadge tone="info">Current project state</VpwBadge>}
+            description="Generate evidence to record the project's current state and create reports about all of its findings."
+            title="No report on the current state yet"
+          />
+        ) : !selectedReportRun ? (
           <VpwEmptyState
             action={<VpwBadge tone="neutral">Select run</VpwBadge>}
             description="Select a completed import run to generate evidence artifacts."
@@ -166,7 +174,11 @@ export function EvidenceCenterTabs({
             />
           ) : (
             <VpwEmptyState
-              description="Select a completed run to populate executive decision language."
+              description={
+                currentStateSelected
+                  ? "Decision language appears once a report records the current project state."
+                  : "Select a completed run to populate executive decision language."
+              }
               title="No decision context selected"
             />
           )}

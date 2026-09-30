@@ -2,7 +2,7 @@
 
 import { buildClientParams, type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AssetCreate, AssetExposure, AssetUpdate, BodyAssetsImportProjectAssets, BodyImportsImportProjectUpload, DeleteApiV1ProjectsByProjectIdErrors, DeleteApiV1ProjectsByProjectIdResponses, DeleteApiV1WaiversByWaiverIdErrors, DeleteApiV1WaiversByWaiverIdResponses, DeleteApiV1WorkbenchDemoResponses, DemoWorkspaceCreate, EvaluationCreate, FindingBulkStatusUpdateRequest, FindingPriority, FindingSlaState, FindingStatus, FindingStatusUpdateRequest, GetApiV1AuditEventsErrors, GetApiV1AuditEventsResponses, GetApiV1FindingsByFindingIdDecisionRevisionsErrors, GetApiV1FindingsByFindingIdDecisionRevisionsResponses, GetApiV1FindingsByFindingIdErrors, GetApiV1FindingsByFindingIdExplainErrors, GetApiV1FindingsByFindingIdExplainResponses, GetApiV1FindingsByFindingIdLifecycleEventsErrors, GetApiV1FindingsByFindingIdLifecycleEventsResponses, GetApiV1FindingsByFindingIdResponses, GetApiV1GithubIssuesExportSettingsResponses, GetApiV1ProjectsByProjectIdAssetsErrors, GetApiV1ProjectsByProjectIdAssetsResponses, GetApiV1ProjectsByProjectIdAttackSummaryErrors, GetApiV1ProjectsByProjectIdAttackSummaryResponses, GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors, GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses, GetApiV1ProjectsByProjectIdDashboardErrors, GetApiV1ProjectsByProjectIdDashboardResponses, GetApiV1ProjectsByProjectIdErrors, GetApiV1ProjectsByProjectIdEvaluationsErrors, GetApiV1ProjectsByProjectIdEvaluationsResponses, GetApiV1ProjectsByProjectIdFindingsErrors, GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdGovernanceRollupsErrors, GetApiV1ProjectsByProjectIdGovernanceRollupsResponses, GetApiV1ProjectsByProjectIdPolicyErrors, GetApiV1ProjectsByProjectIdPolicyResponses, GetApiV1ProjectsByProjectIdResponses, GetApiV1ProjectsByProjectIdRunsErrors, GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdSummaryErrors, GetApiV1ProjectsByProjectIdSummaryResponses, GetApiV1ProjectsByProjectIdWaiversErrors, GetApiV1ProjectsByProjectIdWaiversResponses, GetApiV1ProjectsByProjectIdWorkflowsErrors, GetApiV1ProjectsByProjectIdWorkflowsResponses, GetApiV1ProjectsErrors, GetApiV1ProjectsResponses, GetApiV1ProvidersStatusResponses, GetApiV1ProvidersUpdateJobsResponses, GetApiV1ReportsByReportIdDownloadErrors, GetApiV1ReportsByReportIdDownloadResponses, GetApiV1RunsByRunIdErrors, GetApiV1RunsByRunIdReportsErrors, GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdResponses, GetApiV1RunsByRunIdSbomEvidenceErrors, GetApiV1RunsByRunIdSbomEvidenceResponses, GetApiV1RunsByRunIdSummaryErrors, GetApiV1RunsByRunIdSummaryResponses, GetApiV1UtilsHealthCheckResponses, GetApiV1WorkbenchCapabilitiesResponses, GetApiV1WorkbenchDemoResponses, GetApiV1WorkbenchHealthResponses, GetApiV1WorkbenchSessionResponses, GetApiV1WorkbenchStatusResponses, GetApiV1WorkflowsByWorkflowIdErrors, GetApiV1WorkflowsByWorkflowIdEventsErrors, GetApiV1WorkflowsByWorkflowIdEventsResponses, GetApiV1WorkflowsByWorkflowIdResponses, GitHubIssueExportCreate, GitHubIssuePreviewCreate, PatchApiV1AssetsByAssetIdErrors, PatchApiV1AssetsByAssetIdResponses, PatchApiV1FindingsByFindingIdStatusErrors, PatchApiV1FindingsByFindingIdStatusResponses, PatchApiV1ProjectsByProjectIdErrors, PatchApiV1ProjectsByProjectIdResponses, PatchApiV1WaiversByWaiverIdErrors, PatchApiV1WaiversByWaiverIdResponses, PostApiV1AssetsByAssetIdRecalculateErrors, PostApiV1AssetsByAssetIdRecalculateResponses, PostApiV1ProjectsByProjectIdAssetsErrors, PostApiV1ProjectsByProjectIdAssetsImportErrors, PostApiV1ProjectsByProjectIdAssetsImportResponses, PostApiV1ProjectsByProjectIdAssetsResponses, PostApiV1ProjectsByProjectIdEvaluationsErrors, PostApiV1ProjectsByProjectIdEvaluationsResponses, PostApiV1ProjectsByProjectIdFindingsStatusErrors, PostApiV1ProjectsByProjectIdFindingsStatusResponses, PostApiV1ProjectsByProjectIdGithubIssuesExportErrors, PostApiV1ProjectsByProjectIdGithubIssuesExportResponses, PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors, PostApiV1ProjectsByProjectIdGithubIssuesPreviewResponses, PostApiV1ProjectsByProjectIdImportsErrors, PostApiV1ProjectsByProjectIdImportsResponses, PostApiV1ProjectsByProjectIdWaiversErrors, PostApiV1ProjectsByProjectIdWaiversResponses, PostApiV1ProjectsErrors, PostApiV1ProjectsResponses, PostApiV1ProvidersUpdateJobsErrors, PostApiV1ProvidersUpdateJobsResponses, PostApiV1ReportsByReportIdVerifyErrors, PostApiV1ReportsByReportIdVerifyResponses, PostApiV1RunsByRunIdReportJobsErrors, PostApiV1RunsByRunIdReportJobsResponses, PostApiV1RunsByRunIdSbomRescansErrors, PostApiV1RunsByRunIdSbomRescansResponses, PostApiV1WaiversByWaiverIdExpireErrors, PostApiV1WaiversByWaiverIdExpireResponses, PostApiV1WorkbenchDemoErrors, PostApiV1WorkbenchDemoResponses, PostApiV1WorkflowsByWorkflowIdCancelErrors, PostApiV1WorkflowsByWorkflowIdCancelResponses, PostApiV1WorkflowsByWorkflowIdRetryErrors, PostApiV1WorkflowsByWorkflowIdRetryResponses, ProjectCreate, ProjectPolicyUpdate, ProjectUpdate, ProviderUpdateJobCreate, PutApiV1ProjectsByProjectIdPolicyErrors, PutApiV1ProjectsByProjectIdPolicyResponses, ReportCreate, SbomRescanCreate, WaiverCreate, WaiverUpdate } from './types.gen';
+import type { AssetCreate, AssetExposure, AssetUpdate, BodyAssetsImportProjectAssets, BodyImportsImportProjectUpload, DeleteApiV1ProjectsByProjectIdErrors, DeleteApiV1ProjectsByProjectIdResponses, DeleteApiV1WaiversByWaiverIdErrors, DeleteApiV1WaiversByWaiverIdResponses, DeleteApiV1WorkbenchDemoResponses, DemoWorkspaceCreate, EvaluationCreate, FindingBulkStatusUpdateRequest, FindingPriority, FindingSlaState, FindingStatus, FindingStatusUpdateRequest, GetApiV1AuditEventsErrors, GetApiV1AuditEventsResponses, GetApiV1FindingsByFindingIdDecisionRevisionsErrors, GetApiV1FindingsByFindingIdDecisionRevisionsResponses, GetApiV1FindingsByFindingIdErrors, GetApiV1FindingsByFindingIdExplainErrors, GetApiV1FindingsByFindingIdExplainResponses, GetApiV1FindingsByFindingIdLifecycleEventsErrors, GetApiV1FindingsByFindingIdLifecycleEventsResponses, GetApiV1FindingsByFindingIdResponses, GetApiV1GithubIssuesExportSettingsResponses, GetApiV1ProjectsByProjectIdAssetsErrors, GetApiV1ProjectsByProjectIdAssetsResponses, GetApiV1ProjectsByProjectIdAttackSummaryErrors, GetApiV1ProjectsByProjectIdAttackSummaryResponses, GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors, GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses, GetApiV1ProjectsByProjectIdDashboardErrors, GetApiV1ProjectsByProjectIdDashboardResponses, GetApiV1ProjectsByProjectIdErrors, GetApiV1ProjectsByProjectIdEvaluationsErrors, GetApiV1ProjectsByProjectIdEvaluationsResponses, GetApiV1ProjectsByProjectIdFindingsErrors, GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdGovernanceRollupsErrors, GetApiV1ProjectsByProjectIdGovernanceRollupsResponses, GetApiV1ProjectsByProjectIdPolicyErrors, GetApiV1ProjectsByProjectIdPolicyResponses, GetApiV1ProjectsByProjectIdResponses, GetApiV1ProjectsByProjectIdRunsErrors, GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdSummaryErrors, GetApiV1ProjectsByProjectIdSummaryResponses, GetApiV1ProjectsByProjectIdWaiversErrors, GetApiV1ProjectsByProjectIdWaiversResponses, GetApiV1ProjectsByProjectIdWorkflowsErrors, GetApiV1ProjectsByProjectIdWorkflowsResponses, GetApiV1ProjectsErrors, GetApiV1ProjectsResponses, GetApiV1ProvidersStatusResponses, GetApiV1ProvidersUpdateJobsResponses, GetApiV1ReportsByReportIdDownloadErrors, GetApiV1ReportsByReportIdDownloadResponses, GetApiV1RunsByRunIdErrors, GetApiV1RunsByRunIdReportsErrors, GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdResponses, GetApiV1RunsByRunIdSbomEvidenceErrors, GetApiV1RunsByRunIdSbomEvidenceResponses, GetApiV1RunsByRunIdSummaryErrors, GetApiV1RunsByRunIdSummaryResponses, GetApiV1UtilsHealthCheckResponses, GetApiV1WorkbenchCapabilitiesResponses, GetApiV1WorkbenchDemoResponses, GetApiV1WorkbenchHealthResponses, GetApiV1WorkbenchSessionResponses, GetApiV1WorkbenchStatusResponses, GetApiV1WorkflowsByWorkflowIdErrors, GetApiV1WorkflowsByWorkflowIdEventsErrors, GetApiV1WorkflowsByWorkflowIdEventsResponses, GetApiV1WorkflowsByWorkflowIdResponses, GitHubIssueExportCreate, GitHubIssuePreviewCreate, PatchApiV1AssetsByAssetIdErrors, PatchApiV1AssetsByAssetIdResponses, PatchApiV1FindingsByFindingIdStatusErrors, PatchApiV1FindingsByFindingIdStatusResponses, PatchApiV1ProjectsByProjectIdErrors, PatchApiV1ProjectsByProjectIdResponses, PatchApiV1WaiversByWaiverIdErrors, PatchApiV1WaiversByWaiverIdResponses, PostApiV1AssetsByAssetIdRecalculateErrors, PostApiV1AssetsByAssetIdRecalculateResponses, PostApiV1ProjectsByProjectIdAssetsErrors, PostApiV1ProjectsByProjectIdAssetsImportErrors, PostApiV1ProjectsByProjectIdAssetsImportResponses, PostApiV1ProjectsByProjectIdAssetsResponses, PostApiV1ProjectsByProjectIdEvaluationsErrors, PostApiV1ProjectsByProjectIdEvaluationsResponses, PostApiV1ProjectsByProjectIdFindingsStatusErrors, PostApiV1ProjectsByProjectIdFindingsStatusResponses, PostApiV1ProjectsByProjectIdGithubIssuesExportErrors, PostApiV1ProjectsByProjectIdGithubIssuesExportResponses, PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors, PostApiV1ProjectsByProjectIdGithubIssuesPreviewResponses, PostApiV1ProjectsByProjectIdImportsErrors, PostApiV1ProjectsByProjectIdImportsResponses, PostApiV1ProjectsByProjectIdStateReportJobsErrors, PostApiV1ProjectsByProjectIdStateReportJobsResponses, PostApiV1ProjectsByProjectIdWaiversErrors, PostApiV1ProjectsByProjectIdWaiversResponses, PostApiV1ProjectsErrors, PostApiV1ProjectsResponses, PostApiV1ProvidersUpdateJobsErrors, PostApiV1ProvidersUpdateJobsResponses, PostApiV1ReportsByReportIdVerifyErrors, PostApiV1ReportsByReportIdVerifyResponses, PostApiV1RunsByRunIdReportJobsErrors, PostApiV1RunsByRunIdReportJobsResponses, PostApiV1RunsByRunIdSbomRescansErrors, PostApiV1RunsByRunIdSbomRescansResponses, PostApiV1WaiversByWaiverIdExpireErrors, PostApiV1WaiversByWaiverIdExpireResponses, PostApiV1WorkbenchDemoErrors, PostApiV1WorkbenchDemoResponses, PostApiV1WorkflowsByWorkflowIdCancelErrors, PostApiV1WorkflowsByWorkflowIdCancelResponses, PostApiV1WorkflowsByWorkflowIdRetryErrors, PostApiV1WorkflowsByWorkflowIdRetryResponses, ProjectCreate, ProjectPolicyUpdate, ProjectUpdate, ProviderUpdateJobCreate, PutApiV1ProjectsByProjectIdPolicyErrors, PutApiV1ProjectsByProjectIdPolicyResponses, ReportCreate, SbomRescanCreate, WaiverCreate, WaiverUpdate } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -766,11 +766,13 @@ export class RunsService {
         project_id: string;
         limit?: number;
         offset?: number;
+        include_state_snapshots?: boolean;
     }, options?: Options<never, ThrowOnError>): RequestResult<GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdRunsErrors, ThrowOnError, 'data'> {
         const params = buildClientParams([parameters], [{ args: [
                     { in: 'path', key: 'project_id' },
                     { in: 'query', key: 'limit' },
-                    { in: 'query', key: 'offset' }
+                    { in: 'query', key: 'offset' },
+                    { in: 'query', key: 'include_state_snapshots' }
                 ] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdRunsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
@@ -809,6 +811,105 @@ export class RunsService {
         return (options?.client ?? client).get<GetApiV1RunsByRunIdSummaryResponses, GetApiV1RunsByRunIdSummaryErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
             url: '/api/v1/runs/{run_id}/summary',
+            ...options,
+            ...params
+        });
+    }
+}
+
+export class ReportsService {
+    /**
+     * Queue Project State Report
+     *
+     * Record the project's current state and queue a report about it.
+     */
+    public static queueProjectStateReport<ThrowOnError extends boolean = true>(parameters: {
+        project_id: string;
+        reportCreate: ReportCreate;
+    }, options?: Options<never, ThrowOnError>): RequestResult<PostApiV1ProjectsByProjectIdStateReportJobsResponses, PostApiV1ProjectsByProjectIdStateReportJobsErrors, ThrowOnError, 'data'> {
+        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }, { key: 'reportCreate', map: 'body' }] }]);
+        return (options?.client ?? client).post<PostApiV1ProjectsByProjectIdStateReportJobsResponses, PostApiV1ProjectsByProjectIdStateReportJobsErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            url: '/api/v1/projects/{project_id}/state-report-jobs',
+            ...options,
+            ...params,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options?.headers,
+                ...params.headers
+            }
+        });
+    }
+
+    /**
+     * Download Report
+     *
+     * Download a visible report after root and checksum validation.
+     */
+    public static downloadReport<ThrowOnError extends boolean = true>(parameters: {
+        report_id: string;
+    }, options?: Options<never, ThrowOnError>): RequestResult<GetApiV1ReportsByReportIdDownloadResponses, GetApiV1ReportsByReportIdDownloadErrors, ThrowOnError, 'data'> {
+        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'report_id' }] }]);
+        return (options?.client ?? client).get<GetApiV1ReportsByReportIdDownloadResponses, GetApiV1ReportsByReportIdDownloadErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            url: '/api/v1/reports/{report_id}/download',
+            ...options,
+            ...params
+        });
+    }
+
+    /**
+     * Verify Report
+     *
+     * Verify a visible evidence bundle report against its embedded manifest.
+     */
+    public static verifyReport<ThrowOnError extends boolean = true>(parameters: {
+        report_id: string;
+    }, options?: Options<never, ThrowOnError>): RequestResult<PostApiV1ReportsByReportIdVerifyResponses, PostApiV1ReportsByReportIdVerifyErrors, ThrowOnError, 'data'> {
+        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'report_id' }] }]);
+        return (options?.client ?? client).post<PostApiV1ReportsByReportIdVerifyResponses, PostApiV1ReportsByReportIdVerifyErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            url: '/api/v1/reports/{report_id}/verify',
+            ...options,
+            ...params
+        });
+    }
+
+    /**
+     * Queue Run Report
+     *
+     * Queue a report artifact generation workflow for a completed visible run.
+     */
+    public static queueRunReport<ThrowOnError extends boolean = true>(parameters: {
+        run_id: string;
+        reportCreate: ReportCreate;
+    }, options?: Options<never, ThrowOnError>): RequestResult<PostApiV1RunsByRunIdReportJobsResponses, PostApiV1RunsByRunIdReportJobsErrors, ThrowOnError, 'data'> {
+        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'run_id' }, { key: 'reportCreate', map: 'body' }] }]);
+        return (options?.client ?? client).post<PostApiV1RunsByRunIdReportJobsResponses, PostApiV1RunsByRunIdReportJobsErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            url: '/api/v1/runs/{run_id}/report-jobs',
+            ...options,
+            ...params,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options?.headers,
+                ...params.headers
+            }
+        });
+    }
+
+    /**
+     * Read Run Reports
+     *
+     * List report metadata for a visible analysis run.
+     */
+    public static readRunReports<ThrowOnError extends boolean = true>(parameters: {
+        run_id: string;
+    }, options?: Options<never, ThrowOnError>): RequestResult<GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdReportsErrors, ThrowOnError, 'data'> {
+        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'run_id' }] }]);
+        return (options?.client ?? client).get<GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdReportsErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            url: '/api/v1/runs/{run_id}/reports',
             ...options,
             ...params
         });
@@ -1065,82 +1166,6 @@ export class ProvidersService {
                 ...options?.headers,
                 ...params.headers
             }
-        });
-    }
-}
-
-export class ReportsService {
-    /**
-     * Download Report
-     *
-     * Download a visible report after root and checksum validation.
-     */
-    public static downloadReport<ThrowOnError extends boolean = true>(parameters: {
-        report_id: string;
-    }, options?: Options<never, ThrowOnError>): RequestResult<GetApiV1ReportsByReportIdDownloadResponses, GetApiV1ReportsByReportIdDownloadErrors, ThrowOnError, 'data'> {
-        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'report_id' }] }]);
-        return (options?.client ?? client).get<GetApiV1ReportsByReportIdDownloadResponses, GetApiV1ReportsByReportIdDownloadErrors, ThrowOnError, 'data'>({
-            responseStyle: 'data',
-            url: '/api/v1/reports/{report_id}/download',
-            ...options,
-            ...params
-        });
-    }
-
-    /**
-     * Verify Report
-     *
-     * Verify a visible evidence bundle report against its embedded manifest.
-     */
-    public static verifyReport<ThrowOnError extends boolean = true>(parameters: {
-        report_id: string;
-    }, options?: Options<never, ThrowOnError>): RequestResult<PostApiV1ReportsByReportIdVerifyResponses, PostApiV1ReportsByReportIdVerifyErrors, ThrowOnError, 'data'> {
-        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'report_id' }] }]);
-        return (options?.client ?? client).post<PostApiV1ReportsByReportIdVerifyResponses, PostApiV1ReportsByReportIdVerifyErrors, ThrowOnError, 'data'>({
-            responseStyle: 'data',
-            url: '/api/v1/reports/{report_id}/verify',
-            ...options,
-            ...params
-        });
-    }
-
-    /**
-     * Queue Run Report
-     *
-     * Queue a report artifact generation workflow for a completed visible run.
-     */
-    public static queueRunReport<ThrowOnError extends boolean = true>(parameters: {
-        run_id: string;
-        reportCreate: ReportCreate;
-    }, options?: Options<never, ThrowOnError>): RequestResult<PostApiV1RunsByRunIdReportJobsResponses, PostApiV1RunsByRunIdReportJobsErrors, ThrowOnError, 'data'> {
-        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'run_id' }, { key: 'reportCreate', map: 'body' }] }]);
-        return (options?.client ?? client).post<PostApiV1RunsByRunIdReportJobsResponses, PostApiV1RunsByRunIdReportJobsErrors, ThrowOnError, 'data'>({
-            responseStyle: 'data',
-            url: '/api/v1/runs/{run_id}/report-jobs',
-            ...options,
-            ...params,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options?.headers,
-                ...params.headers
-            }
-        });
-    }
-
-    /**
-     * Read Run Reports
-     *
-     * List report metadata for a visible analysis run.
-     */
-    public static readRunReports<ThrowOnError extends boolean = true>(parameters: {
-        run_id: string;
-    }, options?: Options<never, ThrowOnError>): RequestResult<GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdReportsErrors, ThrowOnError, 'data'> {
-        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'run_id' }] }]);
-        return (options?.client ?? client).get<GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdReportsErrors, ThrowOnError, 'data'>({
-            responseStyle: 'data',
-            url: '/api/v1/runs/{run_id}/reports',
-            ...options,
-            ...params
         });
     }
 }

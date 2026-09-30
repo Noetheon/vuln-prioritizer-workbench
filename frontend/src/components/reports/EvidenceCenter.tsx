@@ -23,6 +23,7 @@ export type EvidenceCenterProps = {
   projectListLoading: boolean
   onProjectChange: (id: string) => void
   selectedRunId: string
+  currentStateSelected?: boolean
   onRunIdChange: (id: string) => void
   selectedReportRun: AnalysisRunPublic | null
   selectedRunSummary: AnalysisRunSummaryPublic | null
@@ -55,6 +56,7 @@ export function EvidenceCenter({
   activeReportFormat,
   capabilitiesError,
   capabilitiesLoading,
+  currentStateSelected = false,
   onCreateReport,
   onDownloadReport,
   onProjectChange,
@@ -112,7 +114,9 @@ export function EvidenceCenter({
   return (
     <VpwPageStack className="evidence-center">
       <RunContext
+        currentStateSelected={currentStateSelected}
         onOpenGenerateDrawer={() => setGenerateDrawerOpen(true)}
+        projectFindingCount={projectSummary?.finding_count ?? null}
         onProjectChange={onProjectChange}
         onRunIdChange={onRunIdChange}
         providerStatus={providerStatus}
@@ -132,6 +136,7 @@ export function EvidenceCenter({
 
       <EvidenceCenterTabs
         activeReportFormat={activeReportFormat}
+        currentStateSelected={currentStateSelected}
         artifactCards={artifactCards}
         hasDecisionContext={hasDecisionContext}
         onCreateReport={onCreateReport}
@@ -152,6 +157,7 @@ export function EvidenceCenter({
       />
       <EvidenceGenerateDrawer
         activeReportFormat={activeReportFormat}
+        currentStateSelected={currentStateSelected}
         artifactCards={artifactCards}
         onCreateReport={onCreateReport}
         onOpenChange={setGenerateDrawerOpen}

@@ -12,7 +12,12 @@ from app.models import (
     AnalysisRunSummaryPublic,
     WorkflowRunPublic,
 )
-from app.services.decision_guidance_summary import run_decision_summary
+from app.models.decision_summary import RunDecisionSummaryPublic
+from app.services.decision_guidance_summary import (
+    project_state_decision_summary,
+    run_decision_summary,
+)
+from app.services.project_state import current_project_state, is_project_state_run
 from app.services.run_workflow_metadata import redact_public_payload
 
 
@@ -84,9 +89,35 @@ def analysis_run_summary_public(
         analysis_decision_scope=view.analysis_decision_scope,
         persistence_scope=view.persistence_scope,
         workflow=workflow,
-        decision_summary=(
-            run_decision_summary(active_session, run.id)
-            if isinstance(active_session, Session) and view.evidence is not None
-            else None
+        decision_summary=_decision_summary(
+            active_session, run, has_evidence=view.evidence is not None
+        ),
+        project_state_current=(
+            _project_state_current(active_session, run) if is_project_state_run(run) else None
         ),
     )
+
+
+def _project_state_current(session: object, run: AnalysisRun) -> bool | None:
+    if not isinstance(session, Session):
+        return None
+    evidence = decision_run_view(run, session=session).evidence
+    recorded = evidence.evaluation.input_sha256 if evidence and evidence.evaluation else None
+    return (
+        recorded is not None
+        and recorded == current_project_state(session, run.project_id).fingerprint
+    )
+
+
+def _decision_summary(
+    session: object, run: AnalysisRun, *, has_evidence: bool
+) -> RunDecisionSummaryPublic | None:
+    if not isinstance(session, Session) or not has_evidence:
+        return None
+    if not is_project_state_run(run):
+        return run_decision_summary(session, run.id)
+    # A recorded project state has no evidence of its own; summarize the
+    # current decisions only while they still match the recording.
+    if not _project_state_current(session, run):
+        return None
+    return project_state_decision_summary(session, run.project_id)
