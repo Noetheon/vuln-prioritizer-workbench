@@ -17,6 +17,9 @@ from app.models.occurrence_identity import (
 )
 from app.models.workflows import WorkflowRunPublic
 
+# A recorded project state that reports describe; it is not an import.
+PROJECT_STATE_INPUT_TYPE = "project_state"
+
 
 class ProviderSnapshotBase(SQLModel):
     """Shared provider snapshot fields."""
@@ -155,6 +158,8 @@ class AnalysisRunPublic(SQLModel):
     warnings: list[str] = Field(default_factory=list)
     parse_errors: list[RunParseErrorV2] = Field(default_factory=list)
     workflow: WorkflowRunPublic | None = None
+    # Recorded project states only: whether the project still matches the recording.
+    project_state_current: bool | None = None
 
 
 class AnalysisRunsPublic(SQLModel):
@@ -208,6 +213,8 @@ class AnalysisRunSummaryPublic(SQLModel):
     persistence_scope: str | None = None
     workflow: WorkflowRunPublic | None = None
     decision_summary: RunDecisionSummaryPublic | None = None
+    # Recorded project states only: whether the project still matches the recording.
+    project_state_current: bool | None = None
 
 
 class FindingOccurrenceBase(SQLModel):

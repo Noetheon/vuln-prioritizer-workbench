@@ -1,5 +1,9 @@
 import { FileText } from "lucide-react"
-import type { ReportPublic, ReportVerificationPublic } from "@/api-client"
+import type {
+  AnalysisRunPublic,
+  ReportPublic,
+  ReportVerificationPublic,
+} from "@/api-client"
 import { Skeleton } from "@/components/ui/skeleton"
 import { VpwDataTable, VpwEmptyState, VpwTableCard } from "@/components/vpw"
 import {
@@ -11,6 +15,7 @@ import { buildReportHistoryColumns } from "./EvidenceCenterHistoryColumns"
 type HistoryProps = {
   reports: ReportPublic[]
   reportsLoading: boolean
+  runs?: readonly AnalysisRunPublic[]
   verificationReport: ReportVerificationPublic | null
   verificationReportTarget: ReportPublic | null
   verificationLoading: boolean
@@ -29,6 +34,7 @@ export function ReportHistory({
   mode = "history",
   reports,
   reportsLoading,
+  runs = [],
   verificationLoading,
   verificationReport,
   verificationReportTarget,
@@ -44,6 +50,7 @@ export function ReportHistory({
     mode,
     onDownload,
     onVerify,
+    runs,
     verificationLoading,
     verificationReport,
     verificationReportTarget,

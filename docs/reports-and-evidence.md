@@ -27,6 +27,35 @@ by run and finding APIs: run-wide `AnalysisEvidenceV2` plus per-finding
 provider facts, VEX state, governance signals, or occurrence semantics from
 successful workflow result JSON.
 
+### Current project state or one run
+
+A report describes either the current state of the whole project or one run.
+The Evidence Center selects **Current project state** unless you pick a run.
+
+- **Current project state.** Generating a report records the state as a
+  `project_state` run: its evidence envelope stores the finding counts and a
+  fingerprint of every finding's current decision, status, and rank. Reports
+  from it list every finding with its current status and priority. They are
+  rendered from each finding's current decision evidence, so a finding closed
+  after its import shows as closed. A recorded state renders only while the
+  project still matches the fingerprint; after a new import, re-evaluation, or
+  status change, report on the current state again. Reports already generated
+  from an older recording stay valid and downloadable.
+- **One run.** Reports from an import run show that run's findings as they
+  were evaluated then. A re-evaluation run covers only the findings it
+  re-scored. Each report opens with a scope line that says which it is.
+
+Recorded states are report sources, not imports. The Overview, trends, project
+summaries, and the Imports page ignore them;
+`GET /api/v1/projects/{project_id}/runs?include_state_snapshots=true` lists
+them.
+
+With **Current project state** selected, the History tab lists every report
+generated for the project, newest first, and names the import or recorded
+state each one covers. `GET /api/v1/projects/{project_id}/reports` returns the
+same list (`limit` and `offset` page through it). With a run selected, the
+History tab lists that run's reports.
+
 ## Report Formats
 
 The current report surface supports:

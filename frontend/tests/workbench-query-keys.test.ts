@@ -34,6 +34,12 @@ test("workbench query keys expose project-scoped invalidation roots", () => {
     "project-1",
   ])
   assert.deepEqual(workbenchQueryKeys.reportsRoot(), ["workbench", "reports"])
+  assert.deepEqual(workbenchQueryKeys.projectReports("project-1"), [
+    "workbench",
+    "reports",
+    "project",
+    "project-1",
+  ])
   assert.deepEqual(workbenchQueryKeys.projectSummariesRoot(), [
     "workbench",
     "project-summaries",

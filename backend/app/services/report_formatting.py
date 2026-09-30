@@ -7,6 +7,7 @@ import re
 from datetime import datetime
 from typing import Any
 
+from app.models import PROJECT_STATE_INPUT_TYPE
 from app.services.report_contracts import MARKDOWN_SPECIAL_CHARS
 
 
@@ -93,9 +94,17 @@ def report_scope(
     input_type: str | None,
     filename: str | None,
     run_id: str,
+    generated_at: datetime | None = None,
 ) -> tuple[str, bool]:
     """Return the report's scope sentence and whether it covers only part of the project."""
     findings = f"{finding_count} finding{'' if finding_count == 1 else 's'}"
+    if input_type == PROJECT_STATE_INPUT_TYPE:
+        as_of = f" as of {iso_datetime(generated_at)}" if generated_at is not None else ""
+        return (
+            f"This report covers the whole project{as_of}: {findings} with their current "
+            "status and priority.",
+            False,
+        )
     if input_type == REEVALUATION_INPUT_TYPE:
         return (
             f"This report covers {findings} re-scored by a re-evaluation run "

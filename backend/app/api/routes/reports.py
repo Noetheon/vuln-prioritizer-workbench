@@ -5,11 +5,11 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from starlette.responses import FileResponse
 
 from app.api.deps import LocalActor, SessionDep
-from app.api.routes.workbench_access import require_project
+from app.api.routes.workbench_access import require_current_decisions, require_project
 from app.core.app_state import workbench_settings
 from app.models import (
     Report,
@@ -27,6 +27,7 @@ from app.services import (
     verify_evidence_bundle_zip,
 )
 from app.services.audit import record_audit_event
+from app.services.project_state import ProjectStateError, record_project_state
 from app.services.report_artifacts import (
     ReportArtifactChecksumError,
     ReportArtifactNotFoundError,
@@ -86,6 +87,53 @@ def queue_run_report(
     return workflow_run_public(workflow, latest_event=repository.latest_event(workflow.id))
 
 
+@router.post("/projects/{project_id}/state-report-jobs", response_model=WorkflowRunPublic)
+def queue_project_state_report(
+    project_id: uuid.UUID,
+    payload: ReportCreate,
+    request: Request,
+    session: SessionDep,
+    local_actor: LocalActor,
+) -> WorkflowRunPublic:
+    """Record the project's current state and queue a report about it."""
+    project = require_current_decisions(session, project_id)
+    try:
+        run = record_project_state(session, project)
+        workflow = ReportService(session, workbench_settings(request)).enqueue_report_generation(
+            run=run,
+            project=project,
+            report_format=payload.format,
+            attack_filter=payload.attack_filter,
+        )
+    except (ProjectStateError, ReportGenerationError) as exc:
+        session.rollback()
+        record_audit_event(
+            session,
+            action="report.job.create",
+            resource_type="project",
+            resource_id=project_id,
+            status="failure",
+            actor=local_actor,
+            project_id=project_id,
+            detail={"format": payload.format, "scope": "project_state", "error": str(exc)},
+        )
+        session.commit()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    record_audit_event(
+        session,
+        action="report.job.create",
+        resource_type="analysis_run",
+        resource_id=run.id,
+        actor=local_actor,
+        project_id=project_id,
+        detail={"format": payload.format, "run_id": str(run.id), "scope": "project_state"},
+    )
+    session.commit()
+    session.refresh(workflow)
+    repository = WorkflowRepository(session)
+    return workflow_run_public(workflow, latest_event=repository.latest_event(workflow.id))
+
+
 @router.get("/runs/{run_id}/reports", response_model=ReportsPublic)
 def read_run_reports(
     run_id: uuid.UUID,
@@ -109,6 +157,33 @@ def read_run_reports(
             for report in reports
         ],
         count=len(reports),
+    )
+
+
+@router.get("/projects/{project_id}/reports", response_model=ReportsPublic)
+def read_project_reports(
+    project_id: uuid.UUID,
+    request: Request,
+    session: SessionDep,
+    local_actor: LocalActor,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+) -> ReportsPublic:
+    """List report metadata for every run of a visible project, newest first."""
+    require_project(session, project_id)
+    reports, count = ReportRepository(session).list_project_reports_page(
+        project_id, limit=limit, offset=offset
+    )
+    return ReportsPublic(
+        data=[
+            _report_public(
+                report,
+                request,
+                workflow=latest_report_workflow_public(session, report_id=report.id),
+            )
+            for report in reports
+        ],
+        count=count,
     )
 
 

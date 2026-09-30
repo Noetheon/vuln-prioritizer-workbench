@@ -122,20 +122,27 @@ export function useProjectGovernanceRollupsQuery(projectId: string) {
   })
 }
 
-export function useProjectRunsQuery(projectId: string, enabled: boolean) {
+export function useProjectRunsQuery(
+  projectId: string,
+  enabled: boolean,
+  { includeStateSnapshots = false }: { includeStateSnapshots?: boolean } = {},
+) {
   return useQuery({
     enabled: enabled && Boolean(projectId),
     queryFn: ({ signal }) =>
       readAllPages((pagination) =>
         RunsService.readProjectRuns(
           {
+            include_state_snapshots: includeStateSnapshots,
             project_id: projectId,
             ...pagination,
           },
           { signal },
         ),
       ),
-    queryKey: workbenchQueryKeys.projectRuns(projectId),
+    queryKey: includeStateSnapshots
+      ? workbenchQueryKeys.projectReportRuns(projectId)
+      : workbenchQueryKeys.projectRuns(projectId),
     retry: false,
     staleTime: 15_000,
   })

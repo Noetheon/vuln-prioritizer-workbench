@@ -35,6 +35,7 @@ import {
 type EvidenceGenerateDrawerProps = {
   activeReportFormat: string
   onCreateReport: (format: ReportFormat) => Promise<void>
+  currentStateSelected?: boolean
   onOpenChange: (open: boolean) => void
   open: boolean
   project: ProjectPublic | null
@@ -47,6 +48,7 @@ type EvidenceGenerateDrawerProps = {
 }
 
 export function EvidenceGenerateDrawer({
+  currentStateSelected = false,
   activeReportFormat,
   onCreateReport,
   onOpenChange,
@@ -99,7 +101,11 @@ export function EvidenceGenerateDrawer({
   return (
     <DetailDrawer
       className="w-[min(100vw,46rem)] sm:max-w-none"
-      description={`Create reports and evidence artifacts for run ${runShortId(selectedReportRun)}.`}
+      description={
+        currentStateSelected
+          ? "Create reports and evidence artifacts about the current state of the whole project."
+          : `Create reports and evidence artifacts for run ${runShortId(selectedReportRun)}.`
+      }
       footer={
         <div className="flex w-full flex-wrap justify-end gap-2">
           <Button

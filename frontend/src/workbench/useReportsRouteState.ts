@@ -28,6 +28,10 @@ type UseReportsRouteStateOptions = {
   currentPath: WorkbenchPath
   reportFormatCapabilities: readonly ReportFormatCapabilityPublic[]
   capabilitiesError: string
+  // "Current project state" is selected: a report records the state first.
+  currentStateSelected?: boolean
+  onStateRunCreated?: (runId: string) => void
+  selectedProjectId?: string
   selectedReportRun: AnalysisRunPublic | null
   selectedRunId: string
 }
@@ -40,6 +44,9 @@ export function useReportsRouteState({
   currentPath,
   reportFormatCapabilities,
   capabilitiesError,
+  currentStateSelected = false,
+  onStateRunCreated,
+  selectedProjectId = "",
   selectedReportRun,
   selectedRunId,
 }: UseReportsRouteStateOptions) {
@@ -56,7 +63,10 @@ export function useReportsRouteState({
   const [activeReportWorkflow, setActiveReportWorkflow] =
     useState<WorkflowRunPublic | null>(null)
   const reportsQuery = useQuery({
-    enabled: currentPath === "/reports" && Boolean(selectedRunId),
+    enabled:
+      currentPath === "/reports" &&
+      Boolean(selectedRunId) &&
+      !currentStateSelected,
     queryFn: ({ signal }) =>
       ReportsService.readRunReports({ run_id: selectedRunId }, { signal }),
     queryKey: workbenchQueryKeys.reports(selectedRunId),
@@ -68,16 +78,51 @@ export function useReportsRouteState({
     retry: false,
     staleTime: 15_000,
   })
+  const projectReportsQuery = useQuery({
+    enabled:
+      currentPath === "/reports" &&
+      Boolean(selectedProjectId) &&
+      currentStateSelected,
+    queryFn: ({ signal }) =>
+      ReportsService.readProjectReports(
+        { project_id: selectedProjectId },
+        { signal },
+      ),
+    queryKey: workbenchQueryKeys.projectReports(selectedProjectId),
+    refetchInterval: (query) =>
+      reportsNeedPolling(query.state.data?.data ?? []) ? 1000 : false,
+    retry: false,
+    staleTime: 15_000,
+  })
   const createReportMutation = useMutation({
     mutationFn: (format: ReportFormat) =>
-      ReportsService.queueRunReport({
-        run_id: selectedRunId,
-        reportCreate: { format },
-      }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: workbenchQueryKeys.reports(selectedRunId),
-      })
+      currentStateSelected
+        ? ReportsService.queueProjectStateReport({
+            project_id: selectedProjectId,
+            reportCreate: { format },
+          })
+        : ReportsService.queueRunReport({
+            run_id: selectedRunId,
+            reportCreate: { format },
+          }),
+    onSuccess: async (workflow) => {
+      const runId = workflow.analysis_run_id ?? selectedRunId
+      if (currentStateSelected) {
+        await queryClient.invalidateQueries({
+          queryKey: workbenchQueryKeys.projectRuns(selectedProjectId),
+        })
+        if (workflow.analysis_run_id) {
+          onStateRunCreated?.(workflow.analysis_run_id)
+        }
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: workbenchQueryKeys.reports(runId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: workbenchQueryKeys.projectReports(selectedProjectId),
+        }),
+      ])
     },
   })
   const verifyReportMutation = useMutation({
@@ -86,20 +131,32 @@ export function useReportsRouteState({
   })
   const reports = reportsQuery.data?.data ?? []
   const reportsLoading = reportsQuery.isLoading || reportsQuery.isFetching
+  const projectReports = projectReportsQuery.data?.data ?? []
+  const projectReportsLoading =
+    projectReportsQuery.isLoading || projectReportsQuery.isFetching
   const reportsError = reportsQuery.isError
     ? apiErrorMessage("Report history unavailable", reportsQuery.error)
-    : ""
+    : projectReportsQuery.isError
+      ? apiErrorMessage("Report history unavailable", projectReportsQuery.error)
+      : ""
   const reportActionPending =
     createReportMutation.isPending ||
     Boolean(activeReportFormat) ||
     reportGenerationInFlight.current ||
     workflowNeedsPolling(activeReportWorkflow)
-  const reportActionsEnabled = reportActionsAvailable({
-    currentPath,
-    reportActionPending,
-    reportsLoading,
-    selectedReportRun,
-  }) && !capabilitiesError && reportFormatCapabilities.length > 0
+  const reportActionsEnabled =
+    (currentStateSelected
+      ? currentPath === "/reports" &&
+        Boolean(selectedProjectId) &&
+        !reportActionPending
+      : reportActionsAvailable({
+          currentPath,
+          reportActionPending,
+          reportsLoading,
+          selectedReportRun,
+        })) &&
+    !capabilitiesError &&
+    reportFormatCapabilities.length > 0
 
   useEffect(() => {
     if (currentPath === "/reports" && selectedRunId) {
@@ -130,6 +187,9 @@ export function useReportsRouteState({
         void queryClient.invalidateQueries({
           queryKey: workbenchQueryKeys.reports(selectedRunId),
         })
+        void queryClient.invalidateQueries({
+          queryKey: workbenchQueryKeys.projectReports(selectedProjectId),
+        })
         if (workflow.status === "failed" || workflow.status === "cancelled") {
           setReportActionError(`Report workflow ${workflowStatusLabel(workflow)}.`)
           return
@@ -145,7 +205,13 @@ export function useReportsRouteState({
           limit: 1000,
         }),
     })
-  }, [activeReportWorkflow?.id, currentPath, queryClient, selectedRunId])
+  }, [
+    activeReportWorkflow?.id,
+    currentPath,
+    queryClient,
+    selectedProjectId,
+    selectedRunId,
+  ])
 
   useEffect(() => {
     if (!activeReportWorkflow?.id) {
@@ -251,6 +317,8 @@ export function useReportsRouteState({
     refreshReports,
     reportActionError,
     reportActionMessage,
+    projectReports,
+    projectReportsLoading,
     reportActionsEnabled,
     reports,
     reportsError,
