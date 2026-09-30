@@ -5,11 +5,15 @@ import type {
 import type { VpwBadgeTone } from "@/components/vpw"
 import {
   formatCacheAge,
+  providerDataState,
   providerSnapshotSummary,
   providerSourceDetail,
   providerSourceState,
 } from "@/lib/provider-format"
-import { formatDateTime } from "./providers-workbench-status-model"
+import {
+  formatDateTime,
+  snapshotModeLabel,
+} from "./providers-workbench-status-model"
 import type {
   ProviderSourceCounts,
   ProviderSourceRow,
@@ -97,6 +101,27 @@ function sourceStatusTone(statusToken: string): VpwBadgeTone {
   }
 }
 
+function snapshotRowStatus(providerStatus: ProviderStatusPublic): {
+  label: string
+  token: string
+  tone: VpwBadgeTone
+} {
+  if (providerStatus.snapshot.missing) {
+    // Live imports do not need a snapshot; snapshots are optional replay evidence.
+    return providerStatus.snapshot_mode === "live"
+      ? { label: "Not used", token: "optional", tone: "neutral" }
+      : { label: "Missing", token: "missing", tone: "critical" }
+  }
+  switch (providerDataState(providerStatus)) {
+    case "fresh":
+      return { label: "Fresh", token: "fresh", tone: "success" }
+    case "stale":
+      return { label: "Stale", token: "stale", tone: "warning" }
+    default:
+      return { label: "Needs attention", token: "stale", tone: "warning" }
+  }
+}
+
 function evidenceUse(source: ProviderSourceStatusPublic) {
   return source.selected ? "Included" : "Not included"
 }
@@ -170,6 +195,7 @@ export function sourceRows(
     }
   })
 
+  const snapshotStatus = snapshotRowStatus(providerStatus)
   rows.push({
     age: lockedReplay
       ? "Replay (locked)"
@@ -188,26 +214,11 @@ export function sourceRows(
       ? "Snapshot metadata and content hash are recorded."
       : providerSnapshotSummary(providerStatus),
     purpose: "Recorded provider replay evidence",
-    statusLabel: providerStatus.snapshot.missing
-      ? "Missing"
-      : providerStatus.status === "ok"
-        ? "Fresh"
-        : "Stale",
-    statusToken: providerStatus.snapshot.missing
-      ? "missing"
-      : providerStatus.status === "ok"
-        ? "fresh"
-        : "stale",
+    statusLabel: snapshotStatus.label,
+    statusToken: snapshotStatus.token,
     technicalName: "provider_snapshot",
-    tone: providerStatus.snapshot.missing
-      ? "critical"
-      : providerStatus.status === "ok"
-        ? "success"
-        : "warning",
-    value:
-      providerStatus.snapshot.mode ??
-      providerStatus.snapshot_mode ??
-      "Not recorded",
+    tone: snapshotStatus.tone,
+    value: snapshotModeLabel(providerStatus),
   })
 
   return rows

@@ -20,7 +20,10 @@ import {
   VpwSection,
   VpwSectionHeader,
 } from "@/components/vpw"
-import { formatProviderFreshness } from "@/lib/provider-format"
+import {
+  formatProviderFreshness,
+  providerDataTone,
+} from "@/lib/provider-format"
 import { runStatusLabel } from "@/lib/risk-format"
 import { supportedImportCategories } from "@/lib/import-format-metadata"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
@@ -67,7 +70,7 @@ export function ImportsHomeRoute(props: ImportsHomeRouteProps) {
       description: providerSummary.detail,
       icon: <Database aria-hidden="true" className="h-4 w-4" />,
       label: "Provider data",
-      tone: props.providerStatus?.status === "ok" ? "success" : "warning",
+      tone: providerDataTone(props.providerStatus),
       value: providerSummary.value,
     },
     {

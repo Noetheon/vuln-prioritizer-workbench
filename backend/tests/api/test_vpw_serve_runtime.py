@@ -187,6 +187,7 @@ def test_vpw_runtime_environment_is_same_origin_and_loopback_only(
 ) -> None:
     for name in (
         "BACKEND_CORS_ORIGINS",
+        "DEMO_PROVIDER_SNAPSHOT_ENABLED",
         "FRONTEND_HOST",
         "IN_PROCESS_WORKER_ENABLED",
         "SQLALCHEMY_DATABASE_URI",
@@ -205,6 +206,9 @@ def test_vpw_runtime_environment_is_same_origin_and_loopback_only(
     assert os.environ["FRONTEND_HOST"] == ""
     assert os.environ["BACKEND_CORS_ORIGINS"] == ""
     assert os.environ["IN_PROCESS_WORKER_ENABLED"] == "true"
+    # Real imports must not silently replay the packaged demo snapshot.
+    assert "DEMO_PROVIDER_SNAPSHOT_ENABLED" not in os.environ
+    assert os.environ["DEMO_WORKSPACE_ENABLED"] == "true"
     snapshot_dir = root / "provider-snapshots"
     assert os.environ["PROVIDER_SNAPSHOT_DIR"] == str(snapshot_dir)
     assert (snapshot_dir / "demo_provider_snapshot.json").is_file()

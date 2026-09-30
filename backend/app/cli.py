@@ -15,7 +15,7 @@ import uuid
 import webbrowser
 import zipfile
 from collections.abc import Sequence
-from importlib import metadata, resources
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
@@ -580,7 +580,8 @@ def _prepare_runtime_environment(
         "PROVIDER_CACHE_DIR": str(cache_dir),
         "PROVIDER_SNAPSHOT_DIR": str(snapshot_dir),
         "ATTACK_ARTIFACT_DIR": str(resource_root / "attack"),
-        "DEMO_PROVIDER_SNAPSHOT_ENABLED": "true",
+        # Imports use live provider data unless the user picks a snapshot. The
+        # demo workspace replays its packaged snapshot explicitly.
         "DEMO_WORKSPACE_ENABLED": "true",
         "FRONTEND_HOST": "",
         "BACKEND_CORS_ORIGINS": "",
@@ -721,10 +722,9 @@ def _open_browser_when_ready(url: str, *, timeout_seconds: float = 20.0) -> None
 
 
 def _package_version() -> str:
-    try:
-        return metadata.version("vuln-prioritizer-workbench")
-    except metadata.PackageNotFoundError:
-        return "0.0.0+local"
+    from app.core.version import package_version
+
+    return package_version()
 
 
 if __name__ == "__main__":  # pragma: no cover

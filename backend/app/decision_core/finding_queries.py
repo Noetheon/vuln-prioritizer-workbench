@@ -296,7 +296,14 @@ def _database_finding_order(query: FindingPageQuery) -> tuple[Any, ...]:
         )
         return _database_direction((operational_rank, priority_rank, *stable_tie), query.direction)
     if query.sort == "priority":
-        return _database_direction((priority_rank, *stable_tie), query.direction)
+        # Within one priority band, open work comes before closed or accepted
+        # findings, and the highest score comes first, whatever the direction.
+        return (
+            *_database_direction((priority_rank,), query.direction),
+            _database_open_work_first(),
+            *_database_none_last_number_order(FindingCurrentProjection.risk_score, "desc"),
+            *_database_direction(stable_tie, "asc"),
+        )
     if query.sort == "score":
         return (
             *_database_none_last_number_order(
@@ -395,6 +402,12 @@ def _database_component_field(projection_column: Any, legacy_column: Any) -> Any
         ),
         else_=col(legacy_column),
     )
+
+
+def _database_open_work_first() -> Any:
+    status = func.coalesce(FindingCurrentProjection.status, Finding.status)
+    open_statuses = [value.value for value in ACTIONABLE_FINDING_STATUSES]
+    return case((status.in_(open_statuses), 0), else_=1).asc()
 
 
 def _database_direction(expressions: tuple[Any, ...], direction: str) -> tuple[Any, ...]:

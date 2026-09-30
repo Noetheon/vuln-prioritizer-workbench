@@ -4,7 +4,15 @@ import type {
   WorkbenchStatus,
 } from "@/api-client"
 import type { VpwBadgeTone } from "@/components/vpw"
-import { formatCacheAge, providerSnapshotSummary } from "@/lib/provider-format"
+import {
+  formatCacheAge,
+  providerDataState,
+  providerDataStateLabel,
+  providerDataTone,
+  providerSnapshotSummary,
+  providerStaleAfterLabel,
+  snapshotModeLabel,
+} from "@/lib/provider-format"
 import { FRONTEND_VERSION } from "@/lib/runtime-config"
 import { formatDateTime as formatWorkbenchDateTime } from "../../lib/date-format.ts"
 
@@ -76,7 +84,7 @@ function sourceAvailability(
     return { label: "Stale", tone: "warning" as VpwBadgeTone }
   }
   return source.available
-    ? { label: "Available", tone: "success" as VpwBadgeTone }
+    ? { label: "Data present", tone: "success" as VpwBadgeTone }
     : { label: "Missing", tone: "critical" as VpwBadgeTone }
 }
 
@@ -84,9 +92,10 @@ export function providerHealth(providerStatus: ProviderStatusPublic | null) {
   if (!providerStatus) {
     return { label: "Loading", tone: "info" as VpwBadgeTone }
   }
-  return providerStatus.status === "ok"
-    ? { label: "Healthy", tone: "success" as VpwBadgeTone }
-    : { label: "Review", tone: "warning" as VpwBadgeTone }
+  return {
+    label: providerDataStateLabel(providerStatus),
+    tone: providerDataTone(providerStatus) as VpwBadgeTone,
+  }
 }
 
 export function evidenceReadiness(
@@ -100,9 +109,14 @@ export function evidenceReadiness(
   if (!providerStatus) {
     return { label: "Checking", tone: "info" as VpwBadgeTone }
   }
-  return providerStatus.status === "ok"
-    ? { label: "Ready", tone: "success" as VpwBadgeTone }
-    : { label: "Partial", tone: "warning" as VpwBadgeTone }
+  switch (providerDataState(providerStatus)) {
+    case "fresh":
+      return { label: "Ready", tone: "success" as VpwBadgeTone }
+    case "not_loaded":
+      return { label: "After first import", tone: "info" as VpwBadgeTone }
+    default:
+      return { label: "Partial", tone: "warning" as VpwBadgeTone }
+  }
 }
 
 export function workerHealth(status: WorkbenchStatus | null) {
@@ -171,7 +185,7 @@ export function providerConfigRows(
       setting: "NVD source",
       value: nvd.label,
       detail:
-        "Availability is reported by the backend without exposing provider secrets.",
+        "Whether NVD data is stored locally. A provider update on Data Sources tests that the feed is reachable.",
       tone: nvd.tone,
     },
     {
@@ -191,15 +205,15 @@ export function providerConfigRows(
     {
       id: "snapshot-mode",
       setting: "Snapshot mode",
-      value: providerStatus?.snapshot_mode ?? "Not reported",
+      value: providerStatus ? snapshotModeLabel(providerStatus) : "Not reported",
       detail: providerSnapshotSummary(providerStatus),
       tone: providerStatus?.snapshot_mode ? "info" : "neutral",
     },
     {
       id: "cache-age",
-      setting: "Cache age",
+      setting: "Data age",
       value: formatCacheAge(providerStatus?.cache_age_seconds),
-      detail: "Provider cache age reported by the Workbench backend.",
+      detail: `Age of the oldest provider data in use. ${providerStaleAfterLabel(providerStatus)}.`,
       tone: providerStatus?.cache_age_seconds ? "info" : "neutral",
     },
     {

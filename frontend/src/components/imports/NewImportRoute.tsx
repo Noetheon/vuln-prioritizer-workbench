@@ -17,6 +17,7 @@ import {
   readinessBlocksImport,
   type ParserPreview,
 } from "@/lib/import-format-metadata"
+import { importProviderReadiness } from "@/lib/provider-format"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   selectedFormat,
@@ -79,7 +80,10 @@ export function NewImportRoute(props: NewImportRouteProps) {
       inputType: props.importWizard.inputType,
       parserPreview,
       projectId: props.selectedProjectId,
-      providerAvailable: props.providerStatus?.status === "ok",
+      providerData: importProviderReadiness(
+        props.providerStatus,
+        props.importWizard.providerSnapshotFile,
+      ),
       sbomScanner: props.importWizard.sbomScanner,
       sbomTargetRef: props.importWizard.sbomTargetRef,
     })
@@ -101,10 +105,11 @@ export function NewImportRoute(props: NewImportRouteProps) {
     props.importWizard.attackSource,
     props.importWizard.file,
     props.importWizard.inputType,
+    props.importWizard.providerSnapshotFile,
     props.importWizard.sbomScanner,
     props.importWizard.sbomTargetRef,
     props.importWizard.vexFile,
-    props.providerStatus?.status,
+    props.providerStatus,
     props.selectedProjectId,
     props.supportedFormats,
   ])

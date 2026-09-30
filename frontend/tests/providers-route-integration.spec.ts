@@ -42,6 +42,8 @@ const degradedProviderStatus: ProviderStatusPublic = {
   },
   snapshot_dir: "/var/tmp/vpw/snapshots",
   snapshot_mode: "cache-only",
+  stale_after_hours: 72,
+  import_provider_mode: "live",
   sources: [
     {
       available: true,

@@ -9241,6 +9241,11 @@ export const ProviderStatusPublicSchema = {
             ],
             title: 'Cache Dir'
         },
+        import_provider_mode: {
+            default: 'live',
+            title: 'Import Provider Mode',
+            type: 'string'
+        },
         last_error: {
             anyOf: [
                 {
@@ -9297,6 +9302,17 @@ export const ProviderStatusPublicSchema = {
             },
             title: 'Sources',
             type: 'array'
+        },
+        stale_after_hours: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Stale After Hours'
         },
         status: {
             title: 'Status',

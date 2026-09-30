@@ -46,7 +46,7 @@ export function ImportDiagnosticsDrawerTabs({
   const providerRows = [
     {
       label: "Provider mode",
-      value: stringValue(inputUpload, "provider_mode") ?? "Current provider data",
+      value: stringValue(inputUpload, "provider_mode") ?? "Live provider data",
     },
     {
       label: "Provider snapshot",

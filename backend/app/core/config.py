@@ -85,6 +85,8 @@ class Settings:
     COMPOSE_COMPATIBILITY_MODE: bool = False
     BACKGROUND_IMPORT_STALE_MINUTES: int = 120
     PROVIDER_UPDATE_STALE_MINUTES: int = 120
+    # Provider data older than this is shown as stale (EPSS publishes daily).
+    PROVIDER_DATA_STALE_HOURS: int = 72
     TRUSTED_PROXY_CIDRS: tuple[str, ...] = field(default_factory=tuple)
     AUTH_MODE: AuthMode = "local"
     AUTH_PROXY_USER_HEADER: str = "Remote-Email"
@@ -305,6 +307,7 @@ def load_settings() -> Settings:
             "PROVIDER_UPDATE_STALE_MINUTES",
             120,
         ),
+        PROVIDER_DATA_STALE_HOURS=_positive_int_from_env("PROVIDER_DATA_STALE_HOURS", 72),
         TRUSTED_PROXY_CIDRS=parse_trusted_proxy_cidrs(environ.get("TRUSTED_PROXY_CIDRS", "")),
         AUTH_MODE=_validate_auth_mode(environ.get("AUTH_MODE", "local")),
         AUTH_PROXY_USER_HEADER=environ.get("AUTH_PROXY_USER_HEADER", "Remote-Email"),

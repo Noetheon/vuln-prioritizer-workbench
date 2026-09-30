@@ -23,6 +23,7 @@ import {
   VpwToolbar,
   VpwToolbarGroup,
 } from "@/components/vpw"
+import { providerDataState } from "@/lib/provider-format"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   evidenceReadinessLabel,
@@ -159,12 +160,70 @@ export function ProvidersContext({
   )
 }
 
+type ProviderStatusSummary = {
+  body: string
+  consumedWarning: string | null
+  title: string
+  tone: "info" | "warning"
+}
+
+/** One banner for the overall state; it absorbs the backend warning that says the same. */
+function providerStatusSummary(
+  providerStatus: ProviderStatusPublic | null,
+): ProviderStatusSummary | null {
+  if (providerStatus === null || providerStatus.last_error) {
+    return null
+  }
+  const warnings = providerStatus.warnings ?? []
+  switch (providerDataState(providerStatus)) {
+    case "stale": {
+      const warning =
+        warnings.find((item) => item.startsWith("Provider data is older than")) ??
+        null
+      return {
+        body: `${warning ?? "Provider data is older than the freshness threshold."} Prioritization continues with the data on hand.`,
+        consumedWarning: warning,
+        title: "Provider data is stale",
+        tone: "warning",
+      }
+    }
+    case "not_loaded": {
+      const warning =
+        warnings.find((item) =>
+          item.startsWith("No provider data has been fetched yet"),
+        ) ?? null
+      return {
+        body:
+          warning ??
+          "No provider data has been fetched yet. The first import fetches NVD, EPSS, and KEV.",
+        consumedWarning: warning,
+        title: "No provider data yet",
+        tone: "info",
+      }
+    }
+    case "degraded":
+      return {
+        body: "Some provider data is missing or failed to load. Prioritization can continue, but evidence freshness should be reviewed.",
+        consumedWarning: null,
+        title: "Provider status degraded",
+        tone: "warning",
+      }
+    default:
+      return null
+  }
+}
+
 export function ProviderStatusAlerts({
   providerStatus,
   providerStatusError,
   providerStatusLoading,
 }: ProviderStatusAlertsProps) {
-  const providerWarnings = providerStatus?.warnings ?? []
+  const summary = providerStatusError
+    ? null
+    : providerStatusSummary(providerStatus)
+  const providerWarnings = (providerStatus?.warnings ?? []).filter(
+    (warning) => warning !== summary?.consumedWarning,
+  )
 
   return (
     <>
@@ -180,13 +239,9 @@ export function ProviderStatusAlerts({
         </VpwStatusBanner>
       ) : null}
 
-      {!providerStatusError &&
-      !providerStatus?.last_error &&
-      providerStatus &&
-      providerStatus.status !== "ok" ? (
-        <VpwStatusBanner title="Provider status degraded" tone="warning">
-          Current status is {providerStatus.status}. Prioritization can
-          continue, but evidence freshness should be reviewed.
+      {summary ? (
+        <VpwStatusBanner title={summary.title} tone={summary.tone}>
+          {summary.body}
         </VpwStatusBanner>
       ) : null}
 

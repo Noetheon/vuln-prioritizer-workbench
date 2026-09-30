@@ -2,57 +2,63 @@ import type { ProviderStatusPublic } from "@/api-client"
 import type { VpwCompactTone } from "@/components/vpw"
 import type { VpwTimelineItem } from "@/components/vpw/VpwTimeline"
 import { formatDateTime as formatWorkbenchDateTime } from "../../lib/date-format.ts"
+import {
+  providerDataState,
+  providerDataStateLabel,
+  providerDataTone,
+  providerStaleAfterLabel,
+  snapshotModeDescription,
+  snapshotModeLabel,
+} from "../../lib/provider-format.ts"
 
-const freshnessThresholdDays = 7
-const reviewDueThresholdDays = 14
-
-function cacheAgeDays(providerStatus: ProviderStatusPublic | null) {
-  const seconds = providerStatus?.cache_age_seconds
-  return seconds === null || seconds === undefined
-    ? null
-    : Math.floor(seconds / 86400)
-}
+export { snapshotModeDescription, snapshotModeLabel }
 
 export function providerHealthTone(
   providerStatus: ProviderStatusPublic | null,
 ): VpwCompactTone {
-  if (providerStatus === null) {
-    return "info"
-  }
-  if (providerStatus.last_error || providerStatus.status === "degraded") {
-    return "warning"
-  }
-  return providerStatus.status === "ok" ? "success" : "critical"
+  return providerDataTone(providerStatus)
 }
 
 export function providerHealthLabel(
   providerStatus: ProviderStatusPublic | null,
 ) {
-  if (providerStatus === null) {
-    return "Checking"
+  switch (providerDataState(providerStatus)) {
+    case "checking":
+      return "Checking"
+    case "fresh":
+      return "Healthy"
+    case "stale":
+      return "Stale"
+    case "not_loaded":
+      return "Not fetched yet"
+    default:
+      return "Degraded"
   }
-  if (providerStatus.last_error || providerStatus.status === "degraded") {
-    return "Degraded"
-  }
-  if (providerStatus.status === "ok") {
-    return "Healthy"
-  }
-  return "Unavailable"
 }
 
 export function providerHealthDescription(
   providerStatus: ProviderStatusPublic | null,
 ) {
-  if (providerStatus === null) {
-    return "Provider status is still loading."
+  switch (providerDataState(providerStatus)) {
+    case "checking":
+      return "Provider status is still loading."
+    case "fresh":
+      return "Provider signals are current and available for prioritization."
+    case "stale":
+      return "Provider data is older than the freshness threshold. Import again or run a provider update."
+    case "not_loaded":
+      return "No provider data has been fetched yet. The first import fetches NVD, EPSS, and KEV."
+    default:
+      return "Provider status has a recorded error or missing data."
   }
-  if (providerStatus.last_error) {
-    return "Provider status has a recorded last-error state."
-  }
-  if (providerStatus.status === "ok") {
-    return "Provider signals are available for prioritization."
-  }
-  return "Provider data is present but needs operational review."
+}
+
+/** Live imports need no snapshot; a missing one only matters for snapshot runtimes. */
+function missingRequiredSnapshot(providerStatus: ProviderStatusPublic) {
+  return (
+    Boolean(providerStatus.snapshot.missing) &&
+    providerStatus.snapshot_mode !== "live"
+  )
 }
 
 export function evidenceReadinessTone(
@@ -73,7 +79,7 @@ export function evidenceReadinessCardTone(
   if (providerStatus === null) {
     return "info"
   }
-  if (providerStatus.last_error || providerStatus.snapshot.missing) {
+  if (providerStatus.last_error || missingRequiredSnapshot(providerStatus)) {
     return "warning"
   }
   return providerStatus.status === "ok" ? "success" : "warning"
@@ -101,7 +107,7 @@ export function evidenceReadinessLabel(
   if (providerStatus === null) {
     return "Checking"
   }
-  if (providerStatus.last_error || providerStatus.snapshot.missing) {
+  if (providerStatus.last_error || missingRequiredSnapshot(providerStatus)) {
     return "Incomplete"
   }
   return providerStatus.status === "ok" ? "Ready" : "Incomplete"
@@ -126,7 +132,7 @@ export function evidenceReadinessScore(
   if (providerStatus === null) {
     return 20
   }
-  if (providerStatus.last_error || providerStatus.snapshot.missing) {
+  if (providerStatus.last_error || missingRequiredSnapshot(providerStatus)) {
     return 35
   }
   if ((providerStatus.warnings ?? []).length > 0) {
@@ -148,7 +154,7 @@ export function evidenceReadinessExplanation(
   if (providerStatus.last_error) {
     return "Provider snapshot metadata is present, but the recorded last-error state makes provider evidence incomplete."
   }
-  if (providerStatus.snapshot.missing) {
+  if (missingRequiredSnapshot(providerStatus)) {
     return "No provider snapshot is recorded, so provider metadata cannot be attached as reproducible evidence."
   }
   if ((providerStatus.warnings ?? []).length > 0) {
@@ -195,30 +201,13 @@ export function warningStatusLabel(
 export function providerFreshnessLabel(
   providerStatus: ProviderStatusPublic | null,
 ) {
-  if (providerStatus === null) {
-    return "Checking"
-  }
-  const days = cacheAgeDays(providerStatus)
-  if (days === null) {
-    return "Review due"
-  }
-  if (days <= freshnessThresholdDays) {
-    return "Fresh"
-  }
-  return days <= reviewDueThresholdDays ? "Review due" : "Stale"
+  return providerDataStateLabel(providerStatus)
 }
 
 export function providerFreshnessTone(
   providerStatus: ProviderStatusPublic | null,
 ): VpwCompactTone {
-  switch (providerFreshnessLabel(providerStatus)) {
-    case "Fresh":
-      return "success"
-    case "Stale":
-      return "warning"
-    default:
-      return "info"
-  }
+  return providerDataTone(providerStatus)
 }
 
 export function providerAgeLabel(providerStatus: ProviderStatusPublic | null) {
@@ -242,43 +231,13 @@ export function providerAgeLabel(providerStatus: ProviderStatusPublic | null) {
 export function providerFreshnessDetail(
   providerStatus: ProviderStatusPublic | null,
 ) {
-  return `Last sync ${formatDateTime(providerStatus?.last_sync)} · Age: ${providerAgeLabel(providerStatus)} · Threshold: Fresh <= ${freshnessThresholdDays} days`
+  return `Data fetched ${formatDateTime(providerStatus?.last_sync)} · Age: ${providerAgeLabel(providerStatus)} · ${providerStaleAfterLabel(providerStatus)}`
 }
 
-export function providerFreshnessThresholdLabel() {
-  return `Fresh <= ${freshnessThresholdDays} days`
-}
-
-export function snapshotModeLabel(
+export function providerFreshnessThresholdLabel(
   providerStatus: ProviderStatusPublic | null,
 ) {
-  if (providerStatus === null) {
-    return "Checking"
-  }
-  if (providerStatus.snapshot.locked_provider_data) {
-    return "Locked"
-  }
-  const mode = `${providerStatus.snapshot.mode ?? providerStatus.snapshot_mode}`.toLowerCase()
-  if (mode.includes("replay")) {
-    return "Replay snapshot"
-  }
-  return "Live cache"
-}
-
-export function snapshotModeDescription(
-  providerStatus: ProviderStatusPublic | null,
-) {
-  if (providerStatus === null) {
-    return "Snapshot status is still loading."
-  }
-  if (providerStatus.snapshot.locked_provider_data) {
-    return "Provider replay is deterministic for evidence review."
-  }
-  const mode = `${providerStatus.snapshot.mode ?? providerStatus.snapshot_mode}`.toLowerCase()
-  if (mode.includes("replay")) {
-    return "Recorded snapshot replay is used for reproducibility review."
-  }
-  return "Stored provider cache is used for status review."
+  return providerStaleAfterLabel(providerStatus)
 }
 
 export function snapshotVerificationLabel(
@@ -308,10 +267,10 @@ export function buildProviderEvidenceFlowItems({
     {
       description: providerStatus?.snapshot.locked_provider_data
         ? "Locked snapshot mode is active for reproducible evidence."
-        : "Stored provider cache is used for the current status response.",
+        : snapshotModeDescription(providerStatus),
       meta: snapshotModeLabel(providerStatus),
       title: "Snapshot mode",
-      tone: providerStatus?.status === "ok" ? "success" : "warning",
+      tone: providerDataState(providerStatus) === "fresh" ? "success" : "warning",
     },
     {
       description:

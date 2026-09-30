@@ -16,6 +16,7 @@ import type {
 import {
   buildDashboardMetricSummaries,
   providerNeedsRefresh,
+  providerRefreshDetail,
   rankedDashboardQueueFindings,
 } from "./dashboard-summary-model"
 
@@ -136,7 +137,9 @@ export function RiskOperationsDashboard({
         </Callout>
       ) : null}
 
-      {staleProvider ? <DashboardProviderWarning /> : null}
+      {staleProvider ? (
+        <DashboardProviderWarning detail={providerRefreshDetail(providerStatus)} />
+      ) : null}
       {selectedProjectId ? (
         <ReevaluateControl
           key={selectedProjectId}

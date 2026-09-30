@@ -4837,6 +4837,10 @@ export type ProviderStatusPublic = {
      */
     cache_dir?: string | null;
     /**
+     * Import Provider Mode
+     */
+    import_provider_mode?: string;
+    /**
      * Last Error
      */
     last_error?: string | null;
@@ -4858,6 +4862,10 @@ export type ProviderStatusPublic = {
      * Sources
      */
     sources?: Array<ProviderSourceStatusPublic>;
+    /**
+     * Stale After Hours
+     */
+    stale_after_hours?: number | null;
     /**
      * Status
      */

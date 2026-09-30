@@ -12,6 +12,7 @@ from app.decision_core.readmodels import (
     latest_finding_decision_view,
 )
 from app.models import (
+    ACTIONABLE_FINDING_STATUSES,
     AnalysisRun,
     AnalysisRunsPublic,
     Finding,
@@ -55,7 +56,12 @@ def build_project_dashboard_payload(
         if findings and isinstance(findings[0], DecisionFindingView)
         else decision_views_for_findings([item for item in findings if isinstance(item, Finding)])
     )
-    remediation_findings = sorted(finding_views, key=_remediation_queue_sort_key)[
+    # The remediation queue is open work only; closed, accepted, and suppressed
+    # findings keep their scores but are not next actions.
+    actionable_views = [
+        view for view in finding_views if view.status in ACTIONABLE_FINDING_STATUSES
+    ]
+    remediation_findings = sorted(actionable_views, key=_remediation_queue_sort_key)[
         :bounded_remediation_limit
     ]
     return ProjectDashboardPublic(
@@ -80,7 +86,7 @@ def build_project_dashboard_payload(
         findings=ProjectDashboardFindingsPublic(
             remediation_queue=FindingsPublic(
                 data=[finding_public(finding) for finding in remediation_findings],
-                count=len(finding_views),
+                count=len(actionable_views),
             ),
             signal_counts=dashboard_signal_counts(finding_views),
         ),

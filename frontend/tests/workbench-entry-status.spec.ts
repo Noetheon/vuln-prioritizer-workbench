@@ -139,7 +139,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     snapshot_mode: string
     sources?: Array<{ name: string }>
   }
-  expect(providerStatusPayload.snapshot_mode).toBe("cache-only")
+  expect(providerStatusPayload.snapshot_mode).toBe("demo")
   expect(providerStatusPayload.snapshot.content_hash).toBeTruthy()
   expect(providerStatusPayload.snapshot.locked_provider_data).toBe(false)
   expect(providerStatusPayload.sources?.map((source) => source.name)).toEqual(
@@ -206,9 +206,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
       "Generate, verify, and download audit-ready evidence for an import run.",
     ),
   ).toBeVisible()
-  await expect(
-    page.getByRole("combobox", { name: "Select analysis run" }),
-  ).toHaveCount(0)
+  await expect(page.getByRole("combobox", { name: "Report run" })).toBeVisible()
   await expect(page.getByText("Analysis run").first()).toBeVisible()
   await expect(page.getByText("Ready for generation").first()).toBeVisible()
   await expect(page.getByRole("tab", { name: "Artifacts" })).toHaveAttribute(

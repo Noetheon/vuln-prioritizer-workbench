@@ -21,6 +21,9 @@ import {
 } from "../../lib/report-format.ts"
 import { runStatusTone } from "../../lib/risk-format.ts"
 import { workflowNeedsPolling, workflowStageLabel } from "../../workbench/workflow-model.ts"
+import { runFileLabel } from "./report-run-scope-model.ts"
+
+export { runFileLabel }
 
 export function reportForFormat(
   reports: readonly ReportPublic[],
@@ -104,14 +107,6 @@ export function verificationTone(label: string): VpwBadgeTone {
   return "neutral"
 }
 
-export function runFileLabel(run: AnalysisRunPublic): string {
-  const inputUpload = objectRecord(run.uploads?.input)
-  const uploadFilename =
-    stringRecordValue(inputUpload, "original_filename") ??
-    stringRecordValue(inputUpload, "stored_filename") ??
-    stringRecordValue(inputUpload, "filename")
-  return run.filename ?? uploadFilename ?? `${run.input_type} upload`
-}
 
 export function priorityCount(
   summary: ProjectDecisionSummaryPublic | AnalysisRunSummaryPublic | null,
@@ -151,13 +146,19 @@ export function providerSnapshotLabel(
   run: AnalysisRunPublic | null,
   providerStatus: ProviderStatusPublic | null,
 ) {
+  if (run !== null && !run.provider_snapshot_id) {
+    return "Live provider data"
+  }
   const snapshot = providerSnapshotShortId(run, providerStatus)
-  const locked = providerStatus?.snapshot.locked_provider_data
-    ? "locked"
-    : providerStatus?.snapshot.missing
+  if (snapshot === "Not recorded") {
+    return snapshot
+  }
+  const mode = providerStatus?.snapshot.locked_provider_data
+    ? "locked replay"
+    : providerStatus?.snapshot.missing && run === null
       ? "missing"
-      : "fresh"
-  return `${snapshot} · ${locked}`
+      : "snapshot replay"
+  return `${snapshot} · ${mode}`
 }
 
 export function evidenceReadinessLabel({

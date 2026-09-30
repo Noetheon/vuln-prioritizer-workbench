@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import os
 import uuid
+from collections.abc import Iterator
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
 from sqlmodel import Session
 from utils.import_contracts import drain_workflow_queue
 from utils.workbench_env import WorkbenchApiEnv, local_api_headers
@@ -74,17 +77,37 @@ def _seed_provider_update_workflow(
         session.flush()
 
 
+@pytest.fixture()
+def empty_provider_cache(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> Iterator[Path]:
+    """Point the app at an empty live provider cache so other tests cannot age it."""
+    active_settings = workbench_api_env.client.app.state.workbench_settings
+    cache_dir = tmp_path / "empty-provider-cache"
+    workbench_api_env.client.app.state.workbench_settings = replace(
+        active_settings,
+        PROVIDER_CACHE_DIR=str(cache_dir),
+    )
+    try:
+        yield cache_dir
+    finally:
+        workbench_api_env.client.app.state.workbench_settings = active_settings
+
+
 def test_workbench_provider_status_is_available_locally(
     workbench_api_env: WorkbenchApiEnv,
+    empty_provider_cache: Path,
 ) -> None:
     response = workbench_api_env.client.get("/api/v1/providers/status")
 
     assert response.status_code == 200
-    assert response.json()["snapshot_mode"] == "missing"
+    assert response.json()["snapshot_mode"] == "live"
 
 
 def test_workbench_provider_status_reports_missing_snapshot(
     workbench_api_env: WorkbenchApiEnv,
+    empty_provider_cache: Path,
 ) -> None:
     headers = local_api_headers(workbench_api_env.client)
 
@@ -92,19 +115,24 @@ def test_workbench_provider_status_reports_missing_snapshot(
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["status"] == "degraded"
-    assert payload["snapshot_mode"] == "missing"
+    # A fresh install has fetched nothing yet: that is not a fault. Imports fetch
+    # live data, so no snapshot is required either.
+    assert payload["status"] == "not_loaded"
+    assert payload["snapshot_mode"] == "live"
     assert payload["snapshot"]["missing"] is True
     assert payload["last_sync"] is None
     assert payload["cache_age_seconds"] is None
     assert payload["last_error"] is None
-    assert "No provider snapshot has been recorded yet." in payload["warnings"]
+    assert payload["warnings"] == [
+        "No provider data has been fetched yet. The first import fetches NVD, EPSS, and KEV."
+    ]
     assert [source["name"] for source in payload["sources"]] == ["nvd", "epss", "kev"]
     assert all(source["available"] is False for source in payload["sources"])
 
 
 def test_workbench_provider_status_reports_latest_snapshot(
     workbench_api_env: WorkbenchApiEnv,
+    empty_provider_cache: Path,
 ) -> None:
     headers = local_api_headers(workbench_api_env.client)
     snapshot_id = uuid.uuid4()
@@ -136,7 +164,9 @@ def test_workbench_provider_status_reports_latest_snapshot(
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["status"] == "ok"
+    # Data fetched on 2026-04-28 is stale today, however recently the row was stored.
+    assert payload["status"] == "stale"
+    assert any("older than 72 hours" in warning for warning in payload["warnings"])
     assert payload["snapshot_mode"] == "cache-only"
     assert payload["last_sync"] == "2026-04-28T10:30:00Z"
     assert isinstance(payload["cache_age_seconds"], int)
@@ -171,7 +201,7 @@ def test_workbench_provider_status_reports_latest_snapshot(
     sources = {source["name"]: source for source in payload["sources"]}
     assert sources["nvd"]["selected"] is True
     assert sources["nvd"]["available"] is True
-    assert sources["nvd"]["stale"] is False
+    assert sources["nvd"]["stale"] is True
     assert isinstance(sources["nvd"]["cache_age_seconds"], int)
     assert sources["nvd"]["last_sync"] == "2026-04-28T10:15:00Z"
     assert sources["epss"]["value"] == "2026-04-28"
@@ -345,7 +375,7 @@ def test_workbench_provider_status_redacts_production_paths_and_cache_details(
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["status"] == "ok"
+    assert payload["status"] == "stale"
     assert payload["cache_dir"] is None
     assert payload["snapshot_dir"] is None
     assert payload["snapshot"]["source_path"] is None
@@ -424,6 +454,187 @@ def test_provider_status_projection_falls_back_to_available_snapshot_columns(
     assert sources["epss"].last_sync == "2026-04-28"
     assert sources["kev"].selected is False
     assert sources["kev"].available is False
+
+
+def _write_live_cache_entry(cache_dir: Path, source: str, fetched_at: datetime) -> None:
+    namespace = cache_dir / source
+    namespace.mkdir(parents=True, exist_ok=True)
+    entry = namespace / "entry.json"
+    entry.write_text("{}", encoding="utf-8")
+    timestamp = fetched_at.timestamp()
+    os.utime(entry, (timestamp, timestamp))
+
+
+def test_provider_status_projection_reports_recent_snapshot_as_ok(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    active_settings = replace(
+        workbench_api_env.client.app.state.workbench_settings,
+        PROVIDER_CACHE_DIR=str(tmp_path / "cache"),
+        DEMO_PROVIDER_SNAPSHOT_ENABLED=True,
+    )
+    now = datetime(2026, 5, 1, 12, 0, tzinfo=UTC)
+    snapshot = workbench_api_env.app_models.ProviderSnapshot(
+        id=uuid.UUID("00000000-0000-4000-8000-000000000203"),
+        created_at=datetime(2026, 5, 1, 10, 5, tzinfo=UTC),
+        content_hash="sha256:provider-recent-snapshot",
+        nvd_last_sync="2026-05-01T09:00:00Z",
+        epss_date="2026-04-30",
+        kev_catalog_version="2026-04-29",
+        source_metadata_json={
+            "selected_sources": ["nvd", "epss", "kev"],
+            "generated_at": "2026-05-01T10:00:00Z",
+        },
+    )
+
+    payload = provider_status_payload(
+        snapshot,
+        latest_update_run=None,
+        active_settings=active_settings,
+        now=now,
+    )
+
+    assert payload.status == "ok"
+    assert payload.import_provider_mode == "default_snapshot"
+    assert payload.warnings == []
+    assert payload.last_sync == "2026-05-01T10:00:00Z"
+    sources = {source.name: source for source in payload.sources}
+    assert [sources[name].stale for name in ("nvd", "epss", "kev")] == [False, False, False]
+    assert sources["nvd"].cache_age_seconds == 2 * 3600
+    # EPSS publishes a model date; its data is as fresh as the end of that day.
+    assert sources["epss"].cache_age_seconds == 12 * 3600
+    assert payload.cache_age_seconds == 12 * 3600
+
+
+def test_provider_status_projection_labels_the_packaged_demo_snapshot(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    active_settings = replace(
+        workbench_api_env.client.app.state.workbench_settings,
+        PROVIDER_CACHE_DIR=str(tmp_path / "cache"),
+    )
+    snapshot = workbench_api_env.app_models.ProviderSnapshot(
+        id=uuid.UUID("00000000-0000-4000-8000-000000000205"),
+        created_at=datetime(2026, 9, 29, 8, 0, tzinfo=UTC),
+        content_hash="sha256:provider-demo-snapshot",
+        nvd_last_sync="2026-04-20T10:15:00Z",
+        epss_date="2026-04-20",
+        kev_catalog_version="2026-04-19",
+        source_metadata_json={
+            "cache_only": True,
+            "generated_at": "2026-04-21T12:00:00+00:00",
+            "selected_sources": ["nvd", "epss", "kev"],
+            "snapshot_id": "online-shop-demo-provider-snapshot-2026-04-21",
+        },
+    )
+
+    payload = provider_status_payload(
+        snapshot,
+        latest_update_run=None,
+        active_settings=active_settings,
+        now=datetime(2026, 9, 29, 9, 0, tzinfo=UTC),
+    )
+
+    # Loading the demo today does not make its April data fresh.
+    assert payload.snapshot_mode == "demo"
+    # The demo snapshot row does not change what new imports use.
+    assert payload.import_provider_mode == "live"
+    assert payload.snapshot.mode == "demo"
+    assert payload.status == "stale"
+    assert payload.stale_after_hours == 72
+    assert payload.last_sync == "2026-04-21T12:00:00+00:00"
+
+
+def test_provider_status_projection_prefers_newer_live_fetch_over_old_snapshot(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    cache_dir = tmp_path / "cache"
+    active_settings = replace(
+        workbench_api_env.client.app.state.workbench_settings,
+        PROVIDER_CACHE_DIR=str(cache_dir),
+    )
+    now = datetime(2026, 5, 10, 12, 0, tzinfo=UTC)
+    _write_live_cache_entry(cache_dir, "nvd", now - timedelta(hours=1))
+    _write_live_cache_entry(cache_dir, "epss", now - timedelta(hours=3))
+    snapshot = workbench_api_env.app_models.ProviderSnapshot(
+        id=uuid.UUID("00000000-0000-4000-8000-000000000204"),
+        created_at=datetime(2026, 5, 10, 11, 0, tzinfo=UTC),
+        content_hash="sha256:provider-old-snapshot",
+        nvd_last_sync="2026-04-28T10:15:00Z",
+        epss_date="2026-04-28",
+        kev_catalog_version="2026-04-27",
+        source_metadata_json={
+            "selected_sources": ["nvd", "epss", "kev"],
+            "generated_at": "2026-04-28T10:30:00Z",
+            "stale_sources": ["epss"],
+        },
+    )
+
+    payload = provider_status_payload(
+        snapshot,
+        latest_update_run=None,
+        active_settings=active_settings,
+        now=now,
+    )
+
+    sources = {source.name: source for source in payload.sources}
+    assert sources["nvd"].stale is False
+    assert sources["nvd"].cache_age_seconds == 3600
+    assert sources["epss"].stale is False
+    assert sources["kev"].stale is True
+    assert payload.status == "stale"
+    assert payload.warnings == [
+        "Provider data is older than 72 hours or missing for: KEV. "
+        "Import again or run a provider update to refresh it."
+    ]
+
+
+def test_provider_status_projection_uses_live_cache_without_snapshot(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    cache_dir = tmp_path / "cache"
+    active_settings = replace(
+        workbench_api_env.client.app.state.workbench_settings,
+        PROVIDER_CACHE_DIR=str(cache_dir),
+        DEMO_PROVIDER_SNAPSHOT_ENABLED=False,
+    )
+    now = datetime(2026, 5, 10, 12, 0, tzinfo=UTC)
+    for hours, source in ((1, "nvd"), (2, "epss"), (5, "kev")):
+        _write_live_cache_entry(cache_dir, source, now - timedelta(hours=hours))
+
+    fresh = provider_status_payload(
+        None,
+        latest_update_run=None,
+        active_settings=active_settings,
+        now=now,
+    )
+
+    assert fresh.status == "ok"
+    assert fresh.snapshot_mode == "live"
+    assert fresh.import_provider_mode == "live"
+    assert fresh.warnings == []
+    assert fresh.last_sync == (now - timedelta(hours=1)).isoformat()
+    assert fresh.cache_age_seconds == 5 * 3600
+    assert all(source.available and not source.stale for source in fresh.sources)
+
+    later = provider_status_payload(
+        None,
+        latest_update_run=None,
+        active_settings=active_settings,
+        now=now + timedelta(hours=70),
+    )
+
+    assert later.status == "stale"
+    stale_sources = [source.name for source in later.sources if source.stale]
+    assert stale_sources == ["kev"]
+    assert later.warnings == [
+        "Provider data is older than 72 hours or missing for: KEV. "
+        "Import again or run a provider update to refresh it."
+    ]
 
 
 def test_provider_status_projection_redacts_failed_job_error_json_fallback(

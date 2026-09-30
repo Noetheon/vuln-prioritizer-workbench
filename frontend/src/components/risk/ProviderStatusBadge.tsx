@@ -14,6 +14,10 @@ function providerStatusLabel(status: string | null | undefined) {
     case "degraded":
     case "warning":
       return "Degraded"
+    case "stale":
+      return "Needs refresh"
+    case "not_loaded":
+      return "No data yet"
     case "error":
     case "failed":
     case "unavailable":
