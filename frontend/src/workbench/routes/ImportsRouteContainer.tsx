@@ -34,6 +34,7 @@ import { selectedProjectRouteSearch } from "../selected-project-search"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import { useProjectChangeReset } from "../useProjectChangeReset"
 import { useProjectRunsQuery, useRunDetailQuery } from "../useWorkbenchQueries"
+import { useProviderReachabilityQuery } from "../useWorkbenchRuntimeQueries"
 import {
   invalidateProjectScopedWorkbenchQueries,
   workbenchQueryKeys,
@@ -99,6 +100,12 @@ export function ImportsRouteContainer() {
     params.importsView === "formats"
       ? params.importsView
       : "home"
+  // A live import asks first whether NVD, EPSS, and KEV answer.
+  const providerReachabilityQuery = useProviderReachabilityQuery(
+    importsView === "new" &&
+      providerStatus !== null &&
+      providerStatus.import_provider_mode !== "default_snapshot",
+  )
   const projectRunsQuery = useProjectRunsQuery(selectedProjectId, true)
   const projectRuns = projectRunsQuery.data?.data ?? []
   const projectRunIds = projectRuns.map((run) => run.id)
@@ -518,6 +525,7 @@ export function ImportsRouteContainer() {
       projectListError={projectListError}
       projectRuns={projectRuns}
       projects={projects}
+      providerReachability={providerReachabilityQuery.data ?? null}
       providerStatus={providerStatus}
       runDetailError={
         routeRunResolutionUnavailable

@@ -670,6 +670,13 @@ export const AnalysisRunSummaryPublicSchema = {
             ],
             title: 'Provider Snapshot Id'
         },
+        provider_warnings: {
+            items: {
+                type: 'string'
+            },
+            title: 'Provider Warnings',
+            type: 'array'
+        },
         reopened_findings: {
             default: 0,
             title: 'Reopened Findings',
@@ -9222,6 +9229,30 @@ export const ProviderEvidenceV2Schema = {
     type: 'object'
 } as const;
 
+export const ProviderReachabilityPublicSchema = {
+    description: 'Live NVD, EPSS, and KEV reachability from this Workbench, briefly cached.',
+    properties: {
+        checked_at: {
+            format: 'date-time',
+            title: 'Checked At',
+            type: 'string'
+        },
+        sources: {
+            items: {
+                $ref: '#/components/schemas/ProviderSourceReachabilityPublic'
+            },
+            title: 'Sources',
+            type: 'array'
+        }
+    },
+    required: [
+        'checked_at',
+        'sources'
+    ],
+    title: 'ProviderReachabilityPublic',
+    type: 'object'
+} as const;
+
 export const ProviderSnapshotStatusPublicSchema = {
     description: 'Stable status projection for the latest provider snapshot.',
     properties: {
@@ -9352,6 +9383,42 @@ export const ProviderSnapshotStatusPublicSchema = {
         }
     },
     title: 'ProviderSnapshotStatusPublic',
+    type: 'object'
+} as const;
+
+export const ProviderSourceReachabilityPublicSchema = {
+    description: 'Whether one live provider feed answered a small probe request.',
+    properties: {
+        detail: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Detail'
+        },
+        label: {
+            title: 'Label',
+            type: 'string'
+        },
+        reachable: {
+            title: 'Reachable',
+            type: 'boolean'
+        },
+        source: {
+            title: 'Source',
+            type: 'string'
+        }
+    },
+    required: [
+        'source',
+        'label',
+        'reachable'
+    ],
+    title: 'ProviderSourceReachabilityPublic',
     type: 'object'
 } as const;
 

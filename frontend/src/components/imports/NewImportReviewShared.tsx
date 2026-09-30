@@ -26,7 +26,7 @@ export function ReviewMetric({
   value,
 }: {
   label: string
-  tone?: "critical" | "success"
+  tone?: "critical" | "success" | "warning"
   value: ReactNode
 }) {
   return (
@@ -37,6 +37,8 @@ export function ReviewMetric({
           "mt-1 min-w-0 font-medium leading-5 text-[var(--vpw-text-primary)] [overflow-wrap:anywhere]",
           tone === "success" && "text-[var(--vpw-green)]",
           tone === "critical" && "text-[var(--vpw-red)]",
+          tone === "warning" &&
+            "text-[color-mix(in_srgb,var(--vpw-amber)_55%,var(--vpw-text-primary))]",
         )}
       >
         {value}

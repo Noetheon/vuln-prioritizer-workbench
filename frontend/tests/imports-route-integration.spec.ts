@@ -376,7 +376,8 @@ test("new import wizard gates the four-step flow", async ({ page }) => {
   await expect(page.getByText("Parser preview")).toBeVisible()
   await expect(page.getByText("Accepted file types:")).toHaveCount(0)
   await expect(page.getByText("Accepted: .csv, text/csv")).toHaveCount(0)
-  await expect(page.getByText("File type match")).toBeVisible()
+  await expect(page.getByText("File content")).toBeVisible()
+  await expect(page.getByText("Every CVE value checked")).toBeVisible()
   await expect(
     page.getByText(
       "If the file structure does not match the selected format, import may create fewer findings or skip rows.",

@@ -93,6 +93,7 @@ export function SummaryRail({
             value: importProviderReadiness(
               props.providerStatus,
               props.importWizard.providerSnapshotFile,
+              props.providerReachability,
             ).label,
           },
           {

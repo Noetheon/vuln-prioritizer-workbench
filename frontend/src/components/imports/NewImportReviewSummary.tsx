@@ -5,13 +5,14 @@ import { ReviewMetric } from "./NewImportReviewShared"
 export function ReviewPreflightSummary({
   blockingCount,
   optionalContext,
-  providerMessage,
+  provider,
   requiredPassed,
   requiredTotal,
 }: {
   blockingCount: number
   optionalContext: string
-  providerMessage: string
+  /** Where provider data comes from; a warning is explained below the summary. */
+  provider: { label: string; warning: boolean }
   requiredPassed: number
   requiredTotal: number
 }) {
@@ -63,7 +64,11 @@ export function ReviewPreflightSummary({
             }
           />
           <ReviewMetric label="Context" value={optionalContext} />
-          <ReviewMetric label="Provider" value={providerMessage} />
+          <ReviewMetric
+            label="Provider"
+            tone={provider.warning ? "warning" : undefined}
+            value={provider.label}
+          />
         </dl>
       </div>
     </div>

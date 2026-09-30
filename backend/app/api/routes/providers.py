@@ -9,6 +9,7 @@ from app.core.app_state import workbench_settings
 from app.core.config import Settings
 from app.models import (
     AnalysisRunStatus,
+    ProviderReachabilityPublic,
     ProviderStatusPublic,
     ProviderUpdateJobCreate,
     ProviderUpdateJobPublic,
@@ -17,6 +18,7 @@ from app.models import (
 )
 from app.repositories import RunRepository
 from app.services.audit import record_audit_event
+from app.services.provider_reachability import app_reachability_probe
 from app.services.provider_status import (
     provider_status_payload,
     provider_update_job_public,
@@ -131,6 +133,15 @@ def read_provider_status(
             else None
         ),
     )
+
+
+@router.get("/reachability", response_model=ProviderReachabilityPublic)
+def read_provider_reachability(
+    request: Request,
+    _local_actor: LocalActor,
+) -> ProviderReachabilityPublic:
+    """Probe the live NVD, EPSS, and KEV feeds; the answer is cached for five minutes."""
+    return app_reachability_probe(request.app.state).check()
 
 
 def _request_settings(request: Request) -> Settings:

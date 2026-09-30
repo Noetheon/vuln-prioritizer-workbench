@@ -10,8 +10,8 @@ export function PreviewSummary({ parserPreview }: { parserPreview: ParserPreview
     },
     { label: "Updated findings", value: "Available after import" },
     {
-      label: "Ignored lines",
-      value: parserPreview.ignoredRows ?? "Available after import",
+      label: "Invalid lines",
+      value: parserPreview.invalidRows ?? "Checked by full parser",
     },
     {
       label: "Warnings",

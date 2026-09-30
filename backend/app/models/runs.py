@@ -228,6 +228,8 @@ class AnalysisRunSummaryPublic(SQLModel):
     provider_snapshot_id: uuid.UUID | None = None
     provider_degraded: bool = False
     warnings: list[str] = Field(default_factory=list)
+    # One readable line per provider (NVD, EPSS, KEV) that failed during the run.
+    provider_warnings: list[str] = Field(default_factory=list)
     parse_errors: list[RunParseErrorV2] = Field(default_factory=list)
     evidence: AnalysisEvidenceV2 | None = None
     diagnostics: RunDiagnosticsV2 | None = None

@@ -45,6 +45,7 @@ from app.domain.engine.services.analysis_quality import (
     _finding_data_quality_flags,
 )
 from app.repositories import RunRepository
+from app.services.provider_warnings import summarize_provider_warnings
 
 DEFAULT_WORKBENCH_PROVIDER_SNAPSHOT = "demo_provider_snapshot.json"
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -175,10 +176,12 @@ class AnalysisService:
                 "waived_count": decision_graph.waived_count,
                 "waiver_review_due_count": decision_graph.waiver_review_due_count,
                 "expired_waiver_count": decision_graph.expired_waiver_count,
-                "warnings": _replace_superseded_waiver_warnings(
-                    context.warnings,
-                    superseded=decision_graph.superseded_waiver_warnings,
-                    scoped=decision_graph.waiver_warnings,
+                "warnings": summarize_provider_warnings(
+                    _replace_superseded_waiver_warnings(
+                        context.warnings,
+                        superseded=decision_graph.superseded_waiver_warnings,
+                        scoped=decision_graph.waiver_warnings,
+                    )
                 ),
             }
         )

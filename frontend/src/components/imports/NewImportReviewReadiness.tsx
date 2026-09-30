@@ -88,7 +88,9 @@ function readinessShortLabel(check: ImportReadinessCheck) {
     case "parser-preview":
       return "Preview ready"
     case "provider-data":
-      return "Provider data ready"
+      return check.status === "warning"
+        ? "Provider data warning"
+        : "Provider data ready"
     case "asset-context":
       return "Asset context checked"
     case "vex":

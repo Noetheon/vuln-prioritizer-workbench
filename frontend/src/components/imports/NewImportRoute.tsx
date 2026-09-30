@@ -83,6 +83,7 @@ export function NewImportRoute(props: NewImportRouteProps) {
       providerData: importProviderReadiness(
         props.providerStatus,
         props.importWizard.providerSnapshotFile,
+        props.providerReachability,
       ),
       sbomScanner: props.importWizard.sbomScanner,
       sbomTargetRef: props.importWizard.sbomTargetRef,
@@ -109,6 +110,7 @@ export function NewImportRoute(props: NewImportRouteProps) {
     props.importWizard.sbomScanner,
     props.importWizard.sbomTargetRef,
     props.importWizard.vexFile,
+    props.providerReachability,
     props.providerStatus,
     props.selectedProjectId,
     props.supportedFormats,

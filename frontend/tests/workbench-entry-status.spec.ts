@@ -670,44 +670,42 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     mimeType: "text/csv",
     name: "invalid-occurrences.csv",
   })
-  await expect(page.getByText("B. File check").first()).toBeVisible()
-  await page.getByRole("button", { name: "Continue" }).click()
-  await expect(page.getByRole("heading", { name: "Add context" })).toBeVisible()
-  await page.getByRole("button", { name: "Continue" }).click()
-  await expect(
-    page.getByRole("heading", { name: "Review import" }),
-  ).toBeVisible()
-  await expect(page.getByRole("button", { name: "Start import" })).toBeVisible({
-    timeout: 15_000,
-  })
-  await page.getByRole("button", { name: "Start import" }).click({
-    noWaitAfter: true,
-    timeout: 15_000,
-  })
-  await expect(page).toHaveURL(/\/imports\/new(?:\?.*)?$/)
-  await expect(page.getByRole("alert").getByText("Import failed")).toBeVisible()
-  await expect(page.getByRole("button", { name: "Retry import" })).toHaveCount(
-    0,
+  // The file check reads the file like the importer and stops it before the
+  // upload, naming the line the import would fail on.
+  await expect(page.getByText("File cannot be prepared for import")).toBeVisible()
+  await expect(page.getByText(/line 2 \("not-a-cve"\)/).first()).toBeVisible()
+  await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled()
+
+  // A file that fails on the server still leaves a failed run to diagnose.
+  const failedImportResponse = await page.request.post(
+    `${backendBaseUrl}/api/v1/projects/${project.id}/imports`,
+    {
+      headers,
+      multipart: {
+        file: {
+          buffer: invalidOccurrenceCsv,
+          mimeType: "text/csv",
+          name: "invalid-occurrences.csv",
+        },
+        input_type: "generic-occurrence-csv",
+      },
+    },
   )
-  await expect(page.getByRole("button", { name: "Start import" })).toHaveCount(
-    0,
-  )
-  const backToFileButton = page.getByRole("button", { name: "Back to file" })
-  if ((await backToFileButton.count()) > 0) {
-    await expect(backToFileButton).toBeVisible()
-    await page.getByRole("button", { name: "Open diagnostics" }).click()
-    const failedImportDiagnostics = page.getByRole("dialog", {
-      name: "Run diagnostics",
-    })
-    await expect(
-      failedImportDiagnostics.getByText("Failure cause").first(),
-    ).toBeVisible()
-    await expect(
-      failedImportDiagnostics.getByText("not-a-cve").first(),
-    ).toBeVisible()
-    await page.keyboard.press("Escape")
-    await page.getByRole("link", { name: "Open run detail" }).click()
-  }
+  expect(failedImportResponse.ok()).toBeTruthy()
+  const failedRun = (await failedImportResponse.json()) as { id: string }
+  await expect
+    .poll(
+      async () => {
+        const response = await page.request.get(
+          `${backendBaseUrl}/api/v1/runs/${failedRun.id}`,
+          { headers },
+        )
+        return ((await response.json()) as { status: string }).status
+      },
+      { timeout: 60_000 },
+    )
+    .toBe("failed")
+  await page.goto(`/imports/runs/${failedRun.id}?projectId=${project.id}`)
   await expect(page).toHaveURL(/\/imports\/runs\/[0-9a-f-]{36}(?:\?.*)?$/)
   await expect(page.getByRole("heading", { name: /Import run/ })).toBeVisible()
   const importRuns = page

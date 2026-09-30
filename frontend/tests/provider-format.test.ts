@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import type {
+  ProviderReachabilityPublic,
   ProviderSourceStatusPublic,
   ProviderStatusPublic,
   WorkbenchStatus,
@@ -24,6 +25,7 @@ import {
   providerStaleAfterLabel,
   snapshotModeDescription,
   snapshotModeLabel,
+  unreachableProvidersMessage,
   workbenchApiHealth,
   workspaceHealthLabel,
 } from "../src/lib/provider-format.ts"
@@ -177,6 +179,85 @@ test("import readiness names the provider data an import will use", () => {
   )
   assert.equal(staleDefault.status, "warning")
   assert.match(staleDefault.message, /older than 72 hours/)
+})
+
+function reachability(
+  unreachable: Record<string, string | null> = {},
+): ProviderReachabilityPublic {
+  return {
+    checked_at: "2026-05-01T10:00:00Z",
+    sources: [
+      ["nvd", "NVD"],
+      ["epss", "EPSS"],
+      ["kev", "KEV"],
+    ].map(([source, label]) => ({
+      detail: unreachable[source] ?? null,
+      label,
+      reachable: !(source in unreachable),
+      source,
+    })),
+  }
+}
+
+test("a live import warns when a feed does not answer", () => {
+  assert.deepEqual(
+    importProviderReadiness(providerStatus(), null, reachability()),
+    importProviderReadiness(providerStatus()),
+  )
+  assert.deepEqual(
+    importProviderReadiness(
+      providerStatus({ last_error: "NVD timed out" }),
+      null,
+      reachability({ epss: "HTTP 403" }),
+    ),
+    {
+      label: "Live provider data",
+      message:
+        "EPSS (HTTP 403) does not answer from this Workbench. The import still runs, but priorities will be computed without EPSS. To import without live data, enter a provider snapshot under Add context.",
+      status: "warning",
+    },
+  )
+  // A picked snapshot or the runtime's default snapshot needs no live feed.
+  assert.equal(
+    importProviderReadiness(
+      providerStatus(),
+      "snapshot.json",
+      reachability({ nvd: "Timed out" }),
+    ).status,
+    "passed",
+  )
+  assert.equal(
+    importProviderReadiness(
+      providerStatus({ import_provider_mode: "default_snapshot" }),
+      null,
+      reachability({ nvd: "Timed out" }),
+    ).status,
+    "passed",
+  )
+})
+
+test("unreachable feeds name what the import loses", () => {
+  assert.equal(
+    unreachableProvidersMessage(
+      reachability({ epss: null, kev: "Connection failed", nvd: "Timed out" })
+        .sources,
+    ),
+    "NVD (Timed out), EPSS, and KEV (Connection failed) do not answer from this Workbench. The import still runs, but CVSS scores and descriptions will be missing, priorities will be computed without EPSS, and KEV status will come from the cached catalog, or stay unknown without one. To import without live data, enter a provider snapshot under Add context.",
+  )
+  assert.match(
+    unreachableProvidersMessage(
+      reachability({ epss: null, nvd: null }).sources.filter(
+        (source) => !source.reachable,
+      ),
+    ),
+    /^NVD and EPSS do not answer .* but CVSS scores and descriptions will be missing and priorities will be computed without EPSS\./,
+  )
+  assert.match(
+    unreachableProvidersMessage([
+      { label: "OSV", reachable: false, source: "osv" },
+    ]),
+    /^OSV does not answer .* but OSV data will be missing\./,
+  )
 })
 
 test("snapshot mode labels say where the data comes from", () => {

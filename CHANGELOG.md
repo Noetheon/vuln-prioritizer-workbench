@@ -19,6 +19,13 @@ exact git tag output when release wording needs to be verified.
 
 ### Added
 
+- Before a live import, the Review step checks whether NVD, EPSS, and KEV
+  answer from this Workbench and says what the import would lose without each
+  (audit M9). `GET /api/v1/providers/reachability` sends one small request to
+  each feed and caches the answer for five minutes. A run that scored without
+  complete provider data shows **Provider data was incomplete for this
+  import** on its overview, with one line per affected source
+  (`provider_warnings` in the run summary).
 - Accept risk where the decision is made (audit H5): **Accept risk…** on a
   finding and in the Triage bulk bar opens the acceptance form for exactly
   those findings and records one acceptance each in one step
@@ -68,6 +75,10 @@ exact git tag output when release wording needs to be verified.
 
 ### Changed
 
+- Provider failures during an import read as one line per source with what it
+  means, for example "EPSS could not be reached for 12 CVEs, so their
+  priorities were computed without EPSS.", instead of one connection error per
+  CVE (audit M9). Summaries of earlier runs read the same way.
 - The menu follows the work: Overview; Projects, Imports, Assets; Triage;
   Risk Acceptance and the new Priority Policy page; Evidence Center; then Data
   Sources and Workspace Settings (audit M2).
@@ -138,6 +149,12 @@ exact git tag output when release wording needs to be verified.
 
 ### Fixed
 
+- The import file check reads a CVE list or occurrence CSV the way the
+  importer does (audit H4). It counts valid CVE identifiers and names the lines
+  that are not one, since the import stops at those. It used to pass files the
+  import then rejected.
+- A JSON file that looks like another format says which one and offers
+  **Use** that format (audit M8), instead of failing after the upload.
 - The Overview remediation queue lists only open work (open, in review,
   remediating). It showed fixed and accepted findings before.
 - Sorting findings by priority lists open work before closed findings of the

@@ -145,7 +145,9 @@ from app.models.projects import (
     ProjectUpdate,
 )
 from app.models.providers import (
+    ProviderReachabilityPublic,
     ProviderSnapshotStatusPublic,
+    ProviderSourceReachabilityPublic,
     ProviderSourceStatusPublic,
     ProviderStatusPublic,
     ProviderUpdateJobCreate,
@@ -350,6 +352,8 @@ __all__ = [
     "ProviderSnapshotBase",
     "ProviderSnapshotStatusPublic",
     "ProviderSourceStatusPublic",
+    "ProviderReachabilityPublic",
+    "ProviderSourceReachabilityPublic",
     "ProviderStatusPublic",
     "ProviderUpdateJobCreate",
     "ProviderUpdateJobPublic",

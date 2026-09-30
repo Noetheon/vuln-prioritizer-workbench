@@ -18,6 +18,7 @@ from app.services.decision_guidance_summary import (
     run_decision_summary,
 )
 from app.services.project_state import current_project_state, is_project_state_run
+from app.services.provider_warnings import provider_warning_lines, summarize_provider_warnings
 from app.services.run_workflow_metadata import redact_public_payload
 
 
@@ -80,7 +81,8 @@ def analysis_run_summary_public(
         kev_hits=counts.kev_hits,
         provider_snapshot_id=run.provider_snapshot_id,
         provider_degraded=view.provider_degraded,
-        warnings=view.warnings,
+        warnings=summarize_provider_warnings(view.warnings),
+        provider_warnings=provider_warning_lines(view.warnings),
         parse_errors=view.parse_errors,
         evidence=view.evidence,
         diagnostics=view.diagnostics,

@@ -23,6 +23,8 @@ export const workbenchQueryKeys = {
   assetsRoot: (projectId: string) =>
     [...workbenchQueryKeys.all, "assets", projectId] as const,
   providerStatus: () => [...workbenchQueryKeys.all, "provider-status"] as const,
+  providerReachability: () =>
+    [...workbenchQueryKeys.all, "provider-reachability"] as const,
   capabilities: () => [...workbenchQueryKeys.all, "capabilities"] as const,
   session: () => [...workbenchQueryKeys.all, "session"] as const,
   githubIssueExportSettings: () =>

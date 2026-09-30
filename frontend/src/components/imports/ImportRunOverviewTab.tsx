@@ -57,6 +57,9 @@ export function OverviewTab({
   const timelineItems = importRunTimelineItems(run, summary)
   return (
     <div className="grid gap-4 lg:grid-cols-2">
+      {summary.provider_degraded ? (
+        <ProviderDataIncompleteBanner summary={summary} />
+      ) : null}
       <VpwPanel>
         <VpwSectionHeader title="Source details" />
         <RunDetailRows
@@ -221,6 +224,43 @@ export function OverviewTab({
         </VpwStatusBanner>
       ) : null}
     </div>
+  )
+}
+
+/** A run that scored without complete NVD, EPSS, or KEV data says so. */
+function ProviderDataIncompleteBanner({
+  summary,
+}: {
+  summary: ImportRunSummary
+}) {
+  const lines = summary.provider_warnings ?? []
+  return (
+    <VpwStatusBanner
+      className="lg:col-span-2"
+      title="Provider data was incomplete for this import"
+      tone="warning"
+    >
+      {lines.length > 0 ? (
+        <ul className="grid list-disc gap-1 pl-4">
+          {lines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      ) : (
+        <p>Some NVD, EPSS, or KEV lookups failed during this import.</p>
+      )}
+      <p className="mt-2">
+        Affected findings can rank lower than they should. Import the file
+        again once the feeds answer, or with a provider snapshot, to complete
+        them.{" "}
+        <Link
+          className="font-medium underline underline-offset-4"
+          to="/data-sources"
+        >
+          Open Data Sources
+        </Link>
+      </p>
+    </VpwStatusBanner>
   )
 }
 

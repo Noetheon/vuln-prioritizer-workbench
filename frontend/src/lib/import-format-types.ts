@@ -71,7 +71,9 @@ export type ParserPreview = {
   candidateRows?: number
   requiredFieldsFound?: string[]
   missingRequiredFields?: string[]
-  ignoredRows?: number
+  // Lines whose CVE value is not an identifier; the import rejects the file.
+  invalidLines?: number[]
+  invalidRows?: number
   warnings: string[]
   errors: string[]
 }

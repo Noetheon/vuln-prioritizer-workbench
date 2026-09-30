@@ -1,4 +1,6 @@
 import type {
+  ProviderReachabilityPublic,
+  ProviderSourceReachabilityPublic,
   ProviderSourceStatusPublic,
   ProviderStatusPublic,
   WorkbenchStatus,
@@ -155,13 +157,22 @@ export type ImportProviderReadiness = {
   status: "passed" | "warning"
 }
 
+// What an import loses when a live feed does not answer.
+const unreachableConsequences: Record<string, string> = {
+  epss: "priorities will be computed without EPSS",
+  kev: "KEV status will come from the cached catalog, or stay unknown without one",
+  nvd: "CVSS scores and descriptions will be missing",
+}
+
 /**
  * What provider data an import will use: a snapshot the user picked, the
  * runtime's default snapshot (demo runtimes), or live NVD, EPSS, and KEV.
+ * A live import warns first when a feed does not answer from this Workbench.
  */
 export function importProviderReadiness(
   providerStatus: ProviderStatusPublic | null,
   providerSnapshotFile?: string | null,
+  reachability?: ProviderReachabilityPublic | null,
 ): ImportProviderReadiness {
   if (providerSnapshotFile) {
     return {
@@ -197,6 +208,15 @@ export function importProviderReadiness(
           status: "warning",
         }
   }
+  const unreachable =
+    reachability?.sources.filter((source) => !source.reachable) ?? []
+  if (unreachable.length > 0) {
+    return {
+      label: "Live provider data",
+      message: unreachableProvidersMessage(unreachable),
+      status: "warning",
+    }
+  }
   if (providerStatus.last_error) {
     return {
       label: "Live provider data",
@@ -209,6 +229,31 @@ export function importProviderReadiness(
     message: "NVD, EPSS, and KEV are fetched live during the import and cached.",
     status: "passed",
   }
+}
+
+/** Which feeds do not answer, and what the import loses without them. */
+export function unreachableProvidersMessage(
+  sources: readonly ProviderSourceReachabilityPublic[],
+) {
+  const names = listPhrase(
+    sources.map((source) =>
+      source.detail ? `${source.label} (${source.detail})` : source.label,
+    ),
+  )
+  const consequences = listPhrase(
+    sources.map(
+      (source) =>
+        unreachableConsequences[source.source] ??
+        `${source.label} data will be missing`,
+    ),
+  )
+  const verb = sources.length === 1 ? "does" : "do"
+  return `${names} ${verb} not answer from this Workbench. The import still runs, but ${consequences}. To import without live data, enter a provider snapshot under Add context.`
+}
+
+function listPhrase(items: readonly string[]) {
+  if (items.length <= 2) return items.join(" and ")
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`
 }
 
 export function providerSnapshotHealth(

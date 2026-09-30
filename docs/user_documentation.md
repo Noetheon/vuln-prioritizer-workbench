@@ -37,7 +37,11 @@ criticality, owners), and generate the first report. Each step links to the
 page that does it, and the checklist stays until the project has its first
 report. `GET /api/v1/projects/{project_id}/onboarding` returns the same
 progress. Choose the input type explicitly when you import, so parsing does
-not depend on filename detection.
+not depend on filename detection. The file check reads a CVE list or
+occurrence CSV the way the importer does: it counts the valid CVE identifiers
+and names any line that is not one, because the import stops there. A JSON
+file that looks like another format says which one and offers to switch the
+input type.
 
 Until the first import, Data Sources shows NVD, EPSS, and KEV as "Not fetched
 yet" with no warnings: nothing is wrong, the first import fetches them.
@@ -151,6 +155,17 @@ Provider identities are intentionally explicit: NVD data comes from NVD CVE API
 CISA KEV or its official `cisagov/kev-data` mirror. Live-provider availability
 can vary, so locked snapshots are the reproducible path for demos and reviewer
 handoff.
+
+Before a live import, the Review step checks whether each feed answers from
+this Workbench (`GET /api/v1/providers/reachability`, cached for five minutes)
+and says what the import would lose: without NVD, CVSS scores and descriptions
+are missing; without EPSS, priorities are computed without EPSS; without KEV,
+the cached catalog is used or KEV status stays unknown. The import can still
+start. A run that scored without complete provider data shows **Provider data
+was incomplete for this import** on its overview, with one line per affected
+source (`provider_warnings` in the run summary). Re-evaluation does not fetch
+live data, so import the file again once the feeds answer, or use a provider
+snapshot.
 
 The base priority remains transparent:
 

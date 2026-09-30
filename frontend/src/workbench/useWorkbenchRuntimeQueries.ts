@@ -22,6 +22,21 @@ export function useWorkbenchProviderStatusQuery() {
   })
 }
 
+/**
+ * Whether NVD, EPSS, and KEV answer from this Workbench. Only asked before a
+ * live import; the backend caches the answer for five minutes.
+ */
+export function useProviderReachabilityQuery(enabled: boolean) {
+  return useQuery({
+    enabled,
+    queryFn: ({ signal }) =>
+      ProvidersService.readProviderReachability({ signal }),
+    queryKey: workbenchQueryKeys.providerReachability(),
+    retry: false,
+    staleTime: 5 * 60_000,
+  })
+}
+
 export function useWorkbenchStatusQuery() {
   return useQuery({
     queryFn: ({ signal }) => WorkbenchService.workbenchStatus({ signal }),

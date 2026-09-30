@@ -19,6 +19,7 @@ export function UploadFileStep({
   format,
   importWizard,
   onFileChange,
+  onInputTypeChange,
   parserPreview,
   supportedFormats,
   onSbomScannerChange,
@@ -28,6 +29,7 @@ export function UploadFileStep({
   ImportsWorkbenchProps,
   | "importWizard"
   | "onFileChange"
+  | "onInputTypeChange"
   | "onSbomScannerChange"
   | "onSbomTargetRefChange"
   | "onSbomDbUpdateChange"
@@ -102,6 +104,7 @@ export function UploadFileStep({
           ) : null}
         </div>
         <ParserPreviewPanel
+          onUseDetectedType={onInputTypeChange}
           parserPreview={parserPreview}
           supportedFormats={supportedFormats}
         />

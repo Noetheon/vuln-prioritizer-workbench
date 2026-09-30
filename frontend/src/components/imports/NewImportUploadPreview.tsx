@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button"
 import { VpwStatusBanner } from "@/components/vpw"
 import {
   getImportFormat,
@@ -29,9 +30,11 @@ export function AcceptedTypeChips({
 }
 
 export function ParserPreviewPanel({
+  onUseDetectedType,
   parserPreview,
   supportedFormats,
 }: {
+  onUseDetectedType?: (inputType: string) => void
   parserPreview: ParserPreview
   supportedFormats: readonly SupportedFormat[]
 }) {
@@ -50,9 +53,25 @@ export function ParserPreviewPanel({
     )
   }
   if (parserPreview.state === "error") {
+    const detected = parserPreview.detectedInputType
+    const detectedLabel = detected
+      ? (getImportFormat(supportedFormats, detected)?.label ?? detected)
+      : ""
     return (
       <VpwStatusBanner title="File cannot be prepared for import" tone="critical">
-        {parserPreview.errors.join(" ")}
+        <span className="flex flex-col items-start gap-2">
+          <span>{parserPreview.errors.join(" ")}</span>
+          {detected && onUseDetectedType ? (
+            <Button
+              onClick={() => onUseDetectedType(detected)}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Use {detectedLabel}
+            </Button>
+          ) : null}
+        </span>
       </VpwStatusBanner>
     )
   }
@@ -62,10 +81,8 @@ export function ParserPreviewPanel({
     value: number | string
   }> = [
     {
-      label: "File type match",
-      value: parserPreview.detectedInputType
-        ? `${getImportFormat(supportedFormats, parserPreview.detectedInputType)?.label ?? "Selected format"}`
-        : "Matches selected format",
+      label: "File content",
+      value: fileContentPreviewLabel(parserPreview, supportedFormats),
     },
     {
       label: "Required fields",
@@ -80,8 +97,9 @@ export function ParserPreviewPanel({
       value: parserPreview.candidateRows ?? "Available after import",
     },
     {
-      label: "Ignored lines",
-      value: parserPreview.ignoredRows ?? "Available after import",
+      label: "Invalid lines",
+      tone: (parserPreview.invalidRows ?? 0) > 0 ? "critical" : undefined,
+      value: parserPreview.invalidRows ?? "Checked by full parser",
     },
     {
       label: "Parser warnings",
@@ -140,6 +158,22 @@ export function uploadRequirementCopy(format: SupportedFormat) {
   return format.minimumFields.length > 0
     ? format.minimumFields.join("; ")
     : format.expectedShape
+}
+
+function fileContentPreviewLabel(
+  parserPreview: ParserPreview,
+  supportedFormats: readonly SupportedFormat[],
+) {
+  if (parserPreview.detectedInputType) {
+    const detected = getImportFormat(
+      supportedFormats,
+      parserPreview.detectedInputType,
+    )
+    return `Looks like ${detected?.label ?? parserPreview.detectedInputType}`
+  }
+  // CVE lists and occurrence CSVs are read line by line before the import.
+  if (parserPreview.invalidRows !== undefined) return "Every CVE value checked"
+  return "Checked by full parser after import"
 }
 
 function requiredFieldsPreviewLabel(parserPreview: ParserPreview) {

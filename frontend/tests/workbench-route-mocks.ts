@@ -7,6 +7,7 @@ import type {
   AssetUpdate,
   ProjectRiskReductionPublic,
   ProjectGovernanceRollupsPublic,
+  ProviderReachabilityPublic,
   ProviderStatusPublic,
   WaiverCreate,
   WaiverPublic,
@@ -68,6 +69,7 @@ type RouteWorkbenchShellOptions = {
   onBulkStatusRequest?: (body: Record<string, unknown>) => void
   onPolicyUpdate?: (body: Record<string, unknown>) => void
   onFindingsRequest?: (url: URL) => void
+  providerReachability?: ProviderReachabilityPublic
   providerStatus?: ProviderStatusPublic
   providerStatusDelayMs?: number
   providerStatusError?: boolean
@@ -340,6 +342,14 @@ export async function routeWorkbenchShell(
     },
     sources: [],
   }
+  const providerReachability = options.providerReachability ?? {
+    checked_at: "2026-06-06T10:00:00Z",
+    sources: [
+      { label: "NVD", reachable: true, source: "nvd" },
+      { label: "EPSS", reachable: true, source: "epss" },
+      { label: "KEV", reachable: true, source: "kev" },
+    ],
+  }
   const providerStatusDelayMs = options.providerStatusDelayMs ?? 0
   const providerStatusError = options.providerStatusError ?? false
   const governanceRollups = options.governanceRollups
@@ -426,6 +436,12 @@ export async function routeWorkbenchShell(
       body: JSON.stringify(providerStatus),
     })
   })
+  await page.route("**/api/v1/providers/reachability", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(providerReachability),
+    }),
+  )
   await page.route("**/api/v1/utils/health-check/", (route) =>
     route.fulfill({
       contentType: "application/json",

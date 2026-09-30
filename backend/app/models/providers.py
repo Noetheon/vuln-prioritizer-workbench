@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
@@ -96,3 +97,19 @@ class ProviderStatusPublic(SQLModel):
 ProviderSourceStatus = ProviderSourceStatusPublic
 ProviderSnapshotStatus = ProviderSnapshotStatusPublic
 ProviderStatusResponse = ProviderStatusPublic
+
+
+class ProviderSourceReachabilityPublic(SQLModel):
+    """Whether one live provider feed answered a small probe request."""
+
+    source: str
+    label: str
+    reachable: bool
+    detail: str | None = None
+
+
+class ProviderReachabilityPublic(SQLModel):
+    """Live NVD, EPSS, and KEV reachability from this Workbench, briefly cached."""
+
+    checked_at: datetime
+    sources: list[ProviderSourceReachabilityPublic]

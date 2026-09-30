@@ -44,6 +44,10 @@ import {
   readinessBlocksImport,
   type ParserPreview,
 } from "../src/lib/import-format-metadata.ts"
+import {
+  csvRecords,
+  detectJsonInputType,
+} from "../src/lib/import-parser-preview.ts"
 import type { ImportFormatCapabilityPublic } from "../src/api-client"
 import { buildImportUploadFormData } from "../src/workbench/import-upload-payload.ts"
 
@@ -1078,24 +1082,71 @@ test("parser preview validates supported shallow input states", async () => {
     false,
   )
 
+  // The importer rejects a list with an invalid line, so the preview does too.
   const cvePreview = await buildParserPreview(
     TEST_SUPPORTED_FORMATS,
     new File(["CVE-2024-3094\nnot-a-cve"], "findings.txt", { type: "text/plain" }),
     "cve-list",
   )
-  assert.equal(cvePreview.state, "passed")
+  assert.equal(cvePreview.state, "error")
   assert.equal(cvePreview.candidateRows, 1)
-  assert.equal(cvePreview.ignoredRows, 1)
+  assert.equal(cvePreview.invalidRows, 1)
+  assert.deepEqual(cvePreview.invalidLines, [2])
   assert.deepEqual(cvePreview.requiredFieldsFound, ["CVE identifier"])
-  assert.match(cvePreview.warnings.join(" "), /do not look like CVE identifiers/)
+  assert.match(cvePreview.errors.join(" "), /line 2 \("not-a-cve"\)/)
+  assert.match(cvePreview.errors.join(" "), /import stops at invalid lines/)
 
-  const emptyCvePreview = await buildParserPreview(
+  const cleanCvePreview = await buildParserPreview(
+    TEST_SUPPORTED_FORMATS,
+    new File(["# triage list\n\ncve-2024-3094\n  CVE-2021-44228  \n"], "findings.txt"),
+    "cve-list",
+  )
+  assert.equal(cleanCvePreview.state, "passed")
+  assert.equal(cleanCvePreview.candidateRows, 2)
+  assert.equal(cleanCvePreview.invalidRows, 0)
+  assert.deepEqual(cleanCvePreview.errors, [])
+
+  const noColumnCvePreview = await buildParserPreview(
     TEST_SUPPORTED_FORMATS,
     new File(["not-a-cve"], "findings.csv", { type: "text/csv" }),
     "cve-list",
   )
+  assert.equal(noColumnCvePreview.state, "error")
+  assert.deepEqual(noColumnCvePreview.missingRequiredFields, ["cve_id column"])
+  assert.match(noColumnCvePreview.errors.join(" "), /cve_id column/)
+
+  const csvCvePreview = await buildParserPreview(
+    TEST_SUPPORTED_FORMATS,
+    new File(
+      ["target_ref;cve_id\nweb-01;CVE-2024-3094\nweb-02;CVE-2024-XZ\nweb-03;\n"],
+      "findings.csv",
+    ),
+    "cve-list",
+  )
+  assert.equal(csvCvePreview.state, "error")
+  assert.equal(csvCvePreview.candidateRows, 1)
+  assert.deepEqual(csvCvePreview.invalidLines, [3])
+
+  const emptyCvePreview = await buildParserPreview(
+    TEST_SUPPORTED_FORMATS,
+    new File(["# nothing yet\n"], "findings.txt", { type: "text/plain" }),
+    "cve-list",
+  )
   assert.equal(emptyCvePreview.state, "error")
   assert.deepEqual(emptyCvePreview.missingRequiredFields, ["CVE identifier"])
+  assert.deepEqual(emptyCvePreview.errors, ["No CVE identifiers detected."])
+
+  const manyInvalid = await buildParserPreview(
+    TEST_SUPPORTED_FORMATS,
+    new File(
+      [["CVE-2024-3094", ...Array.from({ length: 7 }, (_, index) => `bad-${index}`), "x".repeat(60)].join("\n")],
+      "findings.txt",
+    ),
+    "cve-list",
+  )
+  assert.equal(manyInvalid.invalidRows, 8)
+  assert.match(manyInvalid.errors[0] ?? "", /8 lines are not a CVE identifier/)
+  assert.match(manyInvalid.errors[0] ?? "", /and 3 more/)
 
   const csvPreview = await buildParserPreview(
     TEST_SUPPORTED_FORMATS,
@@ -1107,6 +1158,21 @@ test("parser preview validates supported shallow input states", async () => {
   assert.equal(csvPreview.state, "passed")
   assert.equal(csvPreview.candidateRows, 1)
   assert.deepEqual(csvPreview.requiredFieldsFound, ["CVE column"])
+
+  const quotedCsvPreview = await buildParserPreview(
+    TEST_SUPPORTED_FORMATS,
+    new File(
+      [
+        '# exported occurrences\ncve_id,component_name,owner\n"CVE-2024-3094","xz, liblzma","team ""a"""\n"CVE-2021-44228","log4j\ncore",team-b\nCVE-XYZ,openssl,team-c\n',
+      ],
+      "occurrences.csv",
+    ),
+    "generic-occurrence-csv",
+  )
+  assert.equal(quotedCsvPreview.state, "error")
+  assert.equal(quotedCsvPreview.candidateRows, 2)
+  // The quoted cell spans two lines, so the invalid row starts on line 6.
+  assert.deepEqual(quotedCsvPreview.invalidLines, [6])
 
   const missingHeaderPreview = await buildParserPreview(
     TEST_SUPPORTED_FORMATS,
@@ -1126,6 +1192,20 @@ test("parser preview validates supported shallow input states", async () => {
   )
   assert.equal(validJsonPreview.state, "passed")
   assert.match(validJsonPreview.warnings.join(" "), /after import/)
+  assert.equal(validJsonPreview.detectedInputType, "trivy-json")
+
+  // A Grype report chosen as Trivy JSON is caught before the import.
+  const wrongFormatPreview = await buildParserPreview(
+    TEST_SUPPORTED_FORMATS,
+    new File([JSON.stringify({ descriptor: { name: "grype" }, matches: [] })], "scan.json"),
+    "trivy-json",
+  )
+  assert.equal(wrongFormatPreview.state, "error")
+  assert.equal(wrongFormatPreview.detectedInputType, "grype-json")
+  assert.match(
+    wrongFormatPreview.errors.join(" "),
+    /looks like Grype JSON, not Trivy JSON/,
+  )
 
   const invalidJsonPreview = await buildParserPreview(
     TEST_SUPPORTED_FORMATS,
@@ -1144,4 +1224,37 @@ test("parser preview validates supported shallow input states", async () => {
   )
   assert.equal(xmlPreview.state, "passed")
   assert.match(xmlPreview.warnings.join(" "), /Full parser validation/)
+})
+
+test("JSON imports are recognized by the importer's own markers", () => {
+  assert.equal(detectJsonInputType([]), "github-alerts-json")
+  assert.equal(detectJsonInputType({ alerts: [] }), "github-alerts-json")
+  assert.equal(detectJsonInputType({ security_advisory: {} }), "github-alerts-json")
+  assert.equal(detectJsonInputType({ Results: [] }), "trivy-json")
+  assert.equal(detectJsonInputType({ matches: [] }), "grype-json")
+  assert.equal(detectJsonInputType({ bomFormat: "CycloneDX" }), "cyclonedx-json")
+  assert.equal(detectJsonInputType({ spdxVersion: "SPDX-2.3" }), "spdx-json")
+  assert.equal(
+    detectJsonInputType({ dependencies: [], scanInfo: {} }),
+    "dependency-check-json",
+  )
+  assert.equal(detectJsonInputType({ scanInfo: {} }), null)
+  assert.equal(detectJsonInputType("text"), null)
+  assert.equal(detectJsonInputType(null), null)
+})
+
+test("CSV records keep their starting line and skip comments and blanks", () => {
+  assert.deepEqual(
+    csvRecords('a|b\n\n# note\n1|"two\nlines"\n3|4'),
+    [
+      { cells: ["a", "b"], line: 1 },
+      { cells: ["1", "two\nlines"], line: 4 },
+      { cells: ["3", "4"], line: 6 },
+    ],
+  )
+  assert.deepEqual(csvRecords("cve_id\tsource\nCVE-2024-3094\tscan"), [
+    { cells: ["cve_id", "source"], line: 1 },
+    { cells: ["CVE-2024-3094", "scan"], line: 2 },
+  ])
+  assert.deepEqual(csvRecords(""), [])
 })

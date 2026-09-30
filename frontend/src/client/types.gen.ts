@@ -318,6 +318,10 @@ export type AnalysisRunSummaryPublic = {
      */
     provider_snapshot_id?: string | null;
     /**
+     * Provider Warnings
+     */
+    provider_warnings?: Array<string>;
+    /**
      * Reopened Findings
      */
     reopened_findings?: number;
@@ -4861,6 +4865,22 @@ export type ProviderEvidenceV2 = {
 };
 
 /**
+ * ProviderReachabilityPublic
+ *
+ * Live NVD, EPSS, and KEV reachability from this Workbench, briefly cached.
+ */
+export type ProviderReachabilityPublic = {
+    /**
+     * Checked At
+     */
+    checked_at: string;
+    /**
+     * Sources
+     */
+    sources: Array<ProviderSourceReachabilityPublic>;
+};
+
+/**
  * ProviderSnapshotStatusPublic
  *
  * Stable status projection for the latest provider snapshot.
@@ -4930,6 +4950,30 @@ export type ProviderSnapshotStatusPublic = {
      * Source Path
      */
     source_path?: string | null;
+};
+
+/**
+ * ProviderSourceReachabilityPublic
+ *
+ * Whether one live provider feed answered a small probe request.
+ */
+export type ProviderSourceReachabilityPublic = {
+    /**
+     * Detail
+     */
+    detail?: string | null;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Reachable
+     */
+    reachable: boolean;
+    /**
+     * Source
+     */
+    source: string;
 };
 
 /**
@@ -8048,6 +8092,22 @@ export type GetApiV1ProjectsByProjectIdWorkflowsResponses = {
 };
 
 export type GetApiV1ProjectsByProjectIdWorkflowsResponse = GetApiV1ProjectsByProjectIdWorkflowsResponses[keyof GetApiV1ProjectsByProjectIdWorkflowsResponses];
+
+export type GetApiV1ProvidersReachabilityData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/providers/reachability';
+};
+
+export type GetApiV1ProvidersReachabilityResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProviderReachabilityPublic;
+};
+
+export type GetApiV1ProvidersReachabilityResponse = GetApiV1ProvidersReachabilityResponses[keyof GetApiV1ProvidersReachabilityResponses];
 
 export type GetApiV1ProvidersStatusData = {
     body?: never;

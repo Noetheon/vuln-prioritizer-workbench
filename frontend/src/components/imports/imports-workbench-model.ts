@@ -4,6 +4,7 @@ import type {
   AttackSourceCapabilityPublic,
   ImportParseErrorPublic,
   ProjectPublic,
+  ProviderReachabilityPublic,
   ProviderStatusPublic,
 } from "@/api-client"
 import type { VpwBadgeTone } from "@/components/vpw"
@@ -77,6 +78,8 @@ export type ImportsWorkbenchProps = {
   projectRuns: AnalysisRunPublic[]
   projects: ProjectPublic[]
   providerStatus: ProviderStatusPublic | null
+  /** Whether the live feeds answer; only asked before a live import. */
+  providerReachability?: ProviderReachabilityPublic | null
   runDetailError: string
   runDetailLoading: boolean
   runsError: string

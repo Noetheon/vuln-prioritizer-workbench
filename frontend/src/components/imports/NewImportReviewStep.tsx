@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input"
 import {
   VpwBadge,
   VpwSectionHeader,
+  VpwStatusBanner,
 } from "@/components/vpw"
 import {
   getImportFormat,
@@ -29,6 +30,7 @@ export function ReviewImportStep({
   importWizard,
   onResolveMissingChange,
   parserPreview,
+  providerReachability,
   providerStatus,
   readiness,
   selectedProject,
@@ -65,8 +67,11 @@ export function ReviewImportStep({
   const providerData = importProviderReadiness(
     providerStatus,
     importWizard.providerSnapshotFile,
+    providerReachability,
   )
   const providerMessage = providerCheck?.message ?? providerData.message
+  const providerWarning =
+    (providerCheck?.status ?? providerData.status) === "warning"
   const resolveMissing = importWizard.resolveMissing ?? true
   const evidenceFileLabel = importWizard.file
     ? `${importWizard.file.name} - ${fileSizeLabel(importWizard.file)}`
@@ -141,10 +146,15 @@ export function ReviewImportStep({
       <ReviewPreflightSummary
         blockingCount={blockingChecks.length}
         optionalContext={contextSummary}
-        providerMessage={providerMessage}
+        provider={{ label: providerData.label, warning: providerWarning }}
         requiredPassed={requiredPassed}
         requiredTotal={requiredChecks.length}
       />
+      {providerWarning ? (
+        <VpwStatusBanner title="Provider data needs attention" tone="warning">
+          {providerMessage}
+        </VpwStatusBanner>
+      ) : null}
       <ReviewPackageSummary
         evidenceFile={evidenceFileLabel}
         inputType={format?.label ?? "Required"}
