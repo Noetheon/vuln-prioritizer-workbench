@@ -1,5 +1,6 @@
 import type { FormEventHandler } from "react"
 import type {
+  AssetPublic,
   FindingPublic,
   GovernanceWaiverDebtEntryPublic,
   ProjectDecisionSummaryPublic,
@@ -30,6 +31,7 @@ export type WaiverDebtSummaryItem = {
 export type WaiverDrawerMode = "detail" | "create" | "review" | "expire" | null
 
 export type WaiversWorkbenchProps = {
+  assets: readonly AssetPublic[]
   projectListLoading: boolean
   projectSummary: ProjectDecisionSummaryPublic | null
   projects: ProjectPublic[]

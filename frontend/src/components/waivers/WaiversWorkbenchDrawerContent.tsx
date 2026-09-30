@@ -13,6 +13,7 @@ export function WaiverDrawerContent({
   if (state.waiverDrawerMode === "create") {
     return (
       <WaiverForm
+        assets={state.assets}
         buttonLabel="Create acceptance"
         findings={state.findings}
         findingsLoading={state.findingsLoading}
@@ -41,6 +42,7 @@ export function WaiverDrawerContent({
   if (state.waiverDrawerMode === "review") {
     return (
       <WaiverForm
+        assets={state.assets}
         buttonLabel="Save acceptance"
         findings={state.findings}
         findingsLoading={state.findingsLoading}

@@ -16,6 +16,7 @@ import { useWorkbenchContext } from "../WorkbenchContext"
 import { useProjectChangeReset } from "../useProjectChangeReset"
 import { waiverDebtRows, waiverDebtSummaryRows } from "../route-utils"
 import {
+  useProjectAssetsQuery,
   useProjectGovernanceRollupsQuery,
   useProjectSummaryQuery,
   useFindingsQuery,
@@ -41,6 +42,8 @@ function WaiversRouteContent() {
     Boolean(queryProjectId),
   )
   const waiversQuery = useWaiversQuery(queryProjectId, Boolean(queryProjectId))
+  // Assets feed the scope picker, so nobody types an asset UUID.
+  const assetsQuery = useProjectAssetsQuery({ projectId: queryProjectId })
   const [waiverActionError, setWaiverActionError] = useState("")
   const [waiverActionMessage, setWaiverActionMessage] = useState("")
   const [waiverForm, setWaiverForm] =
@@ -227,6 +230,7 @@ function WaiversRouteContent() {
   return (
     <section className="w-full">
       <WaiversWorkbench
+        assets={assetsQuery.data?.data ?? []}
         findings={effectiveFindings}
         findingsError={
           findingsQuery.isError

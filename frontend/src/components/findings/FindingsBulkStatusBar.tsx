@@ -12,16 +12,21 @@ import { manualStatusOptions } from "@/lib/finding-status-transitions"
 import { cn } from "@/lib/utils"
 
 export function FindingsBulkStatusBar({
+  acceptableCount = 0,
   count,
   error,
   message,
+  onAcceptRisk,
   onChooseStatus,
   onClear,
   pending,
 }: {
+  // Selected findings that are open work, so their risk can be accepted.
+  acceptableCount?: number
   count: number
   error: string
   message: string
+  onAcceptRisk?: () => void
   onChooseStatus: (status: FindingStatus) => void
   onClear: () => void
   pending: boolean
@@ -59,6 +64,24 @@ export function FindingsBulkStatusBar({
               ))}
             </SelectContent>
           </Select>
+          {onAcceptRisk ? (
+            <Button
+              disabled={pending || acceptableCount === 0}
+              onClick={onAcceptRisk}
+              size="sm"
+              title={
+                acceptableCount === 0
+                  ? "Only open work can be accepted."
+                  : acceptableCount < count
+                    ? `${acceptableCount} of the selected findings are open work.`
+                    : undefined
+              }
+              type="button"
+              variant="outline"
+            >
+              Accept risk…
+            </Button>
+          ) : null}
           <Button
             disabled={pending}
             onClick={onClear}
