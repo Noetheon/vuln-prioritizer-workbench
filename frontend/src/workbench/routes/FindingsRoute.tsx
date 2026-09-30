@@ -6,13 +6,13 @@ import { useFindingsRouteState } from "../../components/findings/useFindingsRout
 import { apiErrorMessage } from "../../lib/app-errors"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import {
-  defaultFindingsSearchState,
   cleanFindingsSearchQueryString,
   findingsSearchToApiParams,
   findingsSearchToUrlSearch,
   parseFindingsSearch,
   type FindingsSearchState,
 } from "../../components/findings/findings-search-state"
+import { findingsSearchForSavedView } from "../../components/findings/findings-view-state"
 import type { FindingsSavedView } from "../../components/findings/remediation-queue-model"
 import {
   useFindingsQuery,
@@ -150,57 +150,6 @@ function findingsRouteSearch(
   return {
     ...findingsSearchToUrlSearch(findingsSearch),
     projectId: selectedProjectId || undefined,
-  }
-}
-
-function findingsSearchForSavedView(
-  findingsSearch: FindingsSearchState,
-  view: FindingsSavedView,
-): FindingsSearchState {
-  const base: FindingsSearchState = {
-    ...findingsSearch,
-    cvssMax: "",
-    cvssMin: "",
-    dataGap: "",
-    direction: defaultFindingsSearchState.direction,
-    epssMax: "",
-    epssMin: "",
-    exposure: "",
-    kev: "",
-    offset: 0,
-    priority: "",
-    sla: "",
-    sort: defaultFindingsSearchState.sort,
-    status: "",
-  }
-
-  switch (view) {
-    case "accepted":
-      return { ...base, direction: "desc", sort: "last_seen", status: "accepted" }
-    case "fixed":
-      return { ...base, direction: "desc", sort: "last_seen", status: "fixed" }
-    case "immediate":
-      return {
-        ...base,
-        direction: "asc",
-        priority: "critical",
-        sort: "priority",
-        status: "open",
-      }
-    case "overdue":
-      return { ...base, direction: "asc", sla: "overdue", sort: "priority" }
-    case "internet":
-      return {
-        ...base,
-        direction: "asc",
-        exposure: "internet-facing",
-        sort: "priority",
-      }
-    case "kev":
-      return { ...base, direction: "desc", kev: "true", sort: "kev" }
-    case "all":
-    case "custom":
-      return base
   }
 }
 

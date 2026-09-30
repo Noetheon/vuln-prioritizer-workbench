@@ -162,14 +162,6 @@ export function RemediationQueueTableSection({
         eyebrow="Triage focus"
         title="Prioritized findings"
       >
-        <FindingsBulkStatusBar
-          count={selected.length}
-          error={pendingStatus === null ? bulkError : ""}
-          message={bulkMessage}
-          onChooseStatus={chooseBulkStatus}
-          onClear={() => updateSelection(new Set())}
-          pending={bulkPending}
-        />
         <FindingsDataTable
           findingDirection={findingDirection}
           findingSearch={findingSearch}
@@ -191,6 +183,14 @@ export function RemediationQueueTableSection({
                 }
               : undefined
           }
+        />
+        <FindingsBulkStatusBar
+          count={selected.length}
+          error={pendingStatus === null ? bulkError : ""}
+          message={bulkMessage}
+          onChooseStatus={chooseBulkStatus}
+          onClear={() => updateSelection(new Set())}
+          pending={bulkPending}
         />
       </VpwTableCard>
       <FindingStatusReasonDialog

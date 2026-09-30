@@ -75,6 +75,17 @@ exact git tag output when release wording needs to be verified.
     Overview, Triage, Assets, Risk Acceptance, and the Evidence Center.
     Switching keeps filters, drops the previous project's list page, run, or
     asset, and returns from a finding or import run to its list.
+- The Triage queue fits a 1,280 px laptop screen (audit H8, M4, M5, M6).
+  - Priority and score share a column, "why now" sits under the finding, and
+    the owner under the asset. On narrower screens the queue scrolls sideways
+    and the row actions stay in view.
+  - SLA targets read in days ("Emergency · 1 day"), the date is labelled
+    "Last seen", and closed findings show their priority without a score or
+    SLA.
+  - Views such as Overdue keep the priority, status, search, and owner
+    filters already set instead of resetting them.
+  - The bulk-status bar stays at the bottom of the screen while rows are
+    selected.
 - A fresh install reads as "no data yet", not as a fault: Data Sources shows
   NVD, EPSS, and KEV as "Not fetched yet", evidence readiness as "No data
   yet", and no warnings. The provider status API no longer reports

@@ -300,6 +300,69 @@
   gap: 0.35rem;
 }
 
+.finding-priority-cell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.finding-priority-closed {
+  color: var(--vpw-text-muted);
+  font-size: 0.82rem;
+}
+
+.finding-why-now {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--vpw-text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  overflow-wrap: break-word;
+}
+
+/* Two sort controls in one header, for columns that were merged. */
+.finding-sort-pair {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.25rem;
+}
+
+/* Tighter cells so the queue fits a 1,280 px laptop screen. */
+.findings-queue-panel .vpw-table-cell,
+.findings-queue-panel .vpw-table-header-cell {
+  padding-inline: 0.65rem;
+}
+
+/* The row actions stay in view when the queue scrolls sideways; the
+   shadow hints at the columns beneath them. */
+.findings-queue-panel .finding-actions-column {
+  position: sticky;
+  right: calc(-1 * var(--vpw-table-frame-padding, 0.25rem));
+  z-index: 1;
+  background: var(--vpw-bg-card);
+  box-shadow: -10px 0 12px -12px
+    color-mix(in srgb, var(--vpw-text-primary) 55%, transparent);
+}
+
+.findings-queue-panel .finding-actions-header {
+  z-index: 2;
+  background: color-mix(in srgb, var(--vpw-bg-panel) 84%, var(--vpw-bg-card));
+}
+
+/* Bulk actions follow the reader down a long page while rows are chosen. */
+.findings-bulk-bar--sticky {
+  position: sticky;
+  bottom: 0.75rem;
+  z-index: 3;
+  box-shadow: 0 8px 24px -12px color-mix(in srgb, var(--vpw-text-primary) 45%, transparent);
+}
+
 .finding-row-actions {
   flex-wrap: nowrap;
   justify-content: center;
