@@ -70,10 +70,17 @@ function sourcePurpose(sourceName: string) {
   return "Supplemental provider signal"
 }
 
-function sourceStatus(source: ProviderSourceStatusPublic) {
+function sourceStatus(
+  source: ProviderSourceStatusPublic,
+  { liveImports }: { liveImports: boolean },
+) {
   const state = providerSourceState(source)
   if (source.last_error && !source.available) {
     return { label: "Unavailable", token: "unavailable" }
+  }
+  // Live imports fetch a source when they first need it.
+  if (liveImports && !source.available && !source.last_sync) {
+    return { label: "Not fetched yet", token: "not-fetched" }
   }
   if (state === "available") {
     return source.last_sync || source.value
@@ -172,7 +179,9 @@ export function sourceRows(
 
   const lockedReplay = Boolean(providerStatus.snapshot?.locked_provider_data)
   const rows = (providerStatus.sources ?? []).map((source) => {
-    const status = sourceStatus(source)
+    const status = sourceStatus(source, {
+      liveImports: providerStatus.snapshot_mode === "live",
+    })
     const isKevSource = sourceDisplayName(source.name) === "CISA KEV"
     return {
       age: lockedReplay

@@ -31,9 +31,16 @@ vpw serve
 
 [INSTALL.md](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/INSTALL.md)
 covers Docker and sharing one instance with a team.
-Open `http://127.0.0.1:8765`, create or select a project, and upload your
-evidence through Imports. Choose the input type explicitly so parsing does not
-depend on filename detection.
+Open `http://127.0.0.1:8765`. The Overview opens with a setup checklist:
+create a project, import scanner findings, add asset context (exposure,
+criticality, owners), and generate the first report. Each step links to the
+page that does it, and the checklist stays until the project has its first
+report. `GET /api/v1/projects/{project_id}/onboarding` returns the same
+progress. Choose the input type explicitly when you import, so parsing does
+not depend on filename detection.
+
+Until the first import, Data Sources shows NVD, EPSS, and KEV as "Not fetched
+yet" with no warnings: nothing is wrong, the first import fetches them.
 The supervised worker starts with the browser runtime. Imports, provider
 refreshes, reports, and native re-evaluations enqueue durable Workflow v2 jobs
 and do not complete inside the initial HTTP request.

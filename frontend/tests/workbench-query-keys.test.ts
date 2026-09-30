@@ -144,6 +144,7 @@ test("project-scoped invalidation covers route data that can change by project",
   assert.deepEqual(calls, [
     workbenchQueryKeys.projectSummary("project-1"),
     workbenchQueryKeys.projectDashboard("project-1"),
+    workbenchQueryKeys.projectOnboarding("project-1"),
     workbenchQueryKeys.projectSummariesRoot(),
     workbenchQueryKeys.projectRuns("project-1"),
     workbenchQueryKeys.projectEvaluations("project-1"),

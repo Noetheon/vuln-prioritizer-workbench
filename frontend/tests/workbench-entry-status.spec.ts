@@ -57,11 +57,12 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   }
   await expect(navigation.getByRole("link", { name: "Items" })).toHaveCount(0)
   await expect(page.getByText("Items", { exact: true })).toHaveCount(0)
+  // The next step is an import, or creating a project on a fresh install.
   await expect(
-    page.getByRole("link", { name: "Import findings" }).first(),
-  ).toBeVisible()
-  await expect(
-    page.getByRole("link", { name: "Generate evidence" }).first(),
+    page
+      .getByRole("link", { name: "Import findings" })
+      .or(page.getByRole("button", { name: "Create project" }))
+      .first(),
   ).toBeVisible()
 
   const headers = localApiHeaders()
@@ -89,7 +90,16 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page.getByLabel("Open Critical summary card")).toContainText(
     "0",
   )
-  await expect(page.getByText("No open reduction opportunities")).toBeVisible()
+  await expect(page.getByLabel("No findings yet")).toBeVisible()
+  // A new project gets the setup checklist; the import is next.
+  const checklist = page.getByRole("region", {
+    name: `Set up ${dashboardProjectName}`,
+  })
+  await expect(checklist).toContainText("1 of 4 steps done")
+  await expect(
+    checklist.getByRole("link", { name: "Import findings" }),
+  ).toBeVisible()
+  await expect(page.getByRole("link", { name: "Generate evidence" })).toHaveCount(0)
 
   const importResponse = await page.request.post(
     `${backendBaseUrl}/api/v1/projects/${project.id}/imports`,
@@ -120,6 +130,10 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page.getByLabel("Open KEV summary card")).toContainText(
     /[1-9]/,
   )
+  await expect(checklist).toContainText(/findings? from 1 import/)
+  await expect(
+    page.getByRole("link", { name: "Generate evidence" }).first(),
+  ).toBeVisible()
   await expect(page.getByText("Remediation queue")).toBeVisible()
   await expect(
     page.getByRole("link", { name: "CVE-2024-3094" }).first(),

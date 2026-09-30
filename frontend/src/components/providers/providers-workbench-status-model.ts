@@ -61,10 +61,14 @@ function missingRequiredSnapshot(providerStatus: ProviderStatusPublic) {
   )
 }
 
+function notFetchedYet(providerStatus: ProviderStatusPublic) {
+  return providerDataState(providerStatus) === "not_loaded"
+}
+
 export function evidenceReadinessTone(
   providerStatus: ProviderStatusPublic | null,
 ) {
-  if (providerStatus === null) {
+  if (providerStatus === null || notFetchedYet(providerStatus)) {
     return "info"
   }
   if (providerStatus.last_error) {
@@ -76,7 +80,7 @@ export function evidenceReadinessTone(
 export function evidenceReadinessCardTone(
   providerStatus: ProviderStatusPublic | null,
 ): VpwCompactTone {
-  if (providerStatus === null) {
+  if (providerStatus === null || notFetchedYet(providerStatus)) {
     return "info"
   }
   if (providerStatus.last_error || missingRequiredSnapshot(providerStatus)) {
@@ -107,6 +111,9 @@ export function evidenceReadinessLabel(
   if (providerStatus === null) {
     return "Checking"
   }
+  if (notFetchedYet(providerStatus)) {
+    return "No data yet"
+  }
   if (providerStatus.last_error || missingRequiredSnapshot(providerStatus)) {
     return "Incomplete"
   }
@@ -129,7 +136,7 @@ export function evidenceReadinessFullLabel(
 export function evidenceReadinessScore(
   providerStatus: ProviderStatusPublic | null,
 ) {
-  if (providerStatus === null) {
+  if (providerStatus === null || notFetchedYet(providerStatus)) {
     return 20
   }
   if (providerStatus.last_error || missingRequiredSnapshot(providerStatus)) {
@@ -150,6 +157,9 @@ export function evidenceReadinessExplanation(
 ) {
   if (providerStatus === null) {
     return "Provider status is still loading, so evidence readiness cannot be finalized yet."
+  }
+  if (notFetchedYet(providerStatus)) {
+    return "Nothing to check yet. The first import fetches NVD, EPSS, and KEV, and reports then carry that provider evidence."
   }
   if (providerStatus.last_error) {
     return "Provider snapshot metadata is present, but the recorded last-error state makes provider evidence incomplete."

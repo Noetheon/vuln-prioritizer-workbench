@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { Callout } from "@/components/vpw"
 import { formatProviderFreshness } from "@/lib/provider-format"
 import { DashboardContextBar } from "./DashboardContextBar"
-import { DashboardSetupEmptyState } from "./DashboardEmptyState"
+import { DashboardOnboardingChecklist } from "./DashboardOnboardingChecklist"
 import { DashboardMetricStrip } from "./DashboardMetricStrip"
 import { DashboardProviderWarning } from "./DashboardProviderWarning"
 import { DashboardRemediationSection } from "./DashboardRemediationSection"
@@ -13,6 +13,7 @@ import type {
   QueueFilterState,
   RiskOperationsDashboardProps,
 } from "./dashboard-model"
+import { onboardingVisible } from "./dashboard-onboarding-model"
 import {
   buildDashboardMetricSummaries,
   providerNeedsRefresh,
@@ -41,6 +42,8 @@ export function RiskOperationsDashboard({
   providerStatusError,
   providerStatusLoading,
   kpis = null,
+  onboarding = null,
+  onCreateProject = () => {},
   riskReduction,
   runsLoading,
   selectedProject,
@@ -103,6 +106,22 @@ export function RiskOperationsDashboard({
     !dashboardError &&
     !signalError &&
     !providerStatusError
+  const showOnboarding =
+    !projectListLoading &&
+    onboardingVisible({ hasProjects, onboarding, selectedProjectId })
+  // Nothing to re-score or report on until the first import.
+  const hasFindings = (projectSummary?.finding_count ?? 0) > 0
+  const onboardingChecklist = (
+    <DashboardOnboardingChecklist
+      demoWorkspaceEnabled={demoWorkspaceEnabled}
+      demoWorkspacePending={demoWorkspacePending}
+      onCreateProject={onCreateProject}
+      onLoadDemoWorkspace={onLoadDemoWorkspace}
+      onboarding={onboarding}
+      projectName={selectedProject?.name ?? null}
+      selectedProjectId={selectedProjectId}
+    />
+  )
 
   const dashboardContent = (
     <div className="min-w-0 flex flex-col gap-4">
@@ -113,7 +132,9 @@ export function RiskOperationsDashboard({
         effectiveProviderStatus={providerStatus}
         effectiveSelectedProject={selectedProject}
         freshness={freshness}
+        hasFindings={hasFindings}
         isManagedDemoWorkspace={isManagedDemoWorkspace}
+        onCreateProject={onCreateProject}
         onLoadDemoWorkspace={onLoadDemoWorkspace}
         onProjectChange={onProjectChange}
         onRefresh={onRefresh}
@@ -143,7 +164,7 @@ export function RiskOperationsDashboard({
       {staleProvider ? (
         <DashboardProviderWarning detail={providerRefreshDetail(providerStatus)} />
       ) : null}
-      {selectedProjectId ? (
+      {selectedProjectId && hasFindings ? (
         <ReevaluateControl
           key={selectedProjectId}
           projectId={selectedProjectId}
@@ -152,13 +173,10 @@ export function RiskOperationsDashboard({
       ) : null}
 
       {showEmptyState ? (
-        <DashboardSetupEmptyState
-          demoWorkspaceEnabled={demoWorkspaceEnabled}
-          demoWorkspacePending={demoWorkspacePending}
-          onLoadDemoWorkspace={onLoadDemoWorkspace}
-        />
+        onboardingChecklist
       ) : (
         <>
+          {showOnboarding ? onboardingChecklist : null}
           <DashboardRiskReductionPanel
             isLoading={isLoading}
             kpis={kpis}

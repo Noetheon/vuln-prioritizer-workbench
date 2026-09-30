@@ -1,4 +1,4 @@
-export { DashboardSetupEmptyState } from "./DashboardEmptyState"
+export { DashboardOnboardingChecklist } from "./DashboardOnboardingChecklist"
 export { DashboardContextBar } from "./DashboardContextBar"
 export { DashboardDetailRail } from "./DashboardDetailRail"
 export { DashboardMetricStrip } from "./DashboardMetricStrip"

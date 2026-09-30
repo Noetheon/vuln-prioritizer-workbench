@@ -19,6 +19,16 @@ exact git tag output when release wording needs to be verified.
 
 ### Added
 
+- The Overview opens with a setup checklist until the project has its first
+  report: create a project, import scanner findings, add asset context, and
+  generate the first report (audit H9). Each step links to the page that does
+  it, "Create project" opens the create form right there, and the demo
+  workspace stays one click away.
+  - `GET /api/v1/projects/{project_id}/onboarding` returns the progress:
+    imports, findings, assets with context, and reports.
+  - Before the first import the Overview offers no report or re-evaluation,
+    and the risk panel says "No findings yet" instead of "No open reduction
+    opportunities".
 - `examples/team-mode` is a tested reference deployment for team mode. It
   runs Caddy, Authelia, and the Workbench image with Docker Compose.
   - `setup.sh` creates random secrets and the users, so there is no default
@@ -51,6 +61,11 @@ exact git tag output when release wording needs to be verified.
 
 ### Changed
 
+- A fresh install reads as "no data yet", not as a fault: Data Sources shows
+  NVD, EPSS, and KEV as "Not fetched yet", evidence readiness as "No data
+  yet", and no warnings. The provider status API no longer reports
+  never-fetched sources as `stale` and no longer lists the not-fetched notice
+  under `warnings`.
 - Imports under `vpw serve` fetch live NVD, EPSS, and KEV data unless a
   snapshot is selected. Before, they silently replayed the packaged demo
   snapshot. The demo workspace still replays its own snapshot.

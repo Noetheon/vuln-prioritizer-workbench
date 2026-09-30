@@ -18,6 +18,7 @@ from app.models import (
     ProjectDashboardPublic,
     ProjectDecisionSummaryPublic,
     ProjectGovernanceRollupsPublic,
+    ProjectOnboardingPublic,
     ProjectPublic,
     ProjectsPublic,
     ProjectUpdate,
@@ -45,6 +46,7 @@ from app.services.project_lifecycle_lock import (
     ProjectLifecycleBusyError,
     lock_project_lifecycle,
 )
+from app.services.project_onboarding import project_onboarding
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -114,6 +116,17 @@ def read_project_summary(
         findings=finding_repository.list_project_findings(project_id),
         runs=runs,
     )
+
+
+@router.get("/{project_id}/onboarding", response_model=ProjectOnboardingPublic)
+def read_project_onboarding(
+    project_id: uuid.UUID,
+    session: SessionDep,
+    local_actor: LocalActor,
+) -> ProjectOnboardingPublic:
+    """Report how far a project is through first setup for the Overview checklist."""
+    require_project(session, project_id)
+    return project_onboarding(session, project_id)
 
 
 @router.get("/{project_id}/dashboard", response_model=ProjectDashboardPublic)
