@@ -55,5 +55,13 @@ over time, building on the locally verified test work and main including PR #699
   omitted browser diagnostics. The focused case passed locally. First-attempt
   failure traces, route/viewport step labels and retained maintenance browser
   artifacts now make a recurrence diagnosable without relaxing assertions.
+- The first hosted quality campaign rejected a 10,000-entry import taking
+  62.3 seconds against the existing 60-second limit. Profiling identified eager
+  copies of large sections immediately removed by evidence encoding. Detaching
+  only edited containers before copying retained values preserves the storage
+  format and integrity checks. The focused storage/property suite passed 38
+  cases; the local full-size import measured 26.0 seconds after the change.
+  Local and hosted timings are distinct measurements, not a cross-machine
+  speedup claim. The unchanged hosted limits require a fresh successful run.
 
 These are separate outcomes. No release or package publication is part of this rollout.
