@@ -25,6 +25,11 @@ FRONTEND_NPM := $(NPM) --prefix frontend --workspaces=false --engine-strict=$(FR
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
 
+.PHONY: agent-skills-check
+agent-skills-check:
+	$(PYTHON) scripts/check_agent_skills.py
+	$(PYTHON) -m unittest discover -s scripts/tests -p test_agent_skills.py
+
 launch:
 	bash scripts/launch-workbench.sh start
 

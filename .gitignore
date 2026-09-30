@@ -101,4 +101,11 @@ frontend/screenshot*.mjs
 .playwright-cli/
 .playwright-mcp/
 .agents/
+!/.agents/
+/.agents/*
+!/.agents/skills/
+!/.agents/MAINTENANCE.md
 .claude/
+!/.claude/
+/.claude/*
+!/.claude/skills/
