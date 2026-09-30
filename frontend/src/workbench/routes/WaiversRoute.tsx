@@ -13,6 +13,7 @@ import {
   waiverScopeLabel,
 } from "../../lib/waiver-view"
 import { useWorkbenchContext } from "../WorkbenchContext"
+import { useProjectChangeReset } from "../useProjectChangeReset"
 import { waiverDebtRows, waiverDebtSummaryRows } from "../route-utils"
 import {
   useProjectGovernanceRollupsQuery,
@@ -24,13 +25,8 @@ import { invalidateProjectScopedWorkbenchQueries } from "../workbench-query-keys
 
 function WaiversRouteContent() {
   const queryClient = useQueryClient()
-  const {
-    projectListLoading,
-    projects,
-    selectedProject,
-    selectedProjectId,
-    setSelectedProjectId,
-  } = useWorkbenchContext()
+  const { projectListLoading, projects, selectedProject, selectedProjectId } =
+    useWorkbenchContext()
   const queryProjectId = selectedProjectId
   const projectSummaryQuery = useProjectSummaryQuery(queryProjectId)
   const projectGovernanceRollupsQuery =
@@ -54,6 +50,12 @@ function WaiversRouteContent() {
   const [waiverDrawerMode, setWaiverDrawerMode] =
     useState<WaiverDrawerMode>(null)
   const [selectedWaiverId, setSelectedWaiverId] = useState("")
+  useProjectChangeReset(selectedProjectId, () => {
+    setWaiverDrawerMode(null)
+    setSelectedWaiverId("")
+    setWaiverActionMessage("")
+    setWaiverActionError("")
+  })
   const waiverDrawerModeRef = useRef(waiverDrawerMode)
   const createWaiverMutation = useMutation({
     mutationFn: ({
@@ -235,13 +237,6 @@ function WaiversRouteContent() {
         onCreateWaiver={createWaiver}
         onExpireWaiver={(waiver) => void expireWaiver(waiver)}
         onFieldChange={updateWaiverFormField}
-        onProjectChange={(projectId) => {
-          setSelectedProjectId(projectId)
-          setWaiverDrawerMode(null)
-          setSelectedWaiverId("")
-          setWaiverActionMessage("")
-          setWaiverActionError("")
-        }}
         onRefreshWaivers={refreshWaivers}
         onReviewFieldChange={updateWaiverEditFormField}
         onUpdateWaiver={updateWaiver}

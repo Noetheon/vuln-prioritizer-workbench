@@ -24,25 +24,25 @@ type DashboardRecommendedActionsPanelProps = {
 const RECOMMENDED_ACTIONS: readonly {
   icon: LucideIcon
   label: string
-  to: "/" | "/findings" | "/waivers" | "/reports" | "/imports"
+  to: "/" | "/triage" | "/risk-acceptance" | "/evidence" | "/imports"
   tone: VpwBadgeTone
 }[] = [
   {
     icon: ListChecks,
     label: "Review critical items in Triage",
-    to: "/findings",
+    to: "/triage",
     tone: "critical",
   },
   {
     icon: FileCheck2,
     label: "Accept or document risk",
-    to: "/waivers",
+    to: "/risk-acceptance",
     tone: "success",
   },
   {
     icon: FileArchive,
     label: "Generate evidence bundle",
-    to: "/reports",
+    to: "/evidence",
     tone: "support",
   },
   {

@@ -22,13 +22,13 @@ const WORKFLOW_LINKS = [
     detail: "Prioritize findings",
     icon: ListChecks,
     label: "Triage",
-    to: "/findings",
+    to: "/triage",
   },
   {
     detail: "Generate artifacts",
     icon: FileCheck2,
     label: "Evidence",
-    to: "/reports",
+    to: "/evidence",
   },
   {
     detail: "Review posture",

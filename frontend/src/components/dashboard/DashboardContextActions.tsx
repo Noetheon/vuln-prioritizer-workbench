@@ -94,7 +94,7 @@ export function DashboardContextActions({
             className="w-full justify-center sm:w-auto"
             variant="outline"
           >
-            <Link search={projectSearch} to="/reports">
+            <Link search={projectSearch} to="/evidence">
               <BellRing aria-hidden="true" data-icon="inline-start" />
               Generate evidence
             </Link>

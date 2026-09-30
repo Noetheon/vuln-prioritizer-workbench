@@ -138,7 +138,7 @@ export function ProvidersContext({
                 Refresh status
               </Button>
               <Button asChild variant="outline">
-                <Link search={projectSearch} to="/reports">
+                <Link search={projectSearch} to="/evidence">
                   <FileText aria-hidden="true" data-icon="inline-start" />
                   Open Evidence Center
                 </Link>

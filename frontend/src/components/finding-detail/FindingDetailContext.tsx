@@ -10,6 +10,7 @@ import {
   StatusLozenge,
   VpwCommandPanel,
 } from "@/components/vpw"
+import { PriorityPolicyLink } from "@/components/findings/PriorityPolicyLink"
 import { slaDueSummary } from "@/lib/finding-sla-due"
 import { formatEpss, formatNullableNumber } from "@/lib/risk-format"
 
@@ -76,7 +77,11 @@ export function FindingDetailContext({
           : due?.tone === "warning"
             ? "warning"
             : "success",
-      value: findingSlaLabel(finding),
+      value: (
+        <PriorityPolicyLink projectId={finding.project_id}>
+          {findingSlaLabel(finding)}
+        </PriorityPolicyLink>
+      ),
     },
   ]
 

@@ -36,9 +36,7 @@ export type RemediationQueueProps = {
   findingAssetKey: string | null
   selectedProject: ProjectPublic | null
   projects: ProjectPublic[]
-  projectListLoading: boolean
   projectListError: string
-  selectedProjectId: string
   projectSummary: ProjectDecisionSummaryPublic | null
   // Counts across every page of the filtered list.
   findingsSummary?: FindingsSummaryPublic | null
@@ -57,7 +55,6 @@ export type RemediationQueueProps = {
   onPageNext: () => void
   onPagePrev: () => void
   onPageSizeChange: (size: number) => void
-  onProjectChange: (id: string) => void
   onSavedViewChange: (view: FindingsSavedView) => void
 }
 
@@ -76,9 +73,7 @@ export function RemediationQueue({
   findingAssetKey,
   selectedProject,
   projects,
-  projectListLoading,
   projectListError,
-  selectedProjectId,
   projectSummary,
   findingsSummary = null,
   findingSearch,
@@ -90,7 +85,6 @@ export function RemediationQueue({
   onPageNext,
   onPagePrev,
   onPageSizeChange,
-  onProjectChange,
   onSavedViewChange,
 }: RemediationQueueProps) {
   const ownerServiceFilter = findingFilters.ownerService
@@ -217,15 +211,12 @@ export function RemediationQueue({
     onPageNext,
     onPagePrev,
     onPageSizeChange,
-    onProjectChange,
     onSavedViewChange,
     onSortDirectionChange,
     projectListError,
-    projectListLoading,
     projectSummary,
     projects,
     selectedProject,
-    selectedProjectId,
   }
 
   return (

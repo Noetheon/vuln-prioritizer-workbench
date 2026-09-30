@@ -15,6 +15,9 @@ test("a fresh install opens with the setup checklist", async ({ page }) => {
   ).toBeVisible()
   // Nothing to import into or report on until a project exists.
   await expect(checklist.getByRole("link")).toHaveCount(0)
+  await expect(
+    page.getByRole("combobox", { exact: true, name: "Project" }),
+  ).toHaveCount(0)
   await expect(page.getByRole("link", { name: "Import findings" })).toHaveCount(
     0,
   )

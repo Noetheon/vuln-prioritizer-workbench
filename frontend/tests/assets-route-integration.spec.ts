@@ -73,7 +73,7 @@ test("assets route uses inventory table with drawer modes", async ({ page }) => 
   ).toContainText("CVE-2024-3094")
   await expect(
     findingsDrawer.getByRole("link", { name: "Open findings" }),
-  ).toHaveAttribute("href", /\/findings\?.*assetId=asset-1/)
+  ).toHaveAttribute("href", /\/triage\?.*assetId=asset-1/)
   await page.getByRole("button", { name: "Close" }).click()
 
   await buildHostRow.getByRole("button", { name: "Edit" }).click()

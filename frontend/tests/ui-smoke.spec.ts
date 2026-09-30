@@ -45,7 +45,7 @@ test("smoke: imports renders", async ({ page }) => {
 test("smoke: findings renders", async ({ page }) => {
   test.setTimeout(30_000)
   await openWorkbench(page)
-  await page.goto("/findings")
+  await page.goto("/triage")
   await expect(
     page.getByRole("region", { name: "Findings filters" }),
   ).toBeVisible()
@@ -54,7 +54,7 @@ test("smoke: findings renders", async ({ page }) => {
 test("smoke: evidence center renders", async ({ page }) => {
   test.setTimeout(30_000)
   await openWorkbench(page)
-  await page.goto("/reports")
+  await page.goto("/evidence")
   await expect(
     page.getByRole("heading", { level: 1, name: "Evidence Center" }),
   ).toBeVisible()
@@ -70,7 +70,7 @@ test("smoke: evidence center renders", async ({ page }) => {
 test("smoke: providers renders", async ({ page }) => {
   test.setTimeout(30_000)
   await openWorkbench(page)
-  await page.goto("/providers")
+  await page.goto("/data-sources")
   await expect(
     page.getByRole("heading", { level: 1, name: "Data Sources" }),
   ).toBeVisible()

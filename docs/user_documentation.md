@@ -49,6 +49,33 @@ Use the [support matrix](support_matrix.md) before wiring imports or reports
 into local automation. It lists supported input formats, output contracts, and
 Workbench coverage.
 
+## Workbench Pages
+
+The menu follows the work, from setup to reporting. Each page's address uses
+its menu name.
+
+| Menu | Address | What it is for |
+| --- | --- | --- |
+| Overview | `/` | Open risk, setup checklist, and the next remediation work. |
+| Projects | `/projects` | Create, rename, or delete projects. |
+| Imports | `/imports` | Import scanner reports, SBOMs, and CVE lists; review each run. |
+| Assets | `/assets` | Owners, services, exposure, and criticality that shape scores. |
+| Triage | `/triage` | The queue of findings; a finding opens at `/findings/<id>`. |
+| Risk Acceptance | `/risk-acceptance` | Time-bound risk acceptances (waivers) and their reviews. |
+| Priority Policy | `/policy` | The project's priority thresholds and SLA targets. |
+| Evidence Center | `/evidence` | Reports and verifiable evidence bundles. |
+| Data Sources | `/data-sources` | Freshness of NVD, EPSS, and KEV data. |
+| Workspace Settings | `/settings` | Runtime, diagnostics, and configuration. |
+
+Choose the project in the page header; every page then shows that project.
+Switching keeps your Triage filters but starts the list at its first page,
+and from a finding or an import run it returns to Triage or Imports.
+
+Bookmarks from earlier versions keep working: `/findings`, `/reports`,
+`/waivers`, and `/providers` redirect to the pages above. The API keeps its
+own resource names (`/api/v1/.../findings`, `/reports`, `/waivers`,
+`/providers`).
+
 ## Local Workbench Demo
 
 Use this path when you want a reproducible browser demo without customer data
@@ -139,9 +166,10 @@ hidden replacement for the base CVSS, EPSS, and KEV decision rule.
 ### Project priority policy
 
 Each project can change the thresholds of that rule and the SLA each priority
-gets: open **Projects**, choose **Settings** for the project, then
-**Configuration > Priority policy** (or `GET`/`PUT
-/api/v1/projects/{project_id}/policy`). Saving records a new policy version and,
+gets on the **Priority Policy** page (`/policy`). The SLA figures on a
+finding and in the Triage quick view, and "Why this priority?", link to it.
+The same form is under **Projects > Settings > Configuration**, and the API is
+`GET`/`PUT /api/v1/projects/{project_id}/policy`. Saving records a new policy version and,
 by default, re-evaluates the project's findings. New imports use the current
 policy. Every decision records the policy it was evaluated with, so replays and
 reports stay reproducible; findings keep their old policy until they are

@@ -56,7 +56,7 @@ test("critical Workbench evidence flow works across browser engines", async ({
     headers,
   })
 
-  await page.goto(`/reports?projectId=${project.id}&runId=${run.id}`)
+  await page.goto(`/evidence?projectId=${project.id}&runId=${run.id}`)
   await expect(
     page.getByRole("heading", { level: 1, name: "Evidence Center" }),
   ).toBeVisible()
@@ -98,7 +98,7 @@ test("critical Workbench evidence flow works across browser engines", async ({
   }
 
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto(`/reports?projectId=${project.id}&runId=${run.id}`)
+  await page.goto(`/evidence?projectId=${project.id}&runId=${run.id}`)
   await expect(
     page.getByRole("heading", { level: 1, name: "Evidence Center" }),
   ).toBeVisible()

@@ -17,7 +17,7 @@ test("findings route renders the empty live queue without demo data", async ({
   page,
 }) => {
   await routeWorkbenchShell(page)
-  await page.goto("/findings")
+  await page.goto("/triage")
 
   await expect(page.getByText("Demo preview")).toHaveCount(0)
   await expect(
@@ -88,7 +88,7 @@ test("providers route shows provider failures without placeholder source rows", 
 }) => {
   await routeWorkbenchShell(page, { providerStatusError: true })
 
-  await page.goto("/providers")
+  await page.goto("/data-sources")
 
   await expect(page.getByText("Provider data unavailable")).toBeVisible()
   await expect(
@@ -125,7 +125,7 @@ test("malformed finding detail URL fails closed without app crash", async ({
   page.on("pageerror", (error) => pageErrors.push(error))
   await routeWorkbenchShell(page)
 
-  await page.goto("/findings")
+  await page.goto("/triage")
   await page.evaluate(() => {
     window.history.pushState({}, "", "/findings/%E0%A4%A")
     window.dispatchEvent(new PopStateEvent("popstate"))
@@ -147,7 +147,7 @@ test("workbench shell renders when localStorage access is blocked", async ({
   })
   await routeWorkbenchShell(page)
 
-  await page.goto("/findings")
+  await page.goto("/triage")
 
   await expect(
     page.getByRole("region", { name: "Findings filters" }),
@@ -190,7 +190,7 @@ test("findings table owns horizontal scroll without page overflow", async ({
     projects: [mockProject],
   })
 
-  await page.goto("/findings")
+  await page.goto("/triage")
 
   await expect(
     page.getByRole("table", { name: "Findings remediation queue" }),
@@ -240,7 +240,7 @@ test("findings URL search state survives reload and drives API params", async ({
   })
 
   await page.goto(
-    "/findings?projectId=project-1&assetId=asset-1&assetKey=build-host-1&ownerService=payments&priority=critical&status=open&kev=true&exposure=internet-facing&epssMin=0.7&cvssMin=9&sort=score&direction=desc&limit=10&offset=10",
+    "/triage?projectId=project-1&assetId=asset-1&assetKey=build-host-1&ownerService=payments&priority=critical&status=open&kev=true&exposure=internet-facing&epssMin=0.7&cvssMin=9&sort=score&direction=desc&limit=10&offset=10",
   )
 
   await expect(page.getByLabel("Owner / Service")).toHaveValue("payments")
@@ -315,7 +315,7 @@ test("findings controls update canonical URLs and preserve detail back context",
     projects: [mockProject],
   })
 
-  await page.goto("/findings?assetId=asset-1&assetKey=build-host-1")
+  await page.goto("/triage?assetId=asset-1&assetKey=build-host-1")
   await page.getByRole("button", { name: "Clear asset filter" }).click()
   await expect(page).not.toHaveURL(/assetId=/)
 
@@ -370,7 +370,7 @@ test("findings controls update canonical URLs and preserve detail back context",
   await expect(page).toHaveURL(/\/findings\/finding-10\?/)
   await expect(page).toHaveURL(/priority=critical/)
   await page.getByRole("link", { name: "Back to Triage" }).click()
-  await expect(page).toHaveURL(/\/findings\?/)
+  await expect(page).toHaveURL(/\/triage\?/)
   await expect(page).toHaveURL(/priority=critical/)
   await expect(page).toHaveURL(/sort=score/)
   await expect(page).toHaveURL(/offset=10/)
@@ -425,7 +425,7 @@ test("findings detail, drawer preview, and scroll evidence are covered", async (
     }),
   )
 
-  await page.goto("/findings?priority=critical&sort=score&direction=desc")
+  await page.goto("/triage?priority=critical&sort=score&direction=desc")
 
   const scrollRegion = page.getByRole("region", {
     name: "Findings table scroll region",
@@ -551,7 +551,7 @@ test("findings detail, drawer preview, and scroll evidence are covered", async (
   await captureAuditScreenshot(page, "vpw-aud-204-finding-detail-1440.png")
 
   await page.getByRole("link", { name: "Back to Triage" }).click()
-  await expect(page).toHaveURL(/\/findings\?/)
+  await expect(page).toHaveURL(/\/triage\?/)
   await expect(page).toHaveURL(/sort=score/)
   await expect(page).toHaveURL(/priority=critical/)
 })
@@ -633,7 +633,7 @@ test("findings loading and disabled control semantics are observable", async ({
     projects: [mockProject],
   })
 
-  await page.goto("/findings")
+  await page.goto("/triage")
 
   const loadingRegion = page.getByRole("status", { name: "Loading findings" })
   await expect(loadingRegion).toBeVisible()
@@ -666,10 +666,10 @@ test("invalid findings URL params are normalized before API requests", async ({
   })
 
   await page.goto(
-    "/findings?sort=invalid&direction=sideways&limit=999&offset=-5&priority=urgent&epssMin=nope&cvssMax=42&assetKey=orphan",
+    "/triage?sort=invalid&direction=sideways&limit=999&offset=-5&priority=urgent&epssMin=nope&cvssMax=42&assetKey=orphan",
   )
 
-  await expect(page).toHaveURL(/\/findings(?:\?.*)?$/)
+  await expect(page).toHaveURL(/\/triage(?:\?.*)?$/)
   await expect
     .poll(() => requests.at(-1)?.searchParams.get("sort"))
     .toBe("operational")
@@ -700,7 +700,7 @@ test("triage selection closes findings with a recorded reason", async ({
     projects: [mockProject],
   })
 
-  await page.goto("/findings")
+  await page.goto("/triage")
   const table = page.getByRole("table", { name: "Findings remediation queue" })
   await expect(table).toContainText("CVE-2021-44228")
   await expect(
@@ -804,7 +804,7 @@ test("SLA due dates flag overdue work and filter the queue", async ({
     projects: [mockProject],
   })
 
-  await page.goto("/findings")
+  await page.goto("/triage")
   const table = page.getByRole("table", { name: "Findings remediation queue" })
   await expect(table.getByText(/^Overdue since /)).toBeVisible()
 
@@ -842,7 +842,7 @@ test("triage lists open work by default and its tiles count the filtered list", 
     projects: [mockProject],
   })
 
-  await page.goto("/findings")
+  await page.goto("/triage")
   const table = page.getByRole("table", { name: "Findings remediation queue" })
   await expect(table.getByText(mockFinding.cve_id)).toBeVisible()
   await expect(table.getByText("CVE-2021-44228")).toHaveCount(0)

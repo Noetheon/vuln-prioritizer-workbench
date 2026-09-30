@@ -18,10 +18,6 @@ import { EvidenceGenerateDrawer } from "./EvidenceGenerateDrawer"
 
 export type EvidenceCenterProps = {
   selectedProject: ProjectPublic | null
-  selectedProjectId: string
-  projects: ProjectPublic[]
-  projectListLoading: boolean
-  onProjectChange: (id: string) => void
   selectedRunId: string
   currentStateSelected?: boolean
   onRunIdChange: (id: string) => void
@@ -63,14 +59,11 @@ export function EvidenceCenter({
   historyReportsLoading,
   onCreateReport,
   onDownloadReport,
-  onProjectChange,
   onRunIdChange,
   onVerifyReport,
   projectListError,
-  projectListLoading,
   projectRuns,
   projectSummary,
-  projects,
   providerStatus,
   reportActionError,
   reportActionMessage,
@@ -83,7 +76,6 @@ export function EvidenceCenter({
   runsError,
   runsLoading,
   selectedProject,
-  selectedProjectId,
   selectedReportRun,
   selectedRunId,
   selectedRunSummary,
@@ -121,16 +113,12 @@ export function EvidenceCenter({
         currentStateSelected={currentStateSelected}
         onOpenGenerateDrawer={() => setGenerateDrawerOpen(true)}
         projectFindingCount={projectSummary?.finding_count ?? null}
-        onProjectChange={onProjectChange}
         onRunIdChange={onRunIdChange}
         providerStatus={providerStatus}
         projectRuns={projectRuns}
-        projects={projects}
-        projectListLoading={projectListLoading}
         reportActionsEnabled={runtimeReportActionsEnabled}
         runsLoading={runsLoading}
         selectedProject={selectedProject}
-        selectedProjectId={selectedProjectId}
         selectedReportRun={selectedReportRun}
         selectedRunId={selectedRunId}
         selectedRunSummary={selectedRunSummary}

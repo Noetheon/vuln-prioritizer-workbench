@@ -118,7 +118,6 @@ function DashboardRouteContainer() {
       }
       isManagedDemoWorkspace={isManagedDemoWorkspace}
       onLoadDemoWorkspace={() => void activateDemoWorkspace(false)}
-      onProjectChange={setSelectedProjectId}
       onRefresh={refreshDashboard}
       onResetDemoWorkspace={() => void activateDemoWorkspace(true)}
       projectListLoading={projectListLoading}

@@ -79,12 +79,10 @@ export type AssetsWorkbenchProps = {
   ) => void
   projectLoading: boolean
   projects: ProjectPublic[]
-  projectSelectDisabled: boolean
   providerStatus: ProviderStatusPublic | null
   recalculateAsset: (asset: AssetPublic) => Promise<void>
   refreshAssets: (preferredAssetId?: string) => Promise<void>
   saveAsset: (event: FormEvent<HTMLFormElement>) => Promise<void>
-  selectProject: (projectId: string) => void
   selectedAsset: AssetPublic | null
   selectedAssetId: string
   selectedHighestPriority: string
@@ -135,7 +133,7 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
                   Import assets
                 </Button>
                 <Button asChild variant="outline">
-                  <Link search={projectSearch} to="/findings">
+                  <Link search={projectSearch} to="/triage">
                     <ListChecks aria-hidden="true" data-icon="inline-start" />
                     View findings
                   </Link>
@@ -196,10 +194,7 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
         openImportAssets={() => state.openAssetDrawer("import")}
         projectLoading={state.projectLoading}
         projects={state.projects}
-        projectSelectDisabled={state.projectSelectDisabled}
-        selectProject={state.selectProject}
         selectedProject={state.selectedProject}
-        selectedProjectId={state.selectedProjectId}
         setAssetCriticalityFilter={state.setAssetCriticalityFilter}
         setAssetEnvironmentFilter={state.setAssetEnvironmentFilter}
         setAssetExposureFilter={state.setAssetExposureFilter}

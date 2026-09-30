@@ -81,7 +81,7 @@ const allAuditRoutes: AuditRoute[] = [
   },
   {
     name: "Triage",
-    path: ({ project_id }) => `/findings?projectId=${project_id}`,
+    path: ({ project_id }) => `/triage?projectId=${project_id}`,
     readyText: /Prioritized findings|Findings queue/i,
     slug: "triage",
     stableText: /Showing|CVE-/,
@@ -133,21 +133,21 @@ const allAuditRoutes: AuditRoute[] = [
   },
   {
     name: "Data Sources",
-    path: ({ project_id }) => `/providers?projectId=${project_id}`,
+    path: ({ project_id }) => `/data-sources?projectId=${project_id}`,
     readyText: /Provider status|Source inventory/i,
     slug: "providers",
     stableText: /Source inventory|Provider diagnostics/,
   },
   {
     name: "Risk Acceptance",
-    path: ({ project_id }) => `/waivers?projectId=${project_id}`,
+    path: ({ project_id }) => `/risk-acceptance?projectId=${project_id}`,
     readyText: /Decision register|Accepted risk control center/i,
     slug: "waivers",
     stableText: /DEMO-RISK|No accepted-risk lifecycle debt/,
   },
   {
     name: "Evidence Center",
-    path: ({ project_id }) => `/reports?projectId=${project_id}`,
+    path: ({ project_id }) => `/evidence?projectId=${project_id}`,
     readyText: /Evidence summary|Generated artifacts/i,
     slug: "reports",
     stableText: /Generated artifacts|evidence-bundle\.zip/,

@@ -85,12 +85,6 @@ export function useFindingsRouteState({
     )
   }
 
-  function resetFindingOffset() {
-    onSearchChange(
-      updateFindingsSearch(search, { offset: 0 }, { resetOffset: false }),
-    )
-  }
-
   return {
     activeFindingFilters: findingsSearchHasActiveFilters(search),
     clearFindingAssetFilter,
@@ -102,7 +96,6 @@ export function useFindingsRouteState({
     findingSort: search.sort,
     nextFindingPage,
     previousFindingPage,
-    resetFindingOffset,
     updateFindingDirection,
     updateFindingFilter,
     updateFindingPageSize,

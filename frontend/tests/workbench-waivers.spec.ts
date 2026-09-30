@@ -65,15 +65,12 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
   const importedRun = (await importResponse.json()) as { id: string }
   await waitForRunSucceeded(page, importedRun.id, { headers })
 
-  await page.goto(`/waivers?projectId=${project.id}`)
+  await page.goto(`/risk-acceptance?projectId=${project.id}`)
   await expect(
     page.getByRole("link", { name: "Risk Acceptance" }),
   ).toBeVisible()
   await expect(
-    page.getByRole("combobox", {
-      exact: true,
-      name: "Risk Acceptance project",
-    }),
+    page.getByRole("combobox", { exact: true, name: "Project" }),
   ).toContainText(projectName)
 
   await page
@@ -128,12 +125,9 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
     path: evidenceScreenshotPath("vpw-064-waiver-risk-acceptance.png"),
   })
 
-  await page.goto(`/waivers?projectId=${project.id}`)
+  await page.goto(`/risk-acceptance?projectId=${project.id}`)
   await expect(
-    page.getByRole("combobox", {
-      exact: true,
-      name: "Risk Acceptance project",
-    }),
+    page.getByRole("combobox", { exact: true, name: "Project" }),
   ).toContainText(projectName)
   await waiversTable
     .getByRole("button", {
@@ -239,12 +233,9 @@ test("workbench governance rollups show service risk and accepted-risk debt", as
     review_due_count: 1,
   })
 
-  await page.goto(`/waivers?projectId=${project.id}`)
+  await page.goto(`/risk-acceptance?projectId=${project.id}`)
   await expect(
-    page.getByRole("combobox", {
-      exact: true,
-      name: "Risk Acceptance project",
-    }),
+    page.getByRole("combobox", { exact: true, name: "Project" }),
   ).toContainText(projectName)
   await expect(page.getByText("Governance overview")).toBeVisible()
   await expect(page.getByText("Review queue").first()).toBeVisible()

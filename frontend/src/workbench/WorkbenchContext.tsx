@@ -28,6 +28,7 @@ import {
 import { useProjectsQuery } from "./useWorkbenchQueries"
 import {
   normalizeSelectedProjectId,
+  projectSwitchLocation,
   searchStringFromUrlSearch,
   selectedProjectIdFromSearch,
   selectedProjectUrlSearch,
@@ -81,12 +82,21 @@ export type WorkbenchContextValue = {
   setSelectedProjectId: Dispatch<SetStateAction<string>>
   status: WorkbenchStatus | null
   statusError: string
+  // Changes project from the header: drops the page and any run, asset,
+  // or finding of the previous project.
+  switchProject: (projectId: string) => void
 }
 
 const WorkbenchContext = createContext<WorkbenchContextValue | null>(null)
 
 function activeSearchString(fallbackSearch: string) {
   return typeof window === "undefined" ? fallbackSearch : window.location.search
+}
+
+function activePathname(fallbackPathname: string) {
+  return typeof window === "undefined"
+    ? fallbackPathname
+    : window.location.pathname
 }
 
 export function WorkbenchProvider({ children }: { children: ReactNode }) {
@@ -184,6 +194,21 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     urlSelectedProjectId,
   ])
 
+  const switchProject = useCallback(
+    (nextProjectId: string) => {
+      persistSelectedProjectId(nextProjectId)
+      setSelectedProjectIdState(nextProjectId)
+      void navigate(
+        projectSwitchLocation(
+          activePathname(location.pathname),
+          activeSearchString(location.searchStr),
+          nextProjectId,
+        ),
+      )
+    },
+    [location.pathname, location.searchStr, navigate],
+  )
+
   const refreshProjects = useCallback(
     async (preferredProjectId?: string) => {
       await invalidateWorkbenchProjectQueries(queryClient)
@@ -227,6 +252,7 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
       setSelectedProjectId,
       status: statusQuery.data ?? null,
       statusError: statusQuery.isError ? "Data services unavailable" : "",
+      switchProject,
     }),
     [
       capabilitiesQuery.data,
@@ -250,6 +276,7 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
       setSelectedProjectId,
       statusQuery.data,
       statusQuery.isError,
+      switchProject,
     ],
   )
 

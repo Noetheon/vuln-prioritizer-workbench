@@ -161,7 +161,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   )
 
   await navigation.getByRole("link", { name: "Data Sources" }).click()
-  await expect(page).toHaveURL(/\/providers(?:\?.*)?$/)
+  await expect(page).toHaveURL(/\/data-sources(?:\?.*)?$/)
   await expect(
     page.getByRole("heading", { level: 1, name: "Data Sources" }),
   ).toBeVisible()
@@ -211,7 +211,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   })
 
   await navigation.getByRole("link", { name: "Evidence Center" }).click()
-  await expect(page).toHaveURL(/\/reports(?:\?.*)?$/)
+  await expect(page).toHaveURL(/\/evidence(?:\?.*)?$/)
   await expect(
     page.getByRole("heading", { level: 1, name: "Evidence Center" }),
   ).toBeVisible()
@@ -469,12 +469,13 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(
     page.getByRole("heading", { level: 1, name: "Assets" }),
   ).toBeVisible()
-  const assetsProjectSelect = page.getByLabel("Assets project", {
+  const projectSwitcher = page.getByRole("combobox", {
     exact: true,
+    name: "Project",
   })
-  await expect(assetsProjectSelect).toBeVisible()
-  await selectRadixOption(page, assetsProjectSelect, project.name)
-  await expect(assetsProjectSelect).toContainText(project.name)
+  await expect(projectSwitcher).toBeVisible()
+  await selectRadixOption(page, projectSwitcher, project.name)
+  await expect(projectSwitcher).toContainText(project.name)
   await page.getByRole("button", { name: "Add asset" }).click()
   const createAssetDrawer = page.getByRole("dialog", { name: "Add asset" })
   await expect(createAssetDrawer).toBeVisible()
@@ -608,7 +609,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await linkedFindingsDrawer
     .getByRole("link", { name: "Open findings" })
     .click()
-  await expect(page).toHaveURL(/\/findings\?.*assetId=/)
+  await expect(page).toHaveURL(/\/triage\?.*assetId=/)
   await expect(
     page.getByRole("button", { name: "Clear asset filter" }),
   ).toBeVisible()
@@ -637,10 +638,10 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     path: evidenceScreenshotPath("vpw-044-finding-context.png"),
   })
   await page.getByRole("link", { name: "Back to Triage" }).click()
-  await expect(page).toHaveURL(/\/findings(?:\?.*)?$/)
+  await expect(page).toHaveURL(/\/triage(?:\?.*)?$/)
 
   await navigation.getByRole("link", { name: "Assets" }).click()
-  await selectRadixOption(page, assetsProjectSelect, project.name)
+  await selectRadixOption(page, projectSwitcher, project.name)
   const recalculationRow = assetsTable.locator("tbody tr").filter({
     hasText: "build-host-1",
   })
@@ -726,7 +727,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(diagnostics.getByText("not-a-cve").first()).toBeVisible()
   await page.keyboard.press("Escape")
   await navigation.getByRole("link", { name: "Triage" }).click()
-  await expect(page).toHaveURL(/\/findings(?:\?.*)?$/)
+  await expect(page).toHaveURL(/\/triage(?:\?.*)?$/)
   await expect(
     page.getByRole("region", { name: "Findings filters" }),
   ).toBeVisible()
@@ -801,7 +802,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     path: evidenceScreenshotPath("vpw-043-finding-detail.png"),
   })
   await page.getByRole("link", { name: "Back to Triage" }).click()
-  await expect(page).toHaveURL(/\/findings(?:\?.*)?$/)
+  await expect(page).toHaveURL(/\/triage(?:\?.*)?$/)
   await expect(findingsTable).toBeVisible()
   const findingsFilters = page.getByRole("region", { name: "Findings filters" })
 

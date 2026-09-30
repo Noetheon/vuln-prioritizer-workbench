@@ -160,7 +160,6 @@ const resetControlContractFiles = [
 ]
 
 const findingsFilterControlContractFiles = [
-  "src/components/findings/RemediationQueueProjectSelect.tsx",
   "src/components/findings/RemediationQueueFilterControls.tsx",
   "src/components/findings/RemediationQueueRangeFilter.tsx",
   "src/components/findings/RemediationQueueSavedViews.tsx",
@@ -751,7 +750,6 @@ test("filter bars keep the Workbench scope-search-filter-action order", () => {
 
   const assets = readProjectFile("src/components/assets/AssetFilters.tsx")
   assertSourceOrder("src/components/assets/AssetFilters.tsx", assets, [
-    'label="Project"',
     'searchTitle="Asset"',
     'label="Service"',
     'label="Owner"',
@@ -775,9 +773,26 @@ test("filter bars keep the Workbench scope-search-filter-action order", () => {
     "src/components/waivers/WaiversWorkbenchRegister.tsx",
   )
   assert.match(waivers, /<VpwFilterBar/)
-  assert.match(waivers, /leading=\{/)
   assert.match(waivers, /searchLabel="Risk acceptance search"/)
   assert.match(waivers, /actions=\{/)
+})
+
+test("pages leave the project choice to the header switcher", () => {
+  for (const path of [
+    "src/components/assets/AssetFilters.tsx",
+    "src/components/dashboard/DashboardContextBar.tsx",
+    "src/components/findings/RemediationQueueFilters.tsx",
+    "src/components/reports/EvidenceCenterRunContext.tsx",
+    "src/components/waivers/WaiversWorkbenchRegister.tsx",
+  ]) {
+    assert.doesNotMatch(
+      readProjectFile(path),
+      /onProjectChange|selectProject\b|label="Project"/,
+      path,
+    )
+  }
+  const shell = readProjectFile("src/workbench/WorkbenchShell.tsx")
+  assert.match(shell, /headerActions=\{<ProjectSwitcher \/>\}/)
 })
 
 test("inventory filter sections use shared filter controls", () => {
