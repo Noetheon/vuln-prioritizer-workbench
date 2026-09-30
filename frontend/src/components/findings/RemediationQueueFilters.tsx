@@ -97,7 +97,10 @@ export function RemediationQueueFilters({
       : null,
     findingFilters.status
       ? {
-          label: `Status: ${labelize(findingFilters.status)}`,
+          label:
+            findingFilters.status === "all"
+              ? "Status: all statuses"
+              : `Status: ${labelize(findingFilters.status)}`,
           onRemove: () => onFilterChange("status", ""),
         }
       : null,

@@ -22,6 +22,7 @@ from app.models import (
     FindingCurrentProjection,
     FindingPriority,
     FindingSlaState,
+    FindingsSummaryPublic,
     FindingStatus,
 )
 from app.models.base import get_datetime_utc
@@ -148,6 +149,54 @@ def list_project_findings_query(
     return list(session.exec(statement).all()), count
 
 
+def project_findings_summary(
+    session: Session,
+    query: FindingPageQuery,
+) -> FindingsSummaryPublic:
+    """Count what a filtered finding list holds across all of its pages."""
+    now = get_datetime_utc()
+    sla_hours = _project_sla_hours(session, query.project_id)
+    filters = _database_finding_filters(query)
+    if query.sla_state is not None:
+        filters.append(
+            _sla_state_filter(FindingSlaState(query.sla_state), sla_hours=sla_hours, now=now)
+        )
+    priority = func.lower(func.coalesce(FindingCurrentProjection.priority, "medium"))
+    in_kev = func.coalesce(FindingCurrentProjection.in_kev, False).is_(True)
+    overdue = _sla_state_filter(FindingSlaState.OVERDUE, sla_hours=sla_hours, now=now)
+    by_priority = session.exec(
+        _summary_select(priority, func.count()).where(*filters).group_by(priority)
+    ).all()
+    kev, open_work, overdue_count = session.exec(
+        _summary_select(
+            _count_where(in_kev), _count_where(_actionable_status_filter()), _count_where(overdue)
+        ).where(*filters)
+    ).one()
+    return FindingsSummaryPublic(
+        by_priority={str(label): int(count) for label, count in by_priority if count},
+        kev=int(kev or 0),
+        open_work=int(open_work or 0),
+        overdue=int(overdue_count or 0),
+    )
+
+
+def _count_where(condition: Any) -> Any:
+    return func.coalesce(func.sum(case((condition, 1), else_=0)), 0)
+
+
+def _summary_select(*columns: Any) -> Any:
+    return (
+        select(*columns)
+        .select_from(Finding)
+        .outerjoin(Asset, col(Finding.asset_id) == col(Asset.id))
+        .outerjoin(Component, col(Finding.component_id) == col(Component.id))
+        .outerjoin(
+            FindingCurrentProjection,
+            col(FindingCurrentProjection.finding_id) == col(Finding.id),
+        )
+    )
+
+
 def _database_finding_filters(query: FindingPageQuery) -> list[Any]:
     filters: list[Any] = [Finding.project_id == query.project_id]
     if query.priority is not None:
@@ -160,6 +209,9 @@ def _database_finding_filters(query: FindingPageQuery) -> list[Any]:
             func.coalesce(FindingCurrentProjection.status, Finding.status)
             == FindingStatus(query.status).value
         )
+    if query.open_work is not None:
+        open_work = _actionable_status_filter()
+        filters.append(open_work if query.open_work else ~open_work)
     if query.kev is not None:
         filters.append(func.coalesce(FindingCurrentProjection.in_kev, False) == query.kev)
     if query.asset_id is not None:

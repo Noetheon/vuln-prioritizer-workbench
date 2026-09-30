@@ -45,6 +45,7 @@ function DashboardRouteContainer() {
   const projectDashboard = projectDashboardQuery.data ?? null
   const projectSummary = projectDashboard?.summary ?? null
   const riskReduction = projectDashboard?.risk_reduction ?? null
+  const kpis = projectDashboard?.kpis ?? null
   const dashboardFindings =
     projectDashboard?.findings.remediation_queue.data ?? []
   const dashboardSignalCounts = projectDashboard
@@ -115,6 +116,7 @@ function DashboardRouteContainer() {
       providerStatus={providerStatus}
       providerStatusError={providerStatusError || statusError}
       providerStatusLoading={providerStatusLoading}
+      kpis={kpis}
       riskReduction={riskReduction}
       runsLoading={
         projectDashboardQuery.isLoading || projectDashboardQuery.isFetching

@@ -325,6 +325,14 @@ tbody tr:last-child td { border-bottom: 0; }
 .risk-index[data-tone="warning"] .risk-index-value { color: var(--amber); }
 .risk-index[data-tone="success"] .risk-index-value { color: var(--green); }
 .risk-index-band { margin: 0 0 12px; font-weight: 680; color: var(--text-secondary); }
+.risk-scenario-kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 10px 0 4px;
+  color: var(--text-secondary);
+}
+.risk-scenario-kpis strong { color: var(--text-primary); }
 .risk-gauge {
   position: relative;
   height: 8px;

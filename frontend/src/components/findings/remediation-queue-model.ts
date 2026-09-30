@@ -25,6 +25,7 @@ export type QueueSort = FindingsSort | "component" | "owner"
 export type KevFilter = "" | "true" | "false"
 export type FindingsSavedView =
   | "all"
+  | "custom"
   | "immediate"
   | "overdue"
   | "kev"
@@ -36,7 +37,7 @@ export const findingsSavedViewOptions: Array<{
   label: string
   value: FindingsSavedView
 }> = [
-  { label: "All", value: "all" },
+  { label: "Open work", value: "all" },
   { label: "Immediate", value: "immediate" },
   { label: "Overdue", value: "overdue" },
   { label: "KEV", value: "kev" },
@@ -59,7 +60,8 @@ export type FindingFilters = {
   priority: "" | FindingPriority
   query: string
   sla: "" | FindingSlaState
-  status: "" | FindingStatus
+  // "" lists open work (the default); "all" lists every status.
+  status: "" | "all" | FindingStatus
 }
 
 const apiSortValues: readonly FindingsSort[] = [
@@ -138,7 +140,7 @@ export function savedViewFromFilters(
   if (filters.priority === "critical" && filters.status === "open") {
     return "immediate"
   }
-  return "all"
+  return filters.status === "" ? "all" : "custom"
 }
 
 function dateSortValue(value: string | null | undefined) {

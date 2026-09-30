@@ -721,18 +721,24 @@ def _assert_demo_totals_are_coherent(
     assert len(waivers) == 4
     assert {report["filename"] for report in reports} == EXPECTED_REPORT_FILENAMES
 
+    # Overview tiles count open work only.
+    open_work = [
+        finding for finding in findings if finding["status"] in {"open", "in_review", "remediating"}
+    ]
     epss_bucket_counts = {
-        "low": sum(1 for finding in findings if _epss_in_range(finding, 0, 0.25)),
-        "medium": sum(1 for finding in findings if _epss_in_range(finding, 0.25, 0.5)),
-        "high": sum(1 for finding in findings if _epss_in_range(finding, 0.5, 0.7)),
-        "critical": sum(1 for finding in findings if _epss_in_range(finding, 0.7, None)),
+        "low": sum(1 for finding in open_work if _epss_in_range(finding, 0, 0.25)),
+        "medium": sum(1 for finding in open_work if _epss_in_range(finding, 0.25, 0.5)),
+        "high": sum(1 for finding in open_work if _epss_in_range(finding, 0.5, 0.7)),
+        "critical": sum(1 for finding in open_work if _epss_in_range(finding, 0.7, None)),
     }
     assert signal_counts["epss_buckets"] == epss_bucket_counts
     assert signal_counts["high_epss"] == epss_bucket_counts["critical"]
-    assert sum(signal_counts["epss_buckets"].values()) == summary["epss_hits"]
+    assert sum(signal_counts["epss_buckets"].values()) == sum(
+        1 for finding in open_work if finding["epss"] is not None
+    )
     assert signal_counts["internet_facing_criticals"] == sum(
         1
-        for finding in findings
+        for finding in open_work
         if finding["priority"] == "critical" and finding["exposure"] == "internet-facing"
     )
 

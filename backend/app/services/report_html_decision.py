@@ -23,15 +23,7 @@ from app.services.report_models import (
     ExecutiveReportViewModel,
     MarkdownReportPayload,
     RemediationCampaign,
-    RiskPosture,
 )
-
-_RISK_INDEX_BANDS: dict[str, tuple[str, str]] = {
-    "critical": ("Critical band, immediate action", "critical"),
-    "elevated": ("Elevated band, prioritized remediation", "warning"),
-    "low": ("Low band, routine handling", "success"),
-    "none": ("No open actionable findings to score", "neutral"),
-}
 
 
 def _campaign_scope_sentence(campaigns: Sequence[RemediationCampaign], *, limit: int = 5) -> str:
@@ -51,37 +43,6 @@ def _blankable_html(value: object | None) -> str:
         return ""
     text = str(value).strip()
     return _safe_html(text) if text else ""
-
-
-def _html_risk_index_panel_helper(risk_posture: RiskPosture) -> str:
-    """Render the headline risk index gauge for the decision hero."""
-    index = risk_posture.risk_index
-    label, tone = _RISK_INDEX_BANDS.get(risk_posture.risk_index_band, _RISK_INDEX_BANDS["none"])
-    if index is None:
-        value_html = '<span class="risk-index-value">N/A</span>'
-        needle = ""
-        foot = "No open, non-accepted finding carries a risk score for this run."
-    else:
-        value_html = (
-            f'<span class="risk-index-value">{index}<span class="risk-index-max">/100</span></span>'
-        )
-        needle = f'<span class="risk-gauge-needle" style="left:{index}%;"></span>'
-        foot = (
-            "Mean risk score across "
-            f"{_pluralize(risk_posture.risk_index_population, 'open, non-accepted finding')}. "
-            "Accepted risk, VEX suppressed and fixed-evidence findings are excluded."
-        )
-    return (
-        f'      <div class="risk-index" data-tone="{tone}">\n'
-        '        <span class="status-label">Risk Index, open and non-accepted</span>\n'
-        f"        {value_html}\n"
-        f'        <p class="risk-index-band">{_safe_html(label)}</p>\n'
-        f'        <div class="risk-gauge">{needle}</div>\n'
-        '        <div class="risk-gauge-scale"><span>0 low</span><span>40</span>'
-        "<span>70</span><span>100 crit</span></div>\n"
-        f'        <p class="risk-index-foot">{_safe_html(foot)}</p>\n'
-        "      </div>"
-    )
 
 
 def _html_stale_data_alert_helper(view_model: ExecutiveReportViewModel) -> str:
@@ -403,7 +364,6 @@ __all__ = [
     "_action_plan_rows_helper",
     "_html_action_plan_table_helper",
     "_decision_needed_statement_helper",
-    "_html_risk_index_panel_helper",
     "_html_risk_metric_definitions_helper",
     "_html_stale_data_alert_helper",
     "_html_decision_signoff_helper",

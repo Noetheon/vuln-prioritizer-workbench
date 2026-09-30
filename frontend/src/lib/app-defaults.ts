@@ -78,6 +78,8 @@ export type FindingsDirection = NonNullable<
 export type KevFilter = "" | "true" | "false"
 export type DataGapFilter = "" | "true" | "false"
 export type SlaFilter = "" | FindingSlaState
+// "" lists open work (the default); "all" lists every status.
+export type StatusFilter = "" | "all" | FindingStatus
 
 export type FindingFilters = {
   cvssMax: string
@@ -91,7 +93,7 @@ export type FindingFilters = {
   priority: "" | FindingPriority
   query: string
   sla: SlaFilter
-  status: "" | FindingStatus
+  status: StatusFilter
 }
 
 export const defaultFindingFilters: FindingFilters = {

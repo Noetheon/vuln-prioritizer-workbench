@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from datetime import datetime
+from typing import Any
 
 from app.decision_core.readmodels import (
     DecisionFindingView,
@@ -35,6 +37,12 @@ from app.services.decisions import (
 from app.services.governance_rollups import (
     build_project_governance_rollups_payload,
 )
+from app.services.risk_kpis import (
+    build_project_risk_kpis,
+    is_open_work,
+    latest_closure_times,
+    run_risk_snapshots,
+)
 from app.services.risk_reduction import build_project_risk_reduction_payload
 from app.services.run_workflow_projection import analysis_run_public
 
@@ -48,6 +56,8 @@ def build_project_dashboard_payload(
     waiver_repository: WaiverRepository,
     remediation_limit: int = 5,
     rollup_limit: int = 5,
+    closed_at: Mapping[uuid.UUID, datetime] | None = None,
+    run_snapshots: Mapping[uuid.UUID, Mapping[str, Any]] | None = None,
 ) -> ProjectDashboardPublic:
     """Build the one-call project dashboard aggregate from loaded domain rows."""
     bounded_remediation_limit = max(1, min(remediation_limit, 50))
@@ -88,9 +98,19 @@ def build_project_dashboard_payload(
                 data=[finding_public(finding) for finding in remediation_findings],
                 count=len(actionable_views),
             ),
-            signal_counts=dashboard_signal_counts(finding_views),
+            # Tiles describe open work, like the queue and the KPIs.
+            signal_counts=dashboard_signal_counts(
+                [view for view in finding_views if is_open_work(view)]
+            ),
         ),
-        risk_reduction=build_project_risk_reduction_payload(finding_views, runs=runs),
+        risk_reduction=build_project_risk_reduction_payload(
+            finding_views, runs=runs, run_snapshots=run_snapshots
+        ),
+        kpis=build_project_risk_kpis(
+            finding_views,
+            closed_at=closed_at or {},
+            now=get_datetime_utc(),
+        ),
     )
 
 
@@ -119,6 +139,8 @@ def build_project_dashboard_payload_from_repositories(
         runs=runs,
         waivers=waiver_repository.list_project_waivers(project_id),
         waiver_repository=waiver_repository,
+        closed_at=latest_closure_times(finding_repository.session, project_id),
+        run_snapshots=run_risk_snapshots(finding_repository.session, [run.id for run in runs]),
         remediation_limit=bounded_remediation_limit,
         rollup_limit=rollup_limit,
     )

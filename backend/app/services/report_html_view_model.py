@@ -52,27 +52,25 @@ def _risk_index_helper(
     findings: Sequence[MarkdownReportFinding],
 ) -> tuple[float, str, int]:
     """
-    Compute the mean risk score across open, non-accepted findings as a 0-100 index.
+    Return the average score of open, non-accepted findings, its band, and their count.
 
-    Accepted-risk, VEX-suppressed and fixed-evidence findings are excluded so the index
-    reflects only the open posture management still owns. Returns the rounded index, its
-    severity band and the population it was averaged over.
+    Accepted-risk, VEX-suppressed and fixed-evidence findings are excluded. The band
+    follows what is open (any KEV or Critical finding is critical, any High is
+    elevated), because an average is diluted by low-scored findings.
     """
-    scores = [
-        max(float(finding.risk_score or 0.0), 0.0)
-        for finding in findings
-        if _is_actionable_finding(finding)
-    ]
-    if not scores:
+    actionable = [finding for finding in findings if _is_actionable_finding(finding)]
+    if not actionable:
         return 0.0, "none", 0
+    scores = [max(float(finding.risk_score or 0.0), 0.0) for finding in actionable]
     index = round(min(sum(scores) / len(scores), 100.0), 3)
-    if index >= 70:
+    priorities = {str(finding.priority or "").lower() for finding in actionable}
+    if "critical" in priorities or any(finding.in_kev for finding in actionable):
         band = "critical"
-    elif index >= 40:
+    elif "high" in priorities:
         band = "elevated"
     else:
         band = "low"
-    return index, band, len(scores)
+    return index, band, len(actionable)
 
 
 def build_executive_report_view_model(

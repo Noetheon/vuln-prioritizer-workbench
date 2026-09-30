@@ -318,8 +318,18 @@ class FindingLifecycleEventsPublic(SQLModel):
     count: int = 0
 
 
+class FindingsSummaryPublic(SQLModel):
+    """Counts across every page of a filtered finding list."""
+
+    by_priority: dict[str, int] = Field(default_factory=dict)
+    kev: int = 0
+    open_work: int = 0
+    overdue: int = 0
+
+
 class FindingsPublic(SQLModel):
     """Paginated finding collection response."""
 
     data: list[FindingPublic]
     count: int
+    summary: FindingsSummaryPublic | None = None

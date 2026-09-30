@@ -1221,6 +1221,7 @@ function mockFindingsPage(findings: MockFinding[], url: URL) {
   const ownerService = url.searchParams.get("owner_service")?.trim().toLowerCase()
   const query = url.searchParams.get("q")?.trim().toLowerCase()
   const kev = boolParam(url, "kev")
+  const openWork = boolParam(url, "open_work")
   const assetId = url.searchParams.get("asset_id")
   const epssMin = numericParam(url, "epss_min")
   const epssMax = numericParam(url, "epss_max")
@@ -1233,6 +1234,7 @@ function mockFindingsPage(findings: MockFinding[], url: URL) {
   const filtered = findings.filter((finding) => {
     if (priority && finding.priority !== priority) return false
     if (status && finding.status !== status) return false
+    if (openWork !== null && isMockOpenWork(finding) !== openWork) return false
     if (exposure && finding.exposure !== exposure) return false
     if (kev !== null && finding.in_kev !== kev) return false
     if (assetId && finding.asset_id !== assetId) return false
@@ -1278,7 +1280,28 @@ function mockFindingsPage(findings: MockFinding[], url: URL) {
   return {
     count: sorted.length,
     data: sorted.slice(offset, offset + limit),
+    summary: boolParam(url, "include_summary")
+      ? {
+          by_priority: countByPriority(sorted),
+          kev: sorted.filter((finding) => finding.in_kev).length,
+          open_work: sorted.filter(isMockOpenWork).length,
+          overdue: sorted.filter((finding) => finding.sla_state === "overdue")
+            .length,
+        }
+      : null,
   }
+}
+
+function countByPriority(findings: MockFinding[]) {
+  const counts: Record<string, number> = {}
+  for (const finding of findings) {
+    counts[finding.priority] = (counts[finding.priority] ?? 0) + 1
+  }
+  return counts
+}
+
+function isMockOpenWork(finding: MockFinding) {
+  return ["open", "in_review", "remediating"].includes(finding.status)
 }
 
 function findingSearchText(finding: MockFinding) {

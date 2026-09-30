@@ -2724,6 +2724,33 @@ export type FindingsPublic = {
      * Data
      */
     data: Array<FindingPublic>;
+    summary?: FindingsSummaryPublic | null;
+};
+
+/**
+ * FindingsSummaryPublic
+ *
+ * Counts across every page of a filtered finding list.
+ */
+export type FindingsSummaryPublic = {
+    /**
+     * By Priority
+     */
+    by_priority?: {
+        [key: string]: number;
+    };
+    /**
+     * Kev
+     */
+    kev?: number;
+    /**
+     * Open Work
+     */
+    open_work?: number;
+    /**
+     * Overdue
+     */
+    overdue?: number;
 };
 
 /**
@@ -4216,6 +4243,7 @@ export type ProjectDashboardPublic = {
      */
     generated_at: string;
     governance: ProjectGovernanceRollupsPublic;
+    kpis?: ProjectRiskKpisPublic;
     /**
      * Project Id
      */
@@ -4503,6 +4531,88 @@ export type ProjectPublic = {
 };
 
 /**
+ * ProjectRiskKpisPublic
+ *
+ * Absolute risk KPIs of a project's open work, as defined in issue #674.
+ */
+export type ProjectRiskKpisPublic = {
+    /**
+     * Accepted Findings
+     */
+    accepted_findings?: number;
+    /**
+     * Accepted Risk
+     */
+    accepted_risk?: number;
+    /**
+     * Closed Findings
+     */
+    closed_findings?: number;
+    /**
+     * Closed With Sla
+     */
+    closed_with_sla?: number;
+    /**
+     * Closed Within Sla
+     */
+    closed_within_sla?: number;
+    /**
+     * Closure Window Days
+     */
+    closure_window_days?: number;
+    /**
+     * Due Soon
+     */
+    due_soon?: number;
+    /**
+     * Mean Open Score
+     */
+    mean_open_score?: number;
+    /**
+     * Metric
+     */
+    metric?: 'open-risk-kpis.v1';
+    /**
+     * Mttr Days
+     */
+    mttr_days?: number | null;
+    /**
+     * Open By Priority
+     */
+    open_by_priority?: {
+        [key: string]: number;
+    };
+    /**
+     * Open Critical
+     */
+    open_critical?: number;
+    /**
+     * Open Findings
+     */
+    open_findings?: number;
+    /**
+     * Open High
+     */
+    open_high?: number;
+    /**
+     * Open Kev
+     */
+    open_kev?: number;
+    /**
+     * Open Risk
+     */
+    open_risk?: number;
+    /**
+     * Overdue
+     */
+    overdue?: number;
+    /**
+     * Sla Compliance Rate
+     */
+    sla_compliance_rate?: number | null;
+};
+
+/**
  * ProjectRiskReductionPublic
  *
  * Risk-reduction opportunities for the project dashboard.
@@ -4536,7 +4646,7 @@ export type ProjectRiskReductionPublic = {
     /**
      * Metric
      */
-    metric?: 'mean-actionable-score.v1';
+    metric?: 'open-risk-sum.v2';
     /**
      * Residual Steps
      */
@@ -5231,13 +5341,29 @@ export type RiskContributionPublic = {
 /**
  * RiskIndexHistoryPointPublic
  *
- * Persisted risk index of one completed analysis run.
+ * Open risk recorded when one analysis run completed.
  */
 export type RiskIndexHistoryPointPublic = {
     /**
      * Finished At
      */
     finished_at: string;
+    /**
+     * Open Critical
+     */
+    open_critical?: number | null;
+    /**
+     * Open Findings
+     */
+    open_findings?: number | null;
+    /**
+     * Open Kev
+     */
+    open_kev?: number | null;
+    /**
+     * Open Risk
+     */
+    open_risk?: number | null;
     /**
      * Risk Index
      */
@@ -7285,11 +7411,23 @@ export type GetApiV1ProjectsByProjectIdFindingsData = {
          */
         sla?: FindingSlaState | null;
         /**
+         * Open Work
+         *
+         * True lists open work (open, in review, remediating); false lists every other status.
+         */
+        open_work?: boolean | null;
+        /**
          * Include Evidence
          *
          * Expand full decision evidence for this page. Detail views include it by default.
          */
         include_evidence?: boolean;
+        /**
+         * Include Summary
+         *
+         * Add counts by priority, KEV, open work, and overdue across every page.
+         */
+        include_summary?: boolean;
     };
     url: '/api/v1/projects/{project_id}/findings/';
 };

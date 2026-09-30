@@ -67,15 +67,18 @@ export function PrimaryFilterSelects({
         </Select>
       </div>
 
-      <div className="findings-filter-field findings-filter-field--select">
+      <div className="findings-filter-field findings-filter-field--select findings-filter-field--status">
         <span className="vpw-label findings-filter-label">
           Status
         </span>
         <Select
           onValueChange={(v) =>
-            onFilterChange("status", v === "__all" ? "" : (v as FindingStatus))
+            onFilterChange(
+              "status",
+              v === "__open" ? "" : (v as "all" | FindingStatus),
+            )
           }
-          value={findingFilters.status || "__all"}
+          value={findingFilters.status || "__open"}
         >
           <SelectTrigger
             aria-label="Status"
@@ -84,7 +87,8 @@ export function PrimaryFilterSelects({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all">All</SelectItem>
+            <SelectItem value="__open">Open work</SelectItem>
+            <SelectItem value="all">All statuses</SelectItem>
             {statusOptions.map((s) => (
               <SelectItem key={s} value={s}>
                 {labelize(s)}

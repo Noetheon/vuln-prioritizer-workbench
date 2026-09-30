@@ -36,3 +36,5 @@ class FindingPageQuery:
     cvss_max: float | None = None
     data_gap: bool | None = None
     sla_state: FindingSlaState | str | None = None
+    # True: open, in review, or remediating; false: every other status.
+    open_work: bool | None = None
