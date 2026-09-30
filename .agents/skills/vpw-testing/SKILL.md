@@ -23,6 +23,9 @@ Known pitfalls:
   contracts. Do not freeze today's storage layout as the required architecture.
 - Provider/network responses and time-dependent inputs need controlled fixtures
   for repeatable tests; live-provider checks are a separate requested exercise.
+- Hold mocked responses until transient UI-state assertions or accessibility
+  audits finish, then release them and verify the settled state. A fixed response
+  delay can expire before the test observes or finishes auditing the busy state.
 - Remove obsolete assertions when their requirement is retired. Preserve coverage
   of behavior that is still required, rather than replacing every old assertion.
 - Performance regressions need representative finding counts and accumulated

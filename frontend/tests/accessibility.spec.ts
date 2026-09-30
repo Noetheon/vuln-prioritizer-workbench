@@ -3,6 +3,7 @@ import { expect, type Page, test } from "@playwright/test"
 import type { ProviderStatusPublic } from "../src/api-client"
 import { openWorkbench } from "./workbench-runtime-helpers"
 import {
+  createResponseGate,
   mockAsset,
   mockFinding,
   mockProject,
@@ -377,15 +378,25 @@ test("data source tabs have no serious accessibility violations", async ({
 test("findings busy state has no serious accessibility violations", async ({
   page,
 }) => {
+  const findingsResponse = createResponseGate()
   await routeWorkbenchShell(page, {
     findings: [mockFinding],
-    findingsDelayMs: 500,
+    findingsResponseReady: findingsResponse.ready,
     projects: [mockProject],
   })
 
-  await page.goto("/triage")
+  const loadingRegion = page.getByRole("status", { name: "Loading findings" })
+  try {
+    await page.goto("/triage")
+    await expect(loadingRegion).toBeVisible()
+    await expectNoSeriousA11yViolations(page, "findings busy state")
+    // The audit must examine the loading state for its entire duration.
+    await expect(loadingRegion).toBeVisible()
+  } finally {
+    findingsResponse.release()
+  }
+  await expect(loadingRegion).toBeHidden()
   await expect(
-    page.getByRole("status", { name: "Loading findings" }),
+    page.getByRole("table", { name: "Findings remediation queue" }),
   ).toBeVisible()
-  await expectNoSeriousA11yViolations(page, "findings busy state")
 })

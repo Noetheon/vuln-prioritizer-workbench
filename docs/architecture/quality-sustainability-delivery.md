@@ -59,8 +59,15 @@ over time, building on the locally verified test work and main including PR #699
   and reported ENOSPC while closing the browser trace. The 63 route/viewport
   combinations now run as seven independent viewport cases with bounded browser
   contexts and traces. All 12 responsive cases passed locally; runner disk/Docker
-  capacity is also retained in maintenance logs. A hosted recheck establishes
-  whether this resolves the observed runner failure.
+  capacity is also retained in maintenance logs.
+- The hosted recheck passed every responsive case and retained six GiB of free
+  runner disk space. It exposed a separate accessibility fixture race: a fixed
+  500 ms response could end the busy state before an assertion or during the
+  accessibility audit. Both findings-loading tests now hold the mock response
+  until assertions finish and verify the subsequent ready state. Restoring the
+  old 500 ms behavior fails the added post-audit loading assertion; the response
+  barrier passes all 27 cases in the two owning browser suites. The testing guide
+  records this fixture rule. Hosted release validation must verify the final candidate.
 - The first hosted quality campaign rejected a 10,000-entry import taking
   62.3 seconds against the existing 60-second limit. Profiling identified eager
   copies of large sections immediately removed by evidence encoding. Detaching

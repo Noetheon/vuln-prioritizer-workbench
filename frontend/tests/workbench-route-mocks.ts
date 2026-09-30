@@ -63,7 +63,7 @@ type RouteWorkbenchShellOptions = {
   apiDocsPath?: string | null
   assets?: AssetPublic[]
   findings?: MockFinding[]
-  findingsDelayMs?: number
+  findingsResponseReady?: Promise<void>
   lifecycleEvents?: Record<string, unknown>[]
   onBulkStatusRequest?: (body: Record<string, unknown>) => void
   onPolicyUpdate?: (body: Record<string, unknown>) => void
@@ -306,6 +306,14 @@ export const mockWaiver: WaiverPublic = {
   updated_at: "2025-01-02T00:00:00Z",
 }
 
+export function createResponseGate() {
+  let release!: () => void
+  const ready = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  return { ready, release }
+}
+
 export async function routeWorkbenchShell(
   page: Page,
   options: RouteWorkbenchShellOptions = {},
@@ -316,7 +324,6 @@ export async function routeWorkbenchShell(
   const findings = options.findings ?? []
   const runs = options.runs ?? []
   const runSummaries = options.runSummaries ?? {}
-  const findingsDelayMs = options.findingsDelayMs ?? 0
   const demoWorkspaceEnabled = options.demoWorkspaceEnabled ?? false
   const capabilities = options.capabilities ?? mockWorkbenchCapabilities
   const capabilitiesError = options.capabilitiesError ?? false
@@ -845,9 +852,7 @@ export async function routeWorkbenchShell(
       async (route) => {
         const url = new URL(route.request().url())
         onFindingsRequest?.(url)
-        if (findingsDelayMs > 0) {
-          await new Promise((resolve) => setTimeout(resolve, findingsDelayMs))
-        }
+        await options.findingsResponseReady
         const { data, count } = mockFindingsPage(findings, url)
         return route.fulfill({
           contentType: "application/json",
