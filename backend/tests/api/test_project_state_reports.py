@@ -213,3 +213,43 @@ def test_state_report_evidence_bundle_verifies(
 
     assert verification.status_code == 200, verification.text
     assert verification.json()["summary"]["ok"] is True
+
+
+def test_project_report_history_spans_every_run(
+    workbench_api_env: WorkbenchApiEnv, tmp_path: Path
+) -> None:
+    env = workbench_api_env
+    project, import_run, headers = _project_with_findings(env, tmp_path)
+    by_run = env.client.post(
+        f"/api/v1/runs/{import_run['id']}/report-jobs",
+        headers=headers,
+        json={"format": "markdown"},
+    )
+    assert by_run.status_code == 200, by_run.text
+    by_state = env.client.post(
+        f"/api/v1/projects/{project['id']}/state-report-jobs",
+        headers=headers,
+        json={"format": "csv"},
+    )
+    assert by_state.status_code == 200, by_state.text
+    drain_workflow_queue(env)
+
+    history = env.client.get(f"/api/v1/projects/{project['id']}/reports", headers=headers)
+    assert history.status_code == 200, history.text
+    body = history.json()
+    assert body["count"] == 2
+    # Newest first, each naming the run it covers.
+    assert [item["analysis_run_id"] for item in body["data"]] == [
+        by_state.json()["analysis_run_id"],
+        import_run["id"],
+    ]
+    assert [item["format"] for item in body["data"]] == ["csv", "markdown"]
+
+    page = env.client.get(
+        f"/api/v1/projects/{project['id']}/reports?limit=1&offset=1", headers=headers
+    ).json()
+    assert page["count"] == 2
+    assert [item["format"] for item in page["data"]] == ["markdown"]
+
+    missing = env.client.get(f"/api/v1/projects/{uuid.uuid4()}/reports", headers=headers)
+    assert missing.status_code == 404

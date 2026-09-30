@@ -11,6 +11,7 @@ import {
   latestImportRunId,
   reportRunOptionLabel,
   reportRunOptions,
+  reportRunName,
   reportRunScope,
   runFileLabel,
   runFindingCount,
@@ -132,6 +133,12 @@ test("run labels name the file, date, and finding count", () => {
     reportRunOptionLabel(run({ counts: {} })),
     /· findings$/,
   )
+})
+
+test("report history names the run each report covers", () => {
+  assert.equal(reportRunName("run-import", runs), "trivy.json")
+  assert.equal(reportRunName("run-state", runs), "Project state")
+  assert.equal(reportRunName("0123456789abcdef", runs), "01234567")
 })
 
 test("the scope banner says what the report covers", () => {

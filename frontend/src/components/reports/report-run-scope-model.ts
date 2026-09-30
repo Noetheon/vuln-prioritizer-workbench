@@ -45,6 +45,15 @@ export function runFileLabel(run: AnalysisRunPublic): string {
   return isReevaluationRun(run) ? "Re-evaluation" : `${run.input_type} upload`
 }
 
+/** Name the run a report covers: its file, "Project state", or a short id. */
+export function reportRunName(
+  runId: string,
+  runs: readonly AnalysisRunPublic[],
+): string {
+  const run = runs.find((candidate) => candidate.id === runId)
+  return run ? runFileLabel(run) : runId.slice(0, 8)
+}
+
 export function isReevaluationRun(run: AnalysisRunPublic) {
   return run.input_type === REEVALUATION_INPUT_TYPE
 }

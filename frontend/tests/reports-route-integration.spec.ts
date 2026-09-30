@@ -169,6 +169,15 @@ test("Evidence Center reports on the current project state by default", async ({
       body: JSON.stringify({ count: 0, data: [] }),
     }),
   )
+  await page.route(`**/api/v1/projects/${mockProject.id}/reports*`, (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        count: 1,
+        data: [report("report-import-1", "executive-report.html", "html")],
+      }),
+    }),
+  )
 
   await page.goto(`/reports?projectId=${mockProject.id}`)
 
@@ -178,6 +187,13 @@ test("Evidence Center reports on the current project state by default", async ({
   await expect(
     page.getByRole("status").filter({ hasText: "Current project state" }),
   ).toContainText("with their current status and priority")
+
+  // The history spans the project, naming the run each report covers.
+  await page.getByRole("tab", { name: "History" }).click()
+  const history = page.getByRole("table", { name: "Report history list" })
+  await expect(history).toContainText("executive-report.html")
+  await expect(history).toContainText("reports-input.txt")
+  await page.getByRole("tab", { name: "Artifacts" }).click()
 
   await page.getByRole("button", { name: "Generate evidence" }).first().click()
   const drawer = page.getByRole("dialog")

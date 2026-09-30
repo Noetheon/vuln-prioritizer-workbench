@@ -678,6 +678,12 @@ export async function routeWorkbenchShell(
         body: JSON.stringify({ data: projectRuns, count: projectRuns.length }),
       }),
     )
+    await page.route(`**/api/v1/projects/${project.id}/reports`, (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ data: [], count: 0 }),
+      }),
+    )
     await page.route(
       `**/api/v1/projects/${project.id}/governance/rollups/`,
       (route) =>

@@ -142,6 +142,8 @@ function ReportsRouteContent() {
       reportActionMessage={reportsState.reportActionMessage}
       reportActionsEnabled={reportsState.reportActionsEnabled}
       reportFormatCapabilities={capabilities?.report_formats ?? []}
+      historyReports={reportsState.projectReports}
+      historyReportsLoading={reportsState.projectReportsLoading}
       reports={reportsState.reports}
       reportsError={reportsState.reportsError}
       reportsLoading={reportsState.reportsLoading}

@@ -21,7 +21,7 @@ import {
 } from "../../lib/report-format.ts"
 import { runStatusTone } from "../../lib/risk-format.ts"
 import { workflowNeedsPolling, workflowStageLabel } from "../../workbench/workflow-model.ts"
-import { runFileLabel } from "./report-run-scope-model.ts"
+import { reportRunName, runFileLabel } from "./report-run-scope-model.ts"
 
 export { runFileLabel }
 
@@ -288,8 +288,11 @@ export function reportHistoryAction(report: ReportPublic) {
   return "Generated"
 }
 
-export function reportRunLabel(report: ReportPublic) {
-  return report.analysis_run_id.slice(0, 8)
+export function reportRunLabel(
+  report: ReportPublic,
+  runs: readonly AnalysisRunPublic[] = [],
+) {
+  return reportRunName(report.analysis_run_id, runs)
 }
 
 export function artifactFormatLabel(report: ReportPublic) {

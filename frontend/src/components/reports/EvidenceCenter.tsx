@@ -35,6 +35,8 @@ export type EvidenceCenterProps = {
   reports: ReportPublic[]
   reportsLoading: boolean
   reportsError: string
+  historyReports?: ReportPublic[]
+  historyReportsLoading?: boolean
   projectSummary: ProjectDecisionSummaryPublic | null
   providerStatus: ProviderStatusPublic | null
   verificationReport: ReportVerificationPublic | null
@@ -57,6 +59,8 @@ export function EvidenceCenter({
   capabilitiesError,
   capabilitiesLoading,
   currentStateSelected = false,
+  historyReports,
+  historyReportsLoading,
   onCreateReport,
   onDownloadReport,
   onProjectChange,
@@ -139,10 +143,13 @@ export function EvidenceCenter({
         currentStateSelected={currentStateSelected}
         artifactCards={artifactCards}
         hasDecisionContext={hasDecisionContext}
+        historyReports={historyReports}
+        historyReportsLoading={historyReportsLoading}
         onCreateReport={onCreateReport}
         onDownloadReport={onDownloadReport}
         onOpenGenerateDrawer={() => setGenerateDrawerOpen(true)}
         onVerifyReport={onVerifyReport}
+        projectRuns={projectRuns}
         projectSummary={projectSummary}
         providerStatus={providerStatus}
         reportActionsEnabled={runtimeReportActionsEnabled}

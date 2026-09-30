@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from app.models import Report
 
@@ -71,6 +71,22 @@ class ReportRepository:
             .order_by(col(Report.created_at).desc(), col(Report.id).desc())
         )
         return list(self.session.exec(statement).all())
+
+    def list_project_reports_page(
+        self, project_id: uuid.UUID, *, limit: int, offset: int = 0
+    ) -> tuple[list[Report], int]:
+        """Return one newest-first page of a project's reports and their total count."""
+        count = self.session.exec(
+            select(func.count()).select_from(Report).where(Report.project_id == project_id)
+        ).one()
+        statement = (
+            select(Report)
+            .where(Report.project_id == project_id)
+            .order_by(col(Report.created_at).desc(), col(Report.id).desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return list(self.session.exec(statement).all()), int(count)
 
     def delete_report(self, report: Report) -> None:
         """Delete report metadata without committing the transaction."""

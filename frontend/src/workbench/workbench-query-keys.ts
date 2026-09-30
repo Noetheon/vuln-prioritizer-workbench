@@ -78,6 +78,8 @@ export const workbenchQueryKeys = {
   reportsRoot: () => [...workbenchQueryKeys.all, "reports"] as const,
   reports: (runId: string) =>
     [...workbenchQueryKeys.reportsRoot(), runId] as const,
+  projectReports: (projectId: string) =>
+    [...workbenchQueryKeys.reportsRoot(), "project", projectId] as const,
   runDetail: (runId: string) =>
     [...workbenchQueryKeys.all, "run-detail", runId] as const,
   status: () => [...workbenchQueryKeys.all, "status"] as const,

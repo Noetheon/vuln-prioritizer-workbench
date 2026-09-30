@@ -31,10 +31,14 @@ type EvidenceCenterTabsProps = {
   artifactCards: readonly ArtifactCard[]
   currentStateSelected?: boolean
   hasDecisionContext: boolean
+  // Every report of the project; the History tab shows it for the current state.
+  historyReports?: ReportPublic[]
+  historyReportsLoading?: boolean
   onCreateReport: (format: ReportFormat) => Promise<void>
   onDownloadReport: (report: ReportPublic) => Promise<void>
   onOpenGenerateDrawer: () => void
   onVerifyReport: (report: ReportPublic) => Promise<void>
+  projectRuns?: readonly AnalysisRunPublic[]
   projectSummary: ProjectDecisionSummaryPublic | null
   providerStatus: ProviderStatusPublic | null
   reportActionsEnabled: boolean
@@ -53,10 +57,13 @@ export function EvidenceCenterTabs({
   artifactCards,
   currentStateSelected = false,
   hasDecisionContext,
+  historyReports = [],
+  historyReportsLoading = false,
   onCreateReport,
   onDownloadReport,
   onOpenGenerateDrawer,
   onVerifyReport,
+  projectRuns = [],
   projectSummary,
   providerStatus,
   reportActionsEnabled,
@@ -211,14 +218,26 @@ export function EvidenceCenterTabs({
 
       <TabsContent className="mt-0" value="history">
         <ReportHistory
+          emptyDescription={
+            currentStateSelected
+              ? "Generate a report to record the project's current state."
+              : undefined
+          }
           mode="history"
           onDownload={onDownloadReport}
           onVerify={onVerifyReport}
-          panelDescription="Previously generated reports for the selected run."
+          panelDescription={
+            currentStateSelected
+              ? "Every report generated for this project, newest first. The Run column names the import or recorded state each report covers."
+              : "Previously generated reports for the selected run."
+          }
           panelEyebrow="Generated artifact history"
           panelTitle="Generated artifact history"
-          reports={reports}
-          reportsLoading={reportsLoading}
+          reports={currentStateSelected ? historyReports : reports}
+          reportsLoading={
+            currentStateSelected ? historyReportsLoading : reportsLoading
+          }
+          runs={projectRuns}
           verificationLoading={verificationLoading}
           verificationReport={verificationReport}
           verificationReportTarget={verificationReportTarget}

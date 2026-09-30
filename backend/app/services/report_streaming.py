@@ -12,7 +12,7 @@ from app.services.report_governance_projection import _waiver_record
 from app.services.report_models import MarkdownReportFinding
 from app.services.report_projection import _analysis_finding
 from app.services.report_renderer_common import _redact_bundle_value, _redact_report_finding
-from app.services.report_service_payload import ReportSource
+from app.services.report_service_payload import BaseReportSource
 
 
 def _json_bytes(value: Any) -> bytes:
@@ -24,7 +24,7 @@ def _redact(value: Any, path: str) -> Any:
 
 
 def stream_analysis_json(
-    source: ReportSource, *, checkpoint: Callable[[], None] | None = None
+    source: BaseReportSource, *, checkpoint: Callable[[], None] | None = None
 ) -> Iterator[bytes]:
     """
     Keep one evidence batch, compact rollup inputs and disk-backed explanations.
@@ -85,7 +85,7 @@ def stream_analysis_json(
 
 
 def stream_findings_csv(
-    source: ReportSource, *, checkpoint: Callable[[], None] | None = None
+    source: BaseReportSource, *, checkpoint: Callable[[], None] | None = None
 ) -> Iterator[bytes]:
     """Render the existing spreadsheet-safe row contract without collecting findings."""
     header = render_findings_csv(source.header)

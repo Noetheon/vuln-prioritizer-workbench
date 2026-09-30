@@ -7527,6 +7527,45 @@ export type PutApiV1ProjectsByProjectIdPolicyResponses = {
 
 export type PutApiV1ProjectsByProjectIdPolicyResponse = PutApiV1ProjectsByProjectIdPolicyResponses[keyof PutApiV1ProjectsByProjectIdPolicyResponses];
 
+export type GetApiV1ProjectsByProjectIdReportsData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
+    url: '/api/v1/projects/{project_id}/reports';
+};
+
+export type GetApiV1ProjectsByProjectIdReportsErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type GetApiV1ProjectsByProjectIdReportsError = GetApiV1ProjectsByProjectIdReportsErrors[keyof GetApiV1ProjectsByProjectIdReportsErrors];
+
+export type GetApiV1ProjectsByProjectIdReportsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ReportsPublic;
+};
+
+export type GetApiV1ProjectsByProjectIdReportsResponse = GetApiV1ProjectsByProjectIdReportsResponses[keyof GetApiV1ProjectsByProjectIdReportsResponses];
+
 export type GetApiV1ProjectsByProjectIdRunsData = {
     body?: never;
     path: {

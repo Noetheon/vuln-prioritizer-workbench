@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from starlette.responses import FileResponse
 
 from app.api.deps import LocalActor, SessionDep
@@ -157,6 +157,33 @@ def read_run_reports(
             for report in reports
         ],
         count=len(reports),
+    )
+
+
+@router.get("/projects/{project_id}/reports", response_model=ReportsPublic)
+def read_project_reports(
+    project_id: uuid.UUID,
+    request: Request,
+    session: SessionDep,
+    local_actor: LocalActor,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+) -> ReportsPublic:
+    """List report metadata for every run of a visible project, newest first."""
+    require_project(session, project_id)
+    reports, count = ReportRepository(session).list_project_reports_page(
+        project_id, limit=limit, offset=offset
+    )
+    return ReportsPublic(
+        data=[
+            _report_public(
+                report,
+                request,
+                workflow=latest_report_workflow_public(session, report_id=report.id),
+            )
+            for report in reports
+        ],
+        count=count,
     )
 
 

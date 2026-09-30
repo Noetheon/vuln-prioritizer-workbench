@@ -9,7 +9,7 @@ from typing import Any
 
 from sqlmodel import Session, col, select
 
-from app.decision_core.contracts import FindingDecisionEvidenceV2
+from app.decision_core.contracts import AnalysisEvidenceV2, FindingDecisionEvidenceV2
 from app.decision_core.readmodels import (
     DecisionFindingView,
     decision_run_view,
@@ -50,10 +50,65 @@ REPORT_SUPPORTED_RUN_STATUSES = {
 }
 
 
-class ReportSource:
-    """Validate one historical envelope and hydrate only one batch of its members."""
+class BaseReportSource:
+    """Batch report members and complete the payload once they are rendered."""
 
     batch_size = 25
+    session: Session
+    run: AnalysisRun
+    project: Project
+    evidence: AnalysisEvidenceV2
+    header: MarkdownReportPayload
+    finding_ids: list[uuid.UUID]
+    provider_dates: dict[str, Any]
+
+    def findings(
+        self, checkpoint: Callable[[], None] | None = None
+    ) -> Iterator[tuple[MarkdownReportFinding, Finding]]:
+        """Yield report findings one batch at a time."""
+        raise NotImplementedError
+
+    def _record_provider_dates(self, evidence: FindingDecisionEvidenceV2) -> None:
+        self.provider_dates["finding_evidence_count"] += 1
+        facts = evidence.provider.provider_evidence
+        for provider, field, key in (
+            ("nvd", "last_modified", "nvd_last_modified_max"),
+            ("epss", "date", "latest_epss_date"),
+            ("kev", "date_added", "kev_date_added_max"),
+        ):
+            item = facts.get(provider)
+            value = item.get(field) if isinstance(item, dict) else None
+            if isinstance(value, str) and value.strip():
+                self.provider_dates[key] = max(self.provider_dates[key] or "", value.strip())
+
+    def payload(self, findings: list[MarkdownReportFinding]) -> MarkdownReportPayload:
+        """Complete small run-wide summaries after iterating historical findings."""
+        provider = self.header.provider_snapshot
+        if provider is not None:
+            provider = provider.model_copy(
+                update={
+                    "source_metadata": {
+                        **provider.source_metadata,
+                        "run_subset_provider_evidence": dict(self.provider_dates),
+                    }
+                }
+            )
+        return self.header.model_copy(
+            update={
+                "provider_snapshot": provider,
+                "findings": tuple(findings),
+                "governance_rollups": build_run_governance_rollups(
+                    project_id=self.project.id,
+                    findings=findings,
+                    generated_at=self.header.generated_at,
+                    evaluated_at=self.header.generated_at,
+                ),
+            }
+        )
+
+
+class ReportSource(BaseReportSource):
+    """Validate one historical envelope and hydrate only one batch of its members."""
 
     def __init__(self, session: Session, *, run: AnalysisRun, project: Project) -> None:
         generated_at = get_datetime_utc()
@@ -192,46 +247,8 @@ class ReportSource:
                     finding,
                 )
 
-    def _record_provider_dates(self, evidence: FindingDecisionEvidenceV2) -> None:
-        self.provider_dates["finding_evidence_count"] += 1
-        facts = evidence.provider.provider_evidence
-        for provider, field, key in (
-            ("nvd", "last_modified", "nvd_last_modified_max"),
-            ("epss", "date", "latest_epss_date"),
-            ("kev", "date_added", "kev_date_added_max"),
-        ):
-            item = facts.get(provider)
-            value = item.get(field) if isinstance(item, dict) else None
-            if isinstance(value, str) and value.strip():
-                self.provider_dates[key] = max(self.provider_dates[key] or "", value.strip())
 
-    def payload(self, findings: list[MarkdownReportFinding]) -> MarkdownReportPayload:
-        """Complete small run-wide summaries after iterating historical findings."""
-        provider = self.header.provider_snapshot
-        if provider is not None:
-            provider = provider.model_copy(
-                update={
-                    "source_metadata": {
-                        **provider.source_metadata,
-                        "run_subset_provider_evidence": dict(self.provider_dates),
-                    }
-                }
-            )
-        return self.header.model_copy(
-            update={
-                "provider_snapshot": provider,
-                "findings": tuple(findings),
-                "governance_rollups": build_run_governance_rollups(
-                    project_id=self.project.id,
-                    findings=findings,
-                    generated_at=self.header.generated_at,
-                    evaluated_at=self.header.generated_at,
-                ),
-            }
-        )
-
-
-class ProjectStateReportSource(ReportSource):
+class ProjectStateReportSource(BaseReportSource):
     """Report on a recorded project state from the findings' current decisions."""
 
     def __init__(self, session: Session, *, run: AnalysisRun, project: Project) -> None:
@@ -318,7 +335,7 @@ class ProjectStateReportSource(ReportSource):
                 yield _finding_payload_from_decision_view(view, occurrences=[]), view.finding
 
 
-def report_source(session: Session, *, run: AnalysisRun, project: Project) -> ReportSource:
+def report_source(session: Session, *, run: AnalysisRun, project: Project) -> BaseReportSource:
     """Return the report source for a run: its own evidence, or a recorded project state."""
     if is_project_state_run(run):
         return ProjectStateReportSource(session, run=run, project=project)
@@ -415,7 +432,9 @@ def run_occurrences_by_finding(
 
 __all__ = [
     "REPORT_SUPPORTED_RUN_STATUSES",
+    "BaseReportSource",
     "ProjectStateReportSource",
+    "ReportSource",
     "build_report_payload",
     "report_finding_views",
     "report_source",

@@ -38,6 +38,9 @@ exact git tag output when release wording needs to be verified.
     and queues a report. `GET /api/v1/projects/{project_id}/runs` lists
     recorded states only with `include_state_snapshots=true`, and marks
     whether each one still matches the project (`project_state_current`).
+  - The History tab lists every report of the project while the current
+    state is selected, naming the import or recorded state each report
+    covers. `GET /api/v1/projects/{project_id}/reports` returns that list.
 - The Evidence Center has a run picker again. A banner under the run facts
   states what a report will cover, and warns when the selected run is a
   re-evaluation, an older import, or a recorded state the project has moved

@@ -50,6 +50,12 @@ summaries, and the Imports page ignore them;
 `GET /api/v1/projects/{project_id}/runs?include_state_snapshots=true` lists
 them.
 
+With **Current project state** selected, the History tab lists every report
+generated for the project, newest first, and names the import or recorded
+state each one covers. `GET /api/v1/projects/{project_id}/reports` returns the
+same list (`limit` and `offset` page through it). With a run selected, the
+History tab lists that run's reports.
+
 ## Report Formats
 
 The current report surface supports:
