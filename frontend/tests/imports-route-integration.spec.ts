@@ -140,7 +140,7 @@ test("run detail tabs show triage CTA, imported evidence, and compact diagnostic
   await expect(page.getByText("Findings are ready for triage")).toBeVisible()
   await expect(page.getByRole("link", { name: "Open Triage" })).toHaveAttribute(
     "href",
-    `/findings?projectId=${mockProject.id}`,
+    `/triage?projectId=${mockProject.id}`,
   )
   await expect(page.getByText(/API does not expose/i)).toHaveCount(0)
 
@@ -166,7 +166,7 @@ test("run detail tabs show triage CTA, imported evidence, and compact diagnostic
     page.getByRole("link", { name: "Open Evidence Center" }),
   ).toHaveAttribute(
     "href",
-    `/reports?projectId=${mockProject.id}&runId=${runWithMetadata.id}`,
+    `/evidence?projectId=${mockProject.id}&runId=${runWithMetadata.id}`,
   )
 
   await page.getByRole("tab", { name: "Diagnostics" }).click()

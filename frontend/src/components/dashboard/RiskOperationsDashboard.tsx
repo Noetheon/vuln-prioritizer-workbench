@@ -34,7 +34,6 @@ export function RiskOperationsDashboard({
   isManagedDemoWorkspace,
   onLoadDemoWorkspace,
   onRefresh,
-  onProjectChange,
   onResetDemoWorkspace,
   projectListLoading,
   projects,
@@ -136,10 +135,8 @@ export function RiskOperationsDashboard({
         isManagedDemoWorkspace={isManagedDemoWorkspace}
         onCreateProject={onCreateProject}
         onLoadDemoWorkspace={onLoadDemoWorkspace}
-        onProjectChange={onProjectChange}
         onRefresh={onRefresh}
         onResetDemoWorkspace={onResetDemoWorkspace}
-        projectListLoading={projectListLoading}
         providerStatusLoading={providerStatusLoading}
         selectedProjectId={selectedProjectId}
       />

@@ -172,14 +172,14 @@ export function OverviewTab({
           {[
             {
               description: "Open Triage with this project context preserved.",
-              href: "/findings" as const,
+              href: "/triage" as const,
               icon: ListChecks,
               label: "Review findings",
               search: { projectId: summary.project_id },
             },
             {
               description: "Review imported file metadata and report artifacts.",
-              href: "/reports" as const,
+              href: "/evidence" as const,
               icon: FolderOpen,
               label: "Inspect evidence",
               search: { projectId: summary.project_id, runId: summary.id },

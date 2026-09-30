@@ -150,7 +150,7 @@ export function EvidenceTab({
           </div>
         )}
         <Button asChild className="w-fit" variant="outline">
-          <Link search={{ projectId: summary.project_id, runId }} to="/reports">
+          <Link search={{ projectId: summary.project_id, runId }} to="/evidence">
             Open Evidence Center
           </Link>
         </Button>

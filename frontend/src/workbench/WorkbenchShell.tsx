@@ -7,6 +7,7 @@ import {
 } from "../lib/app-route-config"
 import type { WorkbenchPath } from "../lib/workbench-navigation"
 import { ProductAppShell } from "./ProductAppShell"
+import { ProjectSwitcher } from "./ProjectSwitcher"
 import { RouteErrorBoundary } from "./RouteErrorBoundary"
 import { useWorkbenchContext, WorkbenchProvider } from "./WorkbenchContext"
 
@@ -40,6 +41,7 @@ function WorkbenchShellFrame({ children, routePath }: WorkbenchShellProps) {
       activePath={activeRoutePath}
       description={routeDetail.description}
       eyebrow={routeDetail.eyebrow}
+      headerActions={<ProjectSwitcher />}
       hideStatusStrip
       providerStatus={providerStatus}
       status={status}

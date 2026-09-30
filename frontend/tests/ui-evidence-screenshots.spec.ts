@@ -475,7 +475,7 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
       ).toContainText(mockFinding.cve_id)
     },
     id: "findings",
-    path: "/findings",
+    path: "/triage",
   },
   {
     assertReady: async (page) => {
@@ -508,7 +508,7 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
       ).toBeVisible()
     },
     id: "reports-evidence-center",
-    path: "/reports",
+    path: "/evidence",
   },
   {
     assertReady: async (page) => {
@@ -544,7 +544,7 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
       await expect(waiverRegister).toContainText("CAB-2026-014")
     },
     id: "waivers",
-    path: "/waivers",
+    path: "/risk-acceptance",
   },
   {
     assertReady: async (page) => {
@@ -556,7 +556,7 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
       ).toBeVisible()
     },
     id: "providers",
-    path: "/providers",
+    path: "/data-sources",
   },
   {
     assertReady: async (page) => {

@@ -143,7 +143,7 @@ function OnboardingAction({
   const target = {
     context: { label: "Review assets", to: "/assets" },
     import: { label: "Import findings", to: "/imports/new" },
-    report: { label: "Generate evidence", to: "/reports" },
+    report: { label: "Generate evidence", to: "/evidence" },
   } as const
   const { label, to } = target[step.id]
   return (

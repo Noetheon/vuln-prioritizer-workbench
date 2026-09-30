@@ -276,11 +276,11 @@ const workbenchRoutes = [
   "/",
   "/projects",
   "/imports",
-  "/findings",
+  "/triage",
   "/assets",
-  "/waivers",
-  "/reports",
-  "/providers",
+  "/risk-acceptance",
+  "/evidence",
+  "/data-sources",
   "/settings",
 ] as const
 
@@ -338,7 +338,7 @@ test("mobile shell exposes drawer navigation without page-width overflow", async
   await expect(navDialog).toBeVisible()
   await navDialog.getByRole("link", { name: "Evidence Center" }).click()
 
-  await expect(page).toHaveURL(/\/reports(?:\?.*)?$/)
+  await expect(page).toHaveURL(/\/evidence(?:\?.*)?$/)
   await expect(
     page.getByRole("heading", { name: "Recommended artifacts" }),
   ).toBeVisible()
@@ -385,7 +385,7 @@ test("dense evidence and risk tables do not clip internal table content", async 
   await openWorkbench(page)
   await page.setViewportSize({ height: 956, width: 1470 })
 
-  for (const route of ["/reports", "/waivers"] as const) {
+  for (const route of ["/evidence", "/risk-acceptance"] as const) {
     await page.goto(route)
     await expect(page.getByRole("main")).toBeVisible()
     await expectNoPageOverflow(page)
@@ -492,13 +492,13 @@ test("findings table keeps horizontal scroll contained at desktop, tablet, and m
     { height: 1024, width: 768 },
   ]) {
     await page.setViewportSize(viewport)
-    await page.goto("/findings")
+    await page.goto("/triage")
     await expect(page.getByRole("main")).toBeVisible()
     await expectFindingsTableScrollContainment(page, viewport)
   }
 
   await page.setViewportSize({ height: 844, width: 390 })
-  await page.goto("/findings")
+  await page.goto("/triage")
   await expect(page.getByRole("main")).toBeVisible()
   await expectFindingsMobileCards(page)
 })

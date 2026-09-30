@@ -64,10 +64,7 @@ export function AssetInventoryShell({
   openImportAssets,
   projectLoading,
   projects,
-  projectSelectDisabled,
-  selectProject,
   selectedProject,
-  selectedProjectId,
   setAssetCriticalityFilter,
   setAssetEnvironmentFilter,
   setAssetExposureFilter,
@@ -94,10 +91,7 @@ export function AssetInventoryShell({
   openImportAssets: () => void
   projectLoading: boolean
   projects: ProjectPublic[]
-  projectSelectDisabled: boolean
-  selectProject: (projectId: string) => void
   selectedProject: ProjectPublic | null
-  selectedProjectId: string
   setAssetCriticalityFilter: (value: string) => void
   setAssetEnvironmentFilter: (value: string) => void
   setAssetExposureFilter: (value: string) => void
@@ -111,21 +105,6 @@ export function AssetInventoryShell({
     <VpwSection className="assets-inventory-shell">
       <VpwFilterBar
         className="assets-filter-bar"
-        leading={
-          <VpwField className="vpw-filter-field--lg" label="Project">
-            <VpwSelectControl
-              ariaLabel="Assets project"
-              disabled={projectSelectDisabled}
-              options={projects.map((project) => ({
-                label: project.name,
-                value: project.id,
-              }))}
-              onValueChange={selectProject}
-              placeholder="Select project"
-              value={selectedProjectId}
-            />
-          </VpwField>
-        }
         actions={
           <Button
             aria-label="Reset asset filters"

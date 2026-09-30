@@ -141,7 +141,7 @@ export function ImportRunDetailRoute({
                 asChild
                 variant={reviewFindingsPrimary ? "default" : "outline"}
               >
-                <Link search={projectSearch} to="/findings">
+                <Link search={projectSearch} to="/triage">
                   <ListChecks aria-hidden="true" data-icon="inline-start" />
                   Review findings
                 </Link>

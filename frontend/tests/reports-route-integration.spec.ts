@@ -42,7 +42,7 @@ test("Evidence Center separates artifacts, decision, manifest, history, and data
     }),
   )
 
-  await page.goto(`/reports?projectId=${mockProject.id}&runId=${runId}`)
+  await page.goto(`/evidence?projectId=${mockProject.id}&runId=${runId}`)
 
   await expect(page.getByRole("heading", { name: "Evidence Center" })).toBeVisible()
   await expect(page.getByRole("tab", { name: "Artifacts" })).toHaveAttribute(
@@ -100,7 +100,7 @@ test("Evidence Center run context stays compact on mobile", async ({ page }) => 
     }),
   )
 
-  await page.goto(`/reports?projectId=${mockProject.id}&runId=${runId}`)
+  await page.goto(`/evidence?projectId=${mockProject.id}&runId=${runId}`)
   await expect(page.getByRole("heading", { name: "Evidence Center" })).toBeVisible()
 
   const metrics = await page.locator(".evidence-run-context-panel").evaluate((panel) => {
@@ -179,7 +179,7 @@ test("Evidence Center reports on the current project state by default", async ({
     }),
   )
 
-  await page.goto(`/reports?projectId=${mockProject.id}`)
+  await page.goto(`/evidence?projectId=${mockProject.id}`)
 
   await expect(page.getByRole("combobox", { name: "Report run" })).toContainText(
     "Current project state",

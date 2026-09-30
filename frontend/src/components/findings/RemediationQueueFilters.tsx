@@ -1,6 +1,5 @@
 import { ListFilter, RotateCcw, X } from "lucide-react"
 import type { Dispatch, SetStateAction } from "react"
-import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { VpwBadge, VpwSearchInput } from "@/components/vpw"
 import { slaStateLabel } from "@/lib/finding-sla-due"
@@ -9,7 +8,6 @@ import {
   AdvancedFilterSelects,
   PrimaryFilterSelects,
 } from "./RemediationQueueFilterControls"
-import { RemediationQueueProjectSelect } from "./RemediationQueueProjectSelect"
 import { RemediationQueueSavedViews } from "./RemediationQueueSavedViews"
 import {
   savedViewFromFilters,
@@ -30,13 +28,9 @@ type RemediationQueueFiltersProps = {
     key: K,
     value: FindingFilters[K],
   ) => void
-  onProjectChange: (id: string) => void
   onSavedViewChange: (view: FindingsSavedView) => void
   ownerServiceDraft: string
-  projectListLoading: boolean
-  projects: ProjectPublic[]
   queryDraft: string
-  selectedProjectId: string
   setAdvancedFiltersOpen: Dispatch<SetStateAction<boolean>>
   setOwnerServiceDraft: Dispatch<SetStateAction<string>>
   setQueryDraft: Dispatch<SetStateAction<string>>
@@ -54,13 +48,9 @@ export function RemediationQueueFilters({
   onClearAssetFilter,
   onClearFilters,
   onFilterChange,
-  onProjectChange,
   onSavedViewChange,
   ownerServiceDraft,
-  projectListLoading,
-  projects,
   queryDraft,
-  selectedProjectId,
   setAdvancedFiltersOpen,
   setOwnerServiceDraft,
   setQueryDraft,
@@ -163,13 +153,6 @@ export function RemediationQueueFilters({
     <section aria-label="Findings filters" className="findings-filter-card">
       <div className="findings-filter-card__inner">
         <div className="findings-filter-grid">
-          <RemediationQueueProjectSelect
-            onProjectChange={onProjectChange}
-            projectListLoading={projectListLoading}
-            projects={projects}
-            selectedProjectId={selectedProjectId}
-          />
-
           {findingAssetId ? (
             <div className="findings-filter-asset">
               <span>Asset</span>

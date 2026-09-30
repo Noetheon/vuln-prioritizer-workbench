@@ -64,7 +64,7 @@ export function useReportsRouteState({
     useState<WorkflowRunPublic | null>(null)
   const reportsQuery = useQuery({
     enabled:
-      currentPath === "/reports" &&
+      currentPath === "/evidence" &&
       Boolean(selectedRunId) &&
       !currentStateSelected,
     queryFn: ({ signal }) =>
@@ -80,7 +80,7 @@ export function useReportsRouteState({
   })
   const projectReportsQuery = useQuery({
     enabled:
-      currentPath === "/reports" &&
+      currentPath === "/evidence" &&
       Boolean(selectedProjectId) &&
       currentStateSelected,
     queryFn: ({ signal }) =>
@@ -146,7 +146,7 @@ export function useReportsRouteState({
     workflowNeedsPolling(activeReportWorkflow)
   const reportActionsEnabled =
     (currentStateSelected
-      ? currentPath === "/reports" &&
+      ? currentPath === "/evidence" &&
         Boolean(selectedProjectId) &&
         !reportActionPending
       : reportActionsAvailable({
@@ -159,7 +159,7 @@ export function useReportsRouteState({
     reportFormatCapabilities.length > 0
 
   useEffect(() => {
-    if (currentPath === "/reports" && selectedRunId) {
+    if (currentPath === "/evidence" && selectedRunId) {
       setVerificationReport(null)
       setVerificationReportTarget(null)
       setVerificationLoading(false)
@@ -171,7 +171,7 @@ export function useReportsRouteState({
   }, [currentPath, selectedRunId])
 
   useEffect(() => {
-    if (!activeReportWorkflow?.id || currentPath !== "/reports") {
+    if (!activeReportWorkflow?.id || currentPath !== "/evidence") {
       return
     }
     return subscribeWorkflowUpdates({

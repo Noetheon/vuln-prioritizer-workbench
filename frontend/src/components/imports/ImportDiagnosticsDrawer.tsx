@@ -45,7 +45,7 @@ export function ImportDiagnosticsDrawer({
             <Button asChild size="sm" variant="outline">
               <Link
                 search={{ projectId: selectedRunSummary.project_id }}
-                to="/findings"
+                to="/triage"
               >
                 Review findings
               </Link>

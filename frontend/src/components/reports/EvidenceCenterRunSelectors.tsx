@@ -1,4 +1,4 @@
-import type { AnalysisRunPublic, ProjectPublic } from "@/api-client"
+import type { AnalysisRunPublic } from "@/api-client"
 import {
   Select,
   SelectContent,
@@ -12,49 +12,6 @@ import {
   isReportableRun,
   reportRunOptionLabel,
 } from "./report-run-scope-model"
-
-type ReportProjectSelectProps = {
-  disabled: boolean
-  projects: ProjectPublic[]
-  selectedProjectId: string
-  onProjectChange: (id: string) => void
-}
-
-export function ReportProjectSelect({
-  disabled,
-  onProjectChange,
-  projects,
-  selectedProjectId,
-}: ReportProjectSelectProps) {
-  return (
-    <Select
-      disabled={disabled}
-      onValueChange={onProjectChange}
-      value={selectedProjectId}
-    >
-      <SelectTrigger
-        aria-label="Reports project"
-        className="h-10 w-full min-w-0 sm:w-56"
-      >
-        <SelectValue placeholder="Select project" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          {projects.length === 0 ? (
-            <SelectItem disabled value="none">
-              No projects available
-            </SelectItem>
-          ) : null}
-          {projects.map((project) => (
-            <SelectItem key={project.id} value={project.id}>
-              {project.name}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
-  )
-}
 
 type ReportRunSelectProps = {
   disabled: boolean

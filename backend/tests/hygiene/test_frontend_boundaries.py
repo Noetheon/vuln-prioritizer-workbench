@@ -50,7 +50,7 @@ def test_workbench_shell_mounts_once_in_app_router() -> None:
         REPO_ROOT / "frontend/src/workbench/routes/FindingDetailRoute.tsx"
     ).read_text(encoding="utf-8")
     assert "Outlet" not in findings_route
-    assert 'routePath: "/findings"' in app_router_source
+    assert 'routePath: "/triage"' in app_router_source
     assert "findingDetailId=" not in findings_route
     assert "useParams" in finding_detail_route
     assert "findingId=" in finding_detail_route
@@ -511,7 +511,8 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
         REPO_ROOT / "frontend/src/components/dashboard/RiskOperationsDashboard.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardContextBar.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardContextActions.tsx",
-        REPO_ROOT / "frontend/src/components/dashboard/DashboardContextProjectPicker.tsx",
+        # The Overview's project picker became the header switcher.
+        REPO_ROOT / "frontend/src/workbench/ProjectSwitcher.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardProviderWarning.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/DashboardRemediationSection.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/dashboard-summary-model.ts",
@@ -546,7 +547,7 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     dashboard_source = dashboard_paths[0].read_text(encoding="utf-8")
     dashboard_context_source = dashboard_paths[1].read_text(encoding="utf-8")
     dashboard_context_actions_source = dashboard_paths[2].read_text(encoding="utf-8")
-    dashboard_context_project_picker_source = dashboard_paths[3].read_text(encoding="utf-8")
+    project_switcher_source = dashboard_paths[3].read_text(encoding="utf-8")
     dashboard_summary_source = dashboard_paths[6].read_text(encoding="utf-8")
     dashboard_metric_strip_source = dashboard_paths[7].read_text(encoding="utf-8")
     dashboard_detail_rail_source = dashboard_paths[8].read_text(encoding="utf-8")
@@ -565,9 +566,9 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     assert "dashboard-summary-model" in dashboard_source
     assert "VpwCommandPanel" in dashboard_context_source
     assert "DashboardContextActions" in dashboard_context_source
-    assert "DashboardContextProjectPicker" in dashboard_context_source
+    assert "SelectTrigger" not in dashboard_context_source
     assert "ProviderStatusBadge" in dashboard_context_actions_source
-    assert "SelectTrigger" in dashboard_context_project_picker_source
+    assert "SelectTrigger" in project_switcher_source
     assert "buildDashboardMetricSummaries" in dashboard_summary_source
     assert "rankedDashboardQueueFindings" in dashboard_summary_source
     assert "./DashboardRemediationColumns" in dashboard_paths[5].read_text(encoding="utf-8")

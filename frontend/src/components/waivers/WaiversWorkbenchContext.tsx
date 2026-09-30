@@ -72,7 +72,7 @@ export function WaiversContext({
               <Button asChild variant="outline">
                 <Link
                   search={{ ...projectSearch, status: "accepted" }}
-                  to="/findings"
+                  to="/triage"
                 >
                   <ExternalLink aria-hidden="true" data-icon="inline-start" />
                   Open accepted findings

@@ -97,7 +97,7 @@ export function FindingDetailRoute({
     >
       <div className="finding-detail-backbar">
         <Button variant="outline" size="sm" asChild>
-          <Link search={findingsBackSearch} to="/findings">
+          <Link search={findingsBackSearch} to="/triage">
             <ArrowLeft aria-hidden="true" size={16} />
             <span>Back to Triage</span>
           </Link>
@@ -332,12 +332,12 @@ function FindingDetailActionRail({
       footer={
         <div className="finding-detail-action-buttons">
           <Button asChild size="sm">
-            <Link search={findingsBackSearch} to="/findings">
+            <Link search={findingsBackSearch} to="/triage">
               Open in Triage
             </Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link search={projectSearch} to="/waivers">
+            <Link search={projectSearch} to="/risk-acceptance">
               Risk acceptance
             </Link>
           </Button>

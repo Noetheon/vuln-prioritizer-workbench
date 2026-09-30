@@ -68,7 +68,7 @@ export function RemediationQueueSummary({
         actions={
           <div className="findings-triage-overview__actions">
             <Button asChild size="sm" variant="outline">
-              <Link search={projectSearch} to="/reports">
+              <Link search={projectSearch} to="/evidence">
                 <FileDown aria-hidden="true" className="mr-1.5" size={14} />
                 Generate evidence
               </Link>

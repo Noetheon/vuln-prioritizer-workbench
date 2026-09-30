@@ -137,7 +137,7 @@ export function WaiverDetailContent({
               label: "Matched findings",
               value: (
                 <Button asChild size="xs" variant="ghost">
-                  <Link search={findingsSearch} to="/findings">
+                  <Link search={findingsSearch} to="/triage">
                     <CountBadge
                       label={`${matchedCount} finding${matchedCount === 1 ? "" : "s"}`}
                       value={matchedCount}
@@ -251,7 +251,7 @@ export function WaiverDetailContent({
         <VpwSectionHeader
           actions={
             <Button asChild variant="outline">
-              <Link search={findingsSearch} to="/findings">
+              <Link search={findingsSearch} to="/triage">
                 <ExternalLink aria-hidden="true" />
                 Open matched findings
               </Link>

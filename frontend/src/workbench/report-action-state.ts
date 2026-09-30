@@ -15,7 +15,7 @@ export function reportActionsAvailable({
   selectedReportRun,
 }: ReportActionStateInput): boolean {
   return (
-    currentPath === "/reports" &&
+    currentPath === "/evidence" &&
     Boolean(selectedReportRun) &&
     isReportableRunStatus(selectedReportRun?.status) &&
     !reportsLoading &&

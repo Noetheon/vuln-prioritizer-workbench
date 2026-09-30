@@ -126,7 +126,7 @@ export function ExecutiveDecision({
         <Button asChild variant="outline">
           <Link
             search={selectedProjectRouteSearch(selectedProject?.id ?? "")}
-            to="/findings"
+            to="/triage"
           >
             Open Triage
           </Link>

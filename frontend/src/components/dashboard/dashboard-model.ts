@@ -38,7 +38,6 @@ export type RiskOperationsDashboardProps = {
   onRefresh: () => void
   onLoadDemoWorkspace: () => void
   onResetDemoWorkspace: () => void
-  onProjectChange: (projectId: string) => void
   projectListLoading: boolean
   projects: readonly ProjectPublic[]
   providerStatus: ProviderStatusPublic | null

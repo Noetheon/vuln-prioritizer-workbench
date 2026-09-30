@@ -88,13 +88,6 @@ export function activeProjectLabel(
   return selectedProject?.name ?? (projectListLoading ? "Loading" : "No project")
 }
 
-export function projectSelectDisabled(
-  projectListLoading: boolean,
-  projects: readonly ProjectPublic[],
-) {
-  return projectListLoading || projects.length === 0
-}
-
 export function assetActionLoading({
   createPending,
   importPending,

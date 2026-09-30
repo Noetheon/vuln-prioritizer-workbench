@@ -1,11 +1,14 @@
-import { lazy } from "react"
-import { RouteParamsProvider, useLocation } from "./lib/router"
+import { lazy, useEffect } from "react"
+import { legacyWorkbenchPaths } from "./lib/app-route-config"
+import { RouteParamsProvider, useLocation, useNavigate } from "./lib/router"
 import type { WorkbenchPath } from "./lib/workbench-navigation"
 import { WorkbenchShell } from "./workbench/WorkbenchShell"
 
 type RouteMatch = {
   Component: React.ComponentType
   params: Record<string, string>
+  // Set for a path from before the rename; the router replaces it.
+  redirectTo?: WorkbenchPath
   routePath: WorkbenchPath | null
 }
 
@@ -39,6 +42,11 @@ const ProjectsRoute = lazy(() =>
     default: module.ProjectsRoute,
   })),
 )
+const PolicyRoute = lazy(() =>
+  import("./workbench/routes/PolicyRoute").then((module) => ({
+    default: module.PolicyRoute,
+  })),
+)
 const ProvidersRoute = lazy(() =>
   import("./workbench/routes/ProvidersRoute").then((module) => ({
     default: module.ProvidersRoute,
@@ -63,13 +71,14 @@ const WaiversRoute = lazy(() =>
 const staticRoutes: Record<string, Omit<RouteMatch, "params">> = {
   "/": { Component: DashboardRoute, routePath: "/" },
   "/assets": { Component: AssetsRoute, routePath: "/assets" },
-  "/findings": { Component: FindingsRoute, routePath: "/findings" },
+  "/triage": { Component: FindingsRoute, routePath: "/triage" },
   "/imports": { Component: ImportsRoute, routePath: "/imports" },
   "/projects": { Component: ProjectsRoute, routePath: "/projects" },
-  "/providers": { Component: ProvidersRoute, routePath: "/providers" },
-  "/reports": { Component: ReportsRoute, routePath: "/reports" },
+  "/data-sources": { Component: ProvidersRoute, routePath: "/data-sources" },
+  "/policy": { Component: PolicyRoute, routePath: "/policy" },
+  "/evidence": { Component: ReportsRoute, routePath: "/evidence" },
   "/settings": { Component: SettingsRoute, routePath: "/settings" },
-  "/waivers": { Component: WaiversRoute, routePath: "/waivers" },
+  "/risk-acceptance": { Component: WaiversRoute, routePath: "/risk-acceptance" },
 }
 
 function NotFoundRoute() {
@@ -86,7 +95,15 @@ function NotFoundRoute() {
 
 export function AppRouter() {
   const location = useLocation()
+  const navigate = useNavigate()
   const match = routeMatch(location.pathname)
+  const redirectTo = match.redirectTo
+
+  useEffect(() => {
+    if (redirectTo) {
+      void navigate({ replace: true, search: location.searchStr, to: redirectTo })
+    }
+  }, [location.searchStr, navigate, redirectTo])
 
   return (
     <RouteParamsProvider params={match.params}>
@@ -134,12 +151,17 @@ export function routeMatch(pathname: string): RouteMatch {
     return {
       Component: FindingDetailRoute,
       params: { findingId },
-      routePath: "/findings",
+      routePath: "/triage",
     }
   }
   const staticMatch = staticRoutes[normalizedPath]
   if (staticMatch) {
     return { ...staticMatch, params: {} }
+  }
+  const legacyPath = legacyWorkbenchPaths[normalizedPath]
+  const legacyMatch = legacyPath ? staticRoutes[legacyPath] : undefined
+  if (legacyPath && legacyMatch) {
+    return { ...legacyMatch, params: {}, redirectTo: legacyPath }
   }
   return { Component: NotFoundRoute, params: {}, routePath: null }
 }

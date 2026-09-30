@@ -22,7 +22,7 @@ test("pending daily decisions recover automatically without a manual reload", as
       } : { data: [mockFinding], count: 1 }),
     })
   })
-  await page.goto(`/findings?projectId=${mockProject.id}`)
+  await page.goto(`/triage?projectId=${mockProject.id}`)
   await expect(page.getByText(/awaiting today's governance update/)).toBeVisible()
   ready = true
   await expect(page.getByRole("table", { name: "Findings remediation queue" }))
@@ -41,7 +41,7 @@ test("compressed historical JSON can be generated and downloaded through the Evi
   expect(seeded.ok()).toBeTruthy()
   const demo = await seeded.json()
   const runId = demo.latest_run.id
-  await page.goto(`/reports?projectId=${demo.project.id}&runId=${runId}`)
+  await page.goto(`/evidence?projectId=${demo.project.id}&runId=${runId}`)
   await page.getByRole("button", { name: "Export compressed JSON", exact: true }).click()
   await page.getByRole("tab", { name: "History" }).click()
   const downloadButton = page.getByRole("button", { name: "Download analysis-result.v2.json.gz" })

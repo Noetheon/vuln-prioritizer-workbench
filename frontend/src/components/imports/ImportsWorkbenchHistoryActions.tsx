@@ -72,7 +72,7 @@ export function ImportRunActions({
           <Link
             aria-label={`Review findings for run ${run.id.slice(0, 8)}`}
             search={{ projectId: run.project_id }}
-            to="/findings"
+            to="/triage"
           >
             <ListChecks aria-hidden="true" />
           </Link>

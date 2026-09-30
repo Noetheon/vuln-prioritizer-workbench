@@ -4,6 +4,7 @@ import test from "node:test"
 import {
   assetFindingsUrlSearch,
   normalizeSelectedProjectId,
+  projectSwitchLocation,
   searchStringFromUrlSearch,
   selectedProjectIdFromSearch,
   selectedProjectRouteSearch,
@@ -67,5 +68,39 @@ test("serializes asset findings links with project and asset identity", () => {
       }),
     ),
     "projectId=project-1&assetId=asset-1&assetKey=build-host-1",
+  )
+})
+
+test("switching project keeps filters but drops the old project's page, run, and asset", () => {
+  assert.deepEqual(
+    projectSwitchLocation(
+      "/triage",
+      "?projectId=old&priority=critical&offset=50&assetId=a-1&assetKey=web",
+      "next",
+    ),
+    { search: "projectId=next&priority=critical", to: "/triage" },
+  )
+  assert.deepEqual(
+    projectSwitchLocation("/evidence", "runId=run-1&projectId=old", "next"),
+    { search: "projectId=next", to: "/evidence" },
+  )
+  assert.deepEqual(projectSwitchLocation("/", "", "next"), {
+    search: "projectId=next",
+    to: "/",
+  })
+})
+
+test("switching project from a finding or import run returns to its list", () => {
+  assert.deepEqual(
+    projectSwitchLocation("/findings/finding-1", "?projectId=old&status=open", "next"),
+    { search: "projectId=next&status=open", to: "/triage" },
+  )
+  assert.deepEqual(
+    projectSwitchLocation("/imports/runs/run-1/", "?projectId=old", "next"),
+    { search: "projectId=next", to: "/imports" },
+  )
+  assert.deepEqual(
+    projectSwitchLocation("/imports/new", "?projectId=old", "next"),
+    { search: "projectId=next", to: "/imports/new" },
   )
 })

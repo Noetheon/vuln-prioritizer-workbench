@@ -9,6 +9,7 @@ import {
 } from "../../components/reports/report-run-scope-model"
 import { apiErrorMessage } from "../../lib/app-errors"
 import { useWorkbenchContext } from "../WorkbenchContext"
+import { useProjectChangeReset } from "../useProjectChangeReset"
 import {
   normalizeSelectedRunId,
   reportRunUrlSearch,
@@ -33,16 +34,18 @@ function ReportsRouteContent() {
     capabilities,
     capabilitiesError,
     capabilitiesLoading,
-    projectListLoading,
     projectListError,
-    projects,
     providerStatus,
     selectedProject,
     selectedProjectId,
-    setSelectedProjectId,
   } = useWorkbenchContext()
   const routeRunId = selectedReportRunIdFromSearch(location.searchStr)
   const [selectedRunId, setSelectedRunIdState] = useState(routeRunId)
+  // The header project switcher drops the run from the address; forget it
+  // here too so the old project's run is never shown.
+  useProjectChangeReset(selectedProjectId, () =>
+    setSelectedRunIdState(routeRunId),
+  )
   const projectRunsQuery = useProjectRunsQuery(selectedProjectId, true, {
     includeStateSnapshots: true,
   })
@@ -108,7 +111,7 @@ function ReportsRouteContent() {
 
   const reportsState = useReportsRouteState({
     capabilitiesError,
-    currentPath: "/reports",
+    currentPath: "/evidence",
     currentStateSelected,
     onStateRunCreated: (runId) => selectRunId(runId, { replace: false }),
     reportFormatCapabilities: capabilities?.report_formats ?? [],
@@ -117,11 +120,6 @@ function ReportsRouteContent() {
     selectedRunId,
   })
 
-  function handleProjectChange(projectId: string) {
-    setSelectedProjectId(projectId)
-    selectRunId("", { replace: true })
-  }
-
   return (
     <EvidenceCenter
       activeReportFormat={reportsState.activeReportFormat}
@@ -129,14 +127,11 @@ function ReportsRouteContent() {
       capabilitiesLoading={capabilitiesLoading}
       onCreateReport={reportsState.createReport}
       onDownloadReport={reportsState.downloadReport}
-      onProjectChange={handleProjectChange}
       onRunIdChange={(runId) => selectRunId(runId, { replace: false })}
       onVerifyReport={reportsState.verifyEvidenceReport}
       projectListError={projectListError}
-      projectListLoading={projectListLoading}
       projectRuns={reportRuns}
       projectSummary={projectSummaryQuery.data ?? null}
-      projects={projects}
       providerStatus={providerStatus}
       reportActionError={reportsState.reportActionError}
       reportActionMessage={reportsState.reportActionMessage}
@@ -159,7 +154,6 @@ function ReportsRouteContent() {
       }
       runsLoading={projectRunsQuery.isLoading || projectRunsQuery.isFetching}
       selectedProject={selectedProject}
-      selectedProjectId={selectedProjectId}
       currentStateSelected={currentStateSelected}
       selectedReportRun={selectedReportRun}
       selectedRunId={selectedRunId}

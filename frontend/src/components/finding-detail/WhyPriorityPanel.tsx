@@ -2,6 +2,7 @@ import type {
   FindingDetailPublic,
   FindingExplanationPublic,
 } from "@/api-client"
+import { PriorityPolicyLink } from "@/components/findings/PriorityPolicyLink"
 import { formatNullableNumber } from "@/lib/risk-format"
 
 import type { FindingDecisionReason } from "./finding-detail-model"
@@ -115,7 +116,12 @@ export function WhyPriorityPanel({
           <h3>Why this priority?</h3>
           <p>
             The ranking is explained from stored scanner, provider, asset, and
-            governance evidence before any raw audit details.
+            governance evidence before any raw audit details. Priority
+            thresholds and SLA targets come from the project's{" "}
+            <PriorityPolicyLink projectId={finding.project_id}>
+              priority policy
+            </PriorityPolicyLink>
+            .
           </p>
         </div>
       </div>

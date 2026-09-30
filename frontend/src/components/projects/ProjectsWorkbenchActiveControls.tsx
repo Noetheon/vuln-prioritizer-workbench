@@ -32,7 +32,7 @@ export function ActiveProjectActions({
         </Link>
       </Button>
       <Button asChild>
-        <Link search={projectSearch} to="/reports">
+        <Link search={projectSearch} to="/evidence">
           <FileCheck2 aria-hidden="true" />
           Generate evidence
         </Link>

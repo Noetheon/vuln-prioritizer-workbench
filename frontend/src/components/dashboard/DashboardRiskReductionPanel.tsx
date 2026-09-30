@@ -141,7 +141,7 @@ export function DashboardRiskReductionPanel({
               <Button asChild size="sm" variant="outline">
                 <Link
                   search={selectedProjectRouteSearch(selectedProjectId)}
-                  to="/findings"
+                  to="/triage"
                 >
                   Review findings
                   <ArrowUpRight aria-hidden="true" className="size-3.5" />

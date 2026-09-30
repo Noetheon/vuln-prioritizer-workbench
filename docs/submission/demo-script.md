@@ -39,13 +39,13 @@ If the live demo is stable, open the app in this order:
 1. `/`
 2. `/projects`
 3. `/imports`
-4. `/findings`
+4. `/triage`
 5. a Finding Detail page
 6. TTP Context Tab
 7. `/assets`
-8. `/providers`
-9. `/waivers`
-10. `/reports`
+8. `/data-sources`
+9. `/risk-acceptance`
+10. `/evidence`
 11. `/settings`
 
 Archived fallback screens are historical demo evidence. They are useful if the
