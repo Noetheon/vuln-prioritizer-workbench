@@ -1,0 +1,36 @@
+name: Quality health
+
+on:
+  schedule:
+    - cron: "19 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: quality-health
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    name: quality-health
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Detect missing campaigns and deteriorating measurements
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -m scripts.check_quality_health
+      - name: Retain monitoring evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: quality-health
+          path: build/quality-health.json
+          retention-days: 90
+          if-no-files-found: error

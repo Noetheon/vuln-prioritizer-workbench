@@ -12,7 +12,7 @@ docs/audits/
 .env
 .env.*
 !.env.example
-.venv/
+.venv
 venv/
 env/
 ENV/
@@ -28,6 +28,9 @@ __pycache__/
 .ruff_cache/
 .pyre/
 .hypothesis/
+backend/mutants/
+backend/.mutmut-cache
+backend/.mutation-check.lock
 .ipynb_checkpoints/
 
 # Test, benchmark, and coverage artifacts
@@ -101,4 +104,11 @@ frontend/screenshot*.mjs
 .playwright-cli/
 .playwright-mcp/
 .agents/
+!/.agents/
+/.agents/*
+!/.agents/skills/
+!/.agents/MAINTENANCE.md
 .claude/
+!/.claude/
+/.claude/*
+!/.claude/skills/

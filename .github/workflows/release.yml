@@ -16,7 +16,14 @@ permissions:
   contents: write
 
 jobs:
+  quality:
+    uses: ./.github/workflows/test-quality.yml
+    permissions:
+      contents: read
+      actions: read
+
   build-and-release:
+    needs: quality
     runs-on: ubuntu-latest
     permissions:
       contents: write

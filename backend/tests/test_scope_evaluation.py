@@ -121,3 +121,44 @@ def test_input_rejects_mixed_facts_and_unsupported_engine() -> None:
         ScopeEvaluationInput.model_validate(raw)
     with pytest.raises(ValueError, match="Unsupported evaluation engine"):
         evaluate_scope(inputs().model_copy(update={"engine_version": "future-engine"}))
+
+
+def test_scope_uses_supplied_policy_and_context_profile() -> None:
+    from app.domain.engine.models import ContextPolicyProfile, PriorityPolicy
+
+    original = inputs()
+    custom = original.model_copy(
+        update={
+            "priority_policy": PriorityPolicy(high_epss_threshold=0.15),
+            "context_profile": ContextPolicyProfile(
+                narrative_only=False, enterprise_escalation=True
+            ),
+        }
+    )
+    decision = evaluate_scope(custom)
+    assert decision.priority_label == "High"
+    assert "high-epss" in decision.priority_drivers
+    assert decision.context_recommendation == (
+        "Context does not raise the default response, but affected components and owners "
+        "should still be reviewed."
+    )
+
+
+def test_scope_diagnostics_are_empty_without_waivers_or_for_unrelated_scopes() -> None:
+    from app.decision_core.evaluation import evaluate_scope_with_diagnostics
+
+    original = inputs()
+    assert evaluate_scope_with_diagnostics(original)[1] == []
+    unrelated = WaiverRule(
+        cve_id=CVE,
+        id="peer",
+        asset_ids=["other-asset"],
+        owner="peer-owner",
+        reason="Other scope only",
+        expires_on="2099-12-31",
+    )
+    decision, warnings = evaluate_scope_with_diagnostics(
+        original.model_copy(update={"waiver_rules": [unrelated]})
+    )
+    assert decision.waived is False
+    assert warnings == []

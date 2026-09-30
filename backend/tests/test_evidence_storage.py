@@ -58,6 +58,28 @@ def test_sections_share_provider_facts_and_preserve_exact_independent_payloads()
     assert len(json.dumps(document).encode()) < 3000
 
 
+@pytest.mark.parametrize("fact_length", [8, 1000])
+def test_compact_storage_keeps_retained_nested_values_independent(fact_length: int) -> None:
+    payload = {
+        "provider": {
+            "provider_evidence": {"advisory": "x" * fact_length},
+            "kept": [{"label": "original"}],
+        },
+        "context": {"observed": [{"asset": "original"}]},
+    }
+    original = deepcopy(payload)
+    document, sections = split_payload(payload)
+    assert (
+        join_payload(document, {key: json.loads(value) for key, value in sections.items()})
+        == original
+    )
+    document["provider"]["kept"][0]["label"] = "document"
+    document["context"]["observed"][0]["asset"] = "document"
+    assert payload == original
+    payload["context"]["observed"][0]["asset"] = "caller"
+    assert document["context"]["observed"][0]["asset"] == "document"
+
+
 @pytest.mark.parametrize("corruption", ["missing", "section", "root", "overlap", "version", "path"])
 def test_storage_corruption_never_produces_a_silently_changed_decision(corruption: str) -> None:
     document, sections = split_payload(_payload())

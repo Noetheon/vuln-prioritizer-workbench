@@ -43,7 +43,7 @@ export default defineConfig({
     deviceScaleFactor: 1,
     locale: "en-US",
     timezoneId: "UTC",
-    trace: "on-first-retry",
+    trace: "retain-on-failure",
   },
   webServer: [
     {

@@ -55,7 +55,10 @@ measures the active Workbench package under `backend/app`. `pytest-cov` owns
 measurement and the terminal report, while the enforced backend gate is
 `make critical-coverage-check` over the generated coverage JSON. This avoids a
 misleading total-project fail-under message while still protecting the critical
-Workbench modules.
+Workbench modules. Critical modules require 90% line and 80% branch coverage,
+measured independently; missing branch data fails the gate. The
+[testing strategy](testing-strategy.md) explains the complementary property,
+mutation, history and recovery checks.
 
 Coverage configuration must stay aligned with the package boundary when modules
 move. Package inclusion of `app*` is not coverage proof by itself; pytest must

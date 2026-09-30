@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test"
 import { evidenceScreenshotPath } from "./evidence-paths"
 import {
+  createResponseGate,
   mockFinding,
   mockProject,
   routeWorkbenchShell,
@@ -627,22 +628,27 @@ test("finding detail remains scrollable from shell surfaces at MacBook viewport"
 test("findings loading and disabled control semantics are observable", async ({
   page,
 }) => {
+  const findingsResponse = createResponseGate()
   await routeWorkbenchShell(page, {
     findings: [mockFinding],
-    findingsDelayMs: 500,
+    findingsResponseReady: findingsResponse.ready,
     projects: [mockProject],
   })
 
-  await page.goto("/triage")
-
   const loadingRegion = page.getByRole("status", { name: "Loading findings" })
-  await expect(loadingRegion).toBeVisible()
-  await expect(loadingRegion).toHaveAttribute("aria-busy", "true")
-  await expect(page.locator(".findings-remediation-layout")).toHaveAttribute(
-    "aria-busy",
-    "true",
-  )
+  try {
+    await page.goto("/triage")
+    await expect(loadingRegion).toBeVisible()
+    await expect(loadingRegion).toHaveAttribute("aria-busy", "true")
+    await expect(page.locator(".findings-remediation-layout")).toHaveAttribute(
+      "aria-busy",
+      "true",
+    )
+  } finally {
+    findingsResponse.release()
+  }
 
+  await expect(loadingRegion).toBeHidden()
   await expect(
     page.getByRole("table", { name: "Findings remediation queue" }),
   ).toBeVisible()

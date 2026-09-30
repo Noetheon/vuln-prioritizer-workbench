@@ -169,6 +169,7 @@ def workbench_analysis_run_model(
 def create_workbench_api_env(
     *,
     database_path: Path | None = None,
+    initialize_database: bool = True,
 ) -> tuple[WorkbenchApiEnv, Callable[[], None]]:
     """Create a TestClient wired to a disposable SQLModel database."""
     from app.api import deps
@@ -194,10 +195,12 @@ def create_workbench_api_env(
         active_settings = replace(settings, SQLALCHEMY_DATABASE_URI=database_uri)
         engine = create_db_engine(active_settings)
     app.state.workbench_settings = active_settings
-    SQLModel.metadata.create_all(engine)
+    if initialize_database:
+        SQLModel.metadata.create_all(engine)
     with engine.connect() as connection:
         assert connection.exec_driver_sql("PRAGMA foreign_keys").scalar_one() == 1
-    stamp_test_alembic_head(engine)
+    if initialize_database:
+        stamp_test_alembic_head(engine)
 
     def override_get_db() -> Generator[Session, None, None]:
         with Session(engine) as session:

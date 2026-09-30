@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import zipfile
@@ -45,6 +46,8 @@ def test_real_grype_upload_worker_and_evidence(
         SBOM_GRYPE_EXECUTABLE=str(Path(os.environ["VPW_TEST_GRYPE_BINARY"]).resolve()),
         PROVIDER_CACHE_DIR=str(cache),
     )
+    # The global test fixture blocks provider HTTP calls. Missing enrichment
+    # stays explicitly degraded; only the real scanner and its database are live.
     headers = local_api_headers(env.client)
     project = create_project_via_api(env.client, headers)
     source = (REPO_ROOT / "docs/examples" / f"sbom-{name}").read_bytes()
@@ -64,17 +67,25 @@ def test_real_grype_upload_worker_and_evidence(
     assessment = run["evidence"]["sbom_assessment"]
     assert assessment["scanner_version"]
     assert assessment["database_sha256"]
+    assert assessment["input_sha256"] == hashlib.sha256(source).hexdigest()
+    if expected_version := os.environ.get("VPW_TEST_GRYPE_VERSION"):
+        assert assessment["scanner_version"] == expected_version
+    if expected_hashes := os.environ.get("VPW_TEST_GRYPE_DB_SHA256"):
+        assert assessment["database_sha256"] in json.loads(expected_hashes)
     if name.startswith("vulnerable"):
         assert run["evidence"]["counts"]["finding_count"] > 0
+        assert run["evidence"]["provider"]["provider_degraded"] is True
+        findings = env.client.get(f"/api/v1/projects/{project['id']}/findings/", headers=headers)
+        assert findings.status_code == 200, findings.text
+        assert "CVE-2021-44228" in {item["cve_id"] for item in findings.json()["data"]}
     # Zero is a DB-dependent observation, not a timeless claim about this package.
     download = env.client.get(f"/api/v1/runs/{run['id']}/sbom-evidence", headers=headers)
     assert download.status_code == 200, download.text
     with zipfile.ZipFile(BytesIO(download.content)) as bundle:
         assert bundle.read("sbom.json") == source
-        assert (
-            json.loads(bundle.read("assessment.json"))["output_sha256"]
-            == assessment["output_sha256"]
-        )
+        saved = json.loads(bundle.read("assessment.json"))
+        for field in ("input_sha256", "output_sha256", "database_sha256", "scanner_version"):
+            assert saved[field] == assessment[field]
     if output := os.environ.get("VPW_SBOM_VALIDATION_OUTPUT"):
         directory = Path(output)
         directory.mkdir(parents=True, exist_ok=True)

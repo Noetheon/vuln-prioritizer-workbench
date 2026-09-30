@@ -40,13 +40,19 @@ def split_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, by
     """Return a compact document and immutable, content-addressed JSON sections."""
     if STORAGE_KEY in payload:
         raise DecisionLedgerInvariantError("Cannot encode an already encoded evidence payload.")
-    document = deepcopy(payload)
+    # Detach only the containers whose keys are removed. Copying entire provider
+    # sections first wastes work: their immutable bytes replace them below.
+    document = dict(payload)
     sections: dict[str, bytes] = {}
     refs: list[dict[str, Any]] = []
     for path in (*FACT_PATHS, *SECTION_PATHS):
         parent: Any = document
         for name in path[:-1]:
-            parent = parent.get(name) if isinstance(parent, dict) else None
+            child = parent.get(name) if isinstance(parent, dict) else None
+            if isinstance(child, dict):
+                child = dict(child)
+                parent[name] = child
+            parent = child
         if not isinstance(parent, dict) or path[-1] not in parent:
             continue
         encoded = _canonical_bytes(parent[path[-1]])
@@ -56,6 +62,9 @@ def split_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, by
         sections[digest] = encoded
         refs.append({"path": list(path), "sha256": digest})
         del parent[path[-1]]
+    # Retained values still need deep isolation from the caller, including small
+    # sections that stay inline. The extracted sections are already byte strings.
+    document = deepcopy(document)
     document[STORAGE_KEY] = {
         "version": STORAGE_VERSION,
         "sha256": canonical_payload_sha256(payload),

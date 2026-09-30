@@ -930,3 +930,49 @@ def _finding(
         rationale="Deterministic rationale.",
         recommended_action="Do the deterministic thing.",
     )
+
+
+@pytest.mark.parametrize(
+    "cvss,epss,kev,expected",
+    [
+        (None, None, False, ["default-low"]),
+        (None, None, True, ["kev"]),
+        (7.0, 0.7, False, ["critical-epss-cvss", "high-epss", "medium-cvss", "medium-epss"]),
+        (None, 0.4, False, ["high-epss", "medium-epss"]),
+        (None, 0.1, False, ["medium-epss"]),
+        (9.0, None, False, ["high-cvss", "medium-cvss"]),
+        (7.0, None, False, ["medium-cvss"]),
+    ],
+)
+def test_priority_driver_contract_at_each_signal_boundary(cvss, epss, kev, expected) -> None:
+    assert (
+        build_priority_drivers(
+            NvdData(cve_id="CVE-2026-4242", cvss_base_score=cvss),
+            EpssData(cve_id="CVE-2026-4242", epss=epss),
+            KevData(cve_id="CVE-2026-4242", in_kev=kev),
+        )
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    "waived,status,expected",
+    [
+        (True, "active", "Accepted"),
+        (True, "review_due", "Accepted"),
+        (True, "expired", "High"),
+        (False, "active", "High"),
+        (False, "review_due", "High"),
+    ],
+)
+def test_acceptance_requires_both_current_waiver_and_eligible_lifecycle(waived, status, expected):
+    finding = PrioritizedFinding(
+        cve_id="CVE-2026-4242",
+        priority_label="High",
+        priority_rank=2,
+        waived=waived,
+        waiver_status=status,
+        rationale="High signal",
+        recommended_action="Remediate",
+    )
+    assert determine_priority_state(finding) == expected
