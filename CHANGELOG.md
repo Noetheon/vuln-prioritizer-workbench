@@ -19,6 +19,13 @@ exact git tag output when release wording needs to be verified.
 
 ### Added
 
+- Accept risk where the decision is made (audit H5): **Accept risk…** on a
+  finding and in the Triage bulk bar opens the acceptance form for exactly
+  those findings and records one acceptance each in one step
+  (`POST /api/v1/projects/{project_id}/waivers/bulk`, up to 100 findings, one
+  re-evaluation). The Risk Acceptance form picks findings and assets from the
+  project instead of UUID fields and suggests known CVEs, asset keys, and
+  services.
 - The Overview opens with a setup checklist until the project has its first
   report: create a project, import scanner findings, add asset context, and
   generate the first report (audit H9). Each step links to the page that does

@@ -11158,6 +11158,99 @@ export const ValidationErrorSchema = {
     type: 'object'
 } as const;
 
+export const WaiverBulkCreateSchema = {
+    description: 'Accept the risk of several findings at once, one finding-scoped waiver each.',
+    properties: {
+        approval_ref: {
+            anyOf: [
+                {
+                    maxLength: 300,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Approval Ref'
+        },
+        expires_at: {
+            anyOf: [
+                {
+                    format: 'date',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expires At'
+        },
+        finding_ids: {
+            items: {
+                format: 'uuid',
+                type: 'string'
+            },
+            maxItems: 100,
+            minItems: 1,
+            title: 'Finding Ids',
+            type: 'array'
+        },
+        owner: {
+            anyOf: [
+                {
+                    maxLength: 200,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Owner'
+        },
+        reason: {
+            anyOf: [
+                {
+                    maxLength: 4096,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reason'
+        },
+        review_at: {
+            anyOf: [
+                {
+                    format: 'date',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Review At'
+        },
+        ticket_url: {
+            anyOf: [
+                {
+                    maxLength: 1000,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ticket Url'
+        }
+    },
+    required: [
+        'finding_ids'
+    ],
+    title: 'WaiverBulkCreate',
+    type: 'object'
+} as const;
+
 export const WaiverCreateSchema = {
     description: 'Create payload for a project waiver.',
     properties: {

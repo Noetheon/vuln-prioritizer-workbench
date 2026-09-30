@@ -6020,6 +6020,42 @@ export type ValidationError = {
 };
 
 /**
+ * WaiverBulkCreate
+ *
+ * Accept the risk of several findings at once, one finding-scoped waiver each.
+ */
+export type WaiverBulkCreate = {
+    /**
+     * Approval Ref
+     */
+    approval_ref?: string | null;
+    /**
+     * Expires At
+     */
+    expires_at?: string | null;
+    /**
+     * Finding Ids
+     */
+    finding_ids: Array<string>;
+    /**
+     * Owner
+     */
+    owner?: string | null;
+    /**
+     * Reason
+     */
+    reason?: string | null;
+    /**
+     * Review At
+     */
+    review_at?: string | null;
+    /**
+     * Ticket Url
+     */
+    ticket_url?: string | null;
+};
+
+/**
  * WaiverCreate
  *
  * Create payload for a project waiver.
@@ -7943,6 +7979,36 @@ export type PostApiV1ProjectsByProjectIdWaiversResponses = {
 };
 
 export type PostApiV1ProjectsByProjectIdWaiversResponse = PostApiV1ProjectsByProjectIdWaiversResponses[keyof PostApiV1ProjectsByProjectIdWaiversResponses];
+
+export type PostApiV1ProjectsByProjectIdWaiversBulkData = {
+    body: WaiverBulkCreate;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/waivers/bulk';
+};
+
+export type PostApiV1ProjectsByProjectIdWaiversBulkErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type PostApiV1ProjectsByProjectIdWaiversBulkError = PostApiV1ProjectsByProjectIdWaiversBulkErrors[keyof PostApiV1ProjectsByProjectIdWaiversBulkErrors];
+
+export type PostApiV1ProjectsByProjectIdWaiversBulkResponses = {
+    /**
+     * Successful Response
+     */
+    200: WaiversPublic;
+};
+
+export type PostApiV1ProjectsByProjectIdWaiversBulkResponse = PostApiV1ProjectsByProjectIdWaiversBulkResponses[keyof PostApiV1ProjectsByProjectIdWaiversBulkResponses];
 
 export type GetApiV1ProjectsByProjectIdWorkflowsData = {
     body?: never;

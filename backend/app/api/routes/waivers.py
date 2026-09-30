@@ -9,7 +9,14 @@ from sqlmodel import Session
 
 from app.api.deps import LocalActor, SessionDep
 from app.api.routes.workbench_access import lock_existing_project_resource, require_project
-from app.models import Waiver, WaiverCreate, WaiverPublic, WaiversPublic, WaiverUpdate
+from app.models import (
+    Waiver,
+    WaiverBulkCreate,
+    WaiverCreate,
+    WaiverPublic,
+    WaiversPublic,
+    WaiverUpdate,
+)
 from app.repositories import AssetRepository, FindingRepository, WaiverRepository
 from app.services.audit import record_audit_event
 from app.services.decision_projection_sync import DecisionProjectionService
@@ -75,6 +82,55 @@ def create_project_waiver(
     session.commit()
     session.refresh(waiver)
     return _waiver_public(repository, waiver)
+
+
+@router.post("/projects/{project_id}/waivers/bulk", response_model=WaiversPublic)
+def create_project_waivers_bulk(
+    *,
+    project_id: uuid.UUID,
+    session: SessionDep,
+    local_actor: LocalActor,
+    waivers_in: WaiverBulkCreate,
+) -> WaiversPublic:
+    """Accept the risk of several findings at once, one finding-scoped acceptance each."""
+    require_project(session, project_id)
+    lock_project_decision_scope(session, project_id)
+    finding_repository = FindingRepository(session)
+    findings = [finding_repository.get_finding(finding_id) for finding_id in waivers_in.finding_ids]
+    if any(finding is None or finding.project_id != project_id for finding in findings):
+        raise HTTPException(status_code=422, detail="finding_ids must belong to the project.")
+    repository = WaiverRepository(session)
+    waivers = [
+        repository.create_project_waiver(
+            project_id=project_id,
+            waiver_in=waivers_in.waiver_for(finding_id=finding.id, cve_id=finding.cve_id),
+        )
+        for finding in findings
+        if finding is not None
+    ]
+    # One re-evaluation covers every new acceptance.
+    DecisionProjectionService(session).sync_project_waivers(project_id, revision_cause="waiver")
+    for waiver in waivers:
+        record_audit_event(
+            session,
+            action="waiver.create",
+            resource_type="waiver",
+            resource_id=waiver.id,
+            actor=local_actor,
+            project_id=project_id,
+            detail={"cve_id": waiver.cve_id, "owner": waiver.owner, "bulk": True},
+        )
+    session.commit()
+    for waiver in waivers:
+        session.refresh(waiver)
+    matched_counts = repository.matching_finding_counts(waivers)
+    return WaiversPublic(
+        data=[
+            _waiver_public(repository, waiver, matched_findings=matched_counts[waiver.id])
+            for waiver in waivers
+        ],
+        count=len(waivers),
+    )
 
 
 @router.patch("/waivers/{waiver_id}", response_model=WaiverPublic)

@@ -1,5 +1,6 @@
 import type {
   FindingDetailPublic,
+  WaiverBulkCreate,
   WaiverCreate,
   WaiverPublic,
 } from "../api-client"
@@ -112,6 +113,37 @@ export function waiverRequestBody(form: WaiverFormState): WaiverCreate {
     review_at: nullableTrimmed(form.reviewAt),
     service: nullableTrimmed(form.service),
     ticket_url: nullableTrimmed(form.ticketUrl),
+  }
+}
+
+/** One acceptance per finding, sharing the decision in `form`. */
+export function waiverBulkRequestBody(
+  form: WaiverFormState,
+  findingIds: readonly string[],
+): WaiverBulkCreate {
+  return {
+    approval_ref: nullableTrimmed(form.approvalRef),
+    expires_at: nullableTrimmed(form.expiresAt),
+    finding_ids: [...findingIds],
+    owner: nullableTrimmed(form.owner),
+    reason: nullableTrimmed(form.reason),
+    review_at: nullableTrimmed(form.reviewAt),
+    ticket_url: nullableTrimmed(form.ticketUrl),
+  }
+}
+
+/** The acceptance of exactly one finding: its id, with its CVE for the register. */
+export function findingWaiverForm(
+  form: WaiverFormState,
+  finding: { cve_id: string; id: string },
+): WaiverFormState {
+  return {
+    ...form,
+    assetId: "",
+    assetKey: "",
+    cveId: finding.cve_id,
+    findingId: finding.id,
+    service: "",
   }
 }
 

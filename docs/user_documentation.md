@@ -216,6 +216,16 @@ tab under **Status changes** with who or what changed the status and why.
   positives stay closed when a later scan reports them again. Accepted,
   suppressed, and fixed remain owned by waivers and VEX; bulk changes skip
   those findings and say why.
+- **Accepting risk.** Choose **Accept risk…** on a finding, or select rows in
+  the Triage queue and choose **Accept risk…**, to record a time-bound
+  acceptance for exactly those findings: owner, reason, review and expiry
+  dates, and approval evidence, one acceptance per finding
+  (`POST /api/v1/projects/{project_id}/waivers/bulk` takes up to 100
+  findings at once). Only open work can be accepted this way. For a broader
+  scope (a CVE across assets, an asset, or a service), use **Record accepted
+  risk** on the Risk Acceptance page; its finding and asset fields list the
+  project's findings and assets, and the CVE, asset key, and service fields
+  suggest the values the project already has.
 
 The Triage queue lists open work (open, in review, remediating) by default;
 the findings API does the same with `open_work=true`. Choose **All statuses**

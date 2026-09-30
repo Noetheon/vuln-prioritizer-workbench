@@ -11,6 +11,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from app.models.base import get_datetime_utc
 
 WAIVER_REASON_MAX_LENGTH = 4096
+WAIVER_BULK_MAX_FINDINGS = 100
 
 
 class WaiverScopeBase(SQLModel):
@@ -125,6 +126,49 @@ class WaiverCreate(WaiverScopeBase):
         return self
 
 
+class WaiverBulkCreate(SQLModel):
+    """Accept the risk of several findings at once, one finding-scoped waiver each."""
+
+    finding_ids: list[uuid.UUID] = Field(min_length=1, max_length=WAIVER_BULK_MAX_FINDINGS)
+    owner: str | None = Field(default=None, max_length=200)
+    reason: str | None = Field(default=None, max_length=WAIVER_REASON_MAX_LENGTH)
+    expires_at: date | None = None
+    review_at: date | None = None
+    approval_ref: str | None = Field(default=None, max_length=300)
+    ticket_url: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("owner", "reason", "approval_ref", "ticket_url")
+    @classmethod
+    def _strip_strings(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+    @field_validator("finding_ids")
+    @classmethod
+    def _unique_finding_ids(cls, value: list[uuid.UUID]) -> list[uuid.UUID]:
+        return list(dict.fromkeys(value))
+
+    @model_validator(mode="after")
+    def _validate_required_fields(self) -> "WaiverBulkCreate":
+        _validate_waiver_decision(self)
+        return self
+
+    def waiver_for(self, *, finding_id: uuid.UUID, cve_id: str) -> "WaiverCreate":
+        """Return the single-finding waiver this request creates for one finding."""
+        return WaiverCreate(
+            finding_id=finding_id,
+            cve_id=cve_id,
+            owner=self.owner,
+            reason=self.reason,
+            expires_at=self.expires_at,
+            review_at=self.review_at,
+            approval_ref=self.approval_ref,
+            ticket_url=self.ticket_url,
+        )
+
+
 class WaiverUpdate(WaiverCreate):
     """
     Update payload for a waiver.
@@ -153,7 +197,7 @@ class WaiversPublic(SQLModel):
     count: int
 
 
-def _validate_waiver_payload(payload: WaiverCreate) -> None:
+def _validate_waiver_decision(payload: "WaiverCreate | WaiverBulkCreate") -> None:
     if payload.owner is None:
         raise ValueError("owner is required.")
     if payload.reason is None:
@@ -162,6 +206,10 @@ def _validate_waiver_payload(payload: WaiverCreate) -> None:
         raise ValueError("expires_at is required.")
     if payload.review_at is not None and payload.review_at > payload.expires_at:
         raise ValueError("review_after_expiry")
+
+
+def _validate_waiver_payload(payload: WaiverCreate) -> None:
+    _validate_waiver_decision(payload)
     if not any(
         (
             payload.finding_id,

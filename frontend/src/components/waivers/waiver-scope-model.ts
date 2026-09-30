@@ -1,4 +1,5 @@
 import type {
+  AssetPublic,
   FindingPublic,
   GovernanceWaiverDebtEntryPublic,
   WaiverPublic,
@@ -151,4 +152,47 @@ export function findingSummary(finding: FindingPublic) {
     finding.asset_key ?? finding.asset_name,
     finding.business_service,
   ])
+}
+
+export type AcceptableFinding = Pick<
+  FindingPublic,
+  | "asset_key"
+  | "asset_name"
+  | "component_name"
+  | "component_version"
+  | "cve_id"
+  | "id"
+  | "priority"
+>
+
+/** "CVE-2021-44228 · log4j-core 2.14.1 · pay-api-01", for the finding picker. */
+export function findingScopeOptionLabel(finding: AcceptableFinding) {
+  const component = [finding.component_name, finding.component_version]
+    .filter(Boolean)
+    .join(" ")
+  return [finding.cve_id, component, finding.asset_key ?? finding.asset_name]
+    .filter(Boolean)
+    .join(" · ")
+}
+
+/** Values the project already has, offered while a scope is typed. */
+export function scopeSuggestions(
+  findings: readonly FindingPublic[],
+  assets: readonly AssetPublic[],
+) {
+  const distinct = (values: Array<string | null | undefined>) =>
+    [...new Set(values.filter((value): value is string => Boolean(value)))].sort(
+      (left, right) => left.localeCompare(right),
+    )
+  return {
+    assetKeys: distinct([
+      ...assets.map((asset) => asset.asset_key),
+      ...findings.map((finding) => finding.asset_key),
+    ]),
+    cveIds: distinct(findings.map((finding) => finding.cve_id)),
+    services: distinct([
+      ...assets.map((asset) => asset.business_service),
+      ...findings.map((finding) => finding.business_service),
+    ]),
+  }
 }
