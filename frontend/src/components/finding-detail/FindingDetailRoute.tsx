@@ -1,9 +1,11 @@
 import { ArrowLeft, RefreshCcw } from "lucide-react"
+import { useState } from "react"
 import type {
   FindingDetailPublic,
   FindingExplanationPublic,
 } from "@/api-client"
 import { ReevaluateControl } from "@/components/evaluations/ReevaluateControl"
+import { AcceptRiskSheet } from "@/components/waivers/AcceptRiskSheet"
 import type { FindingsUrlSearch } from "@/components/findings/findings-search-state"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -17,6 +19,7 @@ import {
   VpwStatusBanner,
 } from "@/components/vpw"
 import type { FindingDetailTab } from "@/lib/app-defaults"
+import { isActionableFinding } from "@/lib/finding-queue-labels"
 import { slaDueDetail } from "@/lib/finding-sla-due"
 import { Link } from "@/lib/router"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
@@ -89,6 +92,9 @@ export function FindingDetailRoute({
     providerGaps,
   )
   const historyRows = findingHistoryRows(finding, occurrences, waiverEvidence)
+  // Kept here: a refresh replaces the rail with a loading state.
+  const [acceptOpen, setAcceptOpen] = useState(false)
+  const [acceptMessage, setAcceptMessage] = useState("")
 
   return (
     <section
@@ -120,6 +126,21 @@ export function FindingDetailRoute({
       </div>
 
       {error ? <VpwStatusBanner title={error} tone="critical" /> : null}
+      {acceptMessage ? (
+        <VpwStatusBanner title={acceptMessage} tone="success" />
+      ) : null}
+      {finding ? (
+        <AcceptRiskSheet
+          findings={[finding]}
+          onAccepted={(message) => {
+            setAcceptMessage(message)
+            onRefresh()
+          }}
+          onOpenChange={setAcceptOpen}
+          open={acceptOpen}
+          projectId={finding.project_id}
+        />
+      ) : null}
       {explanationWarning ? (
         <VpwStatusBanner title={explanationWarning} tone="critical" />
       ) : null}
@@ -259,6 +280,7 @@ export function FindingDetailRoute({
               finding={finding}
               findingsBackSearch={findingsBackSearch}
               occurrences={occurrences}
+              onAcceptRisk={() => setAcceptOpen(true)}
               onRefresh={onRefresh}
               waiverEvidence={waiverEvidence}
             />
@@ -273,16 +295,20 @@ function FindingDetailActionRail({
   finding,
   findingsBackSearch,
   occurrences,
+  onAcceptRisk,
   onRefresh,
   waiverEvidence,
 }: {
   finding: FindingDetailPublic
   findingsBackSearch: FindingsUrlSearch
   occurrences: ReturnType<typeof findingOccurrenceRows>
+  onAcceptRisk: () => void
   onRefresh: () => void
   waiverEvidence: ReturnType<typeof findingWaiverEvidence>
 }) {
   const projectSearch = selectedProjectRouteSearch(finding.project_id)
+  // Open work that no acceptance covers yet can be accepted from here.
+  const canAcceptRisk = isActionableFinding(finding) && !finding.waived
   const scopeRows = [
     {
       label: "Owner",
@@ -336,6 +362,16 @@ function FindingDetailActionRail({
               Open in Triage
             </Link>
           </Button>
+          {canAcceptRisk ? (
+            <Button
+              onClick={onAcceptRisk}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Accept risk…
+            </Button>
+          ) : null}
           <Button asChild size="sm" variant="outline">
             <Link search={projectSearch} to="/risk-acceptance">
               Risk acceptance

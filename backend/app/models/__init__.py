@@ -183,6 +183,7 @@ from app.models.vulnerabilities import Vulnerability, VulnerabilityBase
 from app.models.waivers import (
     Waiver,
     WaiverBase,
+    WaiverBulkCreate,
     WaiverCreate,
     WaiverPublic,
     WaiversPublic,
@@ -370,6 +371,7 @@ __all__ = [
     "VulnerabilityBase",
     "Waiver",
     "WaiverBase",
+    "WaiverBulkCreate",
     "WaiverCreate",
     "WaiverPublic",
     "WaiversPublic",

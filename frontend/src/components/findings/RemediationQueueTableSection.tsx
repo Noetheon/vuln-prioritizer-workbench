@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { AcceptRiskSheet } from "@/components/waivers/AcceptRiskSheet"
 import { apiErrorMessage } from "@/lib/app-errors"
 import {
   BULK_STATUS_MAX_FINDINGS,
@@ -20,6 +21,7 @@ import {
   toggleSelection,
   visibleSelection,
 } from "@/lib/finding-bulk-selection"
+import { isActionableFinding } from "@/lib/finding-queue-labels"
 import {
   statusRequiresReason,
   statusUpdateRequest,
@@ -82,8 +84,13 @@ export function RemediationQueueTableSection({
   const [bulkPending, setBulkPending] = useState(false)
   const [bulkMessage, setBulkMessage] = useState("")
   const [bulkError, setBulkError] = useState("")
+  const [acceptOpen, setAcceptOpen] = useState(false)
   const visibleIds = displayFindings.map((finding) => finding.id)
   const selected = visibleSelection(selectedIds, visibleIds)
+  // Accepting risk only applies to open work among the chosen rows.
+  const acceptable = displayFindings.filter(
+    (finding) => selectedIds.has(finding.id) && isActionableFinding(finding),
+  )
   const projectId = displayProject?.id ?? ""
 
   function updateSelection(next: ReadonlySet<string>) {
@@ -185,14 +192,28 @@ export function RemediationQueueTableSection({
           }
         />
         <FindingsBulkStatusBar
+          acceptableCount={acceptable.length}
           count={selected.length}
           error={pendingStatus === null ? bulkError : ""}
           message={bulkMessage}
+          onAcceptRisk={projectId ? () => setAcceptOpen(true) : undefined}
           onChooseStatus={chooseBulkStatus}
           onClear={() => updateSelection(new Set())}
           pending={bulkPending}
         />
       </VpwTableCard>
+      {projectId ? (
+        <AcceptRiskSheet
+          findings={acceptable}
+          onAccepted={(message) => {
+            setSelectedIds(new Set())
+            setBulkMessage(message)
+          }}
+          onOpenChange={setAcceptOpen}
+          open={acceptOpen}
+          projectId={projectId}
+        />
+      ) : null}
       <FindingStatusReasonDialog
         count={selected.length}
         error={pendingStatus !== null ? bulkError : ""}
