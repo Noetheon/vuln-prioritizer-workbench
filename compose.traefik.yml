@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik:3.6@sha256:31267173a15b4944e797a76ffd9c419707c8d8b32fe5b610f80cd0cfa05f372d
+    image: traefik:v3.7@sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0
     restart: always
     read_only: true
     cap_drop:
