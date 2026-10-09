@@ -44,7 +44,7 @@ dependencies = [
   "anyio>=4.14.2,<5.0",
   "fastapi>=0.115,<1.0",
   "defusedxml>=0.7,<1.0",
-  "filelock>=3.20,<4.0",
+  "filelock>=3.20,<5.0",
   "jsonschema>=4.23,<5.0",
   "packageurl-python==0.17.6",
   "pydantic>=2.6,<3.0",
